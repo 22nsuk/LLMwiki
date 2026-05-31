@@ -14,10 +14,13 @@ make bootstrap-preflight
 report-contract, public mirror, mechanism, and release entrypoints.
 `make dev-install` creates `.venv`, installs the authoritative dev dependency
 set from `pyproject.toml` (`.[dev]`), and installs the package in editable
-mode. `requirements-dev.txt` remains a compatibility/provenance snapshot of the
-same dev set and should stay aligned with `pyproject.toml`. `make bootstrap-preflight` records a
-schema-backed environment report when dependency or interpreter drift needs to
-be diagnosed.
+mode. The canonical dependency authority is `pyproject.toml` plus `uv.lock`,
+with CI replay proven through a frozen `uv export` locked-requirements install.
+Root `requirements.txt` and `requirements-dev.txt` are retired from the public
+source surface. Historical or sample reports may still classify those paths as
+optional compatibility evidence, but their absence must not be treated as a
+canonical dependency failure. `make bootstrap-preflight` records a schema-backed
+environment report when dependency or interpreter drift needs to be diagnosed.
 
 `uv.lock` is the canonical dependency lockfile. When dependency inputs change,
 refresh the lock intentionally; in review or check-only contexts, use
@@ -86,6 +89,71 @@ The registry-documented entrypoints are:
 - `make release-closeout-regression-dry-run`
 - `make test-execution-summary`
 - `make test-execution-summary-report-contract`
+
+## Cost-Aware Test Use
+
+Use the smallest authoritative lane that proves the change under review.
+`make fast-smoke` and focused `.venv/bin/python -m pytest ...` commands are
+the default tight-loop checks. `make test` / `make test-fast` are broader batch
+validation lanes, not the smallest local proof surface. On 2026-05-31 an early
+local `make test` attempt reached roughly 95% progress and hit a 900 second
+timeout; the later checkpoint rerun passed in about 18 minutes and 40 seconds,
+so this lane still needs checkpoint-grade time budgeting.
+`make test-report-contract-core` / `make report-contracts-core` is the
+preferred tight-loop report-contract proof for schema, Make/CI, and generated
+artifact contract edits. `make test-report-contract-all` intentionally sweeps
+every `report_contract` marker and is a checkpoint/CI or final contract proof,
+not the default for every vertical slice; on 2026-05-31 it selected 463 tests
+and took about 60 minutes in the local full-vault worktree.
+The all target now passes the 48 known report-contract-marked test files
+explicitly while retaining `-m report_contract`, so pytest no longer has to
+collect the entire repository and deselect unrelated tests before that sweep.
+`tests/test_makefile_static_gates.py` keeps the explicit file list aligned with
+the marker surface. The report-contract lane now uses
+`PYTEST_REPORT_CONTRACT_FLAGS`, defaulting to loadfile xdist plus
+`-p no:cacheprovider`; override it to `$(PYTEST_SERIAL_FLAGS)` only when
+investigating an isolation failure. Release-sealing has its own
+`PYTEST_RELEASE_SEALING_FLAGS` for the same reason. The first local proof after
+this isolation change reduced `make test-report-contract-all` to 17 minutes
+49 seconds for the same 463 tests / 465 subtests, and
+`make test-report-contract-core` to 3 minutes 46 seconds for 201 tests /
+454 subtests.
+
+Before spending release-grade runtime, prefer the check/plan targets:
+`make release-run-ready-check`, `make release-sealed-run-ready-check`,
+`make release-sealed-run-ready-plan`, and
+`make release-auto-promotion-ready-plan`. Run the corresponding refresh target
+only when the check/plan shows stale authority that is relevant to the change.
+`test-execution-summary-full-body`, and therefore `release-run-ready`, uses
+`TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS` which defaults to the parallel
+`PYTEST_FLAGS`; set it to `$(PYTEST_SERIAL_FLAGS)` only when debugging a
+known parallel-isolation failure. The first full-suite proof after adding
+cache isolation passed 1859 tests / 1548 subtests in 23 minutes 22 seconds
+with JUnit testcase consistency at 3407/3407.
+`release-test-current` checks schema samples first, then reuses current full
+and report-contract summaries when their source-tree fingerprints still match,
+so clean release runs do not replay the same expensive suite more than once.
+To avoid source-tree fingerprint loops, stabilize mutation-prone generated and
+check surfaces before refreshing expensive summaries. Finish code, docs,
+generator, policy, and schema edits first; then run the stabilizers that can
+mutate or prove generated surfaces, such as `make report-schema-samples-check`,
+`make script-output-surfaces` when `ops/scripts/**` changed, targeted
+generated-artifact converge targets, and `make static`. After that point, do not
+edit source or docs unless restarting this sequence. Refresh
+`make test-execution-summary-current-or-refresh` and
+`make test-execution-summary-full-current-or-refresh` last, or use
+`make release-test-current`, which encodes the same ordering. This keeps
+report/full summaries from becoming stale immediately after they are rebuilt.
+Pytest subprocess probes disable cacheprovider and Make exports
+`PYTHONDONTWRITEBYTECODE=1` to keep xdist workers and child collection checks
+from writing shared repo-local cache artifacts. The broad `PYTEST_FLAGS`
+default also includes `-p no:cacheprovider`.
+The shared Hypothesis profile defaults to 30 derandomized examples with the
+example database disabled; set `LLMWIKI_HYPOTHESIS_MAX_EXAMPLES=100` for an
+audit-strength property sweep.
+If a full-vault `external-reports/` directory exists, refresh the reference
+manifest and action matrix before broad report-contract sweeps so local-only
+review intake drift does not obscure the code or schema result being checked.
 
 ## CI Tier Shape
 

@@ -86,6 +86,8 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
         "setup-python with section must be a mapping",
     )
     case.assertIn("uv.lock", str(with_config.get("cache-dependency-path", "")))
+    case.assertNotIn("requirements.txt", str(with_config.get("cache-dependency-path", "")))
+    case.assertNotIn("requirements-dev.txt", str(with_config.get("cache-dependency-path", "")))
     case.assertEqual(
         setup_uv.get("uses"),
         PINNED_SETUP_UV_ACTION,

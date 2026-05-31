@@ -11,6 +11,7 @@
     "source_command",
     "source_revision",
     "source_tree_fingerprint",
+    "source_tree_scope",
     "input_fingerprints",
     "schema_version",
     "artifact_status",
@@ -48,6 +49,25 @@
     "source_tree_fingerprint": {
       "type": "string",
       "minLength": 1
+    },
+    "source_tree_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "include_prefixes"],
+      "properties": {
+        "mode": {
+          "const": "include_prefixes"
+        },
+        "include_prefixes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
     },
     "input_fingerprints": {
       "type": "object",

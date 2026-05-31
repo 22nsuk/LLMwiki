@@ -49,8 +49,6 @@ SBOM_EXPORT_MAPPING_SCHEMA = SBOM_EXPORT_MAPPING_SCHEMA_PATH
 DEFAULT_OUT = "ops/reports/sbom-export-mapping.json"
 DEPENDENCY_INPUT_PATHS = (
     "pyproject.toml",
-    "requirements.txt",
-    "requirements-dev.txt",
     "uv.lock",
 )
 
@@ -81,6 +79,7 @@ def _dependency_input_mapping(
         mapping.append(
             {
                 "path": item["path"],
+                "authority_role": item.get("authority_role", "canonical"),
                 "exists": item["exists"],
                 "size_bytes": item["size_bytes"],
                 "sha256": item["sha256"],
@@ -181,6 +180,8 @@ def _gaps(
         )
 
     for item in dependency_input_mapping:
+        if item["authority_role"] != "canonical":
+            continue
         if not item["in_release_manifest"]:
             gaps.append(
                 {
@@ -208,8 +209,11 @@ def _sbom_readiness(
     surface_summary: dict,
     gaps: list[dict],
 ) -> dict:
-    release_dependency_inputs_complete = all(item["in_release_manifest"] for item in dependency_input_mapping)
-    public_dependency_inputs_complete = all(item["in_public_export"] for item in dependency_input_mapping)
+    canonical_inputs = [
+        item for item in dependency_input_mapping if item["authority_role"] == "canonical"
+    ]
+    release_dependency_inputs_complete = all(item["in_release_manifest"] for item in canonical_inputs)
+    public_dependency_inputs_complete = all(item["in_public_export"] for item in canonical_inputs)
     return {
         "declared_dependencies_present": bool(provenance_report["declared_dependencies"]),
         "locked_packages_present": bool(provenance_report["locked_packages"]),

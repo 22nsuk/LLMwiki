@@ -2,19 +2,27 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import io
 import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from hypothesis import given
+import hypothesis.strategies as st
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.test_execution_summary import (
+    REUSE_MISMATCH_COMMAND_IDENTITY,
+    REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
+    REUSE_MISMATCH_MISSING_SUMMARY,
+    REUSE_MISMATCH_SOURCE_TREE,
     build_aggregate_report,
     build_report,
     build_reused_report,
@@ -23,6 +31,8 @@ from ops.scripts.test_execution_summary import (
     collect_pytest_nodeid_digest,
     parse_pytest_counts,
     resolve_pytest_target_paths,
+    reuse_currentness_diagnostics,
+    reuse_currentness_diagnostics_from_state,
     reusable_summary_is_current,
     semantic_command,
 )
@@ -61,13 +71,139 @@ def _fixed_context() -> RuntimeContext:
     )
 
 
+def _reusable_existing_summary() -> dict[str, object]:
+    return {
+        "artifact_kind": "test_execution_summary",
+        "status": "pass",
+        "source_tree_fingerprint": "tree-current",
+        "suite": "unit",
+        "command": "python -m pytest tests/test_sample.py",
+        "semantic_command": "-m pytest tests/test_sample.py",
+        "toolchain_fingerprint": "toolchain-current",
+        "test_target_fingerprints": [],
+        "deselected_tests": [],
+        "deselection_lifecycle": {"status": "pass"},
+        "pytest_collect_nodeid_digest": {"status": "skipped"},
+        "nodeid_outcome_consistency": {"status": "skipped"},
+    }
+
+
+def _current_reuse_state(**overrides: object) -> dict[str, object]:
+    state: dict[str, object] = {
+        "suite": "unit",
+        "current_source_tree_fingerprint": "tree-current",
+        "current_semantic_command": "-m pytest tests/test_sample.py",
+        "current_toolchain_fingerprint": "toolchain-current",
+        "current_display_command": "python -m pytest tests/test_sample.py",
+        "current_target_fingerprints": [],
+        "current_deselected_tests": [],
+        "current_deselection_lifecycle": {"status": "pass"},
+        "collect_nodeids": False,
+        "collect_nodeid_digest": None,
+    }
+    state.update(overrides)
+    return state
+
+
+@given(
+    reason=st.sampled_from(
+        [
+            REUSE_MISMATCH_MISSING_SUMMARY,
+            REUSE_MISMATCH_SOURCE_TREE,
+            REUSE_MISMATCH_COMMAND_IDENTITY,
+            REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
+        ]
+    )
+)
+def test_property_6_reuse_diagnostics_select_exactly_one_mismatch_code(reason: str) -> None:
+    """Feature: release-evidence-sync, Property 6: reuse diagnostics select exactly one mismatch code"""
+    existing = _reusable_existing_summary()
+    if reason == REUSE_MISMATCH_MISSING_SUMMARY:
+        existing = {}
+    elif reason == REUSE_MISMATCH_SOURCE_TREE:
+        existing["source_tree_fingerprint"] = "tree-observed"
+    elif reason == REUSE_MISMATCH_COMMAND_IDENTITY:
+        existing["semantic_command"] = "-m pytest tests/test_other.py"
+    elif reason == REUSE_MISMATCH_INTERPRETER_TOOLCHAIN:
+        existing["toolchain_fingerprint"] = "toolchain-observed"
+
+    diagnostics = reuse_currentness_diagnostics_from_state(
+        existing,  # type: ignore[arg-type]
+        **_current_reuse_state(),  # type: ignore[arg-type]
+    )
+
+    assert diagnostics["reusable"] is False
+    assert diagnostics["reason"] == reason
+    assert diagnostics["executable_path_differs_only"] is False
+    if reason == REUSE_MISMATCH_SOURCE_TREE:
+        assert diagnostics["current_source_tree_fingerprint"] == "tree-current"
+        assert diagnostics["observed_source_tree_fingerprint"] == "tree-observed"
+
+
+@given(component=st.sampled_from(["path_only", "source_tree", "command", "toolchain"]))
+def test_property_7_executable_path_only_differences_never_fail_reuse(component: str) -> None:
+    """Feature: release-evidence-sync, Property 7: executable-path-only differences never fail reuse"""
+    existing = _reusable_existing_summary()
+    current_state = _current_reuse_state()
+    if component == "path_only":
+        existing["command"] = "/old/venv/bin/python -m pytest tests/test_sample.py"
+        current_state["current_display_command"] = "/new/venv/bin/python -m pytest tests/test_sample.py"
+    elif component == "source_tree":
+        existing["source_tree_fingerprint"] = "tree-observed"
+    elif component == "command":
+        existing["semantic_command"] = "-m pytest tests/test_other.py"
+    elif component == "toolchain":
+        existing["toolchain_fingerprint"] = "toolchain-observed"
+
+    diagnostics = reuse_currentness_diagnostics_from_state(
+        existing,  # type: ignore[arg-type]
+        **current_state,  # type: ignore[arg-type]
+    )
+
+    if component == "path_only":
+        assert diagnostics["reusable"] is True
+        assert diagnostics["reason"] is None
+        assert diagnostics["executable_path_differs_only"] is True
+    elif component == "source_tree":
+        assert diagnostics["reason"] == REUSE_MISMATCH_SOURCE_TREE
+    elif component == "command":
+        assert diagnostics["reason"] == REUSE_MISMATCH_COMMAND_IDENTITY
+    elif component == "toolchain":
+        assert diagnostics["reason"] == REUSE_MISMATCH_INTERPRETER_TOOLCHAIN
+
+
+@pytest.mark.parametrize(
+    ("mutator", "expected_reason"),
+    [
+        (lambda existing: existing.clear(), REUSE_MISMATCH_MISSING_SUMMARY),
+        (lambda existing: existing.update({"source_tree_fingerprint": "old-tree"}), REUSE_MISMATCH_SOURCE_TREE),
+        (lambda existing: existing.update({"semantic_command": "-m pytest tests/test_other.py"}), REUSE_MISMATCH_COMMAND_IDENTITY),
+        (lambda existing: existing.update({"toolchain_fingerprint": "old-toolchain"}), REUSE_MISMATCH_INTERPRETER_TOOLCHAIN),
+    ],
+)
+def test_reuse_diagnostics_reports_each_mismatch_code(mutator, expected_reason: str) -> None:
+    existing = _reusable_existing_summary()
+    mutator(existing)
+
+    diagnostics = reuse_currentness_diagnostics_from_state(
+        existing,  # type: ignore[arg-type]
+        **_current_reuse_state(),  # type: ignore[arg-type]
+    )
+
+    assert diagnostics["reusable"] is False
+    assert diagnostics["reason"] == expected_reason
+
+
 class TestExecutionSummaryTest(unittest.TestCase):
     def test_parse_pytest_counts_reads_terminal_summary(self) -> None:
-        counts = parse_pytest_counts("= 4 failed, 12 passed, 2 skipped, 1 warning in 0.50s =")
+        counts = parse_pytest_counts(
+            "= 4 failed, 12 passed, 2 skipped, 1548 subtests passed, 1 warning in 0.50s ="
+        )
 
         self.assertEqual(counts["passed"], 12)
         self.assertEqual(counts["failed"], 4)
         self.assertEqual(counts["skipped"], 2)
+        self.assertEqual(counts["subtests_passed"], 1548)
         self.assertEqual(counts["warnings"], 1)
 
     def test_classify_status_distinguishes_release_relevant_outcomes(self) -> None:
@@ -211,7 +347,10 @@ class TestExecutionSummaryTest(unittest.TestCase):
             vault.mkdir()
             seed_minimal_vault(vault)
 
-            with patch("ops.scripts.test_execution_summary.platform.python_version", return_value="3.10.99"):
+            with patch(
+                "ops.scripts.test.test_execution_command_runtime.platform.python_version",
+                return_value="3.10.99",
+            ):
                 report = build_report(
                     vault,
                     command=["python", "-m", "pytest"],
@@ -280,6 +419,81 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(reused["generated_at"], "2026-04-30T00:00:00Z")
             self.assertEqual(reused["counts"]["passed"], 2)
             self.assertEqual(reused["termination_reason"], "reused_current_summary")
+
+    def test_reuse_diagnostics_report_source_tree_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            test_file = vault / "tests" / "test_sample.py"
+            test_file.parent.mkdir(parents=True, exist_ok=True)
+            test_file.write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+            command = ["python", "-m", "pytest", "tests/test_sample.py"]
+            existing = build_report(
+                vault,
+                command=command,
+                result=_result(returncode=0, stdout="= 2 passed in 1.00s ="),
+                duration_ms=1000,
+                suite="unit",
+                context=_fixed_context(),
+            )
+            existing["source_tree_fingerprint"] = "stale-fingerprint"
+
+            diagnostics = reuse_currentness_diagnostics(
+                existing,
+                vault=vault,
+                command=command,
+                suite="unit",
+                collect_nodeids=False,
+                collect_nodeid_digest=None,
+            )
+
+            self.assertFalse(diagnostics["reusable"])
+            self.assertEqual(diagnostics["reason"], REUSE_MISMATCH_SOURCE_TREE)
+            self.assertEqual(diagnostics["observed_source_tree_fingerprint"], "stale-fingerprint")
+            self.assertTrue(diagnostics["current_source_tree_fingerprint"])
+
+    def test_reuse_diagnostics_treat_executable_path_only_change_as_reusable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            test_file = vault / "tests" / "test_sample.py"
+            test_file.parent.mkdir(parents=True, exist_ok=True)
+            test_file.write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+            existing_command = ["python", "-m", "pytest", "tests/test_sample.py"]
+            current_command = ["/opt/venv/bin/python3", "-m", "pytest", "tests/test_sample.py"]
+            existing = build_report(
+                vault,
+                command=existing_command,
+                result=_result(returncode=0, stdout="= 2 passed in 1.00s ="),
+                duration_ms=1000,
+                suite="unit",
+                context=_fixed_context(),
+            )
+
+            diagnostics = reuse_currentness_diagnostics(
+                existing,
+                vault=vault,
+                command=current_command,
+                suite="unit",
+                collect_nodeids=False,
+                collect_nodeid_digest=None,
+            )
+
+            self.assertTrue(diagnostics["reusable"])
+            self.assertIsNone(diagnostics["reason"])
+            self.assertTrue(diagnostics["executable_path_differs_only"])
+            self.assertTrue(
+                reusable_summary_is_current(
+                    existing,
+                    vault=vault,
+                    command=current_command,
+                    suite="unit",
+                    collect_nodeids=False,
+                    collect_nodeid_digest=None,
+                )
+            )
 
     def test_interpreter_path_classification_is_portable_and_does_not_record_absolute_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -728,6 +942,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                             "xfailed": 0,
                             "xpassed": 0,
                             "warnings": 0,
+                            "subtests_passed": 0,
                         },
                         "represents_full_suite": False,
                     },
@@ -745,6 +960,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                             "xfailed": 0,
                             "xpassed": 0,
                             "warnings": 0,
+                            "subtests_passed": 0,
                         },
                         "represents_full_suite": False,
                     },
@@ -978,26 +1194,32 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 "ops.scripts.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
             ) as run:
-                returncode = summary_main(
-                    [
-                        "--vault",
-                        str(vault),
-                        "--out",
-                        "tmp/test-execution-summary-check.json",
-                        "--suite",
-                        "unit",
-                        "--reuse-if-current",
-                        "--reuse-only",
-                        "--reuse-from",
-                        "ops/reports/test-execution-summary.json",
-                        "--",
-                        *command,
-                    ]
-                )
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    returncode = summary_main(
+                        [
+                            "--vault",
+                            str(vault),
+                            "--out",
+                            "tmp/test-execution-summary-check.json",
+                            "--suite",
+                            "unit",
+                            "--reuse-if-current",
+                            "--reuse-only",
+                            "--reuse-from",
+                            "ops/reports/test-execution-summary.json",
+                            "--",
+                            *command,
+                        ]
+                    )
 
             self.assertEqual(returncode, 1)
             self.assertEqual(run.call_count, 0)
             self.assertFalse((vault / "tmp" / "test-execution-summary-check.json").exists())
+            diagnostics = json.loads(stdout.getvalue())["reuse_diagnostics"]
+            self.assertEqual(diagnostics["reason"], REUSE_MISMATCH_SOURCE_TREE)
+            self.assertTrue(diagnostics["current_source_tree_fingerprint"])
+            self.assertTrue(diagnostics["observed_source_tree_fingerprint"])
 
     def test_cli_aggregate_reuse_only_fails_fast_when_full_suite_evidence_is_stale(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1142,8 +1364,8 @@ class TestExecutionSummaryTest(unittest.TestCase):
 
             def fake_run(command: list[str], *, cwd: Path, timeout_seconds: int) -> TimedProcessResult:
                 junit_path.parent.mkdir(parents=True, exist_ok=True)
-                junit_path.write_text("<testsuite tests='1'></testsuite>\n", encoding="utf-8")
-                return _result(returncode=0, stdout="= 1 passed in 0.01s =")
+                junit_path.write_text("<testsuite tests='3'></testsuite>\n", encoding="utf-8")
+                return _result(returncode=0, stdout="= 1 passed, 2 subtests passed in 0.01s =")
 
             with patch("ops.scripts.test_execution_summary.run_with_timeout", side_effect=fake_run):
                 returncode = summary_main(
@@ -1175,8 +1397,9 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertRegex(artifacts["junit_xml"]["sha256"], r"^[a-f0-9]{64}$")
             self.assertRegex(artifacts["execution_log"]["sha256"], r"^[a-f0-9]{64}$")
             self.assertEqual(artifacts["junit_xml"]["consistency_status"], "pass")
-            self.assertEqual(artifacts["junit_xml"]["observed_count"], 1)
-            self.assertEqual(artifacts["junit_xml"]["expected_count"], 1)
+            self.assertEqual(payload["counts"]["subtests_passed"], 2)
+            self.assertEqual(artifacts["junit_xml"]["observed_count"], 3)
+            self.assertEqual(artifacts["junit_xml"]["expected_count"], 3)
             self.assertEqual(validate_with_schema(payload, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)), [])
 
     def test_cli_marks_junit_count_mismatch_as_artifact_attention(self) -> None:
@@ -1190,7 +1413,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             def fake_run(command: list[str], *, cwd: Path, timeout_seconds: int) -> TimedProcessResult:
                 junit_path.parent.mkdir(parents=True, exist_ok=True)
                 junit_path.write_text("<testsuite tests='1'></testsuite>\n", encoding="utf-8")
-                return _result(returncode=0, stdout="= 2 passed in 0.01s =")
+                return _result(returncode=0, stdout="= 2 passed, 1 subtest passed in 0.01s =")
 
             with patch("ops.scripts.test_execution_summary.run_with_timeout", side_effect=fake_run):
                 returncode = summary_main(
@@ -1215,7 +1438,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(returncode, 0)
             self.assertEqual(artifacts["junit_xml"]["consistency_status"], "attention")
             self.assertEqual(artifacts["junit_xml"]["observed_count"], 1)
-            self.assertEqual(artifacts["junit_xml"]["expected_count"], 2)
+            self.assertEqual(artifacts["junit_xml"]["expected_count"], 3)
             self.assertIn("does not match", artifacts["junit_xml"]["consistency_reason"])
             self.assertEqual(validate_with_schema(payload, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)), [])
 

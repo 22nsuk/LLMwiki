@@ -232,7 +232,7 @@ release-evidence-converge-phase-3: release-evidence-converge-phase-2
 
 release-finality-resettle:
 	$(MAKE) workflow-dependency-planner
-	$(MAKE) generated-artifact-converge
+	$(MAKE) generated-artifact-finality-suffix
 	$(MAKE) release-closeout-fixed-point
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
@@ -274,7 +274,7 @@ release-auto-promotion-preflight:
 	$(MAKE) release-auto-promotion-goal-run-id-guard
 	$(MAKE) release-auto-promotion-preflight-prerequisites
 	$(MAKE) release-smoke-fast-refresh-check
-	$(MAKE) test-execution-summary-report-contract
+	$(MAKE) test-execution-summary-current-or-refresh
 	$(MAKE) artifact-freshness-refresh-check
 	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1
 	$(MAKE) learning-readiness-signoff-revalidation
@@ -358,8 +358,8 @@ release-preflight-current:
 release-test-current:
 	$(MAKE) static
 	$(MAKE) report-schema-samples-check
-	$(MAKE) test-execution-summary-report-contract
 	$(MAKE) test-execution-summary-full-current-or-refresh
+	$(MAKE) test-execution-summary-current-or-refresh
 
 release-public-current:
 	$(MAKE) public-check-summary-current-or-refresh
@@ -670,7 +670,7 @@ head-aligned-evidence-converge:
 	$(MAKE) goal-worktree-guard
 	$(MAKE) goal-runtime-certificate
 	$(MAKE) learning-readiness-signoff-refresh
-	$(MAKE) test-execution-summary-report-contract
+	$(MAKE) test-execution-summary-current-or-refresh
 	$(MAKE) test-execution-summary-full-current-or-refresh
 	$(MAKE) sync-public-policy
 	$(MAKE) public-check-summary

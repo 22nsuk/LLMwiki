@@ -261,19 +261,24 @@
     "workflow_step": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "order",
-        "target",
-        "reason_code",
-        "primary_report",
-        "expensive",
-        "reusable"
-      ],
+        "required": [
+          "order",
+          "target",
+          "reason_code",
+          "primary_report",
+          "fanout_targets",
+          "expensive",
+          "reusable"
+        ],
       "properties": {
         "order": { "type": "integer", "minimum": 1 },
         "target": { "$ref": "#/$defs/target_name" },
         "reason_code": { "type": "string", "minLength": 1 },
         "primary_report": { "type": "string" },
+        "fanout_targets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/target_name" }
+        },
         "expensive": { "type": "boolean" },
         "reusable": { "type": "boolean" }
       }

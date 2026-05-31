@@ -103,6 +103,32 @@ class SourceTreeFingerprintRuntimeTests(unittest.TestCase):
             baseline,
         )
 
+    def test_release_source_tree_fingerprint_can_scope_to_included_prefixes(self) -> None:
+        self._write("ops/scripts/example.py", "print('one')\n")
+        self._write("README.md", "# one\n")
+        baseline = release_source_tree_fingerprint(
+            self.vault,
+            included_prefixes=("ops/scripts",),
+        )
+
+        self._write("README.md", "# changed outside scope\n")
+        self.assertEqual(
+            release_source_tree_fingerprint(
+                self.vault,
+                included_prefixes=("ops/scripts",),
+            ),
+            baseline,
+        )
+
+        self._write("ops/scripts/example.py", "print('two')\n")
+        self.assertNotEqual(
+            release_source_tree_fingerprint(
+                self.vault,
+                included_prefixes=("ops/scripts",),
+            ),
+            baseline,
+        )
+
     def test_producer_input_fingerprint_is_stable_and_order_independent(self) -> None:
         left = producer_input_fingerprint({"input_fingerprints": {"b": "two", "a": "one"}})
         right = producer_input_fingerprint({"input_fingerprints": {"a": "one", "b": "two"}})
@@ -170,3 +196,21 @@ class SourceTreeFingerprintRuntimeTests(unittest.TestCase):
         self.assertEqual(baseline["changed_after_generated_at_count"], 1)
         self.assertEqual(excluded["changed_after_generated_at_count"], 0)
         self.assertEqual(excluded["changed_after_generated_at"], [])
+
+    def test_release_source_tree_change_sample_can_scope_to_included_prefixes(self) -> None:
+        self._write("ops/scripts/example.py", "print('tracked')\n")
+        self._set_mtime("ops/scripts/example.py", "2026-04-29T08:00:01Z")
+        self._write("README.md", "# changed outside scope\n")
+        self._set_mtime("README.md", "2026-04-29T08:00:02Z")
+
+        sample = release_source_tree_change_sample(
+            self.vault,
+            generated_at="2026-04-29T08:00:00Z",
+            included_prefixes=("ops/scripts",),
+        )
+
+        self.assertEqual(sample["changed_after_generated_at_count"], 1)
+        self.assertEqual(
+            sample["changed_after_generated_at"],
+            [{"path": "ops/scripts/example.py", "mtime": "2026-04-29T08:00:01Z"}],
+        )

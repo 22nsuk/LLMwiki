@@ -17,6 +17,7 @@ include mk/public.mk
 include mk/supply_chain.mk
 
 export PYTEST_DISABLE_PLUGIN_AUTOLOAD
+export PYTHONDONTWRITEBYTECODE
 
 .PHONY: check check-finalized check-clean check-clean-lane-guard check-conditional check-serial check-all check-all-serial check-strict canonical-parity-guard
 

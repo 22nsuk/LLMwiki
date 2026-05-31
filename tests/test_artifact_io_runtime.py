@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ops.scripts.artifact_io_runtime import (
     ReportWriterKernelRequest,
+    SEMANTIC_NOOP_ENVELOPE_FIELDS,
     SchemaBackedReportWriteRequest,
     describe_output_file,
     load_optional_json_object,
@@ -429,6 +430,77 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
 
             self.assertEqual(promoted, destination)
             self.assertEqual(destination.read_text(encoding="utf-8"), before_text)
+
+    def test_promote_schema_validated_json_can_treat_source_fingerprint_as_semantic(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            schema_path = root / "schema.json"
+            schema_path.write_text(
+                json.dumps(
+                    {
+                        "type": "object",
+                        "required": [
+                            "$schema",
+                            "generated_at",
+                            "source_tree_fingerprint",
+                            "surfaces",
+                        ],
+                        "additionalProperties": False,
+                        "properties": {
+                            "$schema": {"const": "schema.json"},
+                            "generated_at": {"type": "string"},
+                            "source_tree_fingerprint": {"type": "string"},
+                            "surfaces": {"type": "array"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            destination = root / "canonical.json"
+            destination.write_text(
+                json.dumps(
+                    {
+                        "$schema": "schema.json",
+                        "generated_at": "2026-05-28T00:00:00Z",
+                        "source_tree_fingerprint": "old-fp",
+                        "surfaces": [],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            candidate = root / "candidate.json"
+            candidate.write_text(
+                json.dumps(
+                    {
+                        "$schema": "schema.json",
+                        "generated_at": "2026-05-29T00:00:00Z",
+                        "source_tree_fingerprint": "new-fp",
+                        "surfaces": [],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            promote_schema_validated_json(
+                root,
+                candidate_path=candidate,
+                destination_path=destination,
+                context="candidate promotion failed",
+                preserve_existing_on_semantic_match=True,
+                semantic_ignore_fields=SEMANTIC_NOOP_ENVELOPE_FIELDS
+                - {"source_tree_fingerprint"},
+            )
+
+            self.assertEqual(
+                json.loads(destination.read_text(encoding="utf-8"))[
+                    "source_tree_fingerprint"
+                ],
+                "new-fp",
+            )
 
     def test_promote_schema_validated_json_replaces_invalid_semantic_noop_destination(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

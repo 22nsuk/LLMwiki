@@ -221,8 +221,7 @@ class MechanismAssessTest(unittest.TestCase):
 
             targets = {
                 "ops/schemas/example.schema.json": "{}\n",
-                "requirements.txt": "PyYAML>=6.0,<7\n",
-                "requirements-dev.txt": "-r requirements.txt\n",
+                "pyproject.toml": "[project]\nname = 'sample'\n",
                 "uv.lock": "version = 1\n",
                 "migrations/001_init.py": "print('migration')\n",
                 "system/security-check.md": "# Security\n",
@@ -243,8 +242,7 @@ class MechanismAssessTest(unittest.TestCase):
                     vault,
                     [
                         "ops/schemas/example.schema.json",
-                        "requirements.txt",
-                        "requirements-dev.txt",
+                        "pyproject.toml",
                         "uv.lock",
                         "migrations/001_init.py",
                         "system/security-check.md",
@@ -325,7 +323,7 @@ class MechanismAssessTest(unittest.TestCase):
 
             targets = {
                 "ops/schemas/example.schema.json": "{}\n",
-                "requirements.txt": "PyYAML>=6.0,<7\n",
+                "pyproject.toml": "[project]\nname = 'sample'\n",
                 "migrations/001_init.py": "print('migration')\n",
                 "system/security-check.md": "# Security\n",
                 "ops/scripts/danger.py": "rm -rf /tmp/cache\n",
@@ -345,7 +343,7 @@ class MechanismAssessTest(unittest.TestCase):
                     vault,
                     [
                         "ops/schemas/example.schema.json",
-                        "requirements.txt",
+                        "pyproject.toml",
                         "migrations/001_init.py",
                         "system/security-check.md",
                     ],

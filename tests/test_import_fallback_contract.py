@@ -23,7 +23,9 @@ PYPROJECT = Path("pyproject.toml")
 MAKE_FILES = [Path("Makefile"), *sorted(Path("mk").glob("*.mk"))]
 DIRECT_SCRIPT_BRANCH = 'if __package__ in (None, ""):  # pragma: no cover - direct script fallback'
 REPO_ROOT_BOOTSTRAP = 'sys.path.insert(0, str(Path(__file__).resolve().parents[3]))'
-FLAT_SCRIPT_MODULE_RE = re.compile(r"-m\s+ops\.scripts\.([A-Za-z0-9_]+)\b")
+SCRIPT_MODULE_RE = re.compile(
+    r"-m\s+(ops\.scripts\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\b"
+)
 DEPENDENCY_IMPORT_FAILURE_ALLOWLIST = {
     "ops/scripts/core/schema_runtime.py",
     "ops/scripts/core/yaml_runtime.py",
@@ -47,10 +49,10 @@ def _project_script_module_targets() -> set[str]:
     return {str(target).split(":", maxsplit=1)[0] for target in scripts.values()}
 
 
-def _makefile_flat_module_names() -> set[str]:
+def _makefile_module_names() -> set[str]:
     names: set[str] = set()
     for path in MAKE_FILES:
-        names.update(FLAT_SCRIPT_MODULE_RE.findall(path.read_text(encoding="utf-8")))
+        names.update(SCRIPT_MODULE_RE.findall(path.read_text(encoding="utf-8")))
     return names
 
 
@@ -112,13 +114,13 @@ class ImportFallbackContractTests(unittest.TestCase):
 
     def test_cli_surface_inventory_resolves_project_makefile_and_direct_fallback_entries(self) -> None:
         project_targets = _project_script_module_targets()
-        flat_targets = {f"ops.scripts.{name}" for name in _makefile_flat_module_names()}
+        flat_targets = _makefile_module_names()
         direct_fallback_targets = {
             _module_name_from_script_path(path) for path in _fallback_eligible_paths()
         }
         all_targets = sorted(project_targets | flat_targets | direct_fallback_targets)
 
-        self.assertEqual(len(project_targets), 81)
+        self.assertEqual(len(project_targets), 82)
         self.assertTrue(flat_targets)
         self.assertTrue(direct_fallback_targets)
         for module_name in all_targets:

@@ -2,17 +2,11 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
-import hashlib
-import importlib.metadata
 import json
 import os
-import platform
-import re
 import shlex
 import sys
 import time
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -29,15 +23,62 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
-        TEST_DESELECTION_POLICY_SCHEMA_PATH,
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
-    )
-    from ops.scripts.schema_runtime import (
-        load_schema_with_vault_override,
-        validate_or_raise,
     )
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
+    )
+    from ops.scripts.test.test_execution_command_runtime import (
+        build_execution_environment,
+        classify_interpreter_path,
+        classify_status,
+        display_command as _display_command,
+        parse_pytest_counts,
+        semantic_command,
+        semantic_command_text as _semantic_command_text,
+        tail_text as _tail_text,
+        toolchain_fingerprint as _toolchain_fingerprint,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        evidence_artifact_consistency as _evidence_artifact_consistency,
+        failed_nodeids as _failed_nodeids,
+        junit_artifact_identity,
+        nodeid_outcome_consistency as _nodeid_outcome_consistency,
+        sha256_file as _sha256_file,
+        sha256_text as _sha256_text,
+        write_execution_log,
+        write_failed_nodeids_artifact,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
+        deselection_lifecycle as _deselection_lifecycle,
+        load_deselection_policy as _load_deselection_policy,
+        load_deselection_policy_payload as _load_deselection_policy_payload,
+        parse_utc_timestamp as _parse_utc_timestamp,
+        pytest_stdout_deselected_count as _pytest_stdout_deselected_count,
+        structured_deselected_tests,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        FULL_SUITE_COMMAND,
+        FULL_SUITE_SCOPES,
+        FULL_SUITE_SHARD_PREFIX,
+        RELEASE_BUILDER_FULL_SCOPES,
+        REPORT_CONTRACT_SUMMARY_SUITE,
+        apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
+        pytest_args as _pytest_args,
+        pytest_collection_filter_args as _pytest_collection_filter_args,
+        pytest_collect_modifiers as _pytest_collect_modifiers,
+        pytest_deselected_nodeids as _pytest_deselected_nodeids,
+        pytest_selector_args as _pytest_selector_args,
+        suite_coverage as _suite_coverage,
+        suite_scope_for_key as _suite_scope_for_key,
+    )
+    from ops.scripts.test.test_execution_reuse_runtime import (
+        REUSE_MISMATCH_CODES,
+        REUSE_MISMATCH_COMMAND_IDENTITY,
+        REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
+        REUSE_MISMATCH_MISSING_SUMMARY,
+        REUSE_MISMATCH_SOURCE_TREE,
+        reuse_currentness_diagnostics_from_state,
     )
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
@@ -50,58 +91,109 @@ else:
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
-        TEST_DESELECTION_POLICY_SCHEMA_PATH,
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
-    )
-    from ops.scripts.schema_runtime import (
-        load_schema_with_vault_override,
-        validate_or_raise,
     )
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
+    from ops.scripts.test.test_execution_command_runtime import (
+        build_execution_environment,
+        classify_interpreter_path,
+        classify_status,
+        display_command as _display_command,
+        parse_pytest_counts,
+        semantic_command,
+        semantic_command_text as _semantic_command_text,
+        tail_text as _tail_text,
+        toolchain_fingerprint as _toolchain_fingerprint,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        evidence_artifact_consistency as _evidence_artifact_consistency,
+        failed_nodeids as _failed_nodeids,
+        junit_artifact_identity,
+        nodeid_outcome_consistency as _nodeid_outcome_consistency,
+        sha256_file as _sha256_file,
+        sha256_text as _sha256_text,
+        write_execution_log,
+        write_failed_nodeids_artifact,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
+        deselection_lifecycle as _deselection_lifecycle,
+        load_deselection_policy as _load_deselection_policy,
+        load_deselection_policy_payload as _load_deselection_policy_payload,
+        parse_utc_timestamp as _parse_utc_timestamp,
+        pytest_stdout_deselected_count as _pytest_stdout_deselected_count,
+        structured_deselected_tests,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        FULL_SUITE_COMMAND,
+        FULL_SUITE_SCOPES,
+        FULL_SUITE_SHARD_PREFIX,
+        RELEASE_BUILDER_FULL_SCOPES,
+        REPORT_CONTRACT_SUMMARY_SUITE,
+        apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
+        pytest_args as _pytest_args,
+        pytest_collection_filter_args as _pytest_collection_filter_args,
+        pytest_collect_modifiers as _pytest_collect_modifiers,
+        pytest_deselected_nodeids as _pytest_deselected_nodeids,
+        pytest_selector_args as _pytest_selector_args,
+        suite_coverage as _suite_coverage,
+        suite_scope_for_key as _suite_scope_for_key,
+    )
+    from ops.scripts.test.test_execution_reuse_runtime import (
+        REUSE_MISMATCH_CODES,
+        REUSE_MISMATCH_COMMAND_IDENTITY,
+        REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
+        REUSE_MISMATCH_MISSING_SUMMARY,
+        REUSE_MISMATCH_SOURCE_TREE,
+        reuse_currentness_diagnostics_from_state,
+    )
+
+
+_REUSE_COMPAT_EXPORTS = (
+    REUSE_MISMATCH_CODES,
+    REUSE_MISMATCH_COMMAND_IDENTITY,
+    REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
+    REUSE_MISMATCH_MISSING_SUMMARY,
+    REUSE_MISMATCH_SOURCE_TREE,
+    reuse_currentness_diagnostics_from_state,
+)
+_COMMAND_COMPAT_EXPORTS = (
+    classify_interpreter_path,
+    classify_status,
+    parse_pytest_counts,
+    semantic_command,
+)
+_SELECTION_COMPAT_EXPORTS = (
+    FULL_SUITE_COMMAND,
+    FULL_SUITE_SCOPES,
+    FULL_SUITE_SHARD_PREFIX,
+    RELEASE_BUILDER_FULL_SCOPES,
+    REPORT_CONTRACT_SUMMARY_SUITE,
+    _apply_toolchain_contract_to_coverage,
+    _pytest_args,
+    _pytest_collection_filter_args,
+    _pytest_collect_modifiers,
+    _pytest_deselected_nodeids,
+    _pytest_selector_args,
+    _suite_coverage,
+    _suite_scope_for_key,
+)
+_DESELECTION_COMPAT_EXPORTS = (
+    _deselection_lifecycle,
+    _load_deselection_policy,
+    _load_deselection_policy_payload,
+    _parse_utc_timestamp,
+    _pytest_stdout_deselected_count,
+    structured_deselected_tests,
+)
 
 
 DEFAULT_OUT = "ops/reports/test-execution-summary.json"
 PRODUCER = "ops.scripts.test_execution_summary"
 DEFAULT_TIMEOUT_SECONDS = 5400
-TAIL_LINE_COUNT = 80
 DEFAULT_SHARD_DIR = "ops/reports/test-execution-summary-shards"
 DEFAULT_FULL_SUITE_SHARD_DIR = "ops/reports/test-execution-summary-full-shards"
-REPORT_CONTRACT_SUMMARY_SUITE = "report-contract-summary"
-FULL_SUITE_COMMAND = "python -m pytest"
-RELEASE_BUILDER_ENVIRONMENT = ".venv clean release-builder"
-SUPPORTED_PYTHON_MAJOR_MINOR = ("3.11", "3.12", "3.13", "3.14")
-MINIMUM_PYTEST_MAJOR = 8
-FULL_SUITE_SCOPES = {"full", "full-suite", "pytest"}
-RELEASE_BUILDER_FULL_SCOPES = {"release-builder-full", "release_builder_full"}
-FULL_SUITE_SHARD_PREFIX = "full-shard-"
-PYTEST_COUNT_RE = re.compile(
-    r"(?P<count>\d+)\s+"
-    r"(?P<label>passed|failed|error|errors|skipped|xfailed|xpassed|warning|warnings)"
-)
-PYTEST_DESELECTED_RE = re.compile(r"(?P<count>\d+)\s+deselected")
-PYTEST_OPTION_VALUE_FLAGS = {
-    "-c",
-    "-k",
-    "-m",
-    "-n",
-    "-p",
-    "--basetemp",
-    "--cache-clear",
-    "--capture",
-    "--confcutdir",
-    "--deselect",
-    "--dist",
-    "--junit-xml",
-    "--log-cli-level",
-    "--maxfail",
-    "--override-ini",
-    "--rootdir",
-    "--tb",
-}
-PYTEST_COLLECTION_FILTER_FLAGS = {"-k", "-m", "--deselect"}
-PYTEST_PLUGIN_AUTOLOAD_ENV = "PYTEST_DISABLE_PLUGIN_AUTOLOAD"
 
 
 @dataclass(frozen=True)
@@ -146,330 +238,6 @@ class TestExecutionRenderInputs:
     observations: TestExecutionObservations
 
 
-def _is_relative_to(path: Path, parent: Path) -> bool:
-    try:
-        path.relative_to(parent)
-    except ValueError:
-        return False
-    return True
-
-
-def classify_interpreter_path(vault: Path, executable: str) -> str:
-    value = str(executable).strip()
-    if not value:
-        return "unknown"
-    if value in {"python", "python3", "py"}:
-        return "path_lookup"
-    path = Path(value)
-    if not path.is_absolute():
-        if ".venv" in path.parts:
-            return "repo_virtualenv"
-        resolved = (vault / path).resolve()
-        if _is_relative_to(resolved, vault.resolve()):
-            return "repo_relative"
-        return "relative_external"
-    resolved = path.resolve()
-    if _is_relative_to(resolved, vault.resolve()):
-        return "repo_virtualenv" if ".venv" in resolved.parts else "repo_absolute"
-    if ".venv" in resolved.parts or "venv" in resolved.parts:
-        return "external_virtualenv"
-    return "external_absolute"
-
-
-def semantic_command(command: list[str]) -> list[str]:
-    if not command:
-        return []
-    idx = 0
-    while idx < len(command):
-        token = command[idx]
-        if token == "-m" and idx + 1 < len(command):
-            return command[idx:]
-        if "pytest" in Path(token).name:
-            return command[idx:]
-        idx += 1
-    return command[1:] if len(command) > 1 else command
-
-
-def _pytest_version() -> str:
-    try:
-        return importlib.metadata.version("pytest")
-    except importlib.metadata.PackageNotFoundError:
-        return "unavailable"
-
-
-def _major_minor(version: str) -> str:
-    parts = version.split(".")
-    if len(parts) < 2:
-        return version
-    return f"{parts[0]}.{parts[1]}"
-
-
-def _major_version(value: str) -> int | None:
-    try:
-        return int(value.split(".", 1)[0])
-    except ValueError:
-        return None
-
-
-def _toolchain_contract(python_version: str, pytest_version: str) -> dict[str, Any]:
-    python_supported = _major_minor(python_version) in SUPPORTED_PYTHON_MAJOR_MINOR
-    pytest_major = _major_version(pytest_version)
-    pytest_supported = pytest_major is not None and pytest_major >= MINIMUM_PYTEST_MAJOR
-    status = "pass" if python_supported and pytest_supported else "unsupported"
-    reason_parts: list[str] = []
-    if not python_supported:
-        reason_parts.append(
-            f"python {_major_minor(python_version)} is outside supported set "
-            f"{', '.join(SUPPORTED_PYTHON_MAJOR_MINOR)}"
-        )
-    if not pytest_supported:
-        reason_parts.append(f"pytest {pytest_version} is below required major {MINIMUM_PYTEST_MAJOR}")
-    return {
-        "status": status,
-        "python_supported": python_supported,
-        "pytest_supported": pytest_supported,
-        "supported_python_major_minor": list(SUPPORTED_PYTHON_MAJOR_MINOR),
-        "minimum_pytest_major": MINIMUM_PYTEST_MAJOR,
-        "release_evidence_effect": "eligible" if status == "pass" else "blocked_unsupported_toolchain",
-        "reason": "; ".join(reason_parts) if reason_parts else "toolchain is eligible for release evidence",
-    }
-
-
-def build_execution_environment(vault: Path, command: list[str]) -> dict[str, Any]:
-    env_value = os.environ.get(PYTEST_PLUGIN_AUTOLOAD_ENV, "")
-    command_executable = str(command[0]) if command else ""
-    python_version = platform.python_version()
-    pytest_version = _pytest_version()
-    return {
-        "python_version": python_version,
-        "pytest_version": pytest_version,
-        "plugin_autoload_policy": {
-            "env_var": PYTEST_PLUGIN_AUTOLOAD_ENV,
-            "value": env_value,
-            "autoload_disabled": env_value == "1",
-            "policy": "disabled" if env_value == "1" else "not_set" if not env_value else "custom",
-        },
-        "interpreter_path_class": classify_interpreter_path(vault, command_executable),
-        "toolchain_contract": _toolchain_contract(python_version, pytest_version),
-    }
-
-
-def _tail_text(text: str, max_lines: int = TAIL_LINE_COUNT) -> str:
-    lines = text.splitlines()
-    if len(lines) <= max_lines:
-        return text
-    return "\n".join(lines[-max_lines:])
-
-
-def _display_command(vault: Path, command: list[str]) -> str:
-    return shlex.join([sanitize_report_text(vault, item) for item in command])
-
-
-def _semantic_command_text(vault: Path, command: list[str]) -> str:
-    return shlex.join([sanitize_report_text(vault, item) for item in semantic_command(command)])
-
-
-def _toolchain_fingerprint(execution_environment: dict[str, Any]) -> str:
-    python_version = str(execution_environment.get("python_version", "")).strip()
-    pytest_version = str(execution_environment.get("pytest_version", "")).strip()
-    plugin_policy = execution_environment.get("plugin_autoload_policy", {})
-    autoload_disabled = bool(plugin_policy.get("autoload_disabled"))
-    raw = f"python={python_version}|pytest={pytest_version}|plugin_autoload_disabled={autoload_disabled}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
-
-
-def parse_pytest_counts(*streams: str) -> dict[str, int]:
-    counts = {
-        "passed": 0,
-        "failed": 0,
-        "errors": 0,
-        "skipped": 0,
-        "xfailed": 0,
-        "xpassed": 0,
-        "warnings": 0,
-    }
-    text = "\n".join(streams)
-    for match in PYTEST_COUNT_RE.finditer(text):
-        label = match.group("label")
-        normalized = {
-            "error": "errors",
-            "warning": "warnings",
-        }.get(label, label)
-        counts[normalized] = max(counts[normalized], int(match.group("count")))
-    return counts
-
-
-def classify_status(result: TimedProcessResult, counts: dict[str, int]) -> str:
-    if result.timed_out:
-        return "timeout"
-    if result.returncode in {130, -2}:
-        return "interrupted"
-    if result.returncode == 0:
-        return "pass"
-    if counts["passed"] > 0 and (counts["failed"] > 0 or counts["errors"] > 0):
-        return "partial-pass"
-    return "fail"
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def _pytest_args(command: list[str]) -> list[str]:
-    for index, item in enumerate(command):
-        value = str(item)
-        name = Path(value).name
-        if value == "pytest" or name.startswith("pytest"):
-            return [str(arg) for arg in command[index + 1 :]]
-        if value == "-m" and index + 1 < len(command) and str(command[index + 1]) == "pytest":
-            return [str(arg) for arg in command[index + 2 :]]
-    return []
-
-
-def _pytest_selector_args(command: list[str]) -> list[str]:
-    selectors: list[str] = []
-    args = _pytest_args(command)
-    skip_next = False
-    for arg in args:
-        if skip_next:
-            skip_next = False
-            continue
-        if arg == "--":
-            continue
-        if arg in PYTEST_OPTION_VALUE_FLAGS:
-            skip_next = True
-            continue
-        if any(arg.startswith(f"{flag}=") for flag in PYTEST_OPTION_VALUE_FLAGS if flag.startswith("--")):
-            continue
-        if arg.startswith("-"):
-            continue
-        selectors.append(arg)
-    return selectors
-
-
-def _pytest_collection_filter_args(command: list[str]) -> list[str]:
-    filters: list[str] = []
-    args = _pytest_args(command)
-    skip_next = False
-    for arg in args:
-        if skip_next:
-            skip_next = False
-            continue
-        if arg in PYTEST_COLLECTION_FILTER_FLAGS:
-            filters.append(arg)
-            skip_next = True
-            continue
-        for flag in PYTEST_COLLECTION_FILTER_FLAGS:
-            if flag.startswith("--") and arg.startswith(f"{flag}="):
-                filters.append(flag)
-                break
-    return filters
-
-
-def _suite_coverage(
-    *,
-    suite: str,
-    command: list[str],
-    summary_mode: str = "single",
-    shards: list[dict[str, Any]] | None = None,
-) -> dict[str, Any]:
-    selectors = _pytest_selector_args(command)
-    collection_filters = _pytest_collection_filter_args(command)
-    collection_limited = bool(selectors or collection_filters)
-    suite_key = suite.strip().lower().replace("_", "-")
-    if suite_key == REPORT_CONTRACT_SUMMARY_SUITE:
-        suite_scope = "report_contract_summary"
-        represents_full_suite = False
-        not_full_suite_reason = (
-            "report-contract-summary is a targeted report-contract subset; use full release-builder evidence "
-            "before treating this as full-suite proof."
-        )
-    elif summary_mode == "aggregate":
-        shard_values = [
-            bool(shard.get("represents_full_suite"))
-            for shard in shards or []
-            if isinstance(shard, dict)
-        ]
-        represents_full_suite = bool(shard_values) and all(shard_values)
-        suite_scope = "full_suite" if represents_full_suite else _suite_scope_for_key(suite_key)
-        not_full_suite_reason = (
-            ""
-            if represents_full_suite
-            else "aggregate summary does not represent the full suite unless every shard does"
-        )
-    elif collection_limited:
-        suite_scope = _suite_scope_for_key(suite_key)
-        represents_full_suite = False
-        not_full_suite_reason = "pytest selectors limit this execution to a targeted suite subset"
-    else:
-        suite_scope = _suite_scope_for_key(suite_key)
-        represents_full_suite = suite_scope in {"full_suite", "release_builder_full"}
-        not_full_suite_reason = "" if represents_full_suite else f"{suite_scope} is not full-suite evidence"
-
-    return {
-        "suite_scope": suite_scope,
-        "represents_full_suite": represents_full_suite,
-        "not_full_suite_reason": not_full_suite_reason,
-        "full_suite_evidence": {
-            "status": "represented" if represents_full_suite else "not_represented",
-            "required_command": FULL_SUITE_COMMAND,
-            "release_builder_environment": RELEASE_BUILDER_ENVIRONMENT,
-            "reason": (
-                "this execution has no pytest selectors and is treated as full-suite evidence"
-                if represents_full_suite
-                else not_full_suite_reason
-            ),
-        },
-    }
-
-
-def _apply_toolchain_contract_to_coverage(
-    coverage: dict[str, Any],
-    execution_environment: dict[str, Any],
-) -> dict[str, Any]:
-    toolchain = execution_environment.get("toolchain_contract", {})
-    if not isinstance(toolchain, dict) or toolchain.get("status") == "pass":
-        return coverage
-    adjusted = dict(coverage)
-    full_suite_evidence = dict(adjusted.get("full_suite_evidence", {}))
-    reason = (
-        "unsupported toolchain blocks full-suite evidence promotion: "
-        f"{toolchain.get('reason', 'unknown toolchain contract failure')}"
-    )
-    adjusted["represents_full_suite"] = False
-    adjusted["not_full_suite_reason"] = reason
-    full_suite_evidence["status"] = "not_represented"
-    full_suite_evidence["reason"] = reason
-    adjusted["full_suite_evidence"] = full_suite_evidence
-    return adjusted
-
-
-def _suite_scope_for_key(suite_key: str) -> str:
-    if suite_key in FULL_SUITE_SCOPES:
-        return "full_suite"
-    if suite_key.startswith(FULL_SUITE_SHARD_PREFIX):
-        return "full_suite"
-    if suite_key in RELEASE_BUILDER_FULL_SCOPES:
-        return "release_builder_full"
-    if suite_key in {"fast", "unit", "unit-tests", "test-fast"}:
-        return "fast_unit"
-    if suite_key in {"public", "public-contract", "test-public", "public-check"}:
-        return "public_contract"
-    if suite_key in {"release-sealing", "release_sealing"}:
-        return "release_sealing"
-    if suite_key in {"subprocess", "subprocess-integration"}:
-        return "subprocess_integration"
-    return "fast_unit"
-
-
 def _pytest_file_candidates(path: Path) -> list[Path]:
     if path.is_file():
         return [path]
@@ -495,233 +263,6 @@ def resolve_pytest_target_paths(vault: Path, command: list[str]) -> list[str]:
                 seen.add(rel_path)
                 target_paths.append(rel_path)
     return sorted(target_paths)
-
-
-def _pytest_collect_modifiers(command: list[str]) -> list[str]:
-    modifiers: list[str] = []
-    args = _pytest_args(command)
-    skip_next = False
-    for index, arg in enumerate(args):
-        if skip_next:
-            skip_next = False
-            continue
-        if arg.startswith("--deselect="):
-            modifiers.append(arg)
-            continue
-        if arg == "--deselect" and index + 1 < len(args):
-            modifiers.extend([arg, args[index + 1]])
-            skip_next = True
-            continue
-        if arg in {"-m", "-k"} and index + 1 < len(args):
-            modifiers.extend([arg, args[index + 1]])
-            skip_next = True
-            continue
-        if arg.startswith(("--deselect=", "-m=", "-k=")):
-            modifiers.append(arg)
-            continue
-    return modifiers
-
-
-def _pytest_deselected_nodeids(command: list[str]) -> list[str]:
-    nodeids: list[str] = []
-    args = _pytest_args(command)
-    skip_next = False
-    for index, arg in enumerate(args):
-        if skip_next:
-            skip_next = False
-            continue
-        if arg.startswith("--deselect="):
-            nodeids.append(arg.split("=", 1)[1])
-            continue
-        if arg == "--deselect" and index + 1 < len(args):
-            nodeids.append(args[index + 1])
-            skip_next = True
-    return [nodeid for nodeid in nodeids if nodeid]
-
-
-def _load_deselection_policy_payload(vault: Path, policy_path: str | None) -> dict[str, Any]:
-    if not policy_path:
-        return {}
-    resolved = Path(policy_path)
-    if not resolved.is_absolute():
-        resolved = vault / resolved
-    payload = json.loads(resolved.read_text(encoding="utf-8"))
-    schema = load_schema_with_vault_override(vault, TEST_DESELECTION_POLICY_SCHEMA_PATH)
-    validate_or_raise(
-        payload,
-        schema,
-        context=f"test deselection policy validation failed for {report_path(vault, resolved)}",
-    )
-    return payload
-
-
-def _load_deselection_policy(vault: Path, policy_path: str | None) -> dict[str, dict[str, Any]]:
-    payload = _load_deselection_policy_payload(vault, policy_path)
-    if not payload:
-        return {}
-    return {str(item["nodeid"]): item for item in payload["deselected_tests"]}
-
-
-def _parse_utc_timestamp(value: str, *, context: str) -> dt.datetime:
-    text = str(value).strip()
-    if not text:
-        raise ValueError(f"{context} is missing a timestamp")
-    try:
-        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise ValueError(f"{context} has an invalid timestamp: {text!r}") from exc
-    if parsed.tzinfo is None:
-        raise ValueError(f"{context} must include timezone information: {text!r}")
-    return parsed.astimezone(dt.UTC)
-
-
-def _deselection_lifecycle(
-    deselected_tests: list[dict[str, Any]],
-    *,
-    generated_at: str,
-    policy_payload: dict[str, Any] | None,
-) -> dict[str, Any]:
-    policy_payload = policy_payload or {}
-    budget = policy_payload.get("deselection_budget")
-    budget = budget if isinstance(budget, dict) else {}
-    checked_at = _parse_utc_timestamp(generated_at, context="test deselection lifecycle generated_at")
-    policy_entries = policy_payload.get("deselected_tests", [])
-    policy_entries = policy_entries if isinstance(policy_entries, list) else []
-    policy_nodeids = [str(item.get("nodeid", "")) for item in policy_entries if isinstance(item, dict)]
-    actual_nodeids = [str(item.get("nodeid", "")) for item in deselected_tests if isinstance(item, dict)]
-    duplicate_count = len(policy_nodeids) - len(set(policy_nodeids))
-    max_count = int(budget.get("max_count", len(policy_nodeids) or len(actual_nodeids)) or 0)
-    release_blocking_count = sum(1 for item in deselected_tests if bool(item.get("release_blocking")))
-
-    blockers: list[dict[str, str]] = []
-    expired_count = 0
-    missing_lifecycle_count = 0
-    for item in deselected_tests:
-        nodeid = str(item.get("nodeid", ""))
-        owner = str(item.get("risk_owner", "")).strip()
-        expires_at = str(item.get("expires_at", "")).strip()
-        if not owner or not expires_at:
-            missing_lifecycle_count += 1
-            blockers.append(
-                {
-                    "code": "missing_deselection_lifecycle",
-                    "nodeid": nodeid,
-                    "message": "Deselected test is missing risk_owner or expires_at.",
-                }
-            )
-            continue
-        if _parse_utc_timestamp(expires_at, context=f"{nodeid}:expires_at") <= checked_at:
-            expired_count += 1
-            blockers.append(
-                {
-                    "code": "expired_deselection",
-                    "nodeid": nodeid,
-                    "message": f"Deselection expired at {expires_at}.",
-                }
-            )
-        if bool(item.get("release_blocking")):
-            blockers.append(
-                {
-                    "code": "release_blocking_deselection",
-                    "nodeid": nodeid,
-                    "message": "Deselected test is marked release blocking.",
-                }
-            )
-
-    budget_expires_at = str(budget.get("expires_at", "")).strip()
-    if budget_expires_at and _parse_utc_timestamp(
-        budget_expires_at,
-        context="deselection_budget.expires_at",
-    ) <= checked_at:
-        blockers.append(
-            {
-                "code": "expired_deselection_budget",
-                "nodeid": "",
-                "message": f"Deselection budget expired at {budget_expires_at}.",
-            }
-        )
-    if len(actual_nodeids) > max_count:
-        blockers.append(
-            {
-                "code": "deselection_budget_exceeded",
-                "nodeid": "",
-                "message": f"Deselected test count {len(actual_nodeids)} exceeds max_count {max_count}.",
-            }
-        )
-    if duplicate_count:
-        blockers.append(
-            {
-                "code": "duplicate_deselection_policy_entry",
-                "nodeid": "",
-                "message": f"Deselection policy contains {duplicate_count} duplicate nodeid entries.",
-            }
-        )
-    if actual_nodeids and not policy_payload:
-        blockers.append(
-            {
-                "code": "missing_deselection_policy",
-                "nodeid": "",
-                "message": "Pytest command deselects tests without a structured deselection policy.",
-            }
-        )
-
-    return {
-        "status": "fail" if blockers else "pass",
-        "checked_at": generated_at,
-        "actual_deselected_count": len(actual_nodeids),
-        "max_allowed_deselected_count": max_count,
-        "over_budget": len(actual_nodeids) > max_count,
-        "expired_count": expired_count,
-        "release_blocking_count": release_blocking_count,
-        "missing_lifecycle_count": missing_lifecycle_count,
-        "duplicate_policy_entry_count": duplicate_count,
-        "unused_policy_entry_count": len(set(policy_nodeids) - set(actual_nodeids)),
-        "risk_owner": str(budget.get("risk_owner", "")).strip(),
-        "expires_at": budget_expires_at,
-        "count_increase_gate_effect": str(budget.get("count_increase_gate_effect", "")).strip(),
-        "expiry_gate_effect": str(budget.get("expiry_gate_effect", "")).strip(),
-        "next_action": "none" if not blockers else "refresh tests or renew/remove deselection policy entries",
-        "blockers": blockers,
-    }
-
-
-def structured_deselected_tests(
-    command: list[str],
-    *,
-    vault: Path,
-    deselection_policy_path: str | None = None,
-) -> list[dict[str, Any]]:
-    policy = _load_deselection_policy(vault, deselection_policy_path)
-    entries: list[dict[str, Any]] = []
-    for nodeid in _pytest_deselected_nodeids(command):
-        if nodeid in policy:
-            item = policy[nodeid]
-            entries.append(
-                {
-                    "nodeid": nodeid,
-                    "reason": str(item["reason"]),
-                    "policy_ref": str(item["policy_ref"]),
-                    "risk_owner": str(item["risk_owner"]),
-                    "expires_at": str(item["expires_at"]),
-                    "release_blocking": bool(item["release_blocking"]),
-                    "expected_to_pass_after_refresh": bool(item["expected_to_pass_after_refresh"]),
-                }
-            )
-            continue
-        if deselection_policy_path:
-            raise ValueError(f"{nodeid}: missing structured test deselection policy entry")
-        entries.append(
-            {
-                "nodeid": nodeid,
-                "reason": "pytest command deselected this test without a structured policy entry",
-                "policy_ref": "",
-                "risk_owner": "",
-                "expires_at": "",
-                "release_blocking": True,
-                "expected_to_pass_after_refresh": False,
-            }
-        )
-    return entries
 
 
 def build_test_target_fingerprints(vault: Path, target_paths: list[str]) -> list[dict[str, str]]:
@@ -756,11 +297,20 @@ def collect_pytest_nodeid_digest(
         "addopts=",
         "--collect-only",
         "-q",
+        "-p",
+        "no:cacheprovider",
         "--capture=no",
         *selectors,
         *_pytest_collect_modifiers(command),
     ]
-    result = run_with_timeout(collect_command, cwd=vault, timeout_seconds=timeout_seconds)
+    collect_env = dict(os.environ)
+    collect_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    result = run_with_timeout(
+        collect_command,
+        cwd=vault,
+        timeout_seconds=timeout_seconds,
+        env=collect_env,
+    )
     command_text = _display_command(vault, collect_command)
     if result.returncode != 0 or result.timed_out:
         return {
@@ -780,315 +330,6 @@ def collect_pytest_nodeid_digest(
         "nodeid_count": len(nodeids),
         "sha256": _sha256_text(digest_input),
         "reason": "",
-    }
-
-
-def _nodeid_outcome_consistency(
-    counts: dict[str, int],
-    collect_nodeid_digest: dict[str, Any],
-) -> dict[str, Any]:
-    counted_outcomes = {
-        "passed": int(counts.get("passed", 0) or 0),
-        "skipped": int(counts.get("skipped", 0) or 0),
-        "xfailed": int(counts.get("xfailed", 0) or 0),
-        "xpassed": int(counts.get("xpassed", 0) or 0),
-    }
-    nodeid_count = int(collect_nodeid_digest.get("nodeid_count", 0) or 0)
-    outcome_count = sum(counted_outcomes.values())
-    if collect_nodeid_digest.get("status") != "collected":
-        status = "skipped"
-        reason = str(collect_nodeid_digest.get("reason", "")) or "pytest nodeids were not collected"
-    elif int(counts.get("failed", 0) or 0) or int(counts.get("errors", 0) or 0):
-        status = "skipped"
-        reason = "failed/error outcomes are excluded from the release non-failing nodeid consistency gate"
-    elif nodeid_count == outcome_count:
-        status = "pass"
-        reason = "collected nodeid count matches passed + skipped + xfailed/xpassed outcomes"
-    else:
-        status = "fail"
-        reason = "collected nodeid count does not match passed + skipped + xfailed/xpassed outcomes"
-    return {
-        "status": status,
-        "nodeid_count": nodeid_count,
-        "outcome_count": outcome_count,
-        "counted_outcomes": counted_outcomes,
-        "delta": nodeid_count - outcome_count,
-        "reason": reason,
-    }
-
-
-def _artifact_identity(vault: Path, path_value: str | Path, *, kind: str, source: str) -> dict[str, Any]:
-    path = Path(path_value)
-    if not path.is_absolute():
-        path = vault / path
-    exists = path.is_file()
-    return {
-        "kind": kind,
-        "path": report_path(vault, path),
-        "exists": exists,
-        "size_bytes": path.stat().st_size if exists else 0,
-        "sha256": _sha256_file(path) if exists else "",
-        "source": source,
-    }
-
-
-def _pytest_outcome_total(counts: dict[str, int]) -> int:
-    return sum(
-        int(counts.get(label, 0) or 0)
-        for label in ("passed", "failed", "errors", "skipped", "xfailed", "xpassed")
-    )
-
-
-def _count_consistency(
-    *,
-    expected_count: int,
-    observed_count: int | None,
-    subject: str,
-) -> dict[str, Any]:
-    if observed_count is None:
-        return {
-            "consistency_status": "attention",
-            "observed_count": 0,
-            "expected_count": expected_count,
-            "consistency_reason": f"{subject} count could not be read",
-        }
-    if observed_count == expected_count:
-        return {
-            "consistency_status": "pass",
-            "observed_count": observed_count,
-            "expected_count": expected_count,
-            "consistency_reason": f"{subject} count matches pytest summary",
-        }
-    return {
-        "consistency_status": "attention",
-        "observed_count": observed_count,
-        "expected_count": expected_count,
-        "consistency_reason": f"{subject} count does not match pytest summary",
-    }
-
-
-def _failed_nodeids(stdout: str) -> list[str]:
-    failed: set[str] = set()
-    for line in stdout.splitlines():
-        stripped = line.strip()
-        for prefix in ("FAILED ", "ERROR "):
-            if not stripped.startswith(prefix):
-                continue
-            nodeid = stripped.removeprefix(prefix).split(" - ", 1)[0].strip()
-            if nodeid:
-                failed.add(nodeid)
-            break
-    return sorted(failed)
-
-
-def _execution_log_text(result: TimedProcessResult) -> str:
-    return "\n".join(["## stdout", result.stdout, "## stderr", result.stderr])
-
-
-def write_execution_log(vault: Path, out_path: str | Path, result: TimedProcessResult) -> dict[str, Any]:
-    path = Path(out_path)
-    if not path.is_absolute():
-        path = vault / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_execution_log_text(result), encoding="utf-8")
-    return _artifact_identity(vault, path, kind="execution_log", source="captured_pytest_stdout_stderr")
-
-
-def junit_artifact_identity(
-    vault: Path,
-    path_value: str | Path,
-    *,
-    counts: dict[str, int],
-) -> dict[str, Any]:
-    path = Path(path_value)
-    if not path.is_absolute():
-        path = vault / path
-    artifact = _artifact_identity(vault, path, kind="junit_xml", source="pytest_junit_xml")
-    if not artifact["exists"]:
-        artifact.update(
-            {
-                "consistency_status": "skipped",
-                "observed_count": 0,
-                "expected_count": _pytest_outcome_total(counts),
-                "consistency_reason": "junit_xml artifact was not written",
-            }
-        )
-        return artifact
-    artifact.update(
-        _count_consistency(
-            expected_count=_pytest_outcome_total(counts),
-            observed_count=_junit_testcase_count(path),
-            subject="junit testcase",
-        )
-    )
-    return artifact
-
-
-def write_failed_nodeids_artifact(
-    vault: Path,
-    out_path: str | Path,
-    *,
-    failed_nodeids: list[str],
-    expected_count: int | None = None,
-) -> dict[str, Any]:
-    path = Path(out_path)
-    if not path.is_absolute():
-        path = vault / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = "\n".join(failed_nodeids)
-    if payload:
-        payload = f"{payload}\n"
-    path.write_text(payload, encoding="utf-8")
-    artifact = _artifact_identity(vault, path, kind="failed_nodeids", source="pytest_failed_and_error_nodeids")
-    if expected_count is not None:
-        artifact.update(
-            _count_consistency(
-                expected_count=expected_count,
-                observed_count=len(failed_nodeids),
-                subject="failed/error nodeid artifact",
-            )
-        )
-    return artifact
-
-
-def _artifact_path(vault: Path, artifact: dict[str, Any]) -> Path:
-    path = Path(str(artifact.get("path", "")))
-    if not path.is_absolute():
-        path = vault / path
-    return path
-
-
-def _non_empty_line_count(path: Path) -> int:
-    return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
-
-
-def _xml_local_name(tag: str) -> str:
-    return tag.rsplit("}", 1)[-1]
-
-
-def _junit_testcase_count(path: Path) -> int | None:
-    try:
-        root = ET.parse(path).getroot()
-    except (ET.ParseError, OSError):
-        return None
-
-    suite_counts: list[int] = []
-    for element in root.iter():
-        if _xml_local_name(str(element.tag)) != "testsuite":
-            continue
-        value = element.attrib.get("tests")
-        if value is None:
-            continue
-        try:
-            suite_counts.append(int(value))
-        except ValueError:
-            return None
-    if suite_counts:
-        return sum(suite_counts)
-    return sum(1 for element in root.iter() if _xml_local_name(str(element.tag)) == "testcase")
-
-
-def _counted_outcome_total(counts: dict[str, int]) -> int:
-    return sum(
-        int(counts.get(key, 0) or 0)
-        for key in ("passed", "failed", "errors", "skipped", "xfailed", "xpassed")
-    )
-
-
-def _evidence_artifact_consistency(
-    vault: Path,
-    *,
-    counts: dict[str, int],
-    evidence_artifacts: list[dict[str, Any]],
-) -> dict[str, Any]:
-    checks: list[dict[str, Any]] = []
-    blockers: list[dict[str, Any]] = []
-    expected_failed_nodeids = int(counts.get("failed", 0) or 0) + int(counts.get("errors", 0) or 0)
-    expected_junit_tests = _counted_outcome_total(counts)
-
-    for artifact in evidence_artifacts:
-        kind = str(artifact.get("kind", ""))
-        if kind not in {"failed_nodeids", "junit_xml"}:
-            continue
-        path = _artifact_path(vault, artifact)
-        rel_path = report_path(vault, path)
-        if not path.is_file():
-            check = {
-                "kind": kind,
-                "path": rel_path,
-                "status": "fail",
-                "expected_count": 0,
-                "observed_count": 0,
-            }
-            checks.append(check)
-            blockers.append(
-                {
-                    "code": "evidence_artifact_missing",
-                    "path": rel_path,
-                    "expected_count": 1,
-                    "observed_count": 0,
-                    "message": f"{kind} evidence artifact is referenced but missing.",
-                }
-            )
-            continue
-
-        if kind == "failed_nodeids":
-            observed = _non_empty_line_count(path)
-            expected = expected_failed_nodeids
-            code = "failed_nodeids_count_mismatch"
-            message = "failed-nodeids artifact line count does not match failed + error pytest outcomes."
-        else:
-            observed_count = _junit_testcase_count(path)
-            if observed_count is None:
-                check = {
-                    "kind": kind,
-                    "path": rel_path,
-                    "status": "fail",
-                    "expected_count": expected_junit_tests,
-                    "observed_count": 0,
-                }
-                checks.append(check)
-                blockers.append(
-                    {
-                        "code": "junit_xml_unreadable",
-                        "path": rel_path,
-                        "expected_count": expected_junit_tests,
-                        "observed_count": 0,
-                        "message": "JUnit XML evidence artifact could not be parsed.",
-                    }
-                )
-                continue
-            observed = observed_count
-            expected = expected_junit_tests
-            code = "junit_testcase_count_mismatch"
-            message = "JUnit testcase count does not match counted pytest outcomes."
-
-        status = "pass" if observed == expected else "fail"
-        checks.append(
-            {
-                "kind": kind,
-                "path": rel_path,
-                "status": status,
-                "expected_count": expected,
-                "observed_count": observed,
-            }
-        )
-        if status != "pass":
-            blockers.append(
-                {
-                    "code": code,
-                    "path": rel_path,
-                    "expected_count": expected,
-                    "observed_count": observed,
-                    "message": message,
-                }
-            )
-
-    return {
-        "status": "fail" if blockers else "pass" if checks else "skipped",
-        "checked_artifact_count": len(checks),
-        "checks": checks,
-        "blockers": blockers,
     }
 
 
@@ -1161,13 +402,6 @@ def _default_collect_nodeid_digest() -> dict[str, Any]:
         "sha256": "",
         "reason": "collect-nodeids was not requested",
     }
-
-
-def _pytest_stdout_deselected_count(stdout: str) -> int:
-    total = 0
-    for match in PYTEST_DESELECTED_RE.finditer(stdout):
-        total = max(total, int(match.group("count")))
-    return total
 
 
 def _test_execution_observations(
@@ -1424,53 +658,7 @@ def _build_release_contract_diagnosis(
     return diagnosis
 
 
-def _test_target_fingerprints_match(left: object, right: object) -> bool:
-    if not isinstance(left, list) or not isinstance(right, list):
-        return False
-    left_items = sorted(
-        (str(item.get("path", "")), str(item.get("sha256", "")))
-        for item in left
-        if isinstance(item, dict)
-    )
-    right_items = sorted(
-        (str(item.get("path", "")), str(item.get("sha256", "")))
-        for item in right
-        if isinstance(item, dict)
-    )
-    return left_items == right_items
-
-
-def _deselected_tests_match(left: object, right: object) -> bool:
-    if not isinstance(left, list) or not isinstance(right, list):
-        return False
-    return json.dumps(left, sort_keys=True, separators=(",", ":")) == json.dumps(
-        right,
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-
-
-def _collect_nodeid_digest_matches(
-    existing: dict[str, Any],
-    current: dict[str, Any] | None,
-    *,
-    collect_nodeids: bool,
-) -> bool:
-    if not collect_nodeids:
-        return True
-    if current is None or current.get("status") != "collected":
-        return False
-    existing_digest = existing.get("pytest_collect_nodeid_digest")
-    if not isinstance(existing_digest, dict):
-        return False
-    return (
-        existing_digest.get("status") == "collected"
-        and existing_digest.get("nodeid_count") == current.get("nodeid_count")
-        and existing_digest.get("sha256") == current.get("sha256")
-    )
-
-
-def reusable_summary_is_current(
+def reuse_currentness_diagnostics(
     existing: dict[str, Any],
     *,
     vault: Path,
@@ -1479,7 +667,7 @@ def reusable_summary_is_current(
     collect_nodeids: bool,
     collect_nodeid_digest: dict[str, Any] | None,
     deselection_policy_path: str | None = None,
-) -> bool:
+) -> dict[str, Any]:
     target_paths = resolve_pytest_target_paths(vault, command)
     current_target_fingerprints = build_test_target_fingerprints(vault, target_paths)
     current_deselected_tests = structured_deselected_tests(
@@ -1494,43 +682,79 @@ def reusable_summary_is_current(
         generated_at=generated_at,
         policy_payload=_load_deselection_policy_payload(vault, deselection_policy_path),
     )
-    existing_lifecycle = existing.get("deselection_lifecycle")
-    if not isinstance(existing_lifecycle, dict):
-        existing_lifecycle = {}
-    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     current_execution_environment = build_execution_environment(vault, command)
-    current_toolchain_fingerprint = _toolchain_fingerprint(current_execution_environment)
-    existing_execution_environment = existing.get("execution_environment")
-    if not isinstance(existing_execution_environment, dict):
-        existing_execution_environment = {}
-    existing_toolchain_fingerprint = _toolchain_fingerprint(existing_execution_environment)
-    existing_semantic_command = str(existing.get("semantic_command") or "").strip()
-    if not existing_semantic_command:
-        existing_semantic_command = str(existing.get("command") or "").strip()
-    current_semantic_command = _semantic_command_text(vault, command)
-    return (
-        existing.get("artifact_kind") == "test_execution_summary"
-        and existing.get("status") == "pass"
-        and existing.get("source_tree_fingerprint") == current_source_tree_fingerprint
-        and existing_lifecycle.get("status") == "pass"
-        and current_lifecycle.get("status") == "pass"
-        and existing.get("suite") == suite
-        and existing_semantic_command == current_semantic_command
-        and existing_toolchain_fingerprint == current_toolchain_fingerprint
-        and _test_target_fingerprints_match(
-            existing.get("test_target_fingerprints"),
-            current_target_fingerprints,
-        )
-        and _deselected_tests_match(existing.get("deselected_tests"), current_deselected_tests)
-        and _collect_nodeid_digest_matches(
+    return reuse_currentness_diagnostics_from_state(
+        existing,
+        suite=suite,
+        current_source_tree_fingerprint=release_source_tree_fingerprint(vault),
+        current_semantic_command=_semantic_command_text(vault, command),
+        current_toolchain_fingerprint=_toolchain_fingerprint(current_execution_environment),
+        current_display_command=_display_command(vault, command),
+        current_target_fingerprints=current_target_fingerprints,
+        current_deselected_tests=current_deselected_tests,
+        current_deselection_lifecycle=current_lifecycle,
+        collect_nodeids=collect_nodeids,
+        collect_nodeid_digest=collect_nodeid_digest,
+    )
+
+
+def reusable_summary_diagnostics_for_path(
+    vault: Path,
+    path_value: str | Path,
+    *,
+    command: list[str],
+    suite: str,
+    collect_nodeids: bool,
+    collect_nodeid_digest: dict[str, Any] | None,
+    deselection_policy_path: str | None = None,
+) -> dict[str, Any]:
+    path = Path(path_value)
+    try:
+        existing = _load_summary(vault, path)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return {
+            "reusable": False,
+            "path": report_path(vault, path if path.is_absolute() else vault / path),
+            "reason": REUSE_MISMATCH_MISSING_SUMMARY,
+            "load_error": type(exc).__name__,
+            "current_source_tree_fingerprint": release_source_tree_fingerprint(vault),
+            "observed_source_tree_fingerprint": "",
+            "executable_path_differs_only": False,
+            "checks": {"artifact_kind": False, "status": False},
+        }
+    diagnostics = reuse_currentness_diagnostics(
+        existing,
+        vault=vault,
+        command=command,
+        suite=suite,
+        collect_nodeids=collect_nodeids,
+        collect_nodeid_digest=collect_nodeid_digest,
+        deselection_policy_path=deselection_policy_path,
+    )
+    diagnostics["path"] = report_path(vault, path if path.is_absolute() else vault / path)
+    return diagnostics
+
+
+def reusable_summary_is_current(
+    existing: dict[str, Any],
+    *,
+    vault: Path,
+    command: list[str],
+    suite: str,
+    collect_nodeids: bool,
+    collect_nodeid_digest: dict[str, Any] | None,
+    deselection_policy_path: str | None = None,
+) -> bool:
+    return bool(
+        reuse_currentness_diagnostics(
             existing,
-            collect_nodeid_digest,
+            vault=vault,
+            command=command,
+            suite=suite,
             collect_nodeids=collect_nodeids,
-        )
-        and (
-            not collect_nodeids
-            or existing.get("nodeid_outcome_consistency", {}).get("status") == "pass"
-        )
+            collect_nodeid_digest=collect_nodeid_digest,
+            deselection_policy_path=deselection_policy_path,
+        )["reusable"]
     )
 
 
@@ -1591,13 +815,9 @@ def build_reused_report(
 
 
 def _load_summary(vault: Path, path_value: str | Path) -> dict[str, Any]:
-    path = Path(path_value)
-    if not path.is_absolute():
-        path = vault / path
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    schema = load_schema_with_vault_override(vault, TEST_EXECUTION_SUMMARY_SCHEMA_PATH)
-    validate_or_raise(payload, schema, context=f"test execution summary shard validation failed for {report_path(vault, path)}")
-    return payload
+    from ops.scripts.test.test_execution_aggregate_runtime import load_test_execution_summary
+
+    return load_test_execution_summary(vault, path_value)
 
 
 def reusable_aggregate_summary_diagnostics(
@@ -1606,240 +826,17 @@ def reusable_aggregate_summary_diagnostics(
     *,
     suite: str,
 ) -> dict[str, Any]:
-    path = Path(path_value)
-    if not path.is_absolute():
-        path = vault / path
-    diagnostics: dict[str, Any] = {
-        "reusable": False,
-        "path": report_path(vault, path),
-        "reason": "",
-    }
-    try:
-        existing = _load_summary(vault, path)
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
-        diagnostics["reason"] = f"summary_unavailable:{type(exc).__name__}"
-        return diagnostics
-
-    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
-    checks = {
-        "artifact_kind": existing.get("artifact_kind") == "test_execution_summary",
-        "status": existing.get("status") == "pass",
-        "suite": existing.get("suite") == suite,
-        "summary_mode": existing.get("summary_mode") in {"aggregate", "reused"},
-        "source_tree_fingerprint": existing.get("source_tree_fingerprint") == current_source_tree_fingerprint,
-        "full_suite_evidence": (
-            suite.strip().lower().replace("_", "-") not in FULL_SUITE_SCOPES
-            or bool(existing.get("represents_full_suite"))
-        ),
-    }
-    failed = [name for name, passed in checks.items() if not passed]
-    if failed:
-        diagnostics["reason"] = f"not_current:{','.join(failed)}"
-        diagnostics["checks"] = checks
-        diagnostics["current_source_tree_fingerprint"] = current_source_tree_fingerprint
-        diagnostics["observed_source_tree_fingerprint"] = str(existing.get("source_tree_fingerprint", ""))
-        return diagnostics
-    diagnostics.update(
-        {
-            "reusable": True,
-            "reason": "current_passing_aggregate_summary",
-            "generated_at": str(existing.get("generated_at", "")),
-            "source_tree_fingerprint": str(existing.get("source_tree_fingerprint", "")),
-        }
+    from ops.scripts.test.test_execution_aggregate_runtime import (
+        reusable_aggregate_summary_diagnostics as _diagnostics,
     )
-    return diagnostics
 
-
-def _aggregate_status(statuses: list[str]) -> str:
-    if any(status in {"fail", "timeout", "interrupted"} for status in statuses):
-        return "fail"
-    if any(status == "partial-pass" for status in statuses):
-        return "partial-pass"
-    return "pass"
-
-
-def _aggregate_counts(shards: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {
-        "passed": 0,
-        "failed": 0,
-        "errors": 0,
-        "skipped": 0,
-        "xfailed": 0,
-        "xpassed": 0,
-        "warnings": 0,
-    }
-    for shard in shards:
-        shard_counts = shard.get("counts", {})
-        if not isinstance(shard_counts, dict):
-            continue
-        for key in counts:
-            counts[key] += int(shard_counts.get(key, 0) or 0)
-    return counts
+    return _diagnostics(vault, path_value, suite=suite)
 
 
 def _summary_shard_paths(vault: Path, aggregate_from: list[str], aggregate_dir: str) -> list[str]:
-    if aggregate_from:
-        return sorted(str(item) for item in aggregate_from)
-    directory = Path(aggregate_dir)
-    if not directory.is_absolute():
-        directory = vault / directory
-    if not directory.is_dir():
-        return []
-    return sorted(report_path(vault, path) for path in directory.glob("*.json") if path.is_file())
+    from ops.scripts.test.test_execution_aggregate_runtime import summary_shard_paths
 
-
-def _aggregate_deselection_lifecycle(
-    shards: list[dict[str, Any]],
-    *,
-    deselected_tests: list[dict[str, Any]],
-    generated_at: str,
-) -> dict[str, Any]:
-    lifecycles = [
-        lifecycle
-        for shard in shards
-        if isinstance((lifecycle := shard.get("deselection_lifecycle")), dict)
-    ]
-    blockers = [
-        blocker
-        for lifecycle in lifecycles
-        for blocker in lifecycle.get("blockers", [])
-        if isinstance(blocker, dict)
-    ]
-    if any(lifecycle.get("status") != "pass" for lifecycle in lifecycles):
-        blockers.append(
-            {
-                "code": "shard_deselection_lifecycle_failed",
-                "nodeid": "",
-                "message": "One or more summary shards reported a failed deselection lifecycle.",
-            }
-        )
-    max_allowed = sum(
-        int(lifecycle.get("max_allowed_deselected_count", 0) or 0)
-        for lifecycle in lifecycles
-    )
-    return {
-        "status": "fail" if blockers else "pass",
-        "checked_at": generated_at,
-        "actual_deselected_count": len(deselected_tests),
-        "max_allowed_deselected_count": max_allowed,
-        "over_budget": any(bool(lifecycle.get("over_budget")) for lifecycle in lifecycles),
-        "expired_count": sum(int(lifecycle.get("expired_count", 0) or 0) for lifecycle in lifecycles),
-        "release_blocking_count": sum(
-            int(lifecycle.get("release_blocking_count", 0) or 0)
-            for lifecycle in lifecycles
-        ),
-        "missing_lifecycle_count": sum(
-            int(lifecycle.get("missing_lifecycle_count", 0) or 0)
-            for lifecycle in lifecycles
-        ),
-        "duplicate_policy_entry_count": sum(
-            int(lifecycle.get("duplicate_policy_entry_count", 0) or 0)
-            for lifecycle in lifecycles
-        ),
-        "unused_policy_entry_count": sum(
-            int(lifecycle.get("unused_policy_entry_count", 0) or 0)
-            for lifecycle in lifecycles
-        ),
-        "risk_owner": "aggregate",
-        "expires_at": "",
-        "count_increase_gate_effect": "fail",
-        "expiry_gate_effect": "fail",
-        "next_action": "none" if not blockers else "fix failing shard deselection lifecycle",
-        "blockers": blockers,
-    }
-
-
-def _aggregate_shard_refs(shard_paths: list[str], shards: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "path": str(path),
-            "suite": str(shard.get("suite", "")),
-            "status": str(shard.get("status", "")),
-            "generated_at": str(shard.get("generated_at", "")),
-            "duration_ms": int(shard.get("duration_ms", 0) or 0),
-            "counts": shard.get("counts", {}),
-            "represents_full_suite": bool(shard.get("represents_full_suite")),
-        }
-        for path, shard in zip(shard_paths, shards, strict=False)
-    ]
-
-
-def _aggregate_shard_dict_items(shards: list[dict[str, Any]], field: str) -> list[dict[str, Any]]:
-    return [
-        item
-        for shard in shards
-        for item in shard.get(field, [])
-        if isinstance(item, dict)
-    ]
-
-
-def _aggregate_nested_int(shards: list[dict[str, Any]], field: str, key: str) -> int:
-    return sum(
-        int(shard.get(field, {}).get(key, 0) or 0)
-        for shard in shards
-        if isinstance(shard.get(field), dict)
-    )
-
-
-def _aggregate_nodeid_digest(shards: list[dict[str, Any]]) -> dict[str, Any]:
-    digests = [
-        digest
-        for shard in shards
-        if isinstance(shard, dict)
-        and isinstance((digest := shard.get("pytest_collect_nodeid_digest")), dict)
-    ]
-    if not digests:
-        return {
-            "status": "failed",
-            "command": "",
-            "nodeid_count": 0,
-            "sha256": "",
-            "reason": "aggregate report received no shard nodeid digests",
-        }
-    if any(digest.get("status") != "collected" for digest in digests):
-        return {
-            "status": "failed",
-            "command": "",
-            "nodeid_count": sum(int(digest.get("nodeid_count", 0) or 0) for digest in digests),
-            "sha256": "",
-            "reason": "one or more shard nodeid digests were not collected",
-        }
-    digest_input = "\n".join(
-        f"{digest.get('sha256', '')}:{int(digest.get('nodeid_count', 0) or 0)}"
-        for digest in digests
-    )
-    if digest_input:
-        digest_input = f"{digest_input}\n"
-    commands = [
-        str(digest.get("command", "")).strip()
-        for digest in digests
-        if str(digest.get("command", "")).strip()
-    ]
-    return {
-        "status": "collected",
-        "command": " || ".join(commands),
-        "nodeid_count": sum(int(digest.get("nodeid_count", 0) or 0) for digest in digests),
-        "sha256": _sha256_text(digest_input),
-        "reason": "aggregate report reuses shard nodeid digests",
-    }
-
-
-def _aggregate_nodeid_consistency(
-    shards: list[dict[str, Any]],
-    counts: dict[str, int],
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    collect_digest = _aggregate_nodeid_digest(shards)
-    consistency = _nodeid_outcome_consistency(counts, collect_digest)
-    if collect_digest.get("status") != "collected":
-        consistency["reason"] = str(collect_digest.get("reason", "")) or consistency["reason"]
-    return collect_digest, consistency
-
-
-def _aggregate_source_command(suite: str, shard_paths: list[str]) -> str:
-    return (
-        f"python -m ops.scripts.test_execution_summary --vault . --suite {suite} "
-        f"--aggregate-from {' --aggregate-from '.join(shlex.quote(path) for path in shard_paths)}"
-    )
+    return summary_shard_paths(vault, aggregate_from, aggregate_dir)
 
 
 def build_aggregate_report(
@@ -1850,104 +847,17 @@ def build_aggregate_report(
     policy_path: str | None = None,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
-    policy, resolved_policy_path = load_policy(vault, policy_path)
-    runtime_context = context or RuntimeContext.from_policy(policy)
-    generated_at = runtime_context.isoformat_z()
-    shards = [_load_summary(vault, path) for path in shard_paths]
-    statuses = [str(shard.get("status", "fail")) for shard in shards]
-    status = _aggregate_status(statuses) if shards else "fail"
-    counts = _aggregate_counts(shards)
-    command = "aggregate test execution summary shards"
-    shard_refs = _aggregate_shard_refs(shard_paths, shards)
-    deselected_tests = _aggregate_shard_dict_items(shards, "deselected_tests")
-    deselection_lifecycle = _aggregate_deselection_lifecycle(
-        shards,
-        deselected_tests=deselected_tests,
-        generated_at=generated_at,
+    from ops.scripts.test.test_execution_aggregate_runtime import (
+        build_aggregate_report as _build_aggregate_report,
     )
-    execution_environment = build_execution_environment(vault, [sys.executable, "-m", "pytest"])
-    coverage = _apply_toolchain_contract_to_coverage(
-        _suite_coverage(
-            suite=suite,
-            command=[sys.executable, "-m", "pytest"],
-            summary_mode="aggregate",
-            shards=shards,
-        ),
-        execution_environment,
-    )
-    collect_nodeid_digest, nodeid_outcome_consistency = _aggregate_nodeid_consistency(shards, counts)
-    evidence_artifacts = _aggregate_shard_dict_items(shards, "evidence_artifacts")
-    evidence_artifact_consistency = _evidence_artifact_consistency(
+
+    return _build_aggregate_report(
         vault,
-        counts=counts,
-        evidence_artifacts=evidence_artifacts,
+        shard_paths=shard_paths,
+        suite=suite,
+        policy_path=policy_path,
+        context=context,
     )
-    return {
-        **build_canonical_report_envelope(
-            vault,
-            generated_at=generated_at,
-            artifact_kind="test_execution_summary",
-            producer=PRODUCER,
-            source_command=_aggregate_source_command(suite, shard_paths),
-            resolved_policy_path=resolved_policy_path,
-            schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/test_execution_summary.py",
-                "ops/scripts/command_runtime.py",
-            ],
-            file_inputs={f"shard_{index}": path for index, path in enumerate(shard_paths, start=1)},
-            text_inputs={
-                "summary_mode": "aggregate",
-                "suite": suite,
-                "shard_statuses": json.dumps(statuses, sort_keys=True, separators=(",", ":")),
-                "suite_coverage": json.dumps(coverage, sort_keys=True, separators=(",", ":")),
-                "deselection_lifecycle": json.dumps(
-                    deselection_lifecycle,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-                "evidence_artifact_consistency": json.dumps(
-                    evidence_artifact_consistency,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-            },
-        ),
-        "vault": report_path(vault, vault),
-        "policy": {
-            "path": report_path(vault, resolved_policy_path),
-            "version": policy.get("version"),
-        },
-        "suite": suite,
-        **coverage,
-        "status": status,
-        "command": command,
-        "semantic_command": command,
-        "toolchain_fingerprint": _toolchain_fingerprint(execution_environment),
-        "returncode": 0 if status == "pass" else 1,
-        "timed_out": any(bool(shard.get("timed_out")) for shard in shards),
-        "timeout_seconds": max([int(shard.get("timeout_seconds", 1) or 1) for shard in shards] or [1]),
-        "termination_reason": "completed" if status == "pass" else "one_or_more_shards_not_pass",
-        "duration_ms": sum(int(shard.get("duration_ms", 0) or 0) for shard in shards),
-        "counts": counts,
-        "execution_environment": execution_environment,
-        "test_target_fingerprints": [
-            item
-            for shard in shards
-            for item in shard.get("test_target_fingerprints", [])
-            if isinstance(item, dict)
-        ],
-        "deselected_tests": deselected_tests,
-        "deselection_lifecycle": deselection_lifecycle,
-        "pytest_collect_nodeid_digest": collect_nodeid_digest,
-        "nodeid_outcome_consistency": nodeid_outcome_consistency,
-        "evidence_artifacts": evidence_artifacts,
-        "evidence_artifact_consistency": evidence_artifact_consistency,
-        "stdout_tail": json.dumps(shard_refs, ensure_ascii=False, sort_keys=True),
-        "stderr_tail": "",
-        "summary_mode": "aggregate",
-        "shards": shard_refs,
-    }
 
 
 def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> Path:
@@ -2197,15 +1107,20 @@ def main(argv: list[str] | None = None) -> int:
         _write_and_print_report(vault, report, args.out)
         return 0
     if args.reuse_only:
+        diagnostics = reusable_summary_diagnostics_for_path(
+            vault,
+            args.reuse_from or args.out,
+            command=args.command,
+            suite=args.suite,
+            collect_nodeids=args.collect_nodeids,
+            collect_nodeid_digest=collect_nodeid_digest,
+            deselection_policy_path=args.deselection_policy,
+        )
         print(
             json.dumps(
                 {
                     "summary_mode": "single",
-                    "reuse_diagnostics": {
-                        "reusable": False,
-                        "path": report_path(vault, Path(args.reuse_from or args.out)),
-                        "reason": "not_current_or_missing",
-                    },
+                    "reuse_diagnostics": diagnostics,
                 },
                 ensure_ascii=False,
                 indent=2,

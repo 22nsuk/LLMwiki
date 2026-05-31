@@ -100,34 +100,24 @@ def test_property_3_clean_pass_implies_not_blocking(
     stable_contract_debt_issue_count: int,
 ) -> None:
     """Feature: release-evidence-sync, Property 3: clean_pass implies not blocking"""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        vault = Path(temp_dir) / "vault"
-        vault.mkdir()
-        seed_minimal_vault(vault)
-        fixed_point_policy = vault / FIXED_POINT_POLICY_PATH
-        fixed_point_policy.parent.mkdir(parents=True, exist_ok=True)
-        fixed_point_policy.write_text(
-            (REPO_ROOT / FIXED_POINT_POLICY_PATH).read_text(encoding="utf-8"),
-            encoding="utf-8",
-        )
-        gate = _artifact_freshness_gate(
-            vault,
-            _freshness_components(ready=True, source_status="pass"),
-            _freshness_payload(
-                status="pass",
-                summary={
-                    "schema_invalid_artifact_count": schema_invalid_count,
-                    "stable_contract_debt_issue_count": stable_contract_debt_issue_count,
-                },
-            ),
-        )
+    gate = _artifact_freshness_gate(
+        REPO_ROOT,
+        _freshness_components(ready=True, source_status="pass"),
+        _freshness_payload(
+            status="pass",
+            summary={
+                "schema_invalid_artifact_count": schema_invalid_count,
+                "stable_contract_debt_issue_count": stable_contract_debt_issue_count,
+            },
+        ),
+    )
 
-        if schema_invalid_count == 0:
-            assert gate["display_effect"] == "none"
-            assert gate["blocking"] is False
-        else:
-            assert gate["display_effect"] == "advisory"
-            assert gate["blocking"] is False
+    if schema_invalid_count == 0:
+        assert gate["display_effect"] == "none"
+        assert gate["blocking"] is False
+    else:
+        assert gate["display_effect"] == "advisory"
+        assert gate["blocking"] is False
 
 
 @given(
@@ -139,49 +129,39 @@ def test_property_4_release_owned_only_attention_is_advisory(
     use_release_owned_attention: bool,
 ) -> None:
     """Feature: release-evidence-sync, Property 4: release-owned-only attention is advisory"""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        vault = Path(temp_dir) / "vault"
-        vault.mkdir()
-        seed_minimal_vault(vault)
-        fixed_point_policy = vault / FIXED_POINT_POLICY_PATH
-        fixed_point_policy.parent.mkdir(parents=True, exist_ok=True)
-        fixed_point_policy.write_text(
-            (REPO_ROOT / FIXED_POINT_POLICY_PATH).read_text(encoding="utf-8"),
-            encoding="utf-8",
-        )
-        summary = {
-            "schema_invalid_artifact_count": 0,
-            "schema_unavailable_artifact_count": 0,
-            "root_ephemeral_artifact_count": 0,
-            "non_utf8_text_artifact_count": 0,
-            "stale_artifact_count": 0 if not use_release_owned_attention else 1,
-            "mtime_sensitive_attention_artifact_count": 0,
-            "mtime_sensitive_attention_issue_count": 0,
-            "operational_attention_artifact_count": 0 if not use_release_owned_attention else 1,
-            "operational_attention_issue_count": 0 if not use_release_owned_attention else 1,
-            "stable_contract_debt_issue_count": stable_contract_debt_issue_count if not use_release_owned_attention else 0,
-        }
-        artifact_records = None
-        if use_release_owned_attention:
-            artifact_records = [
-                {
-                    "path": "ops/reports/auto-improve-readiness.json",
-                    "issues": ["source_tree_fingerprint_mismatch"],
-                }
-            ]
-        gate = _artifact_freshness_gate(
-            vault,
-            _freshness_components(ready=False, source_status="attention"),
-            _freshness_payload(
-                status="attention",
-                summary=summary,
-                artifact_records=artifact_records,
-            ),
-        )
+    summary = {
+        "schema_invalid_artifact_count": 0,
+        "schema_unavailable_artifact_count": 0,
+        "root_ephemeral_artifact_count": 0,
+        "non_utf8_text_artifact_count": 0,
+        "stale_artifact_count": 0 if not use_release_owned_attention else 1,
+        "mtime_sensitive_attention_artifact_count": 0,
+        "mtime_sensitive_attention_issue_count": 0,
+        "operational_attention_artifact_count": 0 if not use_release_owned_attention else 1,
+        "operational_attention_issue_count": 0 if not use_release_owned_attention else 1,
+        "stable_contract_debt_issue_count": stable_contract_debt_issue_count if not use_release_owned_attention else 0,
+    }
+    artifact_records = None
+    if use_release_owned_attention:
+        artifact_records = [
+            {
+                "path": "ops/reports/auto-improve-readiness.json",
+                "issues": ["source_tree_fingerprint_mismatch"],
+            }
+        ]
+    gate = _artifact_freshness_gate(
+        REPO_ROOT,
+        _freshness_components(ready=False, source_status="attention"),
+        _freshness_payload(
+            status="attention",
+            summary=summary,
+            artifact_records=artifact_records,
+        ),
+    )
 
-        assert gate["gate_effect"] == "advisory"
-        assert gate["display_effect"] == "advisory"
-        assert gate["blocking"] is False
+    assert gate["gate_effect"] == "advisory"
+    assert gate["display_effect"] == "advisory"
+    assert gate["blocking"] is False
 
 
 class ReleaseCloseoutSummaryTests(unittest.TestCase):
@@ -257,18 +237,12 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
 
     def _write_dependency_lockfiles(self) -> None:
         self._write_release_surface_file("pyproject.toml", "[project]\nname = 'llmwiki-test'\n")
-        self._write_release_surface_file("requirements.txt", "PyYAML>=6,<7\n")
-        self._write_release_surface_file(
-            "requirements-dev.txt", "-r requirements.txt\npytest>=8,<9\n"
-        )
         self._write_release_surface_file(
             "uv.lock",
             "version = 1\n[[package]]\nname = 'pytest'\nversion = '8.3.5'\n",
         )
         for rel_path in (
             "pyproject.toml",
-            "requirements.txt",
-            "requirements-dev.txt",
             "uv.lock",
         ):
             self._touch_release_surface_file(rel_path, "2026-04-29T07:59:59Z")

@@ -99,6 +99,8 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertIn("docs/development.md", manifest["files"])
             self.assertIn("pyproject.toml", manifest["files"])
             self.assertIn("uv.lock", manifest["files"])
+            self.assertNotIn("requirements.txt", manifest["files"])
+            self.assertNotIn("requirements-dev.txt", manifest["files"])
             self.assertIn(".github/CODEOWNERS", manifest["files"])
             self.assertIn(".github/dependabot.yml", manifest["files"])
             self.assertIn(".github/pull_request_template.md", manifest["files"])

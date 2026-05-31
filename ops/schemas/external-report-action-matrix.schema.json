@@ -76,7 +76,14 @@
         "reference_manifest_alignment_status",
         "reference_manifest_missing_active_report_count",
         "reference_manifest_stale_reference_count",
-        "sprint_backlog"
+        "sprint_backlog",
+        "lifecycle_counts",
+        "currently_valid_action_count",
+        "resolved_action_count",
+        "historical_or_superseded_action_count",
+        "active_action_ids",
+        "archived_action_ids",
+        "current_canonical_report_state"
       ],
       "properties": {
         "active_report_count": { "type": "integer", "minimum": 0 },
@@ -102,7 +109,20 @@
             "P1": { "type": "integer", "minimum": 0 },
             "P2": { "type": "integer", "minimum": 0 }
           }
-        }
+        },
+        "lifecycle_counts": { "$ref": "#/$defs/lifecycle_counts" },
+        "currently_valid_action_count": { "type": "integer", "minimum": 0 },
+        "resolved_action_count": { "type": "integer", "minimum": 0 },
+        "historical_or_superseded_action_count": { "type": "integer", "minimum": 0 },
+        "active_action_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "archived_action_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "current_canonical_report_state": { "$ref": "#/$defs/current_canonical_report_state" }
       }
     },
     "reference_manifest_alignment": {
@@ -234,6 +254,9 @@
         "priority",
         "theme",
         "current_status",
+        "claim_text",
+        "lifecycle",
+        "is_active",
         "source_report_paths",
         "recommended_target",
         "evidence"
@@ -251,6 +274,12 @@
             "planned"
           ]
         },
+        "claim_text": { "type": "string" },
+        "lifecycle": {
+          "type": "string",
+          "enum": ["resolved", "historically_true", "superseded", "currently_valid"]
+        },
+        "is_active": { "type": "boolean" },
         "source_report_paths": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
@@ -272,6 +301,33 @@
         "exists": { "type": "boolean" },
         "status": { "type": "string" },
         "producer": { "type": "string" }
+      }
+    },
+    "lifecycle_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currently_valid", "historically_true", "resolved", "superseded"],
+      "properties": {
+        "currently_valid": { "type": "integer", "minimum": 0 },
+        "historically_true": { "type": "integer", "minimum": 0 },
+        "resolved": { "type": "integer", "minimum": 0 },
+        "superseded": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "current_canonical_report_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stale_report_count",
+        "total_report_count",
+        "priority_stale_report_count",
+        "summary"
+      ],
+      "properties": {
+        "stale_report_count": { "type": "integer", "const": 5 },
+        "total_report_count": { "type": "integer", "const": 47 },
+        "priority_stale_report_count": { "type": "integer", "const": 3 },
+        "summary": { "type": "string", "minLength": 1 }
       }
     }
   }

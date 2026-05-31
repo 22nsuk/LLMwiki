@@ -41,10 +41,18 @@ from tests.workflow_static_helpers import (
 )
 
 RELEASE_WORKFLOW = Path(".github/workflows/release.yml")
+CI_WORKFLOW = Path(".github/workflows/ci.yml")
+CODEQL_WORKFLOW = Path(".github/workflows/codeql.yml")
+DEPENDENCY_REVIEW_WORKFLOW = Path(".github/workflows/dependency-review.yml")
+RELEASE_GOVERNANCE = Path(".github/release-governance.yml")
 
 
 def _workflow() -> dict[str, object]:
     return load_workflow(RELEASE_WORKFLOW)
+
+
+def _governance() -> dict[str, object]:
+    return load_workflow(RELEASE_GOVERNANCE)
 
 
 class ReleaseWorkflowStaticTests(unittest.TestCase):
@@ -87,6 +95,62 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         )
         publish_runs = "\n".join(_run_text(step) for step in _steps(publish))
         self.assertNotIn("python -m pip install -r requirements-dev.txt build", publish_runs)
+
+    def test_release_governance_policy_matches_remote_visible_workflows(self) -> None:
+        governance = _governance()
+        ci = load_workflow(CI_WORKFLOW)
+        codeql = load_workflow(CODEQL_WORKFLOW)
+        dependency_review = load_workflow(DEPENDENCY_REVIEW_WORKFLOW)
+        release = _workflow()
+
+        self.assertEqual(governance.get("version"), 1)
+        branch_protection = governance.get("branch_protection", {})
+        self.assertIsInstance(branch_protection, dict)
+        self.assertEqual(branch_protection.get("main_direct_push"), "forbidden")
+        self.assertFalse(branch_protection.get("allow_force_pushes"))
+        self.assertTrue(branch_protection.get("require_required_status_checks"))
+
+        required = governance.get("required_status_checks", {})
+        self.assertIsInstance(required, dict)
+        ci_matrix = required.get("ci_matrix", {})
+        self.assertIsInstance(ci_matrix, dict)
+        workflow_matrix = _job(ci, "test-tier")["strategy"]["matrix"]
+        self.assertEqual(ci_matrix.get("python_versions"), workflow_matrix["python-version"])
+        self.assertEqual(ci_matrix.get("tiers"), workflow_matrix["tier"])
+
+        singleton_checks = set(required.get("singleton_checks", []))
+        self.assertIn(_job(ci, "windows-release-smoke")["name"], singleton_checks)
+        self.assertIn(_job(ci, "raw-registry-cross-environment-evidence")["name"], singleton_checks)
+        self.assertIn(_job(ci, "supply-chain-gate")["name"], singleton_checks)
+        codeql_name = str(_job(codeql, "analyze")["name"]).replace(
+            "${{ matrix.language }}", "python"
+        )
+        self.assertIn(codeql_name, singleton_checks)
+        self.assertIn(_job(dependency_review, "dependency-review")["name"], singleton_checks)
+
+        remote_sync = governance.get("remote_sync", {})
+        self.assertIsInstance(remote_sync, dict)
+        attachment = remote_sync.get("workflow_attachment", {})
+        self.assertIsInstance(attachment, dict)
+        self.assertFalse(attachment.get("attachment_failure_blocks_push"))
+        self.assertEqual(
+            attachment.get("error_field"),
+            "remote_sync.workflow_attachment.workflow_attachment_error",
+        )
+
+        release_evidence = governance.get("release_evidence", {})
+        self.assertIsInstance(release_evidence, dict)
+        release_assets = set(release_evidence.get("release_assets", []))
+        verify = _job(release, "verify-clean-release")
+        for step_name in (
+            "Upload verified source zip",
+            "Upload verified evidence bundle",
+            "Upload verified release attestation",
+        ):
+            upload = _step(verify, step_name)
+            with_section = upload.get("with", {})
+            self.assertIsInstance(with_section, dict)
+            self.assertIn(with_section.get("name"), release_assets)
 
     def test_publish_consumes_verify_job_live_release_artifacts(self) -> None:
         workflow = _workflow()

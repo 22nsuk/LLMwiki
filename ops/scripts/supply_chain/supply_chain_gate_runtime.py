@@ -54,7 +54,9 @@ def _check_inputs_exist(provenance: dict[str, Any]) -> dict[str, Any]:
     missing = [
         str(item.get("path", ""))
         for item in inputs
-        if isinstance(item, dict) and not bool(item.get("exists"))
+        if isinstance(item, dict)
+        and str(item.get("authority_role", "canonical")).strip() != "compatibility"
+        and not bool(item.get("exists"))
     ]
     if missing:
         return {"rule": "all_required_inputs_exist", "pass": False, "details": f"Missing: {', '.join(missing)}"}

@@ -232,7 +232,8 @@
         "skipped",
         "xfailed",
         "xpassed",
-        "warnings"
+        "warnings",
+        "subtests_passed"
       ],
       "properties": {
         "passed": {
@@ -260,6 +261,10 @@
           "minimum": 0
         },
         "warnings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "subtests_passed": {
           "type": "integer",
           "minimum": 0
         }

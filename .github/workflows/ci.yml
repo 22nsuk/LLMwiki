@@ -47,8 +47,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
           cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
             pyproject.toml
             uv.lock
 
@@ -172,8 +170,6 @@ jobs:
           python-version: "3.12"
           cache: "pip"
           cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
             pyproject.toml
             uv.lock
 
@@ -239,8 +235,6 @@ jobs:
           python-version: "3.12"
           cache: "pip"
           cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
             pyproject.toml
             uv.lock
 
@@ -292,8 +286,6 @@ jobs:
           python-version: "3.12"
           cache: "pip"
           cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
             pyproject.toml
             uv.lock
 
@@ -346,8 +338,6 @@ jobs:
           python-version: "3.12"
           cache: "pip"
           cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
             pyproject.toml
             uv.lock
 

@@ -1289,8 +1289,6 @@ auto_improve_policy:
       - docs/
       - pyproject.toml
       - pytest.ini
-      - requirements-dev.txt
-      - requirements.txt
       - tools/
       - uv.lock
   scope_resolution:

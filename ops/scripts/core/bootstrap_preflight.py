@@ -260,7 +260,7 @@ def build_report(
     elif include_dev:
         guidance = "Run make dev-install, then rerun make bootstrap-preflight."
     else:
-        guidance = "Install requirements.txt, or run make dev-install for a complete local environment."
+        guidance = "Install the project from pyproject.toml, or run make dev-install for a complete local environment."
     source_revision = resolve_source_revision(resolved_vault)
     return {
         "$schema": schema_path,
@@ -354,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--policy-path")
     parser.add_argument("--environment-class", default="developer")
     parser.add_argument("--out", help="Write a schema-backed report to this path under the vault.")
-    parser.add_argument("--dev", action="store_true", help="Also check dev/test tools from requirements-dev.txt.")
+    parser.add_argument("--dev", action="store_true", help="Also check dev/test tools from pyproject.toml [project.optional-dependencies].dev.")
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     args = parser.parse_args(argv)
 

@@ -57,6 +57,8 @@ SOURCE_COMMAND = "python -m ops.scripts.public_check_summary --vault ."
 DEFAULT_TIMEOUT_SECONDS = 5400
 DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 30
 TAIL_LINE_COUNT = 80
+PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH = "ops/reports/test-execution-summary-public.json"
+PUBLIC_PYTEST_SUMMARY_CACHE_DIRNAME = "tmp-public-check-summary-cache"
 CommandRunner = Callable[[Sequence[str], Path, int], TimedProcessResult]
 PRIVATE_EXPORT_PATTERNS = (
     "raw/",
@@ -169,6 +171,91 @@ def _read_public_text(path: Path) -> str:
         return ""
 
 
+def _public_pytest_summary_path(public_out: Path) -> Path:
+    return public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH
+
+
+def _public_pytest_summary_cache_path() -> Path:
+    return Path(tempfile.gettempdir()) / PUBLIC_PYTEST_SUMMARY_CACHE_DIRNAME / Path(
+        PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH
+    ).name
+
+
+def _persist_public_pytest_summary(temp_summary_path: Path, cache_path: Path) -> None:
+    try:
+        payload = temp_summary_path.read_bytes()
+    except OSError:
+        return
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_bytes(payload)
+
+
+def _remove_optional_file(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
+    except OSError:
+        return
+
+
+def _pytest_public_summary_suite(pytest_mark_expr: str) -> str:
+    return "public" if pytest_mark_expr.strip() == "public" else "pytest"
+
+
+def _pytest_public_summary_command(
+    *,
+    public_python: str,
+    request: PublicCheckRequest,
+    reuse_from: Path,
+) -> tuple[list[str], Path]:
+    pytest_command = [public_python, "-m", "pytest"]
+    if request.pytest_mark_expr.strip():
+        pytest_command.extend(["-m", request.pytest_mark_expr])
+    pytest_command.extend(shlex.split(request.pytest_flags))
+    summary_rel_path = Path(PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH)
+    return (
+        [
+            public_python,
+            "-m",
+            "ops.scripts.test_execution_summary",
+            "--vault",
+            ".",
+            "--out",
+            summary_rel_path.as_posix(),
+            "--suite",
+            _pytest_public_summary_suite(request.pytest_mark_expr),
+            "--timeout-seconds",
+            str(request.timeout_seconds),
+            "--reuse-if-current",
+            "--reuse-from",
+            reuse_from.as_posix(),
+            "--",
+            *pytest_command,
+        ],
+        summary_rel_path,
+    )
+
+
+def _pytest_public_summary_counts(summary_path: Path | None) -> dict[str, int]:
+    if summary_path is None:
+        return {}
+    try:
+        payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    counts = payload.get("counts")
+    if not isinstance(counts, dict):
+        return {}
+    normalized: dict[str, int] = {}
+    for key in ("passed", "failed", "errors", "skipped", "xfailed", "xpassed", "warnings"):
+        try:
+            normalized[key] = int(counts.get(key, 0) or 0)
+        except (TypeError, ValueError):
+            normalized[key] = 0
+    return normalized
+
+
 def _public_export_negative_assertions(
     public_out: Path,
     manifest: dict[str, Any],
@@ -278,11 +365,16 @@ def _command_record(
     display_vault: Path,
     timeout_seconds: int,
     command_runner: CommandRunner,
+    pytest_summary_path: Path | None = None,
 ) -> dict[str, Any]:
     started = time.perf_counter()
     result = command_runner(argv, cwd, timeout_seconds)
     duration_ms = int((time.perf_counter() - started) * 1000)
-    counts = parse_pytest_counts(result.stdout, result.stderr) if command_id == "pytest_public" else {}
+    counts = {}
+    if command_id == "pytest_public":
+        counts = _pytest_public_summary_counts(pytest_summary_path)
+        if not counts:
+            counts = parse_pytest_counts(result.stdout, result.stderr)
     return {
         "id": command_id,
         "command": shlex.join([sanitize_report_text(display_vault, str(arg)) for arg in argv]),
@@ -345,6 +437,8 @@ def build_report(
     )
     export_root_fingerprint = _canonical_sha256(export_records)
     manifest_path = public_out_path / str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
+    pytest_summary_path = _public_pytest_summary_path(public_out_path)
+    pytest_summary_cache_path = _public_pytest_summary_cache_path()
     runner = command_runner or (
         lambda argv, cwd, timeout_seconds: _default_command_runner(
             argv,
@@ -354,21 +448,28 @@ def build_report(
         )
     )
     public_python = _resolve_public_python(vault, request.public_python)
-    commands_to_run: list[tuple[str, list[str]]] = [
+    pytest_summary_command, pytest_summary_relative_path = _pytest_public_summary_command(
+        public_python=public_python,
+        request=request,
+        reuse_from=pytest_summary_cache_path,
+    )
+    commands_to_run: list[tuple[str, list[str], Path | None]] = [
         (
             "ruff",
             [public_python, "-m", "ruff", "check", *shlex.split(request.ruff_targets)],
+            None,
         ),
         (
             "mypy",
             [public_python, "-m", "mypy", *shlex.split(request.mypy_targets)],
+            None,
+        ),
+        (
+            "pytest_public",
+            pytest_summary_command,
+            public_out_path / pytest_summary_relative_path,
         ),
     ]
-    pytest_command = [public_python, "-m", "pytest"]
-    if request.pytest_mark_expr.strip():
-        pytest_command.extend(["-m", request.pytest_mark_expr])
-    pytest_command.extend(shlex.split(request.pytest_flags))
-    commands_to_run.append(("pytest_public", pytest_command))
     commands = [
         _command_record(
             command_id=command_id,
@@ -377,9 +478,12 @@ def build_report(
             display_vault=vault,
             timeout_seconds=request.timeout_seconds,
             command_runner=runner,
+            pytest_summary_path=pytest_summary_path,
         )
-        for command_id, argv in commands_to_run
+        for command_id, argv, pytest_summary_path in commands_to_run
     ]
+    _persist_public_pytest_summary(pytest_summary_path, pytest_summary_cache_path)
+    _remove_optional_file(pytest_summary_path)
     command_status = _overall_status(commands)
     assertion_status = _negative_assertion_status(negative_assertions)
     status = command_status if command_status != "pass" else assertion_status
@@ -389,6 +493,7 @@ def build_report(
         "ops/scripts/public/public_check_summary.py",
         "ops/scripts/public/export_public_repo.py",
         "ops/scripts/public/public_surface_policy.py",
+        "ops/scripts/test_execution_summary.py",
     ]
     return {
         **build_canonical_report_envelope(

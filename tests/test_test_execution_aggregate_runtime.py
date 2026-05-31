@@ -1,0 +1,45 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from ops.scripts.test.test_execution_aggregate_runtime import (
+    aggregate_counts,
+    aggregate_status,
+    summary_shard_paths,
+)
+
+
+def test_aggregate_status_and_counts_are_separate_from_cli_runtime() -> None:
+    shards = [
+        {"status": "pass", "counts": {"passed": 2, "warnings": 1}},
+        {"status": "partial-pass", "counts": {"passed": 1, "failed": 1}},
+    ]
+
+    assert aggregate_status([str(shard["status"]) for shard in shards]) == "partial-pass"
+    assert aggregate_counts(shards) == {
+        "passed": 3,
+        "failed": 1,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0,
+        "xpassed": 0,
+        "warnings": 1,
+        "subtests_passed": 0,
+    }
+
+
+def test_summary_shard_paths_prefers_explicit_inputs(tmp_path: Path) -> None:
+    shard_dir = tmp_path / "ops" / "reports" / "test-execution-summary-shards"
+    shard_dir.mkdir(parents=True)
+    (shard_dir / "beta.json").write_text("{}", encoding="utf-8")
+    (shard_dir / "alpha.json").write_text("{}", encoding="utf-8")
+
+    assert summary_shard_paths(tmp_path, [], "ops/reports/test-execution-summary-shards") == [
+        "ops/reports/test-execution-summary-shards/alpha.json",
+        "ops/reports/test-execution-summary-shards/beta.json",
+    ]
+    assert summary_shard_paths(
+        tmp_path,
+        ["custom/beta.json", "custom/alpha.json"],
+        "ops/reports/test-execution-summary-shards",
+    ) == ["custom/alpha.json", "custom/beta.json"]

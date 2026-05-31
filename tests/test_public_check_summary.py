@@ -6,10 +6,12 @@ import tempfile
 import unittest
 from collections.abc import Sequence
 from pathlib import Path
+from unittest.mock import patch
 
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.public_check_summary import (
     PublicCheckRequest,
+    _public_pytest_summary_cache_path,
     build_report,
     reusable_summary_diagnostics,
     write_report,
@@ -21,6 +23,7 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "public-check-summary.schema.json"
+PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH = Path("ops/reports/test-execution-summary-public.json")
 
 
 def fixed_context() -> RuntimeContext:
@@ -36,12 +39,37 @@ def seed_public_policy_file(vault: Path) -> None:
     policy_path.write_text("PUBLIC_INCLUDE_PREFIXES = ()\n", encoding="utf-8")
 
 
+def write_public_pytest_summary(
+    cwd: Path,
+    *,
+    passed: int,
+    failed: int,
+    errors: int,
+    skipped: int,
+) -> None:
+    summary_path = cwd / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(
+        json.dumps(
+            {
+                "counts": {
+                    "passed": passed,
+                    "failed": failed,
+                    "errors": errors,
+                    "skipped": skipped,
+                }
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+
 def fake_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) -> TimedProcessResult:
-    del cwd
     module = argv[2] if len(argv) > 2 else ""
     stdout = ""
-    if module == "pytest":
-        stdout = "217 passed, 5 skipped in 1.23s\n"
+    if module == "ops.scripts.test_execution_summary":
+        write_public_pytest_summary(cwd, passed=217, failed=0, errors=0, skipped=5)
     return TimedProcessResult(
         args=[str(item) for item in argv],
         returncode=0,
@@ -54,12 +82,13 @@ def fake_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) -> TimedPr
 
 
 def failing_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) -> TimedProcessResult:
-    del cwd
     module = argv[2] if len(argv) > 2 else ""
+    if module == "ops.scripts.test_execution_summary":
+        write_public_pytest_summary(cwd, passed=216, failed=1, errors=0, skipped=0)
     return TimedProcessResult(
         args=[str(item) for item in argv],
-        returncode=1 if module == "pytest" else 0,
-        stdout="216 passed, 1 failed in 1.23s\n" if module == "pytest" else "",
+        returncode=1 if module == "ops.scripts.test_execution_summary" else 0,
+        stdout="",
         stderr="",
         timed_out=False,
         timeout_seconds=timeout_seconds,
@@ -104,10 +133,14 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 {command["heartbeat_interval_seconds"] for command in report["commands"]},
                 {0},
             )
+            self.assertIn("ops.scripts.test_execution_summary", report["commands"][-1]["command"])
+            self.assertIn("--reuse-if-current", report["commands"][-1]["command"])
             self.assertRegex(report["summary"]["export_root_fingerprint"], r"^[a-f0-9]{64}$")
             self.assertRegex(report["summary"]["public_surface_policy_sha256"], r"^[a-f0-9]{64}$")
             self.assertTrue(report["public_export"]["output_dir"].startswith("<tmp>/"))
             self.assertTrue(report["public_export"]["output_dir"].endswith(f"/{public_out.name}"))
+            self.assertTrue(_public_pytest_summary_cache_path().exists())
+            self.assertFalse((public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).exists())
             self.assertEqual(
                 report["public_export_negative_assertions"]["excluded_prefix_absence"]["status"],
                 "pass",
@@ -217,6 +250,60 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["summary"]["pytest_failed"], 1)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_public_check_summary_reuses_external_public_pytest_cache_without_exporting_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cache_path = Path(temp_dir) / "cache" / "test-execution-summary-public.json"
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(
+                json.dumps({"counts": {"passed": 9, "failed": 0, "errors": 0, "skipped": 1}}),
+                encoding="utf-8",
+            )
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            public_out = Path(temp_dir) / "public"
+
+            def reuse_only_runner(
+                argv: Sequence[str],
+                cwd: Path,
+                timeout_seconds: int,
+            ) -> TimedProcessResult:
+                module = argv[2] if len(argv) > 2 else ""
+                if module == "ops.scripts.test_execution_summary":
+                    self.assertIn("--reuse-if-current", argv)
+                    self.assertIn("--reuse-from", argv)
+                    self.assertIn(cache_path.as_posix(), argv)
+                    write_public_pytest_summary(cwd, passed=9, failed=0, errors=0, skipped=1)
+                return TimedProcessResult(
+                    args=[str(item) for item in argv],
+                    returncode=0,
+                    stdout="",
+                    stderr="",
+                    timed_out=False,
+                    timeout_seconds=timeout_seconds,
+                    termination_reason="completed",
+                )
+
+            with patch(
+                "ops.scripts.public_check_summary._public_pytest_summary_cache_path",
+                return_value=cache_path,
+            ):
+                report = build_report(
+                    vault,
+                    PublicCheckRequest(
+                        public_out=str(public_out),
+                        public_python="python",
+                    ),
+                    context=fixed_context(),
+                    command_runner=reuse_only_runner,
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["pytest_passed"], 9)
+            self.assertEqual(report["summary"]["pytest_skipped"], 1)
+            self.assertFalse((public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).exists())
+
     def test_reusable_summary_requires_current_source_tree_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -249,6 +336,69 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 stale["current_source_tree_fingerprint"],
                 json.loads(destination.read_text(encoding="utf-8"))["source_tree_fingerprint"],
             )
+
+    def test_script_output_surfaces_refresh_does_not_stale_public_summary_without_source_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+
+            report = build_report(
+                vault,
+                PublicCheckRequest(
+                    public_out=str(Path(temp_dir) / "public"),
+                    public_python="python",
+                ),
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+            destination = write_report(vault, report)
+
+            script_output_surfaces = vault / "ops" / "script-output-surfaces.json"
+            script_output_surfaces.parent.mkdir(parents=True, exist_ok=True)
+            script_output_surfaces.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/script-output-surfaces.schema.json",
+                        "artifact_kind": "script_output_surfaces",
+                        "generated_at": "2026-05-09T09:00:00Z",
+                        "producer": "ops.scripts.script_output_surfaces",
+                        "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
+                        "source_revision": "source_package_without_git",
+                        "source_tree_fingerprint": "intentionally-different",
+                        "input_fingerprints": {
+                            "policy": "a",
+                            "schema": "b",
+                            "artifact_envelope_schema": "c",
+                            "source_paths": "d",
+                            "ops_scripts": "e",
+                            "classification_values": "f"
+                        },
+                        "schema_version": 1,
+                        "artifact_status": "current",
+                        "retention_policy": "canonical_report",
+                        "encoding": "utf-8",
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2026-05-09T09:00:00Z"
+                        },
+                        "version": 1,
+                        "description": "test fixture",
+                        "generated_by": "ops.scripts.script_output_surfaces",
+                        "classification_values": ["repo_artifact"],
+                        "surfaces": []
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ) + "\n",
+                encoding="utf-8",
+            )
+
+            reusable = reusable_summary_diagnostics(vault, destination)
+
+            self.assertTrue(reusable["reusable"])
+            self.assertEqual(reusable["reason"], "current_passing_public_check_summary")
 
     def test_relative_public_python_resolves_against_source_vault(self) -> None:
         captured_argv: list[list[str]] = []

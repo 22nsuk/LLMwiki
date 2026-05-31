@@ -17,7 +17,6 @@ from ops.scripts.wiki_manifest import (
 
 DEFAULT_RELEASE_MANIFEST_PATH = "ops/manifest.json"
 DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT = 10
-_SOURCE_TREE_CACHE: dict[tuple[str, tuple[str, ...]], tuple[tuple[tuple[str, int, int], ...], str]] = {}
 
 # Note: Scratch and diagnostic directories (tmp/, ops/reports/, runs/, etc.)
 # are already excluded from release source tree fingerprinting via
@@ -30,6 +29,7 @@ class _FileEntry(NamedTuple):
     rel_path: str
     size: int
     mtime_ns: int
+    ctime_ns: int
 
 
 def _sha256_json(payload: Any) -> str:
@@ -42,26 +42,25 @@ def _sha256_json(payload: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def release_source_tree_fingerprint(vault: Path, *, extra_excluded_files: tuple[str, ...] = ()) -> str:
+def release_source_tree_fingerprint(
+    vault: Path,
+    *,
+    extra_excluded_files: tuple[str, ...] = (),
+    included_prefixes: tuple[str, ...] = (),
+) -> str:
     resolved_vault = vault.resolve()
-    extra_excluded = _effective_extra_excluded_files(extra_excluded_files)
-    _, signature = _build_release_source_manifest(
-        resolved_vault,
-        hash_files=False,
-        extra_excluded_files=extra_excluded,
+    normalized_included_prefixes = _normalized_included_prefixes(included_prefixes)
+    extra_excluded = _effective_extra_excluded_files(
+        extra_excluded_files,
+        included_prefixes=normalized_included_prefixes,
     )
-    cache_key = (resolved_vault.as_posix(), extra_excluded)
-    cached = _SOURCE_TREE_CACHE.get(cache_key)
-    if cached is not None and cached[0] == signature:
-        return cached[1]
-    manifest, signature = _build_release_source_manifest(
+    manifest, _signature = _build_release_source_manifest(
         resolved_vault,
         hash_files=True,
         extra_excluded_files=extra_excluded,
+        included_prefixes=normalized_included_prefixes,
     )
-    fingerprint = _sha256_json(manifest)
-    _SOURCE_TREE_CACHE[cache_key] = (signature, fingerprint)
-    return fingerprint
+    return _sha256_json(manifest)
 
 
 def release_source_tree_change_sample(
@@ -69,15 +68,21 @@ def release_source_tree_change_sample(
     *,
     generated_at: str,
     extra_excluded_files: tuple[str, ...] = (),
+    included_prefixes: tuple[str, ...] = (),
     path_limit: int = DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT,
 ) -> dict[str, Any]:
     resolved_vault = vault.resolve()
-    extra_excluded = _effective_extra_excluded_files(extra_excluded_files)
+    normalized_included_prefixes = _normalized_included_prefixes(included_prefixes)
+    extra_excluded = _effective_extra_excluded_files(
+        extra_excluded_files,
+        included_prefixes=normalized_included_prefixes,
+    )
     generated_dt = _parse_iso_z(generated_at)
     entries = _iter_release_source_entries(
         resolved_vault.as_posix(),
         "",
         _release_source_excluded_files(extra_excluded),
+        normalized_included_prefixes,
     )
     changed_after_generated_at: list[dict[str, str]] = []
     if generated_dt is not None:
@@ -105,11 +110,17 @@ def _build_release_source_manifest(
     *,
     hash_files: bool,
     extra_excluded_files: tuple[str, ...] = (),
-) -> tuple[dict[str, Any], tuple[tuple[str, int, int], ...]]:
+    included_prefixes: tuple[str, ...] = (),
+) -> tuple[dict[str, Any], tuple[tuple[str, int, int, int], ...]]:
     excluded_files = _release_source_excluded_files(extra_excluded_files)
     files: list[dict[str, Any]] = []
-    entries = _iter_release_source_entries(vault.as_posix(), "", excluded_files)
-    signature = [(entry.rel_path, entry.size, entry.mtime_ns) for entry in entries]
+    entries = _iter_release_source_entries(
+        vault.as_posix(),
+        "",
+        excluded_files,
+        included_prefixes,
+    )
+    signature = [(entry.rel_path, entry.size, entry.mtime_ns, entry.ctime_ns) for entry in entries]
     for entry in entries:
         if hash_files:
             files.append(
@@ -125,6 +136,7 @@ def _build_release_source_manifest(
         "exclusion_policy": {
             **exclusion_policy(),
             "excluded_files": sorted(excluded_files),
+            "included_prefixes": list(included_prefixes),
         },
     }
     return manifest, tuple(signature)
@@ -134,13 +146,26 @@ def _normalized_extra_excluded_files(extra_excluded_files: tuple[str, ...]) -> t
     return tuple(sorted(str(path).strip("/") for path in extra_excluded_files if str(path).strip("/")))
 
 
-def _effective_extra_excluded_files(extra_excluded_files: tuple[str, ...]) -> tuple[str, ...]:
+def _normalized_included_prefixes(included_prefixes: tuple[str, ...]) -> tuple[str, ...]:
+    normalized = {
+        str(prefix).strip("/")
+        for prefix in included_prefixes
+        if str(prefix).strip("/")
+    }
+    return tuple(sorted(normalized))
+
+
+def _effective_extra_excluded_files(
+    extra_excluded_files: tuple[str, ...],
+    *,
+    included_prefixes: tuple[str, ...] = (),
+) -> tuple[str, ...]:
     base_excluded_files = set(DEFAULT_EXCLUDED_FILES)
     base_excluded_files.add(DEFAULT_RELEASE_MANIFEST_PATH)
     return tuple(
         rel_path
         for rel_path in _normalized_extra_excluded_files(extra_excluded_files)
-        if _should_include(rel_path, base_excluded_files)
+        if _should_include(rel_path, base_excluded_files, included_prefixes)
     )
 
 
@@ -151,7 +176,12 @@ def _release_source_excluded_files(extra_excluded_files: tuple[str, ...]) -> set
     return excluded_files
 
 
-def _iter_release_source_entries(root: str, rel_root: str, excluded_files: set[str]) -> list[_FileEntry]:
+def _iter_release_source_entries(
+    root: str,
+    rel_root: str,
+    excluded_files: set[str],
+    included_prefixes: tuple[str, ...],
+) -> list[_FileEntry]:
     entries: list[_FileEntry] = []
     try:
         with os.scandir(root) as iterator:
@@ -162,33 +192,80 @@ def _iter_release_source_entries(root: str, rel_root: str, excluded_files: set[s
         rel_path = f"{rel_root}/{entry.name}" if rel_root else entry.name
         try:
             if entry.is_dir(follow_symlinks=False):
-                if _should_descend(rel_path):
-                    entries.extend(_iter_release_source_entries(entry.path, rel_path, excluded_files))
+                if _should_descend(rel_path, included_prefixes):
+                    entries.extend(
+                        _iter_release_source_entries(
+                            entry.path,
+                            rel_path,
+                            excluded_files,
+                            included_prefixes,
+                        )
+                    )
                 continue
-            if not entry.is_file(follow_symlinks=False) or not _should_include(rel_path, excluded_files):
+            if not entry.is_file(follow_symlinks=False) or not _should_include(
+                rel_path,
+                excluded_files,
+                included_prefixes,
+            ):
                 continue
             stat = entry.stat(follow_symlinks=False)
         except OSError:
             continue
-        entries.append(_FileEntry(entry.path, rel_path, stat.st_size, stat.st_mtime_ns))
+        entries.append(
+            _FileEntry(
+                entry.path,
+                rel_path,
+                stat.st_size,
+                stat.st_mtime_ns,
+                stat.st_ctime_ns,
+            )
+        )
     return entries
 
 
-def _should_include(rel_path: str, excluded_files: set[str]) -> bool:
+def _matches_included_prefixes(rel_path: str, included_prefixes: tuple[str, ...]) -> bool:
+    if not included_prefixes:
+        return True
+    return any(rel_path == prefix or rel_path.startswith(f"{prefix}/") for prefix in included_prefixes)
+
+
+def _should_include(
+    rel_path: str,
+    excluded_files: set[str],
+    included_prefixes: tuple[str, ...] = (),
+) -> bool:
     if rel_path in excluded_files:
         return False
     if any(rel_path.startswith(prefix) for prefix in DEFAULT_EXCLUDED_PREFIXES):
         return False
     if rel_path.endswith(DEFAULT_EXCLUDED_SUFFIXES):
         return False
-    return not any(part in DEFAULT_EXCLUDED_SEGMENTS or part.endswith(".egg-info") for part in rel_path.split("/"))
+    if any(part in DEFAULT_EXCLUDED_SEGMENTS or part.endswith(".egg-info") for part in rel_path.split("/")):
+        return False
+    return _matches_included_prefixes(rel_path, included_prefixes)
 
 
-def _should_descend(rel_dir: str) -> bool:
+def _directory_may_contain_included_paths(
+    rel_dir: str,
+    included_prefixes: tuple[str, ...],
+) -> bool:
+    if not included_prefixes:
+        return True
+    return any(
+        prefix == rel_dir
+        or prefix.startswith(f"{rel_dir}/")
+        or rel_dir.startswith(f"{prefix}/")
+        for prefix in included_prefixes
+    )
+
+
+def _should_descend(rel_dir: str, included_prefixes: tuple[str, ...] = ()) -> bool:
     rel_dir_prefix = f"{rel_dir}/"
     if any(rel_dir_prefix.startswith(prefix) for prefix in DEFAULT_EXCLUDED_PREFIXES):
         return False
-    return not any(part in DEFAULT_EXCLUDED_SEGMENTS or part.endswith(".egg-info") for part in rel_dir.split("/"))
+    if any(part in DEFAULT_EXCLUDED_SEGMENTS or part.endswith(".egg-info") for part in rel_dir.split("/")):
+        return False
+    return _directory_may_contain_included_paths(rel_dir, included_prefixes)
 
 
 def _sha256_file(path: str) -> str:

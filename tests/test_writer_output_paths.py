@@ -179,6 +179,10 @@ class WriterOutputPathsTest(unittest.TestCase):
         self.assertEqual(registry["producer"], "ops.scripts.script_output_surfaces")
         self.assertEqual(registry["currentness"]["status"], "current")
         self.assertEqual(
+            registry["source_tree_scope"],
+            {"mode": "include_prefixes", "include_prefixes": ["ops/scripts"]},
+        )
+        self.assertEqual(
             set(registry["classification_values"]),
             {"repo_artifact", "user_export", "mixed", "no_output", "diagnostic_only"},
         )
@@ -188,9 +192,9 @@ class WriterOutputPathsTest(unittest.TestCase):
     @unittest.skipIf(
         PUBLIC_EXPORT_MANIFEST.exists(),
         (
-            "script-output-surfaces is generated from the full-vault source tree; "
+            "script-output-surfaces is generated from the ops/scripts-scoped source tree; "
             "public exports validate schema and writer classifications without "
-            "requiring full-vault fingerprint equality"
+            "requiring identical source revision metadata"
         ),
     )
     def test_script_output_surface_registry_matches_current_ast_inventory(self) -> None:
@@ -201,8 +205,39 @@ class WriterOutputPathsTest(unittest.TestCase):
         )
 
         self.maxDiff = None
+        self.assertEqual(actual["source_tree_scope"], expected["source_tree_scope"])
+        self.assertEqual(actual["source_tree_fingerprint"], expected["source_tree_fingerprint"])
         self.assertEqual(actual["surfaces"], expected["surfaces"])
         self.assertEqual(actual["classification_values"], expected["classification_values"])
+
+    def test_script_output_surface_registry_source_tree_fingerprint_is_scoped_to_ops_scripts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "scripts" / "example.py").write_text(
+                "VALUE = 1\n",
+                encoding="utf-8",
+            )
+            baseline = build_script_output_surface_registry(vault)
+
+            (vault / "README.md").write_text("# changed outside scope\n", encoding="utf-8")
+            outside_scope = build_script_output_surface_registry(vault)
+            self.assertEqual(
+                outside_scope["source_tree_fingerprint"],
+                baseline["source_tree_fingerprint"],
+            )
+
+            (vault / "ops" / "scripts" / "example.py").write_text(
+                "VALUE = 2\n",
+                encoding="utf-8",
+            )
+            inside_scope = build_script_output_surface_registry(vault)
+            self.assertNotEqual(
+                inside_scope["source_tree_fingerprint"],
+                baseline["source_tree_fingerprint"],
+            )
 
     def test_output_option_writers_are_classified(self) -> None:
         registry_files = {entry["path"] for entry in _script_output_surface_entries() if entry["output_options"]}

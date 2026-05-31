@@ -38,7 +38,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         (self.vault / "Makefile").write_text(
             ".PHONY: static ruff typecheck release-evidence-converge release-smoke-full "
             "release-evidence-closeout "
-            "test-execution-summary generated-artifact-converge script-output-surfaces "
+            "test-execution-summary generated-artifact-converge generated-artifact-script-output "
+            "generated-artifact-finality-suffix script-output-surfaces "
             "external-report-action-matrix generated-artifact-index artifact-freshness "
             "release-closeout-fixed-point tmp-json-clean release-closeout-finality-verify "
             "operator-release-summary report-contract-closeout workflow-dependency-planner\n"
@@ -59,7 +60,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "test-execution-summary:\n"
             "\t@echo tests\n"
             "generated-artifact-converge:\n"
+            "\t$(MAKE) generated-artifact-script-output\n"
+            "\t$(MAKE) generated-artifact-finality-suffix\n"
+            "generated-artifact-script-output:\n"
             "\t$(MAKE) script-output-surfaces\n"
+            "generated-artifact-finality-suffix:\n"
             "\t$(MAKE) external-report-action-matrix\n"
             "\t$(MAKE) generated-artifact-index\n"
             "\t$(MAKE) artifact-freshness\n"
@@ -240,6 +245,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(workflow["recommended_lane"], "release-evidence-converge")
         self.assertEqual(workflow["matched_paths"], ["ops/scripts/release/operator_release_summary.py"])
         self.assertEqual([step["target"] for step in workflow["steps"]], ["release-evidence-converge", "operator-release-summary"])
+        converge_step = workflow["steps"][0]
+        self.assertEqual(converge_step["fanout_targets"], [])
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
 
     def test_canonical_report_change_selects_finality_resettle_lane(self) -> None:
@@ -260,13 +267,72 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [step["target"] for step in workflow["steps"]],
             [
                 "workflow-dependency-planner",
-                "generated-artifact-converge",
+                "generated-artifact-finality-suffix",
                 "release-closeout-fixed-point",
                 "tmp-json-clean",
                 "release-closeout-finality-verify",
             ],
         )
+        self.assertEqual(
+            workflow["steps"][1]["fanout_targets"],
+            [
+                "external-report-action-matrix",
+                "generated-artifact-index",
+                "artifact-freshness",
+            ],
+        )
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+
+    def test_changed_artifact_class_selects_scoped_generated_artifact_lane(self) -> None:
+        cases = [
+            (
+                "ops/script-output-surfaces.json",
+                "script_output_surface_finalization",
+                "generated-artifact-script-output",
+                "script_output_surface_inventory_changed",
+                ["script-output-surfaces"],
+            ),
+            (
+                "ops/reports/generated-artifact-index.json",
+                "canonical_report_finalization",
+                "generated-artifact-finality-suffix",
+                "canonical_report_finality_suffix_changed",
+                [
+                    "external-report-action-matrix",
+                    "generated-artifact-index",
+                    "artifact-freshness",
+                ],
+            ),
+            (
+                "mk/artifact.mk",
+                "generated_artifact_converge_closeout",
+                "generated-artifact-converge",
+                "generated_artifact_converge_contract_changed",
+                [
+                    "script-output-surfaces",
+                    "external-report-action-matrix",
+                    "generated-artifact-index",
+                    "artifact-freshness",
+                ],
+            ),
+        ]
+        for changed_path, workflow_id, target, reason_code, fanout in cases:
+            with self.subTest(changed_path=changed_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[changed_path],
+                    context=fixed_context(),
+                )
+
+                workflow = next(
+                    item
+                    for item in report["selected_workflows"]
+                    if item["workflow_id"] == workflow_id
+                )
+                step = next(item for item in workflow["steps"] if item["target"] == target)
+                self.assertEqual(step["reason_code"], reason_code)
+                self.assertEqual(step["fanout_targets"], fanout)
+                self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
 
     def test_observation_change_selects_finality_resettle_lane(self) -> None:
         report = build_report(
@@ -283,6 +349,10 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             if item["workflow_id"] == "observation_inventory_closeout"
         )
         self.assertEqual(workflow["recommended_lane"], "release-finality-resettle")
+        self.assertEqual(
+            [step["target"] for step in workflow["steps"][:2]],
+            ["workflow-dependency-planner", "generated-artifact-finality-suffix"],
+        )
         self.assertIn("release-closeout-fixed-point", [step["target"] for step in workflow["steps"]])
         self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-closeout-finality-verify")
 

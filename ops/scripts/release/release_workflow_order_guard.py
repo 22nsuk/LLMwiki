@@ -360,6 +360,8 @@ def _check_planner_fixed_point_writer_order(
     ]
     if "generated-artifact-converge" in planner_steps:
         expected = ["generated-artifact-converge"]
+    elif "generated-artifact-finality-suffix" in planner_steps:
+        expected = ["generated-artifact-finality-suffix"]
     else:
         expected = _fixed_point_initial_order(writers)
     positions = _subsequence_positions(
@@ -450,7 +452,7 @@ def _release_converge_repetition_budget(invocations: list[dict[str, Any]]) -> di
 def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     expected = [
         "workflow-dependency-planner",
-        "generated-artifact-converge",
+        "generated-artifact-finality-suffix",
         "release-closeout-fixed-point",
         "tmp-json-clean",
         "release-closeout-finality-verify",

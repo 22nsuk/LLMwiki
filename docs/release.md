@@ -15,6 +15,10 @@ surface comparison; this document owns release evidence and staged authority.
 
 ## Common Targets
 
+- `make status` / `llm-wiki-status`: read-only operator status surface. It
+  renders source closeout, sealed run, public summary, lockfile freshness,
+  learning signoff, goal runtime certificate, and remote sync as one 7-line
+  view without writing new authority evidence.
 - `make release-check`: check-only release gate for the current tree.
 - `make release-check-all-surfaces`: release check plus public policy and public export checks.
 - `make release-run-ready`: one command to verify the current committed tree,
@@ -184,6 +188,30 @@ Currentness is also objective. Reuse or operator-facing `current` should come
 from the live HEAD/source-fingerprint/domain checks owned by the relevant lane,
 not from a report's self-declared `current` field alone.
 
+## Remote Governance
+
+Remote-visible release governance is recorded in
+`.github/release-governance.yml`. That file is the public-safe checklist for
+branch protection/ruleset configuration: direct pushes to `main` are forbidden,
+pull requests and required status checks are required, force-pushes and branch
+deletions are disabled, and the required CI matrix mirrors the `CI` workflow
+tiers for Python 3.12, 3.13, and 3.14. Singleton checks include Windows release
+smoke, raw-registry cross-environment evidence, supply-chain, CodeQL, and
+dependency review.
+
+Working branches are pushed with `git push -u origin HEAD:<working-branch>`.
+After push, attach the GitHub Actions workflow run and combined status check to
+the pushed commit. Attachment service/configuration failures are recorded under
+`remote_sync.workflow_attachment.workflow_attachment_error`; they do not rewrite
+the push result or stop remote sync bookkeeping.
+
+Release publication must leave remote-visible assets for the verified source
+ZIP, evidence bundle, and release attestation. Offline verification replays the
+staged authority checks with `make release-run-ready-check`,
+`make release-sealed-run-ready-check`,
+`make release-auto-promotion-ready-check`, and
+`python -m ops.scripts.release.release_live_artifact_attestation verify`.
+
 ## Auto-Promotion Closeout Runbook
 
 Use this runbook when the goal is to prove unattended release promotion for the
@@ -277,7 +305,9 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   sealed rehearsal check. Batch/external sidecar legacy statuses are not treated
   as auto-promotion verdicts. Preserved stale sidecars belong in archived or
   otherwise non-authoritative evidence surfaces, not in the active sealed
-  authority set.
+  authority set. A sealed sidecar cleanup is not complete until every active
+  authoritative `build/release/*.json` entry is HEAD-aligned; failed validation
+  requires rerunning the whole cleanup attempt.
 - `build/release/operator-release-summary.json` is generated during sealed-run
   readiness for Stage 3 reuse. It remains diagnostic input and is not included in
   `release-sealed-run-manifest.json` as sealed package authority.
@@ -319,7 +349,17 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `public-check-summary-current-check`, `public-check-all-check`, and
   `release-run-ready` reuse this report only when the same
   `source_tree_fingerprint` still matches; stale evidence reruns the full public
-  export check lane.
+  export check lane. Its inner `pytest_public` step runs
+  `ops.scripts.test_execution_summary --suite public --reuse-if-current` inside
+  the exported tree, reusing a temporary `test-execution-summary-public.json`
+  cache instead of the repository canonical report path. After a refresh, the
+  export-local summary is copied back into that cache and removed from the
+  exported tree so the public surface stays clean. Refreshing
+  `script-output-surfaces` alone does not invalidate this summary because
+  `ops/script-output-surfaces.json` is outside the public export fingerprint
+  authority; broader reruns come from downstream generated-artifact and
+  finality repair bundles, not from `public-check-summary-current-check`
+  itself.
 - `ops/reports/release-closeout-finality-attestation.json` is diagnostic only;
   release authority is the staged `release-run`, `release-sealed-run`, and
   `release-auto-promotion-ready` manifests under `build/release/`.
@@ -329,6 +369,14 @@ fingerprints, accepted risk, gate attention, or learning blockers.
 - `external-reports/` remains private local-only input. Root reports must be
   reflected in lifecycle summaries before release; the reference manifest and
   archived reports are retained outside Git/source-release authority.
+  `ops/reports/external-report-action-matrix.json` separates action lifecycle
+  as `resolved`, `historically_true`, `superseded`, or `currently_valid`.
+  Historical claims such as an older "46/46 stale" report count must not be
+  rendered as current state; the current revalidated operator count is
+  `5 stale / 47 total` with `3` priority stale reports until those reports are
+  regenerated or excluded from the canonical set. Excluded stale canonical
+  reports need an explicit non-canonical marker, and preserved stale payloads
+  need a preservation reason.
 - `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
   and the release-run manifest.
 - `tmp/` holds scratch checks and candidate files that must not become authority.
@@ -347,3 +395,9 @@ make openvex-draft-cached
 CycloneDX, SPDX, OpenVEX, in-toto/SLSA, and Sigstore outputs share the
 repo-native artifact model so dependency and public-export coverage can be
 audited consistently.
+
+Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed in
+CI through `uv lock --check` and a frozen `uv export` locked-requirements
+install. Root `requirements.txt` and `requirements-dev.txt` are retired from the
+source and public-export surfaces; if an older report or fixture still mentions
+them, treat them only as optional compatibility/provenance inputs.

@@ -108,6 +108,8 @@ class PublicSurfacePolicyTests(unittest.TestCase):
             self.assertIn("docs/README.md", exported)
             self.assertIn("docs/development.md", exported)
             self.assertIn("ops/templates/codebase-memory-mcp.cbmignore", exported)
+            self.assertNotIn("requirements.txt", exported)
+            self.assertNotIn("requirements-dev.txt", exported)
             self.assertNotIn("ops/operator/operator-release-summary.json", exported)
             self.assertNotIn("ops/reports/example.json", exported)
             self.assertNotIn("ops/reports/goal-worktree-guard.json", exported)

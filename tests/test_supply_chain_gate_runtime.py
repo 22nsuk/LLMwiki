@@ -68,10 +68,49 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         report = build_gate_report(self.vault, context=fixed_context())
         self.assertEqual(report["status"], "pass")
 
-    def test_gate_fails_when_required_input_missing(self) -> None:
+    def test_gate_allows_missing_compatibility_requirements_input(self) -> None:
         self._write_provenance(
             {
-                "inputs": [{"path": "requirements-dev.txt", "exists": False, "parser_status": {"status": "missing"}}],
+                "inputs": [
+                    {
+                        "path": "requirements-dev.txt",
+                        "authority_role": "compatibility",
+                        "exists": False,
+                        "parser_status": {"status": "missing"},
+                    }
+                ],
+                "lock_evidence": {
+                    "parser_status": {"status": "pass"},
+                    "lock_check_status": "enforced",
+                    "lock_check_command": "uv lock --check",
+                },
+                "ci_install_proof": {
+                    "workflow_path": ".github/workflows/ci.yml",
+                    "workflow_exists": True,
+                    "checks_uv_lock_freshness": True,
+                    "exports_frozen_uv_lock": True,
+                    "installs_locked_requirements": True,
+                    "install_resolution_mode": "canonical_lock_export",
+                    "editable_install": True,
+                },
+            }
+        )
+
+        report = build_gate_report(self.vault, context=fixed_context())
+        self.assertEqual(report["status"], "pass")
+        self.assertTrue(next(c["pass"] for c in report["checks"] if c["rule"] == "all_required_inputs_exist"))
+
+    def test_gate_fails_when_canonical_input_missing(self) -> None:
+        self._write_provenance(
+            {
+                "inputs": [
+                    {
+                        "path": "uv.lock",
+                        "authority_role": "canonical",
+                        "exists": False,
+                        "parser_status": {"status": "missing"},
+                    }
+                ],
                 "lock_evidence": {
                     "parser_status": {"status": "pass"},
                     "lock_check_status": "enforced",

@@ -156,8 +156,6 @@ def _envelope_file_inputs(vault: Path, provenance_report: dict) -> dict[str, str
     file_inputs: dict[str, str] = {}
     candidate_inputs = {
         "pyproject": "pyproject.toml",
-        "requirements": "requirements.txt",
-        "requirements_dev": "requirements-dev.txt",
         "lock": "uv.lock",
     }
     workflow_path = provenance_report.get("ci_install_proof", {}).get("workflow_path")
@@ -201,8 +199,6 @@ def _metadata_properties(
         ),
         _property("urn:openai:sbom:source-zip-sha256", source_package.get("source_zip_sha256", "")),
         _property("urn:openai:sbom:inputs:pyproject", "pyproject.toml"),
-        _property("urn:openai:sbom:inputs:requirements", "requirements.txt"),
-        _property("urn:openai:sbom:inputs:requirements-dev", "requirements-dev.txt"),
         _property("urn:openai:sbom:inputs:lock", "uv.lock"),
     ]
     if provenance_report["ci_install_proof"]["workflow_exists"]:
@@ -244,14 +240,11 @@ def _requirement_names(items: list[dict]) -> set[str]:
 
 
 def _runtime_requirement_names(provenance_report: dict) -> set[str]:
-    names = _requirement_names(provenance_report.get("declared_dependencies", []))
-    return names or _requirement_names(provenance_report.get("requirements", []))
+    return _requirement_names(provenance_report.get("declared_dependencies", []))
 
 
 def _dev_requirement_names(provenance_report: dict) -> set[str]:
-    return _requirement_names(provenance_report.get("dev_dependencies", [])) | _requirement_names(
-        provenance_report.get("dev_requirements", [])
-    )
+    return _requirement_names(provenance_report.get("dev_dependencies", []))
 
 
 def _package_key(package: dict) -> str:
@@ -446,21 +439,6 @@ def _build_components(vault: Path, provenance_report: dict) -> tuple[list[dict[s
 
     for item in provenance_report.get("dev_dependencies", []):
         component = _component_from_requirement(item, source_kind=item.get("source", "pyproject.toml"), scope="excluded")
-        if component is None:
-            continue
-        normalized = normalize_requirement_name(component["name"])
-        by_name[normalized] = _merge_component(by_name[normalized], component) if normalized in by_name else component
-
-    if not by_name:
-        for item in provenance_report.get("requirements", []):
-            component = _component_from_requirement(item, source_kind=item.get("source", "requirements.txt"), scope="required")
-            if component is None:
-                continue
-            normalized = normalize_requirement_name(component["name"])
-            by_name[normalized] = _merge_component(by_name[normalized], component) if normalized in by_name else component
-
-    for item in provenance_report.get("dev_requirements", []):
-        component = _component_from_requirement(item, source_kind=item.get("source", "requirements-dev.txt"), scope="excluded")
         if component is None:
             continue
         normalized = normalize_requirement_name(component["name"])

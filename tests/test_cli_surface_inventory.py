@@ -27,6 +27,7 @@ class CliSurfaceInventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             (vault / "ops" / "scripts" / "core").mkdir(parents=True)
+            (vault / "ops" / "scripts" / "release").mkdir(parents=True)
             (vault / "mk").mkdir()
             (vault / "pyproject.toml").write_text(
                 "[project]\nname = 'sample'\n[project.scripts]\nllmwiki-sample = 'ops.scripts.core.sample_cli:main'\n",
@@ -34,12 +35,17 @@ class CliSurfaceInventoryTests(unittest.TestCase):
             )
             (vault / "Makefile").write_text("include mk/core.mk\n", encoding="utf-8")
             (vault / "mk" / "core.mk").write_text(
-                "sample:\n\tpython -m ops.scripts.sample_cli --help\n",
+                "sample:\n\tpython -m ops.scripts.sample_cli --help\n"
+                "status:\n\tpython -m ops.scripts.release.status_cli --vault .\n",
                 encoding="utf-8",
             )
             (vault / "ops" / "scripts" / "core" / "sample_cli.py").write_text(
                 "if __package__ in (None, \"\"):  # pragma: no cover - direct script fallback\n"
                 "    pass\n"
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "release" / "status_cli.py").write_text(
                 "def main(): pass\n",
                 encoding="utf-8",
             )
@@ -51,16 +57,28 @@ class CliSurfaceInventoryTests(unittest.TestCase):
             report = build_report(vault, context=fixed_context())
 
         self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["summary"]["module_count"], 1)
-        self.assertEqual(report["modules"][0]["module"], "ops.scripts.core.sample_cli")
-        self.assertEqual(report["modules"][0]["path"], "ops/scripts/core/sample_cli.py")
+        self.assertEqual(report["summary"]["module_count"], 2)
+        modules = {item["module"]: item for item in report["modules"]}
+        self.assertEqual(modules["ops.scripts.core.sample_cli"]["path"], "ops/scripts/core/sample_cli.py")
         self.assertEqual(
-            set(report["modules"][0]["aliases"]),
+            set(modules["ops.scripts.core.sample_cli"]["aliases"]),
             {"ops.scripts.core.sample_cli", "ops.scripts.sample_cli"},
         )
         self.assertEqual(
-            set(report["modules"][0]["sources"]),
+            set(modules["ops.scripts.core.sample_cli"]["sources"]),
             {"pyproject_scripts", "makefile_module_invocations", "direct_fallback_modules"},
+        )
+        self.assertEqual(
+            modules["ops.scripts.release.status_cli"]["path"],
+            "ops/scripts/release/status_cli.py",
+        )
+        self.assertEqual(
+            modules["ops.scripts.release.status_cli"]["aliases"],
+            ["ops.scripts.release.status_cli"],
+        )
+        self.assertEqual(
+            modules["ops.scripts.release.status_cli"]["sources"],
+            ["makefile_module_invocations"],
         )
         self.assertEqual(
             validate_with_schema(

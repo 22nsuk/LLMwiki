@@ -92,10 +92,27 @@ EXTERNAL_REPORT_TARGETS = [
 ]
 FINALITY_RESETTLE_TARGETS = [
     "workflow-dependency-planner",
-    "generated-artifact-converge",
+    "generated-artifact-finality-suffix",
     "release-closeout-fixed-point",
     "tmp-json-clean",
     "release-closeout-finality-verify",
+]
+
+GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS = [
+    "script-output-surfaces",
+    "external-report-action-matrix",
+    "generated-artifact-index",
+    "artifact-freshness",
+]
+
+GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS = [
+    "script-output-surfaces",
+]
+
+GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS = [
+    "external-report-action-matrix",
+    "generated-artifact-index",
+    "artifact-freshness",
 ]
 PLANNER_CLOSEOUT_FALLBACK_TARGETS = [
     "workflow-dependency-planner",
@@ -129,6 +146,29 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "reason_code": "workflow_dependency_planner_input_or_contract_changed",
         "description": "Workflow planner source, schema, Make orchestration, CI fingerprint, or CLI/documentation surface changed; refresh the planner before finality verification.",
         "targets": PLANNER_CLOSEOUT_FALLBACK_TARGETS,
+        "expensive": False,
+        "reusable": True,
+    },
+    {
+        "rule_id": "generated_artifact_converge_contract_change",
+        "path_patterns": [
+            "mk/artifact.mk",
+            "ops/scripts/core/generated_artifact_*.py",
+            "ops/scripts/core/script_output_surfaces.py",
+            "ops/schemas/artifact-freshness-report.schema.json",
+            "ops/schemas/generated-artifact-index.schema.json",
+            "ops/schemas/script-output-surfaces.schema.json",
+        ],
+        "workflow_id": "generated_artifact_converge_closeout",
+        "recommended_lane": "generated-artifact-converge",
+        "reason_code": "generated_artifact_converge_contract_changed",
+        "description": "Generated-artifact orchestration, source inventory, index, or freshness contract changed; run the full generated-artifact aggregate instead of a suffix-only repair.",
+        "targets": [
+            "generated-artifact-converge",
+            "release-closeout-fixed-point",
+            "tmp-json-clean",
+            "release-closeout-finality-verify",
+        ],
         "expensive": False,
         "reusable": True,
     },
@@ -209,13 +249,31 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "rule_id": "canonical_release_report_change",
         "path_patterns": [
             "ops/reports/*.json",
-            "ops/script-output-surfaces.json",
         ],
         "workflow_id": "canonical_report_finalization",
         "recommended_lane": "release-finality-resettle",
-        "reason_code": "canonical_report_or_inventory_changed",
+        "reason_code": "canonical_report_finality_suffix_changed",
         "description": "Canonical generated reports changed; use the focused resettle lane so finality is rewritten only after generated artifact convergence and fixed-point closeout.",
         "targets": FINALITY_RESETTLE_TARGETS,
+        "expensive": False,
+        "reusable": True,
+    },
+    {
+        "rule_id": "script_output_surface_inventory_change",
+        "path_patterns": [
+            "ops/script-output-surfaces.json",
+        ],
+        "workflow_id": "script_output_surface_finalization",
+        "recommended_lane": "generated-artifact-script-output",
+        "reason_code": "script_output_surface_inventory_changed",
+        "description": "The script output surface inventory changed; refresh only the script-output slice before fixed-point finality verification.",
+        "targets": [
+            "workflow-dependency-planner",
+            "generated-artifact-script-output",
+            "release-closeout-fixed-point",
+            "tmp-json-clean",
+            "release-closeout-finality-verify",
+        ],
         "expensive": False,
         "reusable": True,
     },
@@ -225,6 +283,8 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
             ".gitignore",
             "AGENTS.md",
             "ARCHITECTURE.md",
+            ".github/*.yml",
+            ".github/*.yaml",
             ".github/workflows/*.yml",
             ".github/workflows/*.yaml",
         ],
@@ -397,6 +457,7 @@ def _selected_workflows(
                         "target": target,
                         "reason_code": rule["reason_code"],
                         "primary_report": _primary_report_for_target(str(target)),
+                        "fanout_targets": _fanout_targets_for_target(str(target)),
                         "expensive": bool(rule["expensive"]),
                         "reusable": bool(rule["reusable"]),
                     }
@@ -415,6 +476,8 @@ def _primary_report_for_target(target: str) -> str:
         "external-report-reference-manifest": "external-reports/report-reference-manifest.json",
         "external-report-action-matrix": "ops/reports/external-report-action-matrix.json",
         "generated-artifact-converge": "ops/reports/artifact-freshness-report.json",
+        "generated-artifact-script-output": "ops/script-output-surfaces.json",
+        "generated-artifact-finality-suffix": "ops/reports/artifact-freshness-report.json",
         "generated-artifact-index": "ops/reports/generated-artifact-index.json",
         "generated-artifact-index-body": "ops/reports/generated-artifact-index.json",
         "learning-readiness-signoff-revalidation": "ops/reports/learning-readiness-signoff-revalidation.json",
@@ -434,6 +497,14 @@ def _primary_report_for_target(target: str) -> str:
         "test-execution-summary": "ops/reports/test-execution-summary.json",
         "workflow-dependency-planner": "ops/reports/workflow-dependency-planner.json",
     }.get(target, "")
+
+
+def _fanout_targets_for_target(target: str) -> list[str]:
+    return {
+        "generated-artifact-converge": list(GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS),
+        "generated-artifact-script-output": list(GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS),
+        "generated-artifact-finality-suffix": list(GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS),
+    }.get(target, [])
 
 
 def _missing_dependencies(targets: set[str], edges: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -623,6 +694,15 @@ def build_report(
             file_inputs=file_inputs,
             text_inputs={
                 "workflow_rules": json.dumps(workflow_rules, ensure_ascii=False, sort_keys=True),
+                "generated_artifact_converge_fanout_targets": json.dumps(
+                    {
+                        "generated-artifact-converge": GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS,
+                        "generated-artifact-script-output": GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS,
+                        "generated-artifact-finality-suffix": GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS,
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ),
             },
         ),
         "vault": report_path(resolved_vault, resolved_vault),

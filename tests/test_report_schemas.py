@@ -651,7 +651,7 @@ class ReportSchemaContractTest(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, schema), [])
         self.assertEqual(
             [item["path"] for item in report["inputs"]],
-            ["pyproject.toml", "requirements.txt", "requirements-dev.txt", "uv.lock"],
+            ["pyproject.toml", "uv.lock", "requirements.txt", "requirements-dev.txt"],
         )
         self.assertEqual(report["locked_packages"][0]["dependencies"][0]["name"], "typing-extensions")
 

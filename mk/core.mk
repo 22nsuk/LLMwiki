@@ -3,8 +3,9 @@ BOOTSTRAP_PREFLIGHT_ENVIRONMENT_CLASS ?= developer
 TOOLS_MIGRATION_PLAN_OUT ?= tmp/tools-migration-plan.json
 SUBAGENT_PROFILE_SCHEMA_OUT ?= tmp/subagent-profile-schema.json
 COMPATIBILITY_ALIAS_DEPRECATION_OUT ?= tmp/compatibility-alias-deprecation.json
+STATUS_FLAGS ?=
 
-.PHONY: help dev-install bootstrap-preflight tools-migration-plan subagent-profile-schema compatibility-alias-deprecation
+.PHONY: help dev-install status llm-wiki-status bootstrap-preflight tools-migration-plan subagent-profile-schema compatibility-alias-deprecation
 
 help:
 	@printf '%s\n' \
@@ -12,6 +13,7 @@ help:
 		"" \
 		"Setup:" \
 		"  make dev-install                  install/update the local developer environment" \
+		"  make status                       render the operator status surface" \
 		"  make bootstrap-preflight          write the environment preflight report" \
 		"" \
 		"Source checks:" \
@@ -52,6 +54,11 @@ dev-install:
 	fi
 	@echo "Development environment is ready at $(VENV_PYTHON)"
 	@echo "Subsequent 'make check' and 'make test' invocations will auto-use $(VENV_PYTHON) when it exists."
+
+status:
+	$(PYTHON) -m ops.scripts.release.release_status_surface --vault "$(VAULT)" $(STATUS_FLAGS)
+
+llm-wiki-status: status
 
 bootstrap-preflight:
 	$(PYTHON) -m ops.scripts.bootstrap_preflight --vault "$(VAULT)" --dev --environment-class "$(BOOTSTRAP_PREFLIGHT_ENVIRONMENT_CLASS)" --out "$(BOOTSTRAP_PREFLIGHT_OUT)"

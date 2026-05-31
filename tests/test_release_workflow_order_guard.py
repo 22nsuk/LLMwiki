@@ -147,6 +147,8 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "auto-improve-readiness-worktree-guard",
                 "remediation-backlog",
                 "generated-artifact-converge",
+                "generated-artifact-script-output",
+                "generated-artifact-finality-suffix",
                 "generated-artifact-index",
                 "artifact-freshness",
                 "release-closeout-summary",
@@ -184,7 +186,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t@echo compatibility alias\n"
             "release-finality-resettle:\n"
             "\t$(MAKE) workflow-dependency-planner\n"
-            "\t$(MAKE) generated-artifact-converge\n"
+            "\t$(MAKE) generated-artifact-finality-suffix\n"
             "\t$(MAKE) release-closeout-fixed-point\n"
             "\t$(MAKE) tmp-json-clean\n"
             "\t$(MAKE) release-closeout-finality-verify\n"
@@ -222,7 +224,11 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "remediation-backlog:\n"
             "\t@true\n"
             "generated-artifact-converge:\n"
+            "\t$(MAKE) generated-artifact-script-output\n"
+            "\t$(MAKE) generated-artifact-finality-suffix\n"
+            "generated-artifact-script-output:\n"
             "\t$(MAKE) script-output-surfaces\n"
+            "generated-artifact-finality-suffix:\n"
             "\t$(MAKE) external-report-action-matrix\n"
             "\t$(MAKE) generated-artifact-index\n"
             "\t$(MAKE) artifact-freshness\n"

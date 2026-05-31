@@ -8,7 +8,7 @@ try:
 except ModuleNotFoundError as exc:  # pragma: no cover - dependency bootstrap
     raise RuntimeError(
         "PyYAML is required for YAML parsing. Install it with "
-        "`python3 -m pip install -r requirements.txt`."
+        "`make dev-install` or `python3 -m pip install -e .`."
     ) from exc
 
 

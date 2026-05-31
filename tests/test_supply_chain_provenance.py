@@ -135,6 +135,10 @@ jobs:
             pyproject_bytes = (vault / "pyproject.toml").read_bytes()
             workflow_bytes = (vault / ".github" / "workflows" / "ci.yml").read_bytes()
             self.assertEqual(persisted["status"], "pass")
+            self.assertEqual(input_by_path["pyproject.toml"]["authority_role"], "canonical")
+            self.assertEqual(input_by_path["uv.lock"]["authority_role"], "canonical")
+            self.assertEqual(input_by_path["requirements.txt"]["authority_role"], "compatibility")
+            self.assertEqual(input_by_path["requirements-dev.txt"]["authority_role"], "compatibility")
             self.assertEqual(input_by_path["pyproject.toml"]["sha256"], hashlib.sha256(pyproject_bytes).hexdigest())
             self.assertEqual(input_by_path["uv.lock"]["parser_status"]["status"], "pass")
             self.assertEqual(persisted["declared_dependencies"][0]["name"], "PyYAML")
@@ -149,6 +153,18 @@ jobs:
                 "python_version >= '3.12'",
             )
             self.assertIn("uv.lock", persisted["release_manifest"]["dependency_files"])
+            self.assertEqual(
+                persisted["release_manifest"]["canonical_dependency_files"],
+                ["pyproject.toml", "uv.lock"],
+            )
+            self.assertEqual(
+                persisted["release_manifest"]["compatibility_dependency_files"],
+                ["requirements.txt", "requirements-dev.txt"],
+            )
+            self.assertEqual(
+                persisted["release_manifest"]["dependency_files"],
+                ["pyproject.toml", "uv.lock"],
+            )
             self.assertTrue(
                 any("frozen locked-requirements install" in note for note in persisted["provenance_notes"])
             )
@@ -185,7 +201,7 @@ jobs:
                 "pass",
             )
 
-    def test_build_report_records_missing_inputs_as_warn_not_fail(self) -> None:
+    def test_build_report_treats_missing_requirements_files_as_compatibility_not_canonical_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -194,13 +210,29 @@ jobs:
                 '[project]\nname = "sample"\nversion = "0.1.0"\n',
                 encoding="utf-8",
             )
+            (vault / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+            (vault / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
+            (vault / ".github" / "workflows" / "ci.yml").write_text(
+                LOCKED_CI_INSTALL_SNIPPET,
+                encoding="utf-8",
+            )
 
             report = build_report(vault, context=fixed_context())
 
             input_by_path = {item["path"]: item for item in report["inputs"]}
-            self.assertEqual(report["status"], "warn")
+            self.assertEqual(report["status"], "pass")
             self.assertFalse(input_by_path["requirements-dev.txt"]["exists"])
+            self.assertEqual(input_by_path["requirements-dev.txt"]["authority_role"], "compatibility")
             self.assertEqual(input_by_path["requirements-dev.txt"]["parser_status"]["status"], "missing")
+            envelope = json.loads(
+                next(
+                    item["value"]
+                    for item in report["metadata"]["properties"]
+                    if item["name"] == "urn:openai:artifact-envelope"
+                )
+            )
+            self.assertNotIn("requirements-dev.txt", envelope["input_fingerprints"])
+            self.assertNotIn("requirements.txt", envelope["input_fingerprints"])
             self.assertEqual(report["source_package_evidence"]["status"], "missing")
 
     def test_build_report_records_malformed_uv_lock_as_parser_error(self) -> None:

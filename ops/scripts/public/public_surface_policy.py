@@ -12,8 +12,6 @@ PUBLIC_INCLUDE_FILES = (
     "README.md",
     "SECURITY.md",
     "THIRD_PARTY_NOTICES.md",
-    "requirements.txt",
-    "requirements-dev.txt",
     "pytest.ini",
     "uv.lock",
 )
@@ -95,8 +93,6 @@ def render_public_gitignore_block() -> str:
         "!/ops/",
         "!/ops/**",
         "!/pytest.ini",
-        "!/requirements-dev.txt",
-        "!/requirements.txt",
         "!/tests/",
         "!/tests/**",
         "!/tools/",

@@ -18,6 +18,9 @@ PYPROJECT = Path("pyproject.toml")
 SCRIPT_MODULE_SURFACES = Path("ops/script-module-surfaces.json")
 SCRIPT_MODULE_SURFACES_SCHEMA = Path("ops/schemas/script-module-surfaces.schema.json")
 CONSOLE_SCRIPT_PREFIX = "llm-wiki-"
+ALLOWED_PROJECT_SCRIPT_ALIASES = {
+    "llm-wiki-status": "ops.scripts.release.release_status_surface:main",
+}
 
 
 def _load_contract() -> dict:
@@ -153,6 +156,7 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
             _console_command_for_direct_script(path): _console_target_for_direct_script(path)
             for path in entrypoints
         }
+        expected.update(ALLOWED_PROJECT_SCRIPT_ALIASES)
 
         self.assertEqual(_project_scripts(), expected)
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -25,11 +24,9 @@ from ops.scripts.core.release_currentness_state_runtime import (
 )
 from ops.scripts.core.release_risk_state_runtime import release_risk_identity
 from ops.scripts.gate_effect_vocabulary import (
-    GATE_EFFECT_NONE,
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
-    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     canonical_gate_effect,
 )
 from ops.scripts.learning_readiness_vocabulary import (
@@ -37,7 +34,7 @@ from ops.scripts.learning_readiness_vocabulary import (
     LEARNING_STATUS_LIKELY,
 )
 from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     LEARNING_READINESS_SIGNOFF_SCHEMA_PATH,
@@ -54,18 +51,16 @@ from ops.scripts.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 
-from .release_authority_vocabulary import release_authority_vocabulary_payload
+from . import release_closeout_render_runtime
+from . import release_closeout_risk_runtime
+from . import release_closeout_source_runtime
+from .release_dependency_reproducibility_runtime import dependency_reproducibility_record
+from .release_freshness_gate_runtime import artifact_freshness_gate_record
 from .release_risk_taxonomy_runtime import (
-    ADVISORY_REVIEW_BACKLOG,
-    CLEAN_LANE_BLOCKS,
-    CONDITIONAL_OPERATOR_REVIEW,
-    LEARNING_BLOCKS_CLAIM,
     RELEASE_RISK_TAXONOMY_PATH,
     annotate_release_risk,
     load_release_risk_taxonomy,
-    unregistered_release_risk_codes,
 )
-from .release_status_v2 import decide_sealed_release_status, release_status_v2_payload
 
 DEFAULT_OUT = "ops/reports/release-closeout-summary.json"
 FIXED_POINT_POLICY_PATH = "ops/policies/release-closeout-fixed-point.json"
@@ -73,15 +68,8 @@ LEARNING_SIGNOFF_PATH = "ops/reports/learning-readiness-signoff.json"
 LEARNING_DELTA_SCOREBOARD_PATH = "ops/reports/learning-delta-scoreboard.json"
 LEARNING_SIGNOFF_ARTIFACT_KIND = "learning_readiness_signoff"
 LEARNING_REVIEW_BLOCKER_ID = LEARNING_REVIEW_REQUIRED_BLOCKER_ID
-TAXONOMY_COVERAGE_BLOCKER_ID = "release_risk_taxonomy_unregistered_code"
 PRODUCER = "ops.scripts.release_closeout_summary"
 SOURCE_COMMAND_TEMPLATE = "python -m ops.scripts.release_closeout_summary --vault . --profile {profile}"
-POLICY_RISK_ACCEPTED_BY = "release_closeout_policy"
-POLICY_RISK_ACCEPTANCE_DAYS = 7
-BASE_PROFILE = "base"
-PROVENANCE_PROFILE = "provenance"
-SBOM_PROFILE = "sbom"
-VALID_PROFILES = (BASE_PROFILE, PROVENANCE_PROFILE, SBOM_PROFILE)
 RELEASE_STATE_CLEAN_PASS = "clean_pass"
 RELEASE_STATE_CONDITIONAL_PASS = "conditional_pass"
 RELEASE_STATE_BLOCKED = "blocked"
@@ -92,53 +80,41 @@ RELEASE_READINESS_STATES = (
     RELEASE_STATE_BLOCKED,
     RELEASE_STATE_UNKNOWN,
 )
-DEPENDENCY_REPRODUCIBILITY_FILES = (
-    "uv.lock",
-    "pyproject.toml",
-    "requirements.txt",
-    "requirements-dev.txt",
+POLICY_ACCEPTED_RISK_METADATA = release_closeout_risk_runtime.POLICY_ACCEPTED_RISK_METADATA
+POLICY_RISK_ACCEPTANCE_DAYS = release_closeout_risk_runtime.POLICY_RISK_ACCEPTANCE_DAYS
+POLICY_RISK_ACCEPTED_BY = release_closeout_risk_runtime.POLICY_RISK_ACCEPTED_BY
+TAXONOMY_COVERAGE_BLOCKER_ID = release_closeout_risk_runtime.TAXONOMY_COVERAGE_BLOCKER_ID
+_accepted_risk_count_by_scope = release_closeout_risk_runtime.accepted_risk_count_by_scope
+_annotated_blocks_source_clean_lane = release_closeout_risk_runtime.annotated_blocks_source_clean_lane
+_blocks_source_clean_lane = release_closeout_risk_runtime.blocks_source_clean_lane
+_finalize_accepted_risks = release_closeout_risk_runtime.finalize_accepted_risks
+_issue = release_closeout_risk_runtime.release_closeout_issue
+_policy_risk_acceptance = release_closeout_risk_runtime.policy_risk_acceptance
+_risk_acceptance_is_active = release_closeout_risk_runtime.risk_acceptance_is_active
+_risk_delta = release_closeout_risk_runtime.risk_delta
+_taxonomy_coverage_blockers = release_closeout_risk_runtime.taxonomy_coverage_blockers
+CloseoutStatusDecision = release_closeout_render_runtime.CloseoutStatusDecision
+_closeout_snapshot_phase = release_closeout_render_runtime.closeout_snapshot_phase
+_closeout_status_decision = release_closeout_render_runtime.closeout_status_decision
+_closeout_summary_payload = release_closeout_render_runtime.closeout_summary_payload
+_render_closeout_report = release_closeout_render_runtime.render_closeout_report
+_status_semantics = release_closeout_render_runtime.status_semantics
+_summary_batch_integrity_status = release_closeout_render_runtime.summary_batch_integrity_status
+_summary_distribution_package_placeholder = (
+    release_closeout_render_runtime.summary_distribution_package_placeholder
 )
-
-
-POLICY_ACCEPTED_RISK_METADATA = {
-    "raw_registry_preflight_warnings": {
-        "risk_owner": "runtime-maintainer",
-        "revalidation_condition": "Rerun registry-preflight before the next release closeout.",
-        "rollback_trigger": "Treat raw registry warnings as blockers if they become fail-level drift.",
-    },
-    "artifact_freshness_attention": {
-        "risk_owner": "runtime-maintainer",
-        "revalidation_condition": "Rerun artifact-freshness before the next release closeout.",
-        "rollback_trigger": "Treat artifact freshness attention as a blocker if it becomes fail-level debt.",
-    },
-    "artifact_freshness_stable_contract_debt_advisory": {
-        "risk_owner": "runtime-maintainer",
-        "revalidation_condition": "Rerun artifact-freshness before the next release closeout.",
-        "rollback_trigger": "Treat stable artifact contract debt as a blocker if it becomes operational or fail-level debt.",
-    },
-    "generated_index_archive_advisory": {
-        "risk_owner": "runtime-maintainer",
-        "revalidation_condition": "Rerun generated-artifact-index before the next release closeout.",
-        "rollback_trigger": "Treat generated artifact index advisory debt as a blocker if current artifacts go missing.",
-    },
-    "source_tree_coherence_attention": {
-        "risk_owner": "runtime-maintainer",
-        "revalidation_condition": "Rerun release evidence in one ordered closeout chain before release signoff.",
-        "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",
-    },
-    "external_report_strict_unavailable": {
-        "risk_owner": "runtime-maintainer",
-        "revalidation_condition": "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
-        "rollback_trigger": "Treat missing strict external report provenance as a blocker in sealed release lanes.",
-    },
-}
-
-
-@dataclass(frozen=True)
-class SourceSpec:
-    name: str
-    path: str
-    artifact_kind: str
+BASE_PROFILE = release_closeout_source_runtime.BASE_PROFILE
+PROVENANCE_PROFILE = release_closeout_source_runtime.PROVENANCE_PROFILE
+SBOM_PROFILE = release_closeout_source_runtime.SBOM_PROFILE
+VALID_PROFILES = release_closeout_source_runtime.VALID_PROFILES
+SourceSpec = release_closeout_source_runtime.SourceSpec
+BASE_SOURCE_SPECS = release_closeout_source_runtime.BASE_SOURCE_SPECS
+PROVENANCE_SOURCE_SPECS = release_closeout_source_runtime.PROVENANCE_SOURCE_SPECS
+SBOM_SOURCE_SPECS = release_closeout_source_runtime.SBOM_SOURCE_SPECS
+SOURCE_SPECS_BY_PROFILE = release_closeout_source_runtime.SOURCE_SPECS_BY_PROFILE
+SOURCE_SPECS = release_closeout_source_runtime.SOURCE_SPECS
+source_specs_for_profile = release_closeout_source_runtime.source_specs_for_profile
+_load_source = release_closeout_source_runtime.load_closeout_source
 
 
 @dataclass(frozen=True)
@@ -204,18 +180,6 @@ class CloseoutReadinessState:
 
 
 @dataclass(frozen=True)
-class CloseoutStatusDecision:
-    status: str
-    release_authority_status: str
-    semantic_release_status: str
-    sealed_release_status: str
-    pre_distribution_package_binding_status: str
-    source_closeout_distribution_binding_status: str
-    release_authority_vocabulary: dict[str, Any]
-    status_v2: dict[str, Any]
-
-
-@dataclass(frozen=True)
 class CloseoutEnvelopeInputs:
     vault: Path
     resolved_policy_path: Path
@@ -276,68 +240,6 @@ class CloseoutRenderInputs:
     envelope: dict[str, Any]
 
 
-BASE_SOURCE_SPECS = (
-    SourceSpec(
-        "bootstrap_preflight",
-        "ops/reports/bootstrap-preflight-report.json",
-        "bootstrap_preflight_report",
-    ),
-    SourceSpec("release_smoke", "ops/reports/release-smoke-report.json", "release_smoke_report"),
-    SourceSpec(
-        "source_package_clean_extract",
-        "ops/reports/source-package-clean-extract.json",
-        "source_package_clean_extract",
-    ),
-    SourceSpec(
-        "external_report_reference_manifest",
-        "external-reports/report-reference-manifest.json",
-        "external_report_reference_manifest",
-    ),
-    SourceSpec("test_summary", "ops/reports/test-execution-summary.json", "test_execution_summary"),
-    SourceSpec("live_make_check", "ops/reports/test-execution-summary-full.json", "test_execution_summary"),
-    SourceSpec(
-        "raw_registry",
-        "ops/reports/raw-registry-preflight-report.json",
-        "raw_registry_preflight_report",
-    ),
-    SourceSpec(
-        "artifact_freshness",
-        "ops/reports/artifact-freshness-report.json",
-        "artifact_freshness_report",
-    ),
-    SourceSpec(
-        "generated_index",
-        "ops/reports/generated-artifact-index.json",
-        "generated_artifact_index_report",
-    ),
-    SourceSpec(
-        "auto_improve_readiness",
-        "ops/reports/auto-improve-readiness.json",
-        "auto_improve_readiness_report",
-    ),
-)
-PROVENANCE_SOURCE_SPECS = (
-    *BASE_SOURCE_SPECS,
-    SourceSpec(
-        "supply_chain_gate",
-        "ops/reports/supply-chain-gate-report.json",
-        "supply_chain_gate_report",
-    ),
-)
-SBOM_SOURCE_SPECS = (
-    *PROVENANCE_SOURCE_SPECS,
-    SourceSpec(
-        "sbom_readiness",
-        "ops/reports/sbom-readiness-gate-report.json",
-        "sbom_readiness_gate_report",
-    ),
-)
-SOURCE_SPECS_BY_PROFILE = {
-    BASE_PROFILE: BASE_SOURCE_SPECS,
-    PROVENANCE_PROFILE: PROVENANCE_SOURCE_SPECS,
-    SBOM_PROFILE: SBOM_SOURCE_SPECS,
-}
-SOURCE_SPECS = BASE_SOURCE_SPECS
 COHERENCE_SOURCE = "source_tree_coherence"
 COHERENCE_POLICY = "allowed_divergence_with_fingerprints"
 
@@ -370,37 +272,6 @@ TEST_FAILURE_LANES = (
 FAILED_NODEID_RE = re.compile(r"(?P<nodeid>tests/[A-Za-z0-9_./-]+\.py::[^\s]+)")
 
 
-def source_specs_for_profile(profile: str) -> tuple[SourceSpec, ...]:
-    try:
-        return SOURCE_SPECS_BY_PROFILE[profile]
-    except KeyError as exc:
-        raise ValueError(f"unsupported release closeout profile: {profile}") from exc
-
-
-def _issue(
-    *,
-    source: str,
-    source_path: str,
-    code: str,
-    message: str,
-    severity: str = "blocker",
-    gate_effect: str = GATE_EFFECT_BLOCKS_PROMOTION,
-    required_evidence: list[str] | None = None,
-) -> dict[str, Any]:
-    return {
-        "source": source,
-        "source_path": source_path,
-        "code": code,
-        "severity": severity,
-        "gate_effect": canonical_gate_effect(
-            gate_effect,
-            active_default=GATE_EFFECT_BLOCKS_PROMOTION,
-        ),
-        "message": message,
-        "required_evidence": required_evidence or [],
-    }
-
-
 def _component(inputs: ComponentInput) -> dict[str, Any]:
     return {
         "name": inputs.spec.name,
@@ -429,44 +300,12 @@ def _artifact_freshness_gate(
 ) -> dict[str, Any]:
     component = next((item for item in components if item["name"] == "artifact_freshness"), {})
     payload = source_payloads.get("artifact_freshness", {})
-    summary = payload.get("summary")
-    summary = summary if isinstance(summary, dict) else {}
-    schema_invalid_count = int(summary.get("schema_invalid_artifact_count", 0) or 0)
-    stable_debt_count = int(summary.get("stable_contract_debt_issue_count", 0) or 0)
-    status = str(payload.get("status", component.get("source_status", "unknown"))).strip() or "unknown"
-    release_owned_attention = _release_owned_artifact_freshness_attention(vault, payload)
-    if status == "pass":
-        gate_effect = GATE_EFFECT_ADVISORY if schema_invalid_count > 0 else GATE_EFFECT_NONE
-    elif status == "attention":
-        if _artifact_freshness_stable_contract_debt_only(payload):
-            gate_effect = GATE_EFFECT_ADVISORY
-        elif release_owned_attention:
-            gate_effect = GATE_EFFECT_ADVISORY
-        else:
-            gate_effect = GATE_EFFECT_NONE
-    else:
-        gate_effect = GATE_EFFECT_BLOCKS_PROMOTION
-
-    if gate_effect == GATE_EFFECT_NONE:
-        display_effect = "none"
-    elif gate_effect == GATE_EFFECT_ADVISORY:
-        display_effect = "advisory"
-    else:
-        display_effect = "blocking"
-
-    blocking = display_effect == "blocking"
-    ready = bool(component.get("ready")) and not blocking
-    return {
-        "path": "ops/reports/artifact-freshness-report.json",
-        "load_status": str(component.get("load_status", "missing")).strip() or "missing",
-        "status": status,
-        "ready": ready,
-        "schema_invalid_artifact_count": schema_invalid_count,
-        "stable_contract_debt_issue_count": stable_debt_count,
-        "gate_effect": gate_effect,
-        "display_effect": display_effect,
-        "blocking": blocking,
-    }
+    return artifact_freshness_gate_record(
+        component=component,
+        payload=payload,
+        stable_contract_debt_only=_artifact_freshness_stable_contract_debt_only(payload),
+        release_owned_attention=_release_owned_artifact_freshness_attention(vault, payload),
+    )
 
 
 def _release_smoke_boundedness_gate(
@@ -723,51 +562,6 @@ def _load_learning_signoff(vault: Path, *, generated_at: str) -> dict[str, Any]:
             f"{LEARNING_SIGNOFF_PATH} declares artifact_kind={artifact_kind or '<missing>'}",
         )
     return _learning_signoff_from_payload(vault, payload, generated_at=generated_at)
-
-
-def _load_source(vault: Path, spec: SourceSpec) -> tuple[dict[str, Any], str, list[dict[str, Any]]]:
-    path = vault / spec.path
-    payload, diagnostics = load_optional_json_object_with_diagnostics(path)
-    load_status = str(diagnostics.get("status", "unknown")).strip() or "unknown"
-    if load_status != "ok":
-        return payload, load_status, [
-            _issue(
-                source=spec.name,
-                source_path=spec.path,
-                code=f"{spec.name}_report_{load_status}",
-                message=f"{spec.path} could not be loaded: {diagnostics.get('message', load_status)}",
-                required_evidence=[f"Regenerate {spec.path} before release closeout."],
-            )
-        ]
-
-    loading_issue = canonical_report_loading_issue(path, payload)
-    if loading_issue is not None:
-        return payload, "unusable", [
-            _issue(
-                source=spec.name,
-                source_path=spec.path,
-                code=f"{spec.name}_report_not_current",
-                message=f"{spec.path} is not usable release evidence: {loading_issue}.",
-                required_evidence=[f"Regenerate {spec.path} with a current artifact envelope."],
-            )
-        ]
-
-    artifact_kind = str(payload.get("artifact_kind", "")).strip()
-    if artifact_kind != spec.artifact_kind:
-        return payload, "kind_mismatch", [
-            _issue(
-                source=spec.name,
-                source_path=spec.path,
-                code=f"{spec.name}_artifact_kind_mismatch",
-                message=(
-                    f"{spec.path} declares artifact_kind={artifact_kind or '<missing>'}; "
-                    f"expected {spec.artifact_kind}."
-                ),
-                required_evidence=[f"Regenerate {spec.path} from the expected producer."],
-            )
-        ]
-
-    return payload, "ok", []
 
 
 def _status(payload: dict[str, Any]) -> str:
@@ -1568,208 +1362,12 @@ def _apply_learning_signoff(
     return remaining_blockers, converted_risks
 
 
-def _policy_risk_acceptance(issue: dict[str, Any], *, generated_at: str) -> dict[str, Any]:
-    code = str(issue.get("code", "")).strip()
-    metadata = POLICY_ACCEPTED_RISK_METADATA.get(
-        code,
-        {
-            "risk_owner": str(issue.get("source", "runtime-maintainer")).strip() or "runtime-maintainer",
-            "revalidation_condition": "Rerun the source report before the next release closeout.",
-            "rollback_trigger": "Treat this accepted risk as a blocker if the source report escalates it.",
-        },
-    )
-    return {
-        "accepted_by": POLICY_RISK_ACCEPTED_BY,
-        "accepted_at": generated_at,
-        "expires_at": _expires_after(generated_at, days=POLICY_RISK_ACCEPTANCE_DAYS),
-        "risk_owner": metadata["risk_owner"],
-        "revalidation_condition": metadata["revalidation_condition"],
-        "rollback_trigger": metadata["rollback_trigger"],
-        "acceptance_source": "ops/scripts/release_closeout_summary.py",
-        "linked_blocker_id": "",
-    }
-
-
-def _risk_acceptance_is_active(acceptance: dict[str, Any], *, generated_at: str) -> bool:
-    expires_at = _parse_iso_z(str(acceptance.get("expires_at", "")).strip())
-    closeout_at = _parse_iso_z(generated_at)
-    return expires_at is not None and closeout_at is not None and expires_at > closeout_at
-
-
-def _finalize_accepted_risks(
-    accepted_risks: list[dict[str, Any]],
-    *,
-    generated_at: str,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    blockers: list[dict[str, Any]] = []
-    finalized: list[dict[str, Any]] = []
-    for risk in accepted_risks:
-        accepted = dict(risk)
-        if "risk_acceptance" not in accepted:
-            accepted["risk_acceptance"] = _policy_risk_acceptance(accepted, generated_at=generated_at)
-        acceptance = accepted.get("risk_acceptance")
-        if isinstance(acceptance, dict) and _risk_acceptance_is_active(acceptance, generated_at=generated_at):
-            finalized.append(accepted)
-            continue
-        blocker = dict(accepted)
-        blocker.pop("risk_acceptance", None)
-        blocker["severity"] = "blocker"
-        blocker["gate_effect"] = GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
-        blocker["message"] = f"{blocker['message']} Accepted risk metadata is missing or expired."
-        evidence = list(blocker.get("required_evidence", []))
-        evidence.append("Refresh or replace the risk acceptance metadata before release closeout.")
-        blocker["required_evidence"] = evidence
-        blockers.append(blocker)
-    return blockers, finalized
-
-
 def _risk_identity(risk: dict[str, Any]) -> str:
     return release_risk_identity(
         risk,
         include_linked_blocker=True,
         separator="::",
     )
-
-
-def _risk_delta(previous_report: dict[str, Any], accepted_risks: list[dict[str, Any]]) -> dict[str, Any]:
-    previous_risks = previous_report.get("accepted_risks")
-    if not isinstance(previous_risks, list):
-        return {
-            "status": "no_previous_report",
-            "previous_report_generated_at": "",
-            "added_count": len(accepted_risks),
-            "removed_count": 0,
-            "unchanged_count": 0,
-            "added": sorted(_risk_identity(risk) for risk in accepted_risks),
-            "removed": [],
-            "unchanged": [],
-            "summary": "No previous closeout accepted-risk set was available for delta comparison.",
-        }
-    previous = {_risk_identity(risk) for risk in previous_risks if isinstance(risk, dict)}
-    current = {_risk_identity(risk) for risk in accepted_risks}
-    added = sorted(current - previous)
-    removed = sorted(previous - current)
-    unchanged = sorted(current & previous)
-    status = "changed" if added or removed else "unchanged"
-    return {
-        "status": status,
-        "previous_report_generated_at": str(previous_report.get("generated_at", "")).strip(),
-        "added_count": len(added),
-        "removed_count": len(removed),
-        "unchanged_count": len(unchanged),
-        "added": added,
-        "removed": removed,
-        "unchanged": unchanged,
-        "summary": (
-            f"accepted_risk_delta status={status}; added={len(added)}; "
-            f"removed={len(removed)}; unchanged={len(unchanged)}"
-        ),
-    }
-
-
-def _accepted_risk_count_by_scope(accepted_risks: list[dict[str, Any]]) -> dict[str, int]:
-    def family_count_for_effect(field: str, effect: str) -> int:
-        return len(
-            {
-                _risk_identity(risk)
-                for risk in accepted_risks
-                if str(risk.get(field, "")).strip() == effect
-            }
-        )
-
-    counts = {
-        "total": len(accepted_risks),
-        "policy": 0,
-        "test_deselection_policy": 0,
-        "operator_signoff": 0,
-        "upstream_report": 0,
-        "instances": len(accepted_risks),
-        "families": len({_risk_identity(risk) for risk in accepted_risks}),
-        "release_blocking_family_count": 0,
-        "advisory_only_family_count": 0,
-        "clean_lane_blocking_family_count": 0,
-        "conditional_operator_review_family_count": 0,
-        "learning_claim_blocking_family_count": 0,
-        "advisory_lifecycle_family_count": 0,
-    }
-    for risk in accepted_risks:
-        acceptance = risk.get("risk_acceptance")
-        if not isinstance(acceptance, dict):
-            counts["upstream_report"] += 1
-            continue
-        accepted_by = str(acceptance.get("accepted_by", "")).strip()
-        acceptance_source = str(acceptance.get("acceptance_source", "")).strip()
-        if acceptance_source == LEARNING_SIGNOFF_PATH:
-            counts["operator_signoff"] += 1
-        elif accepted_by == "test_deselection_policy":
-            counts["test_deselection_policy"] += 1
-        elif accepted_by == POLICY_RISK_ACCEPTED_BY:
-            counts["policy"] += 1
-        else:
-            counts["upstream_report"] += 1
-    release_blocking_family_count = family_count_for_effect("clean_lane_effect", CLEAN_LANE_BLOCKS)
-    advisory_only_family_count = len(
-        {
-            _risk_identity(risk)
-            for risk in accepted_risks
-            if str(risk.get("clean_lane_effect", "")).strip() != CLEAN_LANE_BLOCKS
-        }
-    )
-    conditional_operator_review_family_count = family_count_for_effect(
-        "conditional_lane_effect",
-        CONDITIONAL_OPERATOR_REVIEW,
-    )
-    learning_claim_blocking_family_count = family_count_for_effect(
-        "learning_lane_effect",
-        LEARNING_BLOCKS_CLAIM,
-    )
-    advisory_lifecycle_family_count = family_count_for_effect(
-        "advisory_lifecycle_effect",
-        ADVISORY_REVIEW_BACKLOG,
-    )
-    counts.update(
-        {
-            "release_blocking_family_count": release_blocking_family_count,
-            "advisory_only_family_count": advisory_only_family_count,
-            "clean_lane_blocking_family_count": release_blocking_family_count,
-            "conditional_operator_review_family_count": conditional_operator_review_family_count,
-            "learning_claim_blocking_family_count": learning_claim_blocking_family_count,
-            "advisory_lifecycle_family_count": advisory_lifecycle_family_count,
-        }
-    )
-    return counts
-
-
-def _taxonomy_coverage_blockers(
-    risks: list[dict[str, Any]],
-    taxonomy: dict[str, Any],
-) -> list[dict[str, Any]]:
-    missing_codes = unregistered_release_risk_codes(taxonomy, risks)
-    if not missing_codes:
-        return []
-    return [
-        _issue(
-            source=COHERENCE_SOURCE,
-            source_path=RELEASE_RISK_TAXONOMY_PATH,
-            code=TAXONOMY_COVERAGE_BLOCKER_ID,
-            message=(
-                "release closeout emitted risk code(s) not registered in release-risk-taxonomy: "
-                + ", ".join(missing_codes)
-            ),
-            required_evidence=[
-                "Add each emitted risk code to ops/policies/release-risk-taxonomy.json "
-                "before release closeout can be treated as machine-clean.",
-            ],
-        )
-    ]
-
-
-def _blocks_source_clean_lane(issue: dict[str, Any]) -> bool:
-    return str(issue.get("clean_lane_effect", "")).strip() == CLEAN_LANE_BLOCKS
-
-
-def _annotated_blocks_source_clean_lane(issue: dict[str, Any], taxonomy: dict[str, Any]) -> bool:
-    return _blocks_source_clean_lane(annotate_release_risk(issue, taxonomy))
 
 
 def _downstream_input_digest_mismatch(
@@ -1840,54 +1438,6 @@ def _load_learning_claim_context(vault: Path) -> dict[str, Any]:
         "learning_claim_allowed": bool(summary.get("learning_claim_allowed")),
         "learning_claim_guard_status": str(guard.get("status", payload.get("status", "unknown"))).strip()
         or "unknown",
-    }
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _dependency_reproducibility(vault: Path) -> dict[str, Any]:
-    files: list[dict[str, Any]] = []
-    for rel_path in DEPENDENCY_REPRODUCIBILITY_FILES:
-        path = vault / rel_path
-        exists = path.is_file()
-        files.append(
-            {
-                "path": rel_path,
-                "exists": exists,
-                "sha256": _sha256_file(path) if exists else "",
-                "canonical_lockfile": rel_path == "uv.lock",
-            }
-        )
-    canonical = next(item for item in files if item["canonical_lockfile"])
-    present_files = [item for item in files if item["exists"]]
-    combined = hashlib.sha256()
-    for item in sorted(present_files, key=lambda value: str(value["path"])):
-        combined.update(str(item["path"]).encode("utf-8"))
-        combined.update(b"\0")
-        combined.update(str(item["sha256"]).encode("utf-8"))
-        combined.update(b"\0")
-    dependency_fingerprint = combined.hexdigest() if present_files else ""
-    status = "locked" if canonical["exists"] else "missing_lockfile"
-    return {
-        "schema_version": 1,
-        "status": status,
-        "canonical_lockfile_path": "uv.lock",
-        "canonical_lockfile_sha256": canonical["sha256"],
-        "dependency_fingerprint": dependency_fingerprint,
-        "dependency_files": files,
-        "range_latest_lane": "advisory_only",
-        "replay_contract": "source_tree_fingerprint + dependency_fingerprint",
-        "summary": (
-            f"dependency_reproducibility status={status}; "
-            f"canonical_lockfile=uv.lock; "
-            f"dependency_file_count={len(present_files)}"
-        ),
     }
 
 
@@ -2147,7 +1697,14 @@ def _closeout_envelope(inputs: CloseoutEnvelopeInputs) -> dict[str, Any]:
         source_command=SOURCE_COMMAND_TEMPLATE.format(profile=inputs.profile),
         resolved_policy_path=inputs.resolved_policy_path,
         schema_path=RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH,
-        source_paths=["ops/scripts/release/release_closeout_summary.py"],
+        source_paths=[
+            "ops/scripts/release/release_closeout_summary.py",
+            "ops/scripts/release/release_closeout_source_runtime.py",
+            "ops/scripts/release/release_closeout_risk_runtime.py",
+            "ops/scripts/release/release_closeout_render_runtime.py",
+            "ops/scripts/release/release_dependency_reproducibility_runtime.py",
+            "ops/scripts/release/release_freshness_gate_runtime.py",
+        ],
         file_inputs=_closeout_file_inputs(
             inputs.vault,
             inputs.source_specs,
@@ -2165,202 +1722,6 @@ def _closeout_envelope(inputs: CloseoutEnvelopeInputs) -> dict[str, Any]:
             "test_failure_lane_count": str(len(inputs.gates.test_failure_lanes)),
         },
     )
-
-
-def _closeout_snapshot_phase(
-    downstream_input_digest_mismatch: dict[str, Any],
-    readiness: CloseoutReadinessState,
-) -> str:
-    if downstream_input_digest_mismatch["status"] == "mismatch":
-        return "pre_finalization"
-    if readiness.clean_release_ready and readiness.machine_release_allowed:
-        return "sealed_snapshot"
-    return "post_finalization"
-
-
-def _summary_distribution_package_placeholder() -> dict[str, Any]:
-    return {
-        "status": "not_provided",
-        "pre_distribution_package_binding_status": "not_materialized_by_summary",
-        "path": "",
-        "sha256": "",
-    }
-
-
-def _summary_batch_integrity_status(readiness: CloseoutReadinessState) -> str:
-    return "pass" if readiness.checked_in_release_ready else "fail"
-
-
-def _status_semantics() -> dict[str, str]:
-    return {
-        "top_level_status_meaning": "legacy_checked_in_release_ready_claim",
-        "release_authority_status_meaning": "semantic_release_authority_from_closeout",
-        "sealed_release_status_meaning": "distribution_seal_state_not_materialized_by_summary",
-        "next_migration_candidate": "new_consumers_use_status_v2_axes",
-        "summary": (
-            "release-closeout-summary status remains the legacy checked-in readiness "
-            "alias; status_v2 separates semantic release authority from sealed "
-            "distribution/package state."
-        ),
-    }
-
-
-def _closeout_status_decision(readiness: CloseoutReadinessState) -> CloseoutStatusDecision:
-    status = "pass" if readiness.checked_in_release_ready else "fail"
-    release_authority_status = readiness.release_readiness_state
-    semantic_release_status = readiness.release_readiness_state
-    batch_integrity_status = _summary_batch_integrity_status(readiness)
-    distribution_package = _summary_distribution_package_placeholder()
-    pre_distribution_package_binding_status = str(
-        distribution_package["pre_distribution_package_binding_status"]
-    )
-    sealed_release_status = decide_sealed_release_status(
-        batch_integrity_status=batch_integrity_status,
-        distribution_unsealed_status="unsealed_distribution_not_provided",
-        clean_release_ready=readiness.clean_release_ready,
-        machine_release_allowed=readiness.machine_release_allowed,
-        release_readiness_state=readiness.release_readiness_state,
-    )
-    source_closeout_distribution_binding_status = sealed_release_status
-    vocabulary = release_authority_vocabulary_payload(
-        release_authority_status=release_authority_status,
-        semantic_release_status=semantic_release_status,
-        sealed_release_status=sealed_release_status,
-        machine_release_allowed=readiness.machine_release_allowed,
-        clean_release_ready=readiness.clean_release_ready,
-        batch_integrity_status=batch_integrity_status,
-        distribution_package=distribution_package,
-    )
-    status_v2 = release_status_v2_payload(
-        status=status,
-        release_authority_status=release_authority_status,
-        semantic_release_status=semantic_release_status,
-        sealed_release_status=sealed_release_status,
-        release_authority_vocabulary=vocabulary,
-        sealed_status_field="source_closeout_distribution_binding_status",
-        proposed_top_level_status_replacement="source_closeout_distribution_binding_status",
-        recommended_consumer_fields=[
-            "release_authority_status",
-            "source_closeout_distribution_binding_status",
-            "release_authority_vocabulary.blocker_reason_ids",
-        ],
-        extra_status_axes={
-            "pre_distribution_package_binding_status": pre_distribution_package_binding_status,
-            "source_closeout_distribution_binding_status": source_closeout_distribution_binding_status,
-        },
-    )
-    return CloseoutStatusDecision(
-        status=status,
-        release_authority_status=release_authority_status,
-        semantic_release_status=semantic_release_status,
-        sealed_release_status=sealed_release_status,
-        pre_distribution_package_binding_status=pre_distribution_package_binding_status,
-        source_closeout_distribution_binding_status=source_closeout_distribution_binding_status,
-        release_authority_vocabulary=vocabulary,
-        status_v2=status_v2,
-    )
-
-
-def _closeout_summary_payload(inputs: CloseoutRenderInputs) -> dict[str, Any]:
-    gates = inputs.gates
-    risk_state = inputs.risk_state
-    return {
-        "component_count": len(inputs.collection.components),
-        "ready_component_count": sum(
-            1 for item in inputs.collection.components if item["ready"]
-        ),
-        "blocker_count": len(risk_state.blockers),
-        "source_clean_blocker_count": len(risk_state.source_clean_blockers),
-        "accepted_risk_instance_count": len(risk_state.accepted_risks),
-        "accepted_risk_family_count": len(
-            {_risk_identity(risk) for risk in risk_state.accepted_risks}
-        ),
-        "release_blocking_risk_family_count": risk_state.accepted_risk_scope_counts[
-            "release_blocking_family_count"
-        ],
-        "conditional_operator_review_risk_family_count": risk_state.accepted_risk_scope_counts[
-            "conditional_operator_review_family_count"
-        ],
-        "learning_claim_blocking_risk_family_count": risk_state.accepted_risk_scope_counts[
-            "learning_claim_blocking_family_count"
-        ],
-        "advisory_lifecycle_risk_family_count": risk_state.accepted_risk_scope_counts[
-            "advisory_lifecycle_family_count"
-        ],
-        "advisory_risk_family_count": risk_state.accepted_risk_scope_counts[
-            "advisory_only_family_count"
-        ],
-        "source_tree_coherence_status": gates.source_tree_coherence["status"],
-        "artifact_freshness_status": gates.artifact_freshness_gate["status"],
-        "release_smoke_boundedness_status": gates.release_smoke_boundedness_gate[
-            "status"
-        ],
-        "live_make_check_status": gates.live_make_check["status"],
-        "artifact_freshness_schema_invalid_artifact_count": gates.artifact_freshness_gate[
-            "schema_invalid_artifact_count"
-        ],
-        "test_failure_lane_fail_count": sum(
-            1 for lane in gates.test_failure_lanes if lane["status"] == "fail"
-        ),
-        "test_failure_lane_not_run_count": sum(
-            1 for lane in gates.test_failure_lanes if lane["status"] == "not_run"
-        ),
-    }
-
-
-def _render_closeout_report(inputs: CloseoutRenderInputs) -> dict[str, Any]:
-    readiness = inputs.readiness
-    risk_state = inputs.risk_state
-    status_decision = _closeout_status_decision(readiness)
-    return {
-        **inputs.envelope,
-        "vault": report_path(inputs.vault, inputs.vault),
-        "policy": {
-            "path": report_path(inputs.vault, inputs.resolved_policy_path),
-            "version": inputs.policy.get("version"),
-        },
-        "profile": inputs.profile,
-        "checked_in_release_ready": readiness.checked_in_release_ready,
-        "live_rerun_release_ready": readiness.live_rerun_release_ready,
-        "conditional_release_ready": readiness.conditional_release_ready,
-        "clean_release_ready": readiness.clean_release_ready,
-        "release_readiness_state": readiness.release_readiness_state,
-        "machine_release_allowed": readiness.machine_release_allowed,
-        "operator_release_allowed": readiness.operator_release_allowed,
-        "requires_accepted_risk_review": readiness.requires_accepted_risk_review,
-        "artifact_freshness_gate": inputs.gates.artifact_freshness_gate,
-        "live_make_check": inputs.gates.live_make_check,
-        "dependency_reproducibility": inputs.dependency_reproducibility,
-        "accepted_risk_count_by_scope": risk_state.accepted_risk_scope_counts,
-        "clean_lane_blocking_risk_family_count": (
-            risk_state.clean_lane_blocking_risk_count
-        ),
-        "snapshot_phase": inputs.snapshot_phase,
-        "status": status_decision.status,
-        "status_semantics": _status_semantics(),
-        "status_v2": status_decision.status_v2,
-        "status_v2_preview": status_decision.status_v2,
-        "summary": _closeout_summary_payload(inputs),
-        "release_authority_status": status_decision.release_authority_status,
-        "semantic_release_status": status_decision.semantic_release_status,
-        "pre_distribution_package_binding_status": (
-            status_decision.pre_distribution_package_binding_status
-        ),
-        "source_closeout_distribution_binding_status": (
-            status_decision.source_closeout_distribution_binding_status
-        ),
-        "sealed_release_status": status_decision.sealed_release_status,
-        "release_authority_vocabulary": status_decision.release_authority_vocabulary,
-        "learning_readiness_signoff": inputs.learning_signoff,
-        "source_tree_coherence": inputs.gates.source_tree_coherence,
-        "release_smoke_boundedness_gate": inputs.gates.release_smoke_boundedness_gate,
-        "downstream_input_digest_mismatch": inputs.downstream_input_digest_mismatch,
-        "test_failure_lanes": inputs.gates.test_failure_lanes,
-        "accepted_risk_delta": risk_state.accepted_risk_delta,
-        "components": inputs.collection.components,
-        "blockers": risk_state.blockers,
-        "accepted_risks": risk_state.accepted_risks,
-    }
 
 
 def _load_closeout_sources(
@@ -2385,7 +1746,7 @@ def _load_closeout_sources(
         risk_taxonomy=load_release_risk_taxonomy(vault),
         learning_signoff=_load_learning_signoff(vault, generated_at=generated_at),
         learning_claim_context=_load_learning_claim_context(vault),
-        dependency_reproducibility=_dependency_reproducibility(vault),
+        dependency_reproducibility=dependency_reproducibility_record(vault),
         previous_closeout=_previous_closeout(vault),
     )
 

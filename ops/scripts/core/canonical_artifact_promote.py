@@ -3,7 +3,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .artifact_io_runtime import promote_schema_validated_json
+from .artifact_io_runtime import (
+    SEMANTIC_NOOP_ENVELOPE_FIELDS,
+    promote_schema_validated_json,
+)
 from .output_runtime import display_path, resolve_repo_output_path
 
 
@@ -25,6 +28,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "by volatile canonical envelope fields."
         ),
     )
+    parser.add_argument(
+        "--semantic-match-includes-source-tree-fingerprint",
+        action="store_true",
+        help=(
+            "When preserving semantic matches, still replace the destination "
+            "if source_tree_fingerprint changed."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -42,6 +53,11 @@ def main(argv: list[str] | None = None) -> int:
         expected_producer=args.expected_producer,
         context=f"canonical artifact promotion failed for {display_path(vault, destination)}",
         preserve_existing_on_semantic_match=args.preserve_existing_on_semantic_match,
+        semantic_ignore_fields=(
+            SEMANTIC_NOOP_ENVELOPE_FIELDS - {"source_tree_fingerprint"}
+            if args.semantic_match_includes_source_tree_fingerprint
+            else SEMANTIC_NOOP_ENVELOPE_FIELDS
+        ),
     )
     print(display_path(vault, promoted))
     return 0

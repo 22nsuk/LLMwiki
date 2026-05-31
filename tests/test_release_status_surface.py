@@ -1,0 +1,314 @@
+from __future__ import annotations
+
+import datetime as dt
+import json
+import string
+import subprocess
+import tempfile
+from pathlib import Path
+
+from hypothesis import given
+import hypothesis.strategies as st
+
+from ops.scripts.release.release_status_surface import (
+    FRESHNESS_DISPLAY_VALUES,
+    STATUS_KEYS,
+    STATUS_VALUE_NOT_SYNCED,
+    STATUS_VALUE_PASS,
+    STATUS_VALUE_REQUIRES_FULL_VAULT,
+    STATUS_VALUE_SYNCED,
+    STATUS_VALUE_UNKNOWN,
+    VAULT_COMPLETENESS_FULL,
+    VAULT_COMPLETENESS_PUBLIC,
+    build_status_surface,
+    lockfile_freshness_display_status,
+    remote_sync_display_status,
+    render_status_surface_text,
+    status_surface_from_signals,
+)
+from ops.scripts.runtime_context import RuntimeContext
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SAFE_TEXT = st.text(alphabet=string.ascii_lowercase + string.digits + "-_", min_size=1, max_size=20)
+
+
+def fixed_context() -> RuntimeContext:
+    return RuntimeContext(
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 31, 12, 0, tzinfo=dt.UTC),
+    )
+
+
+def _line_by_key(surface: dict[str, object], key: str) -> dict[str, object]:
+    lines = surface["lines"]
+    assert isinstance(lines, list)
+    matches = [line for line in lines if isinstance(line, dict) and line.get("key") == key]
+    assert len(matches) == 1
+    return matches[0]
+
+
+@given(
+    upstream=st.one_of(st.just(""), SAFE_TEXT.map(lambda value: f"origin/{value}")),
+    ahead=st.integers(min_value=0, max_value=5),
+    behind=st.integers(min_value=0, max_value=5),
+    status=st.sampled_from(["pass", "fail", "unknown", ""]),
+)
+def test_property_1_remote_sync_display_mapping_is_total_and_head_aware(
+    upstream: str,
+    ahead: int,
+    behind: int,
+    status: str,
+) -> None:
+    """Feature: release-evidence-sync, Property 1: remote-sync display mapping is total and HEAD-aware"""
+    display = remote_sync_display_status(
+        {
+            "status": status,
+            "upstream": upstream,
+            "ahead": ahead,
+            "behind": behind,
+        }
+    )
+
+    assert display in {STATUS_VALUE_SYNCED, STATUS_VALUE_NOT_SYNCED}
+    if upstream and ahead == 0 and behind == 0 and status == STATUS_VALUE_PASS:
+        assert display == STATUS_VALUE_SYNCED
+    else:
+        assert display == STATUS_VALUE_NOT_SYNCED
+
+
+@given(
+    lock_check_status=st.sampled_from(
+        ["enforced", "missing_ci_check", "missing_lockfile", "failed", "unknown", ""]
+    ),
+    uv_lock_check_passed=st.booleans(),
+)
+def test_property_2_lockfile_display_never_masks_a_failing_check(
+    lock_check_status: str,
+    uv_lock_check_passed: bool,
+) -> None:
+    """Feature: release-evidence-sync, Property 2: lockfile display never masks a failing check"""
+    display = lockfile_freshness_display_status(
+        lock_check_status=lock_check_status,
+        uv_lock_check_passed=uv_lock_check_passed,
+    )
+
+    if lock_check_status == "enforced" and uv_lock_check_passed:
+        assert display == STATUS_VALUE_PASS
+    else:
+        assert display != STATUS_VALUE_PASS
+
+
+@given(
+    vault_completeness=st.sampled_from([VAULT_COMPLETENESS_FULL, VAULT_COMPLETENESS_PUBLIC]),
+    freshness=st.sampled_from(sorted(FRESHNESS_DISPLAY_VALUES)),
+    learning_available=st.booleans(),
+    goal_available=st.booleans(),
+    lock_check_status=st.sampled_from(["enforced", "missing_ci_check", "missing_lockfile", "failed", "unknown"]),
+    uv_lock_check_passed=st.booleans(),
+)
+def test_property_11_status_surface_shape_and_unverifiable_evidence_handling(
+    vault_completeness: str,
+    freshness: str,
+    learning_available: bool,
+    goal_available: bool,
+    lock_check_status: str,
+    uv_lock_check_passed: bool,
+) -> None:
+    """Feature: release-evidence-sync, Property 11: status surface shape and unverifiable-evidence handling"""
+    surface = status_surface_from_signals(
+        generated_at="2026-05-31T12:00:00Z",
+        vault_completeness=vault_completeness,
+        source_closeout_status="clean_pass",
+        sealed_run_status="sealed_clean_pass",
+        public_summary_status="pass",
+        lock_check_status=lock_check_status,
+        uv_lock_check_passed=uv_lock_check_passed,
+        learning_signoff_status="pass" if learning_available else "",
+        goal_runtime_certificate_status="pass" if goal_available else "",
+        remote_sync_signal={
+            "status": "pass",
+            "upstream": "origin/feature",
+            "ahead": 0,
+            "behind": 0,
+        },
+        artifact_freshness_display=freshness,
+    )
+
+    lines = surface["lines"]
+    assert isinstance(lines, list)
+    assert len(lines) == len(STATUS_KEYS)
+    assert [line["key"] for line in lines] == list(STATUS_KEYS)
+    assert len({line["key"] for line in lines}) == len(STATUS_KEYS)
+    assert f"freshness={freshness}" in str(_line_by_key(surface, "source_closeout")["detail"])
+    if vault_completeness == VAULT_COMPLETENESS_PUBLIC and not learning_available:
+        assert _line_by_key(surface, "learning_signoff")["status"] == STATUS_VALUE_REQUIRES_FULL_VAULT
+    if vault_completeness == VAULT_COMPLETENESS_PUBLIC and not goal_available:
+        assert (
+            _line_by_key(surface, "goal_runtime_certificate")["status"]
+            == STATUS_VALUE_REQUIRES_FULL_VAULT
+        )
+    if not (lock_check_status == "enforced" and uv_lock_check_passed):
+        assert _line_by_key(surface, "lockfile_freshness")["status"] != STATUS_VALUE_PASS
+
+
+@given(
+    source_status=st.sampled_from(["clean_pass", "conditional_pass", "failed", "semantic_clean_unsealed"]),
+    sealed_status=st.sampled_from(
+        ["sealed_clean_pass", "sealed_conditional_pass", "unsealed_missing_manifest", "unsealed_mismatch"]
+    ),
+)
+def test_property_12_source_closeout_and_sealed_run_axes_are_independent(
+    source_status: str,
+    sealed_status: str,
+) -> None:
+    """Feature: release-evidence-sync, Property 12: source-closeout and sealed-run axes are independent"""
+    surface = status_surface_from_signals(
+        generated_at="2026-05-31T12:00:00Z",
+        vault_completeness=VAULT_COMPLETENESS_FULL,
+        source_closeout_status=source_status,
+        sealed_run_status=sealed_status,
+        public_summary_status="pass",
+        lock_check_status="enforced",
+        uv_lock_check_passed=True,
+        learning_signoff_status="pass",
+        goal_runtime_certificate_status="pass",
+        remote_sync_signal={
+            "status": "pass",
+            "upstream": "origin/feature",
+            "ahead": 0,
+            "behind": 0,
+        },
+        artifact_freshness_display="none",
+    )
+
+    assert _line_by_key(surface, "source_closeout")["status"] == source_status
+    assert _line_by_key(surface, "sealed_run")["status"] == sealed_status
+    assert _line_by_key(surface, "source_closeout")["axis"] == "source_closeout"
+    assert _line_by_key(surface, "sealed_run")["axis"] == "sealed_run"
+
+
+def test_status_surface_reads_existing_file_signals_without_writing_authority() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        closeout = vault / "ops" / "reports" / "release-closeout-summary.json"
+        provenance = vault / "ops" / "reports" / "supply-chain-provenance.json"
+        public_summary = vault / "ops" / "reports" / "public-check-summary.json"
+        run_manifest = vault / "build" / "release" / "release-run-manifest.json"
+        closeout.parent.mkdir(parents=True)
+        run_manifest.parent.mkdir(parents=True)
+        closeout.write_text(
+            json.dumps(
+                {
+                    "release_authority_status": "clean_pass",
+                    "machine_release_allowed": True,
+                    "artifact_freshness_gate": {"display_effect": "advisory"},
+                }
+            ),
+            encoding="utf-8",
+        )
+        public_summary.write_text(json.dumps({"status": "pass"}), encoding="utf-8")
+        provenance.write_text(
+            json.dumps({"lock_evidence": {"lock_check_status": "enforced"}}),
+            encoding="utf-8",
+        )
+        run_manifest.write_text(
+            json.dumps(
+                {
+                    "remote_sync": {
+                        "status": "fail",
+                        "upstream": "origin/feature",
+                        "ahead": 1,
+                        "behind": 0,
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        surface = build_status_surface(
+            vault,
+            context=fixed_context(),
+            lock_check_runner=lambda _vault: {"status": "pass", "returncode": 0},
+            remote_sync_reader=lambda _vault: {
+                "status": "pass",
+                "upstream": "origin/feature",
+                "ahead": 0,
+                "behind": 0,
+            },
+        )
+
+        assert _line_by_key(surface, "source_closeout")["status"] == "clean_pass"
+        assert "freshness=advisory" in str(_line_by_key(surface, "source_closeout")["detail"])
+        assert _line_by_key(surface, "public_summary")["status"] == "pass"
+        assert _line_by_key(surface, "lockfile_freshness")["status"] == "pass"
+        assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_NOT_SYNCED
+        assert not (vault / "ops" / "operator" / "operator-release-summary.json").exists()
+
+
+def test_status_surface_text_renderer_outputs_exactly_seven_public_safe_lines() -> None:
+    surface = status_surface_from_signals(
+        generated_at="2026-05-31T12:00:00Z",
+        vault_completeness=VAULT_COMPLETENESS_PUBLIC,
+        source_closeout_status=STATUS_VALUE_UNKNOWN,
+        sealed_run_status=STATUS_VALUE_UNKNOWN,
+        public_summary_status=STATUS_VALUE_UNKNOWN,
+        lock_check_status="unknown",
+        uv_lock_check_passed=False,
+        learning_signoff_status="",
+        goal_runtime_certificate_status="",
+        remote_sync_signal={"status": "unknown", "upstream": "", "ahead": 0, "behind": 0},
+        artifact_freshness_display="none",
+    )
+
+    rendered = render_status_surface_text(surface)
+
+    lines = rendered.strip().splitlines()
+    assert len(lines) == len(STATUS_KEYS)
+    assert [line.split(":", 1)[0] for line in lines] == list(STATUS_KEYS)
+    assert not any(str(REPO_ROOT) in line for line in lines)
+
+
+def test_status_entrypoint_make_aliases_render_the_same_seven_line_surface() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        status = subprocess.run(
+            [
+                "make",
+                "--no-print-directory",
+                "-s",
+                "status",
+                f"VAULT={vault}",
+                "STATUS_FLAGS=--skip-lock-check",
+            ],
+            cwd=REPO_ROOT,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        alias = subprocess.run(
+            [
+                "make",
+                "--no-print-directory",
+                "-s",
+                "llm-wiki-status",
+                f"VAULT={vault}",
+                "STATUS_FLAGS=--skip-lock-check",
+            ],
+            cwd=REPO_ROOT,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+    assert status.stdout == alias.stdout
+    lines = status.stdout.strip().splitlines()
+    assert len(lines) == len(STATUS_KEYS)
+    assert [line.split(":", 1)[0] for line in lines] == list(STATUS_KEYS)
+
+
+def test_pyproject_registers_llm_wiki_status_console_script() -> None:
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert 'llm-wiki-status = "ops.scripts.release.release_status_surface:main"' in pyproject

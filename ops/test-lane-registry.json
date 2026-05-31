@@ -349,6 +349,7 @@
         "selectors": [
           "tests/test_improvement_observations_runtime.py",
           "tests/test_artifact_freshness_runtime.py",
+          "tests/test_artifact_relocation_audit.py",
           "tests/test_backfill_archived_run_artifacts.py",
           "tests/test_backfill_historical_bootstrap_reports.py",
           "tests/test_auto_improve_iteration_runtime.py",
@@ -357,14 +358,20 @@
           "tests/test_raw_registry_cross_environment_evidence_bundle.py",
           "tests/test_release_smoke.py",
           "tests/test_archive_execution_manifest.py",
+          "tests/test_generated_artifact_retention_clean.py",
+          "tests/test_goal_runtime_closeout.py",
+          "tests/test_goal_runtime_quarantine_preflight.py",
+          "tests/test_goal_runtime_run_admission.py",
           "tests/test_release_closeout_summary.py",
           "tests/test_release_evidence_cohort.py",
           "tests/test_release_evidence_dashboard.py",
           "tests/test_learning_readiness_signoff.py",
+          "tests/test_lint_uplift_plan.py",
           "tests/test_bootstrap_preflight.py",
           "tests/test_make_target_inventory.py",
           "tests/test_manifest_export_symlink_safety.py",
-          "tests/test_report_generation_smoke.py"
+          "tests/test_report_generation_smoke.py",
+          "tests/test_type_uplift_plan.py"
         ]
       },
       "ci_entrypoint": "report-contracts-extended",

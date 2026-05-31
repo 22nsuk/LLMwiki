@@ -32,8 +32,6 @@ else:
 MECHANISM_ASSESSMENT_SCHEMA = MECHANISM_ASSESSMENT_SCHEMA_PATH
 MARKDOWN_HEADING_RE = re.compile(r"^#{2,6}\s", re.MULTILINE)
 DEPENDENCY_FILES = {
-    "requirements.txt",
-    "requirements-dev.txt",
     "pyproject.toml",
     "uv.lock",
     "poetry.lock",

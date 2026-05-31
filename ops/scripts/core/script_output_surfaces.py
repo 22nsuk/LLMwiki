@@ -31,6 +31,7 @@ USER_EXPORT_OUTPUT_OPTION_OVERRIDES = frozenset(
     }
 )
 DIAGNOSTIC_ONLY_PATHS = frozenset[str]()
+SOURCE_TREE_INCLUDED_PREFIXES = ("ops/scripts",)
 
 
 def _script_files(vault: Path) -> list[Path]:
@@ -157,9 +158,15 @@ def build_registry(
             path_group_inputs={"ops_scripts": script_paths},
             text_inputs={
                 "classification_values": "\n".join(CLASSIFICATION_VALUES),
+                "source_tree_scope": "include_prefixes:ops/scripts",
             },
             source_tree_excluded_files=(DEFAULT_OUT,),
+            source_tree_included_prefixes=SOURCE_TREE_INCLUDED_PREFIXES,
         ),
+        "source_tree_scope": {
+            "mode": "include_prefixes",
+            "include_prefixes": list(SOURCE_TREE_INCLUDED_PREFIXES),
+        },
         "version": 1,
         "description": (
             "Generated inventory for ops/scripts output path surfaces. "

@@ -73,7 +73,8 @@
         "status": { "type": "string", "enum": ["pass", "fail", "unknown"] },
         "upstream": { "type": "string" },
         "ahead": { "type": "integer", "minimum": 0 },
-        "behind": { "type": "integer", "minimum": 0 }
+        "behind": { "type": "integer", "minimum": 0 },
+        "workflow_attachment": { "$ref": "#/$defs/workflow_attachment" }
       }
     },
     "ignored_tracked_file_count": { "type": "integer", "minimum": 0 },
@@ -196,6 +197,31 @@
         "total_duration_ms": { "type": "integer", "minimum": 0 },
         "slowest_step_name": { "type": "string" },
         "share_of_total": { "type": "number", "minimum": 0 }
+      }
+    },
+    "workflow_attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "workflow_run_attached",
+        "combined_status_check_attached",
+        "sync_continues"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["attached", "failed", "not_attempted"] },
+        "workflow_run_attached": { "type": "boolean" },
+        "combined_status_check_attached": { "type": "boolean" },
+        "sync_continues": { "type": "boolean" },
+        "workflow_attachment_error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "message"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["service", "configuration", "unknown"] },
+            "message": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     }
   }

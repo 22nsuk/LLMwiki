@@ -47,11 +47,17 @@ CI_WORKFLOW_PATH = ".github/workflows/ci.yml"
 LOCKED_REQUIREMENTS_EXPORT_PATH = "tmp/locked-requirements.ci.txt"
 SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_PATH = "ops/reports/source-package-clean-extract.json"
 UV_LOCK_CHECK_COMMAND = "uv lock --check"
-DEPENDENCY_INPUTS = (
+CANONICAL_DEPENDENCY_INPUTS = (
     "pyproject.toml",
+    "uv.lock",
+)
+COMPATIBILITY_DEPENDENCY_INPUTS = (
     "requirements.txt",
     "requirements-dev.txt",
-    "uv.lock",
+)
+DEPENDENCY_INPUTS = (
+    *CANONICAL_DEPENDENCY_INPUTS,
+    *COMPATIBILITY_DEPENDENCY_INPUTS,
 )
 PIP_INSTALL_LINE_PATTERN = re.compile(r"python\s+-m\s+pip\s+install\b", flags=re.IGNORECASE)
 REQUIREMENTS_DEV_INSTALL_PATTERN = re.compile(
@@ -106,9 +112,11 @@ def dependency_name(requirement: str) -> str:
 
 def input_record(vault: Path, rel_path: str, parser: str) -> dict:
     path = vault / rel_path
+    authority_role = "canonical" if rel_path in CANONICAL_DEPENDENCY_INPUTS else "compatibility"
     if not path.exists():
         return {
             "path": rel_path,
+            "authority_role": authority_role,
             "exists": False,
             "size_bytes": 0,
             "sha256": "",
@@ -116,6 +124,7 @@ def input_record(vault: Path, rel_path: str, parser: str) -> dict:
         }
     return {
         "path": rel_path,
+        "authority_role": authority_role,
         "exists": True,
         "size_bytes": path.stat().st_size,
         "sha256": sha256_file(path),
@@ -263,12 +272,19 @@ def parse_uv_lock(vault: Path) -> tuple[list[dict], dict]:
 def release_manifest_summary(vault: Path) -> dict:
     manifest = build_manifest(vault, vault / "ops" / "manifest.json")
     files = {str(item["path"]) for item in manifest.get("files", []) if isinstance(item, dict)}
-    dependency_files = [rel_path for rel_path in DEPENDENCY_INPUTS if rel_path in files]
+    canonical_dependency_files = [
+        rel_path for rel_path in CANONICAL_DEPENDENCY_INPUTS if rel_path in files
+    ]
+    compatibility_dependency_files = [
+        rel_path for rel_path in COMPATIBILITY_DEPENDENCY_INPUTS if rel_path in files
+    ]
     return {
         "source": "ops.scripts.wiki_manifest.build_manifest",
         "file_count": len(files),
-        "dependency_file_count": len(dependency_files),
-        "dependency_files": dependency_files,
+        "dependency_file_count": len(canonical_dependency_files),
+        "dependency_files": canonical_dependency_files,
+        "canonical_dependency_files": canonical_dependency_files,
+        "compatibility_dependency_files": compatibility_dependency_files,
     }
 
 
@@ -437,9 +453,16 @@ def build_report(
     for item in inputs:
         item["parser_status"] = parser_statuses[item["path"]]
 
-    has_error = any(item["parser_status"]["status"] == "error" for item in inputs)
-    has_non_pass = any(item["parser_status"]["status"] != "pass" for item in inputs)
-    status = "fail" if has_error else ("warn" if has_non_pass else "pass")
+    canonical_inputs = [item for item in inputs if item["authority_role"] == "canonical"]
+    compatibility_inputs = [item for item in inputs if item["authority_role"] == "compatibility"]
+    canonical_has_non_pass = any(
+        item["parser_status"]["status"] != "pass" for item in canonical_inputs
+    )
+    compatibility_has_error = any(
+        item["exists"] and item["parser_status"]["status"] == "error"
+        for item in compatibility_inputs
+    )
+    status = "fail" if canonical_has_non_pass else ("warn" if compatibility_has_error else "pass")
     ci_proof = ci_install_proof(vault)
     uv_lock_evidence = lock_evidence(inputs, uv_lock_status, ci_proof)
     if status == "pass" and uv_lock_evidence["lock_check_status"] != "enforced":
@@ -487,7 +510,14 @@ def build_report(
             "ops/scripts/wiki_manifest.py",
             "ops/scripts/artifact_freshness_runtime.py",
         ],
-        file_inputs={rel_path: rel_path for rel_path in DEPENDENCY_INPUTS},
+        file_inputs={
+            **{rel_path: rel_path for rel_path in CANONICAL_DEPENDENCY_INPUTS},
+            **{
+                rel_path: rel_path
+                for rel_path in COMPATIBILITY_DEPENDENCY_INPUTS
+                if (vault / rel_path).exists()
+            },
+        },
         text_inputs={
             "status": status,
             "ci_workflow_path": CI_WORKFLOW_PATH,

@@ -18,6 +18,10 @@ from ops.scripts.release.release_run_manifest import (
     distribution_zip_path_from_manifest,
     write_manifest,
 )
+from ops.scripts.release.release_remote_sync_governance import (
+    remote_sync_governance_record,
+    workflow_attachment_result,
+)
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -288,6 +292,41 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "pass")
         self.assertEqual(manifest["remote_sync"]["ahead"], 1)
         self.assertNotIn("remote_not_in_sync", manifest["failures"])
+
+    def test_workflow_attachment_error_is_recorded_without_blocking_sync(self) -> None:
+        self._write_run_inputs()
+        remote = remote_sync_governance_record(
+            {"status": "pass", "upstream": "origin/feature", "ahead": 0, "behind": 0},
+            workflow_attachment=workflow_attachment_result(
+                workflow_run_attached=False,
+                combined_status_check_attached=False,
+                error_kind="service",
+                error_message="GitHub Actions lookup failed",
+            ),
+        )
+
+        with patch.multiple(
+            "ops.scripts.release.release_run_manifest",
+            release_source_tree_fingerprint=lambda _vault: "fp-current",
+            git_commit=lambda _vault: "abc123",
+            git_clean=lambda _vault: True,
+            remote_sync=lambda _vault: remote,
+            ignored_tracked_file_count=lambda _vault: 0,
+        ):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        attachment = manifest["remote_sync"]["workflow_attachment"]
+        self.assertEqual(manifest["status"], "pass")
+        self.assertEqual(manifest["remote_sync"]["status"], "pass")
+        self.assertEqual(attachment["status"], "failed")
+        self.assertTrue(attachment["sync_continues"])
+        self.assertEqual(attachment["workflow_attachment_error"]["kind"], "service")
+        self.assertNotIn("workflow_attachment_error", manifest["failures"])
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
     def test_manifest_fails_when_ignored_tracked_files_are_present(self) -> None:
         self._write_run_inputs()

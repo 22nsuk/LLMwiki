@@ -275,6 +275,7 @@
       "additionalProperties": false,
       "required": [
         "path",
+        "authority_role",
         "exists",
         "size_bytes",
         "sha256",
@@ -285,6 +286,13 @@
       "properties": {
         "path": {
           "type": "string"
+        },
+        "authority_role": {
+          "type": "string",
+          "enum": [
+            "canonical",
+            "compatibility"
+          ]
         },
         "exists": {
           "type": "boolean"

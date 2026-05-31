@@ -667,6 +667,16 @@ def _makefile_assignment_items(text: str, variable: str) -> tuple[str, ...]:
     return tuple(items)
 
 
+def _report_contract_marked_test_files() -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            path.as_posix()
+            for path in Path("tests").glob("test_*.py")
+            if "pytest.mark.report_contract" in path.read_text(encoding="utf-8")
+        )
+    )
+
+
 def _makefile_assignment_value(text: str, variable: str) -> str:
     prefix = f"{variable} ?="
     for line in text.splitlines():
@@ -720,11 +730,21 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         _recipe_lines(text, "generated-artifact-converge"),
         [
             '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase before --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)"',
-            "$(MAKE) script-output-surfaces",
+            "$(MAKE) generated-artifact-script-output",
+            "$(MAKE) generated-artifact-finality-suffix",
+            '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase after --before "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)" --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT)"',
+        ],
+    )
+    case.assertEqual(
+        _recipe_lines(text, "generated-artifact-script-output"),
+        ["$(MAKE) script-output-surfaces"],
+    )
+    case.assertEqual(
+        _recipe_lines(text, "generated-artifact-finality-suffix"),
+        [
             "$(MAKE) external-report-action-matrix",
             "$(MAKE) generated-artifact-index",
             "$(MAKE) artifact-freshness",
-            '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase after --before "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)" --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT)"',
         ],
     )
     case.assertIn(
@@ -739,6 +759,8 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         "refresh-generated-core",
         "refresh-generated-observability",
         "generated-artifact-converge",
+        "generated-artifact-script-output",
+        "generated-artifact-finality-suffix",
         "generated-artifact-retention-clean",
         "script-output-surfaces",
         "function-budget-refactor-proposals",
@@ -782,6 +804,7 @@ def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: 
     )
     case.assertIn("ops.scripts.canonical_artifact_promote", script_output_block)
     case.assertIn("--preserve-existing-on-semantic-match", script_output_block)
+    case.assertIn("--semantic-match-includes-source-tree-fingerprint", script_output_block)
     retention_clean_block = _target_block(text, "generated-artifact-retention-clean")
     case.assertIn("generated-artifact-retention-clean", _target_block(text, ".PHONY"))
     case.assertIn("ops.scripts.generated_artifact_retention_clean", retention_clean_block)
@@ -1030,8 +1053,26 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         self.assertIn("PYTEST_DISABLE_PLUGIN_AUTOLOAD ?= 1", text)
         self.assertIn("export PYTEST_DISABLE_PLUGIN_AUTOLOAD", text)
+        self.assertIn("PYTHONDONTWRITEBYTECODE ?= 1", text)
+        self.assertIn("export PYTHONDONTWRITEBYTECODE", text)
         self.assertIn(
-            "PYTEST_PARALLEL_FLAGS ?= -p xdist.plugin -n auto --dist=loadfile", text
+            "PYTEST_LOADFILE_FLAGS ?= -p xdist.plugin -n auto --dist=loadfile", text
+        )
+        self.assertIn(
+            "PYTEST_PARALLEL_FLAGS ?= $(PYTEST_LOADFILE_FLAGS)", text
+        )
+        self.assertIn("PYTEST_CACHE_ISOLATION_FLAGS ?= -p no:cacheprovider", text)
+        self.assertIn(
+            "PYTEST_FLAGS ?= $(PYTEST_PARALLEL_FLAGS) $(PYTEST_CACHE_ISOLATION_FLAGS)",
+            text,
+        )
+        self.assertIn(
+            "PYTEST_REPORT_CONTRACT_FLAGS ?= $(PYTEST_LOADFILE_FLAGS) $(PYTEST_CACHE_ISOLATION_FLAGS)",
+            text,
+        )
+        self.assertIn(
+            "PYTEST_RELEASE_SEALING_FLAGS ?= $(PYTEST_LOADFILE_FLAGS) $(PYTEST_CACHE_ISOLATION_FLAGS)",
+            text,
         )
 
     def test_pytest_ini_declares_lane_markers(self) -> None:
@@ -1185,9 +1226,19 @@ class MakefileStaticGateTests(unittest.TestCase):
         selectors = _makefile_assignment_items(text, "FAST_SMOKE_TESTS")
         env = os.environ.copy()
         env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
 
         completed = subprocess.run(
-            [sys.executable, "-m", "pytest", "--collect-only", "-q", *selectors],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "--collect-only",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                *selectors,
+            ],
             cwd=REPO_ROOT,
             env=env,
             capture_output=True,
@@ -1274,11 +1325,11 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "$(PYTHON) -m pytest $(RELEASE_SEALING_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            "$(PYTHON) -m pytest $(RELEASE_SEALING_TESTS) $(PYTEST_RELEASE_SEALING_FLAGS)",
             _target_block(text, "test-release-sealing-core"),
         )
         self.assertIn(
-            '$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_SEALING_MARK_EXPR)" $(PYTEST_SERIAL_FLAGS)',
+            '$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_SEALING_MARK_EXPR)" $(PYTEST_RELEASE_SEALING_FLAGS)',
             _target_block(text, "test-release-sealing-all"),
         )
         self.assertIn(
@@ -1715,8 +1766,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             [
                 "$(MAKE) static",
                 "$(MAKE) report-schema-samples-check",
-                "$(MAKE) test-execution-summary-report-contract",
                 "$(MAKE) test-execution-summary-full-current-or-refresh",
+                "$(MAKE) test-execution-summary-current-or-refresh",
             ],
         )
         release_public_current_lines = _recipe_lines(text, "release-public-current")
@@ -1846,7 +1897,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-auto-promotion-goal-run-id-guard",
                 "$(MAKE) release-auto-promotion-preflight-prerequisites",
                 "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) test-execution-summary-report-contract",
+                "$(MAKE) test-execution-summary-current-or-refresh",
                 "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
                 "$(MAKE) learning-readiness-signoff-revalidation",
@@ -2136,7 +2187,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) goal-worktree-guard",
                 "$(MAKE) goal-runtime-certificate",
                 "$(MAKE) learning-readiness-signoff-refresh",
-                "$(MAKE) test-execution-summary-report-contract",
+                "$(MAKE) test-execution-summary-current-or-refresh",
                 "$(MAKE) test-execution-summary-full-current-or-refresh",
                 "$(MAKE) sync-public-policy",
                 "$(MAKE) public-check-summary",
@@ -2476,6 +2527,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         extended_block = _target_block(text, "report-contracts-extended")
         expected_core_tests = pack_selectors(registry, "report_contract_core")
         expected_extended_tests = pack_selectors(registry, "report_contract_extended")
+        expected_all_test_files = _report_contract_marked_test_files()
 
         self.assertIn("report-contracts", _target_block(text, ".PHONY"))
         self.assertIn("report-contracts-core", _target_block(text, ".PHONY"))
@@ -2483,15 +2535,24 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("report-contracts-extended", _target_block(text, ".PHONY"))
         self.assertIn("REPORT_CONTRACT_CORE_TESTS ?=", text)
         self.assertIn("REPORT_CONTRACT_EXTENDED_TESTS ?=", text)
-        self.assertIn('REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)"', text)
         self.assertIn("REPORT_CONTRACT_TESTS ?=", text)
         self.assertIn("REPORT_CONTRACT_TESTS ?= $(REPORT_CONTRACT_CORE_TESTS)", text)
         core_items = _makefile_assignment_items(text, "REPORT_CONTRACT_CORE_TESTS")
         extended_items = _makefile_assignment_items(
             text, "REPORT_CONTRACT_EXTENDED_TESTS"
         )
+        all_items = _makefile_assignment_items(text, "REPORT_CONTRACT_ALL_TESTS")
         self.assertEqual(core_items, expected_core_tests)
         self.assertEqual(extended_items, expected_extended_tests)
+        self.assertEqual(
+            all_items[:2],
+            ("-m", '"$(PYTEST_REPORT_CONTRACT_MARK_EXPR)"'),
+        )
+        self.assertEqual(tuple(sorted(all_items[2:])), expected_all_test_files)
+        explicit_pack_files = {
+            selector.split("::", 1)[0] for selector in (*core_items, *extended_items)
+        }
+        self.assertEqual(tuple(sorted(explicit_pack_files)), expected_all_test_files)
         for test_path in expected_core_tests:
             with self.subTest(test_path=test_path):
                 self.assertIn(test_path, core_items)
@@ -2500,11 +2561,11 @@ class MakefileStaticGateTests(unittest.TestCase):
                 self.assertIn(test_path, extended_items)
                 self.assertNotIn(test_path, core_items)
         self.assertIn(
-            '$(PYTHON) -m pytest -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" $(REPORT_CONTRACT_TESTS) $(PYTEST_SERIAL_FLAGS)',
+            '$(PYTHON) -m pytest -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" $(REPORT_CONTRACT_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)',
             core_block,
         )
         self.assertIn(
-            "$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            "$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             all_block,
         )
         self.assertIn(
@@ -2512,7 +2573,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             block,
         )
         self.assertIn(
-            "$(PYTHON) -m pytest $(REPORT_CONTRACT_EXTENDED_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            "$(PYTHON) -m pytest $(REPORT_CONTRACT_EXTENDED_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             extended_block,
         )
 
@@ -2541,11 +2602,11 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertNotIn("--deselect=tests/test_", text)
         self.assertIn(
-            "$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            "$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             core_block,
         )
         self.assertIn(
-            "$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            "$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             all_block,
         )
         self.assertIn(
@@ -2780,7 +2841,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             recipe_lines,
             [
                 "$(MAKE) workflow-dependency-planner",
-                "$(MAKE) generated-artifact-converge",
+                "$(MAKE) generated-artifact-finality-suffix",
                 "$(MAKE) release-closeout-fixed-point",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
@@ -3093,6 +3154,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-execution-summary-report-contract-refresh",
             "test-execution-summary-report-contract-refresh-no-smoke",
             "test-execution-summary-current-check",
+            "test-execution-summary-current-or-refresh",
             "test-execution-summary-full-body",
             "test-execution-summary-full",
             "test-execution-summary-full-refresh",
@@ -3164,6 +3226,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         _assert_assignment_exists(
             self, text, "TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM", "$(TEST_EXECUTION_SUMMARY_FULL_OUT)"
+        )
+        _assert_assignment_exists(
+            self, text, "TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS", "$(PYTEST_FLAGS)"
         )
         _assert_assignment_exists(
             self, text, "TEST_EXECUTION_SUMMARY_SHARD_DIR", "ops/reports/test-execution-summary-shards"
@@ -3280,10 +3345,27 @@ class MakefileStaticGateTests(unittest.TestCase):
                 '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
             ),
         )
+        current_or_refresh_block = _target_block(
+            text, "test-execution-summary-current-or-refresh"
+        )
+        self.assertIn(
+            "$(MAKE) test-execution-summary-current-check",
+            current_or_refresh_block,
+        )
+        self.assertIn(
+            "$(MAKE) test-execution-summary-report-contract",
+            current_or_refresh_block,
+        )
+        self.assertIn(
+            "test execution summary is current; reused $(TEST_EXECUTION_SUMMARY_REUSE_FROM)",
+            current_or_refresh_block,
+        )
         full_body_block = _target_block(text, "test-execution-summary-full-body")
         self.assertNotIn("$(MAKE) refresh-generated-core", full_body_block)
         self.assertNotIn("$(MAKE) auto-improve-readiness-report-body", full_body_block)
         self.assertNotIn("$(MAKE) release-smoke-full", full_body_block)
+        self.assertIn("$(TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS)", full_body_block)
+        self.assertNotIn("$(PYTEST_SERIAL_FLAGS)", full_body_block)
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -3291,6 +3373,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             (
                 'rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
                 'mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
+                '"$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)"',
                 "ops.scripts.test_execution_summary",
                 "--collect-nodeids",
                 "--junit-xml-path",
@@ -3488,19 +3571,12 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('uv pip install --python "$(VENV_PYTHON)" -e ".[dev]"', block)
         self.assertIn('"$(VENV_PYTHON)" -m pip install -e ".[dev]"', block)
 
-    def test_requirements_dev_matches_pyproject_dev_snapshot(self) -> None:
+    def test_legacy_root_requirements_files_are_retired(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-        dev_requirements = pyproject["project"]["optional-dependencies"]["dev"]
-        requirements_dev = (REPO_ROOT / "requirements-dev.txt").read_text(encoding="utf-8").splitlines()
 
-        filtered_lines = [
-            line.strip()
-            for line in requirements_dev
-            if line.strip() and not line.lstrip().startswith("#")
-        ]
-
-        self.assertEqual(filtered_lines[0], "-r requirements.txt")
-        self.assertEqual(filtered_lines[1:], dev_requirements)
+        self.assertIn("dev", pyproject["project"]["optional-dependencies"])
+        self.assertFalse((REPO_ROOT / "requirements.txt").exists())
+        self.assertFalse((REPO_ROOT / "requirements-dev.txt").exists())
 
     def test_bootstrap_preflight_target_writes_canonical_report_with_project_python(
         self,

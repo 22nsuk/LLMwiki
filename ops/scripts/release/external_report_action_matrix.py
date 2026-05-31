@@ -16,13 +16,19 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.external_report_lifecycle_runtime import (  # noqa: PLC0415
+    from ops.scripts.release.external_report_action_catalog import (  # noqa: PLC0415
         ACTION_CATALOG,
-        REFERENCE_MANIFEST,
         SPRINT_PRIORITIES,
+    )
+    from ops.scripts.release.external_report_inventory_runtime import (  # noqa: PLC0415
+        REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
         reference_manifest_alignment,
+    )
+    from ops.scripts.external_report_lifecycle_runtime import (  # noqa: PLC0415
+        external_report_action_lifecycle_record,
+        external_report_action_lifecycle_summary,
         report_coverage_item,
         status_from_evidence,
     )
@@ -39,13 +45,16 @@ else:
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
 
-    from .external_report_lifecycle_runtime import (
-        ACTION_CATALOG,
+    from .external_report_action_catalog import ACTION_CATALOG, SPRINT_PRIORITIES
+    from .external_report_inventory_runtime import (
         REFERENCE_MANIFEST,
-        SPRINT_PRIORITIES,
         active_report_paths,
         archived_report_count,
         reference_manifest_alignment,
+    )
+    from .external_report_lifecycle_runtime import (
+        external_report_action_lifecycle_record,
+        external_report_action_lifecycle_summary,
         report_coverage_item,
         status_from_evidence,
     )
@@ -78,6 +87,7 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
         }
         if sprint_priority:
             item["sprint_priority"] = sprint_priority
+        item.update(external_report_action_lifecycle_record(item))
         action_items.append(item)
     return action_items
 
@@ -101,6 +111,7 @@ def _summary(
         sprint_priority = action.get("sprint_priority")
         if sprint_priority and sprint_priority in sprint_backlog:
             sprint_backlog[sprint_priority] += 1
+    lifecycle_summary = external_report_action_lifecycle_summary(actions)
     return {
         "active_report_count": len(coverage),
         "archived_report_count": archived_report_count,
@@ -118,6 +129,7 @@ def _summary(
         ),
         "reference_manifest_stale_reference_count": len(manifest_alignment["stale_reference_paths"]),
         "sprint_backlog": sprint_backlog,
+        **lifecycle_summary,
     }
 
 
@@ -173,6 +185,8 @@ def build_report(
             schema_path=SCHEMA_PATH,
             source_paths=[
                 "ops/scripts/external_report_action_matrix.py",
+                "ops/scripts/external_report_action_catalog.py",
+                "ops/scripts/external_report_inventory_runtime.py",
                 "ops/scripts/external_report_lifecycle_runtime.py",
                 "ops/scripts/external_report_reference_manifest.py",
             ],

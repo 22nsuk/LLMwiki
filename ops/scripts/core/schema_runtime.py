@@ -18,7 +18,7 @@ try:
     from referencing import Registry, Resource
 except ImportError as exc:  # pragma: no cover - dependency contract
     raise RuntimeError(
-        "jsonschema is required; install dependencies from requirements.txt"
+        "jsonschema is required; install the project dependencies from pyproject.toml"
     ) from exc
 
 

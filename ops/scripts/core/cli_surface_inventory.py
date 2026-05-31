@@ -21,7 +21,9 @@ else:
 
 DEFAULT_OUT = "tmp/cli-surface-inventory.json"
 PRODUCER = "ops.scripts.cli_surface_inventory"
-FLAT_SCRIPT_MODULE_RE = re.compile(r"-m\s+ops\.scripts\.([A-Za-z0-9_]+)\b")
+SCRIPT_MODULE_RE = re.compile(
+    r"-m\s+(ops\.scripts\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\b"
+)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -73,7 +75,7 @@ def _makefile_script_modules(vault: Path) -> list[str]:
     modules: set[str] = set()
     for path in [vault / "Makefile", *sorted((vault / "mk").glob("*.mk"))]:
         if path.is_file():
-            modules.update(f"ops.scripts.{name}" for name in FLAT_SCRIPT_MODULE_RE.findall(path.read_text()))
+            modules.update(SCRIPT_MODULE_RE.findall(path.read_text()))
     return sorted(modules)
 
 

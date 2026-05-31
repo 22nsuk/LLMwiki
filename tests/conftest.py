@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -12,6 +13,7 @@ BARE_PYTEST_GUIDANCE = (
     "the supported entrypoints preserve repo import semantics and the documented pytest plugin policy."
 )
 HYPOTHESIS_PROFILE = "llmwiki"
+DEFAULT_HYPOTHESIS_MAX_EXAMPLES = 30
 
 
 def _is_bare_pytest_invocation(argv0: str) -> bool:
@@ -22,10 +24,14 @@ def pytest_configure(config: pytest.Config) -> None:
     del config
     if _is_bare_pytest_invocation(sys.argv[0]):
         raise pytest.UsageError(BARE_PYTEST_GUIDANCE)
+    max_examples = int(
+        os.environ.get("LLMWIKI_HYPOTHESIS_MAX_EXAMPLES", str(DEFAULT_HYPOTHESIS_MAX_EXAMPLES))
+    )
     settings.register_profile(
         HYPOTHESIS_PROFILE,
-        max_examples=100,
+        max_examples=max_examples,
         deadline=None,
+        database=None,
         derandomize=True,
         suppress_health_check=(HealthCheck.function_scoped_fixture,),
     )

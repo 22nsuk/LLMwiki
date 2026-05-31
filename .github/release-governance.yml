@@ -1,0 +1,66 @@
+version: 1
+publication_target:
+  remote: origin
+  protected_branches:
+    - main
+  working_branch_patterns:
+    - "feature/*"
+    - "codex/*"
+required_status_checks:
+  ci_workflow: CI
+  ci_matrix:
+    python_versions:
+      - "3.12"
+      - "3.13"
+      - "3.14"
+    tiers:
+      - fast
+      - report-contract
+      - release-closeout-regression
+      - release-sealing
+      - subprocess
+      - slow
+      - integration
+      - integration-heavy
+      - public
+  singleton_checks:
+    - "windows-release-smoke / py3.12"
+    - "raw-registry-cross-env / linux-c-utf8"
+    - "raw-registry-cross-env / windows-utf8"
+    - "raw-registry-cross-env / macos-utf8"
+    - "raw-registry-cross-env evidence bundle / py3.12"
+    - "supply-chain / py3.12"
+    - "codeql / python"
+    - "dependency review"
+branch_protection:
+  require_pull_request: true
+  require_review_before_merge: true
+  require_required_status_checks: true
+  require_branches_up_to_date: true
+  require_linear_history: true
+  allow_force_pushes: false
+  allow_deletions: false
+  main_direct_push: forbidden
+remote_sync:
+  working_branch_push: "git push -u origin HEAD:<working-branch>"
+  workflow_attachment:
+    attach_workflow_run: true
+    attach_combined_status_check: true
+    attachment_failure_blocks_push: false
+    error_field: "remote_sync.workflow_attachment.workflow_attachment_error"
+release_evidence:
+  workflow: Release
+  release_assets:
+    - verified-source-zip
+    - verified-evidence-bundle
+    - verified-release-attestation
+  attestation_paths:
+    - build/release/release-live-attestation.json
+    - build/release/release-post-seal-attestation.json
+    - ops/reports/release-closeout-finality-attestation.json
+offline_verification:
+  commands:
+    - make release-run-ready-check
+    - make release-sealed-run-ready-check
+    - make release-auto-promotion-ready-check
+    - python -m ops.scripts.release.release_live_artifact_attestation verify

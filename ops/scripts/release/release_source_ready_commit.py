@@ -39,8 +39,6 @@ PUBLIC_SOURCE_FILES = {
     "mypy.ini",
     "pyproject.toml",
     "pytest.ini",
-    "requirements-dev.txt",
-    "requirements.txt",
     "uv.lock",
 }
 LOCAL_SOURCE_CONTRACT_FILES = {

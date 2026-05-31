@@ -43,6 +43,10 @@ membership policy is `ops/scripts/public/public_surface_policy.py`; generated
 ignore templates such as `ops/templates/public-mirror.gitignore` are derived
 from that policy.
 
+Dependency source authority in this surface is `pyproject.toml` plus `uv.lock`.
+Root `requirements.txt` and `requirements-dev.txt` are intentionally retired
+and are not public-export inputs.
+
 Use `docs/public-mirror.md` for public boundary details and commands. Use
 `make sync-public-policy` when the public boundary changes, and use
 `make public-export` or `make public-check` when you need materialized export
@@ -96,6 +100,36 @@ generated report exposes a rule that should become durable public behavior,
 move the behavior into source, schema, policy, fixture, or test coverage instead
 of committing the local report payload.
 
+## Report Bucket Model
+
+Release and runtime report paths are classified into exactly one bucket:
+
+- `checked_in_canonical_source_side`: top-level `ops/reports/*.json` reports
+  that are treated as source-side canonical evidence until regenerated or
+  explicitly excluded.
+- `build_release_authoritative_sidecar`: active `build/release/*.json`
+  sidecars that are bound by staged release authority. Plan, preflight,
+  preseal, dry-run, and archived files are not in this bucket.
+- `observational_diagnostic`: diagnostic, scratch, nested, operator, or plan
+  reports such as `ops/operator/`, `tmp/`, nested `ops/reports/**`, and
+  non-authoritative `build/release/*-plan.json` evidence.
+- `archival_historical`: preserved historical evidence under archive/archival
+  paths such as `ops/reports/archive/`, `build/release/archive/`, and
+  `external-reports/archive/`.
+
+The bucket assignment and the documentation compliance verdict are separate:
+runtime classification must still produce a total partition if this section is
+missing or incomplete, but promotion/signoff should treat missing bucket
+documentation as a policy failure until the public-safe criteria are restored.
+When moving a report out of an authoritative bucket, apply the delete-first
+rule: remove the old canonical path and keep the payload only in its explicit
+new bucket.
+Stale canonical report resolution records one decision per stale report:
+regenerate it into HEAD-aligned current evidence, or remove it from the
+canonical set with an explicit excluded/non-canonical marker. If the stale
+payload is preserved outside the canonical set, the record must include the
+preservation reason.
+
 ## Change Checklist
 
 When a change affects repository boundaries, check the owner surface first:
@@ -113,3 +147,16 @@ When a change affects repository boundaries, check the owner surface first:
 
 For the broader runtime map, see `ARCHITECTURE.md`. For public export details,
 see `docs/public-mirror.md`. For release runbooks, see `docs/release.md`.
+
+## Remote Governance Surface
+
+`.github/release-governance.yml` is part of the public mirror and records the
+remote-visible branch protection, required status checks, release asset, and
+attestation contract. It is configuration evidence for GitHub rulesets/branch
+protection and should stay aligned with `.github/workflows/ci.yml`,
+`.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`, and
+`.github/workflows/release.yml`.
+
+The file is intentionally public-safe: it names check lanes, branch patterns,
+release asset names, and offline verification commands, but it does not contain
+tokens, repository secrets, private corpus paths, or local operator state.

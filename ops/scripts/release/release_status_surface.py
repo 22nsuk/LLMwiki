@@ -1,0 +1,445 @@
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any, Callable
+
+from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagnostics
+from ops.scripts.core.release_authority_state_runtime import (
+    release_status_v2_view_with_readiness_fallback,
+)
+from ops.scripts.release.release_run_manifest import remote_sync as read_remote_sync
+from ops.scripts.runtime_context import RuntimeContext
+
+
+STATUS_KEYS = (
+    "source_closeout",
+    "sealed_run",
+    "public_summary",
+    "lockfile_freshness",
+    "learning_signoff",
+    "goal_runtime_certificate",
+    "remote_sync",
+)
+STATUS_AXIS_SOURCE_CLOSEOUT = "source_closeout"
+STATUS_AXIS_SEALED_RUN = "sealed_run"
+STATUS_VALUE_SYNCED = "synced"
+STATUS_VALUE_NOT_SYNCED = "not_synced"
+STATUS_VALUE_PASS = "pass"
+STATUS_VALUE_FAIL = "fail"
+STATUS_VALUE_UNKNOWN = "unknown"
+STATUS_VALUE_REQUIRES_FULL_VAULT = "requires_full_vault"
+VAULT_COMPLETENESS_FULL = "full_vault"
+VAULT_COMPLETENESS_PUBLIC = "public_mirror"
+FRESHNESS_DISPLAY_VALUES = {"none", "advisory", "blocking"}
+
+DEFAULT_CLOSEOUT = "ops/reports/release-closeout-summary.json"
+DEFAULT_SEALED_RUN = "build/release/release-sealed-run-manifest.json"
+DEFAULT_OPERATOR_SUMMARY = "ops/operator/operator-release-summary.json"
+DEFAULT_PUBLIC_SUMMARY = "ops/reports/public-check-summary.json"
+DEFAULT_SUPPLY_CHAIN_PROVENANCE = "ops/reports/supply-chain-provenance.json"
+DEFAULT_LEARNING_SIGNOFF = "ops/reports/learning-readiness-signoff.json"
+DEFAULT_GOAL_RUNTIME_CERTIFICATE = "ops/reports/goal-runtime-certificate.json"
+DEFAULT_RELEASE_RUN_MANIFEST = "build/release/release-run-manifest.json"
+SOURCE_COMMAND = "python -m ops.scripts.release.release_status_surface --vault ."
+
+LockCheckRunner = Callable[[Path], dict[str, Any]]
+RemoteSyncReader = Callable[[Path], dict[str, Any]]
+
+
+def remote_sync_display_status(remote_signal: dict[str, Any]) -> str:
+    upstream = str(remote_signal.get("upstream", "")).strip()
+    try:
+        ahead = int(remote_signal.get("ahead", 0) or 0)
+        behind = int(remote_signal.get("behind", 0) or 0)
+    except (TypeError, ValueError):
+        return STATUS_VALUE_NOT_SYNCED
+    if (
+        upstream
+        and ahead == 0
+        and behind == 0
+        and str(remote_signal.get("status", "")).strip() == STATUS_VALUE_PASS
+    ):
+        return STATUS_VALUE_SYNCED
+    return STATUS_VALUE_NOT_SYNCED
+
+
+def lockfile_freshness_display_status(
+    *,
+    lock_check_status: str,
+    uv_lock_check_passed: bool,
+) -> str:
+    if lock_check_status == "enforced" and uv_lock_check_passed:
+        return STATUS_VALUE_PASS
+    return STATUS_VALUE_FAIL
+
+
+def _load_optional(vault: Path, rel_path: str) -> tuple[dict[str, Any], str]:
+    payload, diagnostics = load_optional_json_object_with_diagnostics(vault / rel_path)
+    status = str(diagnostics.get("status", STATUS_VALUE_UNKNOWN)).strip()
+    return payload, status or STATUS_VALUE_UNKNOWN
+
+
+def _status_from_payload(payload: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, dict):
+            nested = str(value.get("result", "")).strip()
+            if nested:
+                return nested
+        else:
+            text = str(value or "").strip()
+            if text:
+                return text
+    return ""
+
+
+def _artifact_freshness_display(closeout: dict[str, Any]) -> str:
+    gate = closeout.get("artifact_freshness_gate")
+    gate = gate if isinstance(gate, dict) else {}
+    display_effect = str(gate.get("display_effect", "")).strip()
+    if display_effect in FRESHNESS_DISPLAY_VALUES:
+        return display_effect
+    if bool(gate.get("blocking")):
+        return "blocking"
+    gate_effect = str(gate.get("gate_effect", "")).strip()
+    if gate_effect == "advisory":
+        return "advisory"
+    if gate_effect in {"blocks_promotion", "blocks_execution"}:
+        return "blocking"
+    return "none"
+
+
+def _source_closeout_status(closeout: dict[str, Any], load_status: str) -> tuple[str, str]:
+    if load_status != "ok":
+        return STATUS_VALUE_UNKNOWN, "none"
+    view = release_status_v2_view_with_readiness_fallback(closeout)
+    return (
+        str(view.get("release_authority_status", STATUS_VALUE_UNKNOWN)).strip()
+        or STATUS_VALUE_UNKNOWN,
+        _artifact_freshness_display(closeout),
+    )
+
+
+def _sealed_run_status(
+    sealed_run: dict[str, Any],
+    sealed_load_status: str,
+    operator_summary: dict[str, Any],
+    operator_load_status: str,
+) -> tuple[str, str]:
+    if sealed_load_status == "ok":
+        view = release_status_v2_view_with_readiness_fallback(sealed_run)
+        status = (
+            str(view.get("sealed_release_status", "")).strip()
+            or _status_from_payload(sealed_run, "sealed_release_status", "status")
+            or STATUS_VALUE_UNKNOWN
+        )
+        return status, DEFAULT_SEALED_RUN
+    if operator_load_status == "ok":
+        return (
+            _status_from_payload(operator_summary, "sealed_release_status", "status")
+            or STATUS_VALUE_UNKNOWN,
+            DEFAULT_OPERATOR_SUMMARY,
+        )
+    return STATUS_VALUE_UNKNOWN, DEFAULT_SEALED_RUN
+
+
+def _vault_completeness(vault: Path) -> str:
+    full_vault_paths = ("raw", "wiki", "system", "runs", "external-reports")
+    if all((vault / path).exists() for path in full_vault_paths):
+        return VAULT_COMPLETENESS_FULL
+    return VAULT_COMPLETENESS_PUBLIC
+
+
+def _unverified_status(value: str, *, vault_completeness: str) -> str:
+    if value:
+        return value
+    if vault_completeness == VAULT_COMPLETENESS_PUBLIC:
+        return STATUS_VALUE_REQUIRES_FULL_VAULT
+    return STATUS_VALUE_UNKNOWN
+
+
+def _status_line(
+    *,
+    key: str,
+    status: str,
+    axis: str | None,
+    detail: str,
+    evidence_path: str,
+) -> dict[str, Any]:
+    return {
+        "key": key,
+        "status": status,
+        "axis": axis,
+        "detail": detail,
+        "evidence_path": evidence_path,
+    }
+
+
+def status_surface_from_signals(
+    *,
+    generated_at: str,
+    vault_completeness: str,
+    source_closeout_status: str,
+    sealed_run_status: str,
+    public_summary_status: str,
+    lock_check_status: str,
+    uv_lock_check_passed: bool,
+    learning_signoff_status: str,
+    goal_runtime_certificate_status: str,
+    remote_sync_signal: dict[str, Any],
+    artifact_freshness_display: str,
+    source_closeout_evidence_path: str = DEFAULT_CLOSEOUT,
+    sealed_run_evidence_path: str = DEFAULT_SEALED_RUN,
+    public_summary_evidence_path: str = DEFAULT_PUBLIC_SUMMARY,
+    lockfile_evidence_path: str = DEFAULT_SUPPLY_CHAIN_PROVENANCE,
+    learning_signoff_evidence_path: str = DEFAULT_LEARNING_SIGNOFF,
+    goal_runtime_certificate_evidence_path: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
+    remote_sync_evidence_path: str = DEFAULT_RELEASE_RUN_MANIFEST,
+) -> dict[str, Any]:
+    freshness = (
+        artifact_freshness_display
+        if artifact_freshness_display in FRESHNESS_DISPLAY_VALUES
+        else "none"
+    )
+    lock_status = lockfile_freshness_display_status(
+        lock_check_status=lock_check_status,
+        uv_lock_check_passed=uv_lock_check_passed,
+    )
+    remote_status = remote_sync_display_status(remote_sync_signal)
+    lines = [
+        _status_line(
+            key="source_closeout",
+            status=source_closeout_status or STATUS_VALUE_UNKNOWN,
+            axis=STATUS_AXIS_SOURCE_CLOSEOUT,
+            detail=f"freshness={freshness}",
+            evidence_path=source_closeout_evidence_path,
+        ),
+        _status_line(
+            key="sealed_run",
+            status=sealed_run_status or STATUS_VALUE_UNKNOWN,
+            axis=STATUS_AXIS_SEALED_RUN,
+            detail="axis=sealed_run_authority",
+            evidence_path=sealed_run_evidence_path,
+        ),
+        _status_line(
+            key="public_summary",
+            status=public_summary_status or STATUS_VALUE_UNKNOWN,
+            axis=None,
+            detail="public mirror contract evidence",
+            evidence_path=public_summary_evidence_path,
+        ),
+        _status_line(
+            key="lockfile_freshness",
+            status=lock_status,
+            axis=None,
+            detail=(
+                f"lock_check_status={lock_check_status or STATUS_VALUE_UNKNOWN}; "
+                f"uv_lock_check={'pass' if uv_lock_check_passed else 'fail'}"
+            ),
+            evidence_path=lockfile_evidence_path,
+        ),
+        _status_line(
+            key="learning_signoff",
+            status=_unverified_status(
+                learning_signoff_status,
+                vault_completeness=vault_completeness,
+            ),
+            axis=None,
+            detail="learning readiness signoff evidence",
+            evidence_path=learning_signoff_evidence_path,
+        ),
+        _status_line(
+            key="goal_runtime_certificate",
+            status=_unverified_status(
+                goal_runtime_certificate_status,
+                vault_completeness=vault_completeness,
+            ),
+            axis=None,
+            detail="goal runtime certificate evidence",
+            evidence_path=goal_runtime_certificate_evidence_path,
+        ),
+        _status_line(
+            key="remote_sync",
+            status=remote_status,
+            axis=None,
+            detail=(
+                f"upstream={str(remote_sync_signal.get('upstream', '')).strip() or 'none'}; "
+                f"ahead={remote_sync_signal.get('ahead', 0)}; "
+                f"behind={remote_sync_signal.get('behind', 0)}"
+            ),
+            evidence_path=remote_sync_evidence_path,
+        ),
+    ]
+    return {
+        "generated_at": generated_at,
+        "producer": "ops.scripts.release_status_surface",
+        "source_command": SOURCE_COMMAND,
+        "vault_completeness": vault_completeness,
+        "lines": lines,
+        "axes": {
+            "source_closeout_axis": STATUS_AXIS_SOURCE_CLOSEOUT,
+            "sealed_run_axis": STATUS_AXIS_SEALED_RUN,
+        },
+    }
+
+
+def _run_uv_lock_check(vault: Path) -> dict[str, Any]:
+    try:
+        completed = subprocess.run(
+            ["uv", "lock", "--check"],
+            cwd=vault,
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {
+            "status": STATUS_VALUE_FAIL,
+            "returncode": 127,
+            "error": str(exc),
+        }
+    return {
+        "status": STATUS_VALUE_PASS if completed.returncode == 0 else STATUS_VALUE_FAIL,
+        "returncode": completed.returncode,
+    }
+
+
+def _skipped_lock_check(_vault: Path) -> dict[str, Any]:
+    return {
+        "status": STATUS_VALUE_FAIL,
+        "returncode": None,
+        "reason": "skipped",
+    }
+
+
+def _lock_check_status_from_provenance(provenance: dict[str, Any]) -> str:
+    lock_evidence = provenance.get("lock_evidence")
+    lock_evidence = lock_evidence if isinstance(lock_evidence, dict) else {}
+    return str(lock_evidence.get("lock_check_status", STATUS_VALUE_UNKNOWN)).strip() or STATUS_VALUE_UNKNOWN
+
+
+def _remote_sync_signal(
+    vault: Path,
+    run_manifest: dict[str, Any],
+    run_manifest_load_status: str,
+    remote_sync_reader: RemoteSyncReader,
+) -> dict[str, Any]:
+    if run_manifest_load_status == "ok":
+        remote = run_manifest.get("remote_sync")
+        if isinstance(remote, dict):
+            return remote
+    return remote_sync_reader(vault)
+
+
+def build_status_surface(
+    vault: Path,
+    *,
+    context: RuntimeContext | None = None,
+    lock_check_runner: LockCheckRunner = _run_uv_lock_check,
+    remote_sync_reader: RemoteSyncReader = read_remote_sync,
+) -> dict[str, Any]:
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
+    closeout, closeout_load_status = _load_optional(vault, DEFAULT_CLOSEOUT)
+    sealed_run, sealed_load_status = _load_optional(vault, DEFAULT_SEALED_RUN)
+    operator_summary, operator_load_status = _load_optional(vault, DEFAULT_OPERATOR_SUMMARY)
+    public_summary, public_load_status = _load_optional(vault, DEFAULT_PUBLIC_SUMMARY)
+    provenance, _provenance_load_status = _load_optional(vault, DEFAULT_SUPPLY_CHAIN_PROVENANCE)
+    learning_signoff, learning_load_status = _load_optional(vault, DEFAULT_LEARNING_SIGNOFF)
+    goal_certificate, goal_load_status = _load_optional(vault, DEFAULT_GOAL_RUNTIME_CERTIFICATE)
+    run_manifest, run_manifest_load_status = _load_optional(vault, DEFAULT_RELEASE_RUN_MANIFEST)
+
+    source_status, freshness = _source_closeout_status(closeout, closeout_load_status)
+    sealed_status, sealed_evidence_path = _sealed_run_status(
+        sealed_run,
+        sealed_load_status,
+        operator_summary,
+        operator_load_status,
+    )
+    public_status = (
+        _status_from_payload(public_summary, "status", "result")
+        if public_load_status == "ok"
+        else STATUS_VALUE_UNKNOWN
+    )
+    learning_status = (
+        _status_from_payload(
+            learning_signoff,
+            "signoff_status",
+            "readiness_status",
+            "status",
+        )
+        if learning_load_status == "ok"
+        else ""
+    )
+    goal_status = (
+        _status_from_payload(goal_certificate, "status", "certificate_status", "result")
+        if goal_load_status == "ok"
+        else ""
+    )
+    lock_check = lock_check_runner(vault)
+    remote_signal = _remote_sync_signal(
+        vault,
+        run_manifest,
+        run_manifest_load_status,
+        remote_sync_reader,
+    )
+    return status_surface_from_signals(
+        generated_at=runtime_context.isoformat_z(),
+        vault_completeness=_vault_completeness(vault),
+        source_closeout_status=source_status,
+        sealed_run_status=sealed_status,
+        public_summary_status=public_status,
+        lock_check_status=_lock_check_status_from_provenance(provenance),
+        uv_lock_check_passed=str(lock_check.get("status", "")).strip() == STATUS_VALUE_PASS,
+        learning_signoff_status=learning_status,
+        goal_runtime_certificate_status=goal_status,
+        remote_sync_signal=remote_signal,
+        artifact_freshness_display=freshness,
+        sealed_run_evidence_path=sealed_evidence_path,
+    )
+
+
+def render_status_surface_text(surface: dict[str, Any]) -> str:
+    rows: list[str] = []
+    for line in surface.get("lines", []):
+        if not isinstance(line, dict):
+            continue
+        axis = str(line.get("axis") or "none")
+        rows.append(
+            f"{line.get('key')}: {line.get('status')} | axis={axis} | "
+            f"evidence={line.get('evidence_path')} | {line.get('detail')}"
+        )
+    return "\n".join(rows) + ("\n" if rows else "")
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Render the LLMwiki operator status surface.")
+    parser.add_argument("--vault", default=".")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    parser.add_argument(
+        "--skip-lock-check",
+        action="store_true",
+        help="Do not run uv lock --check; render lock freshness as fail/unknown.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    vault = Path(args.vault).resolve()
+    lock_runner = _skipped_lock_check if args.skip_lock_check else _run_uv_lock_check
+    surface = build_status_surface(vault, lock_check_runner=lock_runner)
+    if args.format == "json":
+        print(json.dumps(surface, ensure_ascii=False, indent=2, sort_keys=True))
+    else:
+        sys.stdout.write(render_status_surface_text(surface))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

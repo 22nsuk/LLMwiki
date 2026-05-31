@@ -752,10 +752,8 @@
         "path": {
           "type": "string",
           "enum": [
-            "uv.lock",
             "pyproject.toml",
-            "requirements.txt",
-            "requirements-dev.txt"
+            "uv.lock"
           ]
         },
         "exists": { "type": "boolean" },

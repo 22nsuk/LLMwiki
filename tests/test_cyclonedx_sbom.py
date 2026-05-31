@@ -89,6 +89,8 @@ class CycloneDxSbomTests(unittest.TestCase):
             self.assertEqual(properties["urn:openai:sbom:source-package-status"], "pass")
             self.assertEqual(properties["urn:openai:sbom:source-package-reproducibility-status"], "pass")
             self.assertEqual(properties["urn:openai:sbom:source-zip-sha256"], SOURCE_ZIP_SHA256)
+            self.assertNotIn("urn:openai:sbom:inputs:requirements", properties)
+            self.assertNotIn("urn:openai:sbom:inputs:requirements-dev", properties)
             self.assertEqual(artifact_envelope["artifact_kind"], "cyclonedx_sbom")
             self.assertEqual(artifact_envelope["artifact_status"], "current")
             self.assertEqual(artifact_envelope["currentness"]["status"], "current")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -18,6 +19,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 
 pytestmark = pytest.mark.report_contract
+
+
+def _isolated_child_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
 
 
 class ReportSchemaSampleRegenerationTests(unittest.TestCase):
@@ -59,6 +66,7 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, "tools/regenerate_report_schema_samples.py", "--help"],
             cwd=REPO_ROOT,
+            env=_isolated_child_env(),
             check=False,
             text=True,
             capture_output=True,
@@ -84,6 +92,7 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
                     "--check",
                 ],
                 cwd=REPO_ROOT,
+                env=_isolated_child_env(),
                 check=False,
                 text=True,
                 capture_output=True,
@@ -100,6 +109,7 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
                 "--check",
             ],
             cwd=REPO_ROOT,
+            env=_isolated_child_env(),
             check=False,
             text=True,
             capture_output=True,

@@ -37,9 +37,17 @@ class PytestEntrypointGuidanceTests(unittest.TestCase):
     def test_bare_pytest_fails_with_supported_entrypoint_guidance(self) -> None:
         env = os.environ.copy()
         env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
 
         completed = subprocess.run(
-            [_pytest_console_script(), "--collect-only", "-q", "tests/test_command_runtime.py"],
+            [
+                _pytest_console_script(),
+                "--collect-only",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                "tests/test_command_runtime.py",
+            ],
             cwd=REPO_ROOT,
             env=env,
             capture_output=True,
@@ -57,9 +65,19 @@ class PytestEntrypointGuidanceTests(unittest.TestCase):
     def test_python_module_pytest_entrypoint_remains_supported(self) -> None:
         env = os.environ.copy()
         env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
 
         completed = subprocess.run(
-            [sys.executable, "-m", "pytest", "--collect-only", "-q", "tests/test_command_runtime.py"],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "--collect-only",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                "tests/test_command_runtime.py",
+            ],
             cwd=REPO_ROOT,
             env=env,
             capture_output=True,

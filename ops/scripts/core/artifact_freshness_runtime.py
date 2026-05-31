@@ -6,8 +6,7 @@ import hashlib
 import json
 import sys
 import time
-import zipfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TextIO
@@ -22,7 +21,6 @@ from .artifact_freshness_debt_runtime import (
     artifact_record_gate_effect,
     contract_issue_class,
     debt_queues,
-    is_historical_schema_drift,
     is_run_local_artifact,
     matching_issues,
     mtime_drift_is_advisory_only,
@@ -33,9 +31,42 @@ from .artifact_freshness_debt_runtime import (
     top_debt,
     top_debt_files,
 )
+from .artifact_envelope_runtime import (
+    CanonicalReportEnvelopeRequest,
+    artifact_input_fingerprints,
+    build_canonical_report_envelope,
+    resolve_artifact_path as _resolve_artifact_path,
+)
 from .artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
+)
+from .artifact_freshness_mtime_runtime import (
+    format_mtime as _format_mtime,
+    load_zip_info_mtimes,
+    mtime_for_source as _mtime_for_source,
+    parse_generated_at as _parse_generated_at,
+    zip_info_mtimes as _zip_info_mtimes,
+)
+from .artifact_freshness_payload_runtime import (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+    ENVELOPE_REQUIRED_FIELDS,
+    canonical_artifact_payload,
+    canonical_report_loading_issue,
+    computed_currentness_status as _computed_currentness_status,
+    currentness_status as _currentness_status,
+    embed_artifact_envelope_metadata,
+    has_artifact_envelope as _has_artifact_envelope,
+    normalized_artifact_payload as _normalized_artifact_payload,
+)
+from .artifact_freshness_schema_runtime import (
+    NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES,
+    NONCANONICAL_JSON_ARCHIVE_PATHS,
+    RAW_INTAKE_RUN_ARTIFACT_PREFIX,
+    SCHEMALESS_HISTORICAL_BOOTSTRAP_REPORTS,
+    is_noncanonical_json_archive_path as _is_noncanonical_json_archive_path,
+    safe_to_backfill as _safe_to_backfill,
+    schema_contract as _schema_contract,
 )
 from .output_runtime import display_path
 from .policy_runtime import load_policy, report_path
@@ -47,13 +78,11 @@ from .schema_runtime import (
     validate_with_schema,
     validate_with_validator,
 )
-from .source_revision_runtime import resolve_source_revision
 from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "ops/reports/artifact-freshness-report.json"
 PRODUCER = "ops.scripts.artifact_freshness_runtime"
 SOURCE_COMMAND = "python -m ops.scripts.artifact_freshness_runtime"
-ARTIFACT_ENVELOPE_SCHEMA_PATH = "ops/schemas/artifact-envelope.schema.json"
 JSON_ARTIFACT_GLOBS = [
     "ops/reports/**/*.json",
     "ops/operator/**/*.json",
@@ -72,56 +101,22 @@ RUN_LOG_PLACEHOLDER_GLOBS = [
     "runs/**/repo-health.stdout.txt",
     "runs/**/repo-health.stderr.txt",
 ]
-ENVELOPE_REQUIRED_FIELDS = [
-    "$schema",
-    "artifact_kind",
-    "generated_at",
-    "producer",
-    "source_command",
-    "source_revision",
-    "source_tree_fingerprint",
-    "input_fingerprints",
-    "schema_version",
-    "artifact_status",
-    "retention_policy",
-    "encoding",
-    "currentness",
-]
-EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY = "urn:openai:artifact-envelope"
 MTIME_SOURCES = (
     "filesystem",
     "zip_info",
     "embedded_currentness",
 )
+_MTIME_COMPAT_EXPORTS = (
+    load_zip_info_mtimes,
+)
+_PAYLOAD_COMPAT_EXPORTS = (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+    ENVELOPE_REQUIRED_FIELDS,
+    canonical_artifact_payload,
+    canonical_report_loading_issue,
+    embed_artifact_envelope_metadata,
+)
 PROGRESS_FORMATS = ("none", "jsonl")
-SCHEMALESS_HISTORICAL_BOOTSTRAP_REPORTS = {
-    "ops/reports/eval-initial-2026-04-12.json",
-    "ops/reports/lint-initial-2026-04-12.json",
-    "ops/reports/manifest-2026-04-12.json",
-    "ops/reports/archive/eval-initial-2026-04-12.json",
-    "ops/reports/archive/lint-initial-2026-04-12.json",
-    "ops/reports/archive/manifest-2026-04-12.json",
-}
-RAW_INTAKE_RUN_ARTIFACT_PREFIX = "runs/run-20260422-raw-intake-registration-and-promotion/"
-NONCANONICAL_JSON_ARCHIVE_PATHS = {
-    (
-        "runs/run-20260422-raw-intake-registration-and-promotion/"
-        "promotion/concept-continuity-integration-2026-04-22.json"
-    ),
-    (
-        "runs/run-20260422-raw-intake-registration-and-promotion/"
-        "registration/source-english-summary-reregistration-2026-04-22.json"
-    ),
-}
-NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES = {
-    "scope-freeze.json",
-    "subagent-routing.validator.json",
-    "subagent-routing.worker.json",
-    "validator-executor-report.json",
-    "validator-last-message.json",
-    "worker-executor-report.json",
-    "worker-last-message.json",
-}
 NON_SEALING_ARTIFACT_PATHS = {
     "ops/reports/archive-execution-manifest.json",
     "ops/reports/make-target-inventory.json",
@@ -130,26 +125,12 @@ NON_SEALING_ARTIFACT_PATHS = {
     "ops/reports/release-workflow-order-guard.json",
     "ops/reports/workflow-dependency-planner.json",
 }
-
-
-def _is_noncanonical_json_archive_path(rel_path: str) -> bool:
-    normalized = rel_path.replace("\\", "/")
-    if normalized in NONCANONICAL_JSON_ARCHIVE_PATHS:
-        return True
-    if not normalized.startswith("runs/"):
-        return False
-    filename = Path(normalized).name
-    if filename in NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES:
-        return True
-    if filename.startswith("subagent-routing.") and filename.endswith(".json"):
-        return True
-    if filename.endswith("-executor-report.json"):
-        return True
-    return bool(filename.endswith("-last-message.json"))
-
-
-def _sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+_SCHEMA_COMPAT_EXPORTS = (
+    NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES,
+    NONCANONICAL_JSON_ARCHIVE_PATHS,
+    RAW_INTAKE_RUN_ARTIFACT_PREFIX,
+    SCHEMALESS_HISTORICAL_BOOTSTRAP_REPORTS,
+)
 
 
 def _sha256_file(path: Path) -> str:
@@ -157,182 +138,6 @@ def _sha256_file(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError:
         return "missing"
-
-
-def _fingerprint_paths(vault: Path, rel_paths: list[str]) -> str:
-    digest = hashlib.sha256()
-    for rel_path in sorted(rel_paths):
-        path = vault / rel_path
-        digest.update(rel_path.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(_sha256_file(path).encode("ascii"))
-        digest.update(b"\0")
-    return digest.hexdigest()
-
-
-def _canonical_source_path(vault: Path, rel_path: str) -> str:
-    normalized = Path(rel_path).as_posix()
-    if (vault / normalized).exists():
-        return normalized
-    parts = normalized.split("/")
-    if len(parts) == 3 and parts[:2] == ["ops", "scripts"] and parts[2].endswith(".py"):
-        matches = sorted((vault / "ops" / "scripts").glob(f"*/{parts[2]}"))
-        if len(matches) == 1:
-            return report_path(vault, matches[0])
-    return normalized
-
-
-def _canonical_source_paths(vault: Path, rel_paths: Sequence[str]) -> list[str]:
-    canonical: dict[str, None] = {}
-    for rel_path in rel_paths:
-        normalized = str(rel_path).strip()
-        if not normalized:
-            continue
-        canonical[_canonical_source_path(vault, normalized)] = None
-    return sorted(canonical)
-
-
-def _resolve_artifact_path(vault: Path, path: str | Path) -> Path:
-    resolved = Path(path)
-    if resolved.is_absolute():
-        return resolved
-    return (vault / resolved).resolve()
-
-
-@dataclass(frozen=True)
-class CanonicalReportEnvelopeRequest:
-    vault: Path
-    generated_at: str
-    artifact_kind: str
-    producer: str
-    source_command: str
-    resolved_policy_path: Path
-    schema_path: str
-    source_paths: list[str]
-    file_inputs: Mapping[str, str | Path] | None = None
-    path_group_inputs: Mapping[str, list[str]] | None = None
-    text_inputs: Mapping[str, str] | None = None
-    source_tree_excluded_files: tuple[str, ...] = ()
-
-    @classmethod
-    def from_legacy_args(
-        cls,
-        vault: Path,
-        **legacy_kwargs: Any,
-    ) -> CanonicalReportEnvelopeRequest:
-        required_keys = {
-            "generated_at",
-            "artifact_kind",
-            "producer",
-            "source_command",
-            "resolved_policy_path",
-            "schema_path",
-            "source_paths",
-        }
-        optional_keys = {
-            "file_inputs",
-            "path_group_inputs",
-            "text_inputs",
-            "source_tree_excluded_files",
-        }
-        missing = sorted(required_keys - legacy_kwargs.keys())
-        unexpected = sorted(set(legacy_kwargs) - required_keys - optional_keys)
-        if missing:
-            raise TypeError(f"missing legacy envelope arguments: {', '.join(missing)}")
-        if unexpected:
-            raise TypeError(f"unexpected legacy envelope arguments: {', '.join(unexpected)}")
-        return cls(
-            vault=vault,
-            generated_at=str(legacy_kwargs["generated_at"]),
-            artifact_kind=str(legacy_kwargs["artifact_kind"]),
-            producer=str(legacy_kwargs["producer"]),
-            source_command=str(legacy_kwargs["source_command"]),
-            resolved_policy_path=Path(legacy_kwargs["resolved_policy_path"]),
-            schema_path=str(legacy_kwargs["schema_path"]),
-            source_paths=[str(path) for path in legacy_kwargs["source_paths"]],
-            file_inputs=legacy_kwargs.get("file_inputs"),
-            path_group_inputs=legacy_kwargs.get("path_group_inputs"),
-            text_inputs=legacy_kwargs.get("text_inputs"),
-            source_tree_excluded_files=tuple(legacy_kwargs.get("source_tree_excluded_files", ())),
-        )
-
-
-def _coerce_canonical_report_envelope_request(
-    request: CanonicalReportEnvelopeRequest | Path,
-    **legacy_kwargs: Any,
-) -> CanonicalReportEnvelopeRequest:
-    if isinstance(request, CanonicalReportEnvelopeRequest):
-        if legacy_kwargs:
-            unexpected = ", ".join(sorted(legacy_kwargs))
-            raise TypeError(f"unexpected legacy envelope arguments with request object: {unexpected}")
-        return request
-    return CanonicalReportEnvelopeRequest.from_legacy_args(Path(request), **legacy_kwargs)
-
-
-def artifact_input_fingerprints(
-    vault: Path,
-    *,
-    resolved_policy_path: Path,
-    schema_path: str,
-    source_paths: Sequence[str] | None = None,
-    file_inputs: Mapping[str, str | Path] | None = None,
-    path_group_inputs: Mapping[str, list[str]] | None = None,
-    text_inputs: Mapping[str, str] | None = None,
-) -> dict[str, str]:
-    fingerprints = {
-        "policy": _sha256_file(resolved_policy_path),
-        "schema": _sha256_file(vault / schema_path),
-        "artifact_envelope_schema": _sha256_file(vault / ARTIFACT_ENVELOPE_SCHEMA_PATH),
-    }
-    if source_paths is not None:
-        fingerprints["source_paths"] = _fingerprint_paths(
-            vault,
-            _canonical_source_paths(vault, source_paths),
-        )
-    for name, path in sorted((file_inputs or {}).items()):
-        fingerprints[str(name)] = _sha256_file(_resolve_artifact_path(vault, path))
-    for name, rel_paths in sorted((path_group_inputs or {}).items()):
-        fingerprints[str(name)] = _fingerprint_paths(vault, [str(item) for item in rel_paths])
-    for name, text in sorted((text_inputs or {}).items()):
-        fingerprints[str(name)] = _sha256_text(str(text))
-    return fingerprints
-
-
-def build_canonical_report_envelope(
-    request: CanonicalReportEnvelopeRequest | Path,
-    **legacy_kwargs: Any,
-) -> dict[str, Any]:
-    envelope_request = _coerce_canonical_report_envelope_request(request, **legacy_kwargs)
-    source_revision = resolve_source_revision(envelope_request.vault)
-    return {
-        "$schema": envelope_request.schema_path,
-        "artifact_kind": envelope_request.artifact_kind,
-        "generated_at": envelope_request.generated_at,
-        "producer": envelope_request.producer,
-        "source_command": envelope_request.source_command,
-        "source_revision": source_revision.revision,
-        "source_tree_fingerprint": release_source_tree_fingerprint(
-            envelope_request.vault,
-            extra_excluded_files=envelope_request.source_tree_excluded_files,
-        ),
-        "input_fingerprints": artifact_input_fingerprints(
-        envelope_request.vault,
-        resolved_policy_path=envelope_request.resolved_policy_path,
-        schema_path=envelope_request.schema_path,
-        source_paths=envelope_request.source_paths,
-        file_inputs=envelope_request.file_inputs,
-        path_group_inputs=envelope_request.path_group_inputs,
-        text_inputs=envelope_request.text_inputs,
-        ),
-        "schema_version": 1,
-        "artifact_status": "current",
-        "retention_policy": "canonical_report",
-        "encoding": "utf-8",
-        "currentness": {
-            "status": "current",
-            "checked_at": envelope_request.generated_at,
-        },
-    }
 
 
 @dataclass(frozen=True)
@@ -553,63 +358,6 @@ def _non_utf8_text_artifacts(vault: Path, paths: list[Path]) -> list[dict[str, s
     return issues
 
 
-def _parse_generated_at(value: str) -> dt.datetime | None:
-    if not value:
-        return None
-    try:
-        return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(dt.UTC)
-    except ValueError:
-        return None
-
-
-def _mtime_utc(path: Path) -> dt.datetime | None:
-    try:
-        return dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.UTC)
-    except OSError:
-        return None
-
-
-def _zip_info_mtime(info: zipfile.ZipInfo) -> dt.datetime:
-    return dt.datetime(*info.date_time, tzinfo=dt.UTC)
-
-
-def _normalize_zip_member_path(path: str) -> str:
-    normalized = path.replace("\\", "/").lstrip("/")
-    while normalized.startswith("./"):
-        normalized = normalized[2:]
-    return normalized
-
-
-def _zip_info_mtimes(zip_metadata_path: Path) -> dict[str, dt.datetime]:
-    mtimes: dict[str, dt.datetime] = {}
-    with zipfile.ZipFile(zip_metadata_path) as archive:
-        for info in archive.infolist():
-            rel_path = _normalize_zip_member_path(info.filename)
-            if not rel_path or rel_path.endswith("/"):
-                continue
-            current = mtimes.get(rel_path)
-            candidate = _zip_info_mtime(info)
-            if current is None or candidate > current:
-                mtimes[rel_path] = candidate
-    return mtimes
-
-
-def load_zip_info_mtimes(zip_metadata_path: Path | None) -> dict[str, dt.datetime]:
-    if zip_metadata_path is None:
-        return {}
-    return _zip_info_mtimes(zip_metadata_path)
-
-
-def _mtime_for_source(path: Path, rel_path: str, *, mtime_source: str, zip_mtimes: Mapping[str, dt.datetime]) -> dt.datetime | None:
-    if mtime_source == "filesystem":
-        return _mtime_utc(path)
-    if mtime_source == "zip_info":
-        return zip_mtimes.get(rel_path)
-    if mtime_source == "embedded_currentness":
-        return None
-    raise ValueError(f"unsupported mtime_source: {mtime_source}")
-
-
 def mtime_for_artifact_source(
     path: Path,
     rel_path: str,
@@ -618,12 +366,6 @@ def mtime_for_artifact_source(
     zip_mtimes: Mapping[str, dt.datetime],
 ) -> dt.datetime | None:
     return _mtime_for_source(path, rel_path, mtime_source=mtime_source, zip_mtimes=zip_mtimes)
-
-
-def _format_mtime(value: dt.datetime | None) -> str:
-    if value is None:
-        return ""
-    return value.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def format_artifact_mtime(value: dt.datetime | None) -> str:
@@ -749,113 +491,6 @@ def _source_tree_fingerprint_status(
     return "current" if observed == current else "stale"
 
 
-def _currentness_status(payload: dict[str, Any]) -> str:
-    normalized_payload = _normalized_artifact_payload(payload)
-    currentness = normalized_payload.get("currentness")
-    if not isinstance(currentness, dict):
-        return "unknown"
-    status = str(currentness.get("status", "")).strip()
-    return status or "unknown"
-
-
-def _computed_currentness_status(
-    *,
-    declared_currentness_status: str,
-    source_tree_fingerprint_status: str,
-) -> str:
-    if declared_currentness_status != "current":
-        return declared_currentness_status
-    if source_tree_fingerprint_status in {"stale", "unknown"}:
-        return source_tree_fingerprint_status
-    return declared_currentness_status
-
-
-def _has_artifact_envelope(payload: dict[str, Any]) -> bool:
-    normalized_payload = _normalized_artifact_payload(payload)
-    if not all(field in normalized_payload for field in ENVELOPE_REQUIRED_FIELDS):
-        return False
-    currentness = normalized_payload.get("currentness")
-    input_fingerprints = normalized_payload.get("input_fingerprints")
-    return isinstance(currentness, dict) and isinstance(input_fingerprints, dict)
-
-
-def _artifact_metadata_properties(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    metadata = payload.get("metadata")
-    if not isinstance(metadata, dict):
-        return []
-    properties = metadata.get("properties")
-    if not isinstance(properties, list):
-        return []
-    return [item for item in properties if isinstance(item, dict)]
-
-
-def embed_artifact_envelope_metadata(payload: dict[str, Any], envelope: dict[str, Any]) -> dict[str, Any]:
-    metadata = payload.get("metadata")
-    normalized_metadata = dict(metadata) if isinstance(metadata, dict) else {}
-    properties = normalized_metadata.get("properties")
-    normalized_properties = [
-        item
-        for item in properties
-        if isinstance(item, dict) and str(item.get("name", "")).strip() != EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
-    ] if isinstance(properties, list) else []
-    normalized_properties.append(
-        {
-            "name": EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
-            "value": json.dumps(envelope, ensure_ascii=False, sort_keys=True),
-        }
-    )
-    normalized_metadata["properties"] = sorted(
-        normalized_properties,
-        key=lambda item: str(item.get("name", "")),
-    )
-    normalized = dict(payload)
-    normalized["metadata"] = normalized_metadata
-    return normalized
-
-
-def _embedded_artifact_envelope(payload: dict[str, Any]) -> dict[str, Any]:
-    for item in _artifact_metadata_properties(payload):
-        name = str(item.get("name", "")).strip()
-        if name != EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY:
-            continue
-        value = item.get("value")
-        if not isinstance(value, str) or not value.strip():
-            return {}
-        try:
-            decoded = json.loads(value)
-        except json.JSONDecodeError:
-            return {}
-        return decoded if isinstance(decoded, dict) else {}
-    return {}
-
-
-def _envelope_field_missing(field: str, value: Any) -> bool:
-    if value is None:
-        return True
-    if field in {"currentness", "input_fingerprints"}:
-        return not isinstance(value, dict)
-    return not str(value).strip()
-
-
-def _normalized_artifact_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    if not payload:
-        return payload
-    embedded_envelope = _embedded_artifact_envelope(payload)
-    if not embedded_envelope:
-        return payload
-    normalized = dict(payload)
-    for envelope_field in ENVELOPE_REQUIRED_FIELDS:
-        if envelope_field not in embedded_envelope:
-            continue
-        if _envelope_field_missing(envelope_field, normalized.get(envelope_field)):
-            normalized[envelope_field] = embedded_envelope[envelope_field]
-    return normalized
-
-
-def canonical_artifact_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    return _normalized_artifact_payload(payload)
-
-
 def _schema_validation(
     vault: Path,
     payload: dict[str, Any],
@@ -877,151 +512,6 @@ def _schema_validation(
     if errors:
         return "fail", errors
     return "pass", []
-
-
-def _schema_contract(
-    rel_path: str,
-    *,
-    has_schema: bool,
-    schema_validation_status: str,
-) -> dict[str, str]:
-    if _is_noncanonical_json_archive_path(rel_path):
-        return {
-            "status": "not_applicable",
-            "classification": "noncanonical_archived_run_note",
-            "reason": (
-                "auxiliary run JSON is retained for audit context "
-                "but is not canonical release evidence"
-            ),
-            "recommended_next_action": "none",
-        }
-    if has_schema:
-        if schema_validation_status == "pass":
-            return {
-                "status": "present",
-                "classification": "schema_backed",
-                "reason": "artifact declares a loadable schema and validates against it",
-                "recommended_next_action": "none",
-            }
-        if schema_validation_status == "fail":
-            return {
-                "status": "invalid",
-                "classification": "schema_invalid",
-                "reason": "artifact declares a schema but current payload fails validation",
-                "recommended_next_action": "regenerate_artifact_from_current_schema",
-            }
-        if is_historical_schema_drift(
-            rel_path=rel_path,
-            schema_validation_status=schema_validation_status,
-        ):
-            return {
-                "status": "invalid",
-                "classification": "historical_run_schema_drift",
-                "reason": (
-                    "run-local artifact is retained as historical audit evidence "
-                    "but predates the current schema contract"
-                ),
-                "recommended_next_action": "archive_or_classify_historical_run_artifact",
-            }
-        if schema_validation_status == "schema_unavailable":
-            return {
-                "status": "unavailable",
-                "classification": "schema_reference_unavailable",
-                "reason": "artifact declares a schema path or URI that cannot be loaded in this vault",
-                "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-            }
-        return {
-            "status": "not_applicable",
-            "classification": "schema_not_applicable",
-            "reason": "artifact payload was not schema-validated",
-            "recommended_next_action": "none",
-        }
-
-    if rel_path in SCHEMALESS_HISTORICAL_BOOTSTRAP_REPORTS:
-        return {
-            "status": "missing",
-            "classification": "historical_bootstrap_report_pending_schema_decision",
-            "reason": "bootstrap ops report predates the generated artifact schema contract",
-            "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-        }
-    if rel_path == "ops/reports/review-archive-report.json":
-        return {
-            "status": "missing",
-            "classification": "review_archive_report_pending_schema_decision",
-            "reason": "review archive report is generated but has no declared schema contract yet",
-            "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-        }
-    if rel_path.startswith(RAW_INTAKE_RUN_ARTIFACT_PREFIX):
-        return {
-            "status": "missing",
-            "classification": "raw_intake_run_artifact_family_pending_schema",
-            "reason": "raw-intake run artifact belongs to a family that needs shared schema or archive classification",
-            "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-        }
-    if rel_path.startswith("runs/"):
-        return {
-            "status": "missing",
-            "classification": "run_artifact_pending_schema_decision",
-            "reason": "run-local JSON artifact lacks a declared schema or noncanonical archive classification",
-            "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-        }
-    if rel_path.startswith("ops/reports/"):
-        return {
-            "status": "missing",
-            "classification": "ops_report_pending_schema_decision",
-            "reason": "ops report lacks a declared schema or noncanonical archive classification",
-            "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-        }
-    if rel_path.startswith("ops/operator/"):
-        return {
-            "status": "missing",
-            "classification": "operator_report_pending_schema_decision",
-            "reason": "operator report lacks a declared schema or noncanonical archive classification",
-            "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-        }
-    return {
-        "status": "missing",
-        "classification": "json_artifact_pending_schema_decision",
-        "reason": "JSON artifact lacks a declared schema or noncanonical classification",
-        "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-    }
-
-
-def _safe_to_backfill(
-    *,
-    utf8_ok: bool,
-    json_ok: bool,
-    schema_validation_status: str,
-    mtime_status: str,
-) -> bool:
-    if not utf8_ok or not json_ok:
-        return False
-    if schema_validation_status == "fail":
-        return False
-    return mtime_status != "stale"
-
-
-def canonical_report_loading_issue(path: Path, payload: dict[str, Any]) -> str | None:
-    if not _has_artifact_envelope(payload):
-        return "missing_artifact_envelope"
-
-    normalized_payload = _normalized_artifact_payload(payload)
-
-    artifact_status = str(normalized_payload.get("artifact_status", "")).strip() or "unknown"
-    if artifact_status != "current":
-        return f"artifact_status={artifact_status}"
-
-    currentness_status = _currentness_status(normalized_payload)
-    if currentness_status != "current":
-        return f"currentness_status={currentness_status}"
-
-    # File mtime drift is reported separately as freshness attention, but it is not a
-    # hard loading blocker for otherwise valid canonical reports. Cross-platform file
-    # copies and checkout behavior can legitimately produce an mtime one second newer
-    # than generated_at, and downstream loaders should still consume the report.
-    del path
-
-    return None
 
 
 def _read_json_artifact_payload(path: Path) -> tuple[dict[str, Any], bool, bool, list[str]]:
