@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from ops.scripts.release.release_closeout_source_runtime import (
@@ -31,7 +33,7 @@ def test_source_specs_for_profile_rejects_unknown_profile() -> None:
         source_specs_for_profile("unknown")
 
 
-def test_load_closeout_source_reports_missing_input(tmp_path) -> None:
+def test_load_closeout_source_reports_missing_input(tmp_path: Path) -> None:
     spec = SourceSpec(
         "test_summary",
         "ops/reports/test-execution-summary.json",

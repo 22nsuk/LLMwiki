@@ -4,7 +4,6 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-
 DEPENDENCY_REPRODUCIBILITY_FILES = (
     "pyproject.toml",
     "uv.lock",

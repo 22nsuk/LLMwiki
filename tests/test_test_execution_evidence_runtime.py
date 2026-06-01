@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ops.scripts.command_runtime import TimedProcessResult
+
 from ops.scripts.test.test_execution_evidence_runtime import (
     evidence_artifact_consistency,
     failed_nodeids,

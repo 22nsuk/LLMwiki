@@ -367,6 +367,7 @@
           "tests/test_release_evidence_dashboard.py",
           "tests/test_learning_readiness_signoff.py",
           "tests/test_lint_uplift_plan.py",
+          "tests/test_runtime_codehealth_hardening_guards.py",
           "tests/test_bootstrap_preflight.py",
           "tests/test_make_target_inventory.py",
           "tests/test_manifest_export_symlink_safety.py",
@@ -514,6 +515,8 @@
       "status": "derived_from_registry",
       "semantics": "Runnable current-commit release manifest authority.",
       "backing_targets": [
+        "release-run-ready-plan",
+        "release-run-ready-plan-check",
         "release-run-ready",
         "release-run-ready-check"
       ],
@@ -528,6 +531,8 @@
         "make -n release-run-ready"
       ],
       "documented_entrypoints": [
+        "make release-run-ready-plan",
+        "make release-run-ready-plan-check",
         "make release-run-ready",
         "make release-run-ready-check"
       ]
@@ -962,12 +967,32 @@
     },
     {
       "kind": "make_target",
+      "name": "release-run-ready-plan",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-run-ready-plan-check",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "make_target",
       "name": "release-run-ready",
       "maps_to": "release_run_ready"
     },
     {
       "kind": "make_target",
       "name": "release-run-ready-check",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-run-ready-plan",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-run-ready-plan-check",
       "maps_to": "release_run_ready"
     },
     {

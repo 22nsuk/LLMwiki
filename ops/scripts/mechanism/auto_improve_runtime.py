@@ -58,6 +58,12 @@ from .auto_improve_iteration_runtime import (
 from .auto_improve_iteration_runtime import (
     run_auto_improve_iteration as run_auto_improve_iteration_helper,
 )
+from .auto_improve_maintenance_decision_runtime import (
+    MAINTENANCE_ACTION_RESUME_TARGET,
+    MAINTENANCE_ACTION_RUNNER_ACTION,
+    _expected_maintenance_cycle_count,
+    _maintenance_cycle_queue_metadata,
+)
 from .auto_improve_outcome_runtime import (
     apply_execution_outcome,
     detect_executor_failure,
@@ -271,8 +277,6 @@ MAINTENANCE_WORK_ITEMS = (
 )
 DEFAULT_POST_PROMOTE_MAINTENANCE_CYCLES = 1
 STABLE_MAINTENANCE_QUEUE_THRESHOLD = 2
-MAINTENANCE_ACTION_RESUME_TARGET = "auto-improve-goal-maintenance-action"
-MAINTENANCE_ACTION_RUNNER_ACTION = "resume_session_with_additional_proposal_budget"
 
 
 def _int_value(value: object, default: int = 0) -> int:
@@ -1511,18 +1515,6 @@ def _last_iteration_outcome(session: Mapping[str, Any]) -> str:
     return ""
 
 
-def _expected_maintenance_cycle_count(
-    *,
-    start_elapsed_seconds: int,
-    target_elapsed_seconds: int,
-    interval_seconds: int,
-) -> int:
-    if start_elapsed_seconds >= target_elapsed_seconds:
-        return 0
-    remaining = target_elapsed_seconds - start_elapsed_seconds
-    return (remaining + interval_seconds - 1) // interval_seconds + 1
-
-
 def _maintenance_cycle_count(session: Mapping[str, Any]) -> int:
     maintenance = _mapping_value(session, "maintenance")
     return _int_value(maintenance.get("cycle_count"))
@@ -1661,75 +1653,6 @@ def write_maintenance_action_resume_plan(
             trailing_newline=True,
         )
     )
-
-
-def _maintenance_queue_action(queue_snapshot: list[str]) -> dict[str, Any]:
-    if not queue_snapshot:
-        return {
-            "status": "none",
-            "reason": "queue_empty",
-            "proposal_ids": [],
-            "runner_action": "none",
-            "proposal_budget_increment": 0,
-            "resume_target": "",
-            "recommended_next_step": "Refresh auto-improve readiness and inspect queue remediations.",
-        }
-    if all(item.startswith("recent_log_overlap_queue_blocked__") for item in queue_snapshot):
-        return {
-            "status": "action_required",
-            "reason": "recent_log_overlap_queue_blocked",
-            "proposal_ids": queue_snapshot,
-            "runner_action": MAINTENANCE_ACTION_RUNNER_ACTION,
-            "proposal_budget_increment": 1,
-            "resume_target": MAINTENANCE_ACTION_RESUME_TARGET,
-            "recommended_next_step": (
-                f"Run make {MAINTENANCE_ACTION_RESUME_TARGET} so the generated "
-                "recent-log-overlap queue-unblock proposal can run instead of "
-                "repeating maintenance refreshes."
-            ),
-        }
-    return {
-        "status": "action_required",
-        "reason": "stable_runnable_queue",
-        "proposal_ids": queue_snapshot,
-        "runner_action": MAINTENANCE_ACTION_RUNNER_ACTION,
-        "proposal_budget_increment": 1,
-        "resume_target": MAINTENANCE_ACTION_RESUME_TARGET,
-        "recommended_next_step": (
-            f"Run make {MAINTENANCE_ACTION_RESUME_TARGET} so the stable queued "
-            "proposal can run with one additional proposal budget slot."
-        ),
-    }
-
-
-def _maintenance_cycle_queue_metadata(
-    cycles: list[Any],
-    queue_snapshot: list[str],
-    runnable_proposal_count: int,
-) -> dict[str, Any]:
-    previous = cycles[-1] if cycles and isinstance(cycles[-1], Mapping) else {}
-    previous_snapshot = _list_text(previous.get("queue_snapshot")) if previous else []
-    previous_runnable_count = _int_value(previous.get("runnable_proposal_count"), -1)
-    queue_changed = not previous or queue_snapshot != previous_snapshot
-    runnable_count_changed = previous_runnable_count != runnable_proposal_count
-    stable_count = 1
-    if previous and not queue_changed:
-        stable_count = _int_value(previous.get("stable_queue_snapshot_count"), 1) + 1
-    meaningful_reasons: list[str] = []
-    if not previous:
-        meaningful_reasons.append("post_promote_observation")
-    if queue_changed and previous:
-        meaningful_reasons.append("queue_snapshot_changed")
-    if runnable_count_changed and previous:
-        meaningful_reasons.append("runnable_proposal_count_changed")
-    meaningful = bool(meaningful_reasons)
-    return {
-        "queue_snapshot_changed": queue_changed,
-        "stable_queue_snapshot_count": stable_count,
-        "meaningful": meaningful,
-        "meaningful_reasons": meaningful_reasons,
-        "queue_action": _maintenance_queue_action(queue_snapshot),
-    }
 
 
 def _record_maintenance_cycle(

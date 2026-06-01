@@ -54,5 +54,5 @@ complexity-budget-touched-check:
 	@if [ -n "$(CHANGED_FILES_MANIFEST)$(STRUCTURAL_COMPLEXITY_BUDGET_TARGETS)" ]; then \
 		$(PYTHON) -m ops.scripts.structural_complexity_budget --vault "$(VAULT)" --out "$(STRUCTURAL_COMPLEXITY_BUDGET_TOUCHED_OUT)" --fail-on-attention $(if $(CHANGED_FILES_MANIFEST),--changed-files-manifest "$(CHANGED_FILES_MANIFEST)",) $(foreach target,$(STRUCTURAL_COMPLEXITY_BUDGET_TARGETS),--target "$(target)"); \
 	else \
-		echo "complexity-budget-touched-check skipped: set CHANGED_FILES_MANIFEST or STRUCTURAL_COMPLEXITY_BUDGET_TARGETS"; \
+		echo "complexity-budget-touched-check skipped: set CHANGED_FILES_MANIFEST or STRUCTURAL_COMPLEXITY_BUDGET_TARGETS (ratchet inactive without touched inputs)"; \
 	fi

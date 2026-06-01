@@ -7,13 +7,15 @@ import json
 import sys
 import tempfile
 import unittest
+from collections.abc import Callable
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import patch
 
+import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-import hypothesis.strategies as st
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
@@ -31,9 +33,9 @@ from ops.scripts.test_execution_summary import (
     collect_pytest_nodeid_digest,
     parse_pytest_counts,
     resolve_pytest_target_paths,
+    reusable_summary_is_current,
     reuse_currentness_diagnostics,
     reuse_currentness_diagnostics_from_state,
-    reusable_summary_is_current,
     semantic_command,
 )
 from ops.scripts.test_execution_summary import (
@@ -105,6 +107,34 @@ def _current_reuse_state(**overrides: object) -> dict[str, object]:
     return state
 
 
+def _reuse_diagnostics(
+    existing: dict[str, object],
+    current_state: dict[str, object] | None = None,
+) -> dict[str, Any]:
+    state = _current_reuse_state() if current_state is None else current_state
+    current_deselection_lifecycle = state["current_deselection_lifecycle"]
+    current_target_fingerprints = state["current_target_fingerprints"]
+    current_deselected_tests = state["current_deselected_tests"]
+    collect_nodeid_digest = state["collect_nodeid_digest"]
+    assert isinstance(current_deselection_lifecycle, dict)
+    assert isinstance(current_target_fingerprints, list)
+    assert isinstance(current_deselected_tests, list)
+    assert collect_nodeid_digest is None or isinstance(collect_nodeid_digest, dict)
+    return reuse_currentness_diagnostics_from_state(
+        existing,
+        suite=str(state["suite"]),
+        current_source_tree_fingerprint=str(state["current_source_tree_fingerprint"]),
+        current_semantic_command=str(state["current_semantic_command"]),
+        current_toolchain_fingerprint=str(state["current_toolchain_fingerprint"]),
+        current_display_command=str(state["current_display_command"]),
+        current_target_fingerprints=cast(list[dict[str, Any]], current_target_fingerprints),
+        current_deselected_tests=cast(list[dict[str, Any]], current_deselected_tests),
+        current_deselection_lifecycle=cast(dict[str, Any], current_deselection_lifecycle),
+        collect_nodeids=bool(state["collect_nodeids"]),
+        collect_nodeid_digest=cast(dict[str, Any] | None, collect_nodeid_digest),
+    )
+
+
 @given(
     reason=st.sampled_from(
         [
@@ -127,10 +157,7 @@ def test_property_6_reuse_diagnostics_select_exactly_one_mismatch_code(reason: s
     elif reason == REUSE_MISMATCH_INTERPRETER_TOOLCHAIN:
         existing["toolchain_fingerprint"] = "toolchain-observed"
 
-    diagnostics = reuse_currentness_diagnostics_from_state(
-        existing,  # type: ignore[arg-type]
-        **_current_reuse_state(),  # type: ignore[arg-type]
-    )
+    diagnostics = _reuse_diagnostics(existing)
 
     assert diagnostics["reusable"] is False
     assert diagnostics["reason"] == reason
@@ -155,10 +182,7 @@ def test_property_7_executable_path_only_differences_never_fail_reuse(component:
     elif component == "toolchain":
         existing["toolchain_fingerprint"] = "toolchain-observed"
 
-    diagnostics = reuse_currentness_diagnostics_from_state(
-        existing,  # type: ignore[arg-type]
-        **current_state,  # type: ignore[arg-type]
-    )
+    diagnostics = _reuse_diagnostics(existing, current_state)
 
     if component == "path_only":
         assert diagnostics["reusable"] is True
@@ -181,14 +205,13 @@ def test_property_7_executable_path_only_differences_never_fail_reuse(component:
         (lambda existing: existing.update({"toolchain_fingerprint": "old-toolchain"}), REUSE_MISMATCH_INTERPRETER_TOOLCHAIN),
     ],
 )
-def test_reuse_diagnostics_reports_each_mismatch_code(mutator, expected_reason: str) -> None:
+def test_reuse_diagnostics_reports_each_mismatch_code(
+    mutator: Callable[[dict[str, object]], None], expected_reason: str
+) -> None:
     existing = _reusable_existing_summary()
     mutator(existing)
 
-    diagnostics = reuse_currentness_diagnostics_from_state(
-        existing,  # type: ignore[arg-type]
-        **_current_reuse_state(),  # type: ignore[arg-type]
-    )
+    diagnostics = _reuse_diagnostics(existing)
 
     assert diagnostics["reusable"] is False
     assert diagnostics["reason"] == expected_reason

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import shlex
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +61,54 @@ def _strict_preview_target_mode(static_mk: str) -> str:
     return "unknown"
 
 
+def _read_enforced_select(vault: Path) -> list[str]:
+    path = vault / "pyproject.toml"
+    if not path.is_file():
+        return []
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    tool = payload.get("tool")
+    if not isinstance(tool, dict):
+        return []
+    ruff = tool.get("ruff")
+    if not isinstance(ruff, dict):
+        return []
+    lint = ruff.get("lint")
+    if not isinstance(lint, dict):
+        return []
+    select = lint.get("select")
+    if not isinstance(select, list):
+        return []
+    return [str(item).strip() for item in select if str(item).strip()]
+
+
+def _audit_rule_family_counts(audit: dict[str, Any], strict_rule_families: list[str]) -> dict[str, int]:
+    family_counts = {family: 0 for family in strict_rule_families}
+    ruff = audit.get("ruff")
+    if not isinstance(ruff, dict):
+        return family_counts
+    rule_counts = ruff.get("rule_counts")
+    if not isinstance(rule_counts, dict):
+        return family_counts
+    ordered_families = sorted(strict_rule_families, key=len, reverse=True)
+    for rule, count in rule_counts.items():
+        rule_text = str(rule).strip()
+        matched_family = next(
+            (
+                family
+                for family in ordered_families
+                if rule_text == family or rule_text.startswith(family)
+            ),
+            None,
+        )
+        if matched_family is None:
+            continue
+        family_counts[matched_family] += int(count)
+    return family_counts
+
+
 def build_report(
     vault: Path,
     *,
@@ -72,10 +121,14 @@ def build_report(
     policy, resolved_policy_path = load_policy(resolved_vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
     target_roots = targets or parse_targets(DEFAULT_TARGETS)
+    strict_rule_families = [item for item in ruff_select.split(",") if item]
     files = _python_files(resolved_vault, target_roots)
     static_mk = _read_static_mk(resolved_vault)
     target_mode = _strict_preview_target_mode(static_mk)
     audit = load_optional_json_object(resolved_vault / STRICT_PREVIEW_AUDIT_PATH)
+    enforced_select = _read_enforced_select(resolved_vault)
+    enforced_rule_families = [family for family in strict_rule_families if family in enforced_select]
+    family_counts = _audit_rule_family_counts(audit, strict_rule_families)
     audit_summary = audit.get("summary") if isinstance(audit.get("summary"), dict) else {}
     audit_status = str(audit.get("status", "missing")) if audit else "missing"
     status = "pass" if target_mode == "full_scope_targets" and audit_status == "pass" else "attention"
@@ -93,6 +146,7 @@ def build_report(
                 "tools/ruff_strict_preview.py",
                 "tools/strict_preview_audit.py",
                 "mk/static.mk",
+                "pyproject.toml",
             ],
             path_group_inputs={"full_scope_targets": files},
             text_inputs={
@@ -108,7 +162,13 @@ def build_report(
         },
         "status": status,
         "target_roots": target_roots,
-        "strict_rule_families": [item for item in ruff_select.split(",") if item],
+        "strict_rule_families": strict_rule_families,
+        "enforced_rule_families": enforced_rule_families,
+        "remaining_violations": {
+            family: family_counts[family]
+            for family in strict_rule_families
+            if family not in enforced_rule_families
+        },
         "full_scope": {
             "python_file_count": len(files),
             "sample_paths": files[:20],

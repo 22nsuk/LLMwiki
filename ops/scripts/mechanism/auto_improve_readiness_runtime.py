@@ -423,6 +423,13 @@ def _remediation_backlog_summary(
     }
 
 
+def _required_reports_present(reports: dict[str, dict[str, Any]]) -> bool:
+    return all(
+        bool(reports[name])
+        for name in ("outcome_metrics", "mechanism_review", "mutation_proposal")
+    )
+
+
 def load_readiness_inputs(
     vault: Path,
     *,
@@ -444,14 +451,7 @@ def load_readiness_inputs(
     )
     release_summaries = _release_gate_summaries(reports)
 
-    reports_present = all(
-        bool(report)
-        for report in (
-            reports["outcome_metrics"],
-            reports["mechanism_review"],
-            reports["mutation_proposal"],
-        )
-    )
+    reports_present = _required_reports_present(reports)
     outcome_summary = _dict_field(reports["outcome_metrics"], "summary")
     review_summary = _dict_field(reports["mechanism_review"], "summary")
     proposal_summary = _dict_field(reports["mutation_proposal"], "summary")

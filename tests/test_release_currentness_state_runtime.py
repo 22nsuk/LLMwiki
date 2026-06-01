@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from hypothesis import given
 import hypothesis.strategies as st
+from hypothesis import given
 
 from ops.scripts.core.release_currentness_state_runtime import (
     CURRENTNESS_CLASSIFICATION_ARTIFACT_CURRENT_BUT_HEAD_STALE,

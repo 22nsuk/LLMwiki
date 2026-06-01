@@ -19,6 +19,14 @@ from ops.scripts.workflow_dependency_planner import (
     build_report as build_workflow_dependency_report,
 )
 
+from .external_report_action_catalog import (
+    ACTION_CATALOG,
+    ALL_EVIDENCE_OR_PLANNED_ACTION_IDS,
+    IMPLEMENTED_ARTIFACT_ACTIONS,
+    ROADMAP_SOURCE_ONLY_ACTION_IDS,
+    SOURCE_REVISION_RELEASE_AUTHORITY_REPORTS,
+    SPRINT_PRIORITIES,
+)
 from .external_report_action_lifecycle_runtime import (
     ACTION_LIFECYCLE_CURRENTLY_VALID,
     ACTION_LIFECYCLE_HISTORICALLY_TRUE,
@@ -29,14 +37,6 @@ from .external_report_action_lifecycle_runtime import (
     external_report_action_lifecycle_record,
     external_report_action_lifecycle_summary,
     external_report_current_canonical_state,
-)
-from .external_report_action_catalog import (
-    ACTION_CATALOG,
-    ALL_EVIDENCE_OR_PLANNED_ACTION_IDS,
-    IMPLEMENTED_ARTIFACT_ACTIONS,
-    ROADMAP_SOURCE_ONLY_ACTION_IDS,
-    SOURCE_REVISION_RELEASE_AUTHORITY_REPORTS,
-    SPRINT_PRIORITIES,
 )
 from .external_report_inventory_runtime import (
     ARCHIVE_STATUS_RE,

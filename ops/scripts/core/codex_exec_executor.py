@@ -248,6 +248,21 @@ class PromptMaterializationRequest:
     context: RuntimeContext
 
 
+@dataclass(frozen=True)
+class ExecutorReportRequest:
+    run_id: str
+    role: str
+    routing_report: dict[str, Any]
+    routing_report_rel: str
+    scope_freeze_rel: str
+    artifacts: _ExecutorArtifacts
+    sanitized_argv: list[str]
+    completed: object
+    summary: _ExecutionSummary
+    dependency_preflight: ExecutorDependencyPreflightPayload
+    context: RuntimeContext
+
+
 def _completed_timed_out(completed: object) -> bool:
     value = getattr(completed, "timed_out", False)
     if isinstance(value, bool):
@@ -380,6 +395,22 @@ def _sanitize_path_text(text: str, *, roots: list[Path]) -> str:
 
 def _sanitize_argv(argv: list[str], *, roots: list[Path]) -> list[str]:
     return [_sanitize_path_text(item, roots=roots) for item in argv]
+
+
+def _sanitize_json_strings(value: Any, *, roots: list[Path]) -> Any:
+    if isinstance(value, str):
+        return _sanitize_path_text(value, roots=roots)
+    if isinstance(value, list):
+        return [_sanitize_json_strings(item, roots=roots) for item in value]
+    if isinstance(value, dict):
+        return {
+            _sanitize_path_text(key, roots=roots) if isinstance(key, str) else key: _sanitize_json_strings(
+                item,
+                roots=roots,
+            )
+            for key, item in value.items()
+        }
+    return value
 
 
 def _display_command_argv(argv: list[str]) -> list[str]:
@@ -552,15 +583,14 @@ def _dependency_preflight_template(
     )
 
 
-def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
-    prompt_path = request.artifact_root / request.artifacts.prompt_rel
-    sandbox_mode = request.routing_report["routing_decision"]["sandbox_mode"]
-    sanitize_roots = [request.artifact_root, request.workspace_root]
-    sanitized_command_argv = _sanitize_argv(
-        _display_command_argv(request.command_argv),
-        roots=sanitize_roots,
-    )
-    template = {
+def _executor_report_template(
+    request: PromptMaterializationRequest,
+    *,
+    sandbox_mode: str,
+    sanitized_command_argv: list[str],
+    sanitize_roots: list[Path],
+) -> dict[str, Any]:
+    return {
         "$schema": EXECUTOR_REPORT_SCHEMA,
         "run_id": request.run_id,
         "role": request.role,
@@ -613,19 +643,44 @@ def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
             "notes": []
         }
     }
+
+
+def _executor_prompt_text(
+    request: PromptMaterializationRequest,
+    *,
+    sandbox_mode: str,
+    sanitize_roots: list[Path],
+    template: dict[str, Any],
+) -> str:
+    profile_name = _sanitize_path_text(
+        str(request.profile.get("name", request.role)),
+        roots=sanitize_roots,
+    )
+    profile_description = _sanitize_path_text(
+        str(request.profile.get("description", "")),
+        roots=sanitize_roots,
+    )
+    developer_instructions = _sanitize_path_text(
+        request.profile.get("developer_instructions", "").strip(),
+        roots=sanitize_roots,
+    )
+    workspace_root = _sanitize_path_text(str(request.workspace_root), roots=sanitize_roots)
+    scope_freeze = _sanitize_json_strings(request.scope_freeze, roots=sanitize_roots)
+    routing_report = _sanitize_json_strings(request.routing_report, roots=sanitize_roots)
+    template = _sanitize_json_strings(template, roots=sanitize_roots)
     prompt_text = f"""You are executing the `{request.role}` role for LLM Wiki vNext.
 
 Role profile:
-- name: `{request.profile.get("name", request.role)}`
-- description: {request.profile.get("description", "")}
+- name: `{profile_name}`
+- description: {profile_description}
 - sandbox_mode: `{sandbox_mode}`
 
 Developer instructions:
-{request.profile.get("developer_instructions", "").strip()}
+{developer_instructions}
 
 Run context:
 - run_id: `{request.run_id}`
-- workspace_root: `{_sanitize_path_text(str(request.workspace_root), roots=sanitize_roots)}`
+- workspace_root: `{workspace_root}`
 - proposal_snapshot: `{request.proposal_snapshot_rel}`
 - scope_freeze: `{request.scope_freeze_rel}`
 - routing_report: `{request.routing_report_rel}`
@@ -654,12 +709,12 @@ Executor phase boundary:
 
 Scope freeze summary:
 ```json
-{json.dumps(request.scope_freeze, ensure_ascii=False, indent=2)}
+{json.dumps(scope_freeze, ensure_ascii=False, indent=2)}
 ```
 
 Routing summary:
 ```json
-{json.dumps(request.routing_report, ensure_ascii=False, indent=2)}
+{json.dumps(routing_report, ensure_ascii=False, indent=2)}
 ```
 
 Final response requirements:
@@ -674,7 +729,29 @@ JSON template:
 {json.dumps(template, ensure_ascii=False, indent=2)}
 ```
 """
-    prompt_text = _sanitize_path_text(prompt_text, roots=sanitize_roots)
+    return prompt_text
+
+
+def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
+    prompt_path = request.artifact_root / request.artifacts.prompt_rel
+    sandbox_mode = request.routing_report["routing_decision"]["sandbox_mode"]
+    sanitize_roots = [request.artifact_root, request.workspace_root]
+    sanitized_command_argv = _sanitize_argv(
+        _display_command_argv(request.command_argv),
+        roots=sanitize_roots,
+    )
+    template = _executor_report_template(
+        request,
+        sandbox_mode=sandbox_mode,
+        sanitized_command_argv=sanitized_command_argv,
+        sanitize_roots=sanitize_roots,
+    )
+    prompt_text = _executor_prompt_text(
+        request,
+        sandbox_mode=sandbox_mode,
+        sanitize_roots=sanitize_roots,
+        template=template,
+    )
     write_output_text(prompt_path, prompt_text)
     return prompt_path
 
@@ -812,57 +889,44 @@ def _summarize_execution(
     )
 
 
-def _build_executor_report(
-    *,
-    run_id: str,
-    role: str,
-    routing_report: dict[str, Any],
-    routing_report_rel: str,
-    scope_freeze_rel: str,
-    artifacts: _ExecutorArtifacts,
-    sanitized_argv: list[str],
-    completed: object,
-    summary: _ExecutionSummary,
-    dependency_preflight: ExecutorDependencyPreflightPayload,
-    context: RuntimeContext,
-) -> ExecutorReportPayload:
+def _build_executor_report(request: ExecutorReportRequest) -> ExecutorReportPayload:
     return {
         "$schema": EXECUTOR_REPORT_SCHEMA,
-        "run_id": run_id,
-        "role": role,
-        "generated_at": context.isoformat_z(),
+        "run_id": request.run_id,
+        "role": request.role,
+        "generated_at": request.context.isoformat_z(),
         "executor": {
             "name": "codex_exec",
-            "sandbox_mode": routing_report["routing_decision"]["sandbox_mode"],
-            "model": routing_report["routing_decision"]["model"],
-            "reasoning_effort": routing_report["routing_decision"]["reasoning_effort"],
+            "sandbox_mode": request.routing_report["routing_decision"]["sandbox_mode"],
+            "model": request.routing_report["routing_decision"]["model"],
+            "reasoning_effort": request.routing_report["routing_decision"]["reasoning_effort"],
         },
-        "status": summary.status,
-        "command": {"argv": sanitized_argv},
+        "status": request.summary.status,
+        "command": {"argv": request.sanitized_argv},
         "artifacts": {
-            "prompt": artifacts.prompt_rel,
-            "output_last_message": artifacts.output_last_message_rel,
-            "stdout": artifacts.stdout_rel,
-            "stderr": artifacts.stderr_rel,
+            "prompt": request.artifacts.prompt_rel,
+            "output_last_message": request.artifacts.output_last_message_rel,
+            "stdout": request.artifacts.stdout_rel,
+            "stderr": request.artifacts.stderr_rel,
             "timeout_failure": None,
         },
         "result": {
-            "returncode": _completed_returncode(completed),
-            "timed_out": summary.timed_out,
-            "timeout_seconds": summary.timeout_seconds,
-            "termination_reason": summary.termination_reason,
-            "launch_succeeded": _completed_launch_succeeded(completed),
-            "signal_sent": _completed_signal_sent(completed),
-            "final_state_observed": _completed_final_state_observed(completed),
-            "stdout_received": _completed_stdout_received(completed),
-            "stderr_received": _completed_stderr_received(completed),
-            "observability": _completed_observability(completed),
+            "returncode": _completed_returncode(request.completed),
+            "timed_out": request.summary.timed_out,
+            "timeout_seconds": request.summary.timeout_seconds,
+            "termination_reason": request.summary.termination_reason,
+            "launch_succeeded": _completed_launch_succeeded(request.completed),
+            "signal_sent": _completed_signal_sent(request.completed),
+            "final_state_observed": _completed_final_state_observed(request.completed),
+            "stdout_received": _completed_stdout_received(request.completed),
+            "stderr_received": _completed_stderr_received(request.completed),
+            "observability": _completed_observability(request.completed),
         },
         "diagnostics": {
-            "routing_report": routing_report_rel,
-            "scope_freeze": scope_freeze_rel,
-            "dependency_preflight": dependency_preflight,
-            "notes": summary.notes,
+            "routing_report": request.routing_report_rel,
+            "scope_freeze": request.scope_freeze_rel,
+            "dependency_preflight": request.dependency_preflight,
+            "notes": request.summary.notes,
         },
     }
 
@@ -1419,17 +1483,19 @@ def persist_execution_outcome(
     context: RuntimeContext,
 ) -> ExecutorReportPayload:
     report = _build_executor_report(
-        run_id=request.run_id,
-        role=request.role,
-        routing_report=request.routing_report,
-        routing_report_rel=request.routing_report_rel,
-        scope_freeze_rel=request.scope_freeze_rel,
-        artifacts=request.artifacts,
-        sanitized_argv=request.sanitized_argv,
-        completed=completed,
-        summary=summary,
-        dependency_preflight=dependency_preflight,
-        context=context,
+        ExecutorReportRequest(
+            run_id=request.run_id,
+            role=request.role,
+            routing_report=request.routing_report,
+            routing_report_rel=request.routing_report_rel,
+            scope_freeze_rel=request.scope_freeze_rel,
+            artifacts=request.artifacts,
+            sanitized_argv=request.sanitized_argv,
+            completed=completed,
+            summary=summary,
+            dependency_preflight=dependency_preflight,
+            context=context,
+        )
     )
     timeout_failure_rel = _attach_timeout_failure(
         artifact_root=request.artifact_root,

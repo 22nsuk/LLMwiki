@@ -4,8 +4,8 @@ import string
 import tempfile
 from pathlib import Path
 
-from hypothesis import given
 import hypothesis.strategies as st
+from hypothesis import given
 
 from ops.scripts.core.stale_report_resolution_runtime import (
     PRIORITY_STALE_CANONICAL_REPORT_PATHS,
@@ -28,7 +28,6 @@ from ops.scripts.core.stale_report_resolution_runtime import (
     validate_sealed_sidecar_cleanup,
     validate_stale_report_resolutions,
 )
-
 
 SAFE_NAME = st.text(alphabet=string.ascii_lowercase + string.digits + "-", min_size=1, max_size=16)
 

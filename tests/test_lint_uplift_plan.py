@@ -85,6 +85,36 @@ class LintUpliftPlanTests(unittest.TestCase):
 
         self.assertTrue(destination.exists())
 
+    def test_example_report_tracks_promoted_rule_families_and_remaining_debt(self) -> None:
+        (self.vault / "pyproject.toml").write_text(
+            "[tool.ruff]\n"
+            'target-version = "py312"\n\n'
+            "[tool.ruff.lint]\n"
+            'select = ["E4", "E7", "E9", "F", "UP"]\n',
+            encoding="utf-8",
+        )
+        (self.vault / "tmp" / "strict-preview-audit.json").write_text(
+            json.dumps(
+                {
+                    "status": "attention",
+                    "summary": {"total_error_count": 5, "ruff_error_count": 5},
+                    "ruff": {
+                        "rule_counts": {
+                            "B904": 3,
+                            "I001": 2,
+                        }
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, targets=["ops/scripts", "tests", "tools"], context=fixed_context())
+
+        self.assertEqual(report["enforced_rule_families"], ["UP"])
+        self.assertEqual(report["remaining_violations"], {"B": 3, "SIM": 0, "I": 2})
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
 
 if __name__ == "__main__":
     unittest.main()

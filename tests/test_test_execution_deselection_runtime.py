@@ -9,7 +9,6 @@ from ops.scripts.test.test_execution_deselection_runtime import (
     pytest_stdout_deselected_count,
     structured_deselected_tests,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

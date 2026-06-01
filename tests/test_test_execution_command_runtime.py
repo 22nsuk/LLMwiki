@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.command_runtime import TimedProcessResult
+
 from ops.scripts.test.test_execution_command_runtime import (
     classify_interpreter_path,
     classify_status,

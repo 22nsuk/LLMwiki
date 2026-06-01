@@ -85,6 +85,26 @@ class TypeUpliftPlanTests(unittest.TestCase):
 
         self.assertTrue(destination.exists())
 
+    def test_report_tracks_enforced_flags_and_remaining_errors(self) -> None:
+        (self.vault / "pyproject.toml").write_text(
+            "[tool.mypy]\n"
+            "python_version = \"3.12\"\n"
+            "check_untyped_defs = true\n",
+            encoding="utf-8",
+        )
+        (self.vault / "tmp" / "strict-preview-audit.json").write_text(
+            json.dumps({"status": "attention", "summary": {"total_error_count": 2, "mypy_error_count": 2}}),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, targets=["ops/scripts"], context=fixed_context())
+
+        self.assertEqual(report["enforced_flags"], ["check_untyped_defs"])
+        self.assertEqual(
+            report["remaining_errors"],
+            {"disallow_untyped_defs": 2, "disallow_incomplete_defs": 2},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

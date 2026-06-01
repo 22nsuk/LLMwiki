@@ -9,7 +9,6 @@ from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagn
 
 from .release_closeout_risk_runtime import release_closeout_issue
 
-
 BASE_PROFILE = "base"
 PROVENANCE_PROFILE = "provenance"
 SBOM_PROFILE = "sbom"

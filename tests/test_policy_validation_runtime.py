@@ -36,6 +36,7 @@ class PolicyValidationRuntimeTests(unittest.TestCase):
                 "complexity_policy_contract",
                 "subagent_safety_contract",
                 "auto_improve_safety_contract",
+                "complexity_ratchet_contract",
                 "strict_warning_budget_contract",
                 "raw_registry_shard_policy_contract",
                 "runtime_defaults_contract",
@@ -112,6 +113,17 @@ class PolicyValidationRuntimeTests(unittest.TestCase):
             workspace_preparation_declared_dependencies_from_policy(policy),
             ["tools", "Makefile"],
         )
+
+    def test_complexity_ratchet_policy_requires_disjoint_warn_and_resolved_sets(self) -> None:
+        policy = deepcopy(_load_live_policy())
+        ratchet = policy["system_refactor_policy"]["complexity_ratchet"]
+        ratchet["resolved_targets"] = [ratchet["warn_targets"][0]]
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "warn_targets and resolved_targets must be disjoint",
+        ):
+            validate_policy_safety_invariants(policy)
 
     def test_validate_policy_registry_references_rejects_unknown_reviewer_score_band(self) -> None:
         policy = deepcopy(_load_live_policy())

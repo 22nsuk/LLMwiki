@@ -7,6 +7,8 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.complexity_ratchet_runtime import RatchetCeiling, judge_ratchet
+    from ops.scripts.policy_runtime import load_policy
     from ops.scripts.structural_complexity_budget_runtime import (
         DEFAULT_REPORT,
         DEFAULT_TARGET_PROFILES,
@@ -16,6 +18,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         write_report,
     )
 else:
+    from ops.scripts.policy_runtime import load_policy
+
+    from .complexity_ratchet_runtime import RatchetCeiling, judge_ratchet
     from .structural_complexity_budget_runtime import (
         DEFAULT_REPORT,
         DEFAULT_TARGET_PROFILES,
@@ -49,6 +54,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _complexity_ratchet_ceiling_from_policy(policy: dict) -> RatchetCeiling:
+    ratchet = policy["system_refactor_policy"]["complexity_ratchet"]
+    return RatchetCeiling(
+        warn_targets=frozenset(str(path) for path in ratchet["warn_targets"]),
+        resolved_targets=frozenset(str(path) for path in ratchet["resolved_targets"]),
+    )
+
+
+def _ratchet_failure_message(judgement: object) -> str:
+    new_warn_targets = list(getattr(judgement, "new_warn_targets", ()))
+    resurfaced_targets = list(getattr(judgement, "resurfaced_targets", ()))
+    details: list[str] = []
+    if new_warn_targets:
+        details.append(f"new_warn_targets={','.join(new_warn_targets)}")
+    if resurfaced_targets:
+        details.append(f"resurfaced_targets={','.join(resurfaced_targets)}")
+    return "complexity ratchet regression: " + "; ".join(details)
+
+
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     vault = Path(args.vault)
@@ -70,8 +94,17 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(7) from exc
 
     write_report(vault, report, args.out)
-    if args.fail_on_attention and report["status"] != "pass":
-        raise SystemExit(1)
+    if args.fail_on_attention:
+        if args.changed_files_manifest or args.target:
+            if report["status"] == "fail":
+                raise SystemExit(1)
+            policy, _resolved_policy_path = load_policy(vault, args.policy)
+            judgement = judge_ratchet(_complexity_ratchet_ceiling_from_policy(policy), report)
+            if judgement.status != "pass":
+                print(_ratchet_failure_message(judgement), file=sys.stderr)
+                raise SystemExit(1)
+        elif report["status"] != "pass":
+            raise SystemExit(1)
     raise SystemExit(0)
 
 

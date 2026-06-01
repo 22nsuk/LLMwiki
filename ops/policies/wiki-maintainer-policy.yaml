@@ -1528,6 +1528,25 @@ system_refactor_policy:
         lines: 180
         params: 12
         branches: 12
+  complexity_ratchet:
+    monitored_profiles:
+      - critical_runtime_orchestrators
+      - high_complexity_helpers
+      - runtime_closeout_orchestrators
+      - release_report_builders
+      - learning_claim_report_builders
+    warn_targets:
+      - ops/scripts/mechanism/auto_improve_runtime.py
+      - ops/scripts/mechanism/mutation_proposal_runtime.py
+      - ops/scripts/core/codex_exec_executor.py
+      - ops/scripts/eval/wiki_lint_review_runtime.py
+      - ops/scripts/core/policy_validation_runtime.py
+      - ops/scripts/release/release_closeout_batch_manifest.py
+      - ops/scripts/release/release_evidence_dashboard.py
+      - ops/scripts/release/release_closeout_summary.py
+      - ops/scripts/learning/learning_claim_evidence_bundle.py
+      - ops/scripts/learning/learning_claim_unlock_review.py
+    resolved_targets: []
 
 registry_contract:
   raw_registry_page: system/system-raw-registry.md

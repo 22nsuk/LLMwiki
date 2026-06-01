@@ -492,6 +492,57 @@ def _validate_auto_improve_safety_policy(policy: dict) -> None:
     workspace_preparation_declared_dependencies_from_policy(policy)
 
 
+def _validate_complexity_ratchet_policy(policy: dict) -> None:
+    system_refactor_policy = policy["system_refactor_policy"]
+    ratchet = system_refactor_policy.get("complexity_ratchet")
+    if not isinstance(ratchet, dict):
+        raise ValueError("system_refactor_policy.complexity_ratchet must be an object")
+
+    monitored_profiles = _string_registry(
+        ratchet["monitored_profiles"],
+        "system_refactor_policy.complexity_ratchet.monitored_profiles",
+    )
+    warn_targets = _string_registry(
+        ratchet["warn_targets"],
+        "system_refactor_policy.complexity_ratchet.warn_targets",
+    )
+    resolved_targets_raw = ratchet["resolved_targets"]
+    if not isinstance(resolved_targets_raw, list):
+        raise ValueError(
+            "system_refactor_policy.complexity_ratchet.resolved_targets must be an array"
+        )
+    resolved_targets = [
+        str(value).strip()
+        for value in resolved_targets_raw
+        if isinstance(value, str) and str(value).strip()
+    ]
+    if len(resolved_targets) != len(resolved_targets_raw):
+        raise ValueError(
+            "system_refactor_policy.complexity_ratchet.resolved_targets must contain only non-empty strings"
+        )
+    if len(set(resolved_targets)) != len(resolved_targets):
+        raise ValueError(
+            "system_refactor_policy.complexity_ratchet.resolved_targets must not contain duplicates"
+        )
+    _require_registry_subset(
+        monitored_profiles,
+        {
+            "critical_runtime_orchestrators",
+            "high_complexity_helpers",
+            "runtime_closeout_orchestrators",
+            "release_report_builders",
+            "learning_claim_report_builders",
+        },
+        path="system_refactor_policy.complexity_ratchet.monitored_profiles",
+        registry_path="supported structural complexity profiles",
+    )
+    overlap = sorted(set(warn_targets) & set(resolved_targets))
+    if overlap:
+        raise ValueError(
+            "system_refactor_policy.complexity_ratchet warn_targets and resolved_targets must be disjoint"
+        )
+
+
 def _validate_strict_warning_budget_policy(policy: dict) -> None:
     warning_budget_policy = policy["strict_warning_budget"]
     default_profile = warning_budget_policy["default_profile"]
@@ -593,6 +644,7 @@ POLICY_SAFETY_INVARIANT_RULES: tuple[PolicyInvariantRule, ...] = (
     PolicyInvariantRule("complexity_policy_contract", "Complexity scoring and dimensions stay supported.", _validate_complexity_policy),
     PolicyInvariantRule("subagent_safety_contract", "Subagent ladder and sandboxes stay supported.", _validate_subagent_safety_policy),
     PolicyInvariantRule("auto_improve_safety_contract", "Auto-improve timeout, roots, class, and workspace policy stay safe.", _validate_auto_improve_safety_policy),
+    PolicyInvariantRule("complexity_ratchet_contract", "Complexity ratchet policy keeps a valid ceiling and resolved-history ledger.", _validate_complexity_ratchet_policy),
     PolicyInvariantRule("strict_warning_budget_contract", "Strict warning-budget profiles reference supported sources and warning types.", _validate_strict_warning_budget_policy),
     PolicyInvariantRule("raw_registry_shard_policy_contract", "Raw registry shard policy surfaces stay aligned.", _validate_raw_registry_shard_policy_contract),
     PolicyInvariantRule(

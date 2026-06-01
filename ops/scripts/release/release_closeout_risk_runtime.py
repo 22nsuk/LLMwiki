@@ -20,7 +20,6 @@ from .release_risk_taxonomy_runtime import (
     unregistered_release_risk_codes,
 )
 
-
 POLICY_RISK_ACCEPTED_BY = "release_closeout_policy"
 POLICY_RISK_ACCEPTANCE_DAYS = 7
 LEARNING_SIGNOFF_PATH = "ops/reports/learning-readiness-signoff.json"

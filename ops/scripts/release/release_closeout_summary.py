@@ -9,10 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import (
-    build_canonical_report_envelope,
-    canonical_report_loading_issue,
-)
+from ops.scripts.artifact_freshness_runtime import canonical_report_loading_issue
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
@@ -51,25 +48,31 @@ from ops.scripts.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 
-from . import release_closeout_render_runtime
-from . import release_closeout_risk_runtime
-from . import release_closeout_source_runtime
-from .release_dependency_reproducibility_runtime import dependency_reproducibility_record
+from . import (
+    release_closeout_envelope_runtime,
+    release_closeout_render_runtime,
+    release_closeout_risk_runtime,
+    release_closeout_source_runtime,
+)
+from .release_dependency_reproducibility_runtime import (
+    dependency_reproducibility_record,
+)
 from .release_freshness_gate_runtime import artifact_freshness_gate_record
 from .release_risk_taxonomy_runtime import (
-    RELEASE_RISK_TAXONOMY_PATH,
     annotate_release_risk,
     load_release_risk_taxonomy,
 )
 
 DEFAULT_OUT = "ops/reports/release-closeout-summary.json"
-FIXED_POINT_POLICY_PATH = "ops/policies/release-closeout-fixed-point.json"
-LEARNING_SIGNOFF_PATH = "ops/reports/learning-readiness-signoff.json"
-LEARNING_DELTA_SCOREBOARD_PATH = "ops/reports/learning-delta-scoreboard.json"
-LEARNING_SIGNOFF_ARTIFACT_KIND = "learning_readiness_signoff"
+FIXED_POINT_POLICY_PATH = release_closeout_envelope_runtime.FIXED_POINT_POLICY_PATH
+LEARNING_SIGNOFF_PATH = release_closeout_envelope_runtime.LEARNING_SIGNOFF_PATH
+LEARNING_DELTA_SCOREBOARD_PATH = release_closeout_envelope_runtime.LEARNING_DELTA_SCOREBOARD_PATH
+LEARNING_SIGNOFF_ARTIFACT_KIND = release_closeout_envelope_runtime.LEARNING_SIGNOFF_ARTIFACT_KIND
+PRODUCER = release_closeout_envelope_runtime.PRODUCER
+SOURCE_COMMAND_TEMPLATE = release_closeout_envelope_runtime.SOURCE_COMMAND_TEMPLATE
+CloseoutEnvelopeInputs = release_closeout_envelope_runtime.CloseoutEnvelopeInputs
+_closeout_envelope = release_closeout_envelope_runtime.closeout_envelope
 LEARNING_REVIEW_BLOCKER_ID = LEARNING_REVIEW_REQUIRED_BLOCKER_ID
-PRODUCER = "ops.scripts.release_closeout_summary"
-SOURCE_COMMAND_TEMPLATE = "python -m ops.scripts.release_closeout_summary --vault . --profile {profile}"
 RELEASE_STATE_CLEAN_PASS = "clean_pass"
 RELEASE_STATE_CONDITIONAL_PASS = "conditional_pass"
 RELEASE_STATE_BLOCKED = "blocked"
@@ -177,19 +180,6 @@ class CloseoutReadinessState:
     machine_release_allowed: bool
     operator_release_allowed: bool
     requires_accepted_risk_review: bool
-
-
-@dataclass(frozen=True)
-class CloseoutEnvelopeInputs:
-    vault: Path
-    resolved_policy_path: Path
-    profile: str
-    source_specs: tuple[SourceSpec, ...]
-    generated_at: str
-    gates: CloseoutGates
-    learning_signoff: dict[str, Any]
-    learning_claim_context: dict[str, Any]
-    dependency_reproducibility: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -1668,59 +1658,6 @@ def _closeout_readiness_state(
         operator_release_allowed=release_state
         in {RELEASE_STATE_CLEAN_PASS, RELEASE_STATE_CONDITIONAL_PASS},
         requires_accepted_risk_review=release_state == RELEASE_STATE_CONDITIONAL_PASS,
-    )
-
-
-def _closeout_file_inputs(
-    vault: Path,
-    source_specs: tuple[SourceSpec, ...],
-    dependency_reproducibility: dict[str, Any],
-) -> dict[str, str]:
-    file_inputs = {spec.name: spec.path for spec in source_specs}
-    file_inputs["release_risk_taxonomy"] = RELEASE_RISK_TAXONOMY_PATH
-    for dependency_file in dependency_reproducibility["dependency_files"]:
-        if dependency_file["exists"]:
-            file_inputs[f"dependency::{dependency_file['path']}"] = str(
-                dependency_file["path"]
-            )
-    if (vault / LEARNING_DELTA_SCOREBOARD_PATH).exists():
-        file_inputs["learning_delta_scoreboard"] = LEARNING_DELTA_SCOREBOARD_PATH
-    return file_inputs
-
-
-def _closeout_envelope(inputs: CloseoutEnvelopeInputs) -> dict[str, Any]:
-    return build_canonical_report_envelope(
-        inputs.vault,
-        generated_at=inputs.generated_at,
-        artifact_kind="release_closeout_summary",
-        producer=PRODUCER,
-        source_command=SOURCE_COMMAND_TEMPLATE.format(profile=inputs.profile),
-        resolved_policy_path=inputs.resolved_policy_path,
-        schema_path=RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH,
-        source_paths=[
-            "ops/scripts/release/release_closeout_summary.py",
-            "ops/scripts/release/release_closeout_source_runtime.py",
-            "ops/scripts/release/release_closeout_risk_runtime.py",
-            "ops/scripts/release/release_closeout_render_runtime.py",
-            "ops/scripts/release/release_dependency_reproducibility_runtime.py",
-            "ops/scripts/release/release_freshness_gate_runtime.py",
-        ],
-        file_inputs=_closeout_file_inputs(
-            inputs.vault,
-            inputs.source_specs,
-            inputs.dependency_reproducibility,
-        ),
-        text_inputs={
-            "profile": inputs.profile,
-            "learning_signoff_path": LEARNING_SIGNOFF_PATH,
-            "learning_signoff_status": str(inputs.learning_signoff["signoff_status"]),
-            "learning_claim_context": (
-                f"load_status={inputs.learning_claim_context['load_status']}; "
-                f"claims_learning_improved={inputs.learning_claim_context['claims_learning_improved']}; "
-                f"learning_claim_guard_status={inputs.learning_claim_context['learning_claim_guard_status']}"
-            ),
-            "test_failure_lane_count": str(len(inputs.gates.test_failure_lanes)),
-        },
     )
 
 

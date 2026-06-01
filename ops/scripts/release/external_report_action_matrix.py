@@ -16,6 +16,14 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
+    from ops.scripts.external_report_lifecycle_runtime import (  # noqa: PLC0415
+        external_report_action_lifecycle_record,
+        external_report_action_lifecycle_summary,
+        report_coverage_item,
+        status_from_evidence,
+    )
+    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
+    from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
     from ops.scripts.release.external_report_action_catalog import (  # noqa: PLC0415
         ACTION_CATALOG,
         SPRINT_PRIORITIES,
@@ -26,14 +34,6 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         archived_report_count,
         reference_manifest_alignment,
     )
-    from ops.scripts.external_report_lifecycle_runtime import (  # noqa: PLC0415
-        external_report_action_lifecycle_record,
-        external_report_action_lifecycle_summary,
-        report_coverage_item,
-        status_from_evidence,
-    )
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
     from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope

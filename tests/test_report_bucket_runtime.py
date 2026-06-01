@@ -4,8 +4,8 @@ import string
 import tempfile
 from pathlib import Path
 
-from hypothesis import given
 import hypothesis.strategies as st
+from hypothesis import given
 
 from ops.scripts.core.report_bucket_runtime import (
     BUCKET_ARCHIVAL_HISTORICAL,
@@ -21,7 +21,6 @@ from ops.scripts.core.report_bucket_runtime import (
     move_report_delete_first,
     report_bucket_documentation_status,
 )
-
 
 SAFE_NAME = st.text(alphabet=string.ascii_lowercase + string.digits + "-", min_size=1, max_size=20)
 

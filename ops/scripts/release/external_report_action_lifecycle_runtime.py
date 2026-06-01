@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 ACTION_LIFECYCLE_RESOLVED = "resolved"
 ACTION_LIFECYCLE_HISTORICALLY_TRUE = "historically_true"
 ACTION_LIFECYCLE_SUPERSEDED = "superseded"

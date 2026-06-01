@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 CURRENTNESS_CLASSIFICATION_CURRENT = "current"
 CURRENTNESS_CLASSIFICATION_ARTIFACT_CURRENT_BUT_HEAD_STALE = (
     "artifact_current_but_head_stale"

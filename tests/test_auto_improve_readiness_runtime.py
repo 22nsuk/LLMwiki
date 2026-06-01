@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
+import hashlib
 import importlib.abc
 import importlib.machinery
 import json
@@ -28,6 +30,12 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
+FIXED_GENERATED_AT = "2026-04-22T04:00:00Z"
+VOLATILE_ENVELOPE_DIGEST_FIELDS = {
+    "input_fingerprints",
+    "source_revision",
+    "source_tree_fingerprint",
+}
 PRIMARY_REPORT_SPECS = {
     "ops/reports/outcome-metrics.json": {
         "schema_path": "ops/schemas/outcome-metrics.schema.json",
@@ -85,6 +93,41 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 4, 22, 4, 0, tzinfo=dt.UTC),
     )
+
+
+def _canonical_jsonable(value: object, *, vault_root: Path | None = None) -> object:
+    if isinstance(value, RuntimeContext):
+        return {
+            "display_timezone": value.display_timezone.tzname(None) or str(value.display_timezone),
+            "generated_at": value.isoformat_z(),
+            "session_id": value.session_id,
+            "iteration": value.iteration,
+            "executor_id": value.executor_id,
+        }
+    if isinstance(value, Path):
+        if vault_root is not None:
+            try:
+                return value.relative_to(vault_root).as_posix()
+            except ValueError:
+                pass
+        return value.as_posix()
+    if dataclasses.is_dataclass(value):
+        return {
+            field.name: _canonical_jsonable(getattr(value, field.name), vault_root=vault_root)
+            for field in dataclasses.fields(value)
+        }
+    if isinstance(value, dict):
+        return {
+            str(key): (
+                f"<normalized:{key}>"
+                if str(key) in VOLATILE_ENVELOPE_DIGEST_FIELDS
+                else _canonical_jsonable(item, vault_root=vault_root)
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_canonical_jsonable(item, vault_root=vault_root) for item in value]
+    return value
 
 
 class _BlockFlatReadinessAlias(importlib.abc.MetaPathFinder):
@@ -230,18 +273,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             self.vault, "ops/policies/wiki-maintainer-policy.yaml"
         )
         spec = PRIMARY_REPORT_SPECS[relative_path]
-        generated_at = (
-            (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=5))
-            .replace(
-                microsecond=0,
-            )
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
         return {
             **build_canonical_report_envelope(
                 self.vault,
-                generated_at=generated_at,
+                generated_at=FIXED_GENERATED_AT,
                 artifact_kind=spec["artifact_kind"],
                 producer="tests.test_auto_improve_readiness_runtime",
                 source_command="pytest",
@@ -286,20 +321,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         _policy, resolved_policy_path = load_policy(
             self.vault, "ops/policies/wiki-maintainer-policy.yaml"
         )
-        generated_at = (
-            (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=5))
-            .replace(
-                microsecond=0,
-            )
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
         fatal_blockers = fatal_blockers or []
         promotion_blockers = promotion_blockers or []
         payload = {
             **build_canonical_report_envelope(
                 self.vault,
-                generated_at=generated_at,
+                generated_at=FIXED_GENERATED_AT,
                 artifact_kind="goal_worktree_guard",
                 producer="ops.scripts.goal_worktree_guard",
                 source_command="pytest",
@@ -578,6 +605,41 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["learning_readiness"]["metrics"]["attempts_considered"], 7
         )
         self.assertTrue(report["checks"][0]["pass"])
+
+    def test_load_readiness_inputs_is_byte_stable_for_fixed_inputs(self) -> None:
+        self._write_ready_queue_reports()
+
+        first_inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        second_inputs = load_readiness_inputs(self.vault, context=fixed_context())
+
+        first_payload = _canonical_jsonable(first_inputs, vault_root=self.vault)
+        second_payload = _canonical_jsonable(second_inputs, vault_root=self.vault)
+        first_bytes = json.dumps(first_payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+        second_bytes = json.dumps(second_payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+        assert isinstance(first_payload, dict)
+        assert isinstance(second_payload, dict)
+        runtime_context = first_payload["runtime_context"]
+        outcome_summary = first_payload["outcome_summary"]
+        proposal_summary = first_payload["proposal_summary"]
+        runnable_proposal_ids = first_payload["runnable_proposal_ids"]
+        assert isinstance(runtime_context, dict)
+        assert isinstance(outcome_summary, dict)
+        assert isinstance(proposal_summary, dict)
+        assert isinstance(runnable_proposal_ids, list)
+
+        self.assertEqual(first_bytes, second_bytes)
+        self.assertTrue(first_payload["reports_present"])
+        self.assertEqual(runtime_context["generated_at"], "2026-04-22T04:00:00Z")
+        self.assertEqual(runtime_context["session_id"], "")
+        self.assertEqual(runtime_context["iteration"], 0)
+        self.assertEqual(runtime_context["executor_id"], "")
+        self.assertEqual(outcome_summary["attempts_considered"], 12)
+        self.assertEqual(proposal_summary["proposals_emitted"], 1)
+        self.assertEqual(runnable_proposal_ids, ["proposal-ready"])
+        self.assertEqual(
+            hashlib.sha256(first_bytes).hexdigest(),
+            "728994bc229e60219d23d78308e38edc1a41906f898d6aa3ec806e19716e84bf",
+        )
 
     def test_build_readiness_report_passes_when_queue_is_nonempty(self) -> None:
         self._write_report(

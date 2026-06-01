@@ -24,7 +24,16 @@ from ops.scripts.supply_chain_provenance import (
     build_report as build_supply_chain_provenance_report,
 )
 
+from ops.scripts.release.release_run_ready import build_run_ready_plan
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
+from tests.test_release_run_ready import (
+    _copy_plan_schema,
+    _patch_plan_repo,
+    _write_current_run_ready_evidence,
+)
+from tests.test_release_run_ready import (
+    fixed_context as fixed_run_ready_context,
+)
 from tests.test_supply_chain_provenance import (
     LOCKED_CI_INSTALL_SNIPPET,
     seed_dependency_inputs,
@@ -480,6 +489,16 @@ def build_auto_improve_readiness_schema_sample() -> dict:
         return report
 
 
+def build_release_run_ready_plan_schema_sample() -> dict:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        _copy_plan_schema(vault)
+        _write_current_run_ready_evidence(vault)
+        with _patch_plan_repo():
+            return build_run_ready_plan(vault, context=fixed_run_ready_context())
+
+
 def regenerate_report_schema_samples(
     fixture_path: Path = FIXTURE_PATH,
     *,
@@ -489,6 +508,7 @@ def regenerate_report_schema_samples(
     payload.update(build_supply_chain_schema_samples())
     payload["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
     payload["auto_improve_readiness_report"] = build_auto_improve_readiness_schema_sample()
+    payload["release_run_ready_plan"] = build_release_run_ready_plan_schema_sample()
     if include_openvex:
         payload["openvex_draft"] = build_openvex_schema_sample(payload["cyclonedx_bom"])
     fixture_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -504,6 +524,7 @@ def candidate_report_schema_samples(
     payload.update(build_supply_chain_schema_samples())
     payload["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
     payload["auto_improve_readiness_report"] = build_auto_improve_readiness_schema_sample()
+    payload["release_run_ready_plan"] = build_release_run_ready_plan_schema_sample()
     if include_openvex:
         payload["openvex_draft"] = build_openvex_schema_sample(payload["cyclonedx_bom"])
     return payload

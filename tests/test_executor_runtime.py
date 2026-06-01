@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime as dt
+import hashlib
 import json
 import os
 import subprocess
@@ -12,6 +14,12 @@ from unittest import mock
 
 from ops.scripts.codex_exec_executor import (
     ExecutorContractError,
+    ExecutorReportRequest,
+    _build_executor_report,
+    _ExecutionSummary,
+    _ExecutorArtifacts,
+    _SyntheticCompleted,
+    build_execution_request,
     execute_codex_exec_role,
 )
 from ops.scripts.executor import main as executor_cli_main
@@ -284,6 +292,20 @@ def _object_schema_paths_with_optional_properties(schema: Any, path: str = "$") 
     return findings
 
 
+def _prompt_fenced_json(prompt: str, heading: str) -> dict[str, Any]:
+    marker = f"{heading}:\n```json\n"
+    start = prompt.index(marker) + len(marker)
+    end = prompt.index("\n```", start)
+    parsed = json.loads(prompt[start:end])
+    if not isinstance(parsed, dict):
+        raise AssertionError(f"{heading} fenced JSON must be an object")
+    return parsed
+
+
+def _canonical_bytes(payload: object) -> bytes:
+    return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+
+
 class ExecutorRuntimeTests(unittest.TestCase):
     def test_executor_report_schema_is_codex_output_schema_strict(self) -> None:
         schema = json.loads((REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text())
@@ -410,6 +432,184 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("-p no:cacheprovider", prompt)
             self.assertIn("Executor roles run before repo-health capture", prompt)
             self.assertIn("candidate-mechanism-assessment.json", prompt)
+
+    def test_validator_prompt_characterization_preserves_json_template_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            build_execution_request(
+                artifact_root=vault,
+                workspace_root=vault,
+                run_id="run-executor",
+                role="validator",
+                routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                context=RuntimeContext(
+                    display_timezone=dt.UTC,
+                    clock=lambda: dt.datetime(2026, 5, 1, 12, 34, 56, tzinfo=dt.UTC),
+                ),
+                timeout_seconds=1800,
+            )
+
+            prompt = (vault / "runs" / "run-executor" / "validator-prompt.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertEqual(
+                hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+                "f2e6648cb5676a1d61ffa0150858eed1db2d0044c8d136b410aaf38c856f10f8",
+            )
+            section_positions = [
+                prompt.index(section)
+                for section in (
+                    "Role profile:",
+                    "Developer instructions:",
+                    "Run context:",
+                    "Repository write boundary:",
+                    "Execution environment guidance:",
+                    "Repository-required local skills:",
+                    "Executor phase boundary:",
+                    "Scope freeze summary:",
+                    "Routing summary:",
+                    "Final response requirements:",
+                    "JSON template:",
+                )
+            ]
+            self.assertEqual(section_positions, sorted(section_positions))
+            self.assertTrue(prompt.endswith("```\n"))
+            self.assertIn('"model_reasoning_effort=\\"xhigh\\""', prompt)
+            self.assertNotIn('model_reasoning_effort=/"xhigh/"', prompt)
+
+            template = _prompt_fenced_json(prompt, "JSON template")
+            self.assertEqual(template["generated_at"], "2026-05-01T12:34:56Z")
+            self.assertEqual(template["command"]["argv"][9], 'model_reasoning_effort="xhigh"')
+            self.assertEqual(
+                template["diagnostics"]["dependency_preflight"]["status"],
+                "not_checked",
+            )
+            self.assertEqual(
+                template["diagnostics"]["dependency_preflight"]["python"]["path"],
+                ".venv/bin/python",
+            )
+            self.assertEqual(
+                _prompt_fenced_json(prompt, "Scope freeze summary")["run_id"],
+                "run-executor",
+            )
+            self.assertEqual(
+                _prompt_fenced_json(prompt, "Routing summary")["routing_decision"]["sandbox_mode"],
+                "workspace-write",
+            )
+
+    def test_build_executor_report_is_byte_stable_for_fixed_inputs(self) -> None:
+        context = RuntimeContext(
+            display_timezone=dt.UTC,
+            clock=lambda: dt.datetime(2026, 5, 2, 1, 2, 3, tzinfo=dt.UTC),
+        )
+        routing_report = _routing_report(
+            "validator",
+            sandbox_mode="read-only",
+            model="gpt-5.5",
+            reasoning_effort="xhigh",
+            selected_rung=3,
+        )
+        artifacts = _ExecutorArtifacts(
+            output_last_message_rel="runs/run-executor/validator-last-message.json",
+            stdout_rel="runs/run-executor/validator.stdout.txt",
+            stderr_rel="runs/run-executor/validator.stderr.txt",
+            prompt_rel="runs/run-executor/validator-prompt.md",
+        )
+        summary = _ExecutionSummary(
+            status="fail",
+            decision="blocked",
+            notes=["validator blocked", "missing dependency evidence"],
+            timed_out=True,
+            timeout_seconds=1800,
+            termination_reason="timeout",
+        )
+        completed = _SyntheticCompleted(
+            returncode=124,
+            stdout="validator stdout",
+            stderr="validator stderr",
+            timed_out=True,
+            timeout_seconds=1800,
+            termination_reason="timeout",
+            launch_succeeded=True,
+            signal_sent="sigterm",
+            final_state_observed="waitpid",
+            stdout_received=True,
+            stderr_received=True,
+            heartbeat_count=2,
+            heartbeat_interval_seconds=30,
+            quiet_seconds=90,
+            last_stdout_at="2026-05-02T01:01:00Z",
+            last_stderr_at="2026-05-02T01:01:30Z",
+            last_artifact_touch_at="2026-05-02T01:01:45Z",
+            observation_mode="heartbeat",
+        )
+        dependency_preflight = {
+            "role_requires_project_check": True,
+            "status": "failed",
+            "command": {
+                "argv": [".venv/bin/python", "-c", "<project-dependency-preflight>"],
+                "project_check_lane": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider",
+            },
+            "python": {
+                "path": ".venv/bin/python",
+                "executable": "/usr/bin/python3",
+                "version": "3.13.0",
+                "exists": True,
+            },
+            "required_modules": [
+                {
+                    "import_name": "pytest",
+                    "package": "pytest",
+                    "status": "missing",
+                    "version": "",
+                    "detail": "pytest missing",
+                }
+            ],
+            "returncode": 1,
+        }
+        request = ExecutorReportRequest(
+            run_id="run-executor",
+            role="validator",
+            routing_report=routing_report,
+            routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+            scope_freeze_rel="runs/run-executor/scope-freeze.json",
+            artifacts=artifacts,
+            sanitized_argv=["codex", "exec", "-s", "read-only", "-"],
+            completed=completed,
+            summary=summary,
+            dependency_preflight=dependency_preflight,
+            context=context,
+        )
+
+        first_payload = _build_executor_report(request)
+        second_payload = _build_executor_report(request)
+
+        first_bytes = _canonical_bytes(first_payload)
+        second_bytes = _canonical_bytes(second_payload)
+
+        self.assertEqual(first_bytes, second_bytes)
+        self.assertEqual(first_payload["generated_at"], "2026-05-02T01:02:03Z")
+        self.assertEqual(first_payload["result"]["returncode"], 124)
+        self.assertTrue(first_payload["result"]["timed_out"])
+        self.assertEqual(first_payload["diagnostics"]["notes"], ["validator blocked", "missing dependency evidence"])
+        self.assertEqual(
+            hashlib.sha256(first_bytes).hexdigest(),
+            "9446862fde72989ecfb4bdf10e4094b5d478af58f9b8b5c6f4372bfc0b5a5432",
+        )
 
     def test_codex_exec_prefers_workspace_virtualenv_on_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

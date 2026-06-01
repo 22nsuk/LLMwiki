@@ -2339,7 +2339,8 @@
         "raw_registry_backlog_max_ratio_before_review",
         "raw_registry_backlog_max_oldest_age_days_before_review",
         "raw_registry_backlog_max_average_age_days_before_review",
-        "python_function_review"
+        "python_function_review",
+        "complexity_ratchet"
       ],
       "additionalProperties": false,
       "properties": {
@@ -2404,6 +2405,37 @@
                 "tests": {
                   "$ref": "#/$defs/pythonFunctionBudgetProfile"
                 }
+              }
+            }
+          }
+        },
+        "complexity_ratchet": {
+          "type": "object",
+          "required": [
+            "monitored_profiles",
+            "warn_targets",
+            "resolved_targets"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "monitored_profiles": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "warn_targets": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "resolved_targets": {
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             }
           }

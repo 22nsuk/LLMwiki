@@ -32,45 +32,58 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         build_execution_environment,
         classify_interpreter_path,
         classify_status,
-        display_command as _display_command,
         parse_pytest_counts,
         semantic_command,
-        semantic_command_text as _semantic_command_text,
-        tail_text as _tail_text,
-        toolchain_fingerprint as _toolchain_fingerprint,
     )
-    from ops.scripts.test.test_execution_evidence_runtime import (
-        evidence_artifact_consistency as _evidence_artifact_consistency,
-        failed_nodeids as _failed_nodeids,
-        junit_artifact_identity,
-        nodeid_outcome_consistency as _nodeid_outcome_consistency,
-        sha256_file as _sha256_file,
-        sha256_text as _sha256_text,
-        write_execution_log,
-        write_failed_nodeids_artifact,
+    from ops.scripts.test.test_execution_command_runtime import (
+        display_command as _display_command,
+    )
+    from ops.scripts.test.test_execution_command_runtime import (
+        semantic_command_text as _semantic_command_text,
+    )
+    from ops.scripts.test.test_execution_command_runtime import (
+        tail_text as _tail_text,
+    )
+    from ops.scripts.test.test_execution_command_runtime import (
+        toolchain_fingerprint as _toolchain_fingerprint,
     )
     from ops.scripts.test.test_execution_deselection_runtime import (
         deselection_lifecycle as _deselection_lifecycle,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         load_deselection_policy as _load_deselection_policy,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         load_deselection_policy_payload as _load_deselection_policy_payload,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         parse_utc_timestamp as _parse_utc_timestamp,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         pytest_stdout_deselected_count as _pytest_stdout_deselected_count,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         structured_deselected_tests,
     )
-    from ops.scripts.test.test_execution_selection_runtime import (
-        FULL_SUITE_COMMAND,
-        FULL_SUITE_SCOPES,
-        FULL_SUITE_SHARD_PREFIX,
-        RELEASE_BUILDER_FULL_SCOPES,
-        REPORT_CONTRACT_SUMMARY_SUITE,
-        apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
-        pytest_args as _pytest_args,
-        pytest_collection_filter_args as _pytest_collection_filter_args,
-        pytest_collect_modifiers as _pytest_collect_modifiers,
-        pytest_deselected_nodeids as _pytest_deselected_nodeids,
-        pytest_selector_args as _pytest_selector_args,
-        suite_coverage as _suite_coverage,
-        suite_scope_for_key as _suite_scope_for_key,
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        evidence_artifact_consistency as _evidence_artifact_consistency,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        failed_nodeids as _failed_nodeids,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        junit_artifact_identity,
+        write_execution_log,
+        write_failed_nodeids_artifact,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        nodeid_outcome_consistency as _nodeid_outcome_consistency,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        sha256_file as _sha256_file,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        sha256_text as _sha256_text,
     )
     from ops.scripts.test.test_execution_reuse_runtime import (
         REUSE_MISMATCH_CODES,
@@ -79,6 +92,37 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         REUSE_MISMATCH_MISSING_SUMMARY,
         REUSE_MISMATCH_SOURCE_TREE,
         reuse_currentness_diagnostics_from_state,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        FULL_SUITE_COMMAND,
+        FULL_SUITE_SCOPES,
+        FULL_SUITE_SHARD_PREFIX,
+        RELEASE_BUILDER_FULL_SCOPES,
+        REPORT_CONTRACT_SUMMARY_SUITE,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_args as _pytest_args,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_collect_modifiers as _pytest_collect_modifiers,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_collection_filter_args as _pytest_collection_filter_args,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_deselected_nodeids as _pytest_deselected_nodeids,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_selector_args as _pytest_selector_args,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        suite_coverage as _suite_coverage,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        suite_scope_for_key as _suite_scope_for_key,
     )
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
@@ -100,45 +144,58 @@ else:
         build_execution_environment,
         classify_interpreter_path,
         classify_status,
-        display_command as _display_command,
         parse_pytest_counts,
         semantic_command,
-        semantic_command_text as _semantic_command_text,
-        tail_text as _tail_text,
-        toolchain_fingerprint as _toolchain_fingerprint,
     )
-    from ops.scripts.test.test_execution_evidence_runtime import (
-        evidence_artifact_consistency as _evidence_artifact_consistency,
-        failed_nodeids as _failed_nodeids,
-        junit_artifact_identity,
-        nodeid_outcome_consistency as _nodeid_outcome_consistency,
-        sha256_file as _sha256_file,
-        sha256_text as _sha256_text,
-        write_execution_log,
-        write_failed_nodeids_artifact,
+    from ops.scripts.test.test_execution_command_runtime import (
+        display_command as _display_command,
+    )
+    from ops.scripts.test.test_execution_command_runtime import (
+        semantic_command_text as _semantic_command_text,
+    )
+    from ops.scripts.test.test_execution_command_runtime import (
+        tail_text as _tail_text,
+    )
+    from ops.scripts.test.test_execution_command_runtime import (
+        toolchain_fingerprint as _toolchain_fingerprint,
     )
     from ops.scripts.test.test_execution_deselection_runtime import (
         deselection_lifecycle as _deselection_lifecycle,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         load_deselection_policy as _load_deselection_policy,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         load_deselection_policy_payload as _load_deselection_policy_payload,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         parse_utc_timestamp as _parse_utc_timestamp,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         pytest_stdout_deselected_count as _pytest_stdout_deselected_count,
+    )
+    from ops.scripts.test.test_execution_deselection_runtime import (
         structured_deselected_tests,
     )
-    from ops.scripts.test.test_execution_selection_runtime import (
-        FULL_SUITE_COMMAND,
-        FULL_SUITE_SCOPES,
-        FULL_SUITE_SHARD_PREFIX,
-        RELEASE_BUILDER_FULL_SCOPES,
-        REPORT_CONTRACT_SUMMARY_SUITE,
-        apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
-        pytest_args as _pytest_args,
-        pytest_collection_filter_args as _pytest_collection_filter_args,
-        pytest_collect_modifiers as _pytest_collect_modifiers,
-        pytest_deselected_nodeids as _pytest_deselected_nodeids,
-        pytest_selector_args as _pytest_selector_args,
-        suite_coverage as _suite_coverage,
-        suite_scope_for_key as _suite_scope_for_key,
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        evidence_artifact_consistency as _evidence_artifact_consistency,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        failed_nodeids as _failed_nodeids,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        junit_artifact_identity,
+        write_execution_log,
+        write_failed_nodeids_artifact,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        nodeid_outcome_consistency as _nodeid_outcome_consistency,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        sha256_file as _sha256_file,
+    )
+    from ops.scripts.test.test_execution_evidence_runtime import (
+        sha256_text as _sha256_text,
     )
     from ops.scripts.test.test_execution_reuse_runtime import (
         REUSE_MISMATCH_CODES,
@@ -147,6 +204,37 @@ else:
         REUSE_MISMATCH_MISSING_SUMMARY,
         REUSE_MISMATCH_SOURCE_TREE,
         reuse_currentness_diagnostics_from_state,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        FULL_SUITE_COMMAND,
+        FULL_SUITE_SCOPES,
+        FULL_SUITE_SHARD_PREFIX,
+        RELEASE_BUILDER_FULL_SCOPES,
+        REPORT_CONTRACT_SUMMARY_SUITE,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_args as _pytest_args,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_collect_modifiers as _pytest_collect_modifiers,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_collection_filter_args as _pytest_collection_filter_args,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_deselected_nodeids as _pytest_deselected_nodeids,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        pytest_selector_args as _pytest_selector_args,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        suite_coverage as _suite_coverage,
+    )
+    from ops.scripts.test.test_execution_selection_runtime import (
+        suite_scope_for_key as _suite_scope_for_key,
     )
 
 
@@ -815,7 +903,9 @@ def build_reused_report(
 
 
 def _load_summary(vault: Path, path_value: str | Path) -> dict[str, Any]:
-    from ops.scripts.test.test_execution_aggregate_runtime import load_test_execution_summary
+    from ops.scripts.test.test_execution_aggregate_runtime import (
+        load_test_execution_summary,
+    )
 
     return load_test_execution_summary(vault, path_value)
 

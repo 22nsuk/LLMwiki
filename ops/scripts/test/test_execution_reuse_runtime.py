@@ -4,7 +4,6 @@ import hashlib
 import json
 from typing import Any
 
-
 REUSE_MISMATCH_SOURCE_TREE = "source_tree_mismatch"
 REUSE_MISMATCH_COMMAND_IDENTITY = "command_identity_mismatch"
 REUSE_MISMATCH_INTERPRETER_TOOLCHAIN = "interpreter_toolchain_mismatch"

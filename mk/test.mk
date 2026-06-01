@@ -87,6 +87,7 @@ REPORT_CONTRACT_EXTENDED_TESTS ?= \
 	tests/test_release_evidence_dashboard.py \
 	tests/test_learning_readiness_signoff.py \
 	tests/test_lint_uplift_plan.py \
+	tests/test_runtime_codehealth_hardening_guards.py \
 	tests/test_bootstrap_preflight.py \
 	tests/test_make_target_inventory.py \
 	tests/test_manifest_export_symlink_safety.py \
@@ -117,6 +118,7 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_improvement_observations_runtime.py \
 	tests/test_learning_readiness_signoff.py \
 	tests/test_lint_uplift_plan.py \
+	tests/test_runtime_codehealth_hardening_guards.py \
 	tests/test_make_target_inventory.py \
 	tests/test_makefile_static_gates.py \
 	tests/test_manifest_export_symlink_safety.py \

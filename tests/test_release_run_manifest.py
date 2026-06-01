@@ -13,14 +13,14 @@ import pytest
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.release.release_remote_sync_governance import (
+    remote_sync_governance_record,
+    workflow_attachment_result,
+)
 from ops.scripts.release.release_run_manifest import (
     build_manifest,
     distribution_zip_path_from_manifest,
     write_manifest,
-)
-from ops.scripts.release.release_remote_sync_governance import (
-    remote_sync_governance_record,
-    workflow_attachment_result,
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 

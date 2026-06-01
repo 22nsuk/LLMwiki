@@ -8,9 +8,9 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-import hypothesis.strategies as st
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release_closeout_summary import (

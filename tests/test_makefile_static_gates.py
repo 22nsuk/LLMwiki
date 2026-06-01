@@ -617,6 +617,7 @@ def _assert_archive_and_complexity_recipes(case: unittest.TestCase, text: str) -
     case.assertIn('--out "$(STRUCTURAL_COMPLEXITY_BUDGET_TOUCHED_OUT)"', touched_block)
     case.assertIn('--changed-files-manifest "$(CHANGED_FILES_MANIFEST)"', touched_block)
     case.assertIn('--target "$(target)"', touched_block)
+    case.assertIn("ratchet inactive without touched inputs", touched_block)
     case.assertIn(
         'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"',
         _target_block(text, "review-archive"),
@@ -1695,6 +1696,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("release-source-ready-final-guard-amend", phony_targets)
         self.assertIn("release-source-ready", _target_block(text, ".PHONY"))
         self.assertIn("release-run-ready", _target_block(text, ".PHONY"))
+        self.assertIn("release-run-ready-plan", _target_block(text, ".PHONY"))
+        self.assertIn("release-run-ready-plan-check", _target_block(text, ".PHONY"))
         self.assertIn("release-run-ready-check", _target_block(text, ".PHONY"))
         self.assertNotIn("release-run-ready-ensure", phony_targets)
         self.assertIn("release-sealed-run-ready-plan", _target_block(text, ".PHONY"))
@@ -1745,6 +1748,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("RELEASE_SOURCE_READY_FINAL_GUARD_AMEND_OUT", text)
         self.assertIn("RELEASE_SOURCE_READY_STATUS_OUT ?= tmp/release-source-ready-status.json", text)
         self.assertIn("RELEASE_WORKTREE_CLEAN_CHECK_OUT ?= tmp/release-worktree-clean-check.json", text)
+        self.assertIn("RELEASE_RUN_READY_PLAN_OUT ?= build/release/release-run-ready-plan.json", text)
+        self.assertIn("RELEASE_RUN_READY_PLAN_CHECK_OUT ?= tmp/release-run-ready-plan-check.json", text)
         worktree_clean_block = _target_block(text, "release-worktree-clean-check")
         self.assertIn('ops.scripts.goal_worktree_guard', worktree_clean_block)
         self.assertIn('--out "$(RELEASE_WORKTREE_CLEAN_CHECK_OUT)"', worktree_clean_block)
@@ -1794,7 +1799,15 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-source-ready-post-verify",
             ],
         )
-        self.assertIn("ops.scripts.release_run_ready", _target_block(text, "release-run-ready"))
+        run_ready_block = _target_block(text, "release-run-ready")
+        run_ready_plan_block = _target_block(text, "release-run-ready-plan")
+        run_ready_plan_check_block = _target_block(text, "release-run-ready-plan-check")
+        self.assertIn("$(MAKE) release-run-ready-plan", run_ready_block)
+        self.assertIn("ops.scripts.release_run_ready", run_ready_block)
+        self.assertIn("--plan", run_ready_plan_block)
+        self.assertIn('--plan-out "$(RELEASE_RUN_READY_PLAN_OUT)"', run_ready_plan_block)
+        self.assertIn("--require-ready", run_ready_plan_check_block)
+        self.assertIn('--plan-out "$(RELEASE_RUN_READY_PLAN_CHECK_OUT)"', run_ready_plan_check_block)
         self.assertIn("ops.scripts.release_run_manifest", _target_block(text, "release-run-ready-check"))
         release_test_current_lines = _recipe_lines(text, "release-test-current")
         self.assertEqual(

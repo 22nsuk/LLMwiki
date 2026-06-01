@@ -7,10 +7,12 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from hypothesis import given
 import hypothesis.strategies as st
+from hypothesis import given
+from ops.scripts.runtime_context import RuntimeContext
 
 from ops.scripts.release.release_status_surface import (
+    DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE,
     FRESHNESS_DISPLAY_VALUES,
     STATUS_KEYS,
     STATUS_VALUE_NOT_SYNCED,
@@ -26,8 +28,6 @@ from ops.scripts.release.release_status_surface import (
     render_status_surface_text,
     status_surface_from_signals,
 )
-from ops.scripts.runtime_context import RuntimeContext
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SAFE_TEXT = st.text(alphabet=string.ascii_lowercase + string.digits + "-_", min_size=1, max_size=20)
@@ -194,6 +194,7 @@ def test_status_surface_reads_existing_file_signals_without_writing_authority() 
         closeout = vault / "ops" / "reports" / "release-closeout-summary.json"
         provenance = vault / "ops" / "reports" / "supply-chain-provenance.json"
         public_summary = vault / "ops" / "reports" / "public-check-summary.json"
+        learning_signoff = vault / "ops" / "reports" / "learning-readiness-signoff.json"
         run_manifest = vault / "build" / "release" / "release-run-manifest.json"
         closeout.parent.mkdir(parents=True)
         run_manifest.parent.mkdir(parents=True)
@@ -210,6 +211,18 @@ def test_status_surface_reads_existing_file_signals_without_writing_authority() 
         public_summary.write_text(json.dumps({"status": "pass"}), encoding="utf-8")
         provenance.write_text(
             json.dumps({"lock_evidence": {"lock_check_status": "enforced"}}),
+            encoding="utf-8",
+        )
+        learning_signoff.write_text(
+            json.dumps(
+                {
+                    "artifact_kind": "learning_readiness_signoff",
+                    "linked_blocker_id": "learning_blocked_by_review_required",
+                    "accepted_by": "operator",
+                    "risk_owner": "runtime-maintainer",
+                    "expires_at": "2026-06-07T12:00:00Z",
+                }
+            ),
             encoding="utf-8",
         )
         run_manifest.write_text(
@@ -242,8 +255,46 @@ def test_status_surface_reads_existing_file_signals_without_writing_authority() 
         assert "freshness=advisory" in str(_line_by_key(surface, "source_closeout")["detail"])
         assert _line_by_key(surface, "public_summary")["status"] == "pass"
         assert _line_by_key(surface, "lockfile_freshness")["status"] == "pass"
-        assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_NOT_SYNCED
+        assert _line_by_key(surface, "learning_signoff")["status"] == "active"
+        assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_SYNCED
+        assert _line_by_key(surface, "remote_sync")["evidence_path"] == DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE
+        assert "source=live_git_remote_state" in str(_line_by_key(surface, "remote_sync")["detail"])
         assert not (vault / "ops" / "operator" / "operator-release-summary.json").exists()
+
+
+def test_status_surface_does_not_promote_stale_manifest_remote_sync_when_live_state_unknown() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        run_manifest = vault / "build" / "release" / "release-run-manifest.json"
+        run_manifest.parent.mkdir(parents=True)
+        run_manifest.write_text(
+            json.dumps(
+                {
+                    "remote_sync": {
+                        "status": "pass",
+                        "upstream": "origin/main",
+                        "ahead": 0,
+                        "behind": 0,
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        surface = build_status_surface(
+            vault,
+            context=fixed_context(),
+            lock_check_runner=lambda _vault: {"status": "pass", "returncode": 0},
+            remote_sync_reader=lambda _vault: {
+                "status": "unknown",
+                "upstream": "",
+                "ahead": 0,
+                "behind": 0,
+            },
+        )
+
+        assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_NOT_SYNCED
+        assert _line_by_key(surface, "remote_sync")["evidence_path"] == DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE
 
 
 def test_status_surface_text_renderer_outputs_exactly_seven_public_safe_lines() -> None:

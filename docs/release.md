@@ -18,7 +18,8 @@ surface comparison; this document owns release evidence and staged authority.
 - `make status` / `llm-wiki-status`: read-only operator status surface. It
   renders source closeout, sealed run, public summary, lockfile freshness,
   learning signoff, goal runtime certificate, and remote sync as one 7-line
-  view without writing new authority evidence.
+  view without writing new authority evidence. Remote sync is read from live Git
+  state, not from a stale release-run manifest sidecar.
 - `make release-check`: check-only release gate for the current tree.
 - `make release-check-all-surfaces`: release check plus public policy and public export checks.
 - `make release-run-ready`: one command to verify the current committed tree,
@@ -28,6 +29,14 @@ surface comparison; this document owns release evidence and staged authority.
   source ZIP, source-package smoke, and clean-extract replay evidence, then
   write the runnable release-run manifest. It removes any older
   auto-promotion-ready manifest before refreshing runnable authority.
+- `make release-run-ready-plan`: cheap read-only planner for the runnable stage.
+  It records stale evidence causes and the minimal next target before a full
+  run-ready refresh spends test/package cycles. It writes a local plan sidecar
+  only; ignored evidence remains release-lane context, not public source. Reuse
+  requires schema-valid evidence with matching producer, currentness,
+  source-fingerprint, revision, and lane-specific semantics.
+- `make release-run-ready-plan-check`: check-only form of the planner that fails
+  when existing evidence is not reusable.
 - `make release-run-ready-check`: revalidate the existing manifest against the
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
 - `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
@@ -132,7 +141,11 @@ surface comparison; this document owns release evidence and staged authority.
    run/certificate evidence. Missing verified runtime evidence is carried as a
    final promotion blocker; it does not stop this diagnostic bridge from
    proving cheaper release blockers.
-3. Run `make release-run-ready`.
+3. Run `make release-run-ready-plan-check` when you want a cheap preflight that
+   reports stale run-ready evidence and the minimal next target without
+   refreshing local evidence. Run `make release-run-ready` from the committed
+   tree when the planner is ready or when you intentionally want the runnable
+   authority stage to refresh the required evidence.
 4. If unattended promotion is the intended outcome, run
    `make release-auto-promotion-preseal` before sealing. As with preflight, an
    explicit `GOAL_RUN_ID=<goal-run-id>` is allowed but the guard can infer the
@@ -331,6 +344,13 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   authority. They decide which evidence can be reused and which minimal Make
   target should run next; the authority verdict still belongs to the staged
   manifests.
+- `build/release/release-run-ready-plan.json` is the runnable-stage diagnostic
+  plan. It may mention stale `ops/reports/` or `build/release/` artifacts, but
+  it does not promote or certify them; it points to the smallest refresh/check
+  target that should run before spending the full run-ready cycle. A passing
+  status field alone is insufficient for reuse; the planner also validates the
+  report schema, producer, currentness envelope, source identity, and relevant
+  package/test semantics.
 - `ops/reports/release-smoke-report.json` is local diagnostic evidence and is
   not a final release authority. `release-run-ready` refreshes or reuses the
   current full smoke report; preseal uses the current-check lane and fails fast

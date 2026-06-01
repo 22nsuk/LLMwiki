@@ -13,6 +13,7 @@ import pytest
 from tools.regenerate_report_schema_samples import (
     build_auto_improve_readiness_schema_sample,
     build_openvex_schema_sample,
+    build_release_run_ready_plan_schema_sample,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +40,14 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
         self.assertEqual(
             build_auto_improve_readiness_schema_sample(),
             samples["auto_improve_readiness_report"],
+        )
+
+    def test_generated_release_run_ready_plan_sample_matches_frozen_fixture(self) -> None:
+        samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            build_release_run_ready_plan_schema_sample(),
+            samples["release_run_ready_plan"],
         )
 
     def test_generated_readiness_sample_keeps_release_clean_queue_blocked_shape(self) -> None:

@@ -12,7 +12,6 @@ from typing import Any
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.output_runtime import sanitize_report_text
 
-
 TAIL_LINE_COUNT = 80
 RELEASE_BUILDER_ENVIRONMENT = ".venv clean release-builder"
 SUPPORTED_PYTHON_MAJOR_MINOR = ("3.11", "3.12", "3.13", "3.14")

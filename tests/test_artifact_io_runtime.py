@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.artifact_io_runtime import (
-    ReportWriterKernelRequest,
     SEMANTIC_NOOP_ENVELOPE_FIELDS,
+    ReportWriterKernelRequest,
     SchemaBackedReportWriteRequest,
     describe_output_file,
     load_optional_json_object,

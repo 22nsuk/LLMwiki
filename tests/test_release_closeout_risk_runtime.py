@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
+
 from ops.scripts.release.release_closeout_risk_runtime import (
     CLEAN_LANE_BLOCKS,
     LEARNING_SIGNOFF_PATH,

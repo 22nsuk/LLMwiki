@@ -164,6 +164,10 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "release-closeout-sealed-rehearsal-check.schema.json",
+    "release-run-ready-plan.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "release-run-ready-plan.schema.json",
     "release-risk-taxonomy.schema.json": REPO_ROOT
     / "ops"
     / "schemas"

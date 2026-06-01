@@ -4,7 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ops.scripts.policy_runtime import load_policy
 from ops.scripts.python_function_budget_runtime import python_function_budget_candidates
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class PythonFunctionBudgetRuntimeTest(unittest.TestCase):
@@ -219,6 +222,30 @@ class PythonFunctionBudgetRuntimeTest(unittest.TestCase):
             )
 
             self.assertEqual(candidates, [])
+
+    def test_runtime_hardening_targets_stay_under_function_budget(self) -> None:
+        policy, _ = load_policy(REPO_ROOT)
+        runtime_profile = policy["system_refactor_policy"]["python_function_review"]["profiles"]["runtime"]
+
+        candidates = python_function_budget_candidates(
+            REPO_ROOT,
+            {
+                "profiles": {
+                    "runtime": {
+                        **runtime_profile,
+                        "include_prefixes": [
+                            "ops/scripts/core/codex_exec_executor.py",
+                            "ops/scripts/mechanism/auto_improve_readiness_runtime.py",
+                        ],
+                    }
+                }
+            },
+        )
+        symbols = {str(candidate["symbol"]) for candidate in candidates}
+
+        self.assertNotIn("_build_executor_report", symbols)
+        self.assertNotIn("_materialize_prompt", symbols)
+        self.assertNotIn("load_readiness_inputs", symbols)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from ops.scripts.policy_runtime import report_path
+
 from ops.scripts.release.external_report_inventory_runtime import (
     REFERENCE_MANIFEST,
     active_reference_report_paths,

@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.schema_constants_runtime import TEST_DESELECTION_POLICY_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_or_raise,
+)
 from ops.scripts.test.test_execution_command_runtime import PYTEST_DESELECTED_RE
 from ops.scripts.test.test_execution_selection_runtime import pytest_deselected_nodeids
 

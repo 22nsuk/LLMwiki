@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import re
 import shlex
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,11 @@ STRICT_PREVIEW_AUDIT_PATH = "tmp/strict-preview-audit.json"
 PRODUCER = "ops.scripts.type_uplift_plan"
 SOURCE_COMMAND = "python -m ops.scripts.type_uplift_plan --vault ."
 ASSIGNMENT_RE = re.compile(r"^(?P<name>[A-Z0-9_]+)\s*\?=\s*(?P<value>.+)$", re.MULTILINE)
+MYPY_FLAG_FIELD_TO_CLI = {
+    "check_untyped_defs": "--check-untyped-defs",
+    "disallow_untyped_defs": "--disallow-untyped-defs",
+    "disallow_incomplete_defs": "--disallow-incomplete-defs",
+}
 
 
 def parse_targets(value: str) -> list[str]:
@@ -62,6 +68,27 @@ def _target_mode(value: str) -> str:
     return "unknown"
 
 
+def _read_enforced_mypy_flags(vault: Path) -> list[str]:
+    path = vault / "pyproject.toml"
+    if not path.is_file():
+        return []
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    tool = payload.get("tool")
+    if not isinstance(tool, dict):
+        return []
+    mypy = tool.get("mypy")
+    if not isinstance(mypy, dict):
+        return []
+    return [
+        flag
+        for flag in MYPY_FLAG_FIELD_TO_CLI
+        if bool(mypy.get(flag))
+    ]
+
+
 def build_report(
     vault: Path,
     *,
@@ -77,6 +104,7 @@ def build_report(
     assignments = _read_static_assignments(resolved_vault)
     default_targets = assignments.get("MYPY_TARGETS", "")
     strict_targets = assignments.get("MYPY_STRICT_PREVIEW_TARGETS", "")
+    enforced_flags = _read_enforced_mypy_flags(resolved_vault)
     default_mode = _target_mode(default_targets)
     strict_mode = _target_mode(strict_targets)
     audit = load_optional_json_object(resolved_vault / STRICT_PREVIEW_AUDIT_PATH)
@@ -95,6 +123,7 @@ def build_report(
             source_paths=[
                 "ops/scripts/type_uplift_plan.py",
                 "mk/static.mk",
+                "pyproject.toml",
             ],
             path_group_inputs={"full_scope_targets": files},
             text_inputs={
@@ -113,6 +142,12 @@ def build_report(
         "full_scope": {
             "python_file_count": len(files),
             "sample_paths": files[:20],
+        },
+        "enforced_flags": enforced_flags,
+        "remaining_errors": {
+            flag: int(audit_summary.get("mypy_error_count", 0) or 0)
+            for flag in MYPY_FLAG_FIELD_TO_CLI
+            if flag not in enforced_flags
         },
         "default_mypy": {
             "targets": default_targets,

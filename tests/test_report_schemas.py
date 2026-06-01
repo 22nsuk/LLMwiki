@@ -52,6 +52,7 @@ SBOM_READINESS_GATE_REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "sbom-r
 CYCLONEDX_16_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "cyclonedx-1.6.schema.json"
 OPENVEX_DRAFT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "openvex-draft.schema.json"
 REVIEW_ARCHIVE_REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "review-archive-report.schema.json"
+RELEASE_RUN_READY_PLAN_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-run-ready-plan.schema.json"
 
 
 class ReportSchemaContractTest(unittest.TestCase):
@@ -95,6 +96,7 @@ class ReportSchemaContractTest(unittest.TestCase):
             "cyclonedx_bom": load_schema(CYCLONEDX_16_SCHEMA_PATH),
             "openvex_draft": load_schema(OPENVEX_DRAFT_SCHEMA_PATH),
             "review_archive": load_schema(REVIEW_ARCHIVE_REPORT_SCHEMA_PATH),
+            "release_run_ready_plan": load_schema(RELEASE_RUN_READY_PLAN_SCHEMA_PATH),
         }
 
     def assert_policy_identity_contract(self, report: ReportPayload, schema: ReportPayload) -> None:
@@ -768,6 +770,18 @@ class ReportSchemaContractTest(unittest.TestCase):
             "$.exclusion_policy: expected one of ['public_surface_policy']",
             validate_with_schema(invalid_exclusion_policy, schema),
         )
+
+    def test_sample_release_run_ready_plan_validates_and_stays_plan_only(self) -> None:
+        sample = self.samples["release_run_ready_plan"]
+
+        self.assertEqual(
+            validate_with_schema(sample, self.schemas["release_run_ready_plan"]),
+            [],
+        )
+        self.assertEqual(sample["plan_status"], "ready")
+        self.assertEqual(sample["execution_mode"], "run_ready_preflight_plan_only")
+        self.assertTrue(sample["boundary"]["local_only_generated_artifacts_not_promoted"])
+        self.assertEqual(sample["stale_evidence_causes"], [])
 
     def test_sample_proposal_scope_report_validates_and_requires_apply_guardrails(self) -> None:
         report = self.samples["proposal_scope"]

@@ -22,6 +22,8 @@
     "status",
     "target_roots",
     "full_scope",
+    "enforced_flags",
+    "remaining_errors",
     "default_mypy",
     "strict_preview",
     "target_contract"
@@ -64,6 +66,15 @@
           "uniqueItems": true
         }
       }
+    },
+    "enforced_flags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "remaining_errors": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
     },
     "default_mypy": { "$ref": "#/$defs/target_state" },
     "strict_preview": {

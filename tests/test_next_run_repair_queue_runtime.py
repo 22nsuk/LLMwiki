@@ -9,8 +9,8 @@ from ops.scripts.mechanism.next_run_repair_queue_runtime import (
 )
 
 
-def _carry_forward_decision(**overrides: object) -> dict:
-    decision = {
+def _carry_forward_decision(**overrides: object) -> dict[str, object]:
+    decision: dict[str, object] = {
         "decision": CARRY_FORWARD_DECISION,
         "status": OPEN_DECISION_STATUS,
         "decision_id": "next-run-decision:run-1",

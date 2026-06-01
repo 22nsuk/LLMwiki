@@ -25,6 +25,9 @@ from tests.workflow_static_helpers import (
     workflow_jobs as _jobs,
 )
 from tests.workflow_static_helpers import (
+    workflow_mapping as _mapping,
+)
+from tests.workflow_static_helpers import (
     workflow_on as _workflow_on,
 )
 from tests.workflow_static_helpers import (
@@ -104,21 +107,36 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         release = _workflow()
 
         self.assertEqual(governance.get("version"), 1)
-        branch_protection = governance.get("branch_protection", {})
-        self.assertIsInstance(branch_protection, dict)
+        branch_protection = _mapping(
+            governance.get("branch_protection", {}),
+            "branch protection must be a mapping",
+        )
         self.assertEqual(branch_protection.get("main_direct_push"), "forbidden")
         self.assertFalse(branch_protection.get("allow_force_pushes"))
         self.assertTrue(branch_protection.get("require_required_status_checks"))
 
-        required = governance.get("required_status_checks", {})
-        self.assertIsInstance(required, dict)
-        ci_matrix = required.get("ci_matrix", {})
-        self.assertIsInstance(ci_matrix, dict)
-        workflow_matrix = _job(ci, "test-tier")["strategy"]["matrix"]
+        required = _mapping(
+            governance.get("required_status_checks", {}),
+            "required status checks must be a mapping",
+        )
+        ci_matrix = _mapping(
+            required.get("ci_matrix", {}),
+            "ci matrix must be a mapping",
+        )
+        workflow_strategy = _mapping(
+            _job(ci, "test-tier").get("strategy", {}),
+            "workflow strategy must be a mapping",
+        )
+        workflow_matrix = _mapping(
+            workflow_strategy.get("matrix", {}),
+            "workflow matrix must be a mapping",
+        )
         self.assertEqual(ci_matrix.get("python_versions"), workflow_matrix["python-version"])
         self.assertEqual(ci_matrix.get("tiers"), workflow_matrix["tier"])
 
-        singleton_checks = set(required.get("singleton_checks", []))
+        singleton_checks_value = required.get("singleton_checks", [])
+        self.assertIsInstance(singleton_checks_value, list)
+        singleton_checks = {str(check) for check in singleton_checks_value}
         self.assertIn(_job(ci, "windows-release-smoke")["name"], singleton_checks)
         self.assertIn(_job(ci, "raw-registry-cross-environment-evidence")["name"], singleton_checks)
         self.assertIn(_job(ci, "supply-chain-gate")["name"], singleton_checks)
@@ -128,19 +146,27 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         self.assertIn(codeql_name, singleton_checks)
         self.assertIn(_job(dependency_review, "dependency-review")["name"], singleton_checks)
 
-        remote_sync = governance.get("remote_sync", {})
-        self.assertIsInstance(remote_sync, dict)
-        attachment = remote_sync.get("workflow_attachment", {})
-        self.assertIsInstance(attachment, dict)
+        remote_sync = _mapping(
+            governance.get("remote_sync", {}),
+            "remote sync must be a mapping",
+        )
+        attachment = _mapping(
+            remote_sync.get("workflow_attachment", {}),
+            "workflow attachment must be a mapping",
+        )
         self.assertFalse(attachment.get("attachment_failure_blocks_push"))
         self.assertEqual(
             attachment.get("error_field"),
             "remote_sync.workflow_attachment.workflow_attachment_error",
         )
 
-        release_evidence = governance.get("release_evidence", {})
-        self.assertIsInstance(release_evidence, dict)
-        release_assets = set(release_evidence.get("release_assets", []))
+        release_evidence = _mapping(
+            governance.get("release_evidence", {}),
+            "release evidence must be a mapping",
+        )
+        release_assets_value = release_evidence.get("release_assets", [])
+        self.assertIsInstance(release_assets_value, list)
+        release_assets = {str(asset) for asset in release_assets_value}
         verify = _job(release, "verify-clean-release")
         for step_name in (
             "Upload verified source zip",
@@ -148,8 +174,10 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             "Upload verified release attestation",
         ):
             upload = _step(verify, step_name)
-            with_section = upload.get("with", {})
-            self.assertIsInstance(with_section, dict)
+            with_section = _mapping(
+                upload.get("with", {}),
+                "upload step with section must be a mapping",
+            )
             self.assertIn(with_section.get("name"), release_assets)
 
     def test_publish_consumes_verify_job_live_release_artifacts(self) -> None:

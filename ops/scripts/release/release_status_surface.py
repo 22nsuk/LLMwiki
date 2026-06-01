@@ -5,16 +5,19 @@ import datetime as dt
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagnostics
 from ops.scripts.core.release_authority_state_runtime import (
     release_status_v2_view_with_readiness_fallback,
 )
+from ops.scripts.learning.learning_readiness_signoff_state import (
+    learning_readiness_signoff_summary,
+)
 from ops.scripts.release.release_run_manifest import remote_sync as read_remote_sync
 from ops.scripts.runtime_context import RuntimeContext
-
 
 STATUS_KEYS = (
     "source_closeout",
@@ -45,6 +48,7 @@ DEFAULT_SUPPLY_CHAIN_PROVENANCE = "ops/reports/supply-chain-provenance.json"
 DEFAULT_LEARNING_SIGNOFF = "ops/reports/learning-readiness-signoff.json"
 DEFAULT_GOAL_RUNTIME_CERTIFICATE = "ops/reports/goal-runtime-certificate.json"
 DEFAULT_RELEASE_RUN_MANIFEST = "build/release/release-run-manifest.json"
+DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE = "git:live-remote-sync"
 SOURCE_COMMAND = "python -m ops.scripts.release.release_status_surface --vault ."
 
 LockCheckRunner = Callable[[Path], dict[str, Any]]
@@ -199,7 +203,7 @@ def status_surface_from_signals(
     lockfile_evidence_path: str = DEFAULT_SUPPLY_CHAIN_PROVENANCE,
     learning_signoff_evidence_path: str = DEFAULT_LEARNING_SIGNOFF,
     goal_runtime_certificate_evidence_path: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
-    remote_sync_evidence_path: str = DEFAULT_RELEASE_RUN_MANIFEST,
+    remote_sync_evidence_path: str = DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE,
 ) -> dict[str, Any]:
     freshness = (
         artifact_freshness_display
@@ -268,6 +272,7 @@ def status_surface_from_signals(
             status=remote_status,
             axis=None,
             detail=(
+                "source=live_git_remote_state; "
                 f"upstream={str(remote_sync_signal.get('upstream', '')).strip() or 'none'}; "
                 f"ahead={remote_sync_signal.get('ahead', 0)}; "
                 f"behind={remote_sync_signal.get('behind', 0)}"
@@ -324,17 +329,35 @@ def _lock_check_status_from_provenance(provenance: dict[str, Any]) -> str:
     return str(lock_evidence.get("lock_check_status", STATUS_VALUE_UNKNOWN)).strip() or STATUS_VALUE_UNKNOWN
 
 
+def _learning_signoff_status(
+    payload: dict[str, Any],
+    *,
+    load_status: str,
+    generated_at: str,
+) -> str:
+    if load_status != "ok":
+        return ""
+    explicit_status = _status_from_payload(
+        payload,
+        "signoff_status",
+        "readiness_status",
+        "status",
+    )
+    if explicit_status:
+        return explicit_status
+    summary = learning_readiness_signoff_summary(payload, generated_at=generated_at)
+    return str(summary.get("signoff_status", "")).strip()
+
+
 def _remote_sync_signal(
     vault: Path,
     run_manifest: dict[str, Any],
     run_manifest_load_status: str,
     remote_sync_reader: RemoteSyncReader,
 ) -> dict[str, Any]:
-    if run_manifest_load_status == "ok":
-        remote = run_manifest.get("remote_sync")
-        if isinstance(remote, dict):
-            return remote
-    return remote_sync_reader(vault)
+    _ = (run_manifest, run_manifest_load_status)
+    live_remote = remote_sync_reader(vault)
+    return live_remote
 
 
 def build_status_surface(
@@ -345,6 +368,7 @@ def build_status_surface(
     remote_sync_reader: RemoteSyncReader = read_remote_sync,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
+    generated_at = runtime_context.isoformat_z()
     closeout, closeout_load_status = _load_optional(vault, DEFAULT_CLOSEOUT)
     sealed_run, sealed_load_status = _load_optional(vault, DEFAULT_SEALED_RUN)
     operator_summary, operator_load_status = _load_optional(vault, DEFAULT_OPERATOR_SUMMARY)
@@ -366,15 +390,10 @@ def build_status_surface(
         if public_load_status == "ok"
         else STATUS_VALUE_UNKNOWN
     )
-    learning_status = (
-        _status_from_payload(
-            learning_signoff,
-            "signoff_status",
-            "readiness_status",
-            "status",
-        )
-        if learning_load_status == "ok"
-        else ""
+    learning_status = _learning_signoff_status(
+        learning_signoff,
+        load_status=learning_load_status,
+        generated_at=generated_at,
     )
     goal_status = (
         _status_from_payload(goal_certificate, "status", "certificate_status", "result")
@@ -389,7 +408,7 @@ def build_status_surface(
         remote_sync_reader,
     )
     return status_surface_from_signals(
-        generated_at=runtime_context.isoformat_z(),
+        generated_at=generated_at,
         vault_completeness=_vault_completeness(vault),
         source_closeout_status=source_status,
         sealed_run_status=sealed_status,

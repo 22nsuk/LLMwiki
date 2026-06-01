@@ -10,7 +10,6 @@ from ops.scripts.core.report_bucket_runtime import (
     move_report_delete_first,
 )
 
-
 STALE_REPORT_DECISION_REGENERATE = "regenerate"
 STALE_REPORT_DECISION_REMOVE_FROM_CANONICAL_SET = "remove_from_canonical_set"
 STALE_REPORT_DECISIONS = {

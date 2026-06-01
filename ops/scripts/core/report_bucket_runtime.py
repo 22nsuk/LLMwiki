@@ -7,7 +7,6 @@ from typing import Any
 from ops.scripts.core.path_runtime import normalize_repo_path_text
 from ops.scripts.core.policy_runtime import report_path
 
-
 BUCKET_CHECKED_IN_CANONICAL_SOURCE_SIDE = "checked_in_canonical_source_side"
 BUCKET_BUILD_RELEASE_AUTHORITATIVE_SIDECAR = "build_release_authoritative_sidecar"
 BUCKET_OBSERVATIONAL_DIAGNOSTIC = "observational_diagnostic"
