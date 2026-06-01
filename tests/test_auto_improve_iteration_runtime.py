@@ -1129,7 +1129,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                     routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
                     roles=["worker"],
                     phase_durations={"routing": 0.1, "experiment": 0.2},
-                    outcome="discarded",
+                    outcome=" DISCARDED ",
                     result={
                         "decision": "DISCARD",
                         "promotion_report": promotion_rel,

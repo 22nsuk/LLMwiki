@@ -77,6 +77,9 @@ CHANGED_FILES_MANIFEST_IGNORED_PREFIX_REASONS = {
     "ops/reports/": "generated_report_surface",
     "tmp/": "transient_workspace_surface",
 }
+CHANGED_FILES_MANIFEST_IGNORED_PATH_REASONS = {
+    "ops/script-output-surfaces.json": "generated_report_surface",
+}
 
 
 def _copytree_ignore(_dir: str, names: list[str]) -> set[str]:
@@ -193,6 +196,9 @@ def _prepare_candidate_report_workspace(
 
 def _changed_files_manifest_ignore_reason(rel_path: str) -> str:
     normalized = rel_path.replace("\\", "/")
+    path_reason = CHANGED_FILES_MANIFEST_IGNORED_PATH_REASONS.get(normalized)
+    if path_reason:
+        return path_reason
     for prefix, reason in CHANGED_FILES_MANIFEST_IGNORED_PREFIX_REASONS.items():
         if normalized.startswith(prefix):
             return reason

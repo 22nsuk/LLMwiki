@@ -1145,6 +1145,10 @@ class RunMechanismExperimentTests(unittest.TestCase):
                     '{"status": "candidate"}\n',
                     encoding="utf-8",
                 )
+                (cwd / "ops" / "script-output-surfaces.json").write_text(
+                    '{"status": "fresh"}\n',
+                    encoding="utf-8",
+                )
                 (cwd / "tmp" / "artifact-freshness-report-check.json").write_text(
                     '{"status": "candidate"}\n',
                     encoding="utf-8",
@@ -1246,12 +1250,13 @@ class RunMechanismExperimentTests(unittest.TestCase):
                     for item in changed_manifest["ignored_changes"]["files"]
                 },
                 {
+                    "ops/script-output-surfaces.json": "generated_report_surface",
                     "ops/reports/raw-registry-preflight-report.json": "generated_report_surface",
                     "tmp/artifact-freshness-report-check.json": "transient_workspace_surface",
                     "tmp/script-output-surfaces.candidate.json": "transient_workspace_surface",
                 },
             )
-            self.assertEqual(changed_manifest["ignored_changes"]["summary"]["total_ignored_files"], 3)
+            self.assertEqual(changed_manifest["ignored_changes"]["summary"]["total_ignored_files"], 4)
 
     def test_selected_raw_registry_preflight_supporting_target_refreshes_before_candidate_capture(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1433,11 +1438,15 @@ class RunMechanismExperimentTests(unittest.TestCase):
             self.assertEqual(convergence["status"], "refreshed")
             self.assertEqual(
                 convergence["refreshed_targets"],
-                ["ops/reports/raw-registry-preflight-report.json"],
+                [
+                    "ops/script-output-surfaces.json",
+                    "ops/reports/raw-registry-preflight-report.json",
+                ],
             )
             self.assertEqual(
                 convergence["artifacts"],
                 [
+                    "ops/script-output-surfaces.json",
                     "ops/reports/raw-registry-preflight-report.json",
                     "ops/reports/raw-registry-preflight-reproducibility.json",
                 ],
@@ -1468,12 +1477,57 @@ class RunMechanismExperimentTests(unittest.TestCase):
             self.assertEqual(
                 ignored_paths,
                 {
+                    "ops/script-output-surfaces.json": "generated_report_surface",
                     "ops/reports/raw-registry-preflight-report.json": "generated_report_surface",
                     "ops/reports/raw-registry-preflight-reproducibility.json": (
                         "generated_report_surface"
                     ),
                 },
             )
+
+    def test_post_mutation_convergence_refreshes_script_output_surfaces_for_ops_script_target(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            written = vault / "ops" / "script-output-surfaces.json"
+            context = fixed_context()
+
+            with (
+                mock.patch(
+                    "ops.scripts.mechanism.post_mutation_generated_artifact_convergence_runtime."
+                    "build_script_output_surface_registry",
+                    return_value={"artifact_status": "current"},
+                ) as build_registry,
+                mock.patch(
+                    "ops.scripts.mechanism.post_mutation_generated_artifact_convergence_runtime."
+                    "write_script_output_surface_registry",
+                    return_value=written,
+                ) as write_registry,
+            ):
+                convergence = converge_post_mutation_generated_artifacts(
+                    vault,
+                    vault,
+                    policy_path_text="ops/policies/wiki-maintainer-policy.yaml",
+                    selected_targets=["ops/scripts/mechanism/example_runtime.py"],
+                    context=context,
+                )
+
+            build_registry.assert_called_once_with(
+                vault,
+                policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                context=context,
+            )
+            write_registry.assert_called_once_with(
+                vault,
+                {"artifact_status": "current"},
+                "ops/script-output-surfaces.json",
+            )
+            self.assertEqual(convergence["status"], "refreshed")
+            self.assertEqual(convergence["refreshed_targets"], ["ops/script-output-surfaces.json"])
+            self.assertEqual(convergence["artifacts"], ["ops/script-output-surfaces.json"])
 
     def test_post_mutation_convergence_noops_for_unrelated_generated_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

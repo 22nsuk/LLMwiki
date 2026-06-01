@@ -28,6 +28,15 @@ from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
 )
+from ops.scripts.script_output_surfaces import (
+    DEFAULT_OUT as SCRIPT_OUTPUT_SURFACES_TARGET,
+)
+from ops.scripts.script_output_surfaces import (
+    build_registry as build_script_output_surface_registry,
+)
+from ops.scripts.script_output_surfaces import (
+    write_registry as write_script_output_surface_registry,
+)
 
 from .mechanism_run_common_runtime import (
     RunMechanismExperimentMutationError,
@@ -39,6 +48,7 @@ RAW_REGISTRY_PREFLIGHT_TARGET = RAW_REGISTRY_PREFLIGHT_REPORT_OUT
 RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_TARGET = RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_OUT
 GENERATED_ARTIFACT_CONVERGENCE_SCHEMA = GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH
 GENERATED_ARTIFACT_CONVERGENCE_REPORT = "generated-artifact-convergence.json"
+OPS_SCRIPTS_PREFIX = "ops/scripts/"
 
 
 @dataclass(frozen=True)
@@ -54,9 +64,14 @@ class PostMutationGeneratedArtifactConvergenceService:
     service_id: str
     trigger_targets: frozenset[str]
     refresh: Callable[[PostMutationGeneratedArtifactConvergenceRequest], dict[str, Any]]
+    trigger_prefixes: tuple[str, ...] = ()
 
     def selected_for(self, selected_targets: set[str]) -> bool:
-        return bool(self.trigger_targets.intersection(selected_targets))
+        return bool(self.trigger_targets.intersection(selected_targets)) or any(
+            target.startswith(prefix)
+            for prefix in self.trigger_prefixes
+            for target in selected_targets
+        )
 
 
 def _normalize_selected_targets(values: list[str]) -> set[str]:
@@ -124,7 +139,35 @@ def _refresh_raw_registry_preflight_artifacts(
     }
 
 
+def _refresh_script_output_surface_artifacts(
+    request: PostMutationGeneratedArtifactConvergenceRequest,
+) -> dict[str, Any]:
+    registry = build_script_output_surface_registry(
+        request.workspace_vault,
+        policy_path=request.policy_path_text,
+        context=request.context,
+    )
+    written_path = write_script_output_surface_registry(
+        request.workspace_vault,
+        registry,
+        SCRIPT_OUTPUT_SURFACES_TARGET,
+    )
+    return {
+        "target": SCRIPT_OUTPUT_SURFACES_TARGET,
+        "status": str(registry.get("artifact_status", "current")),
+        "artifacts": [report_path(request.workspace_vault, written_path)],
+        "reproducibility_status": "not_applicable",
+        "reproducibility_diff_status": "not_applicable",
+    }
+
+
 POST_MUTATION_GENERATED_ARTIFACT_CONVERGENCE_SERVICES = (
+    PostMutationGeneratedArtifactConvergenceService(
+        service_id="script_output_surfaces_refresh",
+        trigger_targets=frozenset({SCRIPT_OUTPUT_SURFACES_TARGET}),
+        trigger_prefixes=(OPS_SCRIPTS_PREFIX,),
+        refresh=_refresh_script_output_surface_artifacts,
+    ),
     PostMutationGeneratedArtifactConvergenceService(
         service_id="raw_registry_preflight_refresh",
         trigger_targets=frozenset(

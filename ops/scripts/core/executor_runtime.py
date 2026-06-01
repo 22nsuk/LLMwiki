@@ -14,6 +14,7 @@ from .runtime_context import RuntimeContext
 
 ROLE_ORDER = ("worker", "reviewer", "validator")
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
+SCRIPT_OUTPUT_SURFACES_MODULE = "ops/scripts/core/script_output_surfaces.py"
 OPS_SCRIPTS_PREFIX = "ops/scripts/"
 
 
@@ -109,8 +110,6 @@ def _should_refresh_script_output_surfaces(
     changed_primary_targets: list[str],
     supporting_targets: list[str],
 ) -> bool:
-    if SCRIPT_OUTPUT_SURFACES_TARGET not in supporting_targets:
-        return False
     return any(target.startswith(OPS_SCRIPTS_PREFIX) for target in changed_primary_targets)
 
 
@@ -123,6 +122,8 @@ def _workspace_python(workspace_root: Path) -> str:
 
 
 def _refresh_script_output_surfaces(workspace_root: Path) -> None:
+    if not (workspace_root / SCRIPT_OUTPUT_SURFACES_MODULE).is_file():
+        return
     completed = subprocess.run(
         [
             _workspace_python(workspace_root),

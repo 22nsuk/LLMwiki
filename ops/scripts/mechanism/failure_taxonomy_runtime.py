@@ -151,7 +151,7 @@ def failure_taxonomy_from_iteration(
     discard_evidence: dict[str, Any] | None,
     result_failure_taxonomy: str = "",
 ) -> str:
-    outcome_text = str(outcome).strip()
+    outcome_text = str(outcome).strip().lower()
     if outcome_text == "promoted":
         return ""
     if result_failure_taxonomy:

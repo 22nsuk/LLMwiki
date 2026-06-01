@@ -1310,9 +1310,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
             vault.mkdir()
             _seed_executor_vault(vault)
             seed_subagent_profiles(vault, ["worker", "validator"])
+            (vault / "ops" / "scripts" / "core").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "scripts" / "core" / "script_output_surfaces.py").write_text(
+                "# script-output-surfaces marker\n",
+                encoding="utf-8",
+            )
             scope_path = vault / "runs" / "run-executor" / "scope-freeze.json"
             scope = json.loads(scope_path.read_text(encoding="utf-8"))
-            scope["inputs"]["supporting_targets"] = ["ops/script-output-surfaces.json"]
+            scope["inputs"]["supporting_targets"] = []
             scope_path.write_text(json.dumps(scope, ensure_ascii=False, indent=2), encoding="utf-8")
             (vault / "ops" / "script-output-surfaces.json").write_text("stale\n", encoding="utf-8")
             worker_routing = _write_routing_report(
