@@ -107,6 +107,7 @@ RECENT_OUTCOME_REWORK_BLOCKER = "recent_outcome_rework"
 RECENT_OUTCOME_REWORK_MIN_ATTEMPTS = 2
 RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS = 1
 RESOLVED_PROMOTION_HISTORY_STATUSES = {"archived", "quarantined"}
+REPEATED_DISCARD_FAILURE_MODE = "repeated_discard_runs"
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
@@ -769,6 +770,22 @@ def _with_generated_supporting_targets(
     return ordered
 
 
+def _proposal_supporting_targets_for_failure_mode(
+    vault: Path,
+    *,
+    failure_mode: str,
+    primary_targets: list[str],
+    supporting_targets: list[str],
+) -> list[str]:
+    if failure_mode == REPEATED_DISCARD_FAILURE_MODE:
+        return []
+    return _with_generated_supporting_targets(
+        vault,
+        primary_targets=primary_targets,
+        supporting_targets=supporting_targets,
+    )
+
+
 def _proposal_blast_radius_score(
     candidate: dict,
     *,
@@ -839,7 +856,7 @@ def _proposal_id(candidate: dict, failure_mode: str) -> str:
 def _proposal_metrics_triggered(candidate: dict, failure_mode: str) -> list[str]:
     metrics = [str(item).strip() for item in candidate.get("metrics_triggered", []) if str(item).strip()]
     failure_mode_metrics = {
-        "repeated_discard_runs": ["repeated_discard_runs"],
+        REPEATED_DISCARD_FAILURE_MODE: [REPEATED_DISCARD_FAILURE_MODE],
         "repeated_same_eval_after_promote": ["stage1_same_eval_rate"],
     }.get(failure_mode)
     if failure_mode_metrics is None:
@@ -1548,21 +1565,27 @@ def _proposal_from_candidate(
 ) -> MutationProposal | None:
     allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
     primary_targets = current_repo_target_paths(vault, list(candidate["primary_targets"]))
-    supporting_targets = _with_generated_supporting_targets(
-        vault,
-        primary_targets=primary_targets,
-        supporting_targets=current_repo_target_paths(vault, list(candidate["supporting_targets"])),
-    )
+    candidate_supporting_targets = current_repo_target_paths(vault, list(candidate["supporting_targets"]))
     current_candidate = {
         **candidate,
         "primary_targets": primary_targets,
+        "supporting_targets": candidate_supporting_targets,
+    }
+    fields = proposal_fields_for_candidate(current_candidate, MECHANISM_CANDIDATE_REGISTRY)
+    if fields["failure_mode"] not in allowed_failure_modes:
+        return None
+    supporting_targets = _proposal_supporting_targets_for_failure_mode(
+        vault,
+        failure_mode=fields["failure_mode"],
+        primary_targets=primary_targets,
+        supporting_targets=candidate_supporting_targets,
+    )
+    current_candidate = {
+        **current_candidate,
         "supporting_targets": supporting_targets,
     }
     recent_log_matches = _recent_log_overlap_matches(current_candidate, recent_log_sections)
     blocked_by = ["recent_log_overlap"] if recent_log_matches else []
-    fields = proposal_fields_for_candidate(current_candidate, MECHANISM_CANDIDATE_REGISTRY)
-    if fields["failure_mode"] not in allowed_failure_modes:
-        return None
     metrics_triggered = _proposal_metrics_triggered(current_candidate, fields["failure_mode"])
     run_ids = _proposal_run_ids(
         current_candidate,

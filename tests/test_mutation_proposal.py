@@ -1750,9 +1750,9 @@ class MutationProposalTest(unittest.TestCase):
                     "priority": 85,
                     "primary_targets": [target],
                     "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
-                    "metrics_triggered": ["repeated_discard_runs"],
+                    "metrics_triggered": ["stage1_same_eval_rate"],
                     "run_ids": ["run-1", "run-2"],
-                    "evidence": {"runs_examined": 2, "same_eval_runs": 0, "discard_runs": 2},
+                    "evidence": {"runs_examined": 2, "same_eval_runs": 2, "discard_runs": 0},
                     "rationale": "fixture",
                     "suggested_experiments": [f"try one mechanism-only experiment on {target}"],
                 }
@@ -1769,6 +1769,75 @@ class MutationProposalTest(unittest.TestCase):
                     "ops/schemas/run-telemetry.schema.json",
                     "ops/script-output-surfaces.json",
                 ],
+            )
+
+    def test_repeated_discard_proposal_keeps_mutation_scope_to_primary_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+            (vault / "ops" / "scripts" / "mechanism").mkdir(parents=True, exist_ok=True)
+            (vault / target).write_text(
+                "def persist_iteration_state() -> None:\n"
+                "    return None\n",
+                encoding="utf-8",
+            )
+            broad_supporting_targets = [
+                "ops/schemas/run-telemetry.schema.json",
+                "ops/script-output-surfaces.json",
+                "tests/fixtures/report_schema_samples.json",
+                "ops/scripts/core/artifact_freshness_runtime.py",
+            ]
+            for rel_path in broad_supporting_targets:
+                path = vault / rel_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("{}\n", encoding="utf-8")
+            (vault / "tests" / "test_auto_improve_iteration_runtime.py").write_text(
+                (
+                    "from ops.scripts.mechanism.auto_improve_iteration_persistence_runtime "
+                    "import persist_iteration_state\n\n"
+                    "def test_placeholder() -> None:\n"
+                    "    assert persist_iteration_state is not None\n"
+                ),
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_report_schema_sample_regeneration.py").write_text(
+                "def test_placeholder() -> None:\n    assert True\n",
+                encoding="utf-8",
+            )
+
+            report = mechanism_review_report()
+            report["summary"]["candidates_emitted"] = 1
+            report["candidates"] = [
+                {
+                    "candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+                    "candidate_type": "mechanism_eval_stagnation_candidate",
+                    "family": "contract_regression_signals",
+                    "tier": "supporting",
+                    "objective": "detect repeated non-improvement against current contract-eval surfaces",
+                    "priority": 85,
+                    "primary_targets": [target],
+                    "supporting_targets": broad_supporting_targets,
+                    "metrics_triggered": ["repeated_discard_runs"],
+                    "run_ids": ["run-1", "run-2"],
+                    "evidence": {"runs_examined": 2, "same_eval_runs": 0, "discard_runs": 2},
+                    "rationale": "fixture",
+                    "suggested_experiments": [f"try one mechanism-only experiment on {target}"],
+                }
+            ]
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", report)
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path)
+
+            proposal = proposal_report["proposals"][0]
+            self.assertEqual(proposal["failure_mode"], "repeated_discard_runs")
+            self.assertEqual(proposal["primary_targets"], [target])
+            self.assertEqual(proposal["supporting_targets"], [])
+            self.assertEqual(
+                proposal["must_change_tests"],
+                ["tests/test_auto_improve_iteration_runtime.py"],
             )
 
     def test_build_report_uses_bundled_schema_fallback_when_vault_schemas_are_absent(self) -> None:
