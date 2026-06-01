@@ -118,6 +118,52 @@ class ImprovementObservationsRuntimeTests(unittest.TestCase):
             self.assertEqual(payload["generated_at"], "2026-04-27T12:00:00Z")
             self.assertEqual(payload["observations"][0]["observation_id"], "legacy_followup")
 
+    def test_backfill_improvement_observations_converts_legacy_root_list(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            rel_path = task_improvement_observations_rel("task-legacy-list")
+            legacy_path = vault / rel_path
+            legacy_path.parent.mkdir(parents=True, exist_ok=True)
+            legacy_path.write_text(
+                json.dumps(
+                    [
+                        {
+                            "id": "release_closeout_summary_run_manifest_check_alignment",
+                            "status": "open",
+                            "summary": "Release preseal cleared one blocker but run manifest evidence was stale.",
+                            "suggested_followup": "Regenerate run-ready evidence when source edits invalidate the run manifest.",
+                            "evidence": [
+                                "ops/scripts/release/release_closeout_summary.py",
+                                "build/release/release-run-manifest.json",
+                            ],
+                        }
+                    ],
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            written = backfill_improvement_observations(
+                vault,
+                [rel_path],
+                context=fixed_context(),
+            )
+            payload = json.loads(legacy_path.read_text(encoding="utf-8"))
+            schema = load_schema(vault / "ops" / "schemas" / "improvement-observations.schema.json")
+
+            self.assertEqual(written, [rel_path])
+            self.assertEqual(validate_with_schema(payload, schema), [])
+            self.assertEqual(payload["record_id"], "task-legacy-list")
+            self.assertEqual(payload["task_id"], "task-legacy-list")
+            self.assertEqual(
+                payload["observations"][0]["observation_id"],
+                "release_closeout_summary_run_manifest_check_alignment",
+            )
+            self.assertIn("release_closeout_summary.py", payload["observations"][0]["surface"])
+
 
 if __name__ == "__main__":
     unittest.main()

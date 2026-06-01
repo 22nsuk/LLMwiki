@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import read_json_object
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import IMPROVEMENT_OBSERVATIONS_SCHEMA_PATH
@@ -256,7 +256,62 @@ def improvement_observation_paths(vault: Path) -> list[str]:
 def _dict_observations(items: object) -> list[dict]:
     if not isinstance(items, list):
         return []
-    return [item for item in items if isinstance(item, dict)]
+    return [_normalized_observation(item) for item in items if isinstance(item, dict)]
+
+
+def _observation_id(value: object) -> str:
+    text = str(value or "").strip().lower()
+    slug = re.sub(r"[^a-z0-9_-]+", "_", text).strip("_-")
+    return slug or "legacy_observation"
+
+
+def _normalized_status(value: object) -> str:
+    status = str(value or "").strip()
+    if status in {"open", "planned", "automated", "wontfix"}:
+        return status
+    return "open"
+
+
+def _joined_surface(value: object) -> str:
+    if isinstance(value, list):
+        joined = ", ".join(str(item).strip() for item in value if str(item).strip())
+        if joined:
+            return joined
+    text = str(value or "").strip()
+    return text or "unspecified observation surface"
+
+
+def _normalized_observation(item: dict) -> dict:
+    summary = str(item.get("summary") or "").strip()
+    suggested_followup = str(item.get("suggested_followup") or "").strip()
+    problem = str(item.get("problem") or summary).strip()
+    automation_candidate = str(item.get("automation_candidate") or suggested_followup or problem).strip()
+    return {
+        "observation_id": _observation_id(item.get("observation_id") or item.get("id")),
+        "surface": _joined_surface(item.get("surface") or item.get("evidence")),
+        "problem": problem or "Legacy improvement observation needs follow-up.",
+        "why_it_matters": str(item.get("why_it_matters") or summary or problem).strip()
+        or "Improvement observations should remain durable and schema-backed.",
+        "automation_candidate": automation_candidate
+        or "Convert the legacy observation into the current schema-backed task artifact contract.",
+        "suggested_followup": suggested_followup
+        or automation_candidate
+        or "Review and resolve the legacy improvement observation.",
+        "status": _normalized_status(item.get("status")),
+    }
+
+
+def _read_existing_payload(vault: Path, rel_path: str) -> dict[str, Any]:
+    path = vault / rel_path
+    raw_payload = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(raw_payload, dict):
+        return raw_payload
+    if isinstance(raw_payload, list):
+        return {
+            "scope": RUN_SCOPE if rel_path.startswith("runs/") else TASK_SCOPE,
+            "observations": _dict_observations(raw_payload),
+        }
+    raise ValueError(f"{rel_path}: improvement observations must be a JSON object or legacy list")
 
 
 def _backfilled_payload(
@@ -309,7 +364,7 @@ def backfill_improvement_observations(
 ) -> list[str]:
     written: list[str] = []
     for rel_path in rel_paths or improvement_observation_paths(vault):
-        payload = read_json_object(vault / rel_path, context=rel_path)
+        payload = _read_existing_payload(vault, rel_path)
         backfilled = _backfilled_payload(
             vault,
             rel_path,
