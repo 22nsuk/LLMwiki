@@ -13,6 +13,7 @@ from typing import Any, cast
 from unittest import mock
 
 from ops.scripts.codex_exec_executor import (
+    EXTERNAL_WORKSPACE_SANDBOX_FLAG,
     ExecutorContractError,
     ExecutorReportRequest,
     _build_executor_report,
@@ -835,6 +836,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
 
             self.assertEqual(report["status"], "pass")
+            self.assertIn(EXTERNAL_WORKSPACE_SANDBOX_FLAG, report["command"]["argv"])
+            self.assertNotIn("--full-auto", report["command"]["argv"])
             self.assertEqual(captured_env["VIRTUAL_ENV"], str(workspace_root / ".venv"))
             self.assertEqual(captured_env["PATH"].split(os.pathsep)[0], str(workspace_venv_bin))
             python_check = subprocess.run(
@@ -846,6 +849,73 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(python_check.stdout, "workspace-python\n")
+
+    def test_codex_exec_uses_external_workspace_sandbox_for_read_only_temp_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            _seed_executor_vault(artifact_root)
+            seed_subagent_profiles(artifact_root, ["provenance-auditor"])
+            workspace_venv_bin = workspace_root / ".venv" / "bin"
+            workspace_venv_bin.mkdir(parents=True)
+            workspace_python = workspace_venv_bin / "python"
+            workspace_python.write_text(
+                f"#!/bin/sh\n"
+                f"if [ \"${{1:-}}\" = \"-c\" ]; then exec {json.dumps(sys.executable)} \"$@\"; fi\n"
+                "printf 'workspace-python\\n'\n",
+                encoding="utf-8",
+            )
+            workspace_python.chmod(0o755)
+            (workspace_root / "ops" / "schemas").mkdir(parents=True)
+            (workspace_root / "ops" / "schemas" / "executor-report.schema.json").write_text(
+                (REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text(
+                    encoding="utf-8"
+                ),
+                encoding="utf-8",
+            )
+            _write_routing_report(
+                artifact_root,
+                "provenance-auditor",
+                sandbox_mode="read-only",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            def fake_run(argv: list[str], **kwargs: object) -> object:
+                self.assertEqual(kwargs["cwd"], workspace_root)
+                self.assertIn(EXTERNAL_WORKSPACE_SANDBOX_FLAG, argv)
+                self.assertNotIn("-s", argv)
+                out_index = argv.index("-o") + 1
+                Path(argv[out_index]).write_text(
+                    json.dumps(
+                        {"status": "pass", "diagnostics": {"notes": ["audited"]}},
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+                report = execute_codex_exec_role(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                    run_id="run-executor",
+                    role="provenance-auditor",
+                    routing_report_rel="runs/run-executor/subagent-routing.provenance-auditor.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["executor"]["sandbox_mode"], "read-only")
+            prompt = (artifact_root / "runs" / "run-executor" / "provenance-auditor-prompt.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("disposable mechanism workspace copy", prompt)
 
     def test_codex_exec_blocks_workspace_virtualenv_codex_when_no_outer_codex_exists(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

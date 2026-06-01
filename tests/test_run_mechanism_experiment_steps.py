@@ -30,6 +30,7 @@ from ops.scripts.promotion_decision_registry_runtime import attach_decision_cont
 from ops.scripts.run_mechanism_experiment_runtime import (
     RunMechanismExperimentMutationError,
     RunMechanismExperimentUsageError,
+    _mechanism_temp_dir_parent,
 )
 from ops.scripts.runtime_context import RuntimeContext
 
@@ -69,6 +70,22 @@ def seed_changed_files_manifest_schema(vault: Path) -> None:
 
 
 class RunMechanismExperimentStepTests(unittest.TestCase):
+    def test_mechanism_temp_dir_parent_prefers_linux_tmp_when_default_temp_is_wsl_mount(
+        self,
+    ) -> None:
+        with mock.patch(
+            "ops.scripts.run_mechanism_experiment_runtime.tempfile.gettempdir",
+            return_value="/mnt/c/Users/ADMINI~1/AppData/Local/Temp",
+        ):
+            self.assertEqual(_mechanism_temp_dir_parent(), "/tmp")
+
+    def test_mechanism_temp_dir_parent_keeps_native_linux_tempdir(self) -> None:
+        with mock.patch(
+            "ops.scripts.run_mechanism_experiment_runtime.tempfile.gettempdir",
+            return_value="/tmp",
+        ):
+            self.assertIsNone(_mechanism_temp_dir_parent())
+
     def test_prepare_workspace_copy_reports_actual_copied_file_count(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

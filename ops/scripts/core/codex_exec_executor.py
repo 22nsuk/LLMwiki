@@ -49,6 +49,7 @@ NON_WORKER_PROJECT_CHECK_MODULES = (
     ("yaml", "PyYAML"),
 )
 PROJECT_CHECK_LANE = "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider"
+EXTERNAL_WORKSPACE_SANDBOX_FLAG = "--dangerously-bypass-approvals-and-sandbox"
 _CODEX_USAGE_LIMIT_RE = re.compile(
     r"(usage limit|try again at|upgrade to pro)",
     flags=re.IGNORECASE,
@@ -668,6 +669,16 @@ def _executor_prompt_text(
     scope_freeze = _sanitize_json_strings(request.scope_freeze, roots=sanitize_roots)
     routing_report = _sanitize_json_strings(request.routing_report, roots=sanitize_roots)
     template = _sanitize_json_strings(template, roots=sanitize_roots)
+    external_sandbox_note = ""
+    if _uses_external_workspace_sandbox(
+        artifact_root=request.artifact_root,
+        workspace_root=request.workspace_root,
+    ):
+        external_sandbox_note = (
+            "- This executor is running inside a disposable mechanism workspace copy. "
+            "Treat the role sandbox_mode above as the write contract, and rely on the "
+            "parent apply guardrails for live-repo mutation.\n"
+        )
     prompt_text = f"""You are executing the `{request.role}` role for LLM Wiki vNext.
 
 Role profile:
@@ -696,7 +707,7 @@ Execution environment guidance:
 - Do not run bare `python -m pytest` when `.venv/bin/python` is present.
 - In reviewer, validator, and auditor roles, keep pytest cache-safe with `PYTHONDONTWRITEBYTECODE=1` and `-p no:cacheprovider`.
 - If dependencies are genuinely absent, report the exact blocked `.venv/bin/python` command and missing dependency surface; do not use network dependency setup as a fallback unless the parent task explicitly asks for environment bootstrap.
-
+{external_sandbox_note}
 Repository-required local skills:
 - If `AGENTS.md` or `AGENTS.local.md` names a required skill that is absent from the system-provided available skills list, check for a local skill body at `$CODEX_HOME/skills/<skill>/SKILL.md` or `~/.codex/skills/<skill>/SKILL.md`.
 - When that local skill body exists and is readable, read and apply it before continuing; do not fail solely because the system available-skills list omitted a readable local required skill.
@@ -781,6 +792,13 @@ def _load_executor_inputs(
     return routing_report, scope_freeze, profile
 
 
+def _uses_external_workspace_sandbox(*, artifact_root: Path, workspace_root: Path) -> bool:
+    try:
+        return artifact_root.resolve() != workspace_root.resolve()
+    except OSError:
+        return artifact_root.absolute() != workspace_root.absolute()
+
+
 def _codex_exec_argv(
     *,
     workspace_root: Path,
@@ -804,7 +822,13 @@ def _codex_exec_argv(
         str(artifact_root / output_last_message_rel),
         "-",
     ]
-    if sandbox_mode == "workspace-write":
+    if _uses_external_workspace_sandbox(
+        artifact_root=artifact_root,
+        workspace_root=workspace_root,
+    ):
+        argv.insert(2, EXTERNAL_WORKSPACE_SANDBOX_FLAG)
+        argv.insert(3, "--skip-git-repo-check")
+    elif sandbox_mode == "workspace-write":
         argv.insert(2, "--full-auto")
         argv.insert(3, "--skip-git-repo-check")
     else:

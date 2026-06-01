@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -157,6 +158,19 @@ class _WorkspaceExperimentResult:
     workspace_apply: WorkspaceApplyResult
 
 
+def _mechanism_temp_dir_parent() -> str | None:
+    if os.name == "nt":
+        return None
+    current = Path(tempfile.gettempdir()).as_posix().lower()
+    if current.startswith("/mnt/") and Path("/tmp").is_dir():
+        return "/tmp"
+    return None
+
+
+def _mechanism_temporary_directory(prefix: str) -> tempfile.TemporaryDirectory[str]:
+    return tempfile.TemporaryDirectory(prefix=prefix, dir=_mechanism_temp_dir_parent())
+
+
 def run_mechanism_experiment(
     vault: Path,
     request: RunMechanismExperimentRequest | None = None,
@@ -290,7 +304,7 @@ def _run_workspace_experiment_phase(
     resolution: Any,
     baseline_artifacts: dict[str, Any],
 ) -> _WorkspaceExperimentResult | dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix=f"{request.run_id}-workspace-") as workspace_root:
+    with _mechanism_temporary_directory(prefix=f"{request.run_id}-workspace-") as workspace_root:
         workspace = _prepare_workspace_copy(
             vault,
             run_id=request.run_id,
@@ -317,7 +331,7 @@ def _run_workspace_experiment_phase(
             resolution=resolution,
             workspace_vault=workspace_vault,
         )
-        with tempfile.TemporaryDirectory(
+        with _mechanism_temporary_directory(
             prefix=f"{request.run_id}-candidate-report-workspace-"
         ) as candidate_report_workspace_root:
             candidate_report_vault = _prepare_candidate_report_workspace(
