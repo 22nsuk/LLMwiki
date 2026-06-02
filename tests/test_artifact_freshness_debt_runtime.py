@@ -19,7 +19,7 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
         issues: list[str] = ["schema_validation_failed"]
         stable_contract_issues: list[str] = ["schema_validation_failed"]
         record = {
-            "path": "runs/run-1/repo-health-artifact-freshness-report-check.json",
+            "path": "runs/run-1/historical-schema-drift.json",
             "owner_surface": "runs",
             "issues": issues,
             "stable_contract_issues": stable_contract_issues,

@@ -997,7 +997,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            run_report = vault / "runs" / "legacy-run" / "repo-health-artifact-freshness-report-check.json"
+            run_report = vault / "runs" / "legacy-run" / "historical-schema-drift.json"
             run_report.parent.mkdir(parents=True, exist_ok=True)
             run_report.write_text(
                 json.dumps(
@@ -1029,7 +1029,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             record = next(
                 item
                 for item in report["artifact_records"]
-                if item["path"].endswith("repo-health-artifact-freshness-report-check.json")
+                if item["path"].endswith("historical-schema-drift.json")
             )
             schema_debt = next(item for item in report["top_debt"] if item["issue"] == "schema_validation_failed")
             queues = {item["queue"]: item for item in report["debt_queues"]}
@@ -1045,6 +1045,63 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(queues["runs_historical_archive"]["gate_effect"], "advisory")
             self.assertEqual(report["gate_effect"], "advisory")
             self.assertIn(report["status"], {"pass", "attention"})
+
+    def test_repo_health_freshness_snapshots_are_noncanonical_run_notes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "ops" / "schemas" / "example.schema.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "type": "object",
+                        "required": ["answer"],
+                        "properties": {"answer": {"type": "string"}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            run_report = vault / "runs" / "legacy-run" / "repo-health-artifact-freshness-report-check.json"
+            run_report.parent.mkdir(parents=True, exist_ok=True)
+            run_report.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/example.schema.json",
+                        "artifact_kind": "artifact_freshness_report",
+                        "generated_at": "2026-04-24T12:00:00Z",
+                        "producer": "ops.scripts.artifact_freshness_runtime",
+                        "source_command": "make artifact-freshness-check",
+                        "source_revision": "unknown",
+                        "source_tree_fingerprint": "historical",
+                        "input_fingerprints": {"policy": "historical"},
+                        "schema_version": 1,
+                        "artifact_status": "current",
+                        "retention_policy": "canonical_report",
+                        "encoding": "utf-8",
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2026-04-24T12:00:00Z",
+                        },
+                        "answer": 1,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context(), mtime_source="embedded_currentness")
+            record = next(
+                item
+                for item in report["artifact_records"]
+                if item["path"].endswith("repo-health-artifact-freshness-report-check.json")
+            )
+
+            self.assertEqual(record["schema_validation_status"], "not_applicable")
+            self.assertEqual(record["schema_contract"]["classification"], "noncanonical_archived_run_note")
+            self.assertEqual(record["contract_issue_class"], "clean")
+            self.assertEqual(record["gate_effect"], "none")
+            self.assertEqual(record["stable_contract_issues"], [])
+            self.assertEqual(record["issues"], [])
 
     def test_report_normalizes_missing_generated_at_action(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

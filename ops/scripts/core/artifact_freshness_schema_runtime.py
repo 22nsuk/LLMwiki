@@ -25,6 +25,8 @@ NONCANONICAL_JSON_ARCHIVE_PATHS = {
     ),
 }
 NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES = {
+    "auto-improve-goal-session-result.json",
+    "repo-health-artifact-freshness-report-check.json",
     "scope-freeze.json",
     "subagent-routing.validator.json",
     "subagent-routing.worker.json",

@@ -173,6 +173,121 @@ def _seed_pre_backfill_raw_intake_run(vault: Path) -> list[str]:
     return target_rel_paths
 
 
+def test_backfill_archived_run_artifacts_supports_convergence_and_timeout_auxiliary_reports() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        run_id = "legacy-generated-artifact-auxiliary-run"
+        run_dir = vault / "runs" / "archive" / run_id
+        run_dir.mkdir(parents=True)
+        convergence_rel_path = f"runs/archive/{run_id}/generated-artifact-convergence.json"
+        timeout_rel_path = f"runs/archive/{run_id}/repo-health-timeout-failure.json"
+        _write_json(
+            vault / convergence_rel_path,
+            {
+                "$schema": "ops/schemas/generated-artifact-convergence.schema.json",
+                "run_id": run_id,
+                "generated_at": "2026-04-28T05:30:00Z",
+                "phase": "post_mutation_generated_artifact_convergence",
+                "status": "refreshed",
+                "selected_targets": ["artifact-freshness-refresh-check"],
+                "refreshed_targets": ["artifact-freshness-refresh-check"],
+                "artifacts": ["ops/reports/artifact-freshness-report.json"],
+                "summary": {
+                    "selected_target_count": 1,
+                    "refreshed_target_count": 1,
+                    "artifact_count": 1,
+                },
+                "details": [
+                    {
+                        "target": "artifact-freshness-refresh-check",
+                        "status": "refreshed",
+                        "artifacts": ["ops/reports/artifact-freshness-report.json"],
+                        "reproducibility_status": "pass",
+                        "reproducibility_diff_status": "clean",
+                    }
+                ],
+            },
+        )
+        _write_json(
+            vault / timeout_rel_path,
+            {
+                "$schema": "ops/schemas/timeout-failure.schema.json",
+                "run_id": run_id,
+                "generated_at": "2026-04-28T05:35:00Z",
+                "phase": "repo_health",
+                "role": "repo-health",
+                "command": {
+                    "command": "make static",
+                    "argv": ["make", "static"],
+                },
+                "result": {
+                    "returncode": -15,
+                    "timed_out": True,
+                    "timeout_seconds": 5,
+                    "termination_reason": "timeout",
+                    "launch_succeeded": True,
+                    "signal_sent": "TERM",
+                    "final_state_observed": "terminated",
+                    "stdout_received": True,
+                    "stderr_received": True,
+                },
+                "artifacts": {
+                    "stdout": f"runs/archive/{run_id}/repo-health.stdout.txt",
+                    "stderr": f"runs/archive/{run_id}/repo-health.stderr.txt",
+                },
+            },
+        )
+
+        written = backfill_archived_run_artifacts(vault, context=fixed_context())
+
+        assert set(written) == {convergence_rel_path, timeout_rel_path}
+        freshness_report = build_report(vault, context=fixed_context())
+        expectations = {
+            convergence_rel_path: (
+                REPO_ROOT / "ops" / "schemas" / "generated-artifact-convergence.schema.json",
+                "generated_artifact_convergence",
+                "2026-04-28T05:30:00Z",
+            ),
+            timeout_rel_path: (
+                REPO_ROOT / "ops" / "schemas" / "timeout-failure.schema.json",
+                "timeout_failure",
+                "2026-04-28T05:35:00Z",
+            ),
+        }
+        for rel_path, (schema_path, artifact_kind, generated_at) in expectations.items():
+            payload = _read_json(vault / rel_path)
+            embedded_envelope = json.loads(_metadata_property(payload, EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY) or "{}")
+            provenance = json.loads(_metadata_property(payload, BACKFILL_PROVENANCE_PROPERTY) or "{}")
+            record = next(
+                item
+                for item in freshness_report.get("artifact_records", [])
+                if item.get("path") == rel_path
+            )
+
+            assert validate_with_schema(payload, load_schema(schema_path)) == []
+            assert embedded_envelope.get("artifact_kind") == artifact_kind
+            assert embedded_envelope.get("artifact_status") == "archived"
+            assert embedded_envelope.get("retention_policy") == "archive"
+            assert embedded_envelope.get("generated_at") == generated_at
+            assert embedded_envelope.get("currentness", {}).get("status") == "current"
+            assert provenance.get("archive_reason") == ARCHIVE_REASON
+            assert provenance.get("source_artifact") == rel_path
+            assert provenance.get("generated_at") == generated_at
+            assert provenance.get("generated_at_source") == "payload.generated_at"
+            assert provenance.get("normalized_at") == FIXED_CHECKED_AT
+            assert record.get("artifact_kind") == artifact_kind
+            assert record.get("artifact_status") == "archived"
+            assert record.get("retention_policy") == "archive"
+            assert record.get("has_artifact_envelope") is True
+            assert record.get("has_generated_at") is True
+            assert record.get("currentness_status") == "current"
+            assert record.get("mtime_status") == "current"
+            assert record.get("schema_validation_status") == "pass"
+            assert record.get("issues") == []
+
+
 def test_backfill_archived_run_artifacts_embeds_archived_envelopes_and_clears_freshness_debt() -> None:
     _require_full_vault_run_fixtures()
     with tempfile.TemporaryDirectory() as temp_dir:

@@ -12,6 +12,40 @@
     "result",
     "artifacts"
   ],
+  "$defs": {
+    "metadata_property": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "properties"
+      ],
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadata_property"
+          }
+        }
+      }
+    }
+  },
   "properties": {
     "$schema": {
       "type": "string",
@@ -160,6 +194,9 @@
           }
         }
       }
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
     }
   }
 }

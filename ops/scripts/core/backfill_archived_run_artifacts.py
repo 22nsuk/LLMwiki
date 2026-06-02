@@ -29,6 +29,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.schema_constants_runtime import (  # noqa: PLC0415
         BEHAVIOR_DELTA_SCHEMA_PATH,
         CHANGED_FILES_MANIFEST_SCHEMA_PATH,
+        GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
         MECHANISM_ASSESSMENT_SCHEMA_PATH,
         PLANNING_VALIDATION_SCHEMA_PATH,
         PROMOTION_REPORT_SCHEMA_PATH,
@@ -45,6 +46,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SHADOW_APPLY_REPORT_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
+        TIMEOUT_FAILURE_SCHEMA_PATH,
     )
     from ops.scripts.schema_runtime import (  # noqa: PLC0415
         load_schema_with_vault_override,
@@ -63,6 +65,7 @@ else:
     from .schema_constants_runtime import (
         BEHAVIOR_DELTA_SCHEMA_PATH,
         CHANGED_FILES_MANIFEST_SCHEMA_PATH,
+        GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
         MECHANISM_ASSESSMENT_SCHEMA_PATH,
         PLANNING_VALIDATION_SCHEMA_PATH,
         PROMOTION_REPORT_SCHEMA_PATH,
@@ -79,6 +82,7 @@ else:
         SHADOW_APPLY_REPORT_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
+        TIMEOUT_FAILURE_SCHEMA_PATH,
     )
     from .schema_runtime import load_schema_with_vault_override, validate_with_schema
 
@@ -544,6 +548,26 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         source_paths=(SCRIPT_PATH, "ops/scripts/run_telemetry_runtime.py"),
         derive_generated_at=_payload_generated_at,
     ),
+    "generated-artifact-convergence.json": ArchivedRunArtifactSpec(
+        filename="generated-artifact-convergence.json",
+        schema_path=GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
+        artifact_kind="generated_artifact_convergence",
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/mechanism/post_mutation_generated_artifact_convergence_runtime.py",
+        ),
+        derive_generated_at=_payload_generated_at,
+    ),
+    "timeout-failure.json": ArchivedRunArtifactSpec(
+        filename="timeout-failure.json",
+        schema_path=TIMEOUT_FAILURE_SCHEMA_PATH,
+        artifact_kind="timeout_failure",
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/core/experiment_telemetry_runtime.py",
+        ),
+        derive_generated_at=_payload_generated_at,
+    ),
     "shadow-apply-report.json": ArchivedRunArtifactSpec(
         filename="shadow-apply-report.json",
         schema_path=SHADOW_APPLY_REPORT_SCHEMA_PATH,
@@ -782,6 +806,8 @@ def _archived_run_artifact_spec_for_filename(filename: str) -> ArchivedRunArtifa
         return spec
     if filename.startswith("promotion-report.") and filename.endswith(".json"):
         return ARCHIVED_RUN_ARTIFACT_SPECS["promotion-report.json"]
+    if filename.endswith("-timeout-failure.json"):
+        return ARCHIVED_RUN_ARTIFACT_SPECS["timeout-failure.json"]
     return None
 
 
