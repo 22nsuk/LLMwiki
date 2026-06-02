@@ -574,7 +574,7 @@ class MutationProposalTest(unittest.TestCase):
             priorities = [proposal["priority"] for proposal in report["proposals"]]
             self.assertEqual(priorities, sorted(priorities, reverse=True))
 
-    def test_closed_repeated_discard_remediation_suppresses_stale_candidate(self) -> None:
+    def test_closed_repeated_discard_remediation_falls_through_to_open_same_eval_signal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             seed_vault(vault)
@@ -616,7 +616,19 @@ class MutationProposalTest(unittest.TestCase):
 
             self.assertEqual(validate_with_schema(report, schema), [])
             self.assertEqual(report["status"], "pass")
-            self.assertEqual(report["summary"]["proposals_emitted"], 2)
+            self.assertEqual(report["summary"]["proposals_emitted"], 3)
+            proposals_by_source = {proposal["source_candidate_type"]: proposal for proposal in report["proposals"]}
+            stagnation = proposals_by_source["mechanism_eval_stagnation_candidate"]
+            self.assertEqual(stagnation["failure_mode"], "repeated_same_eval_after_promote")
+            self.assertEqual(stagnation["metrics_triggered"], ["stage1_same_eval_rate"])
+            self.assertEqual(stagnation["run_ids"], ["run-a", "run-b", "run-c"])
+            self.assertEqual(
+                stagnation["must_change_budget_signal"],
+                {
+                    "signal": "strict_secondary_improvement_present",
+                    "expected_change": "true_for_equal_score_promotion",
+                },
+            )
             self.assertNotIn(
                 "repeated_discard_runs",
                 {proposal["failure_mode"] for proposal in report["proposals"]},
@@ -631,6 +643,61 @@ class MutationProposalTest(unittest.TestCase):
                             "closed remediation backlog item(s): "
                             "negative_lesson_discard_equal_score_secondary_eligibility"
                         ),
+                    }
+                ],
+            )
+
+    def test_closed_repeated_discard_remediation_stays_terminal_without_other_signal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            report = mechanism_review_report()
+            candidate = dict(report["candidates"][0])
+            candidate["metrics_triggered"] = ["repeated_discard_runs"]
+            candidate["signal_run_ids"] = {"repeated_discard_runs": ["run-a", "run-b"]}
+            report["summary"]["candidates_emitted"] = 1
+            report["candidates"] = [candidate]
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", report)
+            write_json(
+                vault / "ops" / "reports" / "remediation-backlog.json",
+                {
+                    "status": "attention",
+                    "summary": {"open_total_count": 0},
+                    "items": [
+                        {
+                            "item_id": "negative_lesson_discard_equal_score_secondary_eligibility",
+                            "blocker_id": "discard_equal_score_secondary_eligibility",
+                            "status": "closed",
+                            "severity": "blocks_repeat",
+                            "repair_target": "Closed discard-only repeat remediation.",
+                            "next_action": "No new independent signal is available.",
+                        },
+                    ],
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            schema = load_schema(vault / "ops" / "schemas" / "mutation-proposals.schema.json")
+
+            self.assertEqual(validate_with_schema(proposal_report, schema), [])
+            self.assertEqual(proposal_report["status"], "attention")
+            self.assertEqual(proposal_report["summary"]["proposals_emitted"], 0)
+            self.assertEqual(proposal_report["summary"]["blocked_proposals"], 1)
+            self.assertEqual(proposal_report["proposals"], [])
+            self.assertEqual(
+                proposal_report["diagnostics"]["empty_queue_blockers"],
+                [
+                    {
+                        "blocker_type": "source",
+                        "reason": "closed_remediation_backlog_resolution",
+                        "detail": (
+                            "closed remediation backlog item(s): "
+                            "negative_lesson_discard_equal_score_secondary_eligibility"
+                        ),
+                        "source": "skipped_candidates",
+                        "candidate_id": "mechanism_eval_stagnation_candidate__promotion-gate",
                     }
                 ],
             )

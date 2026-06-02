@@ -109,6 +109,9 @@ RECENT_OUTCOME_REWORK_MIN_ATTEMPTS = 2
 RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS = 1
 RESOLVED_PROMOTION_HISTORY_STATUSES = {"archived", "quarantined"}
 REPEATED_DISCARD_FAILURE_MODE = "repeated_discard_runs"
+REPEATED_DISCARD_METRIC = "repeated_discard_runs"
+STAGE1_SAME_EVAL_METRIC = "stage1_same_eval_rate"
+REPEATED_SAME_EVAL_AFTER_PROMOTE_FAILURE_MODE = "repeated_same_eval_after_promote"
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
@@ -352,12 +355,48 @@ def _candidate_suppressed_by_closed_remediation(
         for metric in candidate.get("metrics_triggered", [])
         if str(metric).strip()
     }
-    if REPEATED_DISCARD_FAILURE_MODE not in triggered:
+    if REPEATED_DISCARD_METRIC not in triggered:
         return None
     closed_items = _closed_repeated_discard_resolution_items(remediation_backlog_report)
     if not closed_items:
         return None
     return _closed_repeated_discard_resolution_detail(closed_items)
+
+
+def _alternate_candidate_for_closed_failure_mode(
+    candidate: dict,
+    *,
+    closed_failure_mode: str,
+) -> dict | None:
+    if closed_failure_mode != REPEATED_DISCARD_FAILURE_MODE:
+        return None
+
+    metrics = [
+        str(metric).strip()
+        for metric in candidate.get("metrics_triggered", [])
+        if str(metric).strip()
+    ]
+    remaining_metrics = [metric for metric in metrics if metric != REPEATED_DISCARD_METRIC]
+    if STAGE1_SAME_EVAL_METRIC not in remaining_metrics:
+        return None
+    return {
+        **candidate,
+        "metrics_triggered": remaining_metrics,
+    }
+
+
+def _candidate_has_signal_for_failure_mode(candidate: dict, failure_mode: str) -> bool:
+    signal_run_ids = candidate.get("signal_run_ids")
+    if isinstance(signal_run_ids, dict) and failure_mode in signal_run_ids:
+        return any(str(run_id).strip() for run_id in signal_run_ids.get(failure_mode, []))
+    metrics = {
+        str(metric).strip()
+        for metric in candidate.get("metrics_triggered", [])
+        if str(metric).strip()
+    }
+    if failure_mode == REPEATED_SAME_EVAL_AFTER_PROMOTE_FAILURE_MODE:
+        return STAGE1_SAME_EVAL_METRIC in metrics
+    return bool(metrics)
 
 
 def _auto_improve_session_report_paths(vault: Path) -> list[str]:
@@ -1635,6 +1674,7 @@ def _proposal_from_candidate(
     *,
     remediation_backlog_report: dict,
     recent_log_sections: list[RecentLogSection],
+    skipped_candidates: list[dict] | None = None,
 ) -> MutationProposal | None:
     allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
     primary_targets = current_repo_target_paths(vault, list(candidate["primary_targets"]))
@@ -1653,7 +1693,34 @@ def _proposal_from_candidate(
         remediation_backlog_report=remediation_backlog_report,
     )
     if closed_resolution_detail:
-        raise CandidateSuppressedByClosedRemediation(closed_resolution_detail)
+        alternate_candidate = _alternate_candidate_for_closed_failure_mode(
+            current_candidate,
+            closed_failure_mode=fields["failure_mode"],
+        )
+        if alternate_candidate is None:
+            raise CandidateSuppressedByClosedRemediation(closed_resolution_detail)
+        alternate_fields = proposal_fields_for_candidate(
+            alternate_candidate,
+            MECHANISM_CANDIDATE_REGISTRY,
+        )
+        if (
+            alternate_fields["failure_mode"] not in allowed_failure_modes
+            or not _candidate_has_signal_for_failure_mode(
+                alternate_candidate,
+                alternate_fields["failure_mode"],
+            )
+        ):
+            raise CandidateSuppressedByClosedRemediation(closed_resolution_detail)
+        if skipped_candidates is not None:
+            skipped_candidates.append(
+                {
+                    "candidate_id": candidate.get("candidate_id", "<unknown>"),
+                    "reason": "closed_remediation_backlog_resolution",
+                    "detail": closed_resolution_detail,
+                }
+            )
+        current_candidate = alternate_candidate
+        fields = alternate_fields
     supporting_targets = _proposal_supporting_targets_for_failure_mode(
         vault,
         failure_mode=fields["failure_mode"],
@@ -2040,6 +2107,7 @@ def _proposal_models_from_candidates(
                 candidate,
                 remediation_backlog_report=remediation_backlog_report,
                 recent_log_sections=recent_log_sections,
+                skipped_candidates=skipped_candidates,
             )
         except CandidateSuppressedByClosedRemediation as exc:
             skipped_candidates.append(
