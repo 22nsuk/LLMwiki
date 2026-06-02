@@ -1261,7 +1261,7 @@ auto_improve_policy:
     max_minutes: 90
     max_consecutive_failures: 2
     executor: codex_exec
-    executor_timeout_seconds: 1800
+    executor_timeout_seconds: 2400
     wrapper_command_timeout_seconds: 5400
   queue:
     require_unblocked: true

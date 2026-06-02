@@ -429,6 +429,13 @@ def _blocking_promotion_check_ids(
             evidence_ids = sorted(str(item).strip() for item in evidence_refs if str(item).strip())
             if evidence_ids:
                 return evidence_ids
+    legacy_warn_blockers = (
+        ["equal_score_secondary_eligibility"]
+        if statuses.get("equal_score_secondary_eligibility") == "WARN"
+        else []
+    )
+    if legacy_warn_blockers:
+        return legacy_warn_blockers
     return sorted(
         check_id
         for check_id, status in _non_regression_check_statuses(statuses).items()
@@ -476,13 +483,10 @@ def _discard_non_regression_evidence(
     statuses = _promotion_check_statuses(promotion_report.payload)
     evidence: dict[str, Any] = {
         "promotion_report_source": promotion_report.source_kind,
-        "candidate_eval_pass": statuses.get("candidate_eval_pass") == "PASS",
-        "eval_score_improves": statuses.get("eval_score_improves") == "PASS",
-        "lint_non_regression": statuses.get("lint_non_regression") == "PASS",
-        "structural_complexity_non_regression": (
-            statuses.get("structural_complexity_non_regression") == "PASS"
-        ),
-        "tests_non_regression": statuses.get("tests_non_regression") == "PASS",
+        **{
+            check_id: statuses.get(check_id) == "PASS"
+            for check_id in DISCARD_NON_REGRESSION_CHECK_IDS
+        },
         "non_regression_check_statuses": _non_regression_check_statuses(statuses),
         "blocking_check_ids": _blocking_promotion_check_ids(statuses, decision_record),
         "decision_record_reason_code": str(

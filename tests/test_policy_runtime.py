@@ -293,7 +293,7 @@ class PolicyRuntimeTest(unittest.TestCase):
     def test_live_policy_auto_improve_and_promotion_contracts(self) -> None:
         policy = self._live_policy()
 
-        self.assertEqual(policy["auto_improve_policy"]["defaults"]["executor_timeout_seconds"], 1800)
+        self.assertEqual(policy["auto_improve_policy"]["defaults"]["executor_timeout_seconds"], 2400)
         self.assertEqual(policy["auto_improve_policy"]["defaults"]["wrapper_command_timeout_seconds"], 5400)
         self.assertEqual(policy["auto_improve_policy"]["apply_mode"], "live")
         self.assertEqual(policy["auto_improve_policy"]["workspace_preparation"]["mode"], "full_copy")
