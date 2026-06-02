@@ -69,10 +69,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json"
 
 GOLDEN_DIGESTS = {
-    "mutation_proposal": "63e4e2349e8b8eec17c60fc0c6ccea68af057f10db387242a49c252afaad64e0",
-    "release_evidence_dashboard": "1d3c900f7f2aa04fc89c1ef3eff36f3f0df2e8deef843e7a3f5f3762cc9bf214",
-    "release_closeout_summary": "15068052e4807a15c20c3e19008842388d8efaefc8770159ff0c851d910953ec",
-    "auto_improve_session_bundle": "4f1d9819387dc79fb9b3e35c6f00c1d46f439a890da02690281c1a9fec271fac",
+    "mutation_proposal": "bf585d9978c882613d72d3b789a4440b9d144ec44bb1ccbdcb21aee87c2e0356",
+    "release_evidence_dashboard": "3f61e58dd79ae2ae756b2b67e9ac733cdb806d7d8c13c1e5d70e1fed6473e3ad",
+    "release_closeout_summary": "99041fabbdb0a09142e3470a346bf4f02b5dc320b97c2aea1923c93c8d87c2a6",
+    "auto_improve_session_bundle": "254f0ed6c6242ed2f23209094b147862343e60a661975ff1497adb9a7c256437",
 }
 
 

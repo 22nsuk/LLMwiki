@@ -282,6 +282,17 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "# Old\n\nP0: script-output-surfaces\n",
             encoding="utf-8",
         )
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "status": "pass",
+                "summary": {
+                    "artifact_count": 12,
+                    "stale_artifact_count": 0,
+                    "operational_attention_artifact_count": 0,
+                },
+            },
+        )
 
         report = build_report(self.vault, context=fixed_context())
 
@@ -289,6 +300,15 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(report["summary"]["archived_report_count"], 1)
         self.assertEqual(report["summary"]["reference_manifest_alignment_status"], "drift")
         self.assertEqual(report["summary"]["reference_manifest_missing_active_report_count"], 2)
+        self.assertEqual(
+            report["summary"]["current_canonical_report_state"],
+            {
+                "stale_report_count": 0,
+                "total_report_count": 12,
+                "priority_stale_report_count": 0,
+                "summary": "0 stale / 12 total; 0 priority stale",
+            },
+        )
         self.assertEqual(
             report["reference_manifest_alignment"]["missing_active_report_paths"],
             ["external-reports/maintenance.md", "external-reports/release.md"],
@@ -860,6 +880,54 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
         self.assertFalse(decision["archive_recommended"])
 
+    def test_artifact_freshness_stable_contract_debt_has_backfill_target(self) -> None:
+        for rel_path, text in {
+            "ops/scripts/core/artifact_freshness_runtime.py": (
+                "class ArtifactFreshnessContext: pass\n"
+                "schema_cache = {}\n"
+                "phase_timings = []\n"
+                "def progress_jsonl(): return '--progress jsonl'\n"
+            ),
+            "tests/test_artifact_freshness_runtime.py": "def test_placeholder(): pass\n",
+            "mk/artifact.mk": (
+                "artifact-freshness-refresh-check:\n\tpython -m ops.scripts.artifact_freshness\n"
+                "artifact-freshness-stable-contract-debt-refresh:\n"
+                "\tpython -m ops.scripts.backfill_archived_run_artifacts\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "status": "attention",
+                "summary": {
+                    "stale_artifact_count": 0,
+                    "operational_attention_artifact_count": 0,
+                    "stable_contract_debt_artifact_count": 3,
+                },
+            },
+        )
+        (self.external / "artifact-freshness.md").write_text(
+            "# Artifact Freshness\n\nartifact freshness schema validator cache progress jsonl per-phase timing.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        action = actions["artifact_freshness_performance_observability"]
+        self.assertEqual(action["current_status"], "partially_automated")
+        self.assertEqual(action["status_reason_ids"], ["artifact_freshness_stable_contract_debt"])
+        detail = action["status_reason_details"][0]
+        self.assertEqual(detail["owning_stage"], "artifact_freshness")
+        self.assertIn(
+            "artifact-freshness-stable-contract-debt-refresh",
+            detail["recommended_targets"],
+        )
+        self.assertIn("artifact-freshness-refresh-check", detail["recommended_targets"])
+
     def test_release_verified_actions_become_implemented_after_closeout(self) -> None:
         self._write_release_verification_reports()
         (self.external / "release.md").write_text(
@@ -877,6 +945,8 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "promotion_truth_ladder",
         }:
             self.assertEqual(actions[action_id]["current_status"], "implemented")
+            self.assertEqual(actions[action_id]["status_reason_ids"], [])
+            self.assertEqual(actions[action_id]["status_reason_details"], [])
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 0)
 
@@ -904,7 +974,62 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             actions["release_evidence_bundle_and_attestation"]["current_status"],
             "requires_release_run_verification",
         )
+        self.assertIn(
+            "release_finality_attestation_verification_failed",
+            actions["release_evidence_bundle_and_attestation"]["status_reason_ids"],
+        )
+        finality_detail = {
+            item["reason_id"]: item
+            for item in actions["release_evidence_bundle_and_attestation"]["status_reason_details"]
+        }["release_finality_attestation_verification_failed"]
+        self.assertEqual(finality_detail["owning_stage"], "release_auto_promotion_preseal")
+        self.assertIn("release-auto-promotion-preseal", finality_detail["recommended_targets"])
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 1)
+
+    def test_evidence_bundle_attestation_explains_manifest_dependency_mismatch(self) -> None:
+        self._write_release_verification_reports()
+        self._write_json(
+            "build/release/release-run-manifest.json",
+            {
+                "status": "pass",
+                "artifact_kind": "release_run_manifest",
+                "source_tree_fingerprint": "old-run-fingerprint",
+            },
+        )
+        self._write_json(
+            "build/release/release-sealed-run-manifest.json",
+            {
+                "status": "pass",
+                "artifact_kind": "release_sealed_run_manifest",
+                "source_tree_fingerprint": "old-sealed-fingerprint",
+            },
+        )
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nsource package, evidence bundle, full-suite, promotion_blockers.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        evidence_bundle = actions["release_evidence_bundle_and_attestation"]
+        self.assertEqual(evidence_bundle["current_status"], "requires_release_run_verification")
+        self.assertIn(
+            "release_run_manifest_source_tree_fingerprint_mismatch",
+            evidence_bundle["status_reason_ids"],
+        )
+        self.assertIn(
+            "release_sealed_run_manifest_source_tree_fingerprint_mismatch",
+            evidence_bundle["status_reason_ids"],
+        )
+        self.assertNotIn("requires_release_run_verification", evidence_bundle["status_reason_ids"])
+        detail_targets = {
+            target
+            for item in evidence_bundle["status_reason_details"]
+            for target in item["recommended_targets"]
+        }
+        self.assertIn("release-run-ready-plan-check", detail_targets)
+        self.assertIn("release-sealed-run-ready-plan", detail_targets)
 
     def test_negative_lessons_and_remediation_backlog_are_implementation_artifacts(self) -> None:
         for rel_path in (
@@ -1451,6 +1576,15 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             actions["goal_execution_runtime_certificate"]["current_status"],
             "requires_release_run_verification",
         )
+        goal_detail_targets = {
+            target
+            for item in actions["goal_execution_runtime_certificate"]["status_reason_details"]
+            for target in item["recommended_targets"]
+        }
+        self.assertIn("goal-runtime-certificate", goal_detail_targets)
+        self.assertIn("release-auto-promotion-goal-run-id-guard", goal_detail_targets)
+        self.assertIn("release-auto-promotion-ready-plan", goal_detail_targets)
+        self.assertNotIn("auto-improve-goal-run", goal_detail_targets)
 
     def test_goal_prompt_action_accepts_verified_promotion_prompt_without_ban(self) -> None:
         for rel_path in (
@@ -1832,6 +1966,20 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 actions[action_id]["current_status"],
                 "requires_release_run_verification",
             )
+            self.assertIn(
+                "release_authority_status_not_verified",
+                actions[action_id]["status_reason_ids"],
+            )
+            self.assertIn(
+                "release_authority_blocker:machine_release_not_allowed",
+                actions[action_id]["status_reason_ids"],
+            )
+            blocker_detail = {
+                item["reason_id"]: item
+                for item in actions[action_id]["status_reason_details"]
+            }["release_authority_blocker:machine_release_not_allowed"]
+            self.assertEqual(blocker_detail["owning_stage"], "release_auto_promotion_preseal")
+            self.assertIn("release-evidence-dashboard", blocker_detail["recommended_targets"])
 
     def test_release_verified_actions_allow_advisory_dashboard_attention(self) -> None:
         self._write_release_verification_reports()
@@ -1944,6 +2092,16 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 actions[action_id]["current_status"],
                 "requires_release_run_verification",
             )
+            self.assertIn(
+                "release_dashboard_authoritative_live_rerun_not_run",
+                actions[action_id]["status_reason_ids"],
+            )
+            detail = {
+                item["reason_id"]: item
+                for item in actions[action_id]["status_reason_details"]
+            }["release_dashboard_authoritative_live_rerun_not_run"]
+            self.assertEqual(detail["owning_stage"], "release_auto_promotion_preseal")
+            self.assertIn("release-auto-promotion-preseal", detail["recommended_targets"])
 
     def test_release_verified_actions_block_authoritative_dashboard_fail(self) -> None:
         self._write_release_verification_reports()
@@ -1983,6 +2141,16 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 actions[action_id]["current_status"],
                 "requires_release_run_verification",
             )
+            self.assertIn(
+                "release_dashboard_authoritative_live_rerun_fail",
+                actions[action_id]["status_reason_ids"],
+            )
+            detail = {
+                item["reason_id"]: item
+                for item in actions[action_id]["status_reason_details"]
+            }["release_dashboard_authoritative_live_rerun_fail"]
+            self.assertEqual(detail["owning_stage"], "release_auto_promotion_preseal")
+            self.assertIn("release-evidence-dashboard", detail["recommended_targets"])
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import hypothesis.strategies as st
 from hypothesis import given
 
@@ -74,13 +76,42 @@ def test_property_10_external_report_lifecycle_partition_and_active_set_derivati
         assert record["is_active"] is True
 
 
-def test_current_external_report_state_uses_revalidated_5_of_47_counts() -> None:
+def test_current_external_report_state_falls_back_to_revalidated_5_of_47_counts() -> None:
     state = external_report_current_canonical_state()
 
     assert state["stale_report_count"] == 5
     assert state["total_report_count"] == 47
     assert state["priority_stale_report_count"] == 3
     assert "5 stale / 47 total" in state["summary"]
+
+
+def test_current_external_report_state_uses_artifact_freshness_summary(tmp_path) -> None:
+    report_path = tmp_path / "ops" / "reports" / "artifact-freshness-report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "artifact_count": 123,
+                    "stale_artifact_count": 0,
+                    "operational_attention_artifact_count": 0,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    state = external_report_current_canonical_state(tmp_path)
+    summary = external_report_action_lifecycle_summary(
+        [],
+        current_canonical_report_state=state,
+    )
+
+    assert state["stale_report_count"] == 0
+    assert state["total_report_count"] == 123
+    assert state["priority_stale_report_count"] == 0
+    assert "0 stale / 123 total" in state["summary"]
+    assert summary["current_canonical_report_state"] == state
 
 
 def test_46_of_46_stale_claim_is_historical_not_current() -> None:

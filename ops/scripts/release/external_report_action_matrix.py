@@ -17,8 +17,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         write_schema_backed_report,
     )
     from ops.scripts.external_report_lifecycle_runtime import (  # noqa: PLC0415
+        action_status_reason_details,
+        action_status_reason_ids,
         external_report_action_lifecycle_record,
         external_report_action_lifecycle_summary,
+        external_report_current_canonical_state,
         report_coverage_item,
         status_from_evidence,
     )
@@ -53,8 +56,11 @@ else:
         reference_manifest_alignment,
     )
     from .external_report_lifecycle_runtime import (
+        action_status_reason_details,
+        action_status_reason_ids,
         external_report_action_lifecycle_record,
         external_report_action_lifecycle_summary,
+        external_report_current_canonical_state,
         report_coverage_item,
         status_from_evidence,
     )
@@ -75,12 +81,26 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
     for action in ACTION_CATALOG:
         status, evidence = status_from_evidence(vault, action)
         action_id = str(action["action_id"])
+        existing_count = sum(1 for item in evidence if item["exists"])
+        status_reason_ids = action_status_reason_ids(
+            vault,
+            action_id,
+            status,
+            evidence,
+            existing_count=existing_count,
+            expected_count=len(evidence),
+        )
         sprint_priority = SPRINT_PRIORITIES.get(action_id)
         item = {
             "action_id": action_id,
             "priority": action["priority"],
             "theme": action["theme"],
             "current_status": status,
+            "status_reason_ids": status_reason_ids,
+            "status_reason_details": action_status_reason_details(
+                status_reason_ids,
+                fallback_target=str(action["recommended_target"]),
+            ),
             "source_report_paths": sorted(set(source_by_action[action_id])),
             "recommended_target": action["recommended_target"],
             "evidence": evidence,
@@ -102,6 +122,7 @@ def _summary(
     actions: list[dict[str, Any]],
     archived_report_count: int,
     manifest_alignment: dict[str, Any],
+    current_canonical_report_state: dict[str, Any],
 ) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
     sprint_backlog: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
@@ -111,7 +132,10 @@ def _summary(
         sprint_priority = action.get("sprint_priority")
         if sprint_priority and sprint_priority in sprint_backlog:
             sprint_backlog[sprint_priority] += 1
-    lifecycle_summary = external_report_action_lifecycle_summary(actions)
+    lifecycle_summary = external_report_action_lifecycle_summary(
+        actions,
+        current_canonical_report_state=current_canonical_report_state,
+    )
     return {
         "active_report_count": len(coverage),
         "archived_report_count": archived_report_count,
@@ -156,11 +180,13 @@ def build_report(
     coverage = _report_coverage(resolved_vault, report_paths)
     actions = _action_items(resolved_vault, coverage)
     manifest_alignment = reference_manifest_alignment(resolved_vault)
+    current_canonical_report_state = external_report_current_canonical_state(resolved_vault)
     summary = _summary(
         coverage=coverage,
         actions=actions,
         archived_report_count=archived_report_count(resolved_vault),
         manifest_alignment=manifest_alignment,
+        current_canonical_report_state=current_canonical_report_state,
     )
     status = (
         "attention"

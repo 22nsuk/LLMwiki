@@ -460,6 +460,7 @@ def _assert_supply_chain_target_names(case: unittest.TestCase, text: str) -> Non
         "artifact-freshness:",
         "artifact-freshness-check:",
         "artifact-freshness-refresh-check:",
+        "artifact-freshness-stable-contract-debt-refresh:",
         "artifact-relocation-audit:",
         "generated-artifact-converge:",
         "generated-artifact-index:",
@@ -594,6 +595,10 @@ def _assert_artifact_index_and_freshness_recipes(case: unittest.TestCase, text: 
     case.assertIn("ops.scripts.canonical_artifact_promote", freshness_refresh_check)
     case.assertIn("|| status=$$?; exit $$status", freshness_refresh_check)
     case.assertIn("exit $$status", freshness_refresh_check)
+    freshness_stable_debt = _target_block(text, "artifact-freshness-stable-contract-debt-refresh")
+    case.assertIn("artifact-freshness-stable-contract-debt-refresh", _target_block(text, ".PHONY"))
+    case.assertIn("ops.scripts.backfill_archived_run_artifacts", freshness_stable_debt)
+    case.assertIn("$(MAKE) artifact-freshness-refresh-check", freshness_stable_debt)
     relocation_audit = _target_block(text, "artifact-relocation-audit")
     case.assertIn(
         '$(PYTHON) -m ops.scripts.artifact_relocation_audit --vault "$(VAULT)" --out "$(ARTIFACT_RELOCATION_AUDIT_CANDIDATE_OUT)" --fail-on-fail',
