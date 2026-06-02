@@ -34,13 +34,17 @@ def repair_decision_ended_as_noop_mutation_failure(
     *,
     queue_unblock_family: str,
 ) -> bool:
+    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
+        return False
     proposal_family = str(decision.get("proposal_family", "")).strip()
+    decision_action = str(decision.get("next_run_action", "")).strip()
+    decision_kind = str(decision.get("decision", "")).strip()
     if not (
         is_next_run_failure_repair_source(decision)
         or proposal_family == queue_unblock_family
+        or decision_action == "repair_failure"
+        or decision_kind == "carry_forward"
     ):
-        return False
-    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
         return False
     source_run_id = str(decision.get("source_run_id", "")).strip()
     if not source_run_id:

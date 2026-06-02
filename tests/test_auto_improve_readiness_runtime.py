@@ -638,7 +638,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(runnable_proposal_ids, ["proposal-ready"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "728994bc229e60219d23d78308e38edc1a41906f898d6aa3ec806e19716e84bf",
+            "37c782c0f2192fad18ffb85902d27170bcc5763cb51787f9e8415847d2b5d954",
         )
 
     def test_build_readiness_report_passes_when_queue_is_nonempty(self) -> None:

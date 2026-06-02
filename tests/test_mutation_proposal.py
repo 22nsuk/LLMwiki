@@ -574,6 +574,67 @@ class MutationProposalTest(unittest.TestCase):
             priorities = [proposal["priority"] for proposal in report["proposals"]]
             self.assertEqual(priorities, sorted(priorities, reverse=True))
 
+    def test_closed_repeated_discard_remediation_suppresses_stale_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "remediation-backlog.json",
+                {
+                    "status": "attention",
+                    "summary": {"open_total_count": 0},
+                    "items": [
+                        {
+                            "item_id": "negative_lesson_discard_equal_score_secondary_eligibility",
+                            "blocker_id": "discard_equal_score_secondary_eligibility",
+                            "status": "open",
+                            "severity": "blocks_repeat",
+                            "repair_target": "Open items alone should not suppress proposals.",
+                            "next_action": "Keep working.",
+                        },
+                        {
+                            "item_id": "negative_lesson_discard_equal_score_secondary_eligibility",
+                            "blocker_id": "discard_equal_score_secondary_eligibility",
+                            "status": "closed",
+                            "severity": "blocks_repeat",
+                            "repair_target": (
+                                "Change the mechanism or evidence predicate before rerunning "
+                                "another DISCARD attempt with same_eval_reason_code="
+                                "equal_score_secondary_eligibility."
+                            ),
+                            "next_action": "Closed by predicate repair evidence.",
+                        },
+                    ],
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            schema = load_schema(vault / "ops" / "schemas" / "mutation-proposals.schema.json")
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["proposals_emitted"], 2)
+            self.assertNotIn(
+                "repeated_discard_runs",
+                {proposal["failure_mode"] for proposal in report["proposals"]},
+            )
+            self.assertEqual(
+                report["diagnostics"]["skipped_candidates"],
+                [
+                    {
+                        "candidate_id": "mechanism_eval_stagnation_candidate__promotion-gate",
+                        "reason": "closed_remediation_backlog_resolution",
+                        "detail": (
+                            "closed remediation backlog item(s): "
+                            "negative_lesson_discard_equal_score_secondary_eligibility"
+                        ),
+                    }
+                ],
+            )
+
     def test_max_proposals_selects_runnable_before_blocked_proposals(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
@@ -4150,6 +4211,75 @@ class MutationProposalTest(unittest.TestCase):
                             "next_run_action": "repair_failure",
                             "status": "open",
                             "reason": "noop repair should close instead of cycling",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/example_runtime.py"
+                            ],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": ["tests/test_example_runtime.py"],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/run-telemetry.json",
+                                f"runs/{source_run_id}/worker-executor-report.json",
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertFalse(
+                any(
+                    proposal["failure_mode"] == "next_run_failure_repair"
+                    for proposal in proposal_report["proposals"]
+                )
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"]["open_carry_forward_decisions"],
+                0,
+            )
+
+    def test_original_noop_mutation_failure_does_not_emit_followup_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            source_run_id = "auto-session-a-run-01-example-runtime"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "mutation-command.stderr.txt").write_text(
+                (
+                    "worker reported pass without modifying any declared primary target; "
+                    "primary_targets=[ops/scripts/mechanism/example_runtime.py]\n"
+                ),
+                encoding="utf-8",
+            )
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:original-noop",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "repeated_discard_runs__example-runtime",
+                            "source_candidate_id": "mechanism_eval_stagnation_candidate__example-runtime",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__mutation-failed"
+                            ),
+                            "proposal_family": "contract_regression_signals",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "mutation_failed",
+                            "blocking_role": "worker",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "original no-op mutation should close instead of cycling",
                             "quarantined_source_proposal": True,
                             "primary_targets": [
                                 "ops/scripts/mechanism/example_runtime.py"

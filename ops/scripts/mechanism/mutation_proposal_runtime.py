@@ -71,6 +71,7 @@ MECHANISM_REVIEW_SCHEMA = MECHANISM_REVIEW_SCHEMA_PATH
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
 DEFAULT_MECHANISM_REVIEW_REPORT = "ops/reports/mechanism-review-candidates.json"
 DEFAULT_OUTCOME_METRICS_REPORT = "ops/reports/outcome-metrics.json"
+DEFAULT_REMEDIATION_BACKLOG_REPORT = "ops/reports/remediation-backlog.json"
 DEFAULT_SYSTEM_LOG = "system/system-log.md"
 QUEUE_PRESSURE_SUMMARY_TOP_N = 3
 PRODUCER = "ops.scripts.mutation_proposal_runtime"
@@ -112,6 +113,22 @@ SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
 DEFAULT_AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
+CLOSED_REPEATED_DISCARD_BLOCKER_IDS = frozenset(
+    {
+        "discard_equal_score_secondary_eligibility",
+    }
+)
+CLOSED_REPEATED_DISCARD_ITEM_IDS = frozenset(
+    {
+        "negative_lesson_discard_equal_score_secondary_eligibility",
+    }
+)
+
+
+class CandidateSuppressedByClosedRemediation(ValueError):
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
 
 
 @dataclass(frozen=True)
@@ -247,6 +264,8 @@ class _MutationReportInputs:
     mechanism_review_report: dict
     outcome_metrics_path: Path
     outcome_metrics_report: dict
+    remediation_backlog_path: Path
+    remediation_backlog_report: dict
     auto_improve_session_report_paths: list[str]
     consumed_next_run_decision_ids: list[str]
     next_run_decisions: list[dict]
@@ -286,6 +305,59 @@ def _read_optional_report(path: Path) -> dict:
     if not isinstance(payload, dict):
         raise ValueError(f"expected object report at {path}")
     return payload
+
+
+def _closed_repeated_discard_resolution_items(remediation_backlog_report: dict) -> list[dict]:
+    items = remediation_backlog_report.get("items", [])
+    if not isinstance(items, list):
+        return []
+
+    closed_items: list[dict] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("status", "")).strip().lower() != "closed":
+            continue
+        item_id = str(item.get("item_id", "")).strip()
+        blocker_id = str(item.get("blocker_id", "")).strip()
+        if (
+            item_id in CLOSED_REPEATED_DISCARD_ITEM_IDS
+            or blocker_id in CLOSED_REPEATED_DISCARD_BLOCKER_IDS
+        ):
+            closed_items.append(item)
+    return closed_items
+
+
+def _closed_repeated_discard_resolution_detail(items: list[dict]) -> str:
+    identifiers = [
+        str(item.get("item_id") or item.get("blocker_id") or "").strip()
+        for item in items
+    ]
+    identifiers = [identifier for identifier in identifiers if identifier]
+    if not identifiers:
+        return "repeated-discard remediation backlog item is closed"
+    return "closed remediation backlog item(s): " + ", ".join(sorted(set(identifiers)))
+
+
+def _candidate_suppressed_by_closed_remediation(
+    candidate: dict,
+    *,
+    failure_mode: str,
+    remediation_backlog_report: dict,
+) -> str | None:
+    if failure_mode != REPEATED_DISCARD_FAILURE_MODE:
+        return None
+    triggered = {
+        str(metric).strip()
+        for metric in candidate.get("metrics_triggered", [])
+        if str(metric).strip()
+    }
+    if REPEATED_DISCARD_FAILURE_MODE not in triggered:
+        return None
+    closed_items = _closed_repeated_discard_resolution_items(remediation_backlog_report)
+    if not closed_items:
+        return None
+    return _closed_repeated_discard_resolution_detail(closed_items)
 
 
 def _auto_improve_session_report_paths(vault: Path) -> list[str]:
@@ -1561,6 +1633,7 @@ def _proposal_from_candidate(
     policy: dict,
     candidate: dict,
     *,
+    remediation_backlog_report: dict,
     recent_log_sections: list[RecentLogSection],
 ) -> MutationProposal | None:
     allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
@@ -1574,6 +1647,13 @@ def _proposal_from_candidate(
     fields = proposal_fields_for_candidate(current_candidate, MECHANISM_CANDIDATE_REGISTRY)
     if fields["failure_mode"] not in allowed_failure_modes:
         return None
+    closed_resolution_detail = _candidate_suppressed_by_closed_remediation(
+        current_candidate,
+        failure_mode=fields["failure_mode"],
+        remediation_backlog_report=remediation_backlog_report,
+    )
+    if closed_resolution_detail:
+        raise CandidateSuppressedByClosedRemediation(closed_resolution_detail)
     supporting_targets = _proposal_supporting_targets_for_failure_mode(
         vault,
         failure_mode=fields["failure_mode"],
@@ -1943,6 +2023,7 @@ def _proposal_models_from_candidates(
     *,
     recent_log_sections: list[RecentLogSection],
     outcome_metrics_report: dict,
+    remediation_backlog_report: dict,
     next_run_decisions: list[dict],
     consumed_next_run_decision_ids: list[str],
 ) -> tuple[list[MutationProposal], list[dict]]:
@@ -1957,8 +2038,18 @@ def _proposal_models_from_candidates(
                 vault,
                 effective_policy,
                 candidate,
+                remediation_backlog_report=remediation_backlog_report,
                 recent_log_sections=recent_log_sections,
             )
+        except CandidateSuppressedByClosedRemediation as exc:
+            skipped_candidates.append(
+                {
+                    "candidate_id": candidate.get("candidate_id", "<unknown>"),
+                    "reason": "closed_remediation_backlog_resolution",
+                    "detail": exc.detail,
+                }
+            )
+            continue
         except ValueError as exc:
             skipped_candidates.append(
                 {
@@ -2033,6 +2124,8 @@ def _load_mutation_report_inputs(
     )
     outcome_metrics_path = (vault / DEFAULT_OUTCOME_METRICS_REPORT).resolve()
     outcome_metrics_report = _read_optional_report(outcome_metrics_path)
+    remediation_backlog_path = (vault / DEFAULT_REMEDIATION_BACKLOG_REPORT).resolve()
+    remediation_backlog_report = _read_optional_report(remediation_backlog_path)
     auto_improve_session_report_paths = _auto_improve_session_report_paths(vault)
     next_run_decisions = _load_next_run_decisions(
         vault,
@@ -2058,6 +2151,8 @@ def _load_mutation_report_inputs(
         mechanism_review_report=mechanism_review_report,
         outcome_metrics_path=outcome_metrics_path,
         outcome_metrics_report=outcome_metrics_report,
+        remediation_backlog_path=remediation_backlog_path,
+        remediation_backlog_report=remediation_backlog_report,
         auto_improve_session_report_paths=auto_improve_session_report_paths,
         consumed_next_run_decision_ids=consumed_next_run_decision_ids,
         next_run_decisions=next_run_decisions,
@@ -2077,6 +2172,7 @@ def _assemble_mutation_proposals(
         inputs.mechanism_review_report,
         recent_log_sections=inputs.recent_log_sections,
         outcome_metrics_report=inputs.outcome_metrics_report,
+        remediation_backlog_report=inputs.remediation_backlog_report,
         next_run_decisions=inputs.next_run_decisions,
         consumed_next_run_decision_ids=inputs.consumed_next_run_decision_ids,
     )
@@ -2185,10 +2281,12 @@ def _mutation_report_payload(
                 "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
                 "ops/scripts/mechanism/current_target_path_runtime.py",
                 "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
+                "ops/scripts/mechanism/noop_repair_classifier_runtime.py",
             ],
             file_inputs={
                 "mechanism_review_report": report_path(vault, inputs.mechanism_review_path),
                 "outcome_metrics": report_path(vault, inputs.outcome_metrics_path),
+                "remediation_backlog": report_path(vault, inputs.remediation_backlog_path),
                 "system_log": report_path(vault, inputs.system_log),
             },
             path_group_inputs={
