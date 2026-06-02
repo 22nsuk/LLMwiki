@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-06-02T14:53:44Z",
+  "generated_at": "2026-06-02T15:32:06Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
-  "source_revision": "bbe2b9ad12451e7534ca6e3adbdcb3915d19189d",
-  "source_tree_fingerprint": "4fed1a117ccd5d0bce765d5f72f9b774749354318d1372fa02f3a6c450718e40",
+  "source_revision": "602dc8c0e57ff25682e07ec6146ace0bc3bdfd13",
+  "source_tree_fingerprint": "ef69db83eecc7cb7952a6f5163ce55d79ec8e9a2915a1530a3d8ba686e59d6a7",
   "input_fingerprints": {
     "policy": "46af1603943d2ec8e0d04b69adc903a314b9c81b2a2298806d8a007411dc1fb5",
     "schema": "8105f62802da8ab77e20b0ba5a79e9d3f20b09243bc29730f2df940cf9530373",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "5e840c11f73355f29e0db698a5a91ceb269d6befacabeef3d57ac4bb5911172f",
-    "ops_scripts": "8fc1d49da270db1e5ea85441321e5eac6307f5231a0b744fd12d3562fd5b6000",
+    "ops_scripts": "724a44a4f764ae8ebed90df188705c06becc59da6049d0773e22d72de6f3363e",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4",
     "source_tree_scope": "cf97a156fcf94ca97a9864e8cd7523fa97e49e2648a6aeb64c712b2c2f0ec469"
   },
@@ -21,7 +21,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-06-02T14:53:44Z"
+    "checked_at": "2026-06-02T15:32:06Z"
   },
   "source_tree_scope": {
     "mode": "include_prefixes",
