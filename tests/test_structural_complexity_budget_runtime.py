@@ -452,6 +452,30 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(profiles["touched_targets"]["targets"], ["ops/scripts/custom_runtime.py"])
 
+    def test_touched_target_profiles_use_test_support_budget_for_python_tests(self) -> None:
+        profiles = touched_target_profiles(
+            DEFAULT_TARGET_PROFILES,
+            [
+                "ops/scripts/custom_runtime.py",
+                "tests/test_custom_runtime.py",
+            ],
+        )
+
+        self.assertEqual(profiles["touched_targets"]["targets"], ["ops/scripts/custom_runtime.py"])
+        self.assertEqual(profiles["touched_test_targets"]["targets"], ["tests/test_custom_runtime.py"])
+        self.assertEqual(
+            profiles["touched_targets"]["budgets"],
+            DEFAULT_TARGET_PROFILES["critical_runtime_orchestrators"]["budgets"],
+        )
+        self.assertEqual(
+            profiles["touched_test_targets"]["budgets"],
+            {
+                "nonempty_line_count_total": 2400,
+                "python_function_count": 60,
+                "python_branch_node_count": 130,
+            },
+        )
+
     def test_changed_files_manifest_paths_can_drive_empty_touched_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

@@ -139,6 +139,11 @@ DEFAULT_TARGET_PROFILES: dict[str, dict[str, Any]] = {
         ],
     },
 }
+TOUCHED_TEST_TARGET_BUDGETS: dict[str, int] = {
+    "nonempty_line_count_total": 2400,
+    "python_function_count": 60,
+    "python_branch_node_count": 130,
+}
 
 
 @dataclass(frozen=True)
@@ -225,6 +230,10 @@ def _dedupe_paths(paths: list[str]) -> list[str]:
     return deduped
 
 
+def _is_python_test_target(path: str) -> bool:
+    return path.startswith("tests/") and path.endswith(".py")
+
+
 def target_paths_from_changed_files_manifest(vault: Path, manifest_path: str) -> list[str]:
     path = Path(manifest_path)
     if not path.is_absolute():
@@ -270,14 +279,26 @@ def touched_target_profiles(
         }
 
     unmatched = [path for path in _dedupe_paths(target_paths) if path not in matched]
-    if unmatched:
+    unmatched_tests = [path for path in unmatched if _is_python_test_target(path)]
+    unmatched_tests_set = set(unmatched_tests)
+    unmatched_runtime_or_other = [path for path in unmatched if path not in unmatched_tests_set]
+    if unmatched_runtime_or_other:
         fallback = _normalize_target_profiles(configured)["critical_runtime_orchestrators"]
         profiles["touched_targets"] = {
-            "targets": unmatched,
+            "targets": unmatched_runtime_or_other,
             "budgets": fallback["budgets"],
             "notes": [
                 "Touched-surface fallback profile for targets outside the default monitored set.",
                 "Budgets reuse the critical runtime orchestrator preview thresholds.",
+            ],
+        }
+    if unmatched_tests:
+        profiles["touched_test_targets"] = {
+            "targets": unmatched_tests,
+            "budgets": TOUCHED_TEST_TARGET_BUDGETS,
+            "notes": [
+                "Touched-surface fallback profile for test support files outside the default monitored set.",
+                "Budgets allow inherited test harness size while still flagging dense helper growth.",
             ],
         }
     if not profiles:
