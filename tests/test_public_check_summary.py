@@ -4,13 +4,14 @@ import datetime as dt
 import json
 import tempfile
 import unittest
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from unittest.mock import patch
 
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.public_check_summary import (
     PublicCheckRequest,
+    _default_command_runner,
     _public_pytest_summary_cache_path,
     build_report,
     reusable_summary_diagnostics,
@@ -97,6 +98,91 @@ def failing_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) 
 
 
 class PublicCheckSummaryTests(unittest.TestCase):
+    def test_default_runner_exports_public_python_for_nested_make_entrypoints(self) -> None:
+        captured_env: dict[str, str] = {}
+
+        def fake_run_with_timeout(
+            argv: Sequence[str],
+            *,
+            cwd: Path,
+            timeout_seconds: int,
+            env: Mapping[str, str] | None = None,
+            heartbeat_interval_seconds: int | None = None,
+            heartbeat_callback: object | None = None,
+        ) -> TimedProcessResult:
+            captured_env.update(dict(env or {}))
+            return TimedProcessResult(
+                args=[str(item) for item in argv],
+                returncode=0,
+                stdout="",
+                stderr="",
+                timed_out=False,
+                timeout_seconds=timeout_seconds,
+                termination_reason="completed",
+                heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
+            )
+
+        with patch("ops.scripts.public_check_summary.run_with_timeout", fake_run_with_timeout):
+            _default_command_runner(
+                ["python", "-m", "pytest"],
+                Path("."),
+                30,
+                public_python="/workspace/.venv/bin/python",
+                heartbeat_interval_seconds=0,
+            )
+
+        self.assertEqual(captured_env["PYTHON"], "/workspace/.venv/bin/python")
+        self.assertEqual(captured_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"], "1")
+
+    def test_build_report_default_runner_exports_resolved_public_python_to_all_commands(self) -> None:
+        captured_envs: list[dict[str, str]] = []
+
+        def fake_run_with_timeout(
+            argv: Sequence[str],
+            *,
+            cwd: Path,
+            timeout_seconds: int,
+            env: Mapping[str, str] | None = None,
+            heartbeat_interval_seconds: int | None = None,
+            heartbeat_callback: object | None = None,
+        ) -> TimedProcessResult:
+            captured_envs.append(dict(env or {}))
+            module = argv[2] if len(argv) > 2 else ""
+            if module == "ops.scripts.test_execution_summary":
+                write_public_pytest_summary(cwd, passed=3, failed=0, errors=0, skipped=0)
+            return TimedProcessResult(
+                args=[str(item) for item in argv],
+                returncode=0,
+                stdout="",
+                stderr="",
+                timed_out=False,
+                timeout_seconds=timeout_seconds,
+                termination_reason="completed",
+                heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+
+            with patch("ops.scripts.public_check_summary.run_with_timeout", fake_run_with_timeout):
+                report = build_report(
+                    vault,
+                    PublicCheckRequest(
+                        public_out=str(Path(temp_dir) / "public"),
+                        public_python=".venv/bin/python",
+                    ),
+                    context=fixed_context(),
+                )
+
+        expected_python = str((vault / ".venv/bin/python").absolute())
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(len(captured_envs), 3)
+        self.assertEqual({env["PYTHON"] for env in captured_envs}, {expected_python})
+        self.assertEqual({env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] for env in captured_envs}, {"1"})
+
     def test_public_check_summary_schema_passes_and_records_export_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

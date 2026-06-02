@@ -61,6 +61,7 @@ SOURCE_COMMAND = (
     "--vault . --out ops/reports/release-workflow-order-guard.json"
 )
 RELEASE_CONVERGE_TARGET = "release-evidence-converge"
+RELEASE_CONVERGE_PREFLIGHT_TARGET = "release-converge-preflight"
 CHECK_FINALIZED_TARGET = "check-finalized"
 RELEASE_FINALITY_RESETTLE_TARGET = "release-finality-resettle"
 RELEASE_SOURCE_READY_TARGET = "release-source-ready"
@@ -486,6 +487,33 @@ def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[
     return check
 
 
+def _release_converge_preflight_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
+    expected = [
+        "generated-artifact-script-output",
+        "report-schema-samples-regenerate",
+        "goal-runtime-local-evidence-refresh",
+        "test-execution-summary-report-contract-refresh-no-smoke",
+    ]
+    check = _check_subsequence(
+        "release_converge_preflight_sequence",
+        invocations,
+        expected,
+        details=(
+            "release-converge-preflight must refresh the narrow script-output surface "
+            "before report-contract summaries or smoke evidence can read it."
+        ),
+    )
+    if invocations and str(invocations[0]["role"]) != "generated-artifact-script-output":
+        check["status"] = "fail"
+        check["violations"].append(
+            {
+                "expected_role": "generated-artifact-script-output",
+                "reason": "script_output_surface_refresh_must_start_preflight",
+            }
+        )
+    return check
+
+
 def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     expected = [
         "release-source-ready-prepare",
@@ -621,6 +649,10 @@ def build_report(
         makefile_text,
         RELEASE_FINALITY_RESETTLE_TARGET,
     )
+    release_converge_preflight_invocations = _recipe_invocations(
+        makefile_text,
+        RELEASE_CONVERGE_PREFLIGHT_TARGET,
+    )
     release_source_ready_invocations = _recipe_invocations(makefile_text, RELEASE_SOURCE_READY_TARGET)
     release_source_ready_prepare_invocations = _recipe_invocations(
         makefile_text,
@@ -639,6 +671,7 @@ def build_report(
     checks = [
         _release_converge_finalizer_check(release_converge_invocations),
         _release_converge_repetition_budget(release_converge_invocations),
+        _release_converge_preflight_check(release_converge_preflight_invocations),
         _release_finality_resettle_check(release_finality_resettle_invocations),
         _check_subsequence(
             "check_finalized_post_check_sequence",
@@ -730,6 +763,10 @@ def build_report(
         "checks": checks,
         "target_recipes": [
             _target_recipe_payload(RELEASE_CONVERGE_TARGET, release_converge_invocations),
+            _target_recipe_payload(
+                RELEASE_CONVERGE_PREFLIGHT_TARGET,
+                release_converge_preflight_invocations,
+            ),
             _target_recipe_payload(CHECK_FINALIZED_TARGET, check_finalized_invocations),
             _target_recipe_payload(
                 RELEASE_FINALITY_RESETTLE_TARGET,

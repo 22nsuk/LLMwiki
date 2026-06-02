@@ -109,6 +109,9 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-auto-promotion-ready-check`: revalidate the existing
   auto-promotion manifest inputs without recomputing expensive evidence.
 - `make release-converge`: mutating evidence convergence for release reports.
+- `make release-converge-preflight`: first refreshes the narrow
+  `generated-artifact-script-output` lane so `ops/script-output-surfaces.json`
+  is current before report-contract summaries or release smoke can read it.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh.
 - `make release-source-ready`: source-ready commit flow. Mutating convergence happens
   in `release-source-ready-prepare` before the commit; `release-source-ready-post-verify`
@@ -132,8 +135,11 @@ surface comparison; this document owns release evidence and staged authority.
 
 ## Recommended Order
 
-1. Commit the source tree you want to verify. Release tooling no longer commits
-   or pushes automatically.
+1. Before committing a changed source tree, run `make release-converge-preflight`
+   or the full `make release-source-ready` flow. This keeps
+   `ops/script-output-surfaces.json` current in the same source commit instead
+   of requiring a follow-up generated-artifact commit. Release run/seal tooling
+   still does not push automatically.
 2. If unattended promotion is the intended outcome, run
    `make release-auto-promotion-preflight` before the expensive runnable stage.
    You may pass `GOAL_RUN_ID=<goal-run-id>` explicitly, but if it is omitted the

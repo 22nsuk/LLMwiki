@@ -73,6 +73,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         misorder_check_finalized: bool = False,
         misorder_release_source_ready: bool = False,
         misorder_release_source_ready_post_verify: bool = False,
+        misorder_release_converge_preflight: bool = False,
     ) -> None:
         check_finalized_lines = (
             "\t$(MAKE) auto-improve-readiness-report-body\n"
@@ -118,6 +119,19 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "\t$(MAKE) release-closeout-fixed-point\n"
                 "\t$(MAKE) release-source-ready-status\n"
             )
+        release_converge_preflight_lines = (
+            "\t$(MAKE) generated-artifact-script-output\n"
+            "\t$(MAKE) report-schema-samples-regenerate\n"
+            "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
+            "\t$(MAKE) test-execution-summary-report-contract-refresh-no-smoke\n"
+        )
+        if misorder_release_converge_preflight:
+            release_converge_preflight_lines = (
+                "\t$(MAKE) report-schema-samples-regenerate\n"
+                "\t$(MAKE) generated-artifact-script-output\n"
+                "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
+                "\t$(MAKE) test-execution-summary-report-contract-refresh-no-smoke\n"
+            )
         release_converge_all_lines = (
             "\t$(MAKE) release-converge\n"
             "\t$(MAKE) sync-public-policy\n"
@@ -131,6 +145,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "release-evidence-converge",
                 "release-evidence-closeout",
                 "release-finality-resettle",
+                "release-converge-preflight",
                 "release-source-ready",
                 "release-source-ready-snapshot",
                 "release-source-ready-prepare",
@@ -199,7 +214,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-converge-all-surfaces:\n"
             f"{release_converge_all_lines}"
             "release-converge:\n"
+            "\t$(MAKE) release-converge-preflight\n"
             "\t$(MAKE) release-converge-post\n"
+            "release-converge-preflight:\n"
+            f"{release_converge_preflight_lines}"
             "release-converge-post:\n"
             "\t$(MAKE) generated-artifact-converge\n"
             "\t$(MAKE) remediation-backlog\n"
@@ -239,6 +257,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "generated-artifact-index:\n"
             "\t@true\n"
             "artifact-freshness:\n"
+            "\t@true\n"
+            "report-schema-samples-regenerate:\n"
+            "\t@true\n"
+            "test-execution-summary-report-contract-refresh-no-smoke:\n"
             "\t@true\n",
             encoding="utf-8",
         )
@@ -255,7 +277,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(planner_hook["status"], "pass")
         resettle_check = next(item for item in report["checks"] if item["id"] == "release_finality_resettle_sequence")
         self.assertEqual(resettle_check["status"], "pass")
+        preflight_check = next(item for item in report["checks"] if item["id"] == "release_converge_preflight_sequence")
+        self.assertEqual(preflight_check["status"], "pass")
         self.assertIn("release-finality-resettle", {item["target"] for item in report["target_recipes"]})
+        self.assertIn("release-converge-preflight", {item["target"] for item in report["target_recipes"]})
         self.assertTrue(write_report(self.vault, report).exists())
 
     def test_guard_fails_when_check_finalized_skips_initial_dry_run(self) -> None:
@@ -352,6 +377,27 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertTrue(
             any(
                 violation.get("reason") == "post_verify_must_be_write_free"
+                for violation in check["violations"]
+            )
+        )
+
+    def test_guard_fails_when_release_converge_preflight_delays_script_output_refresh(
+        self,
+    ) -> None:
+        self._write_makefile(misorder_release_converge_preflight=True)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_converge_preflight_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(
+            any(
+                violation.get("reason") == "script_output_surface_refresh_must_start_preflight"
                 for violation in check["violations"]
             )
         )

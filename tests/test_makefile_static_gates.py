@@ -1728,6 +1728,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertEqual(
             _recipe_lines(text, "release-converge-preflight"),
             [
+                "$(MAKE) generated-artifact-script-output",
                 "$(MAKE) report-schema-samples-regenerate",
                 "$(MAKE) goal-runtime-local-evidence-refresh",
                 "$(MAKE) test-execution-summary-report-contract-refresh-no-smoke",

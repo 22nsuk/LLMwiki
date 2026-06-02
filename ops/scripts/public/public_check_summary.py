@@ -342,9 +342,11 @@ def _default_command_runner(
     cwd: Path,
     timeout_seconds: int,
     *,
+    public_python: str,
     heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
 ) -> TimedProcessResult:
     env = dict(os.environ)
+    env["PYTHON"] = public_python
     env.setdefault("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
     heartbeat_callback = (lambda _event: None) if heartbeat_interval_seconds else None
     return run_with_timeout(
@@ -444,6 +446,7 @@ def build_report(
             argv,
             cwd,
             timeout_seconds,
+            public_python=public_python,
             heartbeat_interval_seconds=request.heartbeat_interval_seconds,
         )
     )

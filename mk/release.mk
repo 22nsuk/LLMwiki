@@ -647,6 +647,7 @@ release-worktree-clean-check:
 	$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --requested-mode git --out "$(RELEASE_WORKTREE_CLEAN_CHECK_OUT)" --strict
 
 release-converge-preflight:
+	$(MAKE) generated-artifact-script-output
 	$(MAKE) report-schema-samples-regenerate
 	$(MAKE) goal-runtime-local-evidence-refresh
 	$(MAKE) test-execution-summary-report-contract-refresh-no-smoke

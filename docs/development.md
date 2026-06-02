@@ -144,7 +144,9 @@ generated-artifact converge targets, and `make static`. After that point, do not
 edit source or docs unless restarting this sequence. Refresh
 `make test-execution-summary-current-or-refresh` and
 `make test-execution-summary-full-current-or-refresh` last, or use
-`make release-test-current`, which encodes the same ordering. This keeps
+`make release-converge-preflight` before committing, which refreshes
+`generated-artifact-script-output` before report-contract evidence, then refresh
+summaries last. This keeps
 report/full summaries from becoming stale immediately after they are rebuilt.
 Pytest subprocess probes disable cacheprovider and Make exports
 `PYTHONDONTWRITEBYTECODE=1` to keep xdist workers and child collection checks
