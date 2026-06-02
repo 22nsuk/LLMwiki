@@ -616,6 +616,34 @@ def test_run_ready_plan_is_ready_when_all_public_evidence_is_current(tmp_path: P
     assert write_run_ready_plan(vault, plan, "build/release/release-run-ready-plan.json").exists()
 
 
+def test_run_ready_plan_allows_ephemeral_full_smoke_archive(tmp_path: Path) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    full_smoke_path = vault / "ops" / "reports" / "release-smoke-report.json"
+    full_smoke = json.loads(full_smoke_path.read_text(encoding="utf-8"))
+    full_smoke["archive_file"] = {
+        "path": "<tmp>/LLMwiki-release-smoke.zip",
+        "exists": True,
+        "size_bytes": 1234,
+        "sha256": "1" * 64,
+    }
+    _write_json(vault, "ops/reports/release-smoke-report.json", full_smoke)
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(vault, context=fixed_context())
+
+    full_smoke_node = next(node for node in plan["nodes"] if node["name"] == "release_smoke_full")
+    distribution_node = next(
+        node for node in plan["nodes"] if node["name"] == "release_distribution_zip_smoke"
+    )
+    assert full_smoke_node["can_reuse"] is True
+    assert "referenced_file_stale" not in full_smoke_node["issues"]
+    assert distribution_node["can_reuse"] is True
+    assert plan["plan_status"] == "ready"
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
 def test_run_ready_plan_writes_byte_stable_ready_golden(tmp_path: Path) -> None:
     first_bytes = _run_ready_plan_bytes(tmp_path / "first")
     second_bytes = _run_ready_plan_bytes(tmp_path / "second")

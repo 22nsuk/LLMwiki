@@ -140,7 +140,6 @@ PLAN_SPECS = (
         "release-smoke-full-reuse",
         expected_source_command="python -m ops.scripts.release.release_smoke --vault . --profile full",
         expected_profile="full",
-        referenced_file_field="archive_file",
     ),
     RunReadyPlanSpec(
         "release_distribution_zip_smoke",
