@@ -189,6 +189,43 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             )
             self.assertIn("implemented in canonical evidence", archived_external["reason"])
 
+    def test_external_report_archive_lifecycle_uses_current_action_matrix_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "external-reports" / "archive").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "reports" / "external-report-action-matrix.json").write_text(
+                json.dumps(
+                    {
+                        "artifact_kind": "external_report_action_matrix",
+                        "artifact_status": "current",
+                        "currentness": {"status": "current"},
+                        "action_items": [
+                            {
+                                "action_id": "release_evidence_bundle_and_attestation",
+                                "current_status": "implemented",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (vault / "external-reports" / "closed_release_evidence_report.md").write_text(
+                "# Closed\n\nevidence bundle\n",
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+            candidate_paths = {item["path"] for item in report["archive_candidates"]}
+            self.assertIn("external-reports/closed_release_evidence_report.md", candidate_paths)
+            self.assertIn(
+                "external_report_action_matrix_statuses",
+                report["input_fingerprints"],
+            )
+
     def test_index_summary_and_input_fingerprints_track_task_improvement_observations(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

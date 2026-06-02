@@ -56,6 +56,7 @@ else:
 
 DEFAULT_OUT = "ops/reports/generated-artifact-index.json"
 PRODUCER = "ops.scripts.generated_artifact_index"
+EXTERNAL_REPORT_ACTION_MATRIX_PATH = "ops/reports/external-report-action-matrix.json"
 SOURCE_COMMAND = (
     "python -m ops.scripts.generated_artifact_index "
     "--vault . "
@@ -177,6 +178,38 @@ def _external_report_inventory(vault: Path) -> dict[str, Any]:
     }
 
 
+def _action_matrix_statuses(vault: Path) -> dict[str, str]:
+    payload, diagnostics = load_optional_json_object_with_diagnostics(
+        vault / EXTERNAL_REPORT_ACTION_MATRIX_PATH
+    )
+    if diagnostics.get("missing") or not isinstance(payload, dict):
+        return {}
+    if payload.get("artifact_kind") != "external_report_action_matrix":
+        return {}
+    if payload.get("artifact_status") != "current":
+        return {}
+    if str(payload.get("currentness", {}).get("status", "")) != "current":
+        return {}
+    action_items = payload.get("action_items")
+    if not isinstance(action_items, list):
+        return {}
+    statuses: dict[str, str] = {}
+    for item in action_items:
+        if not isinstance(item, dict):
+            continue
+        action_id = str(item.get("action_id", "")).strip()
+        current_status = str(item.get("current_status", "")).strip()
+        if action_id and current_status:
+            statuses[action_id] = current_status
+    return statuses
+
+
+def _external_report_lifecycle_statuses(vault: Path) -> dict[str, str]:
+    statuses = action_statuses(vault)
+    statuses.update(_action_matrix_statuses(vault))
+    return statuses
+
+
 def _ops_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str, str]], dict[str, int]]:
     root_records = [
         record
@@ -251,7 +284,7 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
     record_by_path = {record["path"]: record for record in root_records}
     root_paths = [vault / record["path"] for record in root_records]
     lifecycle_profiles = report_lifecycle_profiles(vault, root_paths)
-    status_by_action = action_statuses(vault)
+    status_by_action = _external_report_lifecycle_statuses(vault)
     current: list[dict[str, str]] = []
     archive_candidates: list[dict[str, str]] = []
     for profile in lifecycle_profiles:
@@ -561,6 +594,9 @@ def build_report(
                 "ops_report_inventory": _canonical_inventory_text(_ops_report_inventory(vault)),
                 "operator_report_inventory": _canonical_inventory_text(_operator_report_inventory(vault)),
                 "external_report_inventory": _canonical_inventory_text(_external_report_inventory(vault)),
+                "external_report_action_matrix_statuses": _canonical_inventory_text(
+                    _action_matrix_statuses(vault)
+                ),
                 "task_improvement_observation_inventory": _canonical_inventory_text(task_observation_reports),
             },
         ),
