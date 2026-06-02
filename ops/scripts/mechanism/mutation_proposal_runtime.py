@@ -381,7 +381,9 @@ def _alternate_candidate_for_closed_failure_mode(
         return None
     return {
         **candidate,
+        "supporting_targets": [],
         "metrics_triggered": remaining_metrics,
+        "_closed_failure_mode_fallback": True,
     }
 
 
@@ -1721,12 +1723,15 @@ def _proposal_from_candidate(
             )
         current_candidate = alternate_candidate
         fields = alternate_fields
-    supporting_targets = _proposal_supporting_targets_for_failure_mode(
-        vault,
-        failure_mode=fields["failure_mode"],
-        primary_targets=primary_targets,
-        supporting_targets=candidate_supporting_targets,
-    )
+    if current_candidate.get("_closed_failure_mode_fallback") is True:
+        supporting_targets = []
+    else:
+        supporting_targets = _proposal_supporting_targets_for_failure_mode(
+            vault,
+            failure_mode=fields["failure_mode"],
+            primary_targets=primary_targets,
+            supporting_targets=list(current_candidate["supporting_targets"]),
+        )
     current_candidate = {
         **current_candidate,
         "supporting_targets": supporting_targets,

@@ -620,6 +620,7 @@ class MutationProposalTest(unittest.TestCase):
             proposals_by_source = {proposal["source_candidate_type"]: proposal for proposal in report["proposals"]}
             stagnation = proposals_by_source["mechanism_eval_stagnation_candidate"]
             self.assertEqual(stagnation["failure_mode"], "repeated_same_eval_after_promote")
+            self.assertEqual(stagnation["supporting_targets"], [])
             self.assertEqual(stagnation["metrics_triggered"], ["stage1_same_eval_rate"])
             self.assertEqual(stagnation["run_ids"], ["run-a", "run-b", "run-c"])
             self.assertEqual(
