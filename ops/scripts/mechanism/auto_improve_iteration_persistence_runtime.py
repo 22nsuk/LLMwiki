@@ -194,10 +194,8 @@ def _iteration_pre_promotion_failure_artifacts(
     run_id: str,
     outcome: str,
 ) -> list[str]:
-    if outcome not in PRE_PROMOTION_FAILURE_ARTIFACT_OUTCOMES:
-        return []
     run_dir = vault / run_rel(run_id, "")
-    if not run_dir.is_dir():
+    if outcome not in PRE_PROMOTION_FAILURE_ARTIFACT_OUTCOMES or not run_dir.is_dir():
         return []
     return [
         run_rel(run_id, log_name)
@@ -252,10 +250,9 @@ def _promotion_report_path_matches_run(rel_path: object, run_id: str) -> bool:
     if not isinstance(rel_path, str) or not rel_path.strip():
         return True
     normalized = _normalized_repo_relative_path(rel_path)
-    if not normalized:
-        return False
-    return normalized == run_rel(run_id, "promotion-report.json") or normalized.startswith(
-        run_rel(run_id, "")
+    return bool(normalized) and (
+        normalized == run_rel(run_id, "promotion-report.json")
+        or normalized.startswith(run_rel(run_id, ""))
     )
 
 
@@ -268,18 +265,18 @@ def _decision_record_matches_run(decision_record: object, run_id: str) -> bool:
 
 def _promotion_report_matches_run(promotion_report: dict[str, Any], run_id: str) -> bool:
     report_run_id = str(promotion_report.get("run_id", "")).strip()
-    if report_run_id and report_run_id != run_id:
-        return False
-    return _decision_record_matches_run(promotion_report.get("decision_record"), run_id)
+    return (not report_run_id or report_run_id == run_id) and _decision_record_matches_run(
+        promotion_report.get("decision_record"),
+        run_id,
+    )
 
 
 def _iteration_executor_report_rels(vault: Path, run_id: str, roles: list[str]) -> list[str]:
-    report_rels: list[str] = []
-    for role in roles:
-        rel_path = role_report_path(run_id, role)
-        if _load_repo_relative_json(vault, rel_path) is not None:
-            report_rels.append(rel_path)
-    return report_rels
+    return [
+        rel_path
+        for role in roles
+        if _load_repo_relative_json(vault, rel_path := role_report_path(run_id, role)) is not None
+    ]
 
 
 def _role_from_executor_report_rel(rel_path: str) -> str:
