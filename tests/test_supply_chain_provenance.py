@@ -14,7 +14,7 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 LOCKED_CI_INSTALL_SNIPPET = (
     '- run: python -c "from pathlib import Path; Path(\'tmp\').mkdir(exist_ok=True)"\n'
-    "- run: uv lock --check\n"
+    "- run: make uv-lock-check\n"
     "- run: uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt\n"
     "- run: python -m pip install -r tmp/locked-requirements.ci.txt\n"
 )
@@ -119,7 +119,7 @@ jobs:
   test:
     steps:
       - run: python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
-      - run: uv lock --check
+      - run: make uv-lock-check
       - run: uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
       - run: python -m pip install -r tmp/locked-requirements.ci.txt
 """.strip()
@@ -177,7 +177,10 @@ jobs:
             self.assertTrue(persisted["ci_install_proof"]["exports_frozen_uv_lock"])
             self.assertTrue(persisted["ci_install_proof"]["installs_locked_requirements"])
             self.assertTrue(persisted["ci_install_proof"]["checks_uv_lock_freshness"])
-            self.assertEqual(persisted["ci_install_proof"]["lock_check_commands"], ["- run: uv lock --check"])
+            self.assertEqual(
+                persisted["ci_install_proof"]["lock_check_commands"],
+                ["- run: make uv-lock-check"],
+            )
             self.assertEqual(persisted["ci_install_proof"]["locked_requirements_path"], "tmp/locked-requirements.ci.txt")
             self.assertEqual(persisted["ci_install_proof"]["install_resolution_mode"], "canonical_lock_export")
             self.assertFalse(persisted["ci_install_proof"]["installs_requirements_dev"])
@@ -192,6 +195,27 @@ jobs:
             self.assertEqual(persisted["lock_evidence"]["parser_status"]["status"], "pass")
             self.assertEqual(persisted["lock_evidence"]["lock_check_status"], "enforced")
             self.assertEqual(persisted["lock_evidence"]["lock_check_command"], "uv lock --check")
+            self.assertEqual(
+                persisted["lock_evidence"]["canonical_lock_check_command"],
+                'UV_DEFAULT_INDEX="https://pypi.org/simple" '
+                'uv lock --check --default-index "https://pypi.org/simple"',
+            )
+            self.assertEqual(
+                persisted["lock_evidence"]["baseline_environment_lock_check_status"],
+                "not_evaluated",
+            )
+            self.assertEqual(
+                persisted["lock_evidence"]["canonical_lock_policy_status"],
+                "enforced",
+            )
+            self.assertEqual(
+                persisted["lock_evidence"]["toolchain_alignment_status"],
+                "canonical_policy_enforced",
+            )
+            self.assertEqual(
+                persisted["lock_evidence"]["recommended_normalization_step"],
+                "none",
+            )
             self.assertTrue(persisted["lock_evidence"]["exists"])
             self.assertEqual(persisted["lock_evidence"]["sha256"], input_by_path["uv.lock"]["sha256"])
             self.assertEqual(persisted["source_package_evidence"]["status"], "pass")
@@ -235,6 +259,39 @@ jobs:
             self.assertNotIn("requirements.txt", envelope["input_fingerprints"])
             self.assertEqual(report["source_package_evidence"]["status"], "missing")
 
+    def test_build_report_does_not_treat_plain_uv_lock_check_as_canonical_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_dependency_inputs(vault)
+            (vault / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
+            (vault / ".github" / "workflows" / "ci.yml").write_text(
+                """
+name: CI
+jobs:
+  test:
+    steps:
+      - run: uv lock --check
+      - run: uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+      - run: python -m pip install -r tmp/locked-requirements.ci.txt
+""".strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+            self.assertEqual(report["status"], "fail")
+            self.assertFalse(report["ci_install_proof"]["checks_uv_lock_freshness"])
+            self.assertEqual(report["ci_install_proof"]["lock_check_commands"], [])
+            self.assertEqual(report["lock_evidence"]["lock_check_status"], "missing_ci_check")
+            self.assertEqual(
+                report["lock_evidence"]["canonical_lock_policy_status"],
+                "missing_ci_check",
+            )
+            self.assertEqual(report["lock_evidence"]["canonical_lock_check_command"], "")
+
     def test_build_report_records_malformed_uv_lock_as_parser_error(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -250,6 +307,23 @@ jobs:
             self.assertEqual(input_by_path["uv.lock"]["parser_status"]["status"], "error")
             self.assertEqual(report["lock_evidence"]["parser_status"]["status"], "error")
             self.assertEqual(report["lock_evidence"]["lock_check_status"], "missing_ci_check")
+            self.assertEqual(report["lock_evidence"]["canonical_lock_check_command"], "")
+            self.assertEqual(
+                report["lock_evidence"]["baseline_environment_lock_check_status"],
+                "not_evaluated",
+            )
+            self.assertEqual(
+                report["lock_evidence"]["canonical_lock_policy_status"],
+                "missing_ci_check",
+            )
+            self.assertEqual(
+                report["lock_evidence"]["toolchain_alignment_status"],
+                "canonical_policy_not_enforced",
+            )
+            self.assertEqual(
+                report["lock_evidence"]["recommended_normalization_step"],
+                "make uv-lock-check",
+            )
             self.assertEqual(report["locked_packages"], [])
 
 

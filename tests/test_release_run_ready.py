@@ -26,7 +26,7 @@ pytestmark = pytest.mark.public
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLAN_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-run-ready-plan.schema.json"
 ZERO_SHA256 = "0" * 64
-READY_PLAN_GOLDEN_SHA256 = "75e2124cf10fc8c54f051456f3bb9bcd94f5eb2c1798ee50bd7a17fd1b6bf200"
+READY_PLAN_GOLDEN_SHA256 = "fa08fbb906e3eb7c0c4638b1b2d185eed0545dcebaf2c6a06ce0bde7d1f9f63d"
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",
     "wiki/",
@@ -470,9 +470,90 @@ def _source_package_clean_extract_payload(source_zip: dict[str, object]) -> dict
     }
 
 
+def _release_run_manifest_payload(source_zip: dict[str, object]) -> dict[str, object]:
+    return {
+        **_common_envelope(
+            schema="ops/schemas/release-run-manifest.schema.json",
+            artifact_kind="release_run_manifest",
+            producer="ops.scripts.release_run_manifest",
+            source_command="python -m ops.scripts.release_run_manifest --vault .",
+            retention_policy="release_sidecar_authority",
+        ),
+        "schema_version": 4,
+        "status": "pass",
+        "release_authority_status": "release_ready",
+        "machine_release_allowed": True,
+        "expected_source_tree_fingerprint": "fp-current",
+        "final_source_tree_fingerprint": "fp-current",
+        "git_commit": "abc123",
+        "git_clean": True,
+        "remote_sync": {
+            "status": "pass",
+            "upstream": "origin/main",
+            "ahead": 0,
+            "behind": 0,
+        },
+        "ignored_tracked_file_count": 0,
+        "steps": [],
+        "step_duration_summary": {
+            "total_duration_ms": 0,
+            "step_count": 0,
+            "passed_step_count": 0,
+            "failed_step_count": 0,
+            "slowest_step": {
+                "name": "",
+                "status": "not_run",
+                "duration_ms": 0,
+                "share_of_total": 0.0,
+            },
+            "steps_by_duration_desc": [],
+            "comparison_groups": {
+                "test": {
+                    "matched_step_count": 0,
+                    "total_duration_ms": 0,
+                    "slowest_step_name": "",
+                    "share_of_total": 0.0,
+                },
+                "public": {
+                    "matched_step_count": 0,
+                    "total_duration_ms": 0,
+                    "slowest_step_name": "",
+                    "share_of_total": 0.0,
+                },
+                "smoke": {
+                    "matched_step_count": 0,
+                    "total_duration_ms": 0,
+                    "slowest_step_name": "",
+                    "share_of_total": 0.0,
+                },
+                "source_package": {
+                    "matched_step_count": 0,
+                    "total_duration_ms": 0,
+                    "slowest_step_name": "",
+                    "share_of_total": 0.0,
+                },
+            },
+        },
+        "distribution_zip": {
+            "path": source_zip["path"],
+            "exists": source_zip["exists"],
+            "size_bytes": source_zip["size_bytes"],
+            "sha256": source_zip["sha256"],
+        },
+        "source_package_smoke": {
+            "path": "build/source-package-smoke/source-package-smoke.json",
+            "exists": True,
+            "status": "pass",
+            "sha256": ZERO_SHA256,
+        },
+        "failures": [],
+    }
+
+
 def _write_current_run_ready_evidence(vault: Path) -> None:
     source_zip = _file_identity(vault, "build/release/LLMwiki-source.zip")
     evidence = {
+        "build/release/release-run-manifest.json": _release_run_manifest_payload(source_zip),
         "ops/reports/test-execution-summary-full.json": _test_execution_summary_payload(
             suite="full",
             represents_full_suite=True,
@@ -610,10 +691,102 @@ def test_run_ready_plan_is_ready_when_all_public_evidence_is_current(tmp_path: P
 
     assert plan["plan_status"] == "ready"
     assert plan["minimal_next_target"] == ""
+    assert plan["authority_manifest_alignment"]["alignment_status"] == "current"
     assert plan["stale_evidence_causes"] == []
     assert all(node["can_reuse"] for node in plan["nodes"])
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
     assert write_run_ready_plan(vault, plan, "build/release/release-run-ready-plan.json").exists()
+
+
+def test_run_ready_plan_selects_stale_authority_manifest_as_minimal_next_target(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    manifest_path = vault / "build" / "release" / "release-run-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["source_revision"] = "old"
+    manifest["source_tree_fingerprint"] = "fp-old"
+    manifest["final_source_tree_fingerprint"] = "fp-old"
+    _write_json(vault, "build/release/release-run-manifest.json", manifest)
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(vault, context=fixed_context())
+
+    alignment = plan["authority_manifest_alignment"]
+    assert plan["plan_status"] == "blocked"
+    assert plan["minimal_next_target"] == "release-run-ready"
+    assert alignment["alignment_status"] == "stale"
+    assert "source_revision_stale" in alignment["issues"]
+    assert "source_tree_fingerprint_stale" in alignment["issues"]
+    assert plan["stale_evidence_causes"][0]["node"] == "authority_manifest"
+    assert plan["stale_evidence_causes"][0]["minimal_next_target"] == "release-run-ready"
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_rejects_schema_invalid_authority_manifest(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    manifest_path = vault / "build" / "release" / "release-run-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["unexpected_contract_drift"] = True
+    _write_json(vault, "build/release/release-run-manifest.json", manifest)
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(vault, context=fixed_context())
+
+    alignment = plan["authority_manifest_alignment"]
+    assert plan["plan_status"] == "blocked"
+    assert plan["minimal_next_target"] == "release-run-ready"
+    assert alignment["alignment_status"] == "stale"
+    assert alignment["issues"] == ["schema_invalid"]
+    assert plan["stale_evidence_causes"][0]["node"] == "authority_manifest"
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_labels_empty_authority_manifest_schema_invalid(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    _write_json(vault, "build/release/release-run-manifest.json", {})
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(vault, context=fixed_context())
+
+    alignment = plan["authority_manifest_alignment"]
+    assert plan["plan_status"] == "blocked"
+    assert plan["minimal_next_target"] == "release-run-ready"
+    assert alignment["alignment_status"] == "stale"
+    assert "schema_invalid" in alignment["issues"]
+    assert "source_tree_fingerprint_missing" in alignment["issues"]
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_reports_missing_authority_manifest_without_private_paths(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    (vault / "build" / "release" / "release-run-manifest.json").unlink()
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(vault, context=fixed_context())
+
+    alignment = plan["authority_manifest_alignment"]
+    assert plan["plan_status"] == "blocked"
+    assert plan["minimal_next_target"] == "release-run-ready"
+    assert alignment["alignment_status"] == "missing"
+    assert alignment["issues"] == ["not_loadable"]
+    assert alignment["recommended_next_target"] == "release-run-ready"
+    _assert_no_forbidden_private_prefixes(plan)
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
 def test_run_ready_plan_allows_ephemeral_full_smoke_archive(tmp_path: Path) -> None:

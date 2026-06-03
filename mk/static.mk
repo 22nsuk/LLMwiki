@@ -16,13 +16,15 @@ LOCAL_CACHE_CLEAN_PATHS ?= .pytest_cache .hypothesis .ruff_cache .mypy_cache $(T
 LOCAL_CACHE_CLEAN_FIND_ROOTS ?= ops tests tools
 UV_CACHE_PRUNE_FLAGS ?=
 UV ?= uv
+UV_CANONICAL_INDEX_URL ?= https://pypi.org/simple
+UV_LOCK_CHECK_INDEX_FLAGS ?= --default-index "$(UV_CANONICAL_INDEX_URL)"
 
 .PHONY: static ruff ruff-strict-preview strict-preview-audit typecheck mypy-strict-preview uv-lock-check local-cache-clean uv-cache-prune
 
 static: uv-lock-check ruff typecheck
 
 uv-lock-check:
-	$(UV) lock --check
+	UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)
 
 ruff:
 	$(PYTHON) -m ruff check $(RUFF_CACHE_FLAGS) $(RUFF_TARGETS)

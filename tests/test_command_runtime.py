@@ -186,6 +186,53 @@ class CommandRuntimeTests(unittest.TestCase):
         self.assertEqual(popen.call_args.kwargs["encoding"], "utf-8")
         self.assertEqual(popen.call_args.kwargs["errors"], "replace")
 
+    def test_run_with_timeout_cleans_child_group_on_parent_sigterm(self) -> None:
+        process = FakeProcess(
+            communicate_side_effect=[
+                subprocess.TimeoutExpired(cmd=["python"], timeout=0),
+                subprocess.TimeoutExpired(cmd=["python"], timeout=2.0),
+                ("terminated-stdout", "terminated-stderr"),
+            ],
+            poll_side_effect=[None],
+        )
+        backend = FakeProcessBackend(process)
+        installed_handlers: dict[int, object] = {}
+
+        def fake_signal(signum: signal.Signals, handler: object) -> object:
+            if callable(handler):
+                installed_handlers[int(signum)] = handler
+            return signal.SIG_DFL
+
+        def interrupted_communicate(**_kwargs: object) -> tuple[str, str]:
+            handler = installed_handlers[int(signal.SIGTERM)]
+            assert callable(handler)
+            handler(int(signal.SIGTERM), None)
+            raise AssertionError("parent SIGTERM handler should exit after cleanup")
+
+        with (
+            mock.patch.object(command_runtime.signal, "signal", side_effect=fake_signal),
+            mock.patch(
+                "ops.scripts.command_runtime._communicate_with_optional_heartbeats",
+                side_effect=interrupted_communicate,
+            ),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            command_runtime.run_with_timeout(
+                ["python", "-c", "import time; time.sleep(5)"],
+                cwd=Path("."),
+                timeout_seconds=30,
+                backend=backend,
+            )
+
+        self.assertEqual(raised.exception.code, 128 + int(signal.SIGTERM))
+        self.assertEqual(
+            backend.signal_calls,
+            [
+                (1, int(signal.SIGTERM)),
+                (1, int(getattr(signal, "SIGKILL", signal.SIGTERM))),
+            ],
+        )
+
     def test_run_with_timeout_disables_start_new_session_on_windows(self) -> None:
         process = mock.Mock()
         process.communicate.return_value = ("ok\n", "")

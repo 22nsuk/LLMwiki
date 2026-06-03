@@ -320,6 +320,7 @@ release-auto-promotion-safe-cleanup:
 release-auto-promotion-preseal:
 	$(MAKE) release-auto-promotion-ready-invalidate
 	$(MAKE) release-auto-promotion-goal-run-id-guard
+	$(MAKE) release-run-ready-plan-check
 	$(MAKE) release-run-ready-check
 	$(MAKE) bootstrap-preflight
 	$(MAKE) registry-preflight

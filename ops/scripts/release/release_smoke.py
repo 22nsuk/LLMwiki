@@ -96,6 +96,8 @@ INFOZIP_C_LOCALE_FILENAME_BYTE_LIMIT = INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT
 TOP_ARCHIVE_OFFENDER_LIMIT = 10
 ARCHIVE_SELF_DESCRIPTION_PATH = "release-archive-self-description.json"
 DEFAULT_ARCHIVE_ROOT_NAME = "LLMwiki"
+FUTURE_MTIME_GRACE_SECONDS = 60
+FUTURE_MTIME_PREVIEW_LIMIT = 10
 EVIDENCE_LINKAGE_PATHS = (
     "build/release/release-run-manifest.json",
     "build/release/release-closeout-batch-manifest.json",
@@ -494,6 +496,64 @@ def _verify_release_archive(archive_path: Path, archive_root_name: str) -> None:
             raise ValueError("release archive self-description has invalid artifact_kind")
 
 
+def _iso_from_timestamp(timestamp: float) -> str:
+    return (
+        dt.datetime.fromtimestamp(timestamp, tz=dt.UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def _future_mtime_files(
+    vault: Path,
+    manifest: dict,
+    *,
+    now_timestamp: float | None = None,
+    grace_seconds: int = FUTURE_MTIME_GRACE_SECONDS,
+) -> list[dict[str, Any]]:
+    now = time.time() if now_timestamp is None else now_timestamp
+    cutoff = now + grace_seconds
+    future_files: list[dict[str, Any]] = []
+    for entry in manifest.get("files", []):
+        if not isinstance(entry, dict):
+            continue
+        rel_path = str(entry.get("path", "")).strip()
+        if not rel_path:
+            continue
+        path = vault / rel_path
+        if not path.is_file():
+            continue
+        mtime = path.stat().st_mtime
+        if mtime <= cutoff:
+            continue
+        future_files.append(
+            {
+                "path": rel_path,
+                "mtime_utc": _iso_from_timestamp(mtime),
+                "seconds_after_now": int(round(mtime - now)),
+            }
+        )
+    return sorted(
+        future_files,
+        key=lambda item: (-int(item["seconds_after_now"]), str(item["path"])),
+    )
+
+
+def _future_mtime_error(future_files: list[dict[str, Any]]) -> str:
+    preview = ", ".join(
+        f"{item['path']}@{item['mtime_utc']}"
+        for item in future_files[:FUTURE_MTIME_PREVIEW_LIMIT]
+    )
+    suffix = ""
+    if len(future_files) > FUTURE_MTIME_PREVIEW_LIMIT:
+        suffix = f"; +{len(future_files) - FUTURE_MTIME_PREVIEW_LIMIT} more"
+    return (
+        f"future mtime files in release archive input: count={len(future_files)}; "
+        f"grace_seconds={FUTURE_MTIME_GRACE_SECONDS}; {preview}{suffix}"
+    )
+
+
 def build_release_archive(
     vault: Path,
     archive_path: Path,
@@ -522,6 +582,21 @@ def build_release_archive(
         )
         raise ReleaseArchiveBuildError(
             "release archive build failed before writing duplicate self-description",
+            archive_write=archive_write,
+        )
+    future_mtime_files = _future_mtime_files(vault, manifest)
+    if future_mtime_files:
+        archive_write = _archive_write_state(
+            vault,
+            archive_path=archive_path,
+            temp_path=temp_path,
+            status="fail",
+            archive_replaced=False,
+            phase="preflight_future_mtime",
+            error=_future_mtime_error(future_mtime_files),
+        )
+        raise ReleaseArchiveBuildError(
+            "release archive build failed before writing future-mtime inputs",
             archive_write=archive_write,
         )
     phase = "write_temp_archive"

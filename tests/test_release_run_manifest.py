@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import datetime as dt
+import io
 import json
 import tempfile
 import unittest
 import zipfile
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -20,6 +22,7 @@ from ops.scripts.release.release_remote_sync_governance import (
 from ops.scripts.release.release_run_manifest import (
     build_manifest,
     distribution_zip_path_from_manifest,
+    main,
     write_manifest,
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -266,6 +269,54 @@ class ReleaseRunManifestTests(unittest.TestCase):
 
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("source_tree_fingerprint_drift", manifest["failures"])
+
+    def test_check_mode_prints_fingerprint_drift_remediation_context(self) -> None:
+        self._write_run_inputs()
+        self._write_json(
+            "build/release/release-run-manifest.json",
+            {
+                "generated_at": "2026-06-03T12:00:00Z",
+                "expected_source_tree_fingerprint": "fp-old",
+                "steps": [],
+            },
+        )
+
+        stdout = io.StringIO()
+        with patch.multiple(
+            "ops.scripts.release.release_run_manifest",
+            release_source_tree_fingerprint=lambda _vault: "fp-current",
+            release_source_tree_change_sample=lambda _vault, *, generated_at: {
+                "changed_after_generated_at_count": 2,
+                "changed_after_generated_at_path_limit": 10,
+                "changed_after_generated_at": [
+                    {"path": "docs/release.md", "mtime": "2026-06-03T12:01:00Z"},
+                    {"path": "ops/scripts/release/release_run_manifest.py", "mtime": "2026-06-03T12:02:00Z"},
+                ],
+            },
+            git_commit=lambda _vault: "abc123",
+            git_clean=lambda _vault: True,
+            remote_sync=lambda _vault: {
+                "status": "pass",
+                "upstream": "origin/main",
+                "ahead": 0,
+                "behind": 0,
+            },
+            ignored_tracked_file_count=lambda _vault: 0,
+        ), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("release_run_manifest_status=fail", output)
+        self.assertIn("failures=source_tree_fingerprint_drift", output)
+        self.assertIn("source_tree_fingerprint_drift=expected:fp-old;current:fp-current", output)
+        self.assertIn("minimal_remediation_target=release-run-ready", output)
+        self.assertIn("changed_after_generated_at_count=2", output)
+        self.assertIn("docs/release.md@2026-06-03T12:01:00Z", output)
+        self.assertIn(
+            "ops/scripts/release/release_run_manifest.py@2026-06-03T12:02:00Z",
+            output,
+        )
 
     def test_remote_ahead_is_diagnostic_not_run_ready_blocker(self) -> None:
         self._write_run_inputs()

@@ -980,7 +980,15 @@ class MakefileStaticGateTests(unittest.TestCase):
                 self.assertIn("registry-preflight-check", dependencies)
                 self.assertNotIn("registry-preflight", dependencies)
         self.assertEqual(_target_dependencies(text, "static"), ("uv-lock-check", "ruff", "typecheck"))
-        self.assertEqual(_recipe_lines(text, "uv-lock-check"), ["$(UV) lock --check"])
+        self.assertEqual(
+            _recipe_lines(text, "uv-lock-check"),
+            ['UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)'],
+        )
+        self.assertIn("UV_CANONICAL_INDEX_URL ?= https://pypi.org/simple", text)
+        self.assertIn(
+            'UV_LOCK_CHECK_INDEX_FLAGS ?= --default-index "$(UV_CANONICAL_INDEX_URL)"',
+            text,
+        )
         self.assertIn("uv-lock-check", _target_block(text, ".PHONY"))
 
     def test_strict_targets_include_warning_budget_gate(self) -> None:
@@ -1052,7 +1060,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("RUFF_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/ruff/$(TOOL_CACHE_PLATFORM)", text)
         self.assertIn("MYPY_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/mypy/$(TOOL_CACHE_PLATFORM)", text)
         self.assertIn("static: uv-lock-check ruff typecheck", text)
-        self.assertIn("$(UV) lock --check", _target_block(text, "uv-lock-check"))
+        self.assertIn(
+            'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)',
+            _target_block(text, "uv-lock-check"),
+        )
         self.assertIn(
             "$(PYTHON) -m ruff check $(RUFF_CACHE_FLAGS) $(RUFF_TARGETS)",
             _target_block(text, "ruff"),
@@ -1096,9 +1107,17 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("export PYTEST_DISABLE_PLUGIN_AUTOLOAD", text)
         self.assertIn("PYTHONDONTWRITEBYTECODE ?= 1", text)
         self.assertIn("export PYTHONDONTWRITEBYTECODE", text)
+        self.assertIn("PYTEST_XDIST_WORKERS ?= 4", text)
+        self.assertIn("PYTEST_XDIST_MAXPROCESSES ?= 4", text)
         self.assertIn(
-            "PYTEST_LOADFILE_FLAGS ?= -p xdist.plugin -n auto --dist=loadfile", text
+            "PYTEST_XDIST_MAXPROCESSES_FLAGS ?= --maxprocesses=$(PYTEST_XDIST_MAXPROCESSES)",
+            text,
         )
+        self.assertIn(
+            "PYTEST_LOADFILE_FLAGS ?= -p xdist.plugin -n $(PYTEST_XDIST_WORKERS) $(PYTEST_XDIST_MAXPROCESSES_FLAGS) --dist=loadfile",
+            text,
+        )
+        self.assertNotIn("-n auto --dist=loadfile", text)
         self.assertIn(
             "PYTEST_PARALLEL_FLAGS ?= $(PYTEST_LOADFILE_FLAGS)", text
         )
@@ -1171,7 +1190,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("docs/development.md", readme_text)
         self.assertIn("make help", readme_text)
         self.assertIn("make help", development_text)
-        self.assertIn("uv lock --check", development_text)
+        self.assertIn("make uv-lock-check", development_text)
+        self.assertIn("UV_CANONICAL_INDEX_URL", development_text)
+        self.assertIn("PYTEST_XDIST_WORKERS", development_text)
         self.assertIn("uv.lock", development_text)
         self.assertIn(
             "공식 pytest 진입점은 `make test*`, `make check*`, `make public-check*` 또는 `.venv/bin/python -m pytest`다.",
@@ -1904,10 +1925,11 @@ class MakefileStaticGateTests(unittest.TestCase):
             auto_promotion_preflight_block,
         )
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal")[:13],
+            _recipe_lines(text, "release-auto-promotion-preseal")[:14],
             [
                 "$(MAKE) release-auto-promotion-ready-invalidate",
                 "$(MAKE) release-auto-promotion-goal-run-id-guard",
+                "$(MAKE) release-run-ready-plan-check",
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) bootstrap-preflight",
                 "$(MAKE) registry-preflight",
@@ -1976,6 +1998,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_block)
         self.assertIn("--phase preseal", auto_promotion_preseal_block)
+        self.assertIn("$(MAKE) release-run-ready-plan-check", auto_promotion_preseal_block)
         self.assertIn("$(MAKE) release-run-ready-check", auto_promotion_preseal_block)
         self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_block)
         self.assertIn(
@@ -3623,7 +3646,23 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
 
         block = _target_block(text, "dev-install")
-        self.assertIn('uv pip install --python "$(VENV_PYTHON)" -e ".[dev]"', block)
+        self.assertIn("DEV_LOCKED_REQUIREMENTS ?= tmp/locked-requirements.dev.txt", text)
+        self.assertIn(
+            "UV_EXPORT_DEV_REQUIREMENTS_FLAGS ?= --frozen --extra dev --format requirements-txt --no-hashes --no-emit-project",
+            text,
+        )
+        self.assertIn(
+            'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)"',
+            block,
+        )
+        self.assertIn(
+            'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"',
+            block,
+        )
+        self.assertIn(
+            'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .',
+            block,
+        )
         self.assertIn('"$(VENV_PYTHON)" -m pip install -e ".[dev]"', block)
 
     def test_legacy_root_requirements_files_are_retired(self) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Callable
@@ -36,9 +37,14 @@ STATUS_VALUE_PASS = "pass"
 STATUS_VALUE_FAIL = "fail"
 STATUS_VALUE_UNKNOWN = "unknown"
 STATUS_VALUE_REQUIRES_FULL_VAULT = "requires_full_vault"
+TOOLCHAIN_ALIGNMENT_ALIGNED = "aligned"
+TOOLCHAIN_ALIGNMENT_BASELINE_NEEDS_NORMALIZATION = "baseline_environment_needs_normalization"
+TOOLCHAIN_ALIGNMENT_CANONICAL_FAILED = "canonical_lock_check_failed"
+TOOLCHAIN_ALIGNMENT_POLICY_EVIDENCE_NOT_ENFORCED = "policy_evidence_not_enforced"
 VAULT_COMPLETENESS_FULL = "full_vault"
 VAULT_COMPLETENESS_PUBLIC = "public_mirror"
 FRESHNESS_DISPLAY_VALUES = {"none", "advisory", "blocking"}
+UV_CANONICAL_INDEX_URL = "https://pypi.org/simple"
 
 DEFAULT_CLOSEOUT = "ops/reports/release-closeout-summary.json"
 DEFAULT_SEALED_RUN = "build/release/release-sealed-run-manifest.json"
@@ -80,6 +86,40 @@ def lockfile_freshness_display_status(
     if lock_check_status == "enforced" and uv_lock_check_passed:
         return STATUS_VALUE_PASS
     return STATUS_VALUE_FAIL
+
+
+def _pass_fail(passed: bool) -> str:
+    return STATUS_VALUE_PASS if passed else STATUS_VALUE_FAIL
+
+
+def _dependency_normalization_status(
+    *,
+    lock_check_status: str,
+    baseline_uv_lock_check_passed: bool,
+    canonical_uv_lock_check_passed: bool,
+) -> dict[str, str]:
+    baseline_status = _pass_fail(baseline_uv_lock_check_passed)
+    canonical_status = _pass_fail(canonical_uv_lock_check_passed)
+    if canonical_status != STATUS_VALUE_PASS:
+        alignment_status = TOOLCHAIN_ALIGNMENT_CANONICAL_FAILED
+        recommended_step = "make uv-lock-check"
+    elif baseline_status != canonical_status:
+        alignment_status = TOOLCHAIN_ALIGNMENT_BASELINE_NEEDS_NORMALIZATION
+        recommended_step = (
+            "set UV_CANONICAL_INDEX_URL=https://pypi.org/simple and rerun make uv-lock-check"
+        )
+    elif lock_check_status != "enforced":
+        alignment_status = TOOLCHAIN_ALIGNMENT_POLICY_EVIDENCE_NOT_ENFORCED
+        recommended_step = "refresh supply-chain provenance evidence"
+    else:
+        alignment_status = TOOLCHAIN_ALIGNMENT_ALIGNED
+        recommended_step = "none"
+    return {
+        "baseline_environment_lock_check_status": baseline_status,
+        "canonical_lock_check_status": canonical_status,
+        "toolchain_alignment_status": alignment_status,
+        "recommended_normalization_step": recommended_step,
+    }
 
 
 def _load_optional(vault: Path, rel_path: str) -> tuple[dict[str, Any], str]:
@@ -197,6 +237,7 @@ def status_surface_from_signals(
     goal_runtime_certificate_status: str,
     remote_sync_signal: dict[str, Any],
     artifact_freshness_display: str,
+    canonical_uv_lock_check_passed: bool | None = None,
     source_closeout_evidence_path: str = DEFAULT_CLOSEOUT,
     sealed_run_evidence_path: str = DEFAULT_SEALED_RUN,
     public_summary_evidence_path: str = DEFAULT_PUBLIC_SUMMARY,
@@ -212,7 +253,20 @@ def status_surface_from_signals(
     )
     lock_status = lockfile_freshness_display_status(
         lock_check_status=lock_check_status,
-        uv_lock_check_passed=uv_lock_check_passed,
+        uv_lock_check_passed=(
+            uv_lock_check_passed
+            if canonical_uv_lock_check_passed is None
+            else canonical_uv_lock_check_passed
+        ),
+    )
+    dependency_normalization = _dependency_normalization_status(
+        lock_check_status=lock_check_status,
+        baseline_uv_lock_check_passed=uv_lock_check_passed,
+        canonical_uv_lock_check_passed=(
+            uv_lock_check_passed
+            if canonical_uv_lock_check_passed is None
+            else canonical_uv_lock_check_passed
+        ),
     )
     remote_status = remote_sync_display_status(remote_sync_signal)
     lines = [
@@ -243,7 +297,10 @@ def status_surface_from_signals(
             axis=None,
             detail=(
                 f"lock_check_status={lock_check_status or STATUS_VALUE_UNKNOWN}; "
-                f"uv_lock_check={'pass' if uv_lock_check_passed else 'fail'}"
+                f"baseline_environment_lock_check={dependency_normalization['baseline_environment_lock_check_status']}; "
+                f"canonical_lock_check={dependency_normalization['canonical_lock_check_status']}; "
+                f"toolchain_alignment={dependency_normalization['toolchain_alignment_status']}; "
+                f"recommended_normalization_step={dependency_normalization['recommended_normalization_step']}"
             ),
             evidence_path=lockfile_evidence_path,
         ),
@@ -290,6 +347,7 @@ def status_surface_from_signals(
             "source_closeout_axis": STATUS_AXIS_SOURCE_CLOSEOUT,
             "sealed_run_axis": STATUS_AXIS_SEALED_RUN,
         },
+        **dependency_normalization,
     }
 
 
@@ -302,6 +360,33 @@ def _run_uv_lock_check(vault: Path) -> dict[str, Any]:
             text=True,
             capture_output=True,
             timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {
+            "status": STATUS_VALUE_FAIL,
+            "returncode": 127,
+            "error": str(exc),
+        }
+    return {
+        "status": STATUS_VALUE_PASS if completed.returncode == 0 else STATUS_VALUE_FAIL,
+        "returncode": completed.returncode,
+    }
+
+
+def _run_canonical_uv_lock_check(vault: Path) -> dict[str, Any]:
+    env = {
+        **os.environ,
+        "UV_DEFAULT_INDEX": UV_CANONICAL_INDEX_URL,
+    }
+    try:
+        completed = subprocess.run(
+            ["uv", "lock", "--check", "--default-index", UV_CANONICAL_INDEX_URL],
+            cwd=vault,
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=60,
+            env=env,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return {
@@ -365,6 +450,7 @@ def build_status_surface(
     *,
     context: RuntimeContext | None = None,
     lock_check_runner: LockCheckRunner = _run_uv_lock_check,
+    canonical_lock_check_runner: LockCheckRunner | None = None,
     remote_sync_reader: RemoteSyncReader = read_remote_sync,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
@@ -400,7 +486,13 @@ def build_status_surface(
         if goal_load_status == "ok"
         else ""
     )
+    selected_canonical_lock_check_runner = (
+        _run_canonical_uv_lock_check
+        if canonical_lock_check_runner is None and lock_check_runner is _run_uv_lock_check
+        else canonical_lock_check_runner or lock_check_runner
+    )
     lock_check = lock_check_runner(vault)
+    canonical_lock_check = selected_canonical_lock_check_runner(vault)
     remote_signal = _remote_sync_signal(
         vault,
         run_manifest,
@@ -415,6 +507,9 @@ def build_status_surface(
         public_summary_status=public_status,
         lock_check_status=_lock_check_status_from_provenance(provenance),
         uv_lock_check_passed=str(lock_check.get("status", "")).strip() == STATUS_VALUE_PASS,
+        canonical_uv_lock_check_passed=(
+            str(canonical_lock_check.get("status", "")).strip() == STATUS_VALUE_PASS
+        ),
         learning_signoff_status=learning_status,
         goal_runtime_certificate_status=goal_status,
         remote_sync_signal=remote_signal,
@@ -452,7 +547,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     lock_runner = _skipped_lock_check if args.skip_lock_check else _run_uv_lock_check
-    surface = build_status_surface(vault, lock_check_runner=lock_runner)
+    canonical_lock_runner = (
+        _skipped_lock_check if args.skip_lock_check else _run_canonical_uv_lock_check
+    )
+    surface = build_status_surface(
+        vault,
+        lock_check_runner=lock_runner,
+        canonical_lock_check_runner=canonical_lock_runner,
+    )
     if args.format == "json":
         print(json.dumps(surface, ensure_ascii=False, indent=2, sort_keys=True))
     else:

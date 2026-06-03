@@ -463,6 +463,11 @@
         "parser_status",
         "lock_check_status",
         "lock_check_command",
+        "canonical_lock_check_command",
+        "baseline_environment_lock_check_status",
+        "canonical_lock_policy_status",
+        "toolchain_alignment_status",
+        "recommended_normalization_step",
         "note"
       ],
       "properties": {
@@ -487,6 +492,41 @@
           ]
         },
         "lock_check_command": {
+          "type": "string"
+        },
+        "canonical_lock_check_command": {
+          "type": "string"
+        },
+        "baseline_environment_lock_check_status": {
+          "type": "string",
+          "enum": [
+            "not_evaluated",
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        },
+        "canonical_lock_policy_status": {
+          "type": "string",
+          "enum": [
+            "enforced",
+            "missing_ci_check",
+            "missing_lockfile"
+          ]
+        },
+        "toolchain_alignment_status": {
+          "type": "string",
+          "enum": [
+            "canonical_policy_enforced",
+            "canonical_policy_not_enforced",
+            "aligned",
+            "baseline_environment_needs_normalization",
+            "canonical_lock_check_failed",
+            "policy_evidence_not_enforced",
+            "unknown"
+          ]
+        },
+        "recommended_normalization_step": {
           "type": "string"
         },
         "note": {

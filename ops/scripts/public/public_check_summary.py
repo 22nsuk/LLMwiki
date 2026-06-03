@@ -386,6 +386,8 @@ def _command_record(
         "timed_out": result.timed_out,
         "timeout_seconds": result.timeout_seconds,
         "termination_reason": result.termination_reason,
+        "signal_sent": result.signal_sent or "none",
+        "final_state_observed": result.final_state_observed or "unknown",
         "duration_ms": duration_ms,
         "heartbeat_count": result.heartbeat_count,
         "heartbeat_interval_seconds": result.heartbeat_interval_seconds,
@@ -410,6 +412,13 @@ def _negative_assertion_status(assertions: dict[str, Any]) -> str:
         if isinstance(assertion, dict) and assertion.get("status") != "pass":
             return "fail"
     return "pass"
+
+
+def _public_pytest_command(commands: list[dict[str, Any]]) -> dict[str, Any]:
+    for command in commands:
+        if command.get("id") == "pytest_public":
+            return command
+    return {}
 
 
 def build_report(
@@ -491,6 +500,7 @@ def build_report(
     assertion_status = _negative_assertion_status(negative_assertions)
     status = command_status if command_status != "pass" else assertion_status
     pytest_counts = commands[-1].get("pytest_counts", {})
+    public_pytest_command = _public_pytest_command(commands)
     source_paths = [
         "Makefile",
         "ops/scripts/public/public_check_summary.py",
@@ -539,6 +549,24 @@ def build_report(
             "pytest_failed": int(pytest_counts.get("failed", 0) or 0),
             "pytest_errors": int(pytest_counts.get("errors", 0) or 0),
             "pytest_skipped": int(pytest_counts.get("skipped", 0) or 0),
+            "timeout_command_count": sum(1 for command in commands if command["timed_out"]),
+            "max_command_heartbeat_count": max(
+                (int(command.get("heartbeat_count", 0) or 0) for command in commands),
+                default=0,
+            ),
+            "max_command_quiet_seconds": max(
+                (int(command.get("quiet_seconds", 0) or 0) for command in commands),
+                default=0,
+            ),
+            "public_pytest_heartbeat_count": int(public_pytest_command.get("heartbeat_count", 0) or 0),
+            "public_pytest_quiet_seconds": int(public_pytest_command.get("quiet_seconds", 0) or 0),
+            "public_pytest_termination_reason": str(
+                public_pytest_command.get("termination_reason", "not_run")
+            ),
+            "public_pytest_signal_sent": str(public_pytest_command.get("signal_sent", "none")),
+            "public_pytest_final_state_observed": str(
+                public_pytest_command.get("final_state_observed", "not_run")
+            ),
         },
         "public_export": {
             "output_dir": _display_external_path(public_out_path, vault),

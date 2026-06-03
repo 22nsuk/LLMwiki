@@ -23,6 +23,12 @@ PRODUCER = "ops.scripts.supply_chain_gate_runtime"
 SOURCE_COMMAND = "python -m ops.scripts.supply_chain_gate_runtime --vault ."
 LOCKED_REQUIREMENTS_EXPORT_PATH = "tmp/locked-requirements.ci.txt"
 UV_LOCK_CHECK_COMMAND = "uv lock --check"
+UV_CANONICAL_INDEX_URL = "https://pypi.org/simple"
+CANONICAL_UV_LOCK_CHECK_COMMAND = (
+    f'UV_DEFAULT_INDEX="{UV_CANONICAL_INDEX_URL}" '
+    f'{UV_LOCK_CHECK_COMMAND} --default-index "{UV_CANONICAL_INDEX_URL}"'
+)
+MAKE_UV_LOCK_CHECK_COMMAND = "make uv-lock-check"
 REQUIREMENTS_DEV_INSTALL_PATTERN = re.compile(
     r"python\s+-m\s+pip\s+install\b[^\n#]*\s-r\s+requirements-dev\.txt(?:\s|$)",
     flags=re.IGNORECASE,
@@ -40,6 +46,22 @@ LOCKED_REQUIREMENTS_INSTALL_PATTERN = re.compile(
 def _line_has_tokens(line: str, tokens: tuple[str, ...]) -> bool:
     normalized = line.strip()
     return all(token in normalized for token in tokens)
+
+
+def _line_enforces_canonical_uv_lock_check(line: str) -> bool:
+    normalized = line.strip()
+    if MAKE_UV_LOCK_CHECK_COMMAND in normalized:
+        return True
+    has_uv_check = _line_has_tokens(normalized, ("uv lock", "--check"))
+    has_canonical_index_flag = _line_has_tokens(
+        normalized,
+        ("--default-index", UV_CANONICAL_INDEX_URL),
+    )
+    has_canonical_index_env = _line_has_tokens(
+        normalized,
+        ("UV_DEFAULT_INDEX", UV_CANONICAL_INDEX_URL),
+    )
+    return has_uv_check and has_canonical_index_flag and has_canonical_index_env
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -122,11 +144,11 @@ def _check_ci_install_drift(vault: Path, provenance: dict[str, Any]) -> dict[str
             "pass": False,
             "details": "CI proof does not identify canonical lock export install mode",
         }
-    if not any(_line_has_tokens(line, ("uv lock", "--check")) for line in content.splitlines()):
+    if not any(_line_enforces_canonical_uv_lock_check(line) for line in content.splitlines()):
         return {
             "rule": "ci_install_note_drift",
             "pass": False,
-            "details": "Workflow does not contain uv lock --check command",
+            "details": "Workflow does not contain canonical uv-lock-check command",
         }
     if not any(
         _line_has_tokens(line, ("uv export", "--frozen", LOCKED_REQUIREMENTS_EXPORT_PATH))
@@ -167,17 +189,29 @@ def _check_uv_lock_freshness(provenance: dict[str, Any]) -> dict[str, Any]:
             "pass": False,
             "details": "uv.lock freshness check is not recorded as enforced",
         }
+    if str(lock_evidence.get("canonical_lock_policy_status", "")) != "enforced":
+        return {
+            "rule": "uv_lock_freshness_enforced",
+            "pass": False,
+            "details": "canonical uv.lock freshness policy is not recorded as enforced",
+        }
     if str(lock_evidence.get("lock_check_command", "")) != UV_LOCK_CHECK_COMMAND:
         return {
             "rule": "uv_lock_freshness_enforced",
             "pass": False,
             "details": "uv.lock freshness evidence does not bind uv lock --check",
         }
+    if str(lock_evidence.get("canonical_lock_check_command", "")) != CANONICAL_UV_LOCK_CHECK_COMMAND:
+        return {
+            "rule": "uv_lock_freshness_enforced",
+            "pass": False,
+            "details": "uv.lock freshness evidence does not bind canonical index check",
+        }
     if not bool(proof.get("checks_uv_lock_freshness")):
         return {
             "rule": "uv_lock_freshness_enforced",
             "pass": False,
-            "details": "CI proof does not bind uv lock --check",
+            "details": "CI proof does not bind canonical uv-lock-check",
         }
     return {"rule": "uv_lock_freshness_enforced", "pass": True}
 

@@ -20,6 +20,10 @@ from ops.scripts.release.release_status_surface import (
     STATUS_VALUE_REQUIRES_FULL_VAULT,
     STATUS_VALUE_SYNCED,
     STATUS_VALUE_UNKNOWN,
+    TOOLCHAIN_ALIGNMENT_ALIGNED,
+    TOOLCHAIN_ALIGNMENT_BASELINE_NEEDS_NORMALIZATION,
+    TOOLCHAIN_ALIGNMENT_CANONICAL_FAILED,
+    TOOLCHAIN_ALIGNMENT_POLICY_EVIDENCE_NOT_ENFORCED,
     VAULT_COMPLETENESS_FULL,
     VAULT_COMPLETENESS_PUBLIC,
     build_status_surface,
@@ -141,6 +145,15 @@ def test_property_11_status_surface_shape_and_unverifiable_evidence_handling(
     assert [line["key"] for line in lines] == list(STATUS_KEYS)
     assert len({line["key"] for line in lines}) == len(STATUS_KEYS)
     assert f"freshness={freshness}" in str(_line_by_key(surface, "source_closeout")["detail"])
+    lock_detail = str(_line_by_key(surface, "lockfile_freshness")["detail"])
+    assert "baseline_environment_lock_check=" in lock_detail
+    assert "canonical_lock_check=" in lock_detail
+    assert "toolchain_alignment=" in lock_detail
+    assert "recommended_normalization_step=" in lock_detail
+    assert surface["baseline_environment_lock_check_status"] in {"pass", "fail"}
+    assert surface["canonical_lock_check_status"] in {"pass", "fail"}
+    assert str(surface["toolchain_alignment_status"])
+    assert str(surface["recommended_normalization_step"])
     if vault_completeness == VAULT_COMPLETENESS_PUBLIC and not learning_available:
         assert _line_by_key(surface, "learning_signoff")["status"] == STATUS_VALUE_REQUIRES_FULL_VAULT
     if vault_completeness == VAULT_COMPLETENESS_PUBLIC and not goal_available:
@@ -259,7 +272,102 @@ def test_status_surface_reads_existing_file_signals_without_writing_authority() 
         assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_SYNCED
         assert _line_by_key(surface, "remote_sync")["evidence_path"] == DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE
         assert "source=live_git_remote_state" in str(_line_by_key(surface, "remote_sync")["detail"])
+        assert surface["baseline_environment_lock_check_status"] == "pass"
+        assert surface["canonical_lock_check_status"] == "pass"
+        assert surface["toolchain_alignment_status"] == TOOLCHAIN_ALIGNMENT_ALIGNED
+        assert surface["recommended_normalization_step"] == "none"
         assert not (vault / "ops" / "operator" / "operator-release-summary.json").exists()
+
+
+def test_status_surface_distinguishes_ambient_from_canonical_lock_check() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        provenance = vault / "ops" / "reports" / "supply-chain-provenance.json"
+        provenance.parent.mkdir(parents=True)
+        provenance.write_text(
+            json.dumps({"lock_evidence": {"lock_check_status": "enforced"}}),
+            encoding="utf-8",
+        )
+
+        surface = build_status_surface(
+            vault,
+            context=fixed_context(),
+            lock_check_runner=lambda _vault: {"status": "fail", "returncode": 1},
+            canonical_lock_check_runner=lambda _vault: {"status": "pass", "returncode": 0},
+            remote_sync_reader=lambda _vault: {
+                "status": "unknown",
+                "upstream": "",
+                "ahead": 0,
+                "behind": 0,
+            },
+        )
+
+        lock_line = _line_by_key(surface, "lockfile_freshness")
+        assert lock_line["status"] == STATUS_VALUE_PASS
+        assert surface["baseline_environment_lock_check_status"] == "fail"
+        assert surface["canonical_lock_check_status"] == "pass"
+        assert surface["toolchain_alignment_status"] == TOOLCHAIN_ALIGNMENT_BASELINE_NEEDS_NORMALIZATION
+        assert (
+            surface["recommended_normalization_step"]
+            == "set UV_CANONICAL_INDEX_URL=https://pypi.org/simple and rerun make uv-lock-check"
+        )
+        assert "baseline_environment_lock_check=fail" in str(lock_line["detail"])
+        assert "canonical_lock_check=pass" in str(lock_line["detail"])
+
+
+def test_status_surface_fails_lock_freshness_when_canonical_lock_check_fails() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        provenance = vault / "ops" / "reports" / "supply-chain-provenance.json"
+        provenance.parent.mkdir(parents=True)
+        provenance.write_text(
+            json.dumps({"lock_evidence": {"lock_check_status": "enforced"}}),
+            encoding="utf-8",
+        )
+
+        surface = build_status_surface(
+            vault,
+            context=fixed_context(),
+            lock_check_runner=lambda _vault: {"status": "pass", "returncode": 0},
+            canonical_lock_check_runner=lambda _vault: {"status": "fail", "returncode": 1},
+            remote_sync_reader=lambda _vault: {
+                "status": "unknown",
+                "upstream": "",
+                "ahead": 0,
+                "behind": 0,
+            },
+        )
+
+        lock_line = _line_by_key(surface, "lockfile_freshness")
+        assert lock_line["status"] != STATUS_VALUE_PASS
+        assert surface["baseline_environment_lock_check_status"] == "pass"
+        assert surface["canonical_lock_check_status"] == "fail"
+        assert surface["toolchain_alignment_status"] == TOOLCHAIN_ALIGNMENT_CANONICAL_FAILED
+        assert surface["recommended_normalization_step"] == "make uv-lock-check"
+
+
+def test_status_surface_requires_provenance_policy_even_when_canonical_lock_check_passes() -> None:
+    surface = status_surface_from_signals(
+        generated_at="2026-05-31T12:00:00Z",
+        vault_completeness=VAULT_COMPLETENESS_PUBLIC,
+        source_closeout_status=STATUS_VALUE_UNKNOWN,
+        sealed_run_status=STATUS_VALUE_UNKNOWN,
+        public_summary_status=STATUS_VALUE_UNKNOWN,
+        lock_check_status="missing_ci_check",
+        uv_lock_check_passed=True,
+        canonical_uv_lock_check_passed=True,
+        learning_signoff_status="",
+        goal_runtime_certificate_status="",
+        remote_sync_signal={"status": "unknown", "upstream": "", "ahead": 0, "behind": 0},
+        artifact_freshness_display="none",
+    )
+
+    lock_line = _line_by_key(surface, "lockfile_freshness")
+    assert lock_line["status"] != STATUS_VALUE_PASS
+    assert surface["baseline_environment_lock_check_status"] == "pass"
+    assert surface["canonical_lock_check_status"] == "pass"
+    assert surface["toolchain_alignment_status"] == TOOLCHAIN_ALIGNMENT_POLICY_EVIDENCE_NOT_ENFORCED
+    assert surface["recommended_normalization_step"] == "refresh supply-chain provenance evidence"
 
 
 def test_status_surface_does_not_promote_stale_manifest_remote_sync_when_live_state_unknown() -> None:

@@ -4,6 +4,7 @@ import contextlib
 import datetime as dt
 import io
 import json
+import os
 import tempfile
 import unittest
 import zipfile
@@ -398,6 +399,34 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
             self.assertFalse(archive_path.exists())
             self.assertEqual(archive_write["quarantine_path"], "")
+
+    def test_build_release_archive_rejects_future_mtime_input_before_archive_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            readme = vault / "README.md"
+            readme.write_text("readme\n", encoding="utf-8")
+            now = dt.datetime(2026, 6, 3, 12, 0, tzinfo=dt.UTC).timestamp()
+            future = dt.datetime(2026, 6, 3, 12, 3, tzinfo=dt.UTC).timestamp()
+            os.utime(readme, (future, future))
+            archive_path = vault / "tmp" / "release.zip"
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_text("old-bytes", encoding="utf-8")
+
+            with mock.patch("ops.scripts.release_smoke.time.time", return_value=now), self.assertRaises(
+                ReleaseArchiveBuildError
+            ) as raised:
+                build_release_archive(vault, archive_path)
+
+            archive_write = raised.exception.archive_write
+            self.assertEqual(archive_path.read_text(encoding="utf-8"), "old-bytes")
+            self.assertEqual(archive_write["phase"], "preflight_future_mtime")
+            self.assertEqual(archive_write["status"], "fail")
+            self.assertFalse(archive_write["archive_replaced"])
+            self.assertIn("README.md@2026-06-03T12:03:00Z", archive_write["error"])
+            self.assertEqual(archive_write["quarantine_path"], "")
+            self.assertEqual(list(archive_path.parent.glob(".release.zip.*.tmp")), [])
 
     def test_verify_release_archive_rejects_duplicate_self_description_members(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

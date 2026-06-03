@@ -3,6 +3,8 @@ BOOTSTRAP_PREFLIGHT_ENVIRONMENT_CLASS ?= developer
 TOOLS_MIGRATION_PLAN_OUT ?= tmp/tools-migration-plan.json
 SUBAGENT_PROFILE_SCHEMA_OUT ?= tmp/subagent-profile-schema.json
 COMPATIBILITY_ALIAS_DEPRECATION_OUT ?= tmp/compatibility-alias-deprecation.json
+DEV_LOCKED_REQUIREMENTS ?= tmp/locked-requirements.dev.txt
+UV_EXPORT_DEV_REQUIREMENTS_FLAGS ?= --frozen --extra dev --format requirements-txt --no-hashes --no-emit-project
 STATUS_FLAGS ?=
 
 .PHONY: help dev-install status llm-wiki-status bootstrap-preflight tools-migration-plan subagent-profile-schema compatibility-alias-deprecation
@@ -44,10 +46,13 @@ help:
 		"  make release-auto-promotion-ready verify auto-promotion readiness"
 
 dev-install:
-	@if command -v uv >/dev/null 2>&1; then \
+	@if command -v $(UV) >/dev/null 2>&1; then \
 		echo "Using uv to create/update $(VENV_DIR)"; \
-		uv venv --allow-existing --python "$(BOOTSTRAP_PYTHON)" "$(VENV_DIR)"; \
-		uv pip install --python "$(VENV_PYTHON)" -e ".[dev]"; \
+		$(UV) venv --allow-existing --python "$(BOOTSTRAP_PYTHON)" "$(VENV_DIR)"; \
+		mkdir -p "$(dir $(DEV_LOCKED_REQUIREMENTS))"; \
+		UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)" >/dev/null; \
+		UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"; \
+		UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .; \
 	else \
 		echo "uv not found; falling back to stdlib venv via $(BOOTSTRAP_PYTHON)"; \
 		"$(BOOTSTRAP_PYTHON)" -m venv "$(VENV_DIR)"; \

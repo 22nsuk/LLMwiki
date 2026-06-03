@@ -104,7 +104,15 @@
         "pytest_passed": { "type": "integer", "minimum": 0 },
         "pytest_failed": { "type": "integer", "minimum": 0 },
         "pytest_errors": { "type": "integer", "minimum": 0 },
-        "pytest_skipped": { "type": "integer", "minimum": 0 }
+        "pytest_skipped": { "type": "integer", "minimum": 0 },
+        "timeout_command_count": { "type": "integer", "minimum": 0 },
+        "max_command_heartbeat_count": { "type": "integer", "minimum": 0 },
+        "max_command_quiet_seconds": { "type": "integer", "minimum": 0 },
+        "public_pytest_heartbeat_count": { "type": "integer", "minimum": 0 },
+        "public_pytest_quiet_seconds": { "type": "integer", "minimum": 0 },
+        "public_pytest_termination_reason": { "type": "string" },
+        "public_pytest_signal_sent": { "type": "string" },
+        "public_pytest_final_state_observed": { "type": "string" }
       }
     },
     "public_export": {
@@ -196,6 +204,8 @@
         "timed_out": { "type": "boolean" },
         "timeout_seconds": { "type": "integer", "minimum": 1 },
         "termination_reason": { "type": "string", "minLength": 1 },
+        "signal_sent": { "type": "string", "minLength": 1 },
+        "final_state_observed": { "type": "string", "minLength": 1 },
         "duration_ms": { "type": "integer", "minimum": 0 },
         "heartbeat_count": { "type": "integer", "minimum": 0 },
         "heartbeat_interval_seconds": { "type": "integer", "minimum": 0 },

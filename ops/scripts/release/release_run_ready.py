@@ -26,6 +26,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         git_commit,
         ignored_tracked_file_count,
         remote_sync,
+        run_manifest_alignment,
         write_manifest,
     )
     from ops.scripts.runtime_context import RuntimeContext
@@ -52,6 +53,7 @@ else:
         git_commit,
         ignored_tracked_file_count,
         remote_sync,
+        run_manifest_alignment,
         write_manifest,
     )
     from ops.scripts.runtime_context import RuntimeContext
@@ -476,6 +478,24 @@ def _plan_cause(node: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _authority_manifest_cause(alignment: dict[str, Any]) -> dict[str, Any]:
+    issues = [str(issue) for issue in alignment.get("issues", [])]
+    issue_text = ",".join(issues) or str(alignment.get("alignment_status", "not_current"))
+    return {
+        "id": "authority_manifest_not_current",
+        "node": "authority_manifest",
+        "path": str(alignment.get("path", DEFAULT_OUT)),
+        "issues": issues or [issue_text],
+        "summary": (
+            "build/release/release-run-manifest.json is not current for "
+            f"release-run-ready because {issue_text}."
+        ),
+        "minimal_next_target": "release-run-ready",
+        "cost_class": "expensive",
+        "handoff_class": "local_evidence_refresh",
+    }
+
+
 def build_run_ready_plan(
     vault: Path,
     *,
@@ -501,7 +521,15 @@ def build_run_ready_plan(
         )
         for spec in PLAN_SPECS
     )
+    authority_alignment = run_manifest_alignment(
+        vault,
+        DEFAULT_OUT,
+        current_revision=revision,
+        current_source_tree_fingerprint=fingerprint,
+    )
     causes = [_plan_cause(node) for node in nodes if not node["can_reuse"]]
+    if authority_alignment["alignment_status"] != "current":
+        causes.append(_authority_manifest_cause(authority_alignment))
     minimal_next_target = str(causes[0]["minimal_next_target"]) if causes else ""
     plan_status = "ready" if not causes else "blocked"
     return {
@@ -513,8 +541,11 @@ def build_run_ready_plan(
         "source_revision": revision,
         "source_tree_fingerprint": fingerprint,
         "input_fingerprints": {
-            str(node["name"]): str(node["input_fingerprint"])
-            for node in nodes
+            **{
+                str(node["name"]): str(node["input_fingerprint"])
+                for node in nodes
+            },
+            "authority_manifest": str(authority_alignment["input_fingerprint"]),
         },
         "schema_version": 1,
         "artifact_status": "current",
@@ -525,6 +556,7 @@ def build_run_ready_plan(
         "execution_mode": "run_ready_preflight_plan_only",
         "minimal_next_target": minimal_next_target,
         "nodes": nodes,
+        "authority_manifest_alignment": authority_alignment,
         "stale_evidence_causes": causes,
         "boundary": {
             "local_only_generated_artifacts_not_promoted": True,

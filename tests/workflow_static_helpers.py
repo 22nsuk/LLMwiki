@@ -133,14 +133,14 @@ def assert_locked_install_shape(
                 case,
                 install,
                 (
-                    "uv lock --check",
+                    "make uv-lock-check",
                     "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
                     "python -m pip install -r tmp/locked-requirements.ci.txt",
                 ),
             )
             install_run = workflow_run_text(install)
             case.assertLess(
-                install_run.index("uv lock --check"),
+                install_run.index("make uv-lock-check"),
                 install_run.index("uv export --frozen"),
             )
 

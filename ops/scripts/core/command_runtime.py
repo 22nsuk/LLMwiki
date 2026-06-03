@@ -7,6 +7,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from types import FrameType
 from typing import Protocol, cast
 
 SignalValue = int | signal.Signals
@@ -19,6 +20,8 @@ TIMEOUT_TERMINATION_REASONS = {
     "startup_timeout",
 }
 CommandHeartbeatCallback = Callable[["CommandHeartbeat"], None]
+SignalHandler = Callable[[int, FrameType | None], object]
+PreviousSignalHandler = SignalHandler | int | signal.Handlers | None
 
 
 class _SyntheticKillSignal(int):
@@ -501,6 +504,46 @@ def _timeout_termination_reason(
     return "execution_timeout"
 
 
+def _install_parent_signal_cleanup(
+    *,
+    process: ProcessHandle,
+    backend: ProcessBackend,
+    grace_seconds: float,
+) -> Callable[[], None]:
+    previous_handlers: dict[signal.Signals, PreviousSignalHandler] = {}
+
+    def cleanup_then_forward(signum: int, frame: FrameType | None) -> None:
+        _finalize_timed_out_process(
+            process,
+            backend=backend,
+            grace_seconds=grace_seconds,
+        )
+        previous = previous_handlers.get(signal.Signals(signum), signal.SIG_DFL)
+        if callable(previous):
+            previous(signum, frame)
+            return
+        if previous == signal.SIG_IGN:
+            return
+        if signum == int(signal.SIGINT):
+            raise KeyboardInterrupt
+        raise SystemExit(128 + signum)
+
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        try:
+            previous_handlers[signum] = signal.signal(signum, cleanup_then_forward)
+        except (OSError, ValueError):
+            previous_handlers.pop(signum, None)
+
+    def restore() -> None:
+        for signum, previous in previous_handlers.items():
+            try:
+                signal.signal(signum, previous)
+            except (OSError, ValueError):
+                continue
+
+    return restore
+
+
 def run_with_timeout(
     argv: Sequence[str],
     *,
@@ -550,6 +593,11 @@ def run_with_timeout(
         env=subprocess_env,
     )
     launch_latency_seconds = monotonic() - launch_start
+    restore_signal_handlers = _install_parent_signal_cleanup(
+        process=process,
+        backend=active_backend,
+        grace_seconds=grace_seconds,
+    )
     try:
         stdout, stderr = _communicate_with_optional_heartbeats(
             process=process,
@@ -627,3 +675,5 @@ def run_with_timeout(
             quiet_seconds=heartbeat_state.quiet_seconds,
             observation_mode=observation_mode,
         )
+    finally:
+        restore_signal_handlers()

@@ -97,6 +97,26 @@ def failing_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) 
     )
 
 
+def timeout_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) -> TimedProcessResult:
+    module = argv[2] if len(argv) > 2 else ""
+    timed_out = module == "ops.scripts.test_execution_summary"
+    return TimedProcessResult(
+        args=[str(item) for item in argv],
+        returncode=-9 if timed_out else 0,
+        stdout="",
+        stderr="",
+        timed_out=timed_out,
+        timeout_seconds=timeout_seconds,
+        termination_reason="execution_timeout" if timed_out else "completed",
+        signal_sent="sigkill" if timed_out else "none",
+        final_state_observed="drain_after_kill" if timed_out else "communicate",
+        heartbeat_count=3 if timed_out else 0,
+        heartbeat_interval_seconds=10 if timed_out else 0,
+        quiet_seconds=30 if timed_out else 0,
+        observation_mode="process_heartbeat" if timed_out else "communicate",
+    )
+
+
 class PublicCheckSummaryTests(unittest.TestCase):
     def test_default_runner_exports_public_python_for_nested_make_entrypoints(self) -> None:
         captured_env: dict[str, str] = {}
@@ -211,6 +231,14 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["summary"]["private_surface_history_absence_status"], "pass")
             self.assertEqual(report["summary"]["pytest_passed"], 217)
             self.assertEqual(report["summary"]["pytest_skipped"], 5)
+            self.assertEqual(report["summary"]["timeout_command_count"], 0)
+            self.assertEqual(report["summary"]["max_command_heartbeat_count"], 0)
+            self.assertEqual(report["summary"]["max_command_quiet_seconds"], 0)
+            self.assertEqual(report["summary"]["public_pytest_heartbeat_count"], 0)
+            self.assertEqual(report["summary"]["public_pytest_quiet_seconds"], 0)
+            self.assertEqual(report["summary"]["public_pytest_termination_reason"], "completed")
+            self.assertEqual(report["summary"]["public_pytest_signal_sent"], "none")
+            self.assertEqual(report["summary"]["public_pytest_final_state_observed"], "unknown")
             self.assertEqual(
                 {command["observation_mode"] for command in report["commands"]},
                 {"communicate"},
@@ -221,6 +249,11 @@ class PublicCheckSummaryTests(unittest.TestCase):
             )
             self.assertIn("ops.scripts.test_execution_summary", report["commands"][-1]["command"])
             self.assertIn("--reuse-if-current", report["commands"][-1]["command"])
+            self.assertEqual({command["signal_sent"] for command in report["commands"]}, {"none"})
+            self.assertEqual(
+                {command["final_state_observed"] for command in report["commands"]},
+                {"unknown"},
+            )
             self.assertRegex(report["summary"]["export_root_fingerprint"], r"^[a-f0-9]{64}$")
             self.assertRegex(report["summary"]["public_surface_policy_sha256"], r"^[a-f0-9]{64}$")
             self.assertTrue(report["public_export"]["output_dir"].startswith("<tmp>/"))
@@ -334,6 +367,44 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["status"], "fail")
             self.assertEqual(report["summary"]["command_fail_count"], 1)
             self.assertEqual(report["summary"]["pytest_failed"], 1)
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_public_check_summary_exposes_public_pytest_timeout_cleanup_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+
+            report = build_report(
+                vault,
+                PublicCheckRequest(
+                    public_out=str(Path(temp_dir) / "public"),
+                    public_python="python",
+                    heartbeat_interval_seconds=10,
+                    timeout_seconds=30,
+                ),
+                context=fixed_context(),
+                command_runner=timeout_pytest_runner,
+            )
+
+            pytest_command = report["commands"][-1]
+            self.assertEqual(report["status"], "timeout")
+            self.assertEqual(report["summary"]["public_check_status"], "timeout")
+            self.assertEqual(report["summary"]["command_fail_count"], 1)
+            self.assertEqual(report["summary"]["timeout_command_count"], 1)
+            self.assertEqual(report["summary"]["max_command_heartbeat_count"], 3)
+            self.assertEqual(report["summary"]["max_command_quiet_seconds"], 30)
+            self.assertEqual(report["summary"]["public_pytest_heartbeat_count"], 3)
+            self.assertEqual(report["summary"]["public_pytest_quiet_seconds"], 30)
+            self.assertEqual(report["summary"]["public_pytest_termination_reason"], "execution_timeout")
+            self.assertEqual(report["summary"]["public_pytest_signal_sent"], "sigkill")
+            self.assertEqual(report["summary"]["public_pytest_final_state_observed"], "drain_after_kill")
+            self.assertTrue(pytest_command["timed_out"])
+            self.assertEqual(pytest_command["signal_sent"], "sigkill")
+            self.assertEqual(pytest_command["final_state_observed"], "drain_after_kill")
+            self.assertEqual(pytest_command["heartbeat_count"], 3)
+            self.assertEqual(pytest_command["quiet_seconds"], 30)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_public_check_summary_reuses_external_public_pytest_cache_without_exporting_it(self) -> None:

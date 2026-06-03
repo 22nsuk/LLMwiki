@@ -47,6 +47,12 @@ CI_WORKFLOW_PATH = ".github/workflows/ci.yml"
 LOCKED_REQUIREMENTS_EXPORT_PATH = "tmp/locked-requirements.ci.txt"
 SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_PATH = "ops/reports/source-package-clean-extract.json"
 UV_LOCK_CHECK_COMMAND = "uv lock --check"
+UV_CANONICAL_INDEX_URL = "https://pypi.org/simple"
+CANONICAL_UV_LOCK_CHECK_COMMAND = (
+    f'UV_DEFAULT_INDEX="{UV_CANONICAL_INDEX_URL}" '
+    f'{UV_LOCK_CHECK_COMMAND} --default-index "{UV_CANONICAL_INDEX_URL}"'
+)
+MAKE_UV_LOCK_CHECK_COMMAND = "make uv-lock-check"
 CANONICAL_DEPENDENCY_INPUTS = (
     "pyproject.toml",
     "uv.lock",
@@ -81,6 +87,22 @@ LOCKED_REQUIREMENTS_INSTALL_PATTERN = re.compile(
 def _line_has_tokens(line: str, tokens: tuple[str, ...]) -> bool:
     normalized = line.strip()
     return all(token in normalized for token in tokens)
+
+
+def _line_enforces_canonical_uv_lock_check(line: str) -> bool:
+    normalized = line.strip()
+    if MAKE_UV_LOCK_CHECK_COMMAND in normalized:
+        return True
+    has_uv_check = _line_has_tokens(normalized, ("uv lock", "--check"))
+    has_canonical_index_flag = _line_has_tokens(
+        normalized,
+        ("--default-index", UV_CANONICAL_INDEX_URL),
+    )
+    has_canonical_index_env = _line_has_tokens(
+        normalized,
+        ("UV_DEFAULT_INDEX", UV_CANONICAL_INDEX_URL),
+    )
+    return has_uv_check and has_canonical_index_flag and has_canonical_index_env
 
 
 def sha256_file(path: Path) -> str:
@@ -314,7 +336,7 @@ def ci_install_proof(vault: Path) -> dict:
     exports_frozen_uv_lock = False
     checks_uv_lock_freshness = False
     for line in content.splitlines():
-        if _line_has_tokens(line, ("uv lock", "--check")):
+        if _line_enforces_canonical_uv_lock_check(line):
             checks_uv_lock_freshness = True
             lock_check_commands.append(line.strip())
         if _line_has_tokens(line, ("uv export", "--frozen", LOCKED_REQUIREMENTS_EXPORT_PATH)):
@@ -358,6 +380,14 @@ def lock_evidence(inputs: list[dict], uv_lock_status: dict, ci_proof: dict) -> d
         lock_check_status = "enforced"
     else:
         lock_check_status = "missing_ci_check"
+    toolchain_alignment_status = (
+        "canonical_policy_enforced"
+        if lock_check_status == "enforced"
+        else "canonical_policy_not_enforced"
+    )
+    recommended_normalization_step = (
+        "none" if lock_check_status == "enforced" else "make uv-lock-check"
+    )
     return {
         "path": "uv.lock",
         "exists": uv_lock_exists,
@@ -365,7 +395,14 @@ def lock_evidence(inputs: list[dict], uv_lock_status: dict, ci_proof: dict) -> d
         "parser_status": uv_lock_status,
         "lock_check_status": lock_check_status,
         "lock_check_command": UV_LOCK_CHECK_COMMAND if checks_uv_lock_freshness else "",
-        "note": "uv.lock is canonical lock evidence; replay requires uv lock --check plus frozen locked-requirements install proof.",
+        "canonical_lock_check_command": (
+            CANONICAL_UV_LOCK_CHECK_COMMAND if checks_uv_lock_freshness else ""
+        ),
+        "baseline_environment_lock_check_status": "not_evaluated",
+        "canonical_lock_policy_status": lock_check_status,
+        "toolchain_alignment_status": toolchain_alignment_status,
+        "recommended_normalization_step": recommended_normalization_step,
+        "note": "uv.lock is canonical lock evidence; replay requires the canonical-index uv-lock-check gate plus frozen locked-requirements install proof.",
     }
 
 
@@ -491,8 +528,8 @@ def build_report(
         "source_package_evidence": source_package,
         "release_manifest": release_manifest_summary(vault),
         "provenance_notes": [
-            "CI install proof is recorded from .github/workflows/ci.yml and must show uv lock --check before frozen uv.lock export for release replay.",
-            "uv.lock is canonical dependency evidence only when paired with uv lock --check and a frozen locked-requirements install.",
+            "CI install proof is recorded from .github/workflows/ci.yml and must show make uv-lock-check before frozen uv.lock export for release replay.",
+            "uv.lock is canonical dependency evidence only when paired with the canonical-index uv-lock-check gate and a frozen locked-requirements install.",
             "source-package-clean-extract links SBOM/provenance evidence to a replayed source ZIP digest when that release check has run.",
             "This repo-native provenance report is audit evidence only; it does not sign artifacts or gate release/promotion.",
         ],

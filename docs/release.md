@@ -19,7 +19,9 @@ surface comparison; this document owns release evidence and staged authority.
   renders source closeout, sealed run, public summary, lockfile freshness,
   learning signoff, goal runtime certificate, and remote sync as one 7-line
   view without writing new authority evidence. Remote sync is read from live Git
-  state, not from a stale release-run manifest sidecar.
+  state, not from a stale release-run manifest sidecar. Lockfile freshness uses
+  the canonical-index lock check, while the line detail also exposes ambient
+  baseline lock-check status and the normalization step when those differ.
 - `make release-check`: check-only release gate for the current tree.
 - `make release-check-all-surfaces`: release check plus public policy and public export checks.
 - `make release-run-ready`: one command to verify the current committed tree,
@@ -39,6 +41,9 @@ surface comparison; this document owns release evidence and staged authority.
   when existing evidence is not reusable.
 - `make release-run-ready-check`: revalidate the existing manifest against the
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
+  Source-tree drift failures print the expected fingerprint, current
+  fingerprint, changed-after-generated-at sample, and
+  `minimal_remediation_target=release-run-ready`.
 - `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
   write the cost-aware action plan for sealing without rerunning stage 1. The
   planner requires both current passing run-ready evidence and current passing
@@ -360,7 +365,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
 - `ops/reports/release-smoke-report.json` is local diagnostic evidence and is
   not a final release authority. `release-run-ready` refreshes or reuses the
   current full smoke report; preseal uses the current-check lane and fails fast
-  if that evidence is missing or stale.
+  if that evidence is missing or stale. Release archive construction rejects
+  included source files whose filesystem mtime is more than 60 seconds in the
+  future before writing a temporary ZIP, so clock-skewed inputs do not become
+  misleading package metadata.
 - `ops/reports/test-execution-summary.json` and
   `ops/reports/test-execution-summary-full.json` are reused by check lanes only
   when their `source_tree_fingerprint` still matches the current tree. Stale
@@ -397,12 +405,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   archived reports are retained outside Git/source-release authority.
   `ops/reports/external-report-action-matrix.json` separates action lifecycle
   as `resolved`, `historically_true`, `superseded`, or `currently_valid`.
-  Historical claims such as an older "46/46 stale" report count must not be
-  rendered as current state; the current revalidated operator count is
-  `5 stale / 47 total` with `3` priority stale reports until those reports are
-  regenerated or excluded from the canonical set. Excluded stale canonical
-  reports need an explicit non-canonical marker, and preserved stale payloads
-  need a preservation reason.
+  Historical claims such as an older stale report count must not be rendered as
+  current state; use the regenerated action matrix and artifact-freshness
+  summary for live counts. Excluded stale canonical reports need an explicit
+  non-canonical marker, and preserved stale payloads need a preservation reason.
 - `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
   and the release-run manifest.
 - `tmp/` holds scratch checks and candidate files that must not become authority.
@@ -422,8 +428,9 @@ CycloneDX, SPDX, OpenVEX, in-toto/SLSA, and Sigstore outputs share the
 repo-native artifact model so dependency and public-export coverage can be
 audited consistently.
 
-Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed in
-CI through `uv lock --check` and a frozen `uv export` locked-requirements
-install. Root `requirements.txt` and `requirements-dev.txt` are retired from the
+Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed with
+the canonical-index `make uv-lock-check` gate and frozen `uv export`
+locked-requirements installs in CI and `make dev-install`. Root
+`requirements.txt` and `requirements-dev.txt` are retired from the
 source and public-export surfaces; if an older report or fixture still mentions
 them, treat them only as optional compatibility/provenance inputs.

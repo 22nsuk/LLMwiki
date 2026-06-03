@@ -12,10 +12,11 @@ make bootstrap-preflight
 
 `make help` prints the compact operator index for setup, source checks,
 report-contract, public mirror, mechanism, and release entrypoints.
-`make dev-install` creates `.venv`, installs the authoritative dev dependency
-set from `pyproject.toml` (`.[dev]`), and installs the package in editable
-mode. The canonical dependency authority is `pyproject.toml` plus `uv.lock`,
-with CI replay proven through a frozen `uv export` locked-requirements install.
+`make dev-install` creates `.venv`, exports the frozen dev dependency set from
+`uv.lock`, and installs that locked requirements file into the environment. The
+export omits the project itself, then installs the local project separately as
+editable with `--no-deps`, so local setup and CI both replay the same frozen
+third-party dependency authority without losing editable source behavior.
 Root `requirements.txt` and `requirements-dev.txt` are retired from the public
 source surface. Historical or sample reports may still classify those paths as
 optional compatibility evidence, but their absence must not be treated as a
@@ -24,10 +25,15 @@ environment report when dependency or interpreter drift needs to be diagnosed.
 
 `uv.lock` is the canonical dependency lockfile. When dependency inputs change,
 refresh the lock intentionally; in review or check-only contexts, use
-`uv lock --check` to verify the lockfile is current without rewriting it.
+`make uv-lock-check` to verify the lockfile is current without rewriting it.
+That target passes the repository canonical package index explicitly through
+`UV_CANONICAL_INDEX_URL` and `UV_LOCK_CHECK_INDEX_FLAGS`.
 Operator-facing lock freshness must mirror that check result directly: a failing
-`uv lock --check` is a failing lock freshness state, not a pass with local
-interpretation.
+`make uv-lock-check` is a failing lock freshness state, not a pass with local
+interpretation. Status views also report the ambient `uv lock --check` result
+separately from the canonical-index check so local index configuration drift is
+visible as environment normalization work instead of being mistaken for lockfile
+staleness.
 
 ## Supported Test Entrypoints
 
@@ -114,7 +120,11 @@ collect the entire repository and deselect unrelated tests before that sweep.
 the marker surface. The report-contract lane now uses
 `PYTEST_REPORT_CONTRACT_FLAGS`, defaulting to loadfile xdist plus
 `-p no:cacheprovider`; override it to `$(PYTEST_SERIAL_FLAGS)` only when
-investigating an isolation failure. Release-sealing has its own
+investigating an isolation failure. The shared loadfile xdist default uses
+`PYTEST_XDIST_WORKERS ?= 4` with `PYTEST_XDIST_MAXPROCESSES ?= 4`; raise those
+deliberately for large checkpoint machines instead of inheriting host CPU count
+through `-n auto`.
+Release-sealing has its own
 `PYTEST_RELEASE_SEALING_FLAGS` for the same reason. The first local proof after
 this isolation change reduced `make test-report-contract-all` to 17 minutes
 49 seconds for the same 463 tests / 465 subtests, and
@@ -171,6 +181,9 @@ audit-strength property sweep.
 If a full-vault `external-reports/` directory exists, refresh the reference
 manifest and action matrix before broad report-contract sweeps so local-only
 review intake drift does not obscure the code or schema result being checked.
+`public-check-summary` records per-command heartbeat counts, quiet seconds,
+timeout termination reason, signal sent, and final observed process state; use
+those diagnostics before assuming a timed-out public pytest is still running.
 
 ## CI Tier Shape
 
@@ -188,7 +201,7 @@ expressions.
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
 | Make or CI lane | `make static` | `make report-contracts-core` |
 | Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | `make complexity-budget-touched-check CHANGED_FILES_MANIFEST=<manifest>` or `STRUCTURAL_COMPLEXITY_BUDGET_TARGETS=...`; without touched inputs the target skips and the ratchet stays inactive |
-| Dependency input | `uv lock --check` | `make static` after any intentional lock refresh |
+| Dependency input | `make uv-lock-check` | `make static` after any intentional lock refresh |
 | Schema/report contract | `make report-contracts-core` | regenerate artifacts, then rerun the focused schema/report tests |
 | Public export policy | `make sync-public-policy` | `make public-check` |
 | Release evidence | `make release-run-ready-plan-check`, then `make release-run-ready-check` | `make release-run-ready` from the committed tree before release; the planner reports stale evidence causes and the minimal next target before the full refresh |

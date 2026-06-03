@@ -22,8 +22,13 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_with_schema,
+    )
     from ops.scripts.source_revision_runtime import resolve_source_revision
     from ops.scripts.source_tree_fingerprint_runtime import (
+        release_source_tree_change_sample,
         release_source_tree_fingerprint,
     )
 else:
@@ -37,8 +42,13 @@ else:
     )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_with_schema,
+    )
     from ops.scripts.source_revision_runtime import resolve_source_revision
     from ops.scripts.source_tree_fingerprint_runtime import (
+        release_source_tree_change_sample,
         release_source_tree_fingerprint,
     )
 
@@ -118,6 +128,96 @@ def _file_identity(vault: Path, path_value: str | Path) -> dict[str, Any]:
         "exists": exists,
         "size_bytes": path.stat().st_size if exists else 0,
         "sha256": _sha256_file(path) if exists else "",
+    }
+
+
+def _loaded_run_manifest_identity(vault: Path, manifest_path: str | Path) -> dict[str, Any]:
+    identity = _file_identity(vault, manifest_path)
+    payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, manifest_path))
+    load_status = str(diagnostics.get("status", "unknown")).strip() or "unknown"
+    if load_status != "ok" or not isinstance(payload, dict):
+        payload = {}
+    schema_errors = (
+        validate_with_schema(payload, load_schema_with_vault_override(vault, SCHEMA_PATH))
+        if load_status == "ok"
+        else []
+    )
+    return {
+        **identity,
+        "load_status": load_status,
+        "schema_valid": not schema_errors,
+        "artifact_kind": str(payload.get("artifact_kind", "")).strip(),
+        "status": _status_label(payload.get("status")),
+        "source_revision": str(payload.get("source_revision", "")).strip(),
+        "source_tree_fingerprint": str(
+            payload.get("final_source_tree_fingerprint")
+            or payload.get("source_tree_fingerprint")
+            or ""
+        ).strip(),
+        "artifact_status": str(payload.get("artifact_status", "")).strip(),
+        "currentness_status": str(
+            payload.get("currentness", {}).get("status", "")
+            if isinstance(payload.get("currentness"), dict)
+            else ""
+        ).strip(),
+    }
+
+
+def run_manifest_alignment(
+    vault: Path,
+    manifest_path: str | Path = DEFAULT_OUT,
+    *,
+    current_revision: str | None = None,
+    current_source_tree_fingerprint: str | None = None,
+) -> dict[str, Any]:
+    current_revision = current_revision if current_revision is not None else git_commit(vault)
+    current_source_tree_fingerprint = (
+        current_source_tree_fingerprint
+        if current_source_tree_fingerprint is not None
+        else release_source_tree_fingerprint(vault)
+    )
+    identity = _loaded_run_manifest_identity(vault, manifest_path)
+    issues: list[str] = []
+    if identity["load_status"] != "ok":
+        issues.append("not_loadable")
+    if identity["load_status"] == "ok" and not identity["schema_valid"]:
+        issues.append("schema_invalid")
+    if identity["artifact_kind"] and identity["artifact_kind"] != "release_run_manifest":
+        issues.append("artifact_kind_mismatch")
+    if identity["artifact_status"] and identity["artifact_status"] != "current":
+        issues.append("artifact_status_not_current")
+    if identity["currentness_status"] and identity["currentness_status"] != "current":
+        issues.append("currentness_not_current")
+    if identity["status"] and identity["status"] != "pass":
+        issues.append("not_pass")
+    if identity["source_revision"] and identity["source_revision"] != current_revision:
+        issues.append("source_revision_stale")
+    if (
+        identity["source_tree_fingerprint"]
+        and identity["source_tree_fingerprint"] != current_source_tree_fingerprint
+    ):
+        issues.append("source_tree_fingerprint_stale")
+    if identity["load_status"] == "ok" and not identity["source_tree_fingerprint"]:
+        issues.append("source_tree_fingerprint_missing")
+    alignment_status = "current" if not issues else "stale"
+    if not identity["exists"]:
+        alignment_status = "missing"
+    return {
+        "path": identity["path"],
+        "exists": identity["exists"],
+        "load_status": identity["load_status"],
+        "artifact_kind": identity["artifact_kind"],
+        "status": identity["status"],
+        "artifact_status": identity["artifact_status"],
+        "currentness_status": identity["currentness_status"],
+        "source_revision": identity["source_revision"],
+        "current_source_revision": current_revision,
+        "source_tree_fingerprint": identity["source_tree_fingerprint"],
+        "current_source_tree_fingerprint": current_source_tree_fingerprint,
+        "input_fingerprint": identity["sha256"] or current_source_tree_fingerprint,
+        "alignment_status": alignment_status,
+        "issues": _unique_failures(issues),
+        "recommended_next_target": "release-run-ready",
     }
 
 
@@ -354,6 +454,53 @@ def distribution_zip_path_from_manifest(vault: Path, manifest_path: str) -> str:
     return str(distribution_zip.get("path", "")).strip()
 
 
+def _check_failure_diagnostics(
+    vault: Path,
+    *,
+    previous_payload: dict[str, Any],
+    manifest: dict[str, Any],
+) -> list[str]:
+    failures = [str(item) for item in manifest.get("failures", [])]
+    if not failures:
+        return []
+    lines = [
+        f"release_run_manifest_status={manifest.get('status', '')}",
+        "failures=" + ",".join(failures),
+    ]
+    if "source_tree_fingerprint_drift" not in failures:
+        return lines
+    generated_at = str(previous_payload.get("generated_at", "")).strip()
+    change_sample = release_source_tree_change_sample(
+        vault,
+        generated_at=generated_at,
+    ) if generated_at else {
+        "changed_after_generated_at_count": 0,
+        "changed_after_generated_at_path_limit": 0,
+        "changed_after_generated_at": [],
+    }
+    changed_items = change_sample.get("changed_after_generated_at", [])
+    if not isinstance(changed_items, list):
+        changed_items = []
+    changed_paths = [
+        f"{item['path']}@{item['mtime']}"
+        for item in changed_items
+        if isinstance(item, dict)
+    ]
+    lines.extend(
+        [
+            "source_tree_fingerprint_drift="
+            f"expected:{manifest.get('expected_source_tree_fingerprint', '')};"
+            f"current:{manifest.get('final_source_tree_fingerprint', '')}",
+            "minimal_remediation_target=release-run-ready",
+            "changed_after_generated_at_count="
+            f"{change_sample.get('changed_after_generated_at_count', 0)}",
+        ]
+    )
+    if changed_paths:
+        lines.append("changed_after_generated_at=" + ",".join(changed_paths))
+    return lines
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build or verify the release-run manifest.")
     parser.add_argument("--vault", default=".")
@@ -371,6 +518,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
+    previous_payload: dict[str, Any] = {}
     if args.print_distribution_zip:
         distribution_zip_path = distribution_zip_path_from_manifest(vault, args.out)
         if distribution_zip_path:
@@ -382,6 +530,7 @@ def main(argv: list[str] | None = None) -> int:
         if diagnostics.get("status") != "ok":
             print(json.dumps({"status": "fail", "reason": diagnostics}, ensure_ascii=False, indent=2))
             return 1
+        previous_payload = payload
         expected = str(payload.get("expected_source_tree_fingerprint", "")).strip()
         steps = payload.get("steps") if isinstance(payload.get("steps"), list) else []
     else:
@@ -397,6 +546,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     path = write_manifest(vault, manifest, args.out)
     print(display_path(vault, path))
+    if args.check:
+        for line in _check_failure_diagnostics(
+            vault,
+            previous_payload=previous_payload,
+            manifest=manifest,
+        ):
+            print(line)
     return 0 if manifest["status"] == "pass" else 1
 
 

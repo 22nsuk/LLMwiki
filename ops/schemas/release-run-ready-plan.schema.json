@@ -22,6 +22,7 @@
     "execution_mode",
     "minimal_next_target",
     "nodes",
+    "authority_manifest_alignment",
     "stale_evidence_causes",
     "boundary"
   ],
@@ -57,6 +58,48 @@
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/node" }
+    },
+    "authority_manifest_alignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "exists",
+        "load_status",
+        "artifact_kind",
+        "status",
+        "artifact_status",
+        "currentness_status",
+        "source_revision",
+        "current_source_revision",
+        "source_tree_fingerprint",
+        "current_source_tree_fingerprint",
+        "input_fingerprint",
+        "alignment_status",
+        "issues",
+        "recommended_next_target"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "exists": { "type": "boolean" },
+        "load_status": { "type": "string" },
+        "artifact_kind": { "type": "string" },
+        "status": { "type": "string" },
+        "artifact_status": { "type": "string" },
+        "currentness_status": { "type": "string" },
+        "source_revision": { "type": "string" },
+        "current_source_revision": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" },
+        "current_source_tree_fingerprint": { "type": "string", "minLength": 1 },
+        "input_fingerprint": { "type": "string", "minLength": 1 },
+        "alignment_status": { "type": "string", "enum": ["current", "missing", "stale"] },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "recommended_next_target": { "type": "string", "const": "release-run-ready" }
+      }
     },
     "stale_evidence_causes": {
       "type": "array",

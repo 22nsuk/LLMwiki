@@ -19,6 +19,12 @@ def fixed_context() -> RuntimeContext:
     )
 
 
+CANONICAL_LOCK_CHECK_COMMAND = (
+    'UV_DEFAULT_INDEX="https://pypi.org/simple" '
+    'uv lock --check --default-index "https://pypi.org/simple"'
+)
+
+
 class SupplyChainGateRuntimeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -29,7 +35,7 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         (self.vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
         (self.vault / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
         (self.vault / ".github" / "workflows" / "ci.yml").write_text(
-            "uv lock --check\n"
+            "make uv-lock-check\n"
             "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt\n"
             "python -m pip install -r tmp/locked-requirements.ci.txt\n",
             encoding="utf-8",
@@ -52,6 +58,8 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
                     "parser_status": {"status": "pass"},
                     "lock_check_status": "enforced",
                     "lock_check_command": "uv lock --check",
+                    "canonical_lock_check_command": CANONICAL_LOCK_CHECK_COMMAND,
+                    "canonical_lock_policy_status": "enforced",
                 },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
@@ -83,6 +91,8 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
                     "parser_status": {"status": "pass"},
                     "lock_check_status": "enforced",
                     "lock_check_command": "uv lock --check",
+                    "canonical_lock_check_command": CANONICAL_LOCK_CHECK_COMMAND,
+                    "canonical_lock_policy_status": "enforced",
                 },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
@@ -115,6 +125,8 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
                     "parser_status": {"status": "pass"},
                     "lock_check_status": "enforced",
                     "lock_check_command": "uv lock --check",
+                    "canonical_lock_check_command": CANONICAL_LOCK_CHECK_COMMAND,
+                    "canonical_lock_policy_status": "enforced",
                 },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
@@ -141,6 +153,8 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
                     "parser_status": {"status": "error"},
                     "lock_check_status": "enforced",
                     "lock_check_command": "uv lock --check",
+                    "canonical_lock_check_command": CANONICAL_LOCK_CHECK_COMMAND,
+                    "canonical_lock_policy_status": "enforced",
                 },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
@@ -168,6 +182,8 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
                     "parser_status": {"status": "pass"},
                     "lock_check_status": "enforced",
                     "lock_check_command": "uv lock --check",
+                    "canonical_lock_check_command": CANONICAL_LOCK_CHECK_COMMAND,
+                    "canonical_lock_policy_status": "enforced",
                 },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
@@ -194,6 +210,8 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
                     "parser_status": {"status": "pass"},
                     "lock_check_status": "enforced",
                     "lock_check_command": "uv lock --check",
+                    "canonical_lock_check_command": CANONICAL_LOCK_CHECK_COMMAND,
+                    "canonical_lock_policy_status": "enforced",
                 },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
@@ -220,6 +238,8 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
                     "parser_status": {"status": "pass"},
                     "lock_check_status": "missing_ci_check",
                     "lock_check_command": "",
+                    "canonical_lock_check_command": "",
+                    "canonical_lock_policy_status": "missing_ci_check",
                 },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
