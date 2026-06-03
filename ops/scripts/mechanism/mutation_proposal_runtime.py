@@ -66,6 +66,9 @@ from .next_run_repair_queue_runtime import (
 from .noop_repair_classifier_runtime import (
     run_has_noop_mutation_failure,
 )
+from .structural_complexity_scope_runtime import (
+    source_targets_within_structural_complexity_budget,
+)
 
 MECHANISM_REVIEW_SCHEMA = MECHANISM_REVIEW_SCHEMA_PATH
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
@@ -107,6 +110,7 @@ RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID = "recent-log-overlap-queue-blocked"
 RECENT_OUTCOME_REWORK_BLOCKER = "recent_outcome_rework"
 RECENT_OUTCOME_REWORK_MIN_ATTEMPTS = 2
 RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS = 1
+STRUCTURAL_COMPLEXITY_BUDGET_BLOCKER = "structural_complexity_budget"
 RESOLVED_PROMOTION_HISTORY_STATUSES = {"archived", "quarantined"}
 REPEATED_DISCARD_FAILURE_MODE = "repeated_discard_runs"
 REPEATED_DISCARD_METRIC = "repeated_discard_runs"
@@ -1513,6 +1517,13 @@ def _recent_log_overlap_unblock_target_option(
             proposal_id=proposal_id,
             min_attempts=RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS,
         )
+        structural_blockers: list[str] = []
+        if not source_targets_within_structural_complexity_budget(
+            vault,
+            [*primary_targets, *supporting_targets],
+        ):
+            structural_blockers.append(STRUCTURAL_COMPLEXITY_BUDGET_BLOCKER)
+        target_blockers = [*structural_blockers, *recent_outcome_blockers]
         options.append(
             (
                 primary_targets,
@@ -1520,10 +1531,10 @@ def _recent_log_overlap_unblock_target_option(
                 must_change_tests,
                 recent_log_matches,
                 candidate_id,
-                recent_outcome_blockers,
+                target_blockers,
             )
         )
-        if not recent_log_matches and not recent_outcome_blockers:
+        if not recent_log_matches and not target_blockers:
             return options[-1]
 
     for option_candidate in options:

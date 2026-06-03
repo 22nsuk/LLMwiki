@@ -117,6 +117,14 @@ Before a new run:
    smoke report fields, goal runtime certificate inputs, readiness reports, and
    run-local remediation backlog evidence.
 
+Run admission applies the touched structural-complexity gate to source targets,
+not generated evidence surfaces. For example, `ops/script-output-surfaces.json`
+may remain a supporting artifact to refresh after an ops script edit, but it is
+excluded from the start-time complexity budget. Mutation proposal selection also
+skips over-budget primary target options unless the proposal is explicitly a
+structural-complexity repair, so the queue should prefer a smaller runnable
+rotation target instead of starting a run that admission will immediately block.
+
 Between runs, prefer `make goal-runtime-between-run-settle` before starting the
 next trial. It runs the same pre-run cleanup, republishes run-local evidence to
 the global report surfaces, and verifies the fixed point. It is meant for the

@@ -22,12 +22,10 @@ from ops.scripts.gate_effect_vocabulary import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.structural_complexity_budget_runtime import (
-    DEFAULT_TARGET_PROFILES,
-    touched_target_profiles,
-)
-from ops.scripts.structural_complexity_budget_runtime import (
-    build_report as build_structural_complexity_budget_report,
+from ops.scripts.structural_complexity_scope_runtime import (
+    generated_canonical_targets,
+    source_targets_structural_complexity_report,
+    structural_complexity_source_targets,
 )
 
 DEFAULT_OUT = "tmp/goal-runtime-run-admission.json"
@@ -704,6 +702,8 @@ def _structural_complexity_budget_start_check(
             if path
         )
     )
+    generated_targets = generated_canonical_targets(target_paths)
+    source_target_paths = structural_complexity_source_targets(target_paths)
     structural_repair_allowed = any(
         _proposal_declares_structural_complexity_repair(proposal)
         for proposal in selected
@@ -714,15 +714,12 @@ def _structural_complexity_budget_start_check(
     failure_count = 0
     over_budget_targets: list[dict[str, Any]] = []
     error = ""
-    if target_paths:
+    if source_target_paths:
         try:
-            budget_report = build_structural_complexity_budget_report(
+            budget_report = source_targets_structural_complexity_report(
                 vault,
+                source_target_paths,
                 context=context,
-                target_profiles=touched_target_profiles(
-                    DEFAULT_TARGET_PROFILES,
-                    target_paths,
-                ),
             )
             report_status = str(budget_report.get("status", "")).strip()
             summary = _dict_field(budget_report, "summary")
@@ -744,7 +741,7 @@ def _structural_complexity_budget_start_check(
         except (OSError, TypeError, ValueError) as exc:
             report_status = "fail"
             error = str(exc)
-    passed = resume_active or not target_paths or (
+    passed = resume_active or not source_target_paths or (
         report_status == "pass" or structural_repair_allowed
     )
     return _check(
@@ -761,7 +758,9 @@ def _structural_complexity_budget_start_check(
         ),
         observed={
             "selected_proposal_ids": selected_ids,
-            "target_paths": target_paths,
+            "target_paths": source_target_paths,
+            "raw_target_paths": target_paths,
+            "ignored_generated_canonical_targets": generated_targets,
             "structural_complexity_repair_allowed": structural_repair_allowed,
             "status": report_status,
             "target_count": target_count,
@@ -775,7 +774,7 @@ def _structural_complexity_budget_start_check(
             "resume is completing maintenance for an already-promoted proposal-budget-exhausted session"
             if resume_active
             else "no selected proposal targets require an early structural budget check"
-            if not target_paths
+            if not source_target_paths
             else "selected proposal is an explicit bounded structural complexity repair"
             if structural_repair_allowed and report_status != "pass"
             else "selected proposal targets are within touched structural complexity budget"

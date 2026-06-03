@@ -26,6 +26,7 @@ SCHEMA_NAMES = (
     "wiki-maintainer-policy.schema.json",
     "mechanism-review-candidates.schema.json",
     "mutation-proposals.schema.json",
+    "structural-complexity-budget-report.schema.json",
 )
 
 
@@ -51,8 +52,17 @@ def seed_vault(vault: Path) -> None:
         "tests/test_wiki_lint.py",
         "tests/test_mechanism_assess.py",
         "tests/test_example.py",
+        "tests/test_mutation_proposal.py",
+        "tests/test_report_generation_smoke.py",
+        "tests/test_mechanism_run_validation_runtime.py",
     ):
         (vault / rel_path).write_text("def test_placeholder():\n    assert True\n", encoding="utf-8")
+    for rel_path in (
+        "ops/scripts/mechanism/mutation_proposal_runtime.py",
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py",
+    ):
+        (vault / rel_path).parent.mkdir(parents=True, exist_ok=True)
+        (vault / rel_path).write_text("def placeholder() -> None:\n    return None\n", encoding="utf-8")
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -914,6 +924,74 @@ class MutationProposalTest(unittest.TestCase):
                 ["tests/test_mechanism_run_validation_runtime.py"],
             )
             self.assertEqual(rotation["blocked_by"], [])
+
+    def test_recent_log_overlap_rotation_skips_over_budget_primary_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            mutation_target = vault / "ops" / "scripts" / "mechanism" / "mutation_proposal_runtime.py"
+            mutation_target.parent.mkdir(parents=True, exist_ok=True)
+            mutation_target.write_text(
+                "\n".join(f"VALUE_{index} = {index}" for index in range(901)) + "\n",
+                encoding="utf-8",
+            )
+            validation_target = (
+                vault
+                / "ops"
+                / "scripts"
+                / "mechanism"
+                / "mechanism_run_validation_runtime.py"
+            )
+            validation_target.write_text(
+                "def validate_run() -> bool:\n    return True\n",
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_mutation_proposal.py").write_text(
+                "def test_mutation_proposal_runtime() -> None:\n    assert True\n",
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_report_generation_smoke.py").write_text(
+                "def test_smoke() -> None:\n    assert True\n",
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_mechanism_run_validation_runtime.py").write_text(
+                "def test_validation_runtime() -> None:\n    assert True\n",
+                encoding="utf-8",
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            (vault / "system" / "system-log.md").write_text(
+                "# System Log\n\n"
+                "## [2026-04-14 00:00] decision | prior overlapping experiments\n\n"
+                "### Artifacts\n"
+                "- `ops/scripts/promotion_gate.py`\n"
+                "- `ops/scripts/wiki_lint.py`\n"
+                "- `ops/scripts/mechanism_assess.py`\n",
+                encoding="utf-8",
+            )
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            schema = load_schema(vault / "ops" / "schemas" / "mutation-proposals.schema.json")
+
+            self.assertEqual(validate_with_schema(proposal_report, schema), [])
+            rotation = next(
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "recent_log_overlap_queue_blocked"
+            )
+            self.assertEqual(
+                rotation["proposal_id"],
+                "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+            )
+            self.assertEqual(
+                rotation["primary_targets"],
+                ["ops/scripts/mechanism/mechanism_run_validation_runtime.py"],
+            )
+            self.assertEqual(rotation["blocked_by"], [])
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"]["runnable_available_count"],
+                1,
+            )
 
     def test_recent_log_overlap_rotation_blocks_after_single_unresolved_queue_unblock_outcome(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -402,6 +402,63 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertEqual(check["observed"]["status"], "attention")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_build_report_ignores_generated_canonical_supporting_target_for_structural_budget(
+        self,
+    ) -> None:
+        source_target = self.vault / "ops" / "scripts" / "mechanism" / "small_runtime.py"
+        source_target.parent.mkdir(parents=True, exist_ok=True)
+        source_target.write_text("def run() -> None:\n    return None\n", encoding="utf-8")
+        generated_target = self.vault / "ops" / "script-output-surfaces.json"
+        generated_target.parent.mkdir(parents=True, exist_ok=True)
+        generated_target.write_text(
+            "\n".join(f'"generated_{index}": true' for index in range(1000)) + "\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [
+                    {
+                        "proposal_id": "small-runtime-change",
+                        "primary_targets": [
+                            "ops/scripts/mechanism/small_runtime.py",
+                        ],
+                        "supporting_targets": [
+                            "ops/script-output-surfaces.json",
+                        ],
+                    }
+                ],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 1,
+                        "selected_runnable_count": 1,
+                        "blocked_available_count": 0,
+                        "blocked_reason_counts": [],
+                    }
+                },
+            },
+        )
+
+        report = self._build_report()
+
+        self.assertNotEqual(report["start_status"], "fail")
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "start_structural_complexity_budget_clear"
+        )
+        self.assertEqual(check["status"], "pass")
+        self.assertEqual(
+            check["observed"]["target_paths"],
+            ["ops/scripts/mechanism/small_runtime.py"],
+        )
+        self.assertEqual(
+            check["observed"]["ignored_generated_canonical_targets"],
+            ["ops/script-output-surfaces.json"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_exposes_distinct_promotion_ready_statuses(self) -> None:
         readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
         readiness["can_promote_result"] = True
