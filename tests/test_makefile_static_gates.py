@@ -2318,7 +2318,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
                 "$(MAKE) release-evidence-converge",
                 "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) auto-improve-goal-status",
+                "$(MAKE) release-freshness-sensitive-evidence-refresh",
                 "$(MAKE) goal-worktree-guard",
                 "$(MAKE) goal-runtime-certificate",
                 "$(MAKE) learning-readiness-signoff-refresh",
@@ -2374,6 +2374,46 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             "ops.scripts.canonical_artifact_promote",
             _target_block(text, "release-closeout-summary-conditional"),
+        )
+
+    def test_release_freshness_sensitive_evidence_refresh_groups_currentness_reports(
+        self,
+    ) -> None:
+        text = _makefile_text()
+        self.assertIn(
+            "release-freshness-sensitive-evidence-refresh",
+            _target_block(text, ".PHONY"),
+        )
+        self.assertEqual(
+            _recipe_lines(text, "release-freshness-sensitive-evidence-refresh"),
+            [
+                "$(MAKE) supply-chain-artifacts-cached",
+                "$(MAKE) lint-uplift-plan",
+                "$(MAKE) type-uplift-plan",
+                "$(MAKE) complexity-budget",
+                "$(MAKE) codex-goal-prompt",
+                "$(MAKE) auto-improve-goal-status",
+                "$(MAKE) goal-runtime-publish-snapshot",
+            ],
+        )
+
+        converge_lines = _release_evidence_converge_expanded_recipe_lines(text)
+        phase_2_refresh_index = converge_lines.index(
+            "$(MAKE) release-freshness-sensitive-evidence-refresh"
+        )
+        self.assertLess(
+            phase_2_refresh_index,
+            converge_lines.index(
+                "$(MAKE) auto-improve-readiness-report-body",
+                phase_2_refresh_index,
+            ),
+        )
+        self.assertLess(
+            phase_2_refresh_index,
+            converge_lines.index(
+                "$(MAKE) generated-artifact-converge",
+                phase_2_refresh_index,
+            ),
         )
 
     def test_release_clean_lane_evidence_review_target_exists(self) -> None:
@@ -2862,6 +2902,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) test-execution-summary",
                 "$(MAKE) function-budget-refactor-proposals",
                 "$(MAKE) outcome-provenance-gate-policy",
+                "$(MAKE) release-freshness-sensitive-evidence-refresh",
                 "$(MAKE) auto-improve-readiness-report-body",
                 "$(MAKE) generated-artifact-converge",
                 "$(MAKE) public-check-summary",
