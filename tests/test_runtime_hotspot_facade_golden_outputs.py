@@ -70,9 +70,9 @@ AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve
 
 GOLDEN_DIGESTS = {
     "mutation_proposal": "bf585d9978c882613d72d3b789a4440b9d144ec44bb1ccbdcb21aee87c2e0356",
-    "release_evidence_dashboard": "0f1aa3a12f6fb124b6daf12f79a35df65e91583124502f5a3483d628f8a960e9",
-    "release_closeout_summary": "b754f7c21ef4507c0662246540ba0b92457307da718ba464aaabe26044c969f0",
-    "auto_improve_session_bundle": "129183c429b7d84069c1bd9d116b1fa19aad760594372cd002f7d0b0c9977fda",
+    "release_evidence_dashboard": "8b503b22dca1c3c8b3dd57de53fbd6f775754a21c4fba5cc2669d0c25ee03715",
+    "release_closeout_summary": "8e4652f36361d344e4f69a57f7861e7664c19c93c4498ceccb582af013f7e590",
+    "auto_improve_session_bundle": "36a02361ba0bc5c02daae84f0e83ab09f0d7778fbb445e20bddac74f2be507bb",
 }
 
 

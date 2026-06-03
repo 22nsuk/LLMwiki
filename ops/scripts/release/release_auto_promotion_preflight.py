@@ -207,11 +207,32 @@ def _identity_current(identity: dict[str, Any], fingerprint: str) -> bool:
     return str(identity.get("source_tree_fingerprint", "")).strip() == fingerprint
 
 
+def _identity_revision_current(identity: dict[str, Any], current_revision: str) -> bool:
+    source_revision = str(identity.get("source_revision", "")).strip()
+    return bool(source_revision) and source_revision in {
+        current_revision,
+        "source_package_without_git",
+    }
+
+
+def _identity_current_for_source(
+    identity: dict[str, Any],
+    *,
+    fingerprint: str,
+    current_revision: str,
+) -> bool:
+    return _identity_current(identity, fingerprint) and _identity_revision_current(
+        identity,
+        current_revision,
+    )
+
+
 def _goal_run_identity_requirements(
     checks: dict[str, bool],
     inputs: dict[str, dict[str, Any]],
     identity: dict[str, Any],
     fingerprint: str,
+    current_revision: str,
 ) -> list[RequirementSpec]:
     goal_input = inputs["goal_run_identity"]
     return [
@@ -240,8 +261,11 @@ def _goal_run_identity_requirements(
             "goal_run_identity_stale",
             "goal_run_identity",
             "$.source_tree_fingerprint",
-            goal_input["source_tree_fingerprint"],
-            fingerprint,
+            (
+                f"source_revision={goal_input['source_revision']};"
+                f"source_tree_fingerprint={goal_input['source_tree_fingerprint']}"
+            ),
+            f"source_revision={current_revision}; source_tree_fingerprint={fingerprint}",
             "Goal-run identity evidence does not describe the current source tree.",
             "Rerun make release-auto-promotion-goal-run-id-guard.",
         ),
@@ -263,6 +287,7 @@ def _auto_improve_requirements(
     inputs: dict[str, dict[str, Any]],
     auto: dict[str, Any],
     fingerprint: str,
+    current_revision: str,
 ) -> list[RequirementSpec]:
     auto_input = inputs["auto_improve_readiness"]
     return [
@@ -290,9 +315,12 @@ def _auto_improve_requirements(
             checks["auto_improve_readiness_current"],
             "auto_improve_readiness_stale",
             "auto_improve_readiness",
-            "$.source_tree_fingerprint",
-            auto_input["source_tree_fingerprint"],
-            fingerprint,
+            "$.source_revision|$.source_tree_fingerprint",
+            (
+                f"source_revision={auto_input['source_revision']};"
+                f"source_tree_fingerprint={auto_input['source_tree_fingerprint']}"
+            ),
+            f"source_revision={current_revision}; source_tree_fingerprint={fingerprint}",
             "Auto-improve readiness does not describe the current source tree.",
             "Run make release-auto-promotion-preflight.",
         ),
@@ -350,6 +378,7 @@ def _artifact_requirements(
     artifact_kind: str,
     stale_next_step: str,
     fingerprint: str,
+    current_revision: str,
 ) -> list[RequirementSpec]:
     identity = inputs[input_key]
     return [
@@ -377,9 +406,12 @@ def _artifact_requirements(
             checks[f"{input_key}_current"],
             f"{input_key}_stale",
             source,
-            "$.source_tree_fingerprint",
-            identity["source_tree_fingerprint"],
-            fingerprint,
+            "$.source_revision|$.source_tree_fingerprint",
+            (
+                f"source_revision={identity['source_revision']};"
+                f"source_tree_fingerprint={identity['source_tree_fingerprint']}"
+            ),
+            f"source_revision={current_revision}; source_tree_fingerprint={fingerprint}",
             f"{source.replace('_', ' ').capitalize()} does not describe the current source tree.",
             stale_next_step,
         ),
@@ -395,10 +427,17 @@ def _base_phase_requirements(
     remediation: dict[str, Any],
     learning: dict[str, Any],
     fingerprint: str,
+    current_revision: str,
 ) -> list[RequirementSpec]:
     requirements = [
-        *_goal_run_identity_requirements(checks, inputs, identity, fingerprint),
-        *_auto_improve_requirements(checks, inputs, auto, fingerprint),
+        *_goal_run_identity_requirements(
+            checks,
+            inputs,
+            identity,
+            fingerprint,
+            current_revision,
+        ),
+        *_auto_improve_requirements(checks, inputs, auto, fingerprint, current_revision),
         *_artifact_requirements(
             checks,
             inputs,
@@ -407,6 +446,7 @@ def _base_phase_requirements(
             artifact_kind="remediation_backlog",
             stale_next_step="Run make remediation-backlog.",
             fingerprint=fingerprint,
+            current_revision=current_revision,
         ),
         RequirementSpec(
             checks["remediation_backlog_promotion_clear"],
@@ -426,6 +466,7 @@ def _base_phase_requirements(
             artifact_kind="learning_readiness_signoff_revalidation",
             stale_next_step="Run make learning-readiness-signoff-revalidation.",
             fingerprint=fingerprint,
+            current_revision=current_revision,
         ),
         RequirementSpec(
             checks["learning_revalidation_current"],
@@ -448,6 +489,7 @@ def _preseal_phase_requirements(
     closeout: dict[str, Any],
     cohort: dict[str, Any],
     fingerprint: str,
+    current_revision: str,
 ) -> list[RequirementSpec]:
     return [
         *_artifact_requirements(
@@ -458,6 +500,7 @@ def _preseal_phase_requirements(
             artifact_kind="release_closeout_summary",
             stale_next_step="Run make release-auto-promotion-preseal.",
             fingerprint=fingerprint,
+            current_revision=current_revision,
         ),
         RequirementSpec(
             checks["closeout_summary_clean"],
@@ -515,6 +558,7 @@ def _preseal_phase_requirements(
             artifact_kind="release_evidence_cohort",
             stale_next_step="Run make release-evidence-cohort.",
             fingerprint=fingerprint,
+            current_revision=current_revision,
         ),
         RequirementSpec(
             checks["evidence_cohort_strict"],
@@ -543,20 +587,29 @@ def _preflight_checks(
     closeout: dict[str, Any],
     cohort: dict[str, Any],
     fingerprint: str,
+    current_revision: str,
 ) -> dict[str, bool]:
     checks = {
         "goal_run_identity_load_ok": inputs["goal_run_identity"]["load_status"] == "ok",
         "goal_run_identity_artifact_kind_ok": (
             inputs["goal_run_identity"]["artifact_kind"] == "release_goal_run_identity"
         ),
-        "goal_run_identity_current": _identity_current(inputs["goal_run_identity"], fingerprint),
+        "goal_run_identity_current": _identity_current_for_source(
+            inputs["goal_run_identity"],
+            fingerprint=fingerprint,
+            current_revision=current_revision,
+        ),
         "goal_run_identity_pass": identity["status"] == "pass",
         "goal_run_identity_effective_run_id_present": bool(identity["effective_run_id"]),
         "auto_improve_readiness_load_ok": inputs["auto_improve_readiness"]["load_status"] == "ok",
         "auto_improve_readiness_artifact_kind_ok": (
             inputs["auto_improve_readiness"]["artifact_kind"] == "auto_improve_readiness_report"
         ),
-        "auto_improve_readiness_current": _identity_current(inputs["auto_improve_readiness"], fingerprint),
+        "auto_improve_readiness_current": _identity_current_for_source(
+            inputs["auto_improve_readiness"],
+            fingerprint=fingerprint,
+            current_revision=current_revision,
+        ),
         "auto_improve_can_execute_trial": auto["can_execute_trial"],
         "auto_improve_stage3_promotion_blockers_clear": (
             int(auto["stage3_blocking_promotion_blocker_count"]) == 0
@@ -569,14 +622,22 @@ def _preflight_checks(
         "remediation_backlog_artifact_kind_ok": (
             inputs["remediation_backlog"]["artifact_kind"] == "remediation_backlog"
         ),
-        "remediation_backlog_current": _identity_current(inputs["remediation_backlog"], fingerprint),
+        "remediation_backlog_current": _identity_current_for_source(
+            inputs["remediation_backlog"],
+            fingerprint=fingerprint,
+            current_revision=current_revision,
+        ),
         "remediation_backlog_promotion_clear": int(remediation["open_promotion_count"]) == 0,
         "learning_revalidation_load_ok": inputs["learning_revalidation"]["load_status"] == "ok",
         "learning_revalidation_artifact_kind_ok": (
             inputs["learning_revalidation"]["artifact_kind"]
             == "learning_readiness_signoff_revalidation"
         ),
-        "learning_revalidation_current_source": _identity_current(inputs["learning_revalidation"], fingerprint),
+        "learning_revalidation_current_source": _identity_current_for_source(
+            inputs["learning_revalidation"],
+            fingerprint=fingerprint,
+            current_revision=current_revision,
+        ),
         "learning_revalidation_current": (
             str(learning["revalidation_status"]) in ALLOWED_LEARNING_REVALIDATION_STATUSES
         ),
@@ -593,7 +654,15 @@ def _preflight_checks(
         "evidence_cohort_strict": True,
     }
     if phase == "preseal":
-        checks.update(_preseal_checks(inputs, closeout=closeout, cohort=cohort, fingerprint=fingerprint))
+        checks.update(
+            _preseal_checks(
+                inputs,
+                closeout=closeout,
+                cohort=cohort,
+                fingerprint=fingerprint,
+                current_revision=current_revision,
+            )
+        )
     return checks
 
 
@@ -603,13 +672,18 @@ def _preseal_checks(
     closeout: dict[str, Any],
     cohort: dict[str, Any],
     fingerprint: str,
+    current_revision: str,
 ) -> dict[str, bool]:
     return {
         "closeout_summary_load_ok": inputs["closeout_summary"]["load_status"] == "ok",
         "closeout_summary_artifact_kind_ok": (
             inputs["closeout_summary"]["artifact_kind"] == "release_closeout_summary"
         ),
-        "closeout_summary_current": _identity_current(inputs["closeout_summary"], fingerprint),
+        "closeout_summary_current": _identity_current_for_source(
+            inputs["closeout_summary"],
+            fingerprint=fingerprint,
+            current_revision=current_revision,
+        ),
         "closeout_summary_clean": (
             closeout["status"] == "pass"
             and closeout["release_authority_status"] == "clean_pass"
@@ -623,7 +697,11 @@ def _preseal_checks(
         "evidence_cohort_artifact_kind_ok": (
             inputs["evidence_cohort"]["artifact_kind"] == "release_evidence_cohort"
         ),
-        "evidence_cohort_current": _identity_current(inputs["evidence_cohort"], fingerprint),
+        "evidence_cohort_current": _identity_current_for_source(
+            inputs["evidence_cohort"],
+            fingerprint=fingerprint,
+            current_revision=current_revision,
+        ),
         "evidence_cohort_strict": (
             bool(cohort["strict_same_fingerprint"])
             and cohort["clean_lane_contract_status"] == "pass"
@@ -643,6 +721,7 @@ def _preflight_requirements(
     closeout: dict[str, Any],
     cohort: dict[str, Any],
     fingerprint: str,
+    current_revision: str,
 ) -> list[RequirementSpec]:
     requirements = _base_phase_requirements(
         checks,
@@ -652,6 +731,7 @@ def _preflight_requirements(
         remediation=remediation,
         learning=learning,
         fingerprint=fingerprint,
+        current_revision=current_revision,
     )
     if phase == "preseal":
         requirements.extend(
@@ -661,6 +741,7 @@ def _preflight_requirements(
                 closeout=closeout,
                 cohort=cohort,
                 fingerprint=fingerprint,
+                current_revision=current_revision,
             )
         )
     return requirements
@@ -758,6 +839,7 @@ def build_manifest(
         closeout=closeout,
         cohort=cohort,
         fingerprint=fingerprint,
+        current_revision=commit,
     )
     requirements = _preflight_requirements(
         checks,
@@ -770,6 +852,7 @@ def build_manifest(
         closeout=closeout,
         cohort=cohort,
         fingerprint=fingerprint,
+        current_revision=commit,
     )
     blockers: list[dict[str, Any]] = []
     append_requirement_blockers(blockers, requirements)

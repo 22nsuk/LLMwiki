@@ -70,6 +70,7 @@ class ReleaseSealedRunManifestTests(unittest.TestCase):
                 "producer": "tests.release_run_manifest",
                 "generated_at": "2026-05-23T12:00:00Z",
                 "status": "pass",
+                "source_revision": "abc123",
                 "final_source_tree_fingerprint": "fp-current",
                 "source_tree_fingerprint": "fp-current",
                 "distribution_zip": {
@@ -85,6 +86,7 @@ class ReleaseSealedRunManifestTests(unittest.TestCase):
             {
                 "artifact_kind": "release_closeout_batch_manifest",
                 "producer": "tests.batch",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "fail",
                 "release_authority_status": "conditional_pass",
@@ -95,6 +97,7 @@ class ReleaseSealedRunManifestTests(unittest.TestCase):
             {
                 "artifact_kind": "external_report_reference_manifest",
                 "producer": "tests.external",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "basis_current_match",
             },
@@ -104,6 +107,7 @@ class ReleaseSealedRunManifestTests(unittest.TestCase):
             {
                 "artifact_kind": "release_evidence_closeout_self_check",
                 "producer": "tests.self_check",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": {"result": "pass"},
             },
@@ -113,6 +117,7 @@ class ReleaseSealedRunManifestTests(unittest.TestCase):
             {
                 "artifact_kind": "release_sealed_post_seal_attestation",
                 "producer": "tests.post_seal",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
             },
@@ -122,6 +127,7 @@ class ReleaseSealedRunManifestTests(unittest.TestCase):
             {
                 "artifact_kind": "release_closeout_sealed_rehearsal_check",
                 "producer": "tests.rehearsal",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
             },
@@ -160,6 +166,40 @@ class ReleaseSealedRunManifestTests(unittest.TestCase):
 
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("source_zip_matches_run_manifest", manifest["failures"])
+
+    def test_manifest_fails_when_run_manifest_revision_is_stale(self) -> None:
+        self._write_sealed_inputs()
+        run_manifest = json.loads(
+            (self.vault / "build/release/release-run-manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        run_manifest["source_revision"] = "old-revision"
+        self._write_json("build/release/release-run-manifest.json", run_manifest)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["run_manifest_source_revision_current"])
+        self.assertIn("run_manifest_source_revision_current", manifest["failures"])
+
+    def test_manifest_fails_when_sidecar_revision_is_stale(self) -> None:
+        self._write_sealed_inputs()
+        sidecar = json.loads(
+            (
+                self.vault / "build/release/release-sealed-post-seal-attestation.json"
+            ).read_text(encoding="utf-8")
+        )
+        sidecar["source_revision"] = "old-revision"
+        self._write_json("build/release/release-sealed-post-seal-attestation.json", sidecar)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["sidecars_source_revisions_current"])
+        self.assertIn("sidecars_source_revisions_current", manifest["failures"])
 
     def test_manifest_fails_when_post_seal_attestation_is_not_pass(self) -> None:
         self._write_sealed_inputs()

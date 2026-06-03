@@ -59,6 +59,7 @@ def _json_identity(vault: Path, path_value: str | Path) -> dict[str, Any]:
             "producer": str(payload.get("producer", "")),
             "generated_at": str(payload.get("generated_at", "")),
             "status": _status_label(payload.get("status")),
+            "source_revision": str(payload.get("source_revision", "")),
             "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
         }
     )
@@ -142,6 +143,8 @@ def build_manifest(
         "run_manifest_pass": run_identity["status"] == "pass",
         "source_tree_fingerprint_matches_run_manifest": bool(run_fingerprint)
         and run_fingerprint == fingerprint,
+        "run_manifest_source_revision_current": run_identity["source_revision"]
+        in {commit, "source_package_without_git"},
         "source_zip_present": bool(source_zip_identity["exists"]),
         "source_zip_matches_run_manifest": bool(run_zip_sha)
         and run_zip_sha == str(source_zip_identity["sha256"]),
@@ -153,6 +156,10 @@ def build_manifest(
         ),
         "sidecars_source_tree_fingerprints_current": all(
             sidecar["source_tree_fingerprint"] == fingerprint
+            for sidecar in sidecars.values()
+        ),
+        "sidecars_source_revisions_current": all(
+            sidecar["source_revision"] in {commit, "source_package_without_git"}
             for sidecar in sidecars.values()
         ),
         "post_seal_attestation_pass": sidecars["post_seal_attestation"]["status"] == "pass",

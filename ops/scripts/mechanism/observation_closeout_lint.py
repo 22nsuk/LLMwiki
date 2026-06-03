@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,10 @@ DEFAULT_REGISTRY = "ops/observation-closeout-registry.json"
 PRODUCER = "ops.scripts.observation_closeout_lint"
 SCHEMA_PATH = "ops/schemas/observation-closeout-registry.schema.json"
 OPEN_STATUSES = {"open", "planned"}
+OBSERVATION_ROOTS = (
+    "ops/reports/task-improvement-observations",
+    "runs",
+)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -32,27 +37,52 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _registry_keys(registry: dict[str, Any]) -> set[tuple[str, str]]:
+def _registry_entries(registry: dict[str, Any]) -> list[tuple[str, str]]:
     entries = registry.get("retained_observations", [])
     if not isinstance(entries, list):
-        return set()
-    return {
+        return []
+    return [
         (str(item.get("path", "")).strip(), str(item.get("observation_id", "")).strip())
         for item in entries
         if isinstance(item, dict)
-    }
+    ]
+
+
+def _registry_keys(registry: dict[str, Any]) -> set[tuple[str, str]]:
+    return set(_registry_entries(registry))
+
+
+def _duplicate_registry_entries(registry: dict[str, Any]) -> list[dict[str, Any]]:
+    counts = Counter(_registry_entries(registry))
+    return [
+        {"path": path, "observation_id": observation_id, "count": count}
+        for (path, observation_id), count in sorted(counts.items())
+        if count > 1
+    ]
 
 
 def _observation_files(vault: Path) -> list[Path]:
-    roots = [
-        vault / "ops" / "reports" / "task-improvement-observations",
-        vault / "runs",
-    ]
     files: list[Path] = []
-    for root in roots:
+    for root in (vault / rel_path for rel_path in OBSERVATION_ROOTS):
         if root.exists():
             files.extend(root.rglob("improvement-observations.json"))
     return sorted(files)
+
+
+def _observation_root_for_path(path: str) -> str:
+    return next(
+        (
+            root
+            for root in OBSERVATION_ROOTS
+            if path == root or path.startswith(f"{root}/")
+        ),
+        "",
+    )
+
+
+def _registry_entry_unavailable(vault: Path, path: str) -> tuple[bool, str]:
+    root = _observation_root_for_path(path)
+    return bool(root and not (vault / root).exists()), root
 
 
 def _open_observations(vault: Path) -> list[dict[str, Any]]:
@@ -87,7 +117,9 @@ def build_report(
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     resolved_vault = vault.resolve()
     registry = _read_json(resolved_vault / registry_path)
+    registry_entries = _registry_entries(registry)
     allowed = _registry_keys(registry)
+    duplicate_registry_entries = _duplicate_registry_entries(registry)
     open_observations = _open_observations(resolved_vault)
     unregistered = [
         item
@@ -95,11 +127,31 @@ def build_report(
         if (item["path"], item["observation_id"]) not in allowed
     ]
     observed_keys = {(item["path"], item["observation_id"]) for item in open_observations}
+    missing_registry_keys = sorted(allowed - observed_keys)
+    unavailable_registry_entries = [
+        {
+            "path": path,
+            "observation_id": observation_id,
+            "root": root,
+            "reason": "observation_root_absent",
+        }
+        for path, observation_id in missing_registry_keys
+        for unavailable, root in [_registry_entry_unavailable(resolved_vault, path)]
+        if unavailable
+    ]
+    unavailable_keys = {
+        (item["path"], item["observation_id"]) for item in unavailable_registry_entries
+    }
     stale_registry_entries = [
         {"path": path, "observation_id": observation_id}
-        for path, observation_id in sorted(allowed - observed_keys)
+        for path, observation_id in missing_registry_keys
+        if (path, observation_id) not in unavailable_keys
     ]
-    status = "pass" if not unregistered and not stale_registry_entries else "fail"
+    status = (
+        "pass"
+        if not unregistered and not stale_registry_entries and not duplicate_registry_entries
+        else "fail"
+    )
     return {
         "$schema": SCHEMA_PATH,
         "artifact_kind": "observation_closeout_lint",
@@ -109,13 +161,17 @@ def build_report(
         "registry_path": registry_path,
         "summary": {
             "open_observation_count": len(open_observations),
-            "registered_retained_count": len(allowed),
+            "registered_retained_count": len(registry_entries),
             "unregistered_open_count": len(unregistered),
             "stale_registry_entry_count": len(stale_registry_entries),
+            "duplicate_registry_key_count": len(duplicate_registry_entries),
+            "unavailable_registry_entry_count": len(unavailable_registry_entries),
         },
         "open_observations": open_observations,
         "unregistered_open_observations": unregistered,
         "stale_registry_entries": stale_registry_entries,
+        "duplicate_registry_entries": duplicate_registry_entries,
+        "unavailable_registry_entries": unavailable_registry_entries,
     }
 
 

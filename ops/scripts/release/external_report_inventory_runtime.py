@@ -15,6 +15,7 @@ REFERENCE_MANIFEST = "external-reports/report-reference-manifest.json"
 REFERENCE_MANIFEST_EXTENSIONS = {".md", ".pdf", ".docx"}
 REPORT_EXTENSIONS = REFERENCE_MANIFEST_EXTENSIONS
 NARRATIVE_REPORT_EXTENSIONS = {".md"}
+BINARY_REPORT_EXTENSIONS = REPORT_EXTENSIONS - NARRATIVE_REPORT_EXTENSIONS
 
 ARCHIVE_STATUS_RE = re.compile(
     r"(?im)^\s*(?:archive_status|lifecycle_status|report_status)\s*[:=]\s*"
@@ -52,7 +53,7 @@ def as_int(value: Any) -> int:
         return 0
 
 
-def active_report_paths(vault: Path) -> list[Path]:
+def _external_report_paths(vault: Path, *, extensions: set[str]) -> list[Path]:
     root = vault / "external-reports"
     if not root.is_dir():
         return []
@@ -69,19 +70,26 @@ def active_report_paths(vault: Path) -> list[Path]:
     return paths
 
 
+def active_report_paths(vault: Path) -> list[Path]:
+    return _external_report_paths(vault, extensions=REPORT_EXTENSIONS)
+
+
 def active_reference_report_paths(vault: Path) -> list[Path]:
-    root = vault / "external-reports"
-    if not root.is_dir():
-        return []
-    manifest_path = (vault / REFERENCE_MANIFEST).resolve()
-    paths: list[Path] = []
-    for path in sorted(root.iterdir()):
-        if not path.is_file() or path.suffix.lower() not in REFERENCE_MANIFEST_EXTENSIONS:
-            continue
-        if path.resolve() == manifest_path:
-            continue
-        paths.append(path)
-    return paths
+    return _external_report_paths(vault, extensions=REFERENCE_MANIFEST_EXTENSIONS)
+
+
+def report_type_for_path(path: Path) -> str:
+    if path.name == Path(REFERENCE_MANIFEST).name:
+        return "reference_manifest"
+    if path.suffix.lower() in NARRATIVE_REPORT_EXTENSIONS:
+        return "narrative_report"
+    if path.suffix.lower() in BINARY_REPORT_EXTENSIONS:
+        return "binary_report"
+    return "unknown_report"
+
+
+def is_binary_report_path(path: Path) -> bool:
+    return report_type_for_path(path) == "binary_report"
 
 
 def reference_manifest_alignment(vault: Path) -> dict[str, Any]:

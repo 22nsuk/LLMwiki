@@ -94,11 +94,13 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         release_source_ready_lines = (
             "\t$(MAKE) release-source-ready-prepare\n"
             "\t$(MAKE) release-source-ready-commit\n"
+            "\t$(MAKE) release-post-commit-finalize\n"
             "\t$(MAKE) release-source-ready-post-verify\n"
         )
         if misorder_release_source_ready:
             release_source_ready_lines = (
                 "\t$(MAKE) release-source-ready-prepare\n"
+                "\t$(MAKE) release-post-commit-finalize\n"
                 "\t$(MAKE) release-source-ready-post-verify\n"
                 "\t$(MAKE) release-source-ready-commit\n"
             )
@@ -150,6 +152,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "release-source-ready-snapshot",
                 "release-source-ready-prepare",
                 "release-source-ready-commit",
+                "release-post-commit-finalize",
                 "release-source-ready-post-verify",
                 "release-source-ready-status",
                 "release-converge-all-surfaces",
@@ -227,6 +230,8 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t@true\n"
             "release-source-ready-commit:\n"
             "\t@true\n"
+            "release-post-commit-finalize:\n"
+            "\t$(MAKE) release-closeout-finality-verify\n"
             "release-source-ready-status:\n"
             "\t@true\n"
             "release-check-all-surfaces:\n"

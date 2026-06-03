@@ -18,13 +18,23 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["path", "observation_id", "status", "retained_reason", "next_action"],
+            "required": [
+              "path",
+              "observation_id",
+              "status",
+              "retained_reason",
+              "next_action",
+              "exit_condition",
+              "owner_or_lane"
+            ],
             "properties": {
               "path": { "type": "string", "minLength": 1 },
               "observation_id": { "type": "string", "minLength": 1 },
               "status": { "type": "string", "enum": ["open", "planned"] },
               "retained_reason": { "type": "string", "minLength": 1 },
-              "next_action": { "type": "string", "minLength": 1 }
+              "next_action": { "type": "string", "minLength": 1 },
+              "exit_condition": { "type": "string", "minLength": 1 },
+              "owner_or_lane": { "type": "string", "minLength": 1 }
             }
           }
         }
@@ -33,7 +43,20 @@
     "lint_report": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "registry_path", "summary", "open_observations", "unregistered_open_observations", "stale_registry_entries"],
+      "required": [
+        "$schema",
+        "artifact_kind",
+        "generated_at",
+        "producer",
+        "status",
+        "registry_path",
+        "summary",
+        "open_observations",
+        "unregistered_open_observations",
+        "stale_registry_entries",
+        "duplicate_registry_entries",
+        "unavailable_registry_entries"
+      ],
       "properties": {
         "$schema": { "type": "string", "const": "ops/schemas/observation-closeout-registry.schema.json" },
         "artifact_kind": { "type": "string", "const": "observation_closeout_lint" },
@@ -44,17 +67,28 @@
         "summary": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["open_observation_count", "registered_retained_count", "unregistered_open_count", "stale_registry_entry_count"],
+          "required": [
+            "open_observation_count",
+            "registered_retained_count",
+            "unregistered_open_count",
+            "stale_registry_entry_count",
+            "duplicate_registry_key_count",
+            "unavailable_registry_entry_count"
+          ],
           "properties": {
             "open_observation_count": { "type": "integer", "minimum": 0 },
             "registered_retained_count": { "type": "integer", "minimum": 0 },
             "unregistered_open_count": { "type": "integer", "minimum": 0 },
-            "stale_registry_entry_count": { "type": "integer", "minimum": 0 }
+            "stale_registry_entry_count": { "type": "integer", "minimum": 0 },
+            "duplicate_registry_key_count": { "type": "integer", "minimum": 0 },
+            "unavailable_registry_entry_count": { "type": "integer", "minimum": 0 }
           }
         },
         "open_observations": { "type": "array", "items": { "$ref": "#/$defs/observation_ref" } },
         "unregistered_open_observations": { "type": "array", "items": { "$ref": "#/$defs/observation_ref" } },
-        "stale_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/stale_registry_entry" } }
+        "stale_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/stale_registry_entry" } },
+        "duplicate_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/duplicate_registry_entry" } },
+        "unavailable_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/unavailable_registry_entry" } }
       }
     },
     "observation_ref": {
@@ -76,6 +110,27 @@
       "properties": {
         "path": { "type": "string", "minLength": 1 },
         "observation_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "duplicate_registry_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "observation_id", "count"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "observation_id": { "type": "string", "minLength": 1 },
+        "count": { "type": "integer", "minimum": 2 }
+      }
+    },
+    "unavailable_registry_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "observation_id", "root", "reason"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "observation_id": { "type": "string", "minLength": 1 },
+        "root": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "enum": ["observation_root_absent"] }
       }
     }
   }

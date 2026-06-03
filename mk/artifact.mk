@@ -25,13 +25,14 @@ WORKFLOW_DEPENDENCY_PLANNER_OUT ?= ops/reports/workflow-dependency-planner.json
 WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT ?= tmp/workflow-dependency-planner.candidate.json
 WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT ?= tmp/workflow-dependency-planner-check.json
 WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST ?=
+CHANGED_PATH_MINIMUM_PLAN_OUT ?= tmp/changed-path-minimum-plan.json
 RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= ops/reports/release-workflow-order-guard.json
 RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json
 RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.json
 RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT ?= tmp/release-risk-taxonomy-matrix.candidate.json
 RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.md
 
-.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-clean-regenerate manual-mutate-defect-registry closure-registry-envelope make-target-inventory workflow-dependency-planner workflow-dependency-planner-check release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
+.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-clean-regenerate manual-mutate-defect-registry closure-registry-envelope make-target-inventory workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
@@ -109,6 +110,9 @@ workflow-dependency-planner:
 
 workflow-dependency-planner-check:
 	$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT)" $(if $(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST),--changed-files-manifest "$(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST)",)
+
+changed-path-minimum-plan:
+	$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(CHANGED_PATH_MINIMUM_PLAN_OUT)" $(if $(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST),--changed-files-manifest "$(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST)",)
 
 release-workflow-order-guard:
 	$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)"

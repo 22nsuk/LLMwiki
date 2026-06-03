@@ -1823,6 +1823,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             [
                 "$(MAKE) release-source-ready-prepare",
                 "$(MAKE) release-source-ready-commit",
+                "$(MAKE) release-post-commit-finalize",
                 "$(MAKE) release-source-ready-post-verify",
             ],
         )
@@ -2216,7 +2217,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         finalized_block = _target_block(text, "release-check-finalized")
         self.assertIn("release-check-finalized", _target_block(text, ".PHONY"))
         self.assertTrue(finalized_block.startswith("release-check-finalized: release-check"))
-        self.assertIn("release-check is check-only", finalized_block)
+        self.assertIn("compatibility alias", finalized_block)
+        self.assertIn("release-check for check-only verification", finalized_block)
+        self.assertIn("release-post-commit-finalize after committing source-ready changes", finalized_block)
         self.assertIn(
             "developer/package precheck이며 canonical release evidence로 쓰지 않는다",
             release_doc_text,
@@ -2256,9 +2259,24 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
 
         self.assertIn("head-aligned-evidence-converge", _target_block(text, ".PHONY"))
+        alias_block = _target_block(text, "head-aligned-evidence-converge")
+        self.assertTrue(
+            alias_block.startswith(
+                "head-aligned-evidence-converge: release-post-commit-finalize"
+            )
+        )
         self.assertEqual(
             _recipe_lines(text, "head-aligned-evidence-converge"),
             [
+                '@echo "head-aligned-evidence-converge is a compatibility alias; prefer release-post-commit-finalize."',
+            ],
+        )
+        self.assertEqual(
+            _recipe_lines(text, "release-post-commit-finalize"),
+            [
+                "$(MAKE) release-worktree-clean-check",
+                "$(MAKE) release-auto-promotion-ready-invalidate",
+                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
                 "$(MAKE) release-evidence-converge",
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) auto-improve-goal-status",
@@ -2289,6 +2307,8 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-clean-blocker-ledger",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
+                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention',
+                "$(MAKE) release-worktree-clean-check",
             ],
         )
 

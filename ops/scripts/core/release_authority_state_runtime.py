@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .source_revision_runtime import resolve_source_revision
 from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 STATUS_V2_SCHEMA_VERSION = 2
@@ -365,11 +366,16 @@ def current_release_manifest_pass(
     artifact_kind: str,
     *,
     source_tree_fingerprint: str | None = None,
+    source_revision: str | None = None,
 ) -> bool:
     payload = _read_json(vault / rel_path)
     current_fingerprint = source_tree_fingerprint or release_source_tree_fingerprint(vault)
+    current_revision = source_revision or resolve_source_revision(vault).revision
+    artifact_revision = release_artifact_revision(payload)
     return (
         payload.get("status") == "pass"
         and payload.get("artifact_kind") == artifact_kind
         and str(payload.get("source_tree_fingerprint", "")).strip() == current_fingerprint
+        and bool(artifact_revision)
+        and artifact_revision in {current_revision, "source_package_without_git"}
     )

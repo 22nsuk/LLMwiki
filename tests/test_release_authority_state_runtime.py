@@ -162,6 +162,16 @@ class ReleaseAuthorityStateRuntimeTests(unittest.TestCase):
                     "build/release/release-run-manifest.json",
                     "release_run_manifest",
                     source_tree_fingerprint="fingerprint",
+                    source_revision="current",
+                )
+            )
+            self.assertFalse(
+                current_release_manifest_pass(
+                    vault,
+                    "build/release/release-run-manifest.json",
+                    "release_run_manifest",
+                    source_tree_fingerprint="fingerprint",
+                    source_revision="other",
                 )
             )
 

@@ -211,6 +211,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             {
                 "status": "pass",
                 "artifact_kind": "release_run_manifest",
+                "source_revision": "source_package_without_git",
                 "source_tree_fingerprint": current_source_tree_fingerprint,
             },
         )
@@ -219,6 +220,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             {
                 "status": "pass",
                 "artifact_kind": "release_sealed_run_manifest",
+                "source_revision": "source_package_without_git",
                 "source_tree_fingerprint": current_source_tree_fingerprint,
             },
         )
@@ -227,6 +229,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             {
                 "status": "pass",
                 "artifact_kind": "release_auto_promotion_ready_manifest",
+                "source_revision": "source_package_without_git",
                 "source_tree_fingerprint": current_source_tree_fingerprint,
                 "auto_promotion_status": "allowed",
                 "unattended_promotion_allowed": True,
@@ -374,6 +377,32 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         ][0]
         self.assertEqual(self_evidence["status"], report["status"])
         self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_binary_active_report_is_operator_only_action_not_unmatched(self) -> None:
+        (self.external / "review.pdf").write_bytes(b"%PDF-1.4\n")
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/review.pdf"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(report["summary"]["active_report_count"], 1)
+        self.assertEqual(report["summary"]["unmatched_active_report_count"], 0)
+        coverage = report["active_report_coverage"][0]
+        self.assertEqual(coverage["report_type"], "binary_report")
+        self.assertEqual(
+            coverage["matched_action_ids"],
+            ["operator_only_external_report_binary"],
+        )
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        binary_action = actions["operator_only_external_report_binary"]
+        self.assertEqual(binary_action["current_status"], "planned")
+        self.assertIn("external-reports/review.pdf", binary_action["source_report_paths"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_source_revision_unknown_is_explicit_partial_until_canonical_reports_are_refreshed(self) -> None:
@@ -1030,6 +1059,67 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         }
         self.assertIn("release-run-ready-plan-check", detail_targets)
         self.assertIn("release-sealed-run-ready-plan", detail_targets)
+
+    def test_release_verified_actions_explain_manifest_revision_mismatch(self) -> None:
+        self._write_release_verification_reports()
+        current_source_tree_fingerprint = release_source_tree_fingerprint(self.vault)
+        self._write_json(
+            "build/release/release-run-manifest.json",
+            {
+                "status": "pass",
+                "artifact_kind": "release_run_manifest",
+                "source_revision": "old-revision",
+                "source_tree_fingerprint": current_source_tree_fingerprint,
+            },
+        )
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nsource package, evidence bundle, full-suite.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        action = actions["full_suite_evidence_currentness"]
+        self.assertEqual(action["current_status"], "requires_release_run_verification")
+        self.assertIn(
+            "release_run_manifest_source_revision_mismatch",
+            action["status_reason_ids"],
+        )
+        detail = {
+            item["reason_id"]: item for item in action["status_reason_details"]
+        }["release_run_manifest_source_revision_mismatch"]
+        self.assertEqual(detail["owning_stage"], "release_run_ready")
+        self.assertIn("release-run-ready", detail["recommended_targets"])
+
+    def test_promotion_truth_ladder_rejects_ready_manifest_revision_stale(self) -> None:
+        self._write_release_verification_reports()
+        ready = json.loads(
+            (
+                self.vault / "build/release/release-auto-promotion-ready-manifest.json"
+            ).read_text(encoding="utf-8")
+        )
+        ready["source_revision"] = "old-revision"
+        self._write_json("build/release/release-auto-promotion-ready-manifest.json", ready)
+        (self.external / "release.md").write_text(
+            "# Release Review\n\npromotion_blockers.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        action = actions["promotion_truth_ladder"]
+        self.assertEqual(action["current_status"], "requires_release_run_verification")
+        self.assertIn(
+            "release_auto_promotion_ready_manifest_source_revision_mismatch",
+            action["status_reason_ids"],
+        )
+        detail = {
+            item["reason_id"]: item for item in action["status_reason_details"]
+        }["release_auto_promotion_ready_manifest_source_revision_mismatch"]
+        self.assertEqual(detail["owning_stage"], "release_auto_promotion_ready")
+        self.assertIn("release-auto-promotion-ready", detail["recommended_targets"])
 
     def test_negative_lessons_and_remediation_backlog_are_implementation_artifacts(self) -> None:
         for rel_path in (

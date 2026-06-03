@@ -236,7 +236,7 @@
         "path": { "type": "string", "minLength": 1 },
         "report_type": {
           "type": "string",
-          "enum": ["narrative_report", "reference_manifest"]
+          "enum": ["narrative_report", "reference_manifest", "binary_report"]
         },
         "priority_mentions": { "$ref": "#/$defs/priority_counts" },
         "matched_action_ids": {

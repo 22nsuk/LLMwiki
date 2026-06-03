@@ -91,6 +91,14 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "recommended_target": "external-report-action-matrix",
     },
     {
+        "action_id": "operator_only_external_report_binary",
+        "priority": "P1",
+        "theme": "binary active external report operator review",
+        "patterns": [r"binary external report", r"PDF", r"DOCX", r"operator-only"],
+        "evidence_paths": [],
+        "recommended_target": "external-report-reference-manifest-settle",
+    },
+    {
         "action_id": "active_report_manifest_freshness",
         "priority": "P0",
         "theme": "active external report manifest freshness",

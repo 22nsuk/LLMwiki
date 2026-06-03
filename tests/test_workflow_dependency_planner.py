@@ -33,6 +33,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.vault = Path(self.temp_dir.name) / "vault"
         self.vault.mkdir()
         seed_minimal_vault(self.vault)
+        registry = self.vault / "ops" / "test-lane-registry.json"
+        registry.parent.mkdir(parents=True, exist_ok=True)
+        registry.write_text(
+            (REPO_ROOT / "ops" / "test-lane-registry.json").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
         (self.vault / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
         (self.vault / ".github" / "workflows" / "ci.yml").write_text("name: CI\n", encoding="utf-8")
         (self.vault / "Makefile").write_text(
@@ -145,6 +151,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(report["evidence_dag"]["status"], "attention")
         self.assertIn("Makefile", report["input_fingerprints"])
         self.assertIn(".github/workflows/ci.yml", report["input_fingerprints"])
+        self.assertIn("test_lane_registry", report["input_fingerprints"])
+        self.assertEqual(report["changed_path_minimum_plan"]["budget_status"], "not_applicable")
 
     def test_included_mk_files_are_part_of_workflow_graph(self) -> None:
         (self.vault / "mk").mkdir(exist_ok=True)
@@ -508,6 +516,83 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "attention")
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], ["notes/private-scratch.txt"])
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "attention")
+        self.assertEqual(plan["coverage_class"], "conservative")
+        self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
+        self.assertTrue(plan["static_required"])
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertTrue(plan["final_checkpoint_required"])
+        self.assertFalse(plan["release_proof_replacement"])
+
+    def test_changed_path_minimum_plan_selects_focused_test_without_full_proof_claim(
+        self,
+    ) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["tests/test_workflow_dependency_planner.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "focused_test")
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "uv run python -m pytest tests/test_workflow_dependency_planner.py -q",
+            ],
+        )
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertEqual(
+            plan["final_checkpoint_commands"],
+            ["make test-execution-summary-full-current-or-refresh"],
+        )
+        self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_budget_status_is_deterministic(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[
+                "ops/scripts/core/workflow_dependency_planner.py",
+                "ops/schemas/workflow-dependency-planner.schema.json",
+            ],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["coverage_class"], "mixed")
+        self.assertEqual(plan["estimated_duration_seconds"], 420)
+        self.assertEqual(plan["duration_budget_seconds"], 300)
+        self.assertEqual(plan["budget_status"], "over_budget")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_plan_matches_root_docs(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["docs/release.md"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "public_boundary")
+        self.assertEqual(plan["selected_commands"], ["make static", "make public-check"])
+
+    def test_changed_path_minimum_plan_matches_root_tools_python(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["tools/regenerate_report_schema_samples.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "runtime_source")
+        self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
+        self.assertEqual(plan["unknown_paths"], [])
 
     def test_missing_make_dependency_fails_with_diagnostic(self) -> None:
         (self.vault / "Makefile").write_text(

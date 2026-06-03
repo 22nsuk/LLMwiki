@@ -23,6 +23,9 @@ from ops.scripts.path_portability_runtime import (
     utf8_byte_len,
 )
 from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.release.external_report_inventory_runtime import (
+    active_reference_report_paths,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     EXTERNAL_REPORT_REFERENCE_MANIFEST_SCHEMA_PATH,
@@ -119,24 +122,16 @@ def _path_reference(vault: Path, path: Path) -> dict[str, Any]:
 
 
 def _reference_paths(vault: Path, out_path: str) -> list[Path]:
-    root = vault / "external-reports"
-    if not root.is_dir():
-        return []
     resolved_out = resolve_schema_backed_report_output_path(
         vault,
         out_path,
         default_relative_path=DEFAULT_OUT,
     )
-    paths = []
-    for path in sorted(root.iterdir()):
-        if not path.is_file():
-            continue
-        if path.resolve() == resolved_out.resolve():
-            continue
-        if path.suffix.lower() not in REFERENCE_EXTENSIONS:
-            continue
-        paths.append(path)
-    return paths
+    return [
+        path
+        for path in active_reference_report_paths(vault)
+        if path.resolve() != resolved_out.resolve()
+    ]
 
 
 def _archive_reference_count(vault: Path) -> int:

@@ -49,6 +49,7 @@ else:
 
 
 DEFAULT_OUT = "ops/reports/workflow-dependency-planner.json"
+DEFAULT_TEST_LANE_REGISTRY = "ops/test-lane-registry.json"
 PRODUCER = "ops.scripts.workflow_dependency_planner"
 SOURCE_COMMAND = (
     "python -m ops.scripts.workflow_dependency_planner "
@@ -529,6 +530,113 @@ def _unknown_change_paths(
     ]
 
 
+def _test_lane_registry(vault: Path) -> dict[str, Any]:
+    payload = load_optional_json_object(vault / DEFAULT_TEST_LANE_REGISTRY)
+    return payload if isinstance(payload, dict) else {}
+
+
+def _format_command(command: str, path: str) -> str:
+    return command.replace("{path}", path)
+
+
+def _changed_path_minimum_rules(registry: dict[str, Any]) -> dict[str, Any]:
+    plan = registry.get("changed_path_minimums")
+    return plan if isinstance(plan, dict) else {}
+
+
+def _changed_path_minimum_plan(
+    changed_paths: list[str],
+    registry: dict[str, Any],
+) -> dict[str, Any]:
+    config = _changed_path_minimum_rules(registry)
+    rules = [item for item in config.get("rules", []) if isinstance(item, dict)]
+    default_rule = config.get("unknown_path")
+    if not isinstance(default_rule, dict):
+        default_rule = {
+            "commands": ["make static", "make test-fast"],
+            "reason": "Unknown paths use the conservative advisory minimum lane.",
+            "coverage_class": "conservative",
+            "static_required": True,
+            "duration_seconds": 300,
+        }
+    path_recommendations: list[dict[str, Any]] = []
+    unknown_paths: list[str] = []
+    for path in changed_paths:
+        matched_rule = next(
+            (
+                rule
+                for rule in rules
+                if any(
+                    fnmatch.fnmatch(path, str(pattern))
+                    for pattern in rule.get("path_patterns", [])
+                )
+            ),
+            None,
+        )
+        rule = matched_rule or default_rule
+        if matched_rule is None:
+            unknown_paths.append(path)
+        commands = [
+            _format_command(str(command), path)
+            for command in rule.get("commands", [])
+            if str(command).strip()
+        ]
+        path_recommendations.append(
+            {
+                "path": path,
+                "matched_rule_id": str(rule.get("rule_id", "unknown_path")),
+                "commands": commands,
+                "reason": str(rule.get("reason", "")).strip(),
+                "coverage_class": str(rule.get("coverage_class", "conservative")).strip(),
+                "static_required": bool(rule.get("static_required", True)),
+                "duration_seconds": int(rule.get("duration_seconds", 0) or 0),
+            }
+        )
+    selected_commands = _dedupe_preserve_order(
+        [
+            command
+            for recommendation in path_recommendations
+            for command in recommendation["commands"]
+        ]
+    )
+    estimated_duration_seconds = sum(
+        int(item["duration_seconds"]) for item in path_recommendations
+    )
+    duration_budget_seconds = int(config.get("default_duration_budget_seconds", 0) or 0)
+    if not path_recommendations:
+        budget_status = "not_applicable"
+        coverage_class = "none"
+    else:
+        budget_status = (
+            "unknown"
+            if duration_budget_seconds <= 0
+            else "within_budget"
+            if estimated_duration_seconds <= duration_budget_seconds
+            else "over_budget"
+        )
+        coverage_classes = sorted(
+            {str(item["coverage_class"]) for item in path_recommendations}
+        )
+        coverage_class = coverage_classes[0] if len(coverage_classes) == 1 else "mixed"
+    status = "attention" if unknown_paths else "pass"
+    return {
+        "status": status,
+        "advisory": True,
+        "registry_path": DEFAULT_TEST_LANE_REGISTRY,
+        "selected_commands": selected_commands,
+        "final_checkpoint_required": True,
+        "final_checkpoint_commands": ["make test-execution-summary-full-current-or-refresh"],
+        "release_proof_replacement": False,
+        "coverage_class": coverage_class,
+        "static_required": any(item["static_required"] for item in path_recommendations),
+        "budget_status": budget_status,
+        "duration_budget_seconds": duration_budget_seconds,
+        "estimated_duration_seconds": estimated_duration_seconds,
+        "unknown_paths": unknown_paths,
+        "path_recommendations": path_recommendations,
+    }
+
+
 def _current_evidence_signals() -> list[dict[str, str]]:
     return [
         {
@@ -665,6 +773,11 @@ def build_report(
     manifest_paths = _read_changed_paths(resolved_vault, changed_files_manifest)
     selected_paths = sorted(set([*(changed_paths or []), *manifest_paths]))
     workflow_rules = _workflow_rules(resolved_vault)
+    test_lane_registry = _test_lane_registry(resolved_vault)
+    changed_path_minimum_plan = _changed_path_minimum_plan(
+        selected_paths,
+        test_lane_registry,
+    )
     missing_dependencies = _missing_dependencies(targets, dependency_edges)
     unknown_change_paths = _unknown_change_paths(selected_paths, workflow_rules)
     selected_workflows = _selected_workflows(selected_paths, workflow_rules)
@@ -676,6 +789,8 @@ def build_report(
         file_inputs[".github/workflows/ci.yml"] = ".github/workflows/ci.yml"
     if changed_files_manifest:
         file_inputs["changed_files_manifest"] = changed_files_manifest
+    if (resolved_vault / DEFAULT_TEST_LANE_REGISTRY).exists():
+        file_inputs["test_lane_registry"] = DEFAULT_TEST_LANE_REGISTRY
     return {
         **build_canonical_report_envelope(
             resolved_vault,
@@ -718,12 +833,19 @@ def build_report(
             "dependency_edge_count": len(dependency_edges),
             "missing_dependency_count": len(missing_dependencies),
             "unknown_change_path_count": len(unknown_change_paths),
+            "changed_path_minimum_command_count": len(
+                changed_path_minimum_plan["selected_commands"]
+            ),
+            "changed_path_minimum_budget_status": changed_path_minimum_plan[
+                "budget_status"
+            ],
             "evidence_node_count": evidence_dag["node_count"],
             "evidence_edge_count": evidence_dag["edge_count"],
         },
         "selected_change_paths": selected_paths,
         "workflow_rules": workflow_rules,
         "selected_workflows": selected_workflows,
+        "changed_path_minimum_plan": changed_path_minimum_plan,
         "dependency_edges": dependency_edges,
         "evidence_dag": evidence_dag,
         "current_evidence_signals": _current_evidence_signals(),

@@ -13,11 +13,13 @@ from ops.scripts.core.release_authority_state_runtime import (
     authoritative_live_rerun_fail_count,
     authoritative_live_rerun_not_run_count,
     current_release_manifest_pass,
+    release_artifact_revision,
     release_authority_reports_verified,
     release_status_v2_view_with_readiness_fallback,
 )
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.source_revision_runtime import resolve_source_revision
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 from ops.scripts.workflow_dependency_planner import (
     build_report as build_workflow_dependency_report,
@@ -44,6 +46,7 @@ from .external_report_action_lifecycle_runtime import (
 )
 from .external_report_inventory_runtime import (
     ARCHIVE_STATUS_RE,
+    BINARY_REPORT_EXTENSIONS,
     COVERAGE_MARKER_PATTERNS,
     NARRATIVE_REPORT_EXTENSIONS,
     REFERENCE_MANIFEST,
@@ -58,11 +61,13 @@ from .external_report_inventory_runtime import (
     as_list,
     content_sha256,
     coverage_markers,
+    is_binary_report_path,
     load_json_object,
     matched_actions,
     priority_counts,
     reference_manifest_alignment,
     report_text,
+    report_type_for_path,
 )
 from .release_closeout_finality_attestation import verify_attestation
 from .release_workflow_order_guard import (
@@ -90,6 +95,7 @@ _ACTION_CATALOG_COMPAT_EXPORTS = (
 )
 _INVENTORY_COMPAT_EXPORTS = (
     ARCHIVE_STATUS_RE,
+    BINARY_REPORT_EXTENSIONS,
     COVERAGE_MARKER_PATTERNS,
     NARRATIVE_REPORT_EXTENSIONS,
     REFERENCE_MANIFEST,
@@ -104,10 +110,12 @@ _INVENTORY_COMPAT_EXPORTS = (
     as_list,
     content_sha256,
     coverage_markers,
+    is_binary_report_path,
     load_json_object,
     matched_actions,
     priority_counts,
     reference_manifest_alignment,
+    report_type_for_path,
     report_text,
 )
 
@@ -206,7 +214,21 @@ def _current_release_manifest_reason_ids(
     current_fingerprint = release_source_tree_fingerprint(vault)
     if str(payload.get("source_tree_fingerprint", "")).strip() != current_fingerprint:
         reasons.append(f"{reason_prefix}_source_tree_fingerprint_mismatch")
+    artifact_revision = release_artifact_revision(payload)
+    current_revision = resolve_source_revision(vault).revision
+    if not artifact_revision:
+        reasons.append(f"{reason_prefix}_source_revision_missing")
+    elif artifact_revision not in {current_revision, "source_package_without_git"}:
+        reasons.append(f"{reason_prefix}_source_revision_mismatch")
     return reasons
+
+
+def _release_artifact_revision_current(vault: Path, payload: dict[str, Any]) -> bool:
+    artifact_revision = release_artifact_revision(payload)
+    return bool(artifact_revision) and artifact_revision in {
+        resolve_source_revision(vault).revision,
+        "source_package_without_git",
+    }
 
 
 def _source_package_reason_ids(vault: Path) -> list[str]:
@@ -315,6 +337,11 @@ def release_verified_action_reason_ids(vault: Path, action_id: str) -> list[str]
                 != release_source_tree_fingerprint(vault)
             ):
                 reasons.append("release_auto_promotion_ready_manifest_source_tree_fingerprint_mismatch")
+            artifact_revision = release_artifact_revision(ready)
+            if not artifact_revision:
+                reasons.append("release_auto_promotion_ready_manifest_source_revision_missing")
+            elif not _release_artifact_revision_current(vault, ready):
+                reasons.append("release_auto_promotion_ready_manifest_source_revision_mismatch")
     return _dedupe_reason_ids(reasons)
 
 
@@ -358,6 +385,7 @@ def promotion_truth_ladder_verified(vault: Path) -> bool:
         and ready.get("unattended_promotion_allowed") is True
         and str(ready.get("source_tree_fingerprint", "")).strip()
         == release_source_tree_fingerprint(vault)
+        and _release_artifact_revision_current(vault, ready)
     )
 
 
@@ -1545,12 +1573,19 @@ def external_report_lifecycle_status(vault: Path) -> str:
     return "planned"
 
 
+def operator_only_external_report_binary_status(vault: Path) -> str:
+    if any(is_binary_report_path(path) for path in active_report_paths(vault)):
+        return "planned"
+    return "implemented"
+
+
 STATUS_RESOLVERS: dict[str, StatusResolver] = {
     "release_writer_dependency_single_source": single_source_status,
     "outcome_provenance_gate_policy": lambda vault: json_report_status(
         vault / "ops/reports/outcome-provenance-gate-policy.json"
     ),
     "external_report_lifecycle": external_report_lifecycle_status,
+    "operator_only_external_report_binary": operator_only_external_report_binary_status,
     "active_report_manifest_freshness": active_report_manifest_freshness_status,
     "release_lane_mutability_split": release_lane_mutability_split_status,
     "sealed_summary_vocabulary_demotion": sealed_summary_vocabulary_demotion_status,
@@ -1881,12 +1916,16 @@ def action_statuses(vault: Path) -> dict[str, str]:
 def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
     rel_path = report_path(vault, path)
     text = report_text(path)
-    action_ids = matched_actions(text) if text else ["external_report_lifecycle"]
+    report_type = report_type_for_path(path)
+    if report_type == "binary_report":
+        action_ids = ["operator_only_external_report_binary"]
+    else:
+        action_ids = matched_actions(text) if text else ["external_report_lifecycle"]
     if path.name == Path(REFERENCE_MANIFEST).name:
         action_ids = sorted(set(action_ids) | {"active_report_manifest_freshness"})
     return {
         "path": rel_path,
-        "report_type": "reference_manifest" if path.name == "report-reference-manifest.json" else "narrative_report",
+        "report_type": report_type,
         "priority_mentions": priority_counts(text),
         "matched_action_ids": action_ids,
         "matched_action_count": len(action_ids),
@@ -1948,6 +1987,12 @@ def lifecycle_decision(
 ) -> dict[str, Any]:
     path = str(profile["path"])
     if profile["report_type"] != "narrative_report":
+        if profile["report_type"] == "binary_report":
+            return {
+                "archive_recommended": False,
+                "reason": "Binary active reports require operator-only review or an explicit extracted mapping before lifecycle automation can archive them.",
+                "superseded_by": [],
+            }
         return {
             "archive_recommended": False,
             "reason": "Reference manifest remains active lifecycle evidence.",

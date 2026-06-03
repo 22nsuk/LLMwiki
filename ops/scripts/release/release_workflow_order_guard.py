@@ -66,6 +66,7 @@ CHECK_FINALIZED_TARGET = "check-finalized"
 RELEASE_FINALITY_RESETTLE_TARGET = "release-finality-resettle"
 RELEASE_SOURCE_READY_TARGET = "release-source-ready"
 RELEASE_SOURCE_READY_PREPARE_TARGET = "release-source-ready-prepare"
+RELEASE_POST_COMMIT_FINALIZE_TARGET = "release-post-commit-finalize"
 RELEASE_SOURCE_READY_POST_VERIFY_TARGET = "release-source-ready-post-verify"
 STRICT_FINALIZER_FLAG = "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
 ALLOWED_REPEATED_CONVERGE_TARGETS = {
@@ -518,6 +519,7 @@ def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -
     expected = [
         "release-source-ready-prepare",
         "release-source-ready-commit",
+        "release-post-commit-finalize",
         "release-source-ready-post-verify",
     ]
     check = _check_subsequence(
@@ -526,7 +528,8 @@ def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -
         expected,
         details=(
             "release-source-ready must prepare all mutating evidence before committing, "
-            "create one release-source-ready commit, then run a write-free post-verify lane."
+            "create one release-source-ready commit, converge post-commit evidence, "
+            "then run a write-free post-verify lane."
         ),
     )
     terminal_index = _first_index(invocations, "release-source-ready-post-verify")

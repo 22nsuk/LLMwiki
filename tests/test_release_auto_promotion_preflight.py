@@ -59,6 +59,7 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "artifact_kind": "release_goal_run_identity",
                 "producer": "tests.goal_identity",
                 "generated_at": "2026-05-23T12:00:00Z",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
                 "binding_status": "bound",
@@ -87,6 +88,7 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "artifact_kind": "auto_improve_readiness_report",
                 "producer": "tests.auto_improve",
                 "generated_at": "2026-05-23T12:00:00Z",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
                 "can_execute_trial": True,
@@ -102,6 +104,7 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "artifact_kind": "remediation_backlog",
                 "producer": "tests.remediation",
                 "generated_at": "2026-05-23T12:00:00Z",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
                 "summary": {
@@ -117,6 +120,7 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "artifact_kind": "learning_readiness_signoff_revalidation",
                 "producer": "tests.learning",
                 "generated_at": "2026-05-23T12:00:00Z",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
                 "revalidation": {"status": "current", "clean_closeout_required": False},
@@ -130,6 +134,7 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "artifact_kind": "release_closeout_summary",
                 "producer": "tests.closeout",
                 "generated_at": "2026-05-23T12:00:00Z",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
                 "release_authority_status": "clean_pass",
@@ -149,6 +154,7 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "artifact_kind": "release_evidence_cohort",
                 "producer": "tests.cohort",
                 "generated_at": "2026-05-23T12:00:00Z",
+                "source_revision": "abc123",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
                 "cohort": {
@@ -187,6 +193,32 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "build/release/release-auto-promotion-preflight.json",
             ).exists()
         )
+
+    def test_preflight_rejects_revision_stale_identity_even_when_fingerprint_matches(
+        self,
+    ) -> None:
+        self._write_common_inputs()
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["source_revision"] = "old-revision"
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, phase="preflight", context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["auto_improve_readiness_current"])
+        self.assertIn("auto_improve_readiness_stale", manifest["failures"])
+        blocker = next(
+            item
+            for item in manifest["blockers"]
+            if item["id"] == "auto_improve_readiness_stale"
+        )
+        self.assertIn("source_revision=old-revision", blocker["observed"])
+        self.assertIn("source_revision=abc123", blocker["expected"])
 
     def test_preflight_accepts_metrics_close_candidate_revalidation(self) -> None:
         self._write_common_inputs()
@@ -454,6 +486,26 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
             if item["id"] == "closeout_gate_attention_not_clean"
         )
         self.assertEqual(blocker["gate_effect"], "blocks_promotion")
+
+    def test_preseal_rejects_revision_stale_closeout_even_when_fingerprint_matches(
+        self,
+    ) -> None:
+        self._write_common_inputs()
+        self._write_preseal_inputs()
+        closeout = json.loads(
+            (self.vault / "ops/reports/release-closeout-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        closeout["source_revision"] = "old-revision"
+        self._write_json("ops/reports/release-closeout-summary.json", closeout)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, phase="preseal", context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["closeout_summary_current"])
+        self.assertIn("closeout_summary_stale", manifest["failures"])
 
     def test_preseal_requires_closeout_source_tree_coherence(self) -> None:
         self._write_common_inputs()

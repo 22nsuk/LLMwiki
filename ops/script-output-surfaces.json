@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-06-03T02:12:07Z",
+  "generated_at": "2026-06-03T06:39:35Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
-  "source_revision": "b0abad939ff57dfb3bb6ebbc55338169586e0a95",
-  "source_tree_fingerprint": "313c25597d6707fe55a64a71d4dd4950917ac3fd430f7b8e259a264d6274320a",
+  "source_revision": "60c5a14220dcad2fdafa753036d0bc31778f3ed4",
+  "source_tree_fingerprint": "805e6380fe489d6fd65edfa7a4df32c61ccdbc9ee3b21bbc4b81eda7c83a1db5",
   "input_fingerprints": {
     "policy": "46af1603943d2ec8e0d04b69adc903a314b9c81b2a2298806d8a007411dc1fb5",
     "schema": "8105f62802da8ab77e20b0ba5a79e9d3f20b09243bc29730f2df940cf9530373",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "5e840c11f73355f29e0db698a5a91ceb269d6befacabeef3d57ac4bb5911172f",
-    "ops_scripts": "6ba06e4d1be450ce15cd12e18d0b96d2c5a1d7df9c375dbe6e0e01c34874589a",
+    "ops_scripts": "b91a84f03c78e11883c9f0e37fc74e92be8f940f1d201a7050e7ce5ddfeb3826",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4",
     "source_tree_scope": "cf97a156fcf94ca97a9864e8cd7523fa97e49e2648a6aeb64c712b2c2f0ec469"
   },
@@ -21,7 +21,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-06-03T02:12:07Z"
+    "checked_at": "2026-06-03T06:39:35Z"
   },
   "source_tree_scope": {
     "mode": "include_prefixes",
@@ -2768,6 +2768,17 @@
     },
     {
       "path": "ops/scripts/release/release_live_artifact_attestation.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/release/release_post_commit_finalizer.py",
       "classification": "repo_artifact",
       "output_options": [
         "--out"

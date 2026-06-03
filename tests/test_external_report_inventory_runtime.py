@@ -12,6 +12,7 @@ from ops.scripts.release.external_report_inventory_runtime import (
     coverage_markers,
     matched_actions,
     reference_manifest_alignment,
+    report_type_for_path,
 )
 
 
@@ -65,3 +66,18 @@ def test_coverage_markers_and_action_matching_are_catalog_backed(tmp_path: Path)
     assert "final_conclusion" in coverage_markers(report, text)
     assert "live_reverification" in coverage_markers(report, text)
     assert "script_output_surfaces_currentness" in matched_actions(text)
+
+
+def test_active_selector_includes_binary_reports_with_explicit_type(tmp_path: Path) -> None:
+    reports = tmp_path / "external-reports"
+    archive = reports / "archive"
+    archive.mkdir(parents=True)
+    pdf = reports / "review.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n")
+    (archive / "old.pdf").write_bytes(b"%PDF-1.4\n")
+    (reports / Path(REFERENCE_MANIFEST).name).write_text("{}", encoding="utf-8")
+
+    assert [report_path(tmp_path, path) for path in active_report_paths(tmp_path)] == [
+        "external-reports/review.pdf"
+    ]
+    assert report_type_for_path(pdf) == "binary_report"

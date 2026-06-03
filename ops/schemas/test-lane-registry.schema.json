@@ -24,6 +24,9 @@
       "type": "string",
       "minLength": 1
     },
+    "changed_path_minimums": {
+      "$ref": "#/$defs/changed_path_minimums"
+    },
     "persistent_lanes": {
       "type": "array",
       "minItems": 1,
@@ -71,6 +74,72 @@
         "minLength": 1
       },
       "uniqueItems": true
+    },
+    "changed_path_minimums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "default_duration_budget_seconds",
+        "unknown_path",
+        "rules"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "default_duration_budget_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_path": {
+          "$ref": "#/$defs/changed_path_minimum_rule"
+        },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/changed_path_minimum_rule"
+          }
+        }
+      }
+    },
+    "changed_path_minimum_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "commands",
+        "reason",
+        "coverage_class",
+        "static_required",
+        "duration_seconds"
+      ],
+      "properties": {
+        "rule_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "path_patterns": {
+          "$ref": "#/$defs/string_list"
+        },
+        "commands": {
+          "$ref": "#/$defs/string_list"
+        },
+        "reason": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "coverage_class": {
+          "$ref": "#/$defs/identifier"
+        },
+        "static_required": {
+          "type": "boolean"
+        },
+        "duration_seconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
     },
     "selection": {
       "type": "object",

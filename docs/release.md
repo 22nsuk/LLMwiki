@@ -119,10 +119,23 @@ surface comparison; this document owns release evidence and staged authority.
   is current before report-contract summaries or release smoke can read it.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh.
 - `make release-source-ready`: source-ready commit flow. Mutating convergence happens
-  in `release-source-ready-prepare` before the commit; `release-source-ready-post-verify`
-  is write-free and only fails if the already-generated check evidence is stale or
-  failing. Operator release summary is local-only evidence and is refreshed
-  during the prepare convergence flow.
+  in `release-source-ready-prepare` before the commit; `release-post-commit-finalize`
+  then resettles revision-bound evidence for the new HEAD before
+  `release-source-ready-post-verify` runs as a write-free check. Operator
+  release summary is local-only evidence and is refreshed during the prepare
+  convergence flow.
+- `make release-post-commit-finalize`: official post-commit evidence suffix for
+  source-ready commits. It invalidates stale auto-promotion ready evidence,
+  refreshes freshness-sensitive reports before finality, verifies finality, and
+  fails if source-tracked files drift while generated/local evidence is being
+  resettled. It does not replace `release-run-ready`,
+  `release-sealed-run-ready`, or `release-auto-promotion-ready` authority.
+  `make head-aligned-evidence-converge` is a compatibility alias for this target.
+- `make changed-path-minimum-plan`: advisory changed-path cost planner. It reads
+  `ops/test-lane-registry.json` and an optional
+  `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST`, emits minimal suggested
+  commands and deterministic duration-budget status, and always marks the final
+  full release proof as still required.
 - `make release-evidence-converge`: authoritative clean release evidence convergence.
 - `make release-evidence-closeout-sealed`: check-only sealed packaging lane for an
   already source-ready tree. It must not run mutating source/evidence convergence;
@@ -140,7 +153,8 @@ surface comparison; this document owns release evidence and staged authority.
 
 ## Recommended Order
 
-1. Before committing a changed source tree, run `make release-converge-preflight`
+1. Before committing a changed source tree, run `make changed-path-minimum-plan`
+   when you want a cheap advisory lane, then run `make release-converge-preflight`
    or the full `make release-source-ready` flow. This keeps
    `ops/script-output-surfaces.json` current in the same source commit instead
    of requiring a follow-up generated-artifact commit. Release run/seal tooling
@@ -211,6 +225,10 @@ emitted by new reports.
 Currentness is also objective. Reuse or operator-facing `current` should come
 from the live HEAD/source-fingerprint/domain checks owned by the relevant lane,
 not from a report's self-declared `current` field alone.
+After a source-ready commit, use `make release-post-commit-finalize` before
+claiming release evidence is settled for that HEAD. `make release-check-finalized`
+is retained only as a compatibility alias for `release-check`; it is not a
+mutating finalization target.
 
 ## Remote Governance
 

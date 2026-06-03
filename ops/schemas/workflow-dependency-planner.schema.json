@@ -24,6 +24,7 @@
     "selected_change_paths",
     "workflow_rules",
     "selected_workflows",
+    "changed_path_minimum_plan",
     "dependency_edges",
     "evidence_dag",
     "current_evidence_signals",
@@ -87,6 +88,8 @@
         "dependency_edge_count",
         "missing_dependency_count",
         "unknown_change_path_count",
+        "changed_path_minimum_command_count",
+        "changed_path_minimum_budget_status",
         "evidence_node_count",
         "evidence_edge_count"
       ],
@@ -97,6 +100,11 @@
         "dependency_edge_count": { "type": "integer", "minimum": 0 },
         "missing_dependency_count": { "type": "integer", "minimum": 0 },
         "unknown_change_path_count": { "type": "integer", "minimum": 0 },
+        "changed_path_minimum_command_count": { "type": "integer", "minimum": 0 },
+        "changed_path_minimum_budget_status": {
+          "type": "string",
+          "enum": ["within_budget", "over_budget", "unknown", "not_applicable"]
+        },
         "evidence_node_count": { "type": "integer", "minimum": 0 },
         "evidence_edge_count": { "type": "integer", "minimum": 0 }
       }
@@ -117,6 +125,9 @@
       "items": {
         "$ref": "#/$defs/selected_workflow"
       }
+    },
+    "changed_path_minimum_plan": {
+      "$ref": "#/$defs/changed_path_minimum_plan"
     },
     "dependency_edges": {
       "type": "array",
@@ -294,6 +305,104 @@
           "type": "string",
           "enum": ["make_prerequisite", "make_recipe"]
         }
+      }
+    },
+    "changed_path_minimum_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "advisory",
+        "registry_path",
+        "selected_commands",
+        "final_checkpoint_required",
+        "final_checkpoint_commands",
+        "release_proof_replacement",
+        "coverage_class",
+        "static_required",
+        "budget_status",
+        "duration_budget_seconds",
+        "estimated_duration_seconds",
+        "unknown_paths",
+        "path_recommendations"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "attention"]
+        },
+        "advisory": {
+          "type": "boolean",
+          "const": true
+        },
+        "registry_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selected_commands": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "final_checkpoint_required": {
+          "type": "boolean",
+          "const": true
+        },
+        "final_checkpoint_commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "release_proof_replacement": {
+          "type": "boolean",
+          "const": false
+        },
+        "coverage_class": {
+          "type": "string",
+          "minLength": 1
+        },
+        "static_required": { "type": "boolean" },
+        "budget_status": {
+          "type": "string",
+          "enum": ["within_budget", "over_budget", "unknown", "not_applicable"]
+        },
+        "duration_budget_seconds": { "type": "integer", "minimum": 0 },
+        "estimated_duration_seconds": { "type": "integer", "minimum": 0 },
+        "unknown_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "path_recommendations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/changed_path_recommendation" }
+        }
+      }
+    },
+    "changed_path_recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "matched_rule_id",
+        "commands",
+        "reason",
+        "coverage_class",
+        "static_required",
+        "duration_seconds"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "matched_rule_id": { "type": "string", "minLength": 1 },
+        "commands": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "coverage_class": { "type": "string", "minLength": 1 },
+        "static_required": { "type": "boolean" },
+        "duration_seconds": { "type": "integer", "minimum": 0 }
       }
     },
     "missing_dependency": {

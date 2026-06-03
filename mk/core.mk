@@ -41,7 +41,9 @@ help:
 		"  make goal-runtime-run-admission   check whether a goal-native run may start" \
 		"" \
 		"Release:" \
+		"  make changed-path-minimum-plan    write advisory changed-path test plan" \
 		"  make release-run-ready            converge and verify run-ready evidence" \
+		"  make release-post-commit-finalize resettle evidence after source commit" \
 		"  make release-sealed-run-ready     verify sealed release readiness" \
 		"  make release-auto-promotion-ready verify auto-promotion readiness"
 

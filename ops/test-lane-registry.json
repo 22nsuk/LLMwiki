@@ -2,6 +2,104 @@
   "$schema": "ops/schemas/test-lane-registry.schema.json",
   "version": 2,
   "description": "Authoritative registry for persistent pytest lanes, derived execution packs, CI routing, and documentation boundaries used by Make, CI, and public-safe docs.",
+  "changed_path_minimums": {
+    "version": 1,
+    "default_duration_budget_seconds": 300,
+    "unknown_path": {
+      "rule_id": "unknown_path",
+      "commands": [
+        "make static",
+        "make test-fast"
+      ],
+      "reason": "Unknown paths use the conservative advisory minimum lane.",
+      "coverage_class": "conservative",
+      "static_required": true,
+      "duration_seconds": 300
+    },
+    "rules": [
+      {
+        "rule_id": "python_runtime_source",
+        "path_patterns": [
+          "ops/scripts/**/*.py",
+          "tools/*.py",
+          "tools/**/*.py"
+        ],
+        "commands": [
+          "make static",
+          "make test-fast"
+        ],
+        "reason": "Runtime Python changes need static analysis plus the fast pytest lane before release evidence is trusted.",
+        "coverage_class": "runtime_source",
+        "static_required": true,
+        "duration_seconds": 180
+      },
+      {
+        "rule_id": "focused_pytest_file",
+        "path_patterns": [
+          "tests/test_*.py"
+        ],
+        "commands": [
+          "make static",
+          "uv run python -m pytest {path} -q"
+        ],
+        "reason": "Changed tests should run directly with static checks; this is not a full-suite proof.",
+        "coverage_class": "focused_test",
+        "static_required": true,
+        "duration_seconds": 90
+      },
+      {
+        "rule_id": "schema_or_report_contract",
+        "path_patterns": [
+          "ops/schemas/*.schema.json",
+          "ops/policies/*.json",
+          "ops/policies/*.yaml"
+        ],
+        "commands": [
+          "make static",
+          "make test-report-contract-core"
+        ],
+        "reason": "Schema or policy changes need report-contract coverage plus static checks.",
+        "coverage_class": "report_contract",
+        "static_required": true,
+        "duration_seconds": 240
+      },
+      {
+        "rule_id": "make_or_ci_contract",
+        "path_patterns": [
+          "Makefile",
+          "mk/*.mk",
+          ".github/workflows/*.yml",
+          ".github/workflows/*.yaml"
+        ],
+        "commands": [
+          "make static",
+          "make workflow-dependency-planner-check"
+        ],
+        "reason": "Make or CI orchestration changes should refresh planner diagnostics before broader gates.",
+        "coverage_class": "orchestration",
+        "static_required": true,
+        "duration_seconds": 120
+      },
+      {
+        "rule_id": "public_docs_boundary",
+        "path_patterns": [
+          "docs/*.md",
+          "docs/**/*.md",
+          "AGENTS.md",
+          "ARCHITECTURE.md",
+          "README.md"
+        ],
+        "commands": [
+          "make static",
+          "make public-check"
+        ],
+        "reason": "Public documentation and boundary changes need static and public export checks.",
+        "coverage_class": "public_boundary",
+        "static_required": true,
+        "duration_seconds": 180
+      }
+    ]
+  },
   "persistent_lanes": [
     {
       "lane_id": "slow",

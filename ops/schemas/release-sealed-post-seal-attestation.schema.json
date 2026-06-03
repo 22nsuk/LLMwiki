@@ -148,6 +148,7 @@
         "producer",
         "generated_at",
         "status",
+        "source_revision",
         "source_tree_fingerprint"
       ],
       "properties": {
@@ -160,6 +161,7 @@
         "producer": { "type": "string" },
         "generated_at": { "type": "string" },
         "status": { "type": "string" },
+        "source_revision": { "type": "string" },
         "source_tree_fingerprint": { "type": "string" }
       }
     }
