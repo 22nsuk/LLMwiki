@@ -170,7 +170,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "generated-artifact-index",
                 "artifact-freshness",
                 "release-closeout-summary",
-                "release-evidence-dashboard",
+                "release-evidence-dashboard-report",
                 "release-lane-summary",
                 "release-clean-blocker-ledger",
                 "auto-improve-readiness-report-body",
@@ -193,7 +193,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t$(MAKE) auto-improve-readiness-report-body\n"
             "\t$(MAKE) generated-artifact-converge\n"
             "\t$(MAKE) release-closeout-summary-report\n"
-            "\t$(MAKE) release-evidence-dashboard\n"
+            "\t$(MAKE) release-evidence-dashboard-report\n"
             "\t$(MAKE) release-lane-summary\n"
             "\t$(MAKE) release-clean-blocker-ledger\n"
             "\t$(MAKE) generated-artifact-converge\n"

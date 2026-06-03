@@ -222,7 +222,7 @@ release-evidence-converge-phase-2: release-evidence-converge-phase-1
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
 	$(MAKE) auto-improve-readiness-report-body
-	$(MAKE) release-evidence-dashboard
+	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
 	$(MAKE) release-clean-blocker-ledger
 	$(MAKE) generated-artifact-converge
