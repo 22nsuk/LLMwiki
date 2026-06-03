@@ -217,7 +217,7 @@ release-evidence-converge-phase-2: release-evidence-converge-phase-1
 	$(MAKE) session-synopsis
 	$(MAKE) self-improvement-negative-lessons
 	$(MAKE) remediation-backlog
-	$(MAKE) release-closeout-summary
+	$(MAKE) release-closeout-summary-report
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
 	$(MAKE) auto-improve-readiness-report-body
