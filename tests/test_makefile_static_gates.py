@@ -2330,7 +2330,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) generated-artifact-converge",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) release-closeout-summary-report",
-                "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
+                "$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
                 "$(MAKE) auto-improve-readiness-report-body",
                 "$(MAKE) release-evidence-dashboard-report",
                 "$(MAKE) release-lane-summary",
@@ -2339,7 +2339,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) generated-artifact-converge",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) release-closeout-summary-report",
-                "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
+                "$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
                 "$(MAKE) auto-improve-readiness-report-body",
                 "$(MAKE) release-evidence-dashboard-report",
                 "$(MAKE) release-lane-summary",
@@ -2875,7 +2875,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) remediation-backlog",
                 "$(MAKE) release-closeout-summary-report",
                 "$(MAKE) learning-readiness-signoff-revalidation",
-                "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
+                "$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
                 "$(MAKE) auto-improve-readiness-report-body",
                 "$(MAKE) release-evidence-dashboard",
                 "$(MAKE) release-lane-summary",
@@ -3135,6 +3135,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
 
         self.assertIn("release-evidence-cohort", _target_block(text, ".PHONY"))
+        self.assertIn("release-evidence-cohort-report", _target_block(text, ".PHONY"))
         self.assertIn("release-evidence-cohort-preseal-refresh", _target_block(text, ".PHONY"))
         self.assertIn("release-evidence-dashboard", _target_block(text, ".PHONY"))
         self.assertIn(
@@ -3242,6 +3243,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             "ops.scripts.canonical_artifact_promote",
             _target_block(text, "release-evidence-cohort"),
         )
+        cohort_report_block = _target_block(text, "release-evidence-cohort-report")
+        self.assertIn(
+            '$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy "$(RELEASE_EVIDENCE_COHORT_POLICY)" --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)"',
+            cohort_report_block,
+        )
+        self.assertIn("ops.scripts.canonical_artifact_promote", cohort_report_block)
+        self.assertNotIn("--require-clean-lane", cohort_report_block)
+        self.assertNotIn("--fail-on-attention", cohort_report_block)
         preseal_refresh_block = _target_block(text, "release-evidence-cohort-preseal-refresh")
         self.assertIn(
             '--cohort-policy strict_same_fingerprint',
