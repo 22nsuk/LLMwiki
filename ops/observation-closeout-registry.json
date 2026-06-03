@@ -8,6 +8,34 @@
       "status": "planned",
       "retained_reason": "Strict-preview burn-down is intentionally tracked as broad lint/type debt rather than deleted from local evidence.",
       "next_action": "Continue strict-preview burn-down through lint/type uplift work."
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260529-active-external-report-current-code-reconciliation/improvement-observations.json",
+      "observation_id": "strict_preview_and_command_identity_backlog",
+      "status": "planned",
+      "retained_reason": "Strict-preview zero-burn and command identity normalization remain broad runtime semantics work; current release and external-report closeout did not implement that full scope.",
+      "next_action": "Finish strict-preview zero-burn with strict-preview audit, then implement command identity normalization under focused tests before making it a release currentness rule."
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260531-release-evidence-sync-test-cost-governance/improvement-observations.json",
+      "observation_id": "report_contract_all_marker_cost_20260531",
+      "status": "planned",
+      "retained_reason": "Report-contract all-lane cost governance still needs duration budget reporting and explicit current-check routing beyond the xdist and currentness improvements already made.",
+      "next_action": "Reserve the all-lane for checkpoint or CI proof, add duration budget reporting for broad gates, and keep local external-report drift behind refresh or current-check contracts."
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260531-release-evidence-sync-test-cost-governance/improvement-observations.json",
+      "observation_id": "default_fast_lane_too_broad_for_agent_loop_20260531",
+      "status": "planned",
+      "retained_reason": "The default fast lane still needs a changed-path cost planner; current work established proof ordering but did not add the minimal target planner.",
+      "next_action": "Extend workflow dependency and test-lane metadata to emit the minimal authoritative Make target and duration budget before expensive pytest lanes."
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260531-release-evidence-sync-test-cost-governance/improvement-observations.json",
+      "observation_id": "release_run_ready_cost_plan_20260531",
+      "status": "planned",
+      "retained_reason": "Release-run-ready planning is improved and in use, but registry-backed planner reason codes and duration budgets for expensive gates remain future hardening.",
+      "next_action": "Extend release-run-ready and release-evidence planner outputs with duration summaries and changed-fingerprint reason codes while preserving release-run-ready as final authority."
     }
   ]
 }
