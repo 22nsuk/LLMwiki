@@ -622,6 +622,7 @@ def _assert_archive_and_complexity_recipes(case: unittest.TestCase, text: str) -
     case.assertIn('--out "$(STRUCTURAL_COMPLEXITY_BUDGET_TOUCHED_OUT)"', touched_block)
     case.assertIn('--changed-files-manifest "$(CHANGED_FILES_MANIFEST)"', touched_block)
     case.assertIn('--target "$(target)"', touched_block)
+    case.assertIn('rm -f "$(STRUCTURAL_COMPLEXITY_BUDGET_TOUCHED_OUT)"', touched_block)
     case.assertIn("ratchet inactive without touched inputs", touched_block)
     case.assertIn(
         'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"',
