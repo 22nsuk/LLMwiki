@@ -323,6 +323,7 @@
         "budget_status",
         "duration_budget_seconds",
         "estimated_duration_seconds",
+        "command_duration_seconds",
         "unknown_paths",
         "path_recommendations"
       ],
@@ -369,6 +370,10 @@
         },
         "duration_budget_seconds": { "type": "integer", "minimum": 0 },
         "estimated_duration_seconds": { "type": "integer", "minimum": 0 },
+        "command_duration_seconds": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
         "unknown_paths": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },

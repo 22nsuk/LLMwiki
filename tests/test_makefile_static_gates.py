@@ -811,6 +811,13 @@ def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: 
     case.assertIn("ops.scripts.canonical_artifact_promote", script_output_block)
     case.assertIn("--preserve-existing-on-semantic-match", script_output_block)
     case.assertIn("--semantic-match-includes-source-tree-fingerprint", script_output_block)
+    script_output_check_block = _target_block(text, "script-output-surfaces-check")
+    case.assertIn("script-output-surfaces-check", _target_block(text, ".PHONY"))
+    case.assertIn("ops.scripts.script_output_surfaces", script_output_check_block)
+    case.assertIn('--stored "$(SCRIPT_OUTPUT_SURFACES_OUT)"', script_output_check_block)
+    case.assertIn("--check", script_output_check_block)
+    case.assertNotIn("SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT", script_output_check_block)
+    case.assertNotIn("ops.scripts.canonical_artifact_promote", script_output_check_block)
     retention_clean_block = _target_block(text, "generated-artifact-retention-clean")
     case.assertIn("generated-artifact-retention-clean", _target_block(text, ".PHONY"))
     case.assertIn("ops.scripts.generated_artifact_retention_clean", retention_clean_block)
@@ -962,7 +969,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "make local-cache-clean",
             "make uv-cache-prune",
             "make strict-preview-audit",
-            "make report-contracts-core",
+            "make test-report-contract-core",
             "make external-report-lifecycle-refresh",
             "make sync-public-policy",
             "make goal-runtime-run-admission",
@@ -1208,6 +1215,17 @@ class MakefileStaticGateTests(unittest.TestCase):
         for entrypoint in compatibility_names(registry, "documented_entrypoint"):
             with self.subTest(entrypoint=entrypoint):
                 self.assertIn(entrypoint, development_text)
+        for alias in (
+            "make test-report-contract",
+            "make report-contracts",
+            "make report-contracts-core",
+            "make report-contracts-all",
+            "make report-contracts-extended",
+            "make test-release-sealing",
+        ):
+            with self.subTest(alias=alias):
+                self.assertNotIn(f"- `{alias}`", development_text)
+                self.assertNotIn(alias, compatibility_names(registry, "documented_entrypoint"))
 
     def test_python_command_allows_interpreter_flags(self) -> None:
         text = _makefile_text()
@@ -1326,10 +1344,8 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         for target in (
             "test-fast",
-            "test-report-contract",
             "test-report-contract-core",
             "test-report-contract-all",
-            "test-release-sealing",
             "test-release-sealing-core",
             "test-release-sealing-all",
             "test-subprocess",
@@ -1354,6 +1370,22 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(target=target):
                 self.assertIn(target, _target_block(text, ".PHONY"))
+        phony_block = _target_block(text, ".PHONY")
+        for removed_alias in (
+            "report-contracts",
+            "report-contracts-core",
+            "report-contracts-all",
+            "report-contracts-extended",
+            "test-report-contract",
+            "report-contract-summary",
+            "test-release-sealing",
+            "test-execution-summary-aggregate",
+        ):
+            with self.subTest(removed_alias=removed_alias):
+                self.assertNotRegex(
+                    phony_block,
+                    rf"(?<![A-Za-z0-9_.-]){re.escape(removed_alias)}(?![A-Za-z0-9_.-])",
+                )
 
         self.assertIn(
             "PYTEST_REPORT_CONTRACT_MARK_EXPR ?= report_contract",
@@ -1394,10 +1426,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             '$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_SEALING_MARK_EXPR)" $(PYTEST_RELEASE_SEALING_FLAGS)',
             _target_block(text, "test-release-sealing-all"),
-        )
-        self.assertIn(
-            "test-release-sealing is a compatibility alias",
-            _target_block(text, "test-release-sealing"),
         )
         self.assertIn(
             "$(PYTHON) -m pytest $(SUBPROCESS_TESTS) $(PYTEST_SERIAL_FLAGS)",
@@ -1624,6 +1652,17 @@ class MakefileStaticGateTests(unittest.TestCase):
         for entrypoint in compatibility_names(registry, "documented_entrypoint"):
             with self.subTest(entrypoint=entrypoint):
                 self.assertIn(entrypoint, development_text)
+        for alias in (
+            "make test-report-contract",
+            "make report-contracts",
+            "make report-contracts-core",
+            "make report-contracts-all",
+            "make report-contracts-extended",
+            "make test-release-sealing",
+        ):
+            with self.subTest(alias=alias):
+                self.assertNotIn(f"- `{alias}`", development_text)
+                self.assertNotIn(alias, compatibility_names(registry, "documented_entrypoint"))
 
     def test_registry_documents_authority_boundary_for_lane_contract(self) -> None:
         registry = _test_lane_registry()
@@ -2614,79 +2653,62 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("find tmp -mindepth 1 -delete", tmp_json_clean_block)
         self.assertNotIn("goal-worktree-guard.json", tmp_json_clean_block)
 
-    def test_report_contracts_target_collects_schema_and_generated_artifact_checks(
+    def test_report_contract_targets_collect_schema_and_generated_artifact_checks(
         self,
     ) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
-        block = _target_block(text, "report-contracts")
-        core_block = _target_block(text, "report-contracts-core")
-        all_block = _target_block(text, "report-contracts-all")
-        extended_block = _target_block(text, "report-contracts-extended")
+        core_block = _target_block(text, "test-report-contract-core")
+        all_block = _target_block(text, "test-report-contract-all")
         expected_core_tests = pack_selectors(registry, "report_contract_core")
-        expected_extended_tests = pack_selectors(registry, "report_contract_extended")
         expected_all_test_files = _report_contract_marked_test_files()
 
-        self.assertIn("report-contracts", _target_block(text, ".PHONY"))
-        self.assertIn("report-contracts-core", _target_block(text, ".PHONY"))
-        self.assertIn("report-contracts-all", _target_block(text, ".PHONY"))
-        self.assertIn("report-contracts-extended", _target_block(text, ".PHONY"))
+        self.assertIn("test-report-contract-core", _target_block(text, ".PHONY"))
+        self.assertIn("test-report-contract-all", _target_block(text, ".PHONY"))
         self.assertIn("REPORT_CONTRACT_CORE_TESTS ?=", text)
-        self.assertIn("REPORT_CONTRACT_EXTENDED_TESTS ?=", text)
+        self.assertNotIn("REPORT_CONTRACT_EXTENDED_TESTS", text)
         self.assertIn("REPORT_CONTRACT_TESTS ?=", text)
         self.assertIn("REPORT_CONTRACT_TESTS ?= $(REPORT_CONTRACT_CORE_TESTS)", text)
         core_items = _makefile_assignment_items(text, "REPORT_CONTRACT_CORE_TESTS")
-        extended_items = _makefile_assignment_items(
-            text, "REPORT_CONTRACT_EXTENDED_TESTS"
-        )
         all_items = _makefile_assignment_items(text, "REPORT_CONTRACT_ALL_TESTS")
         self.assertEqual(core_items, expected_core_tests)
-        self.assertEqual(extended_items, expected_extended_tests)
         self.assertEqual(
             all_items[:2],
             ("-m", '"$(PYTEST_REPORT_CONTRACT_MARK_EXPR)"'),
         )
         self.assertEqual(tuple(sorted(all_items[2:])), expected_all_test_files)
-        explicit_pack_files = {
-            selector.split("::", 1)[0] for selector in (*core_items, *extended_items)
-        }
-        self.assertEqual(tuple(sorted(explicit_pack_files)), expected_all_test_files)
+        core_files = {selector.split("::", 1)[0] for selector in core_items}
+        self.assertTrue(core_files.issubset(set(all_items[2:])))
         for test_path in expected_core_tests:
             with self.subTest(test_path=test_path):
                 self.assertIn(test_path, core_items)
-        for test_path in expected_extended_tests:
-            with self.subTest(test_path=test_path):
-                self.assertIn(test_path, extended_items)
-                self.assertNotIn(test_path, core_items)
         self.assertIn(
-            '$(PYTHON) -m pytest -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" $(REPORT_CONTRACT_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)',
+            "$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             core_block,
         )
         self.assertIn(
             "$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             all_block,
         )
-        self.assertIn(
-            "report-contracts is a compatibility alias",
-            block,
-        )
-        self.assertIn(
-            "$(PYTHON) -m pytest $(REPORT_CONTRACT_EXTENDED_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
-            extended_block,
-        )
 
     def test_report_contract_summary_uses_current_report_contract_lane(
         self,
     ) -> None:
         text = _makefile_text()
-        block = _target_block(text, "test-report-contract")
         core_block = _target_block(text, "test-report-contract-core")
         all_block = _target_block(text, "test-report-contract-all")
 
-        self.assertIn("test-report-contract", _target_block(text, ".PHONY"))
         self.assertIn("test-report-contract-core", _target_block(text, ".PHONY"))
         self.assertIn("test-report-contract-all", _target_block(text, ".PHONY"))
-        self.assertIn("report-contract-summary", _target_block(text, ".PHONY"))
+        phony_block = _target_block(text, ".PHONY")
+        self.assertNotRegex(
+            phony_block,
+            r"(?<![A-Za-z0-9_.-])test-report-contract(?![A-Za-z0-9_.-])",
+        )
+        self.assertNotRegex(
+            phony_block,
+            r"(?<![A-Za-z0-9_.-])report-contract-summary(?![A-Za-z0-9_.-])",
+        )
         self.assertIn(
             "REPORT_CONTRACT_SUMMARY_MARK_EXPR ?= $(PYTEST_REPORT_CONTRACT_MARK_EXPR)", text
         )
@@ -2707,11 +2729,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             all_block,
         )
-        self.assertIn(
-            "test-report-contract is a compatibility alias",
-            block,
-        )
-        self.assertIn("report-contract-summary: test-report-contract-core", text)
+        self.assertNotIn("test-report-contract is a compatibility alias", text)
+        self.assertNotIn("report-contract-summary:", text)
 
     def test_report_contract_closeout_runs_pytest_wrapper_once_between_generated_refreshes(
         self,
@@ -3257,10 +3276,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-execution-summary-full",
             "test-execution-summary-full-refresh",
             "test-execution-summary-full-refresh-no-converge",
+            "test-execution-summary-full-aggregate-reuse",
             "test-execution-summary-full-current-check",
             "test-execution-summary-full-current-or-refresh",
             "test-execution-summary-reuse",
-            "test-execution-summary-aggregate",
         ):
             self.assertIn(target, _target_block(text, ".PHONY"))
         _assert_assignment_exists(
@@ -3328,9 +3347,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_assignment_exists(
             self, text, "TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS", "$(PYTEST_FLAGS)"
         )
-        _assert_assignment_exists(
-            self, text, "TEST_EXECUTION_SUMMARY_SHARD_DIR", "ops/reports/test-execution-summary-shards"
-        )
+        _assert_assignment_not_exists(self, text, "TEST_EXECUTION_SUMMARY_SHARD_DIR")
         _assert_assignment_exists(
             self,
             text,
@@ -3451,13 +3468,34 @@ class MakefileStaticGateTests(unittest.TestCase):
             current_or_refresh_block,
         )
         self.assertIn(
-            "$(MAKE) test-execution-summary-report-contract",
+            "$(MAKE) test-execution-summary-reuse",
             current_or_refresh_block,
         )
         self.assertIn(
             "test execution summary is current; reused $(TEST_EXECUTION_SUMMARY_REUSE_FROM)",
             current_or_refresh_block,
         )
+        runtime_hotspot_block = _target_block(text, "runtime-hotspot-goldens-check")
+        self.assertIn("runtime-hotspot-goldens-check", _target_block(text, ".PHONY"))
+        self.assertIn(
+            "tests/test_runtime_hotspot_facade_golden_outputs.py",
+            runtime_hotspot_block,
+        )
+        self.assertIn("$(PYTEST_CACHE_ISOLATION_FLAGS)", runtime_hotspot_block)
+        self.assertIn("$(PYTEST_SERIAL_FLAGS)", runtime_hotspot_block)
+        generated_preflight_block = _target_block(text, "full-pytest-generated-preflight")
+        self.assertIn("full-pytest-generated-preflight", _target_block(text, ".PHONY"))
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "full-pytest-generated-preflight",
+            (
+                "$(MAKE) report-schema-samples-check",
+                "$(MAKE) script-output-surfaces-check",
+                "$(MAKE) runtime-hotspot-goldens-check",
+            ),
+        )
+        self.assertNotIn("ops.scripts.canonical_artifact_promote", generated_preflight_block)
         full_body_block = _target_block(text, "test-execution-summary-full-body")
         self.assertNotIn("$(MAKE) refresh-generated-core", full_body_block)
         self.assertNotIn("$(MAKE) auto-improve-readiness-report-body", full_body_block)
@@ -3469,6 +3507,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "test-execution-summary-full-body",
             (
+                "$(MAKE) full-pytest-generated-preflight",
                 'rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
                 'mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
                 '"$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)"',
@@ -3481,6 +3520,10 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "--aggregate-dir",
                 "ops.scripts.canonical_artifact_promote",
             ),
+        )
+        self.assertLess(
+            full_body_block.index("$(MAKE) full-pytest-generated-preflight"),
+            full_body_block.index('rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"'),
         )
         self.assertNotIn("$(MAKE) generated-artifact-converge", full_body_block)
         self.assertNotIn("$(MAKE) test-execution-summary-report-contract-refresh", full_body_block)
@@ -3516,6 +3559,20 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_recipe_contains_tokens(
             self,
             text,
+            "test-execution-summary-full-aggregate-reuse",
+            (
+                "ops.scripts.test_execution_summary",
+                "--aggregate",
+                "--aggregate-dir",
+                "--reuse-if-current",
+                "--refresh-revision-if-same-tree",
+                '--reuse-from "$(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"',
+                "ops.scripts.canonical_artifact_promote",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
             "test-execution-summary-full-current-check",
             (
                 "ops.scripts.test_execution_summary",
@@ -3530,6 +3587,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text, "test-execution-summary-full-current-or-refresh"
         )
         self.assertIn("$(MAKE) test-execution-summary-full-current-check", full_current_or_refresh_block)
+        self.assertIn("$(MAKE) test-execution-summary-full-aggregate-reuse", full_current_or_refresh_block)
         self.assertIn("$(MAKE) test-execution-summary-full-refresh-no-converge", full_current_or_refresh_block)
         self.assertIn("full-suite evidence is current", full_current_or_refresh_block)
         _assert_recipe_contains_tokens(
@@ -3539,19 +3597,9 @@ class MakefileStaticGateTests(unittest.TestCase):
             (
                 "ops.scripts.test_execution_summary",
                 "--reuse-if-current",
+                "--refresh-revision-if-same-tree",
                 '--reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)"',
                 '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
-                "ops.scripts.canonical_artifact_promote",
-            ),
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "test-execution-summary-aggregate",
-            (
-                "ops.scripts.test_execution_summary",
-                "--aggregate",
-                '--aggregate-dir "$(TEST_EXECUTION_SUMMARY_SHARD_DIR)"',
                 "ops.scripts.canonical_artifact_promote",
             ),
         )

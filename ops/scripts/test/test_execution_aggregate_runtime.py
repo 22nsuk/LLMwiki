@@ -15,6 +15,7 @@ from ops.scripts.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
 )
+from ops.scripts.source_revision_runtime import resolve_source_revision
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 from ops.scripts.test.test_execution_command_runtime import (
     build_execution_environment,
@@ -79,12 +80,14 @@ def reusable_aggregate_summary_diagnostics(
         diagnostics["reason"] = f"summary_unavailable:{type(exc).__name__}"
         return diagnostics
 
+    current_source_revision = resolve_source_revision(vault).revision
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     checks = {
         "artifact_kind": existing.get("artifact_kind") == "test_execution_summary",
         "status": existing.get("status") == "pass",
         "suite": existing.get("suite") == suite,
         "summary_mode": existing.get("summary_mode") in {"aggregate", "reused"},
+        "source_revision": existing.get("source_revision") == current_source_revision,
         "source_tree_fingerprint": existing.get("source_tree_fingerprint") == current_source_tree_fingerprint,
         "full_suite_evidence": (
             suite.strip().lower().replace("_", "-") not in FULL_SUITE_SCOPES
@@ -94,15 +97,20 @@ def reusable_aggregate_summary_diagnostics(
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         diagnostics["reason"] = f"not_current:{','.join(failed)}"
+        diagnostics["result_reusable"] = failed == ["source_revision"]
         diagnostics["checks"] = checks
+        diagnostics["current_source_revision"] = current_source_revision
+        diagnostics["observed_source_revision"] = str(existing.get("source_revision", ""))
         diagnostics["current_source_tree_fingerprint"] = current_source_tree_fingerprint
         diagnostics["observed_source_tree_fingerprint"] = str(existing.get("source_tree_fingerprint", ""))
         return diagnostics
     diagnostics.update(
         {
             "reusable": True,
+            "result_reusable": True,
             "reason": "current_passing_aggregate_summary",
             "generated_at": str(existing.get("generated_at", "")),
+            "source_revision": str(existing.get("source_revision", "")),
             "source_tree_fingerprint": str(existing.get("source_tree_fingerprint", "")),
         }
     )
@@ -115,6 +123,18 @@ def aggregate_status(statuses: list[str]) -> str:
     if any(status == "partial-pass" for status in statuses):
         return "partial-pass"
     return "pass"
+
+
+def aggregate_shard_source_tree_status(vault: Path, shards: list[dict[str, Any]]) -> str:
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    if not shards:
+        return "fail"
+    if all(
+        str(shard.get("source_tree_fingerprint", "")).strip() == current_source_tree_fingerprint
+        for shard in shards
+    ):
+        return "pass"
+    return "fail"
 
 
 def aggregate_counts(shards: list[dict[str, Any]]) -> dict[str, int]:
@@ -224,6 +244,31 @@ def aggregate_shard_refs(shard_paths: list[str], shards: list[dict[str, Any]]) -
     ]
 
 
+def _nonnegative_int(value: Any) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def aggregate_duration_telemetry(shards: list[dict[str, Any]]) -> dict[str, Any]:
+    command_duration_ms = 0
+    collect_only_duration_ms = 0
+    for shard in shards:
+        telemetry = shard.get("duration_telemetry")
+        if isinstance(telemetry, dict):
+            command_duration_ms += _nonnegative_int(telemetry.get("command_duration_ms"))
+            collect_only_duration_ms += _nonnegative_int(telemetry.get("collect_only_duration_ms"))
+            continue
+        command_duration_ms += _nonnegative_int(shard.get("duration_ms"))
+    return {
+        "command_duration_ms": command_duration_ms,
+        "collect_only_duration_ms": collect_only_duration_ms,
+        "total_wall_time_ms": command_duration_ms + collect_only_duration_ms,
+        "total_wall_time_source": "command_plus_collect_only",
+    }
+
+
 def aggregate_shard_dict_items(shards: list[dict[str, Any]], field: str) -> list[dict[str, Any]]:
     return [
         item
@@ -273,6 +318,7 @@ def aggregate_nodeid_digest(shards: list[dict[str, Any]]) -> dict[str, Any]:
         "nodeid_count": sum(int(digest.get("nodeid_count", 0) or 0) for digest in digests),
         "sha256": _sha256_text(digest_input),
         "reason": "aggregate report reuses shard nodeid digests",
+        "duration_ms": sum(_nonnegative_int(digest.get("duration_ms")) for digest in digests),
     }
 
 
@@ -308,6 +354,8 @@ def build_aggregate_report(
     shards = [load_test_execution_summary(vault, path) for path in shard_paths]
     statuses = [str(shard.get("status", "fail")) for shard in shards]
     status = aggregate_status(statuses) if shards else "fail"
+    if aggregate_shard_source_tree_status(vault, shards) != "pass":
+        status = "fail"
     counts = aggregate_counts(shards)
     command = "aggregate test execution summary shards"
     shard_refs = aggregate_shard_refs(shard_paths, shards)
@@ -328,6 +376,7 @@ def build_aggregate_report(
         execution_environment,
     )
     collect_nodeid_digest, nodeid_outcome_consistency = aggregate_nodeid_consistency(shards, counts)
+    duration_telemetry = aggregate_duration_telemetry(shards)
     evidence_artifacts = aggregate_shard_dict_items(shards, "evidence_artifacts")
     evidence_artifact_consistency = _evidence_artifact_consistency(
         vault,
@@ -379,8 +428,9 @@ def build_aggregate_report(
         "returncode": 0 if status == "pass" else 1,
         "timed_out": any(bool(shard.get("timed_out")) for shard in shards),
         "timeout_seconds": max([int(shard.get("timeout_seconds", 1) or 1) for shard in shards] or [1]),
-        "termination_reason": "completed" if status == "pass" else "one_or_more_shards_not_pass",
+        "termination_reason": "completed" if status == "pass" else "one_or_more_shards_not_current_or_pass",
         "duration_ms": sum(int(shard.get("duration_ms", 0) or 0) for shard in shards),
+        "duration_telemetry": duration_telemetry,
         "counts": counts,
         "execution_environment": execution_environment,
         "test_target_fingerprints": [

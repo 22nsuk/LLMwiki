@@ -22,6 +22,17 @@ FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 pytestmark = pytest.mark.report_contract
 
 
+def _assert_sample_matches(case: unittest.TestCase, actual: object, expected: object, sample_key: str) -> None:
+    case.assertEqual(
+        actual,
+        expected,
+        msg=(
+            f"report schema sample fixture drift for {sample_key}; "
+            "run `make report-schema-samples-regenerate` and review the fixture diff."
+        ),
+    )
+
+
 def _isolated_child_env() -> dict[str, str]:
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -32,22 +43,31 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
     def test_generated_openvex_sample_matches_frozen_fixture(self) -> None:
         samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 
-        self.assertEqual(build_openvex_schema_sample(), samples["openvex_draft"])
+        _assert_sample_matches(
+            self,
+            build_openvex_schema_sample(),
+            samples["openvex_draft"],
+            "openvex_draft",
+        )
 
     def test_generated_readiness_sample_matches_frozen_fixture(self) -> None:
         samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 
-        self.assertEqual(
+        _assert_sample_matches(
+            self,
             build_auto_improve_readiness_schema_sample(),
             samples["auto_improve_readiness_report"],
+            "auto_improve_readiness_report",
         )
 
     def test_generated_release_run_ready_plan_sample_matches_frozen_fixture(self) -> None:
         samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 
-        self.assertEqual(
+        _assert_sample_matches(
+            self,
             build_release_run_ready_plan_schema_sample(),
             samples["release_run_ready_plan"],
+            "release_run_ready_plan",
         )
 
     def test_generated_readiness_sample_keeps_release_clean_queue_blocked_shape(self) -> None:

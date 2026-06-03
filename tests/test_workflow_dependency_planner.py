@@ -564,22 +564,76 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
         plan = report["changed_path_minimum_plan"]
         self.assertEqual(plan["coverage_class"], "mixed")
-        self.assertEqual(plan["estimated_duration_seconds"], 420)
+        self.assertEqual(plan["estimated_duration_seconds"], 360)
         self.assertEqual(plan["duration_budget_seconds"], 300)
         self.assertEqual(plan["budget_status"], "over_budget")
+        self.assertEqual(
+            plan["command_duration_seconds"],
+            {
+                "make static": 60,
+                "make test-fast": 120,
+                "make test-report-contract-core": 180,
+            },
+        )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
-    def test_changed_path_minimum_plan_matches_root_docs(self) -> None:
+    def test_changed_path_minimum_budget_dedupes_repeated_selected_commands(self) -> None:
         report = build_report(
             self.vault,
-            changed_paths=["docs/release.md"],
+            changed_paths=[
+                "ops/scripts/core/workflow_dependency_planner.py",
+                "ops/scripts/core/artifact_freshness_runtime.py",
+            ],
             context=fixed_context(),
         )
 
         plan = report["changed_path_minimum_plan"]
-        self.assertEqual(plan["status"], "pass")
-        self.assertEqual(plan["coverage_class"], "public_boundary")
-        self.assertEqual(plan["selected_commands"], ["make static", "make public-check"])
+        self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
+        self.assertEqual(plan["estimated_duration_seconds"], 180)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertEqual(
+            plan["command_duration_seconds"],
+            {"make static": 60, "make test-fast": 120},
+        )
+        self.assertEqual(
+            [item["duration_seconds"] for item in plan["path_recommendations"]],
+            [180, 180],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_budget_falls_back_without_command_estimates(self) -> None:
+        registry_path = self.vault / "ops" / "test-lane-registry.json"
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        registry["changed_path_minimums"].pop("command_duration_seconds")
+        registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths=[
+                "ops/scripts/core/workflow_dependency_planner.py",
+                "ops/scripts/core/artifact_freshness_runtime.py",
+            ],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
+        self.assertEqual(plan["estimated_duration_seconds"], 180)
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_plan_matches_public_docs(self) -> None:
+        for changed_path in ["docs/release.md", "ops/README.md"]:
+            with self.subTest(changed_path=changed_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[changed_path],
+                    context=fixed_context(),
+                )
+
+                plan = report["changed_path_minimum_plan"]
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "public_boundary")
+                self.assertEqual(plan["selected_commands"], ["make static", "make public-check"])
 
     def test_changed_path_minimum_plan_matches_root_tools_python(self) -> None:
         report = build_report(
@@ -593,6 +647,47 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(plan["coverage_class"], "runtime_source")
         self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
         self.assertEqual(plan["unknown_paths"], [])
+
+    def test_changed_path_minimum_plan_covers_registry_and_generated_currentness_artifacts(
+        self,
+    ) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[
+                "ops/test-lane-registry.json",
+                "ops/script-output-surfaces.json",
+                "tests/fixtures/report_schema_samples.json",
+            ],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "mixed")
+        self.assertEqual(plan["unknown_paths"], [])
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make script-output-surfaces-check",
+                "make static",
+                "make workflow-dependency-planner-check",
+                "uv run python -m pytest tests/test_workflow_dependency_planner.py -q",
+                "make report-schema-samples-check",
+            ],
+        )
+        self.assertEqual(
+            plan["command_duration_seconds"],
+            {
+                "make script-output-surfaces-check": 30,
+                "make static": 60,
+                "make workflow-dependency-planner-check": 60,
+                "uv run python -m pytest tests/test_workflow_dependency_planner.py -q": 30,
+                "make report-schema-samples-check": 30,
+            },
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 210)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_missing_make_dependency_fails_with_diagnostic(self) -> None:
         (self.vault / "Makefile").write_text(

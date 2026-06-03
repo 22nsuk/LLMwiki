@@ -5,6 +5,17 @@
   "changed_path_minimums": {
     "version": 1,
     "default_duration_budget_seconds": 300,
+    "command_duration_seconds": {
+      "make static": 60,
+      "make test-fast": 120,
+      "uv run python -m pytest {path} -q": 30,
+      "uv run python -m pytest tests/test_workflow_dependency_planner.py -q": 30,
+      "make test-report-contract-core": 180,
+      "make workflow-dependency-planner-check": 60,
+      "make script-output-surfaces-check": 30,
+      "make report-schema-samples-check": 30,
+      "make public-check": 120
+    },
     "unknown_path": {
       "rule_id": "unknown_path",
       "commands": [
@@ -85,6 +96,7 @@
         "path_patterns": [
           "docs/*.md",
           "docs/**/*.md",
+          "ops/*.md",
           "AGENTS.md",
           "ARCHITECTURE.md",
           "README.md"
@@ -97,6 +109,47 @@
         "coverage_class": "public_boundary",
         "static_required": true,
         "duration_seconds": 180
+      },
+      {
+        "rule_id": "test_lane_registry_contract",
+        "path_patterns": [
+          "ops/test-lane-registry.json"
+        ],
+        "commands": [
+          "make static",
+          "make workflow-dependency-planner-check",
+          "uv run python -m pytest tests/test_workflow_dependency_planner.py -q"
+        ],
+        "reason": "Test lane registry changes should validate planner output and focused planner behavior before broader gates.",
+        "coverage_class": "orchestration",
+        "static_required": true,
+        "duration_seconds": 120
+      },
+      {
+        "rule_id": "script_output_surfaces_artifact",
+        "path_patterns": [
+          "ops/script-output-surfaces.json"
+        ],
+        "commands": [
+          "make script-output-surfaces-check"
+        ],
+        "reason": "Script output surface artifact changes should verify the generated inventory is current.",
+        "coverage_class": "generated_artifact_currentness",
+        "static_required": false,
+        "duration_seconds": 30
+      },
+      {
+        "rule_id": "report_schema_sample_fixture",
+        "path_patterns": [
+          "tests/fixtures/report_schema_samples.json"
+        ],
+        "commands": [
+          "make report-schema-samples-check"
+        ],
+        "reason": "Report schema sample fixture changes should verify the canonical fixture generator is current.",
+        "coverage_class": "generated_artifact_currentness",
+        "static_required": false,
+        "duration_seconds": 30
       }
     ]
   },
@@ -385,7 +438,6 @@
       "status": "derived_from_registry",
       "semantics": "Targeted core verification slice for report-contract summary evidence.",
       "backing_targets": [
-        "report-contracts-core",
         "test-report-contract-core"
       ],
       "selection": {
@@ -432,54 +484,6 @@
         "make test-report-contract-core",
         "make test-execution-summary",
         "make test-execution-summary-report-contract"
-      ]
-    },
-    {
-      "pack_id": "report_contract_extended",
-      "authority": "derived",
-      "status": "derived_from_registry",
-      "semantics": "Extended report-contract regression pack built on authoritative lanes and targeted selectors.",
-      "backing_targets": [
-        "report-contracts-extended"
-      ],
-      "selection": {
-        "mode": "explicit_selectors",
-        "selectors": [
-          "tests/test_improvement_observations_runtime.py",
-          "tests/test_artifact_freshness_runtime.py",
-          "tests/test_artifact_relocation_audit.py",
-          "tests/test_backfill_archived_run_artifacts.py",
-          "tests/test_backfill_historical_bootstrap_reports.py",
-          "tests/test_auto_improve_iteration_runtime.py",
-          "tests/test_observability_artifacts_runtime.py",
-          "tests/test_raw_registry_cross_environment_matrix.py",
-          "tests/test_raw_registry_cross_environment_evidence_bundle.py",
-          "tests/test_release_smoke.py",
-          "tests/test_archive_execution_manifest.py",
-          "tests/test_generated_artifact_retention_clean.py",
-          "tests/test_goal_runtime_closeout.py",
-          "tests/test_goal_runtime_quarantine_preflight.py",
-          "tests/test_goal_runtime_run_admission.py",
-          "tests/test_release_closeout_summary.py",
-          "tests/test_release_evidence_cohort.py",
-          "tests/test_release_evidence_dashboard.py",
-          "tests/test_learning_readiness_signoff.py",
-          "tests/test_lint_uplift_plan.py",
-          "tests/test_runtime_codehealth_hardening_guards.py",
-          "tests/test_bootstrap_preflight.py",
-          "tests/test_make_target_inventory.py",
-          "tests/test_manifest_export_symlink_safety.py",
-          "tests/test_report_generation_smoke.py",
-          "tests/test_type_uplift_plan.py"
-        ]
-      },
-      "ci_entrypoint": "report-contracts-extended",
-      "ci_steps": [
-        "make report-contracts-extended"
-      ],
-      "documented_entrypoints": [
-        "make report-contracts",
-        "make report-contracts-extended"
       ]
     },
     {
@@ -780,26 +784,6 @@
     },
     {
       "kind": "make_target",
-      "name": "report-contracts",
-      "maps_to": "report_contract"
-    },
-    {
-      "kind": "make_target",
-      "name": "report-contracts-core",
-      "maps_to": "report_contract_core"
-    },
-    {
-      "kind": "make_target",
-      "name": "report-contracts-all",
-      "maps_to": "report_contract"
-    },
-    {
-      "kind": "make_target",
-      "name": "report-contracts-extended",
-      "maps_to": "report_contract_extended"
-    },
-    {
-      "kind": "make_target",
       "name": "test-release-closeout-regression-pack",
       "maps_to": "release_closeout_regression"
     },
@@ -835,11 +819,6 @@
     },
     {
       "kind": "make_target",
-      "name": "test-report-contract",
-      "maps_to": "report_contract"
-    },
-    {
-      "kind": "make_target",
       "name": "test-report-contract-core",
       "maps_to": "report_contract_core"
     },
@@ -847,11 +826,6 @@
       "kind": "make_target",
       "name": "test-report-contract-all",
       "maps_to": "report_contract"
-    },
-    {
-      "kind": "make_target",
-      "name": "test-release-sealing",
-      "maps_to": "release_sealing"
     },
     {
       "kind": "make_target",
@@ -960,16 +934,6 @@
     },
     {
       "kind": "documented_entrypoint",
-      "name": "make test-report-contract",
-      "maps_to": "report_contract"
-    },
-    {
-      "kind": "documented_entrypoint",
-      "name": "make report-contracts",
-      "maps_to": "report_contract"
-    },
-    {
-      "kind": "documented_entrypoint",
       "name": "make test-report-contract-core",
       "maps_to": "report_contract_core"
     },
@@ -977,26 +941,6 @@
       "kind": "documented_entrypoint",
       "name": "make test-report-contract-all",
       "maps_to": "report_contract"
-    },
-    {
-      "kind": "documented_entrypoint",
-      "name": "make report-contracts-core",
-      "maps_to": "report_contract_core"
-    },
-    {
-      "kind": "documented_entrypoint",
-      "name": "make report-contracts-all",
-      "maps_to": "report_contract"
-    },
-    {
-      "kind": "documented_entrypoint",
-      "name": "make report-contracts-extended",
-      "maps_to": "report_contract_extended"
-    },
-    {
-      "kind": "documented_entrypoint",
-      "name": "make test-release-sealing",
-      "maps_to": "release_sealing"
     },
     {
       "kind": "documented_entrypoint",

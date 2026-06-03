@@ -454,7 +454,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             "ops/test-lane-registry.json",
             "tests/test_makefile_static_gates.py",
         ],
-        "recommended_target": "test-release-sealing",
+        "recommended_target": "test-release-sealing-all",
     },
     {
         "action_id": "source_package_distribution_binding",

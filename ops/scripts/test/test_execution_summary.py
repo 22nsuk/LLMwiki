@@ -25,6 +25,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
+    from ops.scripts.source_revision_runtime import resolve_source_revision
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
@@ -90,6 +91,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         REUSE_MISMATCH_COMMAND_IDENTITY,
         REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
         REUSE_MISMATCH_MISSING_SUMMARY,
+        REUSE_MISMATCH_SOURCE_REVISION,
         REUSE_MISMATCH_SOURCE_TREE,
         reuse_currentness_diagnostics_from_state,
     )
@@ -137,6 +139,7 @@ else:
     from ops.scripts.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
+    from ops.scripts.source_revision_runtime import resolve_source_revision
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
@@ -202,6 +205,7 @@ else:
         REUSE_MISMATCH_COMMAND_IDENTITY,
         REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
         REUSE_MISMATCH_MISSING_SUMMARY,
+        REUSE_MISMATCH_SOURCE_REVISION,
         REUSE_MISMATCH_SOURCE_TREE,
         reuse_currentness_diagnostics_from_state,
     )
@@ -243,6 +247,7 @@ _REUSE_COMPAT_EXPORTS = (
     REUSE_MISMATCH_COMMAND_IDENTITY,
     REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
     REUSE_MISMATCH_MISSING_SUMMARY,
+    REUSE_MISMATCH_SOURCE_REVISION,
     REUSE_MISMATCH_SOURCE_TREE,
     reuse_currentness_diagnostics_from_state,
 )
@@ -393,12 +398,14 @@ def collect_pytest_nodeid_digest(
     ]
     collect_env = dict(os.environ)
     collect_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    started_at = time.monotonic()
     result = run_with_timeout(
         collect_command,
         cwd=vault,
         timeout_seconds=timeout_seconds,
         env=collect_env,
     )
+    elapsed_ms = max(0, int(round((time.monotonic() - started_at) * 1000)))
     command_text = _display_command(vault, collect_command)
     if result.returncode != 0 or result.timed_out:
         return {
@@ -407,6 +414,7 @@ def collect_pytest_nodeid_digest(
             "nodeid_count": 0,
             "sha256": "",
             "reason": result.termination_reason,
+            "duration_ms": elapsed_ms,
         }
     nodeids = _collect_nodeids(result.stdout)
     digest_input = "\n".join(nodeids)
@@ -418,6 +426,7 @@ def collect_pytest_nodeid_digest(
         "nodeid_count": len(nodeids),
         "sha256": _sha256_text(digest_input),
         "reason": "",
+        "duration_ms": elapsed_ms,
     }
 
 
@@ -489,6 +498,24 @@ def _default_collect_nodeid_digest() -> dict[str, Any]:
         "nodeid_count": 0,
         "sha256": "",
         "reason": "collect-nodeids was not requested",
+    }
+
+
+def _collect_only_duration_ms(collect_nodeid_digest: dict[str, Any]) -> int:
+    try:
+        return max(0, int(collect_nodeid_digest.get("duration_ms", 0) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _duration_telemetry(request: TestExecutionReportRequest, observations: TestExecutionObservations) -> dict[str, Any]:
+    collect_only_duration_ms = _collect_only_duration_ms(observations.collect_nodeid_digest)
+    command_duration_ms = max(0, int(request.duration_ms))
+    return {
+        "command_duration_ms": command_duration_ms,
+        "collect_only_duration_ms": collect_only_duration_ms,
+        "total_wall_time_ms": command_duration_ms + collect_only_duration_ms,
+        "total_wall_time_source": "command_plus_collect_only",
     }
 
 
@@ -640,6 +667,7 @@ def _render_test_execution_summary(inputs: TestExecutionRenderInputs) -> dict[st
         "timeout_seconds": request.result.timeout_seconds,
         "termination_reason": request.result.termination_reason,
         "duration_ms": request.duration_ms,
+        "duration_telemetry": _duration_telemetry(request, observations),
         "counts": observations.counts,
         "execution_environment": observations.execution_environment,
         "test_target_fingerprints": observations.test_target_fingerprints,
@@ -774,6 +802,7 @@ def reuse_currentness_diagnostics(
     return reuse_currentness_diagnostics_from_state(
         existing,
         suite=suite,
+        current_source_revision=resolve_source_revision(vault).revision,
         current_source_tree_fingerprint=release_source_tree_fingerprint(vault),
         current_semantic_command=_semantic_command_text(vault, command),
         current_toolchain_fingerprint=_toolchain_fingerprint(current_execution_environment),
@@ -805,6 +834,8 @@ def reusable_summary_diagnostics_for_path(
             "path": report_path(vault, path if path.is_absolute() else vault / path),
             "reason": REUSE_MISMATCH_MISSING_SUMMARY,
             "load_error": type(exc).__name__,
+            "current_source_revision": resolve_source_revision(vault).revision,
+            "observed_source_revision": "",
             "current_source_tree_fingerprint": release_source_tree_fingerprint(vault),
             "observed_source_tree_fingerprint": "",
             "executable_path_differs_only": False,
@@ -982,6 +1013,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--reuse-if-current", action="store_true")
     parser.add_argument("--reuse-from")
     parser.add_argument(
+        "--refresh-revision-if-same-tree",
+        action="store_true",
+        help=(
+            "Rewrite passing evidence from the same source tree, command, "
+            "and toolchain with the current source_revision instead of rerunning pytest."
+        ),
+    )
+    parser.add_argument(
         "--reuse-only",
         action="store_true",
         help="With --reuse-if-current, fail instead of executing when reusable evidence is stale.",
@@ -1038,14 +1077,26 @@ def _reused_report_for_args(
             existing = _load_summary(vault, reuse_path)
         except (OSError, json.JSONDecodeError, ValueError):
             existing = {}
-        if existing and reusable_summary_is_current(
-            existing,
-            vault=vault,
-            command=args.command,
-            suite=args.suite,
-            collect_nodeids=args.collect_nodeids,
-            collect_nodeid_digest=collect_nodeid_digest,
-            deselection_policy_path=args.deselection_policy,
+        diagnostics = (
+            reuse_currentness_diagnostics(
+                existing,
+                vault=vault,
+                command=args.command,
+                suite=args.suite,
+                collect_nodeids=args.collect_nodeids,
+                collect_nodeid_digest=collect_nodeid_digest,
+                deselection_policy_path=args.deselection_policy,
+            )
+            if existing
+            else {}
+        )
+        if existing and (
+            diagnostics.get("reusable")
+            or (
+                args.refresh_revision_if_same_tree
+                and diagnostics.get("reason") == REUSE_MISMATCH_SOURCE_REVISION
+                and diagnostics.get("result_reusable")
+            )
         ):
             report = build_reused_report(
                 vault,
@@ -1173,6 +1224,12 @@ def main(argv: list[str] | None = None) -> int:
                 args.reuse_from or args.out,
                 suite=args.suite,
             )
+            if (
+                args.refresh_revision_if_same_tree
+                and diagnostics.get("reason") == "not_current:source_revision"
+                and diagnostics.get("result_reusable")
+            ):
+                return _run_aggregate_cli(vault, args)
             if diagnostics["reusable"]:
                 print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
                 return 0

@@ -93,6 +93,13 @@
           "type": "integer",
           "minimum": 0
         },
+        "command_duration_seconds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
         "unknown_path": {
           "$ref": "#/$defs/changed_path_minimum_rule"
         },

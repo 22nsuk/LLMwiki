@@ -60,14 +60,8 @@ The registry-documented entrypoints are:
 - `make check-all`
 - `make release-check`
 - `make release-check-all-surfaces`
-- `make test-report-contract`
-- `make report-contracts`
 - `make test-report-contract-core`
 - `make test-report-contract-all`
-- `make report-contracts-core`
-- `make report-contracts-all`
-- `make report-contracts-extended`
-- `make test-release-sealing`
 - `make test-release-sealing-core`
 - `make test-release-sealing-all`
 - `make test-subprocess`
@@ -105,13 +99,12 @@ The registry-documented entrypoints are:
 Use the smallest authoritative lane that proves the change under review.
 `make fast-smoke` and focused `.venv/bin/python -m pytest ...` commands are
 the default tight-loop checks. `make test` / `make test-fast` are broader batch
-validation lanes, not the smallest local proof surface. On 2026-05-31 an early
 local `make test` attempt reached roughly 95% progress and hit a 900 second
 timeout; the later checkpoint rerun passed in about 18 minutes and 40 seconds,
 so this lane still needs checkpoint-grade time budgeting.
-`make test-report-contract-core` / `make report-contracts-core` is the
-preferred tight-loop report-contract proof for schema, Make/CI, and generated
-artifact contract edits. `make test-report-contract-all` intentionally sweeps
+`make test-report-contract-core` is the preferred tight-loop report-contract
+proof for schema, Make/CI, and generated artifact contract edits.
+`make test-report-contract-all` intentionally sweeps
 every `report_contract` marker and is a checkpoint/CI or final contract proof,
 not the default for every vertical slice; on 2026-05-31 it selected 463 tests
 and took about 60 minutes in the local full-vault worktree.
@@ -151,9 +144,13 @@ To avoid source-tree fingerprint loops, stabilize mutation-prone generated and
 check surfaces before refreshing expensive summaries. Finish code, docs,
 generator, policy, and schema edits first; then run the stabilizers that can
 mutate or prove generated surfaces, such as `make report-schema-samples-check`,
-`make script-output-surfaces` when `ops/scripts/**` changed, targeted
-generated-artifact converge targets, and `make static`. After that point, do not
-edit source or docs unless restarting this sequence. Refresh
+`make script-output-surfaces-check`, `make script-output-surfaces` when the check
+reports stale `ops/scripts/**` inventory, targeted generated-artifact converge
+targets, and `make static`. `test-execution-summary-full-body` runs
+`make full-pytest-generated-preflight` before the expensive full suite, so stale
+schema samples, script output surfaces, and runtime hotspot golden digests fail
+early with the owning repair target. After that point, do not edit source or docs
+unless restarting this sequence. Refresh
 `make test-execution-summary-current-or-refresh` and
 `make test-execution-summary-full-current-or-refresh` last, or use
 `make release-converge-preflight` before committing, which refreshes
@@ -201,10 +198,10 @@ expressions.
 | --- | --- | --- |
 | Docs only | `make test-public` | `make sync-public-policy-check` if public boundaries changed |
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
-| Make or CI lane | `make static` | `make report-contracts-core` |
+| Make or CI lane | `make static` | `make test-report-contract-core` |
 | Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | `make complexity-budget-touched-check CHANGED_FILES_MANIFEST=<manifest>` or `STRUCTURAL_COMPLEXITY_BUDGET_TARGETS=...`; without touched inputs the target skips and the ratchet stays inactive |
 | Dependency input | `make uv-lock-check` | `make static` after any intentional lock refresh |
-| Schema/report contract | `make report-contracts-core` | regenerate artifacts, then rerun the focused schema/report tests |
+| Schema/report contract | `make test-report-contract-core` | regenerate artifacts, then rerun the focused schema/report tests |
 | Public export policy | `make sync-public-policy` | `make public-check` |
 | Release evidence | `make changed-path-minimum-plan`, then `make release-run-ready-plan-check` and `make release-run-ready-check` | `make release-run-ready` from the committed tree before release; after a source-ready commit run `make release-post-commit-finalize` so revision-bound evidence converges before final post-verify |
 | Sealed release evidence | `make release-sealed-run-ready-check` | `make release-sealed-run-ready`; its planner requires current passing run-ready and auto-promotion preseal evidence and reports the minimal next action |

@@ -70,10 +70,11 @@ AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve
 
 GOLDEN_DIGESTS = {
     "mutation_proposal": "bf585d9978c882613d72d3b789a4440b9d144ec44bb1ccbdcb21aee87c2e0356",
-    "release_evidence_dashboard": "8b503b22dca1c3c8b3dd57de53fbd6f775754a21c4fba5cc2669d0c25ee03715",
-    "release_closeout_summary": "8e4652f36361d344e4f69a57f7861e7664c19c93c4498ceccb582af013f7e590",
-    "auto_improve_session_bundle": "36a02361ba0bc5c02daae84f0e83ab09f0d7778fbb445e20bddac74f2be507bb",
+    "release_evidence_dashboard": "62538ade77a6af4439be4c044058fb328a036c645f1bc8d0257ae115f2987dc2",
+    "release_closeout_summary": "417fe51900acc02ff5917f6918e52248593e4a224e7d5358f3705d201152c280",
+    "auto_improve_session_bundle": "9e340c714ea513897f73b58b969ed8463073fc88703a277aa0a21ab4cbab1b48",
 }
+GOLDEN_CHECK_COMMAND = "make runtime-hotspot-goldens-check"
 
 
 def _canonical_bytes(payload: object) -> bytes:
@@ -107,6 +108,15 @@ def _assert_no_local_path_leak(payload: object) -> None:
 
     for text in strings(payload):
         assert not any(fragment in text for fragment in forbidden_fragments), text
+
+
+def _golden_digest_failure_message(facade_name: str, *, expected: str, actual: str) -> str:
+    return (
+        f"runtime hotspot golden digest drift for {facade_name}: "
+        f"expected={expected} actual={actual}. "
+        f"Run `{GOLDEN_CHECK_COMMAND}` to reproduce; update GOLDEN_DIGESTS only after "
+        "reviewing the canonical payload change."
+    )
 
 
 def _mutation_proposal_payload() -> dict[str, object]:
@@ -241,6 +251,28 @@ def test_runtime_hotspot_facade_golden_output_is_byte_stable(facade_name: str) -
     first_bytes = _canonical_bytes(first_payload)
     second_bytes = _canonical_bytes(second_payload)
 
-    assert first_bytes == second_bytes
+    assert first_bytes == second_bytes, (
+        f"runtime hotspot facade {facade_name} is nondeterministic; "
+        f"run `{GOLDEN_CHECK_COMMAND}` and inspect injected clocks, paths, and ordering."
+    )
     _assert_no_local_path_leak(first_payload)
-    assert hashlib.sha256(first_bytes).hexdigest() == GOLDEN_DIGESTS[facade_name]
+    actual_digest = hashlib.sha256(first_bytes).hexdigest()
+    expected_digest = GOLDEN_DIGESTS[facade_name]
+    assert actual_digest == expected_digest, _golden_digest_failure_message(
+        facade_name,
+        expected=expected_digest,
+        actual=actual_digest,
+    )
+
+
+def test_runtime_hotspot_golden_digest_failure_message_names_recovery_target() -> None:
+    message = _golden_digest_failure_message(
+        "release_closeout_summary",
+        expected="expected",
+        actual="actual",
+    )
+
+    assert "release_closeout_summary" in message
+    assert "expected=expected" in message
+    assert "actual=actual" in message
+    assert GOLDEN_CHECK_COMMAND in message

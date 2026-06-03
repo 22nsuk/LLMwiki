@@ -71,7 +71,7 @@ selection guidance remains in [docs/development.md](./docs/development.md).
 | --- | --- | --- |
 | docs-only public change | `make test-public` | `make sync-public-policy-check` if boundaries changed |
 | ops script or test change | `make static` | `make test` or a focused pytest target |
-| schema or report contract change | `make report-contracts-core` | `make test-artifact-finalization` after regenerating artifacts |
+| schema or report contract change | `make test-report-contract-core` | `make test-artifact-finalization` after regenerating artifacts |
 | public export change | `make sync-public-policy` | `make public-check` |
 | release evidence change | `make release-check` | `make release-check-all-surfaces` when public/export surfaces changed |
 

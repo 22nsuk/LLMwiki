@@ -296,7 +296,7 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "targets": [
             "static",
             "sync-public-policy",
-            "test-report-contract",
+            "test-report-contract-core",
             "generated-artifact-converge",
             "operator-release-summary",
         ],
@@ -544,12 +544,84 @@ def _changed_path_minimum_rules(registry: dict[str, Any]) -> dict[str, Any]:
     return plan if isinstance(plan, dict) else {}
 
 
+def _command_duration_seconds(config: dict[str, Any]) -> dict[str, int]:
+    raw_durations = config.get("command_duration_seconds")
+    if not isinstance(raw_durations, dict):
+        return {}
+    durations: dict[str, int] = {}
+    for command, duration in raw_durations.items():
+        command_text = str(command).strip()
+        if not command_text:
+            continue
+        try:
+            durations[command_text] = max(0, int(duration))
+        except (TypeError, ValueError):
+            continue
+    return durations
+
+
+def _estimate_selected_command_duration_seconds(
+    selected_commands: list[str],
+    recommendation_duration_inputs: list[dict[str, Any]],
+    command_duration_seconds: dict[str, int],
+) -> int:
+    selected_estimates = _selected_command_duration_seconds(
+        selected_commands,
+        recommendation_duration_inputs,
+        command_duration_seconds,
+    )
+    if selected_estimates:
+        return sum(selected_estimates.values())
+
+    unique_recommendation_durations: dict[tuple[str, ...], int] = {}
+    for item in recommendation_duration_inputs:
+        command_key = tuple(str(command) for command in item["commands"])
+        if not command_key:
+            continue
+        unique_recommendation_durations[command_key] = max(
+            unique_recommendation_durations.get(command_key, 0),
+            int(item["duration_seconds"]),
+        )
+    return sum(unique_recommendation_durations.values())
+
+
+def _selected_command_duration_seconds(
+    selected_commands: list[str],
+    recommendation_duration_inputs: list[dict[str, Any]],
+    command_duration_seconds: dict[str, int],
+) -> dict[str, int]:
+    if not command_duration_seconds:
+        return {}
+    selected_estimates: dict[str, int] = {command: 0 for command in selected_commands}
+    missing_estimates: set[str] = set(selected_commands)
+    for item in recommendation_duration_inputs:
+        commands = item["commands"]
+        templates = item["command_templates"]
+        for command, template in zip(commands, templates, strict=False):
+            template_text = str(template)
+            command_text = str(command)
+            duration = command_duration_seconds.get(template_text)
+            if duration is None:
+                duration = command_duration_seconds.get(command_text)
+            if duration is None:
+                continue
+            missing_estimates.discard(command_text)
+            selected_estimates[command_text] = max(
+                selected_estimates.get(command_text, 0),
+                duration,
+            )
+    if missing_estimates or not any(selected_estimates.values()):
+        return {}
+    return selected_estimates
+
+
 def _changed_path_minimum_plan(
     changed_paths: list[str],
     registry: dict[str, Any],
 ) -> dict[str, Any]:
     config = _changed_path_minimum_rules(registry)
     rules = [item for item in config.get("rules", []) if isinstance(item, dict)]
+    command_duration_seconds = _command_duration_seconds(config)
     default_rule = config.get("unknown_path")
     if not isinstance(default_rule, dict):
         default_rule = {
@@ -560,6 +632,7 @@ def _changed_path_minimum_plan(
             "duration_seconds": 300,
         }
     path_recommendations: list[dict[str, Any]] = []
+    recommendation_duration_inputs: list[dict[str, Any]] = []
     unknown_paths: list[str] = []
     for path in changed_paths:
         matched_rule = next(
@@ -576,11 +649,11 @@ def _changed_path_minimum_plan(
         rule = matched_rule or default_rule
         if matched_rule is None:
             unknown_paths.append(path)
-        commands = [
-            _format_command(str(command), path)
-            for command in rule.get("commands", [])
-            if str(command).strip()
+        command_templates = [
+            str(command) for command in rule.get("commands", []) if str(command).strip()
         ]
+        commands = [_format_command(command, path) for command in command_templates]
+        duration_seconds = int(rule.get("duration_seconds", 0) or 0)
         path_recommendations.append(
             {
                 "path": path,
@@ -589,7 +662,14 @@ def _changed_path_minimum_plan(
                 "reason": str(rule.get("reason", "")).strip(),
                 "coverage_class": str(rule.get("coverage_class", "conservative")).strip(),
                 "static_required": bool(rule.get("static_required", True)),
-                "duration_seconds": int(rule.get("duration_seconds", 0) or 0),
+                "duration_seconds": duration_seconds,
+            }
+        )
+        recommendation_duration_inputs.append(
+            {
+                "commands": commands,
+                "command_templates": command_templates,
+                "duration_seconds": duration_seconds,
             }
         )
     selected_commands = _dedupe_preserve_order(
@@ -599,8 +679,15 @@ def _changed_path_minimum_plan(
             for command in recommendation["commands"]
         ]
     )
-    estimated_duration_seconds = sum(
-        int(item["duration_seconds"]) for item in path_recommendations
+    estimated_duration_seconds = _estimate_selected_command_duration_seconds(
+        selected_commands,
+        recommendation_duration_inputs,
+        command_duration_seconds,
+    )
+    selected_command_duration_seconds = _selected_command_duration_seconds(
+        selected_commands,
+        recommendation_duration_inputs,
+        command_duration_seconds,
     )
     duration_budget_seconds = int(config.get("default_duration_budget_seconds", 0) or 0)
     if not path_recommendations:
@@ -632,6 +719,7 @@ def _changed_path_minimum_plan(
         "budget_status": budget_status,
         "duration_budget_seconds": duration_budget_seconds,
         "estimated_duration_seconds": estimated_duration_seconds,
+        "command_duration_seconds": selected_command_duration_seconds,
         "unknown_paths": unknown_paths,
         "path_recommendations": path_recommendations,
     }

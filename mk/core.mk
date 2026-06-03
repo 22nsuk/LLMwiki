@@ -27,7 +27,7 @@ help:
 		"  make strict-preview-audit         audit strict preview debt across ops/scripts tests tools" \
 		"" \
 		"Report contracts:" \
-		"  make report-contracts-core        run core report contract tests" \
+		"  make test-report-contract-core   run core report contract tests" \
 		"  make external-report-lifecycle-refresh refresh active external-report evidence" \
 		"  make remediation-backlog          refresh remediation backlog evidence" \
 		"" \

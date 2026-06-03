@@ -102,6 +102,7 @@ from .schema_runtime import (
     validate_with_schema,
     validate_with_validator,
 )
+from .source_revision_runtime import resolve_source_revision
 from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "ops/reports/artifact-freshness-report.json"
@@ -110,6 +111,7 @@ SOURCE_COMMAND = "python -m ops.scripts.artifact_freshness_runtime"
 JSON_ARTIFACT_GLOBS = [
     "ops/reports/**/*.json",
     "ops/operator/**/*.json",
+    "external-reports/report-reference-manifest.json",
     "runs/**/*.json",
 ]
 TEXT_ARTIFACT_GLOBS = [
@@ -204,6 +206,7 @@ class ArtifactFreshnessContext:
     progress_stream: TextIO = field(default_factory=lambda: sys.stderr)
     schema_cache: dict[str, dict[str, Any]] = field(default_factory=dict)
     validator_cache: dict[str, Any] = field(default_factory=dict)
+    source_revision_cache: str | None = None
     source_tree_fingerprint_cache: str | None = None
     phase_timings: list[dict[str, Any]] = field(default_factory=list)
     started_at: float = field(default_factory=time.perf_counter)
@@ -280,6 +283,11 @@ class ArtifactFreshnessContext:
         if self.source_tree_fingerprint_cache is None:
             self.source_tree_fingerprint_cache = release_source_tree_fingerprint(self.vault)
         return self.source_tree_fingerprint_cache
+
+    def current_source_revision(self) -> str:
+        if self.source_revision_cache is None:
+            self.source_revision_cache = resolve_source_revision(self.vault).revision
+        return self.source_revision_cache
 
 
 def _input_fingerprints(vault: Path, policy_path: Path) -> dict[str, str]:
@@ -488,6 +496,13 @@ def _requires_source_tree_fingerprint_check(rel_path: str) -> bool:
     return "/" not in report_name
 
 
+def _requires_canonical_currentness_check(rel_path: str) -> bool:
+    return (
+        _requires_source_tree_fingerprint_check(rel_path)
+        or rel_path == "external-reports/report-reference-manifest.json"
+    )
+
+
 def _source_tree_fingerprint_status(
     *,
     vault: Path,
@@ -496,7 +511,7 @@ def _source_tree_fingerprint_status(
     schema_validation_status: str,
     freshness_context: ArtifactFreshnessContext | None,
 ) -> str:
-    if not _requires_source_tree_fingerprint_check(rel_path):
+    if not _requires_canonical_currentness_check(rel_path):
         return "not_applicable"
     if schema_validation_status != "pass":
         return "not_applicable"
@@ -511,6 +526,33 @@ def _source_tree_fingerprint_status(
         freshness_context.current_source_tree_fingerprint()
         if freshness_context is not None
         else release_source_tree_fingerprint(vault)
+    )
+    return "current" if observed == current else "stale"
+
+
+def _source_revision_status(
+    *,
+    vault: Path,
+    rel_path: str,
+    normalized_payload: dict[str, Any],
+    schema_validation_status: str,
+    freshness_context: ArtifactFreshnessContext | None,
+) -> str:
+    if not _requires_canonical_currentness_check(rel_path):
+        return "not_applicable"
+    if schema_validation_status != "pass":
+        return "not_applicable"
+    if str(normalized_payload.get("artifact_status", "")).strip() != "current":
+        return "not_applicable"
+    if str(normalized_payload.get("retention_policy", "")).strip() != "canonical_report":
+        return "not_applicable"
+    observed = str(normalized_payload.get("source_revision", "")).strip()
+    if not observed:
+        return "unknown"
+    current = (
+        freshness_context.current_source_revision()
+        if freshness_context is not None
+        else resolve_source_revision(vault).revision
     )
     return "current" if observed == current else "stale"
 
@@ -734,20 +776,32 @@ def _json_artifact_record(
         schema_validation_status=schema_validation_status,
         freshness_context=freshness_context,
     )
+    source_revision_status = _source_revision_status(
+        vault=vault,
+        rel_path=rel_path,
+        normalized_payload=normalized_payload,
+        schema_validation_status=schema_validation_status,
+        freshness_context=freshness_context,
+    )
     currentness_status = _computed_currentness_status(
         declared_currentness_status=declared_currentness_status,
         source_tree_fingerprint_status=source_tree_fingerprint_status,
+        source_revision_status=source_revision_status,
     )
     if source_tree_fingerprint_status == "stale":
         issues.append("source_tree_fingerprint_mismatch")
     elif source_tree_fingerprint_status == "unknown":
         issues.append("source_tree_fingerprint_unknown")
+    if source_revision_status == "stale":
+        issues.append("source_revision_mismatch")
+    elif source_revision_status == "unknown":
+        issues.append("source_revision_unknown")
     safe_to_backfill = _safe_to_backfill(
         utf8_ok=utf8_ok,
         json_ok=json_ok,
         schema_validation_status=schema_validation_status,
         mtime_status=mtime_status,
-    ) and source_tree_fingerprint_status != "stale"
+    ) and source_tree_fingerprint_status != "stale" and source_revision_status != "stale"
     mtime_sensitive = mtime_status == "stale"
     issues = sorted(set(issues))
     stable_contract_issues = matching_issues(issues, STABLE_CONTRACT_ISSUES)
@@ -766,6 +820,7 @@ def _json_artifact_record(
         "artifact_status": str(fields["artifact_status"]),
         "retention_policy": str(fields["retention_policy"]),
         "declared_currentness_status": declared_currentness_status,
+        "source_revision_status": source_revision_status,
         "source_tree_fingerprint_status": source_tree_fingerprint_status,
         "currentness_status": currentness_status,
         "file_mtime_utc": _format_mtime(source_mtime),

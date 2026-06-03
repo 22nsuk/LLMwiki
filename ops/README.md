@@ -34,7 +34,7 @@ make help
 make dev-install
 make static
 make test-public
-make report-contracts-core
+make test-report-contract-core
 make sync-public-policy
 make public-check
 make release-check

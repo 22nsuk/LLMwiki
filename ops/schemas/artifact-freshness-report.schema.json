@@ -676,6 +676,7 @@
         "artifact_status",
         "retention_policy",
         "currentness_status",
+        "source_revision_status",
         "file_mtime_utc",
         "mtime_source",
         "mtime_status",
@@ -732,6 +733,15 @@
           "type": "string"
         },
         "source_tree_fingerprint_status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "not_applicable"
+          ]
+        },
+        "source_revision_status": {
           "type": "string",
           "enum": [
             "current",

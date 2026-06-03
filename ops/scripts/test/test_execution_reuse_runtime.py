@@ -5,11 +5,13 @@ import json
 from typing import Any
 
 REUSE_MISMATCH_SOURCE_TREE = "source_tree_mismatch"
+REUSE_MISMATCH_SOURCE_REVISION = "source_revision_mismatch"
 REUSE_MISMATCH_COMMAND_IDENTITY = "command_identity_mismatch"
 REUSE_MISMATCH_INTERPRETER_TOOLCHAIN = "interpreter_toolchain_mismatch"
 REUSE_MISMATCH_MISSING_SUMMARY = "missing_summary"
 REUSE_MISMATCH_CODES = {
     REUSE_MISMATCH_SOURCE_TREE,
+    REUSE_MISMATCH_SOURCE_REVISION,
     REUSE_MISMATCH_COMMAND_IDENTITY,
     REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
     REUSE_MISMATCH_MISSING_SUMMARY,
@@ -89,6 +91,8 @@ def _existing_semantic_command(existing: dict[str, Any]) -> str:
 def _reuse_failure(
     *,
     reason: str,
+    current_source_revision: str,
+    observed_source_revision: str,
     current_source_tree_fingerprint: str,
     observed_source_tree_fingerprint: str,
     checks: dict[str, bool],
@@ -97,7 +101,10 @@ def _reuse_failure(
         raise ValueError(f"unsupported reuse mismatch reason: {reason}")
     return {
         "reusable": False,
+        "result_reusable": bool(checks.get("result_reusable", False)),
         "reason": reason,
+        "current_source_revision": current_source_revision,
+        "observed_source_revision": observed_source_revision,
         "current_source_tree_fingerprint": current_source_tree_fingerprint,
         "observed_source_tree_fingerprint": observed_source_tree_fingerprint,
         "executable_path_differs_only": False,
@@ -109,6 +116,7 @@ def reuse_currentness_diagnostics_from_state(
     existing: dict[str, Any],
     *,
     suite: str,
+    current_source_revision: str,
     current_source_tree_fingerprint: str,
     current_semantic_command: str,
     current_toolchain_fingerprint: str,
@@ -119,6 +127,7 @@ def reuse_currentness_diagnostics_from_state(
     collect_nodeids: bool,
     collect_nodeid_digest: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    observed_source_revision = str(existing.get("source_revision", "")).strip()
     observed_source_tree_fingerprint = str(existing.get("source_tree_fingerprint", "")).strip()
     checks = {
         "artifact_kind": existing.get("artifact_kind") == "test_execution_summary",
@@ -127,6 +136,8 @@ def reuse_currentness_diagnostics_from_state(
     if not existing or not all(checks.values()):
         return _reuse_failure(
             reason=REUSE_MISMATCH_MISSING_SUMMARY,
+            current_source_revision=current_source_revision,
+            observed_source_revision=observed_source_revision,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
@@ -138,10 +149,14 @@ def reuse_currentness_diagnostics_from_state(
     if not checks["source_tree_fingerprint"]:
         return _reuse_failure(
             reason=REUSE_MISMATCH_SOURCE_TREE,
+            current_source_revision=current_source_revision,
+            observed_source_revision=observed_source_revision,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
         )
+
+    checks["source_revision"] = observed_source_revision == current_source_revision
 
     existing_lifecycle = existing.get("deselection_lifecycle")
     if not isinstance(existing_lifecycle, dict):
@@ -174,6 +189,8 @@ def reuse_currentness_diagnostics_from_state(
     if not all(command_checks.values()):
         return _reuse_failure(
             reason=REUSE_MISMATCH_COMMAND_IDENTITY,
+            current_source_revision=current_source_revision,
+            observed_source_revision=observed_source_revision,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
@@ -186,6 +203,19 @@ def reuse_currentness_diagnostics_from_state(
     if not checks["toolchain_fingerprint"]:
         return _reuse_failure(
             reason=REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
+            current_source_revision=current_source_revision,
+            observed_source_revision=observed_source_revision,
+            current_source_tree_fingerprint=current_source_tree_fingerprint,
+            observed_source_tree_fingerprint=observed_source_tree_fingerprint,
+            checks=checks,
+        )
+
+    checks["result_reusable"] = True
+    if not checks["source_revision"]:
+        return _reuse_failure(
+            reason=REUSE_MISMATCH_SOURCE_REVISION,
+            current_source_revision=current_source_revision,
+            observed_source_revision=observed_source_revision,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
@@ -199,7 +229,10 @@ def reuse_currentness_diagnostics_from_state(
     )
     return {
         "reusable": True,
+        "result_reusable": True,
         "reason": None,
+        "current_source_revision": current_source_revision,
+        "observed_source_revision": observed_source_revision,
         "current_source_tree_fingerprint": current_source_tree_fingerprint,
         "observed_source_tree_fingerprint": observed_source_tree_fingerprint,
         "executable_path_differs_only": executable_path_differs_only,

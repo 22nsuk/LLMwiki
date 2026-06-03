@@ -45,7 +45,13 @@ SOURCE_TREE_FINGERPRINT_ISSUES = (
     "source_tree_fingerprint_mismatch",
     "source_tree_fingerprint_unknown",
 )
-OPERATIONAL_ATTENTION_ISSUES = TEST_TARGET_FINGERPRINT_ISSUES + SOURCE_TREE_FINGERPRINT_ISSUES
+SOURCE_REVISION_ISSUES = (
+    "source_revision_mismatch",
+    "source_revision_unknown",
+)
+OPERATIONAL_ATTENTION_ISSUES = (
+    TEST_TARGET_FINGERPRINT_ISSUES + SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES
+)
 EXECUTION_BLOCKING_ISSUES = (
     "root_ephemeral_artifact",
     "utf8_decode_failed",
@@ -108,6 +114,10 @@ def recommended_next_action(
         return "regenerate_canonical_report"
     if "source_tree_fingerprint_unknown" in issues:
         return "regenerate_canonical_report_with_source_tree_fingerprint"
+    if "source_revision_mismatch" in issues:
+        return "regenerate_canonical_report"
+    if "source_revision_unknown" in issues:
+        return "regenerate_canonical_report_with_source_revision"
     if "generated_at_older_than_file_mtime" in issues:
         return "regenerate_artifact_or_refresh_timestamp"
     if "missing_generated_at" in issues:
@@ -222,6 +232,8 @@ def _issue_priority(issue: str) -> int:
         "schema_unavailable": 6,
         "source_tree_fingerprint_mismatch": 7,
         "source_tree_fingerprint_unknown": 7,
+        "source_revision_mismatch": 7,
+        "source_revision_unknown": 7,
         "generated_at_older_than_file_mtime": 7,
         "test_target_fingerprint_mismatch": 7,
         "test_target_missing": 7,

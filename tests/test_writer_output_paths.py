@@ -3,6 +3,9 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from collections.abc import Callable
@@ -101,6 +104,32 @@ def _runtime_context_for_generated_at(iso_z: str) -> RuntimeContext:
 
     instant = dt.datetime.fromisoformat(iso_z.replace("Z", "+00:00"))
     return RuntimeContext(display_timezone=dt.UTC, clock=lambda: instant)
+
+
+def _isolated_child_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
+
+
+def _run_script_output_surfaces_check(stored: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ops.scripts.script_output_surfaces",
+            "--vault",
+            ".",
+            "--stored",
+            stored.as_posix(),
+            "--check",
+        ],
+        cwd=REPO_ROOT,
+        env=_isolated_child_env(),
+        check=False,
+        text=True,
+        capture_output=True,
+    )
 
 
 def _script_output_surface_entries() -> list[dict]:
@@ -209,6 +238,51 @@ class WriterOutputPathsTest(unittest.TestCase):
         self.assertEqual(actual["source_tree_fingerprint"], expected["source_tree_fingerprint"])
         self.assertEqual(actual["surfaces"], expected["surfaces"])
         self.assertEqual(actual["classification_values"], expected["classification_values"])
+
+    def test_script_output_surfaces_check_passes_for_current_registry_without_writing(self) -> None:
+        before = SCRIPT_OUTPUT_SURFACES.read_bytes()
+
+        result = _run_script_output_surfaces_check(REPO_ROOT / SCRIPT_OUTPUT_SURFACES)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("ops/script-output-surfaces.json is current", result.stdout)
+        self.assertEqual(SCRIPT_OUTPUT_SURFACES.read_bytes(), before)
+
+    def test_script_output_surfaces_check_ignores_source_revision_only_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stored = Path(temp_dir) / "script-output-surfaces.json"
+            payload = _script_output_surface_registry()
+            payload["source_revision"] = "older-but-same-script-surface"
+            stored.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+            result = _run_script_output_surfaces_check(stored)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_script_output_surfaces_check_fails_on_stale_inventory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stored = Path(temp_dir) / "script-output-surfaces.json"
+            payload = _script_output_surface_registry()
+            payload["surfaces"] = payload["surfaces"][:-1]
+            stored.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+            result = _run_script_output_surfaces_check(stored)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("script-output-surfaces registry is stale", result.stderr)
+        self.assertIn("make script-output-surfaces", result.stderr)
+        self.assertIn("added_paths", result.stderr)
+
+    def test_script_output_surfaces_check_fails_schema_errors_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stored = Path(temp_dir) / "script-output-surfaces.json"
+            stored.write_text("{}\n", encoding="utf-8")
+
+            result = _run_script_output_surfaces_check(stored)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("schema validation failed", result.stderr)
+        self.assertIn("not an AST inventory mismatch", result.stderr)
 
     def test_script_output_surface_registry_source_tree_fingerprint_is_scoped_to_ops_scripts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

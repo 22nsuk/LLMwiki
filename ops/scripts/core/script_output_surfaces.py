@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import datetime as dt
+import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +16,7 @@ from .artifact_io_runtime import (
 from .output_runtime import display_path
 from .policy_runtime import load_policy
 from .runtime_context import RuntimeContext
+from .schema_runtime import load_schema, validate_with_schema
 
 DEFAULT_OUT = "ops/script-output-surfaces.json"
 SCHEMA_PATH = "ops/schemas/script-output-surfaces.schema.json"
@@ -192,17 +196,124 @@ def write_registry(vault: Path, registry: dict[str, Any], out_path: str | None =
     )
 
 
+def _resolve_registry_path(vault: Path, out_path: str | None) -> Path:
+    path = Path(out_path or DEFAULT_OUT)
+    if not path.is_absolute():
+        path = vault / path
+    return path
+
+
+def _context_from_generated_at(generated_at: str) -> RuntimeContext:
+    try:
+        instant = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+    except ValueError:
+        instant = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=dt.UTC)
+    return RuntimeContext(display_timezone=dt.UTC, clock=lambda: instant)
+
+
+def _surface_map(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(item.get("path", "")): item
+        for item in registry.get("surfaces", [])
+        if isinstance(item, dict) and str(item.get("path", "")).strip()
+    }
+
+
+def _registry_check_diagnostics(actual: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
+    actual_surfaces = _surface_map(actual)
+    expected_surfaces = _surface_map(expected)
+    actual_paths = set(actual_surfaces)
+    expected_paths = set(expected_surfaces)
+    changed_paths = sorted(
+        path
+        for path in actual_paths & expected_paths
+        if actual_surfaces[path] != expected_surfaces[path]
+    )
+    return {
+        "actual_source_tree_fingerprint": str(actual.get("source_tree_fingerprint", "")),
+        "expected_source_tree_fingerprint": str(expected.get("source_tree_fingerprint", "")),
+        "added_paths": sorted(expected_paths - actual_paths),
+        "removed_paths": sorted(actual_paths - expected_paths),
+        "changed_paths": changed_paths,
+    }
+
+
+def _registry_is_current(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
+    return (
+        actual.get("source_tree_scope") == expected.get("source_tree_scope")
+        and actual.get("source_tree_fingerprint") == expected.get("source_tree_fingerprint")
+        and actual.get("classification_values") == expected.get("classification_values")
+        and actual.get("surfaces") == expected.get("surfaces")
+    )
+
+
+def check_registry(vault: Path, *, policy_path: str | None = None, stored_path: str | None = None) -> int:
+    registry_path = _resolve_registry_path(vault, stored_path)
+    try:
+        actual = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            "script-output-surfaces check failed: "
+            f"could not read {display_path(vault, registry_path)} ({type(exc).__name__}: {exc}). "
+            "Run `make script-output-surfaces`.",
+            file=sys.stderr,
+        )
+        return 1
+
+    schema_errors = validate_with_schema(actual, load_schema(vault / SCHEMA_PATH))
+    if schema_errors:
+        print(
+            "script-output-surfaces schema validation failed; this is a schema/shape "
+            "error, not an AST inventory mismatch. "
+            "Run `make script-output-surfaces` after fixing the schema issue.\n"
+            + "\n".join(schema_errors[:10]),
+            file=sys.stderr,
+        )
+        return 1
+
+    expected = build_registry(
+        vault,
+        policy_path=policy_path,
+        context=_context_from_generated_at(str(actual.get("generated_at", ""))),
+    )
+    if _registry_is_current(actual, expected):
+        print(f"{display_path(vault, registry_path)} is current")
+        return 0
+
+    diagnostics = _registry_check_diagnostics(actual, expected)
+    print(
+        "script-output-surfaces registry is stale; run `make script-output-surfaces`.\n"
+        + json.dumps(diagnostics, ensure_ascii=False, indent=2, sort_keys=True),
+        file=sys.stderr,
+    )
+    return 1
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
     parser.add_argument("--policy", default=None, help="Policy path relative to the vault.")
     parser.add_argument("--out", default=DEFAULT_OUT, help="Output path for the generated registry.")
+    parser.add_argument(
+        "--stored",
+        default=None,
+        help="Stored registry path to verify in --check mode. Defaults to --out.",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Fail if the checked-in registry differs from the live AST-derived inventory.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
+    if args.check:
+        return check_registry(vault, policy_path=args.policy, stored_path=args.stored or args.out)
     destination = write_registry(vault, build_registry(vault, policy_path=args.policy), args.out)
     print(display_path(vault, destination))
     return 0

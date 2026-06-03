@@ -409,6 +409,9 @@ class ReleaseSmokeTest(unittest.TestCase):
             readme.write_text("readme\n", encoding="utf-8")
             now = dt.datetime(2026, 6, 3, 12, 0, tzinfo=dt.UTC).timestamp()
             future = dt.datetime(2026, 6, 3, 12, 3, tzinfo=dt.UTC).timestamp()
+            for path in vault.rglob("*"):
+                if path.is_file():
+                    os.utime(path, (now, now))
             os.utime(readme, (future, future))
             archive_path = vault / "tmp" / "release.zip"
             archive_path.parent.mkdir(parents=True, exist_ok=True)

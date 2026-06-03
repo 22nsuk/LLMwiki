@@ -113,11 +113,14 @@ def computed_currentness_status(
     *,
     declared_currentness_status: str,
     source_tree_fingerprint_status: str,
+    source_revision_status: str = "not_applicable",
 ) -> str:
     if declared_currentness_status != "current":
         return declared_currentness_status
     if source_tree_fingerprint_status in {"stale", "unknown"}:
         return source_tree_fingerprint_status
+    if source_revision_status in {"stale", "unknown"}:
+        return source_revision_status
     return declared_currentness_status
 
 

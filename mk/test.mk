@@ -69,33 +69,6 @@ REPORT_CONTRACT_CORE_TESTS ?= \
 	tests/test_goal_runtime_clean_transient.py \
 	tests/test_goal_runtime_fixed_point_check.py \
 	tests/test_run_templates.py
-REPORT_CONTRACT_EXTENDED_TESTS ?= \
-	tests/test_improvement_observations_runtime.py \
-	tests/test_artifact_freshness_runtime.py \
-	tests/test_artifact_relocation_audit.py \
-	tests/test_backfill_archived_run_artifacts.py \
-	tests/test_backfill_historical_bootstrap_reports.py \
-	tests/test_auto_improve_iteration_runtime.py \
-	tests/test_observability_artifacts_runtime.py \
-	tests/test_raw_registry_cross_environment_matrix.py \
-	tests/test_raw_registry_cross_environment_evidence_bundle.py \
-	tests/test_release_smoke.py \
-	tests/test_archive_execution_manifest.py \
-	tests/test_generated_artifact_retention_clean.py \
-	tests/test_goal_runtime_closeout.py \
-	tests/test_goal_runtime_quarantine_preflight.py \
-	tests/test_goal_runtime_run_admission.py \
-	tests/test_release_closeout_summary.py \
-	tests/test_release_evidence_cohort.py \
-	tests/test_release_evidence_dashboard.py \
-	tests/test_learning_readiness_signoff.py \
-	tests/test_lint_uplift_plan.py \
-	tests/test_runtime_codehealth_hardening_guards.py \
-	tests/test_bootstrap_preflight.py \
-	tests/test_make_target_inventory.py \
-	tests/test_manifest_export_symlink_safety.py \
-	tests/test_report_generation_smoke.py \
-	tests/test_type_uplift_plan.py
 REPORT_CONTRACT_TESTS ?= $(REPORT_CONTRACT_CORE_TESTS)
 REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_archive_execution_manifest.py \
@@ -184,29 +157,16 @@ TEST_EXECUTION_SUMMARY_FULL_LOG_OUT ?= $(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test
 TEST_EXECUTION_SUMMARY_REUSE_FROM ?= $(TEST_EXECUTION_SUMMARY_OUT)
 TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM ?= $(TEST_EXECUTION_SUMMARY_FULL_OUT)
 TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS ?= $(PYTEST_FLAGS)
-TEST_EXECUTION_SUMMARY_SHARD_DIR ?= ops/reports/test-execution-summary-shards
 TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR ?= ops/reports/test-execution-summary-full-shards
 REPORT_CONTRACT_SUMMARY_DESELECT_POLICY ?= ops/policies/report-contract-deselections.json
 RELEASE_CLOSEOUT_REGRESSION_TESTS ?= tests/test_release_closeout_finality_attestation.py::ReleaseCloseoutFinalityAttestationTests::test_finality_verify_fails_after_tracked_digest_drift tests/test_release_closeout_batch_manifest.py::ReleaseCloseoutBatchManifestTests::test_batch_manifest_finality_points_to_attestation_without_digest_ownership tests/test_source_package_clean_extract.py::SourcePackageCleanExtractTests::test_clean_extract_fails_when_zip_smoke_archive_budget_fails tests/test_release_closeout_summary.py::ReleaseCloseoutSummaryTests::test_release_smoke_archive_budget_failure_blocks_clean_release
 RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 
-.PHONY: fast-smoke report-contracts report-contracts-core report-contracts-all report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract test-report-contract-core test-report-contract-all report-contract-summary test-release-sealing test-release-sealing-core test-release-sealing-all test-subprocess report-schema-samples-check report-schema-samples-regenerate report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess report-schema-samples-check report-schema-samples-regenerate runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 
 fast-smoke:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
-
-report-contracts: report-contracts-all
-	@echo "report-contracts is a compatibility alias; prefer report-contracts-all or test-report-contract-all."
-
-report-contracts-core:
-	$(PYTHON) -m pytest -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" $(REPORT_CONTRACT_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
-
-report-contracts-all:
-	$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
-
-report-contracts-extended:
-	$(PYTHON) -m pytest $(REPORT_CONTRACT_EXTENDED_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
 
 test-release-closeout-regression-pack:
 	$(PYTHON) -m pytest $(RELEASE_CLOSEOUT_REGRESSION_TESTS) $(PYTEST_SERIAL_FLAGS)
@@ -219,19 +179,11 @@ release-closeout-regression-dry-run: tmp-json-clean
 release-closeout-cost-evidence-ci-artifact:
 	$(PYTHON) -m ops.scripts.release_closeout_fixed_point_cost_trend --vault "$(VAULT)" --previous "$(RELEASE_CLOSEOUT_FIXED_POINT_COST_TREND_OUT)" --out "$(RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT)" --no-fail
 
-test-report-contract: test-report-contract-all
-	@echo "test-report-contract is a compatibility alias; prefer test-report-contract-all or test-report-contract-core."
-
 test-report-contract-core:
 	$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
 
 test-report-contract-all:
 	$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
-
-report-contract-summary: test-report-contract-core
-
-test-release-sealing: test-release-sealing-all
-	@echo "test-release-sealing is a compatibility alias; prefer test-release-sealing-all or test-release-sealing-core."
 
 test-release-sealing-core:
 	$(PYTHON) -m pytest $(RELEASE_SEALING_TESTS) $(PYTEST_RELEASE_SEALING_FLAGS)
@@ -247,6 +199,14 @@ report-schema-samples-check:
 
 report-schema-samples-regenerate: clean-fixture-regeneration-guard
 	$(PYTHON) tools/regenerate_report_schema_samples.py
+
+runtime-hotspot-goldens-check:
+	$(PYTHON) -m pytest tests/test_runtime_hotspot_facade_golden_outputs.py $(PYTEST_CACHE_ISOLATION_FLAGS) $(PYTEST_SERIAL_FLAGS)
+
+full-pytest-generated-preflight:
+	$(MAKE) report-schema-samples-check
+	$(MAKE) script-output-surfaces-check
+	$(MAKE) runtime-hotspot-goldens-check
 
 report-contract-closeout-precheck:
 	@for target in $$($(PYTHON) -m ops.scripts.report_contract_closeout_runtime --vault "$(VAULT)"); do \
@@ -299,10 +259,11 @@ test-execution-summary-current-or-refresh:
 	@if $(MAKE) test-execution-summary-current-check; then \
 		echo "test execution summary is current; reused $(TEST_EXECUTION_SUMMARY_REUSE_FROM)"; \
 	else \
-		$(MAKE) test-execution-summary-report-contract; \
+		$(MAKE) test-execution-summary-reuse; \
 	fi
 
 test-execution-summary-full-body:
+	$(MAKE) full-pytest-generated-preflight
 	rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"
 	mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)" "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)"
 	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)/full-suite-shard-1.json" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE)" --collect-nodeids --junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" --execution-log-out "$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)" --failed-nodeids-out "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.failed-nodeids.txt" -- $(PYTHON) -m pytest --junit-xml "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" $(TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS)
@@ -318,23 +279,26 @@ test-execution-summary-full-refresh: test-execution-summary-full
 test-execution-summary-full-refresh-no-converge: test-execution-summary-full-body
 	@echo "full-suite evidence refreshed without generated artifact convergence; release preseal must reuse $(TEST_EXECUTION_SUMMARY_FULL_OUT) by currentness check"
 
+test-execution-summary-full-aggregate-reuse:
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)" --aggregate --aggregate-dir "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)" --reuse-if-current --refresh-revision-if-same-tree --reuse-from "$(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
+
 test-execution-summary-full-current-check:
 	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_CHECK_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)" --aggregate --reuse-if-current --reuse-only --reuse-from "$(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"
 
 test-execution-summary-full-current-or-refresh:
 	@if $(MAKE) test-execution-summary-full-current-check; then \
 		echo "full-suite evidence is current; reused $(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"; \
+	elif $(MAKE) test-execution-summary-full-aggregate-reuse; then \
+		echo "full-suite evidence metadata refreshed from current shards; reused $(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"; \
 	else \
 		$(MAKE) test-execution-summary-full-refresh-no-converge; \
 	fi
 
 test-execution-summary-reuse:
-	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --reuse-if-current --reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)" --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --reuse-if-current --refresh-revision-if-same-tree --reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)" --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
 
-test-execution-summary-aggregate:
-	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --aggregate --aggregate-dir "$(TEST_EXECUTION_SUMMARY_SHARD_DIR)"
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
 test-fast:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)" $(PYTEST_FLAGS)
 
