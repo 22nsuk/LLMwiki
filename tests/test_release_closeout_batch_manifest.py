@@ -1323,6 +1323,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         allowed_after_fixed_point = {
             "$(MAKE) operator-release-summary",
             "$(MAKE) generated-artifact-converge",
+            "$(MAKE) release-closeout-fixed-point",
             "$(MAKE) tmp-json-clean",
             "$(MAKE) release-closeout-finality-verify",
         }
@@ -1333,6 +1334,11 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
                     allowed_after_fixed_point,
                     f"step at index {i} is not allowed after release-closeout-fixed-point",
                 )
+        self.assertEqual(
+            recipe_lines.count("$(MAKE) release-closeout-fixed-point"),
+            2,
+            "release-evidence-converge should settle once before and once after late generated writers",
+        )
 
 
 if __name__ == "__main__":

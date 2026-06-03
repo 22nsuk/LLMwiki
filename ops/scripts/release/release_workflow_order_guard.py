@@ -72,6 +72,7 @@ STRICT_FINALIZER_FLAG = "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-r
 ALLOWED_REPEATED_CONVERGE_TARGETS = {
     "auto-improve-readiness-report-body",
     "generated-artifact-converge",
+    "release-closeout-fixed-point",
     "release-closeout-summary-report",
     "tmp-json-clean",
 }

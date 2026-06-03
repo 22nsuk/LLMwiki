@@ -2344,6 +2344,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-evidence-dashboard-report",
                 "$(MAKE) release-lane-summary",
                 "$(MAKE) release-clean-blocker-ledger",
+                "$(MAKE) release-closeout-fixed-point",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention',
@@ -2884,6 +2885,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-closeout-fixed-point",
                 "$(MAKE) operator-release-summary",
                 "$(MAKE) generated-artifact-converge",
+                "$(MAKE) release-closeout-fixed-point",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
             ],
@@ -2912,10 +2914,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             recipe_lines[fixed_point_index + 2], "$(MAKE) generated-artifact-converge"
         )
         self.assertEqual(
-            recipe_lines[fixed_point_index + 3], "$(MAKE) tmp-json-clean"
+            recipe_lines[fixed_point_index + 3], "$(MAKE) release-closeout-fixed-point"
         )
         self.assertEqual(
             recipe_lines[fixed_point_index + 4],
+            "$(MAKE) tmp-json-clean",
+        )
+        self.assertEqual(
+            recipe_lines[fixed_point_index + 5],
             "$(MAKE) release-closeout-finality-verify",
         )
         self.assertNotIn(
@@ -3079,14 +3085,15 @@ class MakefileStaticGateTests(unittest.TestCase):
             "batch manifest index out of range",
         )
 
-        # release-closeout-fixed-point must appear exactly once
+        # release-closeout-fixed-point may run once before late generated writers
+        # and once more as the terminal canonical writer before finality verify.
         fixed_point_count = sum(
             1 for w, _ in occurrences if w == "release-closeout-fixed-point"
         )
         self.assertEqual(
             fixed_point_count,
-            1,
-            "release-closeout-fixed-point must appear exactly once in release-evidence-converge",
+            2,
+            "release-closeout-fixed-point must appear once before and once after late generated writers",
         )
 
     def test_release_evidence_refresh_fast_reuses_existing_expensive_evidence(
