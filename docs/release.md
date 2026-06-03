@@ -127,8 +127,13 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-post-commit-finalize`: official post-commit evidence suffix for
   source-ready commits. It invalidates stale auto-promotion ready evidence,
   refreshes freshness-sensitive reports before finality, verifies finality, and
-  fails if source-tracked files drift while generated/local evidence is being
-  resettled. It does not replace `release-run-ready`,
+  fails if source fingerprint or source contract paths drift while
+  generated/local evidence is being resettled. Revision-bound tracked generated
+  evidence such as `ops/script-output-surfaces.json` is reported as
+  `dirty_generated_paths`; that blocks promotion cleanliness through the normal
+  worktree guard but does not make this suffix a source-drift failure. It does
+  not require the worktree to be promotion-clean before or after the suffix, and
+  it does not replace `release-run-ready`,
   `release-sealed-run-ready`, or `release-auto-promotion-ready` authority.
   When those staged authority sidecars are stale, its report may remain
   `attention` with the owning authority target as `minimal_next_target` while

@@ -2325,7 +2325,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertEqual(
             _recipe_lines(text, "release-post-commit-finalize"),
             [
-                "$(MAKE) release-worktree-clean-check",
                 "$(MAKE) release-auto-promotion-ready-invalidate",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
                 "$(MAKE) release-evidence-converge",
@@ -2360,7 +2359,6 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)"',
-                "$(MAKE) release-worktree-clean-check",
             ],
         )
 

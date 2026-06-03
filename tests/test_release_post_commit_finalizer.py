@@ -178,6 +178,27 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
         self.assertEqual(report["owning_target"], "release-source-ready-prepare")
         self.assertEqual(report["minimal_next_target"], "release-source-ready-prepare")
         self.assertIn("README.md", report["dirty_source_paths"])
+        self.assertEqual(report["dirty_generated_paths"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_generated_canonical_drift_is_reported_without_source_failure(self) -> None:
+        self._write_authority_inputs()
+        self._init_clean_git()
+        (self.vault / "ops/script-output-surfaces.json").write_text(
+            '{"artifact_kind": "script_output_surfaces", "phase": "post-commit"}\n',
+            encoding="utf-8",
+        )
+
+        with self._patch_current_repo():
+            report = build_report(self.vault, mode="verify", context=fixed_context())
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["blocker_class"], "none")
+        self.assertEqual(report["dirty_source_paths"], [])
+        self.assertEqual(report["dirty_generated_paths"], ["ops/script-output-surfaces.json"])
+        self.assertEqual(report["changed_paths"], ["ops/script-output-surfaces.json"])
+        self.assertEqual(report["summary"]["dirty_source_path_count"], 0)
+        self.assertEqual(report["summary"]["dirty_generated_path_count"], 1)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_cli_returns_nonzero_for_source_tracked_drift(self) -> None:

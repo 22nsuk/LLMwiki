@@ -692,7 +692,6 @@ release-converge-all-surfaces:
 	$(MAKE) release-converge-post
 
 release-post-commit-finalize:
-	$(MAKE) release-worktree-clean-check
 	$(MAKE) release-auto-promotion-ready-invalidate
 	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"
 	$(MAKE) release-evidence-converge
@@ -727,7 +726,6 @@ release-post-commit-finalize:
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
 	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)"
-	$(MAKE) release-worktree-clean-check
 
 head-aligned-evidence-converge: release-post-commit-finalize
 	@echo "head-aligned-evidence-converge is a compatibility alias; prefer release-post-commit-finalize."

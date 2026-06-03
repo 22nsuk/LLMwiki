@@ -31,6 +31,7 @@
     "changed_paths",
     "dirty_entries",
     "dirty_source_paths",
+    "dirty_generated_paths",
     "authority_inputs",
     "summary"
   ],
@@ -75,6 +76,11 @@
       "items": { "type": "string", "minLength": 1 },
       "uniqueItems": true
     },
+    "dirty_generated_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
     "authority_inputs": {
       "type": "array",
       "items": { "$ref": "#/$defs/authority_input" }
@@ -84,12 +90,14 @@
       "additionalProperties": false,
       "required": [
         "dirty_source_path_count",
+        "dirty_generated_path_count",
         "authority_stale_count",
         "fingerprint_changed_since_snapshot",
         "revision_changed_since_snapshot"
       ],
       "properties": {
         "dirty_source_path_count": { "type": "integer", "minimum": 0 },
+        "dirty_generated_path_count": { "type": "integer", "minimum": 0 },
         "authority_stale_count": { "type": "integer", "minimum": 0 },
         "fingerprint_changed_since_snapshot": { "type": "boolean" },
         "revision_changed_since_snapshot": { "type": "boolean" }

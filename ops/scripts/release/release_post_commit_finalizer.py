@@ -33,7 +33,6 @@ MODES = {"snapshot", "verify", "refresh"}
 
 SOURCE_BLOCKING_CATEGORIES = {
     *SOURCE_CONTRACT_CATEGORIES,
-    "generated_canonical",
     "unexpected",
 }
 
@@ -108,6 +107,16 @@ def _source_dirty_paths(entries: list[dict[str, str]]) -> list[str]:
             entry["path"]
             for entry in entries
             if entry["path"] and entry["category"] in SOURCE_BLOCKING_CATEGORIES
+        }
+    )
+
+
+def _generated_dirty_paths(entries: list[dict[str, str]]) -> list[str]:
+    return sorted(
+        {
+            entry["path"]
+            for entry in entries
+            if entry["path"] and entry["category"] == "generated_canonical"
         }
     )
 
@@ -207,6 +216,7 @@ def build_report(
 
     dirty_entries = _dirty_entries(resolved_vault)
     dirty_source_paths = _source_dirty_paths(dirty_entries)
+    dirty_generated_paths = _generated_dirty_paths(dirty_entries)
     authority = _authority_inputs(
         resolved_vault,
         current_revision=current_revision,
@@ -237,6 +247,7 @@ def build_report(
     changed_paths = sorted(
         {
             *dirty_source_paths,
+            *dirty_generated_paths,
             *(
                 ["<source-tree-fingerprint>"]
                 if fingerprint_changed_since_snapshot
@@ -278,9 +289,11 @@ def build_report(
         "changed_paths": changed_paths,
         "dirty_entries": dirty_entries,
         "dirty_source_paths": dirty_source_paths,
+        "dirty_generated_paths": dirty_generated_paths,
         "authority_inputs": authority,
         "summary": {
             "dirty_source_path_count": len(dirty_source_paths),
+            "dirty_generated_path_count": len(dirty_generated_paths),
             "authority_stale_count": sum(1 for item in authority if not item["current"]),
             "fingerprint_changed_since_snapshot": fingerprint_changed_since_snapshot,
             "revision_changed_since_snapshot": revision_changed_since_snapshot,
