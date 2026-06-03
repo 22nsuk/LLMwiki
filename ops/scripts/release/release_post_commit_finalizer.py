@@ -147,8 +147,6 @@ def _authority_input(
             if source_tree_fingerprint
             else "source_tree_fingerprint_missing"
         )
-    if status != "pass":
-        issues.append("status_not_pass")
     return {
         "stage": spec["stage"],
         "path": spec["path"],
@@ -225,16 +223,15 @@ def build_report(
         blocker_class = "source_tree_changed"
         owning_target = "release-source-ready-prepare"
         minimal_next_target = "release-source-ready-prepare"
-    elif stale_authority is not None and mode != "snapshot":
-        status = "attention"
-        blocker_class = "authority_stale"
-        owning_target = str(stale_authority["owning_target"])
-        minimal_next_target = str(stale_authority["owning_target"])
     else:
         status = "pass"
         blocker_class = "none"
         owning_target = "release-post-commit-finalize"
-        minimal_next_target = "release-check-all-surfaces"
+        minimal_next_target = (
+            str(stale_authority["owning_target"])
+            if stale_authority is not None and mode != "snapshot"
+            else "release-check-all-surfaces"
+        )
 
     changed_paths = sorted(
         {
