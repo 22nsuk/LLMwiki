@@ -130,6 +130,9 @@ surface comparison; this document owns release evidence and staged authority.
   fails if source-tracked files drift while generated/local evidence is being
   resettled. It does not replace `release-run-ready`,
   `release-sealed-run-ready`, or `release-auto-promotion-ready` authority.
+  When those staged authority sidecars are stale, its report may remain
+  `attention` with the owning authority target as `minimal_next_target` while
+  the post-commit evidence suffix itself completes.
   `make head-aligned-evidence-converge` is a compatibility alias for this target.
 - `make changed-path-minimum-plan`: advisory changed-path cost planner. It reads
   `ops/test-lane-registry.json` and an optional

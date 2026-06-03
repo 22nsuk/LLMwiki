@@ -90,6 +90,10 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
             existing_count=existing_count,
             expected_count=len(evidence),
         )
+        status_reason_details = action_status_reason_details(
+            status_reason_ids,
+            fallback_target=str(action["recommended_target"]),
+        )
         sprint_priority = SPRINT_PRIORITIES.get(action_id)
         item = {
             "action_id": action_id,
@@ -97,12 +101,12 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
             "theme": action["theme"],
             "current_status": status,
             "status_reason_ids": status_reason_ids,
-            "status_reason_details": action_status_reason_details(
-                status_reason_ids,
-                fallback_target=str(action["recommended_target"]),
-            ),
+            "status_reason_details": status_reason_details,
             "source_report_paths": sorted(set(source_by_action[action_id])),
-            "recommended_target": action["recommended_target"],
+            "recommended_target": _recommended_target(
+                str(action["recommended_target"]),
+                status_reason_details,
+            ),
             "evidence": evidence,
         }
         if sprint_priority:
@@ -110,6 +114,34 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
         item.update(external_report_action_lifecycle_record(item))
         action_items.append(item)
     return action_items
+
+
+def _recommended_target(
+    fallback_target: str,
+    status_reason_details: list[dict[str, Any]],
+) -> str:
+    """Prefer the current blocker owner over the static catalog target."""
+    for detail in status_reason_details:
+        targets = detail.get("recommended_targets")
+        if not isinstance(targets, list):
+            continue
+        for target in targets:
+            if not isinstance(target, str) or not target:
+                continue
+            if (
+                target.endswith("-check")
+                or target.endswith("-plan-check")
+                or target.endswith("-plan")
+            ):
+                continue
+            return target
+    for detail in status_reason_details:
+        targets = detail.get("recommended_targets")
+        if isinstance(targets, list):
+            for target in targets:
+                if isinstance(target, str) and target:
+                    return target
+    return fallback_target
 
 
 def _report_coverage(vault: Path, paths: list[Path]) -> list[dict[str, Any]]:

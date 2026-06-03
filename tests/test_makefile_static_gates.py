@@ -1921,6 +1921,18 @@ class MakefileStaticGateTests(unittest.TestCase):
             'rm -f "$(RELEASE_AUTO_PROMOTION_READY_MANIFEST_OUT)"',
             auto_promotion_ready_invalidate_block,
         )
+        self.assertIn(
+            '"$(RELEASE_AUTO_PROMOTION_READY_PLAN_OUT)"',
+            auto_promotion_ready_invalidate_block,
+        )
+        self.assertIn(
+            '"$(RELEASE_SEALED_RUN_READY_PLAN_OUT)"',
+            auto_promotion_ready_invalidate_block,
+        )
+        self.assertIn(
+            '"$(RELEASE_RUN_READY_PLAN_OUT)"',
+            auto_promotion_ready_invalidate_block,
+        )
         for target in (
             "release-run-ready",
             "release-sealed-run-ready",
@@ -2347,7 +2359,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-closeout-fixed-point",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
-                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention',
+                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)"',
                 "$(MAKE) release-worktree-clean-check",
             ],
         )
@@ -2899,7 +2911,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) auto-improve-readiness-report-body",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) test-execution-summary-full-refresh",
-                "$(MAKE) test-execution-summary",
+                "$(MAKE) test-execution-summary-current-or-refresh",
                 "$(MAKE) function-budget-refactor-proposals",
                 "$(MAKE) outcome-provenance-gate-policy",
                 "$(MAKE) release-freshness-sensitive-evidence-refresh",

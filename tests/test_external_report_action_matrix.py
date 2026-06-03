@@ -1059,6 +1059,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         }
         self.assertIn("release-run-ready-plan-check", detail_targets)
         self.assertIn("release-sealed-run-ready-plan", detail_targets)
+        self.assertEqual(evidence_bundle["recommended_target"], "release-run-ready")
 
     def test_release_verified_actions_explain_manifest_revision_mismatch(self) -> None:
         self._write_release_verification_reports()
@@ -1091,6 +1092,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         }["release_run_manifest_source_revision_mismatch"]
         self.assertEqual(detail["owning_stage"], "release_run_ready")
         self.assertIn("release-run-ready", detail["recommended_targets"])
+        self.assertEqual(action["recommended_target"], "release-run-ready")
 
     def test_promotion_truth_ladder_rejects_ready_manifest_revision_stale(self) -> None:
         self._write_release_verification_reports()
@@ -1120,6 +1122,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         }["release_auto_promotion_ready_manifest_source_revision_mismatch"]
         self.assertEqual(detail["owning_stage"], "release_auto_promotion_ready")
         self.assertIn("release-auto-promotion-ready", detail["recommended_targets"])
+        self.assertEqual(action["recommended_target"], "release-auto-promotion-ready")
 
     def test_negative_lessons_and_remediation_backlog_are_implementation_artifacts(self) -> None:
         for rel_path in (
@@ -1675,6 +1678,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertIn("release-auto-promotion-goal-run-id-guard", goal_detail_targets)
         self.assertIn("release-auto-promotion-ready-plan", goal_detail_targets)
         self.assertNotIn("auto-improve-goal-run", goal_detail_targets)
+        self.assertEqual(
+            actions["goal_execution_runtime_certificate"]["recommended_target"],
+            "goal-runtime-certificate",
+        )
 
     def test_goal_prompt_action_accepts_verified_promotion_prompt_without_ban(self) -> None:
         for rel_path in (

@@ -539,12 +539,6 @@
           "tests/test_release_sealing_lane.py"
         ]
       },
-      "summary_suite": {
-        "suite_id": "release-sealing",
-        "suite_scope": "release_sealing",
-        "summary_target": "ops/reports/test-execution-summary.json",
-        "make_summary_target": "test-release-sealing-core"
-      },
       "ci_entrypoint": "test-release-sealing-core",
       "ci_steps": [
         "make test-release-sealing-core"
@@ -566,12 +560,6 @@
         "selectors": [
           "tests/test_command_runtime_subprocess.py"
         ]
-      },
-      "summary_suite": {
-        "suite_id": "subprocess",
-        "suite_scope": "subprocess_integration",
-        "summary_target": "ops/reports/test-execution-summary.json",
-        "make_summary_target": "test-subprocess"
       },
       "ci_entrypoint": "test-subprocess",
       "ci_steps": [

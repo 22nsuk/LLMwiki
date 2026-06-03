@@ -31,15 +31,6 @@
     },
     {
       "path": "ops/reports/task-improvement-observations/task-20260531-release-evidence-sync-test-cost-governance/improvement-observations.json",
-      "observation_id": "default_fast_lane_too_broad_for_agent_loop_20260531",
-      "status": "planned",
-      "retained_reason": "The default fast lane still needs a changed-path cost planner; current work established proof ordering but did not add the minimal target planner.",
-      "next_action": "Extend workflow dependency and test-lane metadata to emit the minimal authoritative Make target and duration budget before expensive pytest lanes.",
-      "exit_condition": "Close when changed-path planner output selects minimal advisory commands, reports budget status, and states that full release proof remains required.",
-      "owner_or_lane": "changed-path-minimum-plan"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260531-release-evidence-sync-test-cost-governance/improvement-observations.json",
       "observation_id": "release_run_ready_cost_plan_20260531",
       "status": "planned",
       "retained_reason": "Release-run-ready planning is improved and in use, but registry-backed planner reason codes and duration budgets for expensive gates remain future hardening.",

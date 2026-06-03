@@ -111,23 +111,23 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
                 },
             )
 
-    def test_revision_stale_authority_is_advisory_with_owning_target(self) -> None:
+    def test_revision_stale_authority_is_attention_with_owning_target(self) -> None:
         self._write_authority_inputs(preflight_revision="old-revision")
         self._init_clean_git()
 
         with self._patch_current_repo():
             report = build_report(self.vault, mode="verify", context=fixed_context())
 
-        self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["blocker_class"], "none")
-        self.assertEqual(report["owning_target"], "release-post-commit-finalize")
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["blocker_class"], "authority_stale")
+        self.assertEqual(report["owning_target"], "release-auto-promotion-preflight")
         self.assertEqual(report["minimal_next_target"], "release-auto-promotion-preflight")
         self.assertEqual(report["authority_inputs"][0]["issues"], ["source_revision_stale"])
         self.assertEqual(report["summary"]["authority_stale_count"], 1)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_report(self.vault, report).exists())
 
-    def test_cli_does_not_fail_on_authority_advisory_for_make_target(self) -> None:
+    def test_cli_strict_mode_fails_on_authority_attention(self) -> None:
         self._write_authority_inputs(preflight_revision="old-revision")
         self._init_clean_git()
 
@@ -161,9 +161,9 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
             )
         )
         self.assertEqual(default_exit_code, 0)
-        self.assertEqual(strict_exit_code, 0)
-        self.assertEqual(default_report["status"], "pass")
-        self.assertEqual(strict_report["status"], "pass")
+        self.assertEqual(strict_exit_code, 1)
+        self.assertEqual(default_report["status"], "attention")
+        self.assertEqual(strict_report["status"], "attention")
         self.assertEqual(strict_report["minimal_next_target"], "release-auto-promotion-preflight")
 
     def test_source_tracked_drift_fails_and_returns_to_prepare(self) -> None:

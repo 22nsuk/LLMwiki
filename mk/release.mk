@@ -203,7 +203,7 @@ release-evidence-converge-phase-1:
 
 release-evidence-converge-phase-2: release-evidence-converge-phase-1
 	$(MAKE) test-execution-summary-full-refresh
-	$(MAKE) test-execution-summary
+	$(MAKE) test-execution-summary-current-or-refresh
 	$(MAKE) function-budget-refactor-proposals
 	$(MAKE) outcome-provenance-gate-policy
 	$(MAKE) release-freshness-sensitive-evidence-refresh
@@ -362,7 +362,7 @@ release-auto-promotion-ready-plan:
 	$(PYTHON) -m ops.scripts.release_evidence_planner --vault "$(VAULT)" --stage auto-promotion-ready --out "$(RELEASE_AUTO_PROMOTION_READY_PLAN_OUT)" --run-manifest "$(RELEASE_RUN_MANIFEST_OUT)" --sealed-run-manifest "$(RELEASE_SEALED_RUN_MANIFEST_OUT)" --operator-summary "$(RELEASE_AUTO_PROMOTION_OPERATOR_SUMMARY_OUT)" --auto-improve-readiness "$(AUTO_IMPROVE_READINESS_OUT)" --auto-promotion-preflight "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)" --auto-promotion-preseal "$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)" --goal-run-status "$(GOAL_RUN_STATUS_OUT)" --goal-runtime-certificate "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --require-ready
 
 release-auto-promotion-ready-invalidate:
-	rm -f "$(RELEASE_AUTO_PROMOTION_READY_MANIFEST_OUT)"
+	rm -f "$(RELEASE_AUTO_PROMOTION_READY_MANIFEST_OUT)" "$(RELEASE_AUTO_PROMOTION_READY_PLAN_OUT)" "$(RELEASE_SEALED_RUN_READY_PLAN_OUT)" "$(RELEASE_RUN_READY_PLAN_OUT)"
 
 release-auto-promotion-operator-summary:
 	$(MAKE) release-auto-promotion-ready-invalidate
@@ -726,7 +726,7 @@ release-post-commit-finalize:
 	$(MAKE) release-closeout-fixed-point
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
-	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention
+	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)"
 	$(MAKE) release-worktree-clean-check
 
 head-aligned-evidence-converge: release-post-commit-finalize
