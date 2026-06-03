@@ -9,6 +9,7 @@ from ops.scripts.mechanism_run_validation_runtime import (
     build_changed_files_scope_gate_check,
     build_event_sequence_phase_checks,
     build_report_consistency_checks,
+    build_test_surface_phase_check,
     display_report_vault,
     normalize_mechanism_artifact_bundle,
 )
@@ -402,6 +403,38 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
         self.assertTrue(by_check["mechanism_run_event_order"]["pass"])
         self.assertFalse(by_check["mechanism_run_terminal_event"]["pass"])
         self.assertIn("finalized", by_check["mechanism_run_terminal_event"]["detail"])
+
+    def test_test_surface_phase_check_requires_discovered_test_cases(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            bundle = normalize_mechanism_artifact_bundle(
+                {
+                    "baseline_eval_report": {},
+                    "candidate_eval_report": {},
+                    "baseline_lint_report": {},
+                    "candidate_lint_report": {},
+                    "baseline_mechanism_report": mechanism_report(
+                        vault,
+                        primary_targets=["ops/scripts/example.py"],
+                        test_file_count=1,
+                        test_case_count=0,
+                    ),
+                    "candidate_mechanism_report": mechanism_report(
+                        vault,
+                        primary_targets=["ops/scripts/example.py"],
+                        test_file_count=1,
+                        test_case_count=0,
+                    ),
+                    "changed_files_manifest_report": {},
+                    "run_ledger_report": {},
+                }
+            )
+
+            check = build_test_surface_phase_check(bundle, ready=True)
+
+            self.assertFalse(check["pass"])
+            self.assertIn("baseline_test_case_count=0", check["detail"])
+            self.assertIn("candidate_test_case_count=0", check["detail"])
 
     def test_changed_files_scope_normalizes_manifest_paths_before_matching(self) -> None:
         bundle = normalize_mechanism_artifact_bundle(

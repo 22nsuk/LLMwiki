@@ -665,13 +665,17 @@ def build_test_surface_phase_check(
     *,
     ready: bool,
 ) -> PhaseCheckResult:
-    baseline_test_files = bundle.baseline_mechanism_report.get("test_files", [])
-    candidate_test_files = bundle.candidate_mechanism_report.get("test_files", [])
+    baseline_test_files = report_target_list(bundle.baseline_mechanism_report, "test_files")
+    candidate_test_files = report_target_list(bundle.candidate_mechanism_report, "test_files")
+    baseline_metrics = bundle.baseline_mechanism_report.get("structural_metrics", {})
+    candidate_metrics = bundle.candidate_mechanism_report.get("structural_metrics", {})
+    baseline_test_case_count = baseline_metrics.get("test_case_count", 0)
+    candidate_test_case_count = candidate_metrics.get("test_case_count", 0)
     test_surface_present = (
-        isinstance(baseline_test_files, list)
-        and isinstance(candidate_test_files, list)
-        and len(baseline_test_files) >= 1
-        and len(candidate_test_files) >= 1
+        bool(baseline_test_files)
+        and bool(candidate_test_files)
+        and baseline_test_case_count >= 1
+        and candidate_test_case_count >= 1
     )
     return mechanism_phase_check(
         "mechanism_run_test_surface_present",
@@ -680,11 +684,14 @@ def build_test_surface_phase_check(
             "skipped until baseline/candidate mechanism artifacts are complete"
             if not ready
             else (
-                "baseline and candidate mechanism assessments both include at least one focused test file"
+                "baseline and candidate mechanism assessments both include at least one focused test file and test case"
                 if test_surface_present
                 else (
-                    "completed mechanism runs should capture at least one focused test file in both "
-                    "baseline and candidate mechanism assessments"
+                    "completed mechanism runs should capture at least one focused test file and "
+                    "discovered test case in both baseline and candidate mechanism assessments; "
+                    f"baseline_files={len(baseline_test_files)}, candidate_files={len(candidate_test_files)}, "
+                    f"baseline_test_case_count={baseline_test_case_count}, "
+                    f"candidate_test_case_count={candidate_test_case_count}"
                 )
             )
         ),
