@@ -158,8 +158,16 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "release-converge-all-surfaces",
                 "release-converge",
                 "release-converge-post",
+                "release-smoke-fast-refresh-check",
+                "release-freshness-sensitive-evidence-refresh",
+                "goal-worktree-guard",
+                "goal-runtime-certificate",
+                "learning-readiness-signoff-refresh",
+                "test-execution-summary-current-or-refresh",
+                "test-execution-summary-full-current-check",
                 "release-check-all-surfaces",
                 "sync-public-policy",
+                "public-check-summary",
                 "public-check-all",
                 "goal-runtime-local-evidence-refresh",
                 "auto-improve-readiness-worktree-guard",
@@ -232,14 +240,45 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-source-ready-commit:\n"
             "\t@true\n"
             "release-post-commit-finalize:\n"
-            "\t$(MAKE) release-closeout-finality-verify\n"
+            "\t$(MAKE) release-smoke-fast-refresh-check\n"
+            "\t$(MAKE) release-freshness-sensitive-evidence-refresh\n"
+            "\t$(MAKE) goal-worktree-guard\n"
+            "\t$(MAKE) goal-runtime-certificate\n"
+            "\t$(MAKE) learning-readiness-signoff-refresh\n"
+            "\t$(MAKE) test-execution-summary-current-or-refresh\n"
+            "\t$(MAKE) test-execution-summary-full-current-check\n"
+            "\t$(MAKE) sync-public-policy\n"
+            "\t$(MAKE) public-check-summary\n"
+            "\t$(MAKE) generated-artifact-converge\n"
+            "\t$(MAKE) learning-readiness-signoff-revalidation\n"
+            "\t$(MAKE) release-closeout-summary-report\n"
+            "\t$(MAKE) release-evidence-cohort-report\n"
+            "\t$(MAKE) auto-improve-readiness-report-body\n"
+            "\t$(MAKE) release-lane-summary\n"
+            "\t$(MAKE) release-finality-resettle\n"
             "release-source-ready-status:\n"
             "\t@true\n"
             "release-check-all-surfaces:\n"
             "\t@true\n"
             "sync-public-policy:\n"
             "\t@true\n"
+            "public-check-summary:\n"
+            "\t@true\n"
             "public-check-all:\n"
+            "\t@true\n"
+            "release-smoke-fast-refresh-check:\n"
+            "\t@true\n"
+            "release-freshness-sensitive-evidence-refresh:\n"
+            "\t@true\n"
+            "goal-worktree-guard:\n"
+            "\t@true\n"
+            "goal-runtime-certificate:\n"
+            "\t@true\n"
+            "learning-readiness-signoff-refresh:\n"
+            "\t@true\n"
+            "test-execution-summary-current-or-refresh:\n"
+            "\t@true\n"
+            "test-execution-summary-full-current-check:\n"
             "\t@true\n"
             "goal-runtime-local-evidence-refresh:\n"
             "\t@true\n"
@@ -283,9 +322,22 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(planner_hook["status"], "pass")
         resettle_check = next(item for item in report["checks"] if item["id"] == "release_finality_resettle_sequence")
         self.assertEqual(resettle_check["status"], "pass")
+        post_commit_sequence = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        self.assertEqual(post_commit_sequence["status"], "pass")
+        post_commit_budget = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        self.assertEqual(post_commit_budget["status"], "pass")
         preflight_check = next(item for item in report["checks"] if item["id"] == "release_converge_preflight_sequence")
         self.assertEqual(preflight_check["status"], "pass")
         self.assertIn("release-finality-resettle", {item["target"] for item in report["target_recipes"]})
+        self.assertIn("release-post-commit-finalize", {item["target"] for item in report["target_recipes"]})
         self.assertIn("release-converge-preflight", {item["target"] for item in report["target_recipes"]})
         self.assertTrue(write_report(self.vault, report).exists())
 
@@ -351,6 +403,87 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(
             check["violations"][0]["reason"],
             "unexpected_repeated_closeout_target",
+        )
+
+    def test_guard_fails_when_post_commit_finalizer_reintroduces_full_refresh(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "\t$(MAKE) test-execution-summary-full-current-check\n",
+                "\t$(MAKE) test-execution-summary-full-current-or-refresh\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(
+            check["violations"][0]["reason"],
+            "forbidden_post_commit_target",
+        )
+
+    def test_guard_fails_when_post_commit_finalizer_repeats_writer_cluster(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "\t$(MAKE) release-closeout-summary-report\n",
+                "\t$(MAKE) release-closeout-summary-report\n"
+                "\t$(MAKE) release-closeout-summary-report\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(check["violations"][0]["target"], "release-closeout-summary-report")
+        self.assertEqual(
+            check["violations"][0]["reason"],
+            "unexpected_repeated_post_commit_target",
+        )
+
+    def test_guard_fails_when_post_commit_finalizer_calls_authority_cleanup(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-post-commit-finalize:\n",
+                "release-post-commit-finalize:\n"
+                "\t$(MAKE) release-auto-promotion-ready-invalidate\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(
+            check["violations"][0]["reason"],
+            "forbidden_post_commit_target",
         )
 
     def test_guard_fails_when_release_source_ready_status_is_not_terminal(self) -> None:

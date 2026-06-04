@@ -692,39 +692,23 @@ release-converge-all-surfaces:
 	$(MAKE) release-converge-post
 
 release-post-commit-finalize:
-	$(MAKE) release-auto-promotion-ready-invalidate
 	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"
-	$(MAKE) release-evidence-converge
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) release-freshness-sensitive-evidence-refresh
 	$(MAKE) goal-worktree-guard
 	$(MAKE) goal-runtime-certificate
 	$(MAKE) learning-readiness-signoff-refresh
 	$(MAKE) test-execution-summary-current-or-refresh
-	$(MAKE) test-execution-summary-full-current-or-refresh
+	$(MAKE) test-execution-summary-full-current-check
 	$(MAKE) sync-public-policy
 	$(MAKE) public-check-summary
-	$(MAKE) release-authority-sealed-preflight
 	$(MAKE) generated-artifact-converge
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
 	$(MAKE) auto-improve-readiness-report-body
-	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
-	$(MAKE) release-clean-blocker-ledger
-	$(MAKE) release-closeout-fixed-point
-	$(MAKE) generated-artifact-converge
-	$(MAKE) learning-readiness-signoff-revalidation
-	$(MAKE) release-closeout-summary-report
-	$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
-	$(MAKE) auto-improve-readiness-report-body
-	$(MAKE) release-evidence-dashboard-report
-	$(MAKE) release-lane-summary
-	$(MAKE) release-clean-blocker-ledger
-	$(MAKE) release-closeout-fixed-point
-	$(MAKE) tmp-json-clean
-	$(MAKE) release-closeout-finality-verify
+	$(MAKE) release-finality-resettle
 	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)"
 
 head-aligned-evidence-converge: release-post-commit-finalize

@@ -125,15 +125,17 @@ surface comparison; this document owns release evidence and staged authority.
   release summary is local-only evidence and is refreshed during the prepare
   convergence flow.
 - `make release-post-commit-finalize`: official post-commit evidence suffix for
-  source-ready commits. It invalidates stale auto-promotion ready evidence,
-  refreshes freshness-sensitive reports before finality, verifies finality, and
-  fails if source fingerprint or source contract paths drift while
-  generated/local evidence is being resettled. Revision-bound tracked generated
+  source-ready commits. It refreshes focused/currentness and freshness-sensitive
+  reports before finality, checks existing full-pytest evidence for currentness
+  without refreshing it, verifies finality, and fails if source fingerprint or
+  source contract paths drift while generated/local evidence is being resettled.
+  Revision-bound tracked generated
   evidence such as `ops/script-output-surfaces.json` is reported as
   `dirty_generated_paths`; that blocks promotion cleanliness through the normal
   worktree guard but does not make this suffix a source-drift failure. It does
   not require the worktree to be promotion-clean before or after the suffix, and
-  it does not replace `release-run-ready`,
+  it does not refresh full pytest evidence, staged authority manifests, or
+  action lifecycle cleanup. It also does not replace `release-run-ready`,
   `release-sealed-run-ready`, or `release-auto-promotion-ready` authority.
   When those staged authority sidecars are stale, its report may remain
   `attention` with the owning authority target as `minimal_next_target` while
@@ -143,7 +145,8 @@ surface comparison; this document owns release evidence and staged authority.
   `ops/test-lane-registry.json` and an optional
   `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST`, emits minimal suggested
   commands and deterministic duration-budget status, and always marks the final
-  full release proof as still required.
+  full release proof as still required through the registry-owned explicit
+  checkpoint command, currently `make release-run-ready`.
 - `make release-evidence-converge`: authoritative clean release evidence convergence.
 - `make release-evidence-closeout-sealed`: check-only sealed packaging lane for an
   already source-ready tree. It must not run mutating source/evidence convergence;

@@ -560,6 +560,15 @@ def _command_duration_seconds(config: dict[str, Any]) -> dict[str, int]:
     return durations
 
 
+def _changed_path_final_checkpoint_commands(config: dict[str, Any]) -> list[str]:
+    commands = [
+        str(command).strip()
+        for command in config.get("final_checkpoint_commands", [])
+        if str(command).strip()
+    ]
+    return commands or ["make release-run-ready"]
+
+
 def _estimate_selected_command_duration_seconds(
     selected_commands: list[str],
     recommendation_duration_inputs: list[dict[str, Any]],
@@ -712,7 +721,7 @@ def _changed_path_minimum_plan(
         "registry_path": DEFAULT_TEST_LANE_REGISTRY,
         "selected_commands": selected_commands,
         "final_checkpoint_required": True,
-        "final_checkpoint_commands": ["make test-execution-summary-full-current-or-refresh"],
+        "final_checkpoint_commands": _changed_path_final_checkpoint_commands(config),
         "release_proof_replacement": False,
         "coverage_class": coverage_class,
         "static_required": any(item["static_required"] for item in path_recommendations),

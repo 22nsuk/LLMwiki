@@ -547,10 +547,41 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(plan["budget_status"], "within_budget")
         self.assertEqual(
             plan["final_checkpoint_commands"],
-            ["make test-execution-summary-full-current-or-refresh"],
+            ["make release-run-ready"],
         )
         self.assertFalse(plan["release_proof_replacement"])
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_plan_uses_registry_owned_final_checkpoint(
+        self,
+    ) -> None:
+        registry_path = self.vault / "ops" / "test-lane-registry.json"
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        registry["changed_path_minimums"]["final_checkpoint_commands"] = [
+            "make release-run-ready-plan-check",
+            "make release-run-ready",
+        ]
+        registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths=["tests/test_workflow_dependency_planner.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(
+            plan["final_checkpoint_commands"],
+            ["make release-run-ready-plan-check", "make release-run-ready"],
+        )
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "uv run python -m pytest tests/test_workflow_dependency_planner.py -q",
+            ],
+        )
+        self.assertFalse(plan["release_proof_replacement"])
 
     def test_changed_path_minimum_budget_status_is_deterministic(self) -> None:
         report = build_report(

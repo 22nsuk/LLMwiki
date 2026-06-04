@@ -76,6 +76,15 @@ ALLOWED_REPEATED_CONVERGE_TARGETS = {
     "release-closeout-summary-report",
     "tmp-json-clean",
 }
+FORBIDDEN_POST_COMMIT_FINALIZER_TARGETS = {
+    "release-auto-promotion-ready-invalidate",
+    "release-authority-sealed-preflight",
+    "release-evidence-converge",
+    "release-evidence-dashboard-report",
+    "release-clean-blocker-ledger",
+    "test-execution-summary-full-current-or-refresh",
+    "test-execution-summary-full-refresh",
+}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -489,6 +498,91 @@ def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[
     return check
 
 
+def _release_post_commit_finalizer_sequence_check(
+    invocations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    expected = [
+        "release-smoke-fast-refresh-check",
+        "release-freshness-sensitive-evidence-refresh",
+        "goal-worktree-guard",
+        "goal-runtime-certificate",
+        "learning-readiness-signoff-refresh",
+        "test-execution-summary-current-or-refresh",
+        "test-execution-summary-full-current-check",
+        "sync-public-policy",
+        "public-check-summary",
+        "generated-artifact-converge",
+        "learning-readiness-signoff-revalidation",
+        "release-closeout-summary-report",
+        "release-evidence-cohort-report",
+        "auto-improve-readiness-report-body",
+        "release-lane-summary",
+        "release-finality-resettle",
+    ]
+    check = _check_subsequence(
+        "release_post_commit_finalizer_sequence",
+        invocations,
+        expected,
+        details=(
+            "release-post-commit-finalize must stay a focused HEAD-bound suffix: "
+            "cheap/currentness refreshes, one late-report pass, then the narrow "
+            "release-finality-resettle wrapper."
+        ),
+    )
+    if invocations and str(invocations[-1]["target"]) != "release-finality-resettle":
+        check["status"] = "fail"
+        check["violations"].append(
+            {
+                "expected_role": "release-finality-resettle",
+                "reason": "finality_resettle_must_be_last_make_invocation",
+            }
+        )
+    return check
+
+
+def _release_post_commit_finalizer_repetition_budget(
+    invocations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    counts: dict[str, int] = {}
+    for invocation in invocations:
+        target = str(invocation["target"])
+        counts[target] = counts.get(target, 0) + 1
+    repeated_targets = sorted(target for target, count in counts.items() if count > 1)
+    violations = [
+        {
+            "target": target,
+            "count": counts[target],
+            "reason": "unexpected_repeated_post_commit_target",
+        }
+        for target in repeated_targets
+    ]
+    violations.extend(
+        {
+            "target": target,
+            "count": counts[target],
+            "reason": "forbidden_post_commit_target",
+        }
+        for target in sorted(FORBIDDEN_POST_COMMIT_FINALIZER_TARGETS)
+        if counts.get(target, 0)
+    )
+    return _check(
+        "release_post_commit_finalizer_repetition_budget",
+        expected_order=["each post-commit Make target at most once"],
+        observed_order=[
+            f"{target} x{counts[target]}"
+            for target in sorted(
+                set(repeated_targets) | (FORBIDDEN_POST_COMMIT_FINALIZER_TARGETS & set(counts))
+            )
+        ],
+        violations=violations,
+        details=(
+            "Post-commit finalization must not reintroduce an outer writer loop, "
+            "full-suite refresh, or staged release-authority cleanup. "
+            "Fixed-point owns digest iteration and staged authority lanes own their own refreshes."
+        ),
+    )
+
+
 def _release_converge_preflight_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     expected = [
         "generated-artifact-script-output",
@@ -666,6 +760,10 @@ def build_report(
         makefile_text,
         RELEASE_SOURCE_READY_POST_VERIFY_TARGET,
     )
+    release_post_commit_finalize_invocations = _recipe_invocations(
+        makefile_text,
+        RELEASE_POST_COMMIT_FINALIZE_TARGET,
+    )
     planner_report = build_workflow_dependency_report(
         resolved_vault,
         changed_paths=["Makefile"],
@@ -677,6 +775,8 @@ def build_report(
         _release_converge_repetition_budget(release_converge_invocations),
         _release_converge_preflight_check(release_converge_preflight_invocations),
         _release_finality_resettle_check(release_finality_resettle_invocations),
+        _release_post_commit_finalizer_sequence_check(release_post_commit_finalize_invocations),
+        _release_post_commit_finalizer_repetition_budget(release_post_commit_finalize_invocations),
         _check_subsequence(
             "check_finalized_post_check_sequence",
             check_finalized_invocations,
@@ -726,9 +826,9 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/release_workflow_order_guard.py",
-                "ops/scripts/workflow_dependency_planner.py",
-                "ops/scripts/release_closeout_fixed_point.py",
+                "ops/scripts/release/release_workflow_order_guard.py",
+                "ops/scripts/core/workflow_dependency_planner.py",
+                "ops/scripts/release/release_closeout_fixed_point.py",
                 "Makefile",
                 *[path for path in makefile_sources if path != "Makefile"],
                 FIXED_POINT_POLICY_PATH,
@@ -784,6 +884,10 @@ def build_report(
             _target_recipe_payload(
                 RELEASE_SOURCE_READY_POST_VERIFY_TARGET,
                 release_source_ready_post_verify_invocations,
+            ),
+            _target_recipe_payload(
+                RELEASE_POST_COMMIT_FINALIZE_TARGET,
+                release_post_commit_finalize_invocations,
             ),
         ],
         "planner_snapshot": _planner_snapshot(planner_report),

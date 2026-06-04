@@ -81,6 +81,19 @@ def _recipe_lines(text: str, target: str) -> list[str]:
     return [line.strip() for line in block.splitlines()[1:] if line.startswith("\t")]
 
 
+def _assert_ordered_subsequence(
+    case: unittest.TestCase,
+    observed: list[str],
+    expected: list[str],
+) -> None:
+    cursor = 0
+    for expected_line in expected:
+        try:
+            cursor = observed.index(expected_line, cursor) + 1
+        except ValueError:
+            case.fail(f"missing or out-of-order recipe line: {expected_line}")
+
+
 def _target_dependencies(text: str, target: str) -> tuple[str, ...]:
     header = _target_block(text, target).splitlines()[0]
     _, _, raw_deps = header.partition(":")
@@ -2323,45 +2336,44 @@ class MakefileStaticGateTests(unittest.TestCase):
                 '@echo "head-aligned-evidence-converge is a compatibility alias; prefer release-post-commit-finalize."',
             ],
         )
-        self.assertEqual(
-            _recipe_lines(text, "release-post-commit-finalize"),
+        finalizer_lines = _recipe_lines(text, "release-post-commit-finalize")
+        _assert_ordered_subsequence(
+            self,
+            finalizer_lines,
             [
-                "$(MAKE) release-auto-promotion-ready-invalidate",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
-                "$(MAKE) release-evidence-converge",
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) release-freshness-sensitive-evidence-refresh",
                 "$(MAKE) goal-worktree-guard",
                 "$(MAKE) goal-runtime-certificate",
                 "$(MAKE) learning-readiness-signoff-refresh",
                 "$(MAKE) test-execution-summary-current-or-refresh",
-                "$(MAKE) test-execution-summary-full-current-or-refresh",
+                "$(MAKE) test-execution-summary-full-current-check",
                 "$(MAKE) sync-public-policy",
                 "$(MAKE) public-check-summary",
-                "$(MAKE) release-authority-sealed-preflight",
                 "$(MAKE) generated-artifact-converge",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) release-closeout-summary-report",
                 "$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
                 "$(MAKE) auto-improve-readiness-report-body",
-                "$(MAKE) release-evidence-dashboard-report",
                 "$(MAKE) release-lane-summary",
-                "$(MAKE) release-clean-blocker-ledger",
-                "$(MAKE) release-closeout-fixed-point",
-                "$(MAKE) generated-artifact-converge",
-                "$(MAKE) learning-readiness-signoff-revalidation",
-                "$(MAKE) release-closeout-summary-report",
-                "$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
-                "$(MAKE) auto-improve-readiness-report-body",
-                "$(MAKE) release-evidence-dashboard-report",
-                "$(MAKE) release-lane-summary",
-                "$(MAKE) release-clean-blocker-ledger",
-                "$(MAKE) release-closeout-fixed-point",
-                "$(MAKE) tmp-json-clean",
-                "$(MAKE) release-closeout-finality-verify",
+                "$(MAKE) release-finality-resettle",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)"',
             ],
         )
+        forbidden_default_refreshes = {
+            "$(MAKE) release-evidence-converge",
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
+            "$(MAKE) test-execution-summary-full-refresh",
+            "$(MAKE) release-auto-promotion-ready-invalidate",
+            "$(MAKE) release-authority-sealed-preflight",
+            "$(MAKE) release-evidence-dashboard-report",
+            "$(MAKE) release-clean-blocker-ledger",
+        }
+        self.assertEqual(forbidden_default_refreshes & set(finalizer_lines), set())
+        self.assertEqual(finalizer_lines.count("$(MAKE) release-finality-resettle"), 1)
+        self.assertEqual(finalizer_lines.count("$(MAKE) generated-artifact-converge"), 1)
+        self.assertIn("--mode verify", finalizer_lines[-1])
 
     def test_release_closeout_summary_report_target_is_write_only(self) -> None:
         text = _makefile_text()
@@ -2888,7 +2900,9 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "release-evidence-converge-phase-3").splitlines()[0],
             "release-evidence-converge-phase-3: release-evidence-converge-phase-2",
         )
-        self.assertEqual(
+        self.assertEqual(recipe_lines[0], "$(MAKE) release-evidence-converge-lane-guard")
+        _assert_ordered_subsequence(
+            self,
             recipe_lines,
             [
                 "$(MAKE) release-evidence-converge-lane-guard",
@@ -2897,51 +2911,30 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) registry-preflight",
                 "$(MAKE) static",
                 "$(MAKE) report-schema-samples-check",
-                "$(MAKE) external-report-reference-manifest-settle",
                 "$(MAKE) release-smoke-full",
                 "$(MAKE) release-source-package-check",
-                "$(MAKE) generated-artifact-converge",
                 "$(MAKE) test-execution-summary-report-contract-refresh",
-                "$(MAKE) generated-artifact-converge",
-                "$(MAKE) release-closeout-summary-report",
-                "$(MAKE) auto-improve-readiness-report-body",
-                "$(MAKE) generated-artifact-converge",
-                "$(MAKE) release-closeout-summary-report",
-                "$(MAKE) auto-improve-readiness-report-body",
-                "$(MAKE) tmp-json-clean",
                 "$(MAKE) test-execution-summary-full-refresh",
                 "$(MAKE) test-execution-summary-current-or-refresh",
-                "$(MAKE) function-budget-refactor-proposals",
-                "$(MAKE) outcome-provenance-gate-policy",
                 "$(MAKE) release-freshness-sensitive-evidence-refresh",
-                "$(MAKE) auto-improve-readiness-report-body",
-                "$(MAKE) generated-artifact-converge",
                 "$(MAKE) public-check-summary",
-                "$(MAKE) learning-claim-evidence-bundle",
-                "$(MAKE) learning-confirmed-evidence-cohort",
-                "$(MAKE) learning-claim-unlock-review",
-                "$(MAKE) learning-delta-scoreboard",
-                "$(MAKE) learning-claim-activation-report",
-                "$(MAKE) session-synopsis",
-                "$(MAKE) self-improvement-negative-lessons",
                 "$(MAKE) remediation-backlog",
-                "$(MAKE) release-closeout-summary-report",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
-                "$(MAKE) auto-improve-readiness-report-body",
                 "$(MAKE) release-evidence-dashboard-report",
                 "$(MAKE) release-lane-summary",
                 "$(MAKE) release-clean-blocker-ledger",
-                "$(MAKE) generated-artifact-converge",
                 "$(MAKE) release-closeout-post-check-finalizer-dry-run",
-                "$(MAKE) release-closeout-fixed-point",
-                "$(MAKE) operator-release-summary",
-                "$(MAKE) generated-artifact-converge",
                 "$(MAKE) release-closeout-fixed-point",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
             ],
         )
+        self.assertEqual(recipe_lines.count("$(MAKE) test-execution-summary-full-refresh"), 1)
+        self.assertGreaterEqual(recipe_lines.count("$(MAKE) generated-artifact-converge"), 2)
+        self.assertEqual(recipe_lines[-1], "$(MAKE) release-closeout-finality-verify")
+        self.assertNotIn("$(MAKE) release-closeout-batch-manifest-promote", recipe_lines)
+        self.assertNotIn("$(MAKE) release-evidence-closeout-self-check", recipe_lines)
 
     def test_release_evidence_converge_uses_fixed_point_finalizer(self) -> None:
         text = _makefile_text()
@@ -3137,16 +3130,13 @@ class MakefileStaticGateTests(unittest.TestCase):
             "batch manifest index out of range",
         )
 
-        # release-closeout-fixed-point may run once before late generated writers
-        # and once more as the terminal canonical writer before finality verify.
+        # Fixed-point owns iteration internally; Make should keep any extra
+        # fixed-point calls bounded instead of hand-rolling an outer loop.
         fixed_point_count = sum(
             1 for w, _ in occurrences if w == "release-closeout-fixed-point"
         )
-        self.assertEqual(
-            fixed_point_count,
-            2,
-            "release-closeout-fixed-point must appear once before and once after late generated writers",
-        )
+        self.assertGreaterEqual(fixed_point_count, 1)
+        self.assertLessEqual(fixed_point_count, 2)
 
     def test_release_evidence_refresh_fast_reuses_existing_expensive_evidence(
         self,

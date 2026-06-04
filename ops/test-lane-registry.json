@@ -5,6 +5,9 @@
   "changed_path_minimums": {
     "version": 1,
     "default_duration_budget_seconds": 300,
+    "final_checkpoint_commands": [
+      "make release-run-ready"
+    ],
     "command_duration_seconds": {
       "make static": 60,
       "make test-fast": 120,
