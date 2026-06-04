@@ -571,6 +571,14 @@
           "type": "string",
           "minLength": 1
         },
+        "raw_pytest_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "developer_regression_command": {
+          "type": "string",
+          "minLength": 1
+        },
         "release_builder_environment": {
           "type": "string",
           "minLength": 1

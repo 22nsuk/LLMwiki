@@ -3,6 +3,7 @@ CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.jso
 CLOSURE_REGISTRY_ENVELOPE_REGISTRY ?= all
 GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json
 GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT ?= tmp/generated-artifact-index.candidate.json
+GENERATED_ARTIFACT_INDEX_CHECK_OUT ?= tmp/generated-artifact-index-check.json
 GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT ?= tmp/generated-artifact-converge-summary.json
 GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT ?= tmp/generated-artifact-converge-summary.before.json
 GENERATED_ARTIFACT_RETENTION_CLEAN_OUT ?= tmp/generated-artifact-retention-clean.json
@@ -31,7 +32,7 @@ RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.jso
 RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT ?= tmp/release-risk-taxonomy-matrix.candidate.json
 RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.md
 
-.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-output-surfaces-clean-regenerate manual-mutate-defect-registry closure-registry-envelope make-target-inventory workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
+.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-output-surfaces-clean-regenerate manual-mutate-defect-registry closure-registry-envelope make-target-inventory workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
@@ -123,6 +124,9 @@ release-risk-taxonomy-matrix:
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT)" --out "$(RELEASE_RISK_TAXONOMY_MATRIX_OUT)" --schema ops/schemas/release-risk-taxonomy-matrix.schema.json --expected-artifact-kind release_risk_taxonomy_matrix --expected-producer ops.scripts.release_risk_taxonomy_matrix
 
 generated-artifact-index: artifact-relocation-audit closure-registry-envelope manual-mutate-defect-registry release-risk-taxonomy-matrix generated-artifact-index-body
+
+generated-artifact-index-check:
+	$(PYTHON) -m ops.scripts.generated_artifact_index --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_INDEX_CHECK_OUT)"
 
 generated-artifact-index-body:
 	$(PYTHON) -m ops.scripts.generated_artifact_index --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT)"

@@ -105,7 +105,7 @@ EVIDENCE_REPORTS = (
     EvidenceReport(
         phase_id="full_suite",
         path="ops/reports/test-execution-summary-full.json",
-        target="test-execution-summary-full-refresh",
+        target="test-execution-summary-full-current-or-refresh",
         expensive=True,
     ),
 )
@@ -359,7 +359,10 @@ def _transaction_contract(*, budget: str, candidate_root: str) -> dict[str, Any]
         "forbidden_default_targets": [
             "release-smoke-full",
             "release-smoke-full-reuse",
+            "test-execution-summary-full-current-or-refresh",
+            "test-execution-summary-full-body",
             "test-execution-summary-full-refresh",
+            "test-execution-summary-full-refresh-no-converge",
         ]
         if budget == "cheap"
         else [],

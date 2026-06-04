@@ -1029,8 +1029,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.command and args.command[0] == "--":
         args.command = args.command[1:]
-    if not args.command:
-        args.command = [sys.executable, "-m", "pytest"]
+    if not args.command and not args.aggregate and not args.aggregate_from:
+        parser.error("test command required for non-aggregate summaries; pass -- <command>")
     return args
 
 

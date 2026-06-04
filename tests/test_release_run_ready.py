@@ -26,7 +26,7 @@ pytestmark = pytest.mark.public
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLAN_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-run-ready-plan.schema.json"
 ZERO_SHA256 = "0" * 64
-READY_PLAN_GOLDEN_SHA256 = "fa08fbb906e3eb7c0c4638b1b2d185eed0545dcebaf2c6a06ce0bde7d1f9f63d"
+READY_PLAN_GOLDEN_SHA256 = "c387acf93be7bac0a469b3a6c29f75d0de7d75c06e2f13cf0742aa296d7d2d3b"
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",
     "wiki/",
@@ -134,7 +134,9 @@ def _test_execution_summary_payload(*, suite: str, represents_full_suite: bool) 
         "not_full_suite_reason": "" if represents_full_suite else "report-contract fixture",
         "full_suite_evidence": {
             "status": full_suite_status,
-            "required_command": "make test-execution-summary-full",
+            "required_command": "make test-execution-summary-full-current-or-refresh",
+            "raw_pytest_command": "python -m pytest",
+            "developer_regression_command": "make test-all",
             "release_builder_environment": "synthetic-public-fixture",
             "reason": "schema-backed run-ready planner fixture",
         },

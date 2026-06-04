@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 from collections.abc import Callable
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import patch
@@ -343,7 +343,12 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertTrue(report["represents_full_suite"])
             self.assertEqual(report["not_full_suite_reason"], "")
             self.assertEqual(report["full_suite_evidence"]["status"], "represented")
-            self.assertEqual(report["full_suite_evidence"]["required_command"], "python -m pytest")
+            self.assertEqual(
+                report["full_suite_evidence"]["required_command"],
+                "make test-execution-summary-full-current-or-refresh",
+            )
+            self.assertEqual(report["full_suite_evidence"]["raw_pytest_command"], "python -m pytest")
+            self.assertEqual(report["full_suite_evidence"]["developer_regression_command"], "make test-all")
             self.assertEqual(
                 validate_with_schema(report, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)),
                 [],
@@ -1237,6 +1242,32 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(run.call_count, 1)
             self.assertNotEqual(payload.get("summary_mode"), "aggregate")
             self.assertEqual(payload["counts"]["passed"], 1)
+
+    def test_cli_non_aggregate_requires_explicit_test_command(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            with (
+                patch("ops.scripts.test_execution_summary.run_with_timeout") as run,
+                redirect_stderr(io.StringIO()) as stderr,
+                self.assertRaises(SystemExit) as raised,
+            ):
+                summary_main(
+                    [
+                        "--vault",
+                        str(vault),
+                        "--out",
+                        "ops/reports/test-execution-summary.json",
+                        "--suite",
+                        "unit",
+                    ]
+                )
+
+            self.assertEqual(raised.exception.code, 2)
+            self.assertIn("test command required for non-aggregate summaries", stderr.getvalue())
+            run.assert_not_called()
 
     def test_cli_reuse_if_current_skips_pytest_wrapper(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

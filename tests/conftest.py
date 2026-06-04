@@ -7,23 +7,74 @@ from pathlib import Path
 import pytest
 from hypothesis import HealthCheck, settings
 
+from ops.scripts.test.test_execution_command_runtime import PYTEST_OPTION_VALUE_FLAGS
+
 BARE_PYTEST_GUIDANCE = (
     "plain `pytest` is not a supported entrypoint for this repository. "
-    "Use `make test`, `make check`, `make public-check`, or `.venv/bin/python -m pytest ...` instead; "
-    "the supported entrypoints preserve repo import semantics and the documented pytest plugin policy."
+    "Use `make test`, `make test-all`, `make check`, `make public-check`, "
+    "or a focused `.venv/bin/python -m pytest ...` selector instead; "
+    "use `make test-execution-summary-full-current-or-refresh` for release-grade full-suite evidence."
 )
+SELECTORLESS_PYTEST_GUIDANCE = (
+    "selectorless `.venv/bin/python -m pytest` is not a supported ad hoc entrypoint for this repository. "
+    "Use `make test-all` for developer full regression, "
+    "`make test-execution-summary-full-current-or-refresh` for release-grade full-suite evidence, "
+    "or pass a focused pytest selector."
+)
+MAKE_PYTEST_ENTRYPOINT_ENV = "LLMWIKI_MAKE_PYTEST_ENTRYPOINT"
 HYPOTHESIS_PROFILE = "llmwiki"
 DEFAULT_HYPOTHESIS_MAX_EXAMPLES = 30
+PYTEST_SCOPE_VALUE_FLAGS = {"-k", "-m", "--deselect", "--ignore", "--ignore-glob"}
 
 
 def _is_bare_pytest_invocation(argv0: str) -> bool:
     return Path(argv0).stem.lower() in {"pytest", "py.test"}
 
 
+def _is_python_module_pytest_invocation(argv0: str) -> bool:
+    path = Path(argv0)
+    return path.name == "__main__.py" and path.parent.name == "pytest"
+
+
+def _is_broad_pytest_selector(arg: str) -> bool:
+    normalized = arg.rstrip("/")
+    return normalized in {".", "tests"}
+
+
+def _argv_has_focused_pytest_scope(argv: list[str]) -> bool:
+    skip_next = False
+    for arg in argv[1:]:
+        if skip_next:
+            skip_next = False
+            continue
+        if arg == "--":
+            continue
+        if arg in PYTEST_SCOPE_VALUE_FLAGS:
+            return True
+        if any(arg.startswith(f"{flag}=") for flag in PYTEST_SCOPE_VALUE_FLAGS if flag.startswith("--")):
+            return True
+        if arg in PYTEST_OPTION_VALUE_FLAGS:
+            skip_next = True
+            continue
+        if any(arg.startswith(f"{flag}=") for flag in PYTEST_OPTION_VALUE_FLAGS if flag.startswith("--")):
+            continue
+        if arg.startswith("-"):
+            continue
+        if not _is_broad_pytest_selector(arg):
+            return True
+    return False
+
+
 def pytest_configure(config: pytest.Config) -> None:
     del config
     if _is_bare_pytest_invocation(sys.argv[0]):
         raise pytest.UsageError(BARE_PYTEST_GUIDANCE)
+    if (
+        _is_python_module_pytest_invocation(sys.argv[0])
+        and os.environ.get(MAKE_PYTEST_ENTRYPOINT_ENV) != "1"
+        and not _argv_has_focused_pytest_scope(sys.argv)
+    ):
+        raise pytest.UsageError(SELECTORLESS_PYTEST_GUIDANCE)
     max_examples = int(
         os.environ.get("LLMWIKI_HYPOTHESIS_MAX_EXAMPLES", str(DEFAULT_HYPOTHESIS_MAX_EXAMPLES))
     )

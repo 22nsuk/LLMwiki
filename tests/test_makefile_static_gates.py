@@ -437,6 +437,7 @@ def _assert_supply_chain_make_variables(case: unittest.TestCase, text: str) -> N
         "STRUCTURAL_COMPLEXITY_BUDGET_OUT ?= ops/reports/structural-complexity-budget.json",
         "GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json",
         "GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT ?= tmp/generated-artifact-index.candidate.json",
+        "GENERATED_ARTIFACT_INDEX_CHECK_OUT ?= tmp/generated-artifact-index-check.json",
         "ARTIFACT_FRESHNESS_OUT ?= ops/reports/artifact-freshness-report.json",
         "ARTIFACT_FRESHNESS_CANDIDATE_OUT ?= tmp/artifact-freshness-report.candidate.json",
         "ARTIFACT_FRESHNESS_CHECK_OUT ?= tmp/artifact-freshness-report-check.json",
@@ -477,6 +478,7 @@ def _assert_supply_chain_target_names(case: unittest.TestCase, text: str) -> Non
         "artifact-relocation-audit:",
         "generated-artifact-converge:",
         "generated-artifact-index:",
+        "generated-artifact-index-check:",
         "generated-artifact-index-body:",
         "archive-execution-manifest:",
         "archive-execution-manifest-report:",
@@ -624,6 +626,12 @@ def _assert_artifact_index_and_freshness_recipes(case: unittest.TestCase, text: 
         generated_index,
     )
     case.assertIn("ops.scripts.canonical_artifact_promote", generated_index)
+    generated_index_check = _target_block(text, "generated-artifact-index-check")
+    case.assertIn(
+        '$(PYTHON) -m ops.scripts.generated_artifact_index --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_INDEX_CHECK_OUT)"',
+        generated_index_check,
+    )
+    case.assertNotIn("ops.scripts.canonical_artifact_promote", generated_index_check)
     case.assertIn(
         '$(PYTHON) -m ops.scripts.closure_registry_envelope --vault "$(VAULT)" --registry "$(CLOSURE_REGISTRY_ENVELOPE_REGISTRY)"',
         _target_block(text, "closure-registry-envelope"),
@@ -1124,6 +1132,8 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         self.assertIn("PYTEST_DISABLE_PLUGIN_AUTOLOAD ?= 1", text)
         self.assertIn("export PYTEST_DISABLE_PLUGIN_AUTOLOAD", text)
+        self.assertIn("LLMWIKI_MAKE_PYTEST_ENTRYPOINT ?= 1", text)
+        self.assertIn("export LLMWIKI_MAKE_PYTEST_ENTRYPOINT", text)
         self.assertIn("PYTHONDONTWRITEBYTECODE ?= 1", text)
         self.assertIn("export PYTHONDONTWRITEBYTECODE", text)
         self.assertIn("PYTEST_XDIST_WORKERS ?= 4", text)
@@ -1205,26 +1215,54 @@ class MakefileStaticGateTests(unittest.TestCase):
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         conftest_text = CONFTEST.read_text(encoding="utf-8")
         pytest_ini_text = PYTEST_INI.read_text(encoding="utf-8")
+        normalized_readme_text = _normalize_whitespace(readme_text)
+        normalized_development_text = _normalize_whitespace(development_text)
 
         self.assertIn("docs/development.md", readme_text)
         self.assertIn("make help", readme_text)
         self.assertIn("make help", development_text)
         self.assertIn("make uv-lock-check", development_text)
         self.assertIn("UV_CANONICAL_INDEX_URL", development_text)
-        self.assertIn("PYTEST_XDIST_WORKERS", development_text)
         self.assertIn("uv.lock", development_text)
         self.assertIn(
-            "공식 pytest 진입점은 `make test*`, `make check*`, `make public-check*` 또는 `.venv/bin/python -m pytest`다.",
-            development_text,
+            "For a full developer regression, use `make test-all`.",
+            readme_text,
         )
         self.assertIn(
-            "문서, CI, 재현 절차 예시도 bare `pytest`가 아니라 `python -m pytest` 또는 Make target을 사용한다.",
+            "Bare `pytest` is not a supported entrypoint.",
+            normalized_readme_text,
+        )
+        self.assertIn(
+            "`make test-execution-summary-full-current-or-refresh`",
             development_text,
         )
+        self.assertIn("`test-execution-summary-full-refresh-no-converge`", development_text)
+        self.assertIn("`make test-all`", development_text)
+        self.assertIn("focused `.venv/bin/python -m pytest tests/...`", development_text)
+        self.assertIn("Bare `pytest` is unsupported.", normalized_development_text)
+        self.assertIn("ops/test-lane-registry.json", development_text)
+        self.assertIn("mk/test.mk", development_text)
+        self.assertIn("Volatile counts and durations belong", development_text)
+        self.assertNotRegex(
+            development_text,
+            r"\b(?:\d+\s+(?:tests|subtests|minutes)|20\d{2}-\d{2}-\d{2})\b",
+        )
         self.assertIn("plain `pytest` is not a supported entrypoint", conftest_text)
+        self.assertIn("selectorless `.venv/bin/python -m pytest`", conftest_text)
         self.assertIn("BARE_PYTEST_GUIDANCE", conftest_text)
+        self.assertIn("SELECTORLESS_PYTEST_GUIDANCE", conftest_text)
+        self.assertIn("LLMWIKI_MAKE_PYTEST_ENTRYPOINT", conftest_text)
+        self.assertIn("make test-all", conftest_text)
+        self.assertIn("make test-execution-summary-full-current-or-refresh", conftest_text)
         self.assertNotRegex(pytest_ini_text, r"(?im)^pythonpath\s*=")
-        for entrypoint in compatibility_names(registry, "documented_entrypoint"):
+        for entrypoint in (
+            "make fast-smoke",
+            "make test",
+            "make test-all",
+            "make release-run-ready",
+            "make release-post-commit-finalize",
+            "make release-authority-settle",
+        ):
             with self.subTest(entrypoint=entrypoint):
                 self.assertIn(entrypoint, development_text)
         for alias in (
@@ -1658,11 +1696,16 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
 
-        self.assertIn(
-            "`.github/workflows/ci.yml`은 test tier를 `fast`, `report-contract`, `release-closeout-regression`, `release-sealing`, `subprocess`, `slow`, `integration`, `integration-heavy`, `public`으로 나눠 병렬 job으로 실행하고, 별도 Windows/raw-registry/supply-chain job도 유지한다.",
-            development_text,
-        )
-        for entrypoint in compatibility_names(registry, "documented_entrypoint"):
+        self.assertIn("CI splits registry-backed lanes into parallel jobs", development_text)
+        self.assertIn(".github/workflows/ci.yml", development_text)
+        self.assertIn("ops/test-lane-registry.json", development_text)
+        self.assertIn("make help", development_text)
+        for entrypoint in (
+            "make test-fast",
+            "make test-all",
+            "make public-check",
+            "make release-run-ready",
+        ):
             with self.subTest(entrypoint=entrypoint):
                 self.assertIn(entrypoint, development_text)
         for alias in (
@@ -2337,7 +2380,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "release-closeout-summary"),
         )
 
-    def test_head_aligned_evidence_converge_refreshes_late_release_evidence_surfaces(
+    def test_head_aligned_evidence_converge_aliases_post_commit_check_only_finalizer(
         self,
     ) -> None:
         text = _makefile_text()
@@ -4657,6 +4700,10 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote"
             ),
             6,
+        )
+        self.assertIn(
+            "$(MAKE) goal-runtime-local-evidence-converge",
+            _recipe_lines(text, "goal-runtime-publish-local-evidence")[0],
         )
         _assert_recipe_contains_tokens(
             self,

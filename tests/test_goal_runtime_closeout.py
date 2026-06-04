@@ -85,6 +85,7 @@ class GoalRuntimeCloseoutTests(unittest.TestCase):
         self.assertFalse(report["summary"]["full_suite_required"])
         self.assertEqual(report["summary"]["blocked_by_budget_count"], 0)
         self.assertNotIn("test-execution-summary-full-refresh", report["recommended_targets"])
+        self.assertNotIn("test-execution-summary-full-current-or-refresh", report["recommended_targets"])
         self.assertEqual(
             report["recommended_targets"],
             [
@@ -146,6 +147,7 @@ class GoalRuntimeCloseoutTests(unittest.TestCase):
         self.assertTrue(report["summary"]["full_suite_required"])
         self.assertEqual(report["summary"]["blocked_by_budget_count"], 1)
         self.assertNotIn("test-execution-summary-full-refresh", report["recommended_targets"])
+        self.assertNotIn("test-execution-summary-full-current-or-refresh", report["recommended_targets"])
         self.assertEqual(
             report["recommended_targets"],
             [
@@ -161,6 +163,10 @@ class GoalRuntimeCloseoutTests(unittest.TestCase):
             if item["phase_id"] == "publish_goal_runtime_closeout_publish_script_output_surfaces"
         )
         self.assertEqual(publish_decision["decision"], "skip")
+        self.assertIn(
+            "test-execution-summary-full-current-or-refresh",
+            report["transaction"]["forbidden_default_targets"],
+        )
         self.assertIn(
             "test-execution-summary-full-refresh",
             report["transaction"]["forbidden_default_targets"],
@@ -184,14 +190,17 @@ class GoalRuntimeCloseoutTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["summary"]["blocked_by_budget_count"], 0)
-        self.assertEqual(report["recommended_targets"].count("test-execution-summary-full-refresh"), 1)
+        self.assertEqual(
+            report["recommended_targets"].count("test-execution-summary-full-current-or-refresh"),
+            1,
+        )
         self.assertEqual(report["recommended_targets"].count("release-smoke-full-reuse"), 1)
         self.assertLess(
             report["recommended_targets"].index("goal-runtime-closeout-candidate-converge"),
-            report["recommended_targets"].index("test-execution-summary-full-refresh"),
+            report["recommended_targets"].index("test-execution-summary-full-current-or-refresh"),
         )
         self.assertLess(
-            report["recommended_targets"].index("test-execution-summary-full-refresh"),
+            report["recommended_targets"].index("test-execution-summary-full-current-or-refresh"),
             report["recommended_targets"].index("goal-runtime-closeout-publish"),
         )
         self.assertLess(

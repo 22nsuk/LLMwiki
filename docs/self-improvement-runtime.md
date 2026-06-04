@@ -64,6 +64,8 @@ pytest, and project entrypoints. Do not create or rely on a repository-local
 `.venv/bin/codex` shim for goal execution. If a run is blocked by `python`,
 `pytest`, `jsonschema`, or Codex resolution, diagnose it as an environment
 contract problem before classifying the mechanism proposal as failed.
+General pytest lane selection lives in [development.md](development.md); this
+section only covers the goal-runtime executor environment split.
 
 Useful checks:
 

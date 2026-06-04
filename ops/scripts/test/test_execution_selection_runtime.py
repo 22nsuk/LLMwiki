@@ -11,7 +11,9 @@ from ops.scripts.test.test_execution_command_runtime import (
 )
 
 REPORT_CONTRACT_SUMMARY_SUITE = "report-contract-summary"
-FULL_SUITE_COMMAND = "python -m pytest"
+RAW_FULL_SUITE_PYTEST_COMMAND = "python -m pytest"
+FULL_SUITE_COMMAND = "make test-execution-summary-full-current-or-refresh"
+DEVELOPER_FULL_REGRESSION_COMMAND = "make test-all"
 FULL_SUITE_SCOPES = {"full", "full-suite", "pytest"}
 RELEASE_BUILDER_FULL_SCOPES = {"release-builder-full", "release_builder_full"}
 FULL_SUITE_SHARD_PREFIX = "full-shard-"
@@ -115,6 +117,8 @@ def suite_coverage(
         "full_suite_evidence": {
             "status": "represented" if represents_full_suite else "not_represented",
             "required_command": FULL_SUITE_COMMAND,
+            "raw_pytest_command": RAW_FULL_SUITE_PYTEST_COMMAND,
+            "developer_regression_command": DEVELOPER_FULL_REGRESSION_COMMAND,
             "release_builder_environment": RELEASE_BUILDER_ENVIRONMENT,
             "reason": (
                 "this execution has no pytest selectors and is treated as full-suite evidence"

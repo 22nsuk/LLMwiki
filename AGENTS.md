@@ -106,7 +106,7 @@ public mirror에서 당신의 기본 역할은 **runtime maintainer** 또는 **m
 기본 gate:
 1. `make dev-install`
 2. `make static`
-3. `python -m pytest` 또는 `make test`
+3. `make test`; full-suite 요청이면 `make test-all`, focused selector 검증이면 `.venv/bin/python -m pytest tests/...`
 4. 새 public 파일, 새 public prefix, 공개/비공개 경계를 바꾸는 변경이면 `make sync-public-policy`
 5. 필요하면 `make public-export`
 6. 공개 미러 자체를 재검증할 때 `make public-check`

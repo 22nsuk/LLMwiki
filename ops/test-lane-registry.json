@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/test-lane-registry.schema.json",
   "version": 2,
-  "description": "Authoritative registry for persistent pytest lanes, derived execution packs, CI routing, and documentation boundaries used by Make, CI, and public-safe docs.",
+  "description": "Authoritative registry for persistent pytest lanes, derived execution packs, CI routing, and documentation boundaries validated against Make, CI, and public-safe docs.",
   "changed_path_minimums": {
     "version": 1,
     "default_duration_budget_seconds": 300,

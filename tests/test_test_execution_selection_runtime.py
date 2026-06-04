@@ -40,6 +40,12 @@ def test_suite_coverage_distinguishes_report_contract_and_full_aggregate() -> No
     assert targeted["represents_full_suite"] is False
     assert aggregate_full["suite_scope"] == "full_suite"
     assert aggregate_full["represents_full_suite"] is True
+    assert (
+        aggregate_full["full_suite_evidence"]["required_command"]
+        == "make test-execution-summary-full-current-or-refresh"
+    )
+    assert aggregate_full["full_suite_evidence"]["raw_pytest_command"] == "python -m pytest"
+    assert aggregate_full["full_suite_evidence"]["developer_regression_command"] == "make test-all"
 
 
 def test_toolchain_failure_demotes_full_suite_coverage() -> None:

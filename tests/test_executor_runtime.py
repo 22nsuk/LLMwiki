@@ -426,9 +426,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertIn("workspace-local `.venv/bin/python`", prompt)
             self.assertIn(
-                "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider",
+                "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider <focused-selector>",
                 prompt,
             )
+            self.assertIn("make test-all", prompt)
+            self.assertIn("make test-execution-summary-full-current-or-refresh", prompt)
             self.assertIn("PYTHONDONTWRITEBYTECODE=1", prompt)
             self.assertIn("-p no:cacheprovider", prompt)
             self.assertIn("Executor roles run before repo-health capture", prompt)
@@ -469,7 +471,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(
                 hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "f2e6648cb5676a1d61ffa0150858eed1db2d0044c8d136b410aaf38c856f10f8",
+                "71edebc8480f47f948ddcf18b517a4eece9607546045103625e361a26630a629",
             )
             section_positions = [
                 prompt.index(section)
@@ -563,7 +565,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             "status": "failed",
             "command": {
                 "argv": [".venv/bin/python", "-c", "<project-dependency-preflight>"],
-                "project_check_lane": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider",
+                "project_check_lane": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider <focused-selector>",
             },
             "python": {
                 "path": ".venv/bin/python",
@@ -609,7 +611,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
         self.assertEqual(first_payload["diagnostics"]["notes"], ["validator blocked", "missing dependency evidence"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "9446862fde72989ecfb4bdf10e4094b5d478af58f9b8b5c6f4372bfc0b5a5432",
+            "bc0a25f4aeda3a4cbd2402a8f04c3b1b9580af3d6687940ee58682346dd48e52",
         )
 
     def test_codex_exec_prefers_workspace_virtualenv_on_path(self) -> None:
@@ -740,7 +742,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertEqual(report["diagnostics"]["dependency_preflight"]["status"], "fail")
             self.assertEqual(
                 report["diagnostics"]["dependency_preflight"]["command"]["project_check_lane"],
-                "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider",
+                "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider <focused-selector>",
             )
             self.assertTrue(report["diagnostics"]["dependency_preflight"]["python"]["exists"])
             notes = "\n".join(report["diagnostics"]["notes"])

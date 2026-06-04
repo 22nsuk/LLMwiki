@@ -37,8 +37,25 @@ staleness.
 
 ## Supported Test Entrypoints
 
-공식 pytest 진입점은 `make test*`, `make check*`, `make public-check*` 또는 `.venv/bin/python -m pytest`다.
-문서, CI, 재현 절차 예시도 bare `pytest`가 아니라 `python -m pytest` 또는 Make target을 사용한다.
+Use Make targets for repository-owned test lanes. They apply the documented
+virtualenv, plugin-autoload, bytecode/cache, marker, and xdist policy. Bare
+`pytest` is unsupported. `.venv/bin/python -m pytest tests/...` is supported for
+focused selectors and serial/isolation debugging; selectorless raw module pytest
+belongs behind Make-owned lanes because it runs the full suite serially without
+the repository lane policy.
+
+When a request says "full pytest", choose the lane by intent:
+
+| Intent | Command | Notes |
+| --- | --- | --- |
+| Developer full regression | `make test-all` | Runs all current pytest tests with the default parallel/cache policy and does not write canonical release evidence. |
+| Exact serial reproduction or xdist isolation debugging | `make test-all-serial` or focused `.venv/bin/python -m pytest tests/...` | Use only when the serial behavior itself is the thing being investigated. |
+| Release-grade full-suite evidence | `make test-execution-summary-full-current-or-refresh` | Runs current-check, then aggregate metadata reuse from current shards, then `test-execution-summary-full-refresh-no-converge` only when evidence really needs to be regenerated. |
+| Runnable release authority | `make release-run-ready` | Owns the runnable release stage, including full-suite evidence plus release smoke, public-check, package, and manifest authority. |
+
+The registry-backed test lane inventory is recorded in
+`ops/test-lane-registry.json`, reconciled against `mk/test.mk` and sibling
+Makefiles, and summarized for operators by `make help`.
 
 Goal-runtime Codex execution has a separate outer-tool contract: the operator
 Codex CLI must resolve outside the repository `.venv`, while Python and pytest
@@ -50,81 +67,23 @@ environment setup issues before treating a mechanism proposal as failed.
 It is intentionally smaller than lint/eval, integration-heavy generator smoke,
 and full release smoke.
 
-The registry-documented entrypoints are:
-
-- `make fast-smoke`
-- `make test-fast`
-- `make test`
-- `make unit-tests`
-- `make test-all`
-- `make check-all`
-- `make release-check`
-- `make release-check-all-surfaces`
-- `make test-report-contract-core`
-- `make test-report-contract-all`
-- `make test-release-sealing-core`
-- `make test-release-sealing-all`
-- `make test-subprocess`
-- `make test-slow`
-- `make test-integration`
-- `make test-integration-heavy`
-- `make test-public`
-- `make public-check`
-- `make release-source-package-smoke`
-- `make release-source-package-check`
-- `make changed-path-minimum-plan`
-- `make release-run-ready`
-- `make release-run-ready-plan`
-- `make release-run-ready-plan-check`
-- `make release-run-ready-check`
-- `make release-post-commit-finalize`
-- `make release-sealed-run-ready-plan`
-- `make release-sealed-run-ready`
-- `make release-sealed-run-ready-check`
-- `make release-auto-promotion-ready-plan`
-- `make release-auto-promotion-goal-run-id-guard`
-- `make release-auto-promotion-preflight`
-- `make release-auto-promotion-preflight-check`
-- `make release-auto-promotion-preseal`
-- `make release-auto-promotion-preseal-check`
-- `make release-auto-promotion-operator-summary`
-- `make release-auto-promotion-ready`
-- `make release-auto-promotion-ready-check`
-- `make release-closeout-regression-dry-run`
-- `make test-execution-summary`
-- `make test-execution-summary-report-contract`
-
 ## Cost-Aware Test Use
 
 Use the smallest authoritative lane that proves the change under review.
 `make fast-smoke` and focused `.venv/bin/python -m pytest ...` commands are
 the default tight-loop checks. `make test` / `make test-fast` are broader batch
-local `make test` attempt reached roughly 95% progress and hit a 900 second
-timeout; the later checkpoint rerun passed in about 18 minutes and 40 seconds,
-so this lane still needs checkpoint-grade time budgeting.
+checks for ordinary Python changes. `make test-all` is the non-release full
+regression lane and should be treated as checkpoint-grade work.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.
 `make test-report-contract-all` intentionally sweeps
 every `report_contract` marker and is a checkpoint/CI or final contract proof,
-not the default for every vertical slice; on 2026-05-31 it selected 463 tests
-and took about 60 minutes in the local full-vault worktree.
-The all target now passes the 48 known report-contract-marked test files
-explicitly while retaining `-m report_contract`, so pytest no longer has to
-collect the entire repository and deselect unrelated tests before that sweep.
-`tests/test_makefile_static_gates.py` keeps the explicit file list aligned with
-the marker surface. The report-contract lane now uses
-`PYTEST_REPORT_CONTRACT_FLAGS`, defaulting to loadfile xdist plus
-`-p no:cacheprovider`; override it to `$(PYTEST_SERIAL_FLAGS)` only when
-investigating an isolation failure. The shared loadfile xdist default uses
-`PYTEST_XDIST_WORKERS ?= 4` with `PYTEST_XDIST_MAXPROCESSES ?= 4`; raise those
-deliberately for large checkpoint machines instead of inheriting host CPU count
-through `-n auto`.
-Release-sealing has its own
-`PYTEST_RELEASE_SEALING_FLAGS` for the same reason. The first local proof after
-this isolation change reduced `make test-report-contract-all` to 17 minutes
-49 seconds for the same 463 tests / 465 subtests, and
-`make test-report-contract-core` to 3 minutes 46 seconds for 201 tests /
-454 subtests.
+not the default for every vertical slice. Report-contract, release-sealing, and
+full-suite Make lanes use their own pytest flag variables so isolation fixes can
+be applied without changing every recipe. Override those variables to
+`$(PYTEST_SERIAL_FLAGS)` only when investigating a parallel-isolation failure.
+Volatile counts and durations belong in the generated execution summaries,
+JUnit XML, and logs, not in durable docs.
 
 Before spending release-grade runtime, prefer the check/plan targets:
 `make release-run-ready-check`, `make release-sealed-run-ready-check`,
@@ -134,9 +93,7 @@ only when the check/plan shows stale authority that is relevant to the change.
 `test-execution-summary-full-body`, and therefore `release-run-ready`, uses
 `TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS` which defaults to the parallel
 `PYTEST_FLAGS`; set it to `$(PYTEST_SERIAL_FLAGS)` only when debugging a
-known parallel-isolation failure. The first full-suite proof after adding
-cache isolation passed 1859 tests / 1548 subtests in 23 minutes 22 seconds
-with JUnit testcase consistency at 3407/3407.
+known parallel-isolation failure.
 `release-test-current` checks schema samples first, then reuses current full
 and report-contract summaries when their source-tree fingerprints still match,
 so clean release runs do not replay the same expensive suite more than once.
@@ -187,11 +144,10 @@ those diagnostics before assuming a timed-out public pytest is still running.
 
 ## CI Tier Shape
 
-`.github/workflows/ci.yml`은 test tier를 `fast`, `report-contract`, `release-closeout-regression`, `release-sealing`, `subprocess`, `slow`, `integration`, `integration-heavy`, `public`으로 나눠 병렬 job으로 실행하고, 별도 Windows/raw-registry/supply-chain job도 유지한다.
-
-The lane contract lives in `ops/test-lane-registry.json`. CI and docs should
-point to registry-backed Make targets rather than hand-maintained pytest marker
-expressions.
+CI splits registry-backed lanes into parallel jobs; see
+`.github/workflows/ci.yml` and `ops/test-lane-registry.json` for the executable
+shape. Docs should point to registry-backed Make targets rather than
+hand-maintained pytest marker expressions.
 
 ## Change-Type Gates
 

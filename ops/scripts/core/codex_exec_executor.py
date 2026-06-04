@@ -48,7 +48,11 @@ NON_WORKER_PROJECT_CHECK_MODULES = (
     ("jsonschema", "jsonschema"),
     ("yaml", "PyYAML"),
 )
-PROJECT_CHECK_LANE = "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider"
+PROJECT_CHECK_LANE = (
+    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider <focused-selector>"
+)
+PROJECT_FULL_REGRESSION_LANE = "make test-all"
+PROJECT_RELEASE_EVIDENCE_LANE = "make test-execution-summary-full-current-or-refresh"
 EXTERNAL_WORKSPACE_SANDBOX_FLAG = "--dangerously-bypass-approvals-and-sandbox"
 _CODEX_USAGE_LIMIT_RE = re.compile(
     r"(usage limit|try again at|upgrade to pro)",
@@ -703,8 +707,9 @@ Repository write boundary:
 - do not rewrite unrelated files or expand scope.
 
 Execution environment guidance:
-- Required Python project check lane uses workspace-local `.venv/bin/python`: `{PROJECT_CHECK_LANE} ...`.
-- Do not run bare `python -m pytest` when `.venv/bin/python` is present.
+- Required Python focused check lane uses workspace-local `.venv/bin/python`: `{PROJECT_CHECK_LANE}`.
+- Use `{PROJECT_FULL_REGRESSION_LANE}` for developer full regression and `{PROJECT_RELEASE_EVIDENCE_LANE}` for release-grade full-suite evidence.
+- Do not run bare `python -m pytest` or selectorless `.venv/bin/python -m pytest` when `.venv/bin/python` is present.
 - In reviewer, validator, and auditor roles, keep pytest cache-safe with `PYTHONDONTWRITEBYTECODE=1` and `-p no:cacheprovider`.
 - If dependencies are genuinely absent, report the exact blocked `.venv/bin/python` command and missing dependency surface; do not use network dependency setup as a fallback unless the parent task explicitly asks for environment bootstrap.
 {external_sandbox_note}

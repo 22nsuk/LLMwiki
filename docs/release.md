@@ -411,13 +411,15 @@ fingerprints, accepted risk, gate attention, or learning blockers.
 - `ops/reports/test-execution-summary.json` and
   `ops/reports/test-execution-summary-full.json` are reused by check lanes only
   when their `source_tree_fingerprint` still matches the current tree. Stale
-  evidence fails fast; explicit refresh targets rerun tests. `release-run-ready`
-  emits the canonical full-suite summary while it runs the test stage, so
-  preseal and auto-promotion checks should reuse that evidence by currentness
-  check instead of rerunning the full suite. Self-declared currentness is only a
-  diagnostic hint; HEAD/source-fingerprint/domain-currentness checks are the
-  authority. `release-check` does not rerun the unit subset after this full-suite
-  evidence is current.
+  evidence goes through the current-or-refresh path documented in
+  `docs/development.md`: current check, aggregate metadata reuse, then explicit
+  refresh only when needed. `release-run-ready` emits the canonical full-suite
+  summary while it runs the test stage, so preseal and auto-promotion checks
+  should reuse that evidence by currentness check instead of rerunning the full
+  suite. Self-declared currentness is only a diagnostic hint;
+  HEAD/source-fingerprint/domain-currentness checks are the authority.
+  `release-check` does not rerun the unit subset after this full-suite evidence
+  is current.
 - `ops/reports/public-check-summary.json` proves the exported public tree contract.
   `public-check-summary-current-check`, `public-check-all-check`, and
   `release-run-ready` reuse this report only when the same

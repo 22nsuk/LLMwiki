@@ -28,8 +28,10 @@ make test
 make check
 ```
 
-공식 pytest 진입점은 `make test*`, `make check*`, `make public-check*` 또는 `.venv/bin/python -m pytest`다.
-문서, CI, 재현 절차 예시도 bare `pytest`가 아니라 `python -m pytest` 또는 Make target을 사용한다.
+For a full developer regression, use `make test-all`. For release-grade
+full-suite evidence, use the current-or-refresh evidence lane described in
+[docs/development.md](./docs/development.md#supported-test-entrypoints). Bare
+`pytest` is not a supported entrypoint.
 
 ## Documentation Map
 
