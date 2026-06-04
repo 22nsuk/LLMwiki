@@ -6,13 +6,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.output_runtime import write_output_text
+from ops.scripts.artifact_io_runtime import write_vault_schema_validated_json
 from ops.scripts.policy_runtime import load_policy
+from ops.scripts.run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import (
-    load_schema_with_vault_override,
-    validate_or_raise,
-)
 
 
 class RunMechanismExperimentError(Exception):
@@ -212,9 +209,19 @@ def sanitize_payload(value: object, *, roots: list[Path]) -> object:
 
 def write_json(vault: Path, rel_path: str, payload: dict, schema_rel_path: str) -> None:
     try:
-        schema = load_schema_with_vault_override(vault, schema_rel_path)
-        validate_or_raise(payload, schema, context=f"schema validation failed for {rel_path}")
-        write_output_text(vault / rel_path, json.dumps(payload, ensure_ascii=False, indent=2))
+        payload = maybe_embed_run_artifact_envelope(
+            vault,
+            rel_path,
+            payload,
+            schema_path=schema_rel_path,
+        )
+        write_vault_schema_validated_json(
+            vault,
+            rel_path,
+            payload,
+            schema_rel_path,
+            context=f"schema validation failed for {rel_path}",
+        )
     except FileNotFoundError as exc:
         raise RunMechanismExperimentArtifactError(f"missing schema: {schema_rel_path}") from exc
     except ValueError as exc:

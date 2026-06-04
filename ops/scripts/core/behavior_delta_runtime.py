@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .artifact_io_runtime import write_schema_validated_json
+from .artifact_io_runtime import write_vault_schema_validated_json
+from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .schema_constants_runtime import BEHAVIOR_DELTA_SCHEMA_PATH
-from .schema_runtime import load_schema
 
 _RISK_ORDER = {"none": 0, "low": 1, "medium": 2, "high": 3}
 _EXECUTION_SCRIPT_NAMES = {
@@ -509,11 +509,17 @@ def write_behavior_delta_report(
     report_path: str,
     report: dict[str, Any],
 ) -> str:
-    schema = load_schema(vault / BEHAVIOR_DELTA_SCHEMA_PATH)
-    write_schema_validated_json(
-        vault / report_path,
+    report = maybe_embed_run_artifact_envelope(
+        vault,
+        report_path,
         report,
-        schema,
+        schema_path=BEHAVIOR_DELTA_SCHEMA_PATH,
+    )
+    write_vault_schema_validated_json(
+        vault,
+        report_path,
+        report,
+        BEHAVIOR_DELTA_SCHEMA_PATH,
         context=f"schema validation failed for {report_path}",
     )
     return report_path

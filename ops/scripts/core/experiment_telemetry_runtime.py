@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .artifact_io_runtime import read_json_object, write_schema_validated_json
+from .artifact_io_runtime import read_json_object, write_vault_schema_validated_json
 from .output_runtime import write_output_text
+from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import (
     RUN_LEDGER_SCHEMA_PATH,
     RUN_TELEMETRY_SCHEMA_PATH,
     TIMEOUT_FAILURE_SCHEMA_PATH,
 )
-from .schema_runtime import load_schema_with_vault_override
 
 RUN_LEDGER_SCHEMA = RUN_LEDGER_SCHEMA_PATH
 RUN_TELEMETRY_SCHEMA = RUN_TELEMETRY_SCHEMA_PATH
@@ -51,12 +51,19 @@ def load_run_ledger(vault: Path, run_id: str) -> dict:
 
 
 def write_run_ledger(vault: Path, run_id: str, ledger: dict) -> None:
-    schema = load_schema_with_vault_override(vault, RUN_LEDGER_SCHEMA)
-    write_schema_validated_json(
-        vault / run_rel(run_id, "run-ledger.json"),
+    rel_path = run_rel(run_id, "run-ledger.json")
+    ledger = maybe_embed_run_artifact_envelope(
+        vault,
+        rel_path,
         ledger,
-        schema,
-        context=f"schema validation failed for {run_rel(run_id, 'run-ledger.json')}",
+        schema_path=RUN_LEDGER_SCHEMA,
+    )
+    write_vault_schema_validated_json(
+        vault,
+        rel_path,
+        ledger,
+        RUN_LEDGER_SCHEMA,
+        context=f"schema validation failed for {rel_path}",
     )
 
 
@@ -174,11 +181,17 @@ def write_timeout_failure_artifact(
     if diagnostics is not None:
         payload["diagnostics"] = diagnostics
     rel_path = timeout_failure_rel(run_id, phase, role=role)
-    schema = load_schema_with_vault_override(vault, TIMEOUT_FAILURE_SCHEMA)
-    write_schema_validated_json(
-        vault / rel_path,
+    payload = maybe_embed_run_artifact_envelope(
+        vault,
+        rel_path,
         payload,
-        schema,
+        schema_path=TIMEOUT_FAILURE_SCHEMA,
+    )
+    write_vault_schema_validated_json(
+        vault,
+        rel_path,
+        payload,
+        TIMEOUT_FAILURE_SCHEMA,
         context=f"schema validation failed for {rel_path}",
     )
     return rel_path
@@ -200,12 +213,18 @@ def write_run_telemetry(vault: Path, run_id: str, payload: dict) -> str:
             "run telemetry payload run_id must match destination run id: "
             f"{normalized_payload['run_id']} != {run_id}"
         )
-    schema = load_schema_with_vault_override(vault, RUN_TELEMETRY_SCHEMA)
-    path = vault / run_rel(run_id, "run-telemetry.json")
-    write_schema_validated_json(
-        path,
+    rel_path = run_rel(run_id, "run-telemetry.json")
+    normalized_payload = maybe_embed_run_artifact_envelope(
+        vault,
+        rel_path,
         normalized_payload,
-        schema,
-        context=f"schema validation failed for {run_rel(run_id, 'run-telemetry.json')}",
+        schema_path=RUN_TELEMETRY_SCHEMA,
     )
-    return run_rel(run_id, "run-telemetry.json")
+    write_vault_schema_validated_json(
+        vault,
+        rel_path,
+        normalized_payload,
+        RUN_TELEMETRY_SCHEMA,
+        context=f"schema validation failed for {rel_path}",
+    )
+    return rel_path

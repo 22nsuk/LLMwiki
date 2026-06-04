@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
+from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
 from ops.scripts.experiment_telemetry_runtime import (
+    append_ledger_event,
+    write_run_ledger,
     write_run_telemetry,
     write_timeout_failure_artifact,
 )
@@ -15,6 +19,57 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 
 class ExperimentTelemetryRuntimeTests(unittest.TestCase):
+    def test_write_run_ledger_refreshes_embedded_envelope_on_append(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            write_run_ledger(
+                vault,
+                "run-ledger-refresh",
+                {
+                    "$schema": "ops/schemas/run-ledger.schema.json",
+                    "run_id": "run-ledger-refresh",
+                    "status": "draft",
+                    "events": [
+                        {
+                            "ts": "2026-04-16T00:00:00Z",
+                            "type": "created",
+                            "summary": "created",
+                            "artifacts": ["seed.yaml"],
+                            "decision": "",
+                        }
+                    ],
+                },
+            )
+            append_ledger_event(
+                vault,
+                "run-ledger-refresh",
+                event_type="seed_frozen",
+                summary="updated",
+                artifacts=["run-ledger.json"],
+                decision="",
+                context=RuntimeContext(
+                    display_timezone=dt.UTC,
+                    clock=lambda: dt.datetime(2026, 4, 16, 0, 5, tzinfo=dt.UTC),
+                ),
+            )
+
+            payload = json.loads(
+                (vault / "runs" / "run-ledger-refresh" / "run-ledger.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            embedded_envelope = next(
+                item["value"]
+                for item in payload["metadata"]["properties"]
+                if item["name"] == EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
+            )
+            envelope = json.loads(embedded_envelope)
+            self.assertEqual(envelope["artifact_kind"], "run_ledger")
+            self.assertEqual(envelope["generated_at"], "2026-04-16T00:05:00Z")
+
     def test_write_timeout_failure_artifact_validates_and_writes_schema_backed_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -107,6 +162,15 @@ class ExperimentTelemetryRuntimeTests(unittest.TestCase):
             self.assertEqual(payload["$schema"], "ops/schemas/run-telemetry.schema.json")
             self.assertEqual(payload["run_id"], "run-telemetry-valid")
             self.assertEqual(payload["workspace_preparation"]["mode"], "full_copy")
+            embedded_envelope = next(
+                item["value"]
+                for item in payload["metadata"]["properties"]
+                if item["name"] == EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
+            )
+            envelope = json.loads(embedded_envelope)
+            self.assertEqual(envelope["artifact_kind"], "run_telemetry")
+            self.assertEqual(envelope["artifact_status"], "archived")
+            self.assertEqual(envelope["retention_policy"], "archive")
 
     def test_write_run_telemetry_normalizes_legacy_timeout_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -162,7 +226,7 @@ class ExperimentTelemetryRuntimeTests(unittest.TestCase):
             vault.mkdir()
             seed_minimal_vault(vault)
 
-            with self.assertRaisesRegex(ValueError, "schema validation failed for runs/run-telemetry-invalid/run-telemetry.json"):
+            with self.assertRaisesRegex(ValueError, "generated_at"):
                 write_run_telemetry(
                     vault,
                     "run-telemetry-invalid",

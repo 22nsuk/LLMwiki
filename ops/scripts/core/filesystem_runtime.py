@@ -5,7 +5,7 @@ import json
 import os
 import shutil
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -603,6 +603,7 @@ def rehearse_manifest_apply_rollback(
     rollback_rehearsal_report_path: Path,
     rollback_rehearsal_generated_at: str,
     shadow_report_ref: str = "",
+    rollback_rehearsal_report_writer: Callable[[Path, dict[str, Any]], Path] | None = None,
 ) -> dict[str, Any]:
     if not rollback_rehearsal_generated_at:
         raise FilesystemTransactionError("rollback_rehearsal_generated_at is required")
@@ -674,7 +675,8 @@ def rehearse_manifest_apply_rollback(
         shadow_report_ref=shadow_report_ref,
         diagnostics=diagnostics,
     )
-    write_rollback_rehearsal_report(rollback_rehearsal_report_path, report)
+    writer = rollback_rehearsal_report_writer or write_rollback_rehearsal_report
+    writer(rollback_rehearsal_report_path, report)
     return report
 
 
@@ -790,6 +792,7 @@ def plan_manifest_apply_transaction(
     allowed_apply_roots: Sequence[str],
     shadow_report_path: Path,
     shadow_report_generated_at: str,
+    shadow_report_writer: Callable[[Path, dict[str, Any]], Path] | None = None,
 ) -> list[str]:
     if not shadow_report_generated_at:
         raise FilesystemTransactionError("shadow_report_generated_at is required")
@@ -811,7 +814,8 @@ def plan_manifest_apply_transaction(
             prepared,
             generated_at=shadow_report_generated_at,
         )
-        write_shadow_apply_report(shadow_report_path, shadow_report)
+        writer = shadow_report_writer or write_shadow_apply_report
+        writer(shadow_report_path, shadow_report)
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
     return guard_state.changed_paths
@@ -825,6 +829,7 @@ def apply_manifest_transaction(
     allowed_apply_roots: Sequence[str],
     shadow_report_path: Path | None = None,
     shadow_report_generated_at: str = "",
+    shadow_report_writer: Callable[[Path, dict[str, Any]], Path] | None = None,
 ) -> list[str]:
     try:
         guard_state = validate_manifest_apply_guard(
@@ -853,7 +858,8 @@ def apply_manifest_transaction(
                 prepared,
                 generated_at=shadow_report_generated_at,
             )
-            write_shadow_apply_report(shadow_report_path, shadow_report)
+            writer = shadow_report_writer or write_shadow_apply_report
+            writer(shadow_report_path, shadow_report)
 
         _apply_prepared_manifest_items_in_place(prepared, applied, deleted_live_paths)
     except OSError as exc:

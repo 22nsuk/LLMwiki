@@ -524,28 +524,28 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         filename="baseline-mechanism-assessment.json",
         schema_path=MECHANISM_ASSESSMENT_SCHEMA_PATH,
         artifact_kind="mechanism_assessment_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/mechanism_assessment_runtime.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/mechanism/mechanism_assess.py"),
         derive_generated_at=_payload_generated_at,
     ),
     "candidate-mechanism-assessment.json": ArchivedRunArtifactSpec(
         filename="candidate-mechanism-assessment.json",
         schema_path=MECHANISM_ASSESSMENT_SCHEMA_PATH,
         artifact_kind="mechanism_assessment_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/mechanism_assessment_runtime.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/mechanism/mechanism_assess.py"),
         derive_generated_at=_payload_generated_at,
     ),
     "raw-markdown-normalization-report.json": ArchivedRunArtifactSpec(
         filename="raw-markdown-normalization-report.json",
         schema_path=RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH,
         artifact_kind="raw_markdown_normalization_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/raw_markdown_normalization.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/registry/raw_markdown_normalize.py"),
         derive_generated_at=_payload_generated_at,
     ),
     "run-telemetry.json": ArchivedRunArtifactSpec(
         filename="run-telemetry.json",
         schema_path=RUN_TELEMETRY_SCHEMA_PATH,
         artifact_kind="run_telemetry",
-        source_paths=(SCRIPT_PATH, "ops/scripts/run_telemetry_runtime.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/core/experiment_telemetry_runtime.py"),
         derive_generated_at=_payload_generated_at,
     ),
     "generated-artifact-convergence.json": ArchivedRunArtifactSpec(
@@ -572,21 +572,34 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         filename="shadow-apply-report.json",
         schema_path=SHADOW_APPLY_REPORT_SCHEMA_PATH,
         artifact_kind="shadow_apply_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/shadow_apply_runtime.py"),
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/core/filesystem_runtime.py",
+            "ops/scripts/mechanism/mechanism_run_workspace_runtime.py",
+        ),
         derive_generated_at=_payload_generated_at,
     ),
     "rollback-rehearsal-report.json": ArchivedRunArtifactSpec(
         filename="rollback-rehearsal-report.json",
         schema_path=ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
         artifact_kind="rollback_rehearsal_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/rollback_rehearsal_runtime.py"),
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/core/filesystem_runtime.py",
+            "ops/scripts/mechanism/mechanism_run_workspace_runtime.py",
+        ),
         derive_generated_at=_payload_generated_at,
     ),
     "raw-intake-absorption-matrix-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="raw-intake-absorption-matrix-2026-04-22.json",
         schema_path=RAW_INTAKE_ABSORPTION_MATRIX_SCHEMA_PATH,
         artifact_kind="raw_intake_absorption_matrix",
-        source_paths=(SCRIPT_PATH, "ops/scripts/raw_intake_absorption_matrix.py"),
+        source_paths=(
+            SCRIPT_PATH,
+            "mk/registry.mk",
+            "ops/scripts/registry/raw_intake_route_proposal.py",
+            "ops/scripts/registry/raw_intake_source_quality.py",
+        ),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "source-english-summary-slug-manifest-2026-04-22.json": ArchivedRunArtifactSpec(
@@ -809,6 +822,24 @@ def _archived_run_artifact_spec_for_filename(filename: str) -> ArchivedRunArtifa
     if filename.endswith("-timeout-failure.json"):
         return ARCHIVED_RUN_ARTIFACT_SPECS["timeout-failure.json"]
     return None
+
+
+def run_artifact_spec_for_filename(filename: str) -> ArchivedRunArtifactSpec | None:
+    return _archived_run_artifact_spec_for_filename(filename)
+
+
+def derive_run_artifact_generated_at(
+    vault: Path,
+    artifact_path: Path,
+    rel_path: str,
+    payload: dict[str, Any],
+    *,
+    spec: ArchivedRunArtifactSpec | None = None,
+) -> tuple[str, str]:
+    resolved_spec = spec or _archived_run_artifact_spec_for_filename(artifact_path.name)
+    if resolved_spec is None:
+        raise ValueError(f"unsupported run artifact path: {rel_path}")
+    return resolved_spec.derive_generated_at(vault, artifact_path, rel_path, payload)
 
 
 def _discover_supported_rel_paths(vault: Path) -> list[str]:

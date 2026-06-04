@@ -211,6 +211,18 @@ def _scaffold_run_dir(
             build_run_improvement_observations(run_id, context=request.context),
             IMPROVEMENT_OBSERVATIONS_SCHEMA,
         )
+    # planning-validation has no own timestamp, so its envelope derives currentness from run-ledger.
+    if not (run_dir / "run-ledger.json").exists():
+        write_json(
+            vault,
+            run_rel(run_id, "run-ledger.json"),
+            _initial_run_ledger(
+                run_id,
+                include_proposal_snapshot=request.proposal is not None,
+                context=request.context,
+            ),
+            RUN_LEDGER_SCHEMA,
+        )
     if not (run_dir / "planning-validation.json").exists():
         write_json(
             vault,
@@ -222,17 +234,6 @@ def _scaffold_run_dir(
                 proposal=request.proposal,
             ),
             PLANNING_VALIDATION_SCHEMA,
-        )
-    if not (run_dir / "run-ledger.json").exists():
-        write_json(
-            vault,
-            run_rel(run_id, "run-ledger.json"),
-            _initial_run_ledger(
-                run_id,
-                include_proposal_snapshot=request.proposal is not None,
-                context=request.context,
-            ),
-            RUN_LEDGER_SCHEMA,
         )
     if not (run_dir / "promotion-report.json").exists():
         write_json(

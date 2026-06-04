@@ -9,6 +9,7 @@ from .observability_artifacts_shared_runtime import (
     write_schema_backed_json,
 )
 from .policy_runtime import report_path
+from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import (
     BEHAVIOR_DELTA_SCHEMA_PATH,
@@ -164,10 +165,17 @@ def write_run_artifact_fingerprint(
     context: RuntimeContext,
 ) -> str:
     payload = build_run_artifact_fingerprint(vault, run_id, context=context)
+    rel_path = run_rel(run_id, "run-artifact-fingerprint.json")
+    payload = maybe_embed_run_artifact_envelope(
+        vault,
+        rel_path,
+        payload,
+        schema_path=RUN_ARTIFACT_FINGERPRINT,
+    )
     return write_schema_backed_json(
         vault,
-        run_rel(run_id, "run-artifact-fingerprint.json"),
+        rel_path,
         payload,
         RUN_ARTIFACT_FINGERPRINT,
-        context=f"schema validation failed for {run_rel(run_id, 'run-artifact-fingerprint.json')}",
+        context=f"schema validation failed for {rel_path}",
     )

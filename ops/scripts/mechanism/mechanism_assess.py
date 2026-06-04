@@ -12,19 +12,27 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
+        resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
     from ops.scripts.output_runtime import display_path, resolve_vault_path
     from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.run_artifact_envelope_runtime import (
+        maybe_embed_run_artifact_envelope,
+    )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import MECHANISM_ASSESSMENT_SCHEMA_PATH
 else:
     from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
+        resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
     from ops.scripts.output_runtime import display_path, resolve_vault_path
     from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.run_artifact_envelope_runtime import (
+        maybe_embed_run_artifact_envelope,
+    )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import MECHANISM_ASSESSMENT_SCHEMA_PATH
 
@@ -843,6 +851,18 @@ def build_report(
 
 
 def write_report(vault: Path, report: dict, out_path: str | None) -> Path:
+    destination = resolve_schema_backed_report_output_path(
+        vault,
+        out_path,
+        default_relative_path="ops/reports/mechanism-assessment.json",
+    )
+    rel_path = report_path(vault, destination)
+    report = maybe_embed_run_artifact_envelope(
+        vault,
+        rel_path,
+        report,
+        schema_path=MECHANISM_ASSESSMENT_SCHEMA,
+    )
     return write_schema_backed_report(
         SchemaBackedReportWriteRequest(
             vault=vault,

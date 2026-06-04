@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import shutil
 import time
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from ops.scripts.behavior_delta_runtime import (
     build_behavior_delta_report,
@@ -20,7 +22,11 @@ from ops.scripts.observability_artifacts_runtime import write_run_artifact_finge
 from ops.scripts.path_runtime import normalize_repo_path_text
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import CHANGED_FILES_MANIFEST_SCHEMA_PATH
+from ops.scripts.schema_constants_runtime import (
+    CHANGED_FILES_MANIFEST_SCHEMA_PATH,
+    ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
+    SHADOW_APPLY_REPORT_SCHEMA_PATH,
+)
 
 from .improvement_observations_runtime import IMPROVEMENT_OBSERVATIONS_FILENAME
 from .mechanism_run_common_runtime import (
@@ -56,6 +62,8 @@ from .mechanism_run_scaffold_resolution_runtime import _command_argv
 from .planning_gate_validate import validate_run_dir
 
 CHANGED_FILES_MANIFEST_SCHEMA = CHANGED_FILES_MANIFEST_SCHEMA_PATH
+ROLLBACK_REHEARSAL_REPORT_SCHEMA = ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH
+SHADOW_APPLY_REPORT_SCHEMA = SHADOW_APPLY_REPORT_SCHEMA_PATH
 FULL_WORKSPACE_DIFF_MODEL = "full_workspace"
 COPIED_UNIVERSE_DIFF_MODEL = "copied_universe"
 WORKSPACE_IGNORE_NAMES = {
@@ -421,6 +429,17 @@ def _write_behavior_delta_artifact(
     )
 
 
+def _schema_backed_run_report_writer(
+    vault: Path,
+    schema_rel_path: str,
+) -> Callable[[Path, dict[str, Any]], Path]:
+    def _write(path: Path, report: dict[str, Any]) -> Path:
+        write_json(vault, report_path(vault, path), report, schema_rel_path)
+        return path
+
+    return _write
+
+
 def _remove_empty_parent_dirs(path: Path, *, stop_at: Path) -> None:
     current = path.parent
     resolved_stop = stop_at.resolve()
@@ -452,6 +471,7 @@ def _apply_workspace_changes(
         allowed_apply_roots=allowed_apply_roots,
         shadow_report_path=vault / shadow_apply_report,
         shadow_report_generated_at=context.isoformat_z(),
+        shadow_report_writer=_schema_backed_run_report_writer(vault, SHADOW_APPLY_REPORT_SCHEMA),
     )
     rehearsal_report = rehearse_manifest_apply_rollback(
         vault,
@@ -461,6 +481,10 @@ def _apply_workspace_changes(
         rollback_rehearsal_report_path=vault / rollback_rehearsal_report,
         rollback_rehearsal_generated_at=context.isoformat_z(),
         shadow_report_ref=shadow_apply_report,
+        rollback_rehearsal_report_writer=_schema_backed_run_report_writer(
+            vault,
+            ROLLBACK_REHEARSAL_REPORT_SCHEMA,
+        ),
     )
     if rehearsal_report["status"] != "pass":
         raise FilesystemTransactionError(
@@ -509,6 +533,7 @@ def _plan_workspace_changes(
         allowed_apply_roots=allowed_apply_roots,
         shadow_report_path=vault / shadow_apply_report,
         shadow_report_generated_at=context.isoformat_z(),
+        shadow_report_writer=_schema_backed_run_report_writer(vault, SHADOW_APPLY_REPORT_SCHEMA),
     )
     return shadow_apply_report
 

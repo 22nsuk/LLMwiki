@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-06-04T01:56:09Z",
+  "generated_at": "2026-06-04T03:46:23Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
-  "source_revision": "ba3cbca8e6d76b923bfa283952115387f63862d7",
-  "source_tree_fingerprint": "72a1fe7a2d7e186a80c47169cadb3af3d1b779f2017312b5842eacbac6581919",
+  "source_revision": "5228a8d9aab816ec0840e7193ac70f2189bd285e",
+  "source_tree_fingerprint": "1c8cd1136875a79710e84418832ce6dc28e079e6fc4505a73533364031c5306f",
   "input_fingerprints": {
     "policy": "46af1603943d2ec8e0d04b69adc903a314b9c81b2a2298806d8a007411dc1fb5",
     "schema": "8105f62802da8ab77e20b0ba5a79e9d3f20b09243bc29730f2df940cf9530373",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c3ed2a23a7f742cb7be0b0f2b45effa814e84ef1f065ed143a95ce071321ed5c",
-    "ops_scripts": "3cc61e37617ab9f6f028f6ffc494c8cf4c597a8402ab3be09dd436f5c149ef15",
+    "ops_scripts": "eb687caf5b82b2bd3645bb759d010592dd91e05892d81a0479c6d2dc3d5460be",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4",
     "source_tree_scope": "cf97a156fcf94ca97a9864e8cd7523fa97e49e2648a6aeb64c712b2c2f0ec469"
   },
@@ -21,7 +21,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-06-04T01:56:09Z"
+    "checked_at": "2026-06-04T03:46:23Z"
   },
   "source_tree_scope": {
     "mode": "include_prefixes",
@@ -599,6 +599,15 @@
     },
     {
       "path": "ops/scripts/core/rule_registry_runtime.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/core/run_artifact_envelope_runtime.py",
       "classification": "no_output",
       "output_options": [],
       "references_resolve_output_path": false,

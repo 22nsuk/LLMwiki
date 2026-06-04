@@ -276,6 +276,50 @@ class FilesystemRuntimeTests(unittest.TestCase):
             self.assertEqual(shadow_report["status"], "ready_for_live_apply")
             self.assertEqual((live_root / "ops" / "scripts" / "example.py").read_text(encoding="utf-8"), "before\n")
 
+    def test_plan_manifest_apply_transaction_delegates_shadow_report_writer(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            live_root = root / "live"
+            workspace_root = root / "workspace"
+            live_root.mkdir()
+            workspace_root.mkdir()
+            (live_root / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
+            (workspace_root / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
+            (live_root / "ops" / "scripts" / "example.py").write_text("before\n", encoding="utf-8")
+            (workspace_root / "ops" / "scripts" / "example.py").write_text("after\n", encoding="utf-8")
+
+            calls: list[tuple[Path, dict]] = []
+
+            def writer(path: Path, report: dict) -> Path:
+                calls.append((path, report))
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    json.dumps({**report, "writer_marker": "schema_backed"}),
+                    encoding="utf-8",
+                )
+                return path
+
+            shadow_report_path = live_root / "runs" / "run-canary" / "shadow-apply-report.json"
+            plan_manifest_apply_transaction(
+                live_root,
+                workspace_root,
+                {
+                    "$schema": "ops/schemas/changed-files-manifest.schema.json",
+                    "run_id": "run-canary",
+                    "files": [{"path": "ops/scripts/example.py", "change_type": "modified"}],
+                },
+                allowed_apply_roots=["ops/"],
+                shadow_report_path=shadow_report_path,
+                shadow_report_generated_at="2026-04-15T03:45:00Z",
+                shadow_report_writer=writer,
+            )
+
+            persisted = json.loads(shadow_report_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0][0], shadow_report_path)
+            self.assertEqual(calls[0][1]["mode"], "shadow")
+            self.assertEqual(persisted["writer_marker"], "schema_backed")
+
     def test_rehearse_manifest_apply_rollback_writes_report_without_live_apply(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -323,6 +367,50 @@ class FilesystemRuntimeTests(unittest.TestCase):
             self.assertEqual((live_root / "ops" / "scripts" / "example.py").read_text(encoding="utf-8"), "before\n")
             self.assertFalse((live_root / "ops" / "scripts" / "new_module.py").exists())
             self.assertTrue((live_root / "ops" / "scripts" / "old_module.py").exists())
+
+    def test_rehearse_manifest_apply_rollback_delegates_report_writer(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            live_root = root / "live"
+            workspace_root = root / "workspace"
+            live_root.mkdir()
+            workspace_root.mkdir()
+            (live_root / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
+            (workspace_root / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
+            (live_root / "ops" / "scripts" / "example.py").write_text("before\n", encoding="utf-8")
+            (workspace_root / "ops" / "scripts" / "example.py").write_text("after\n", encoding="utf-8")
+
+            calls: list[tuple[Path, dict]] = []
+
+            def writer(path: Path, report: dict) -> Path:
+                calls.append((path, report))
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    json.dumps({**report, "writer_marker": "schema_backed"}),
+                    encoding="utf-8",
+                )
+                return path
+
+            report_path = live_root / "runs" / "run-rehearsal" / "rollback-rehearsal-report.json"
+            report = rehearse_manifest_apply_rollback(
+                live_root,
+                workspace_root,
+                {
+                    "$schema": "ops/schemas/changed-files-manifest.schema.json",
+                    "run_id": "run-rehearsal",
+                    "files": [{"path": "ops/scripts/example.py", "change_type": "modified"}],
+                },
+                allowed_apply_roots=["ops/"],
+                rollback_rehearsal_report_path=report_path,
+                rollback_rehearsal_generated_at="2026-04-15T03:45:00Z",
+                rollback_rehearsal_report_writer=writer,
+            )
+
+            persisted = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0][0], report_path)
+            self.assertEqual(calls[0][1], report)
+            self.assertEqual(persisted["writer_marker"], "schema_backed")
 
     def test_rehearse_manifest_apply_rollback_reports_rollback_verification_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

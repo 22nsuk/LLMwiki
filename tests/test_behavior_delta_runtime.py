@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
 from ops.scripts.behavior_delta_runtime import (
     build_behavior_delta_report,
     write_behavior_delta_report,
@@ -114,7 +115,18 @@ class BehaviorDeltaRuntimeTest(unittest.TestCase):
             )
             self.assertEqual(rel_path, "runs/run-behavior/behavior-delta.json")
             written = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            metadata = written.pop("metadata")
             self.assertEqual(written, report)
+            embedded_envelope = next(
+                item["value"]
+                for item in metadata["properties"]
+                if item["name"] == EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
+            )
+            envelope = json.loads(embedded_envelope)
+            self.assertEqual(envelope["artifact_kind"], "behavior_delta")
+            self.assertEqual(envelope["artifact_status"], "archived")
+            self.assertEqual(envelope["retention_policy"], "archive")
+            self.assertEqual(envelope["currentness"]["status"], "current")
 
     def test_build_behavior_delta_report_records_parse_errors_and_skipped_manifest_entries(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
