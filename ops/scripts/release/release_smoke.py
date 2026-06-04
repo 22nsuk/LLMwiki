@@ -1347,6 +1347,7 @@ def release_smoke_reuse_diagnostics(
         and payload["archive_file"].get("exists") is True,
         "currentness": isinstance(payload.get("currentness"), dict)
         and payload["currentness"].get("status") == "current",
+        "source_revision": payload.get("source_revision") == expected.get("source_revision"),
         "source_tree_fingerprint": payload.get("source_tree_fingerprint") == expected.get("source_tree_fingerprint"),
         "input_fingerprints": payload.get("input_fingerprints") == expected.get("input_fingerprints"),
     }

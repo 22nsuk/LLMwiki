@@ -711,7 +711,23 @@ class ReleaseSmokeTest(unittest.TestCase):
             self.assertFalse(missing_archive_diagnostics["reusable"])
             self.assertIn("archive_file", missing_archive_diagnostics["reason"])
 
-            destination.write_text(json.dumps(report | {"archive_file": {**report["archive_file"], "exists": True}}, ensure_ascii=False, indent=2), encoding="utf-8")
+            current_report = report | {"archive_file": {**report["archive_file"], "exists": True}}
+            stale_revision_report = current_report | {"source_revision": "old-revision"}
+            destination.write_text(
+                json.dumps(stale_revision_report, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            stale_revision_diagnostics = release_smoke_reuse_diagnostics(
+                vault,
+                destination,
+                profile=FULL_PROFILE,
+                resolved_policy_path=policy_path,
+                context=context,
+            )
+            self.assertFalse(stale_revision_diagnostics["reusable"])
+            self.assertIn("source_revision", stale_revision_diagnostics["reason"])
+
+            destination.write_text(json.dumps(current_report, ensure_ascii=False, indent=2), encoding="utf-8")
 
             (vault / "README.md").write_text("changed\n", encoding="utf-8")
             stale_diagnostics = release_smoke_reuse_diagnostics(
