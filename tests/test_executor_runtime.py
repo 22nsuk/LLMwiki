@@ -1358,6 +1358,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             def fake_refresh(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[:3] == ["git", "rev-parse", "HEAD"]:
+                    return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
                 if argv[1:2] == ["-c"]:
                     return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
                 events.append("script-output-surfaces")

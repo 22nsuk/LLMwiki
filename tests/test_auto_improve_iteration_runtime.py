@@ -10,6 +10,7 @@ from typing import Any
 from unittest import mock
 
 import pytest
+from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
 from ops.scripts.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluatePhaseResult,
@@ -268,7 +269,14 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
 
             payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
             self.assertEqual(payload["source_candidate_id"], "candidate-1")
-            self.assertEqual(payload["metadata"], existing_metadata)
+            metadata_properties = payload["metadata"]["properties"]
+            embedded_envelopes = [
+                json.loads(item["value"])
+                for item in metadata_properties
+                if item["name"] == EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
+            ]
+            self.assertEqual(len(embedded_envelopes), 1)
+            self.assertEqual(embedded_envelopes[0]["artifact_kind"], "run_telemetry")
             runtime_source = (
                 Path(__file__).resolve().parents[1]
                 / "ops"
