@@ -132,6 +132,44 @@ class AutoImproveQueueRuntimeTests(unittest.TestCase):
         self.assertEqual(queue[0]["blocked_by"], [])
         self.assertEqual(proposals_report["proposals"][0]["blocked_by"], ["", "  "])
 
+    def test_recent_log_overlap_queue_unblock_remains_runnable_without_mutating_source(self) -> None:
+        proposals_report = {
+            "proposals": [
+                {
+                    "proposal_id": "ordinary-overlap",
+                    "priority": 90,
+                    "blocked_by": ["recent_log_overlap"],
+                },
+                {
+                    "proposal_id": "recent_log_overlap_queue_blocked__target",
+                    "family": "queue_unblock",
+                    "failure_mode": "recent_log_overlap_queue_blocked",
+                    "priority": 80,
+                    "blocked_by": ["recent_log_overlap"],
+                },
+                {
+                    "proposal_id": "recent_log_overlap_queue_blocked__mixed",
+                    "family": "queue_unblock",
+                    "failure_mode": "recent_log_overlap_queue_blocked",
+                    "priority": 100,
+                    "blocked_by": ["recent_log_overlap", "scope_blocked"],
+                },
+            ]
+        }
+
+        queue = build_proposal_queue(
+            proposals_report,
+            attempted=set(),
+            quarantined=set(),
+        )
+
+        self.assertEqual(
+            [proposal["proposal_id"] for proposal in queue],
+            ["recent_log_overlap_queue_blocked__target"],
+        )
+        self.assertEqual(queue[0]["blocked_by"], [])
+        self.assertEqual(proposals_report["proposals"][1]["blocked_by"], ["recent_log_overlap"])
+
     def test_queue_normalizes_identity_and_priority_without_mutating_source(self) -> None:
         proposals_report: dict[str, list[dict[str, object]]] = {
             "proposals": [

@@ -16,13 +16,22 @@ def build_proposal_queue(
         }
         for proposal in proposals_report["proposals"]
         for proposal_id in [str(proposal.get("proposal_id", "")).strip()]
+        for proposal_family in [str(proposal.get("family", "")).strip()]
+        for failure_mode in [str(proposal.get("failure_mode", "")).strip()]
         for priority_text in [str(proposal.get("priority", 0)).strip()]
         if proposal_id
         and not (
             normalized_blockers := [
-                str(blocker).strip()
+                blocker_text
                 for blocker in proposal.get("blocked_by", []) or []
-                if str(blocker).strip()
+                for blocker_text in [str(blocker).strip()]
+                if blocker_text
+                and not (
+                    blocker_text == "recent_log_overlap"
+                    and proposal_family == "queue_unblock"
+                    and failure_mode == "recent_log_overlap_queue_blocked"
+                    and proposal_id.startswith("recent_log_overlap_queue_blocked__")
+                )
             ]
         )
         and proposal_id not in attempted
