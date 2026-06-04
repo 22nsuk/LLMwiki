@@ -286,6 +286,15 @@ Before starting:
   as generated evidence surfaces. Refresh them through Make/script targets, not
   by hand editing JSON.
 
+Remediation backlog may auto-close historical `goal_status_*` echo blockers
+when current release authority evidence proves the owning gate is clean, such as
+artifact freshness, release closeout summary, or strict release evidence cohort.
+Do not close `goal_status_self_improvement_loop_certificate_incomplete` this
+way. When current blocked certificate evidence exists, remediation backlog may
+defer the duplicate goal-status echo to the release auto-promotion final
+certificate gate, where it remains a live blocker until a completed goal-runtime
+run produces a verified `goal-runtime-certificate`.
+
 Recommended closeout sequence:
 
 1. Run `make release-auto-promotion-preflight GOAL_RUN_ID=<goal-run-id>` for

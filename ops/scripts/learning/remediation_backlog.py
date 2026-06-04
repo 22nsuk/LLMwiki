@@ -42,6 +42,9 @@ STATUS_OVERRIDES_PATH = "ops/policies/remediation-backlog-status-overrides.json"
 GOAL_RUNTIME_CERTIFICATE_PATH = "ops/reports/goal-runtime-certificate.json"
 GOAL_WORKTREE_GUARD_PATH = "ops/reports/goal-worktree-guard.json"
 MUTATION_PROPOSALS_PATH = "ops/reports/mutation-proposals.json"
+ARTIFACT_FRESHNESS_REPORT_PATH = "ops/reports/artifact-freshness-report.json"
+RELEASE_CLOSEOUT_SUMMARY_PATH = "ops/reports/release-closeout-summary.json"
+RELEASE_EVIDENCE_COHORT_PATH = "ops/reports/release-evidence-cohort.json"
 RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH = (
     "build/release/release-auto-promotion-ready-manifest.json"
 )
@@ -53,6 +56,15 @@ GOAL_WORKTREE_GUARD_FAILURE_ITEM_ID = (
 )
 GOAL_STATUS_WORKTREE_GUARD_FAILURE_ITEM_ID = (
     "active_blocker_goal_status_promotion_blocked_by_goal_worktree_guard_failure"
+)
+GOAL_STATUS_ARTIFACT_CONTRACT_FAILURE_ITEM_ID = (
+    "active_blocker_goal_status_promotion_blocked_by_artifact_contract_failure"
+)
+GOAL_STATUS_RELEASE_CLOSEOUT_SUMMARY_FAILURE_ITEM_ID = (
+    "active_blocker_goal_status_promotion_blocked_by_release_closeout_summary_failure"
+)
+GOAL_STATUS_RELEASE_LINEAGE_MISMATCH_ITEM_ID = (
+    "active_blocker_goal_status_promotion_blocked_by_release_lineage_mismatch"
 )
 GOAL_WORKTREE_GUARD_FAILURE_ITEM_IDS = (
     GOAL_WORKTREE_GUARD_FAILURE_ITEM_ID,
@@ -109,6 +121,14 @@ def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _int_value(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    return None
 
 
 def _status_overrides(vault: Path) -> dict[str, dict[str, Any]]:
@@ -192,6 +212,22 @@ def _goal_runtime_certificate_waiting_for_release_authority(vault: Path) -> bool
     )
 
 
+def _goal_runtime_certificate_owned_by_final_promotion(vault: Path) -> bool:
+    report = load_optional_json_object(vault / GOAL_RUNTIME_CERTIFICATE_PATH)
+    certificate = report.get("certificate")
+    run = report.get("run")
+    if not isinstance(certificate, dict) or not isinstance(run, dict):
+        return False
+    return (
+        report.get("artifact_kind") == "goal_runtime_certificate"
+        and report.get("status") == "attention"
+        and _report_matches_current_source_tree(vault, report)
+        and str(certificate.get("verification_status", "")).strip() == "blocked"
+        and certificate.get("eligible") is False
+        and bool(_string_list(report.get("blockers")))
+    )
+
+
 def _goal_worktree_guard_currently_clean(vault: Path) -> bool:
     report = load_optional_json_object(vault / GOAL_WORKTREE_GUARD_PATH)
     decisions = report.get("decisions")
@@ -211,6 +247,63 @@ def _goal_worktree_guard_currently_clean(vault: Path) -> bool:
 def _report_matches_current_source_tree(vault: Path, report: dict[str, Any]) -> bool:
     fingerprint = str(report.get("source_tree_fingerprint", "")).strip()
     return bool(fingerprint) and fingerprint == release_source_tree_fingerprint(vault)
+
+
+def _artifact_report_present(vault: Path, rel_path: str, artifact_kind: str) -> bool:
+    report = load_optional_json_object(vault / rel_path)
+    return report.get("artifact_kind") == artifact_kind
+
+
+def _release_closeout_summary_currently_clean(vault: Path) -> bool:
+    report = load_optional_json_object(vault / RELEASE_CLOSEOUT_SUMMARY_PATH)
+    summary = report.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    return (
+        report.get("artifact_kind") == "release_closeout_summary"
+        and report.get("status") == "pass"
+        and _report_matches_current_source_tree(vault, report)
+        and report.get("release_authority_status") == "clean_pass"
+        and report.get("machine_release_allowed") is True
+        and report.get("clean_release_ready") is True
+        and _int_value(summary.get("source_clean_blocker_count")) == 0
+        and str(summary.get("source_tree_coherence_status", "")).strip() == "pass"
+        and str(summary.get("artifact_freshness_status", "")).strip() == "pass"
+    )
+
+
+def _release_evidence_cohort_currently_clean(vault: Path) -> bool:
+    report = load_optional_json_object(vault / RELEASE_EVIDENCE_COHORT_PATH)
+    summary = report.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    return (
+        report.get("artifact_kind") == "release_evidence_cohort"
+        and report.get("status") == "pass"
+        and _report_matches_current_source_tree(vault, report)
+        and summary.get("strict_same_fingerprint") is True
+        and str(summary.get("clean_lane_contract_status", "")).strip() == "pass"
+        and _int_value(summary.get("issue_count")) == 0
+    )
+
+
+def _artifact_contract_currently_clean(vault: Path) -> bool:
+    report = load_optional_json_object(vault / ARTIFACT_FRESHNESS_REPORT_PATH)
+    summary = report.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    required_zero_counts = (
+        "stale_artifact_count",
+        "unknown_currentness_artifact_count",
+        "missing_schema_count",
+        "missing_artifact_envelope_count",
+        "schema_invalid_artifact_count",
+        "stable_contract_debt_artifact_count",
+        "operational_attention_artifact_count",
+    )
+    return (
+        report.get("artifact_kind") == "artifact_freshness_report"
+        and report.get("status") == "pass"
+        and _report_matches_current_source_tree(vault, report)
+        and all(_int_value(summary.get(key)) == 0 for key in required_zero_counts)
+    )
 
 
 def _recent_log_overlap_queue_unblocked(vault: Path) -> bool:
@@ -283,6 +376,17 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
             ),
             "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
         }
+    elif _goal_runtime_certificate_owned_by_final_promotion(vault):
+        overrides[GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID] = {
+            "status": "deferred",
+            "reason": (
+                "Deferred to the release auto-promotion final goal-runtime certificate "
+                "gate: current certificate evidence is present and still blocks final "
+                "promotion, but it should not also create a remediation-backlog retry "
+                "blocker."
+            ),
+            "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
+        }
     if _goal_worktree_guard_currently_clean(vault):
         for item_id in GOAL_WORKTREE_GUARD_FAILURE_ITEM_IDS:
             overrides[item_id] = {
@@ -293,6 +397,79 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
                 ),
                 "evidence_paths": [GOAL_WORKTREE_GUARD_PATH],
             }
+    if _artifact_contract_currently_clean(vault):
+        overrides[GOAL_STATUS_ARTIFACT_CONTRACT_FAILURE_ITEM_ID] = {
+            "status": "closed",
+            "reason": (
+                "Current artifact-freshness evidence is pass/current with no stale, "
+                "unknown, schema, envelope, stable-contract-debt, or operational "
+                "attention artifacts; the historical goal-status artifact-contract "
+                "blocker has been reconciled."
+            ),
+            "evidence_paths": [ARTIFACT_FRESHNESS_REPORT_PATH],
+        }
+    elif _artifact_report_present(
+        vault,
+        ARTIFACT_FRESHNESS_REPORT_PATH,
+        "artifact_freshness_report",
+    ):
+        overrides[GOAL_STATUS_ARTIFACT_CONTRACT_FAILURE_ITEM_ID] = {
+            "status": "deferred",
+            "reason": (
+                "Deferred as a duplicate goal-status artifact-contract echo: "
+                "artifact-freshness remains the authoritative live gate for current "
+                "artifact contract failures."
+            ),
+            "evidence_paths": [ARTIFACT_FRESHNESS_REPORT_PATH],
+        }
+    if _release_closeout_summary_currently_clean(vault):
+        overrides[GOAL_STATUS_RELEASE_CLOSEOUT_SUMMARY_FAILURE_ITEM_ID] = {
+            "status": "closed",
+            "reason": (
+                "Current release-closeout-summary evidence is pass/current and "
+                "clean-release ready; the historical goal-status closeout-summary "
+                "blocker has been reconciled."
+            ),
+            "evidence_paths": [RELEASE_CLOSEOUT_SUMMARY_PATH],
+        }
+    elif _artifact_report_present(
+        vault,
+        RELEASE_CLOSEOUT_SUMMARY_PATH,
+        "release_closeout_summary",
+    ):
+        overrides[GOAL_STATUS_RELEASE_CLOSEOUT_SUMMARY_FAILURE_ITEM_ID] = {
+            "status": "deferred",
+            "reason": (
+                "Deferred as a duplicate goal-status closeout-summary echo: "
+                "release-closeout-summary remains the authoritative clean-release "
+                "gate."
+            ),
+            "evidence_paths": [RELEASE_CLOSEOUT_SUMMARY_PATH],
+        }
+    if _release_evidence_cohort_currently_clean(vault):
+        overrides[GOAL_STATUS_RELEASE_LINEAGE_MISMATCH_ITEM_ID] = {
+            "status": "closed",
+            "reason": (
+                "Current release-evidence-cohort evidence is pass/current with a "
+                "strict same-fingerprint cohort and no issues; the historical "
+                "goal-status lineage blocker has been reconciled."
+            ),
+            "evidence_paths": [RELEASE_EVIDENCE_COHORT_PATH],
+        }
+    elif _artifact_report_present(
+        vault,
+        RELEASE_EVIDENCE_COHORT_PATH,
+        "release_evidence_cohort",
+    ):
+        overrides[GOAL_STATUS_RELEASE_LINEAGE_MISMATCH_ITEM_ID] = {
+            "status": "deferred",
+            "reason": (
+                "Deferred as a duplicate goal-status lineage echo: "
+                "release-evidence-cohort remains the authoritative strict "
+                "same-fingerprint gate."
+            ),
+            "evidence_paths": [RELEASE_EVIDENCE_COHORT_PATH],
+        }
     if _recent_log_overlap_queue_unblocked(vault):
         reason = (
             "Closed by current mutation-proposal evidence: the proposal queue has a "
@@ -564,6 +741,9 @@ def build_report(
                 "goal_runtime_certificate": GOAL_RUNTIME_CERTIFICATE_PATH,
                 "goal_worktree_guard": GOAL_WORKTREE_GUARD_PATH,
                 "mutation_proposals": MUTATION_PROPOSALS_PATH,
+                "artifact_freshness_report": ARTIFACT_FRESHNESS_REPORT_PATH,
+                "release_closeout_summary": RELEASE_CLOSEOUT_SUMMARY_PATH,
+                "release_evidence_cohort": RELEASE_EVIDENCE_COHORT_PATH,
                 "release_auto_promotion_ready_manifest": RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH,
                 "learning_readiness_signoff": SIGNOFF_REPORT_REL_PATH,
                 "status_overrides": STATUS_OVERRIDES_PATH,
@@ -589,6 +769,9 @@ def build_report(
             "goal_runtime_certificate": GOAL_RUNTIME_CERTIFICATE_PATH,
             "goal_worktree_guard": GOAL_WORKTREE_GUARD_PATH,
             "mutation_proposals": MUTATION_PROPOSALS_PATH,
+            "artifact_freshness_report": ARTIFACT_FRESHNESS_REPORT_PATH,
+            "release_closeout_summary": RELEASE_CLOSEOUT_SUMMARY_PATH,
+            "release_evidence_cohort": RELEASE_EVIDENCE_COHORT_PATH,
             "release_auto_promotion_ready_manifest": RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH,
             "learning_readiness_signoff": SIGNOFF_REPORT_REL_PATH,
             "status_overrides": STATUS_OVERRIDES_PATH,

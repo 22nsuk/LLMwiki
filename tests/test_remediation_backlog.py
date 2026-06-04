@@ -535,6 +535,309 @@ class RemediationBacklogTests(unittest.TestCase):
             )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_current_clean_release_evidence_closes_goal_status_echo_blockers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            write_json(vault, "ops/reports/self-improvement-negative-lessons.json", {"lessons": []})
+            write_json(
+                vault,
+                "ops/reports/session-synopsis.json",
+                {
+                    "recent_blockers": [
+                        {
+                            "id": "goal_status_promotion_blocked_by_artifact_contract_failure",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "historical artifact-contract echo blocker",
+                            "repair_target": "Refresh artifact freshness evidence.",
+                        },
+                        {
+                            "id": (
+                                "goal_status_promotion_blocked_by_"
+                                "release_closeout_summary_failure"
+                            ),
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "historical closeout-summary echo blocker",
+                            "repair_target": "Refresh release closeout evidence.",
+                        },
+                        {
+                            "id": "goal_status_promotion_blocked_by_release_lineage_mismatch",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "historical lineage echo blocker",
+                            "repair_target": "Refresh release cohort evidence.",
+                        },
+                        {
+                            "id": "goal_status_self_improvement_loop_certificate_incomplete",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "real incomplete runtime certificate blocker",
+                            "repair_target": "Complete a certifiable goal-runtime run.",
+                        },
+                    ]
+                },
+            )
+            write_json(vault, "ops/reports/learning_claim_activation_report.json", {"status": "pass"})
+            fingerprint = release_source_tree_fingerprint(vault)
+            write_json(
+                vault,
+                "ops/reports/artifact-freshness-report.json",
+                {
+                    "artifact_kind": "artifact_freshness_report",
+                    "status": "pass",
+                    "source_tree_fingerprint": fingerprint,
+                    "summary": {
+                        "stale_artifact_count": 0,
+                        "unknown_currentness_artifact_count": 0,
+                        "missing_schema_count": 0,
+                        "missing_artifact_envelope_count": 0,
+                        "schema_invalid_artifact_count": 0,
+                        "stable_contract_debt_artifact_count": 0,
+                        "operational_attention_artifact_count": 0,
+                    },
+                },
+            )
+            write_json(
+                vault,
+                "ops/reports/release-closeout-summary.json",
+                {
+                    "artifact_kind": "release_closeout_summary",
+                    "status": "pass",
+                    "source_tree_fingerprint": fingerprint,
+                    "release_authority_status": "clean_pass",
+                    "machine_release_allowed": True,
+                    "clean_release_ready": True,
+                    "summary": {
+                        "source_clean_blocker_count": 0,
+                        "source_tree_coherence_status": "pass",
+                        "artifact_freshness_status": "pass",
+                    },
+                },
+            )
+            write_json(
+                vault,
+                "ops/reports/release-evidence-cohort.json",
+                {
+                    "artifact_kind": "release_evidence_cohort",
+                    "status": "pass",
+                    "source_tree_fingerprint": fingerprint,
+                    "summary": {
+                        "strict_same_fingerprint": True,
+                        "clean_lane_contract_status": "pass",
+                        "issue_count": 0,
+                    },
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            items = {item["item_id"]: item for item in report["items"]}
+
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_artifact_contract_failure"
+                ]["status"],
+                "closed",
+            )
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_"
+                    "release_closeout_summary_failure"
+                ]["status"],
+                "closed",
+            )
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_release_lineage_mismatch"
+                ]["status"],
+                "closed",
+            )
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_self_improvement_loop_certificate_incomplete"
+                ]["status"],
+                "open",
+            )
+            self.assertIn(
+                "ops/reports/artifact-freshness-report.json",
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_artifact_contract_failure"
+                ]["evidence_paths"],
+            )
+            self.assertIn(
+                "ops/reports/release-closeout-summary.json",
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_"
+                    "release_closeout_summary_failure"
+                ]["evidence_paths"],
+            )
+            self.assertIn(
+                "ops/reports/release-evidence-cohort.json",
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_release_lineage_mismatch"
+                ]["evidence_paths"],
+            )
+            self.assertEqual(report["status"], "attention")
+            self.assertEqual(report["summary"]["open_total_count"], 1)
+            self.assertEqual(report["summary"]["open_promotion_count"], 1)
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_owner_gates_defer_goal_status_echo_blockers_without_hiding_them(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            write_json(vault, "ops/reports/self-improvement-negative-lessons.json", {"lessons": []})
+            write_json(
+                vault,
+                "ops/reports/session-synopsis.json",
+                {
+                    "recent_blockers": [
+                        {
+                            "id": "goal_status_promotion_blocked_by_artifact_contract_failure",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "artifact contract owner gate is still attention",
+                            "repair_target": "Refresh artifact freshness evidence.",
+                        },
+                        {
+                            "id": (
+                                "goal_status_promotion_blocked_by_"
+                                "release_closeout_summary_failure"
+                            ),
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "closeout owner gate is still conditional",
+                            "repair_target": "Refresh release closeout evidence.",
+                        },
+                        {
+                            "id": "goal_status_promotion_blocked_by_release_lineage_mismatch",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "cohort owner gate is still stale",
+                            "repair_target": "Refresh release cohort evidence.",
+                        },
+                        {
+                            "id": "goal_status_self_improvement_loop_certificate_incomplete",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "runtime certificate is not verified",
+                            "repair_target": "Complete a certifiable goal-runtime run.",
+                        },
+                    ]
+                },
+            )
+            write_json(vault, "ops/reports/learning_claim_activation_report.json", {"status": "pass"})
+            fingerprint = release_source_tree_fingerprint(vault)
+            write_json(
+                vault,
+                "ops/reports/artifact-freshness-report.json",
+                {
+                    "artifact_kind": "artifact_freshness_report",
+                    "status": "attention",
+                    "source_tree_fingerprint": fingerprint,
+                    "summary": {
+                        "stale_artifact_count": 3,
+                        "unknown_currentness_artifact_count": 0,
+                        "missing_schema_count": 0,
+                        "missing_artifact_envelope_count": 0,
+                        "schema_invalid_artifact_count": 0,
+                        "stable_contract_debt_artifact_count": 0,
+                        "operational_attention_artifact_count": 3,
+                    },
+                },
+            )
+            write_json(
+                vault,
+                "ops/reports/release-closeout-summary.json",
+                {
+                    "artifact_kind": "release_closeout_summary",
+                    "status": "pass",
+                    "source_tree_fingerprint": fingerprint,
+                    "release_authority_status": "conditional_pass",
+                    "machine_release_allowed": False,
+                    "clean_release_ready": False,
+                    "summary": {
+                        "source_clean_blocker_count": 0,
+                        "source_tree_coherence_status": "attention",
+                        "artifact_freshness_status": "attention",
+                    },
+                },
+            )
+            write_json(
+                vault,
+                "ops/reports/release-evidence-cohort.json",
+                {
+                    "artifact_kind": "release_evidence_cohort",
+                    "status": "pass",
+                    "source_tree_fingerprint": "previous-fingerprint",
+                    "summary": {
+                        "strict_same_fingerprint": True,
+                        "clean_lane_contract_status": "pass",
+                        "issue_count": 0,
+                    },
+                },
+            )
+            write_json(
+                vault,
+                "ops/reports/goal-runtime-certificate.json",
+                {
+                    "artifact_kind": "goal_runtime_certificate",
+                    "status": "attention",
+                    "source_tree_fingerprint": fingerprint,
+                    "certificate": {"verification_status": "blocked", "eligible": False},
+                    "run": {"run_id": "goal-live", "run_status": "blocked"},
+                    "blockers": ["goal run is not completed"],
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            items = {item["item_id"]: item for item in report["items"]}
+
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_artifact_contract_failure"
+                ]["status"],
+                "deferred",
+            )
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_"
+                    "release_closeout_summary_failure"
+                ]["status"],
+                "deferred",
+            )
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_release_lineage_mismatch"
+                ]["status"],
+                "deferred",
+            )
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_self_improvement_loop_certificate_incomplete"
+                ]["status"],
+                "deferred",
+            )
+            self.assertIn(
+                "authoritative live gate",
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_artifact_contract_failure"
+                ]["next_action"],
+            )
+            self.assertIn(
+                "final goal-runtime certificate gate",
+                items[
+                    "active_blocker_goal_status_self_improvement_loop_certificate_incomplete"
+                ]["next_action"],
+            )
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["open_total_count"], 0)
+            self.assertEqual(report["summary"]["open_promotion_count"], 0)
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_verified_certificate_closes_incomplete_certificate_item_from_canonical_report(
         self,
     ) -> None:
