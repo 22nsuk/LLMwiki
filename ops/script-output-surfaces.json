@@ -594,6 +594,15 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/core/run_id_runtime.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "no configurable output path surface detected"
+    },
+    {
       "path": "ops/scripts/core/runtime_context.py",
       "classification": "no_output",
       "output_options": [],

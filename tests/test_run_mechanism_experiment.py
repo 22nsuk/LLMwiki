@@ -13,6 +13,7 @@ from ops.scripts.post_mutation_generated_artifact_convergence_runtime import (
     converge_post_mutation_generated_artifacts,
 )
 from ops.scripts.run_mechanism_experiment_runtime import (
+    RunMechanismExperimentUsageError,
     run_mechanism_experiment,
 )
 from ops.scripts.runtime_context import RuntimeContext
@@ -45,6 +46,34 @@ def fixed_context() -> RuntimeContext:
 
 
 class RunMechanismExperimentTests(unittest.TestCase):
+    def test_wrapper_rejects_template_placeholder_run_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+
+            with self.assertRaisesRegex(RunMechanismExperimentUsageError, "template placeholder run id"):
+                run_mechanism_experiment(
+                    vault,
+                    run_id="run-YYYYMMDD-mechanism-slug",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    primary_targets=["ops/scripts/example.py"],
+                    supporting_targets=[],
+                    test_files=["tests/test_example.py"],
+                    log_summary="Template placeholder run id should be rejected",
+                    mutation_command=None,
+                    check_command=None,
+                    require_signoff=False,
+                    signoff_status="approved",
+                    signoff_by="human",
+                    signoff_ts="2026-04-14T00:00:00Z",
+                    scaffold_only=True,
+                    finalize=False,
+                    context=fixed_context(),
+                )
+
+            self.assertFalse((vault / "runs" / "run-YYYYMMDD-mechanism-slug").exists())
+
     def test_wrapper_runs_full_promote_and_finalize_flow(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

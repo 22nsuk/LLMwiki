@@ -78,9 +78,9 @@ generated-artifact-script-output:
 	$(MAKE) script-output-surfaces
 
 generated-artifact-finality-suffix:
+	$(MAKE) artifact-freshness
 	$(MAKE) external-report-action-matrix
 	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
 
 generated-artifact-retention-clean:
 	$(PYTHON) -m ops.scripts.generated_artifact_retention_clean --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_RETENTION_CLEAN_OUT)" $(if $(GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY),--apply,)

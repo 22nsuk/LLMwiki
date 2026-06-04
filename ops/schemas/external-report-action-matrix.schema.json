@@ -83,7 +83,7 @@
         "historical_or_superseded_action_count",
         "active_action_ids",
         "archived_action_ids",
-        "current_canonical_report_state"
+        "canonical_artifact_freshness_state"
       ],
       "properties": {
         "active_report_count": { "type": "integer", "minimum": 0 },
@@ -122,7 +122,7 @@
           "type": "array",
           "items": { "type": "string" }
         },
-        "current_canonical_report_state": { "$ref": "#/$defs/current_canonical_report_state" }
+        "canonical_artifact_freshness_state": { "$ref": "#/$defs/canonical_artifact_freshness_state" }
       }
     },
     "reference_manifest_alignment": {
@@ -340,20 +340,44 @@
         "superseded": { "type": "integer", "minimum": 0 }
       }
     },
-    "current_canonical_report_state": {
+    "nullable_count": {
+      "anyOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "null" }
+      ]
+    },
+    "canonical_artifact_freshness_state": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "stale_report_count",
-        "total_report_count",
-        "priority_stale_report_count",
-        "summary"
+        "evidence_status",
+        "evidence_path",
+        "stale_artifact_count",
+        "total_artifact_count",
+        "operational_attention_artifact_count",
+        "summary",
+        "reason_id",
+        "owner_target"
       ],
       "properties": {
-        "stale_report_count": { "type": "integer", "minimum": 0 },
-        "total_report_count": { "type": "integer", "minimum": 0 },
-        "priority_stale_report_count": { "type": "integer", "minimum": 0 },
-        "summary": { "type": "string", "minLength": 1 }
+        "evidence_status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "missing",
+            "unreadable",
+            "invalid",
+            "stale",
+            "source_identity_mismatch"
+          ]
+        },
+        "evidence_path": { "type": "string", "minLength": 1 },
+        "stale_artifact_count": { "$ref": "#/$defs/nullable_count" },
+        "total_artifact_count": { "$ref": "#/$defs/nullable_count" },
+        "operational_attention_artifact_count": { "$ref": "#/$defs/nullable_count" },
+        "summary": { "type": "string", "minLength": 1 },
+        "reason_id": { "type": "string", "minLength": 1 },
+        "owner_target": { "const": "artifact-freshness" }
       }
     }
   }

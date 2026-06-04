@@ -19,9 +19,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.external_report_lifecycle_runtime import (  # noqa: PLC0415
         action_status_reason_details,
         action_status_reason_ids,
+        canonical_artifact_freshness_state,
         external_report_action_lifecycle_record,
         external_report_action_lifecycle_summary,
-        external_report_current_canonical_state,
         report_coverage_item,
         status_from_evidence,
     )
@@ -58,9 +58,9 @@ else:
     from .external_report_lifecycle_runtime import (
         action_status_reason_details,
         action_status_reason_ids,
+        canonical_artifact_freshness_state,
         external_report_action_lifecycle_record,
         external_report_action_lifecycle_summary,
-        external_report_current_canonical_state,
         report_coverage_item,
         status_from_evidence,
     )
@@ -154,7 +154,7 @@ def _summary(
     actions: list[dict[str, Any]],
     archived_report_count: int,
     manifest_alignment: dict[str, Any],
-    current_canonical_report_state: dict[str, Any],
+    canonical_artifact_freshness_state_record: dict[str, Any],
 ) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
     sprint_backlog: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
@@ -166,7 +166,7 @@ def _summary(
             sprint_backlog[sprint_priority] += 1
     lifecycle_summary = external_report_action_lifecycle_summary(
         actions,
-        current_canonical_report_state=current_canonical_report_state,
+        canonical_artifact_freshness_state_record=canonical_artifact_freshness_state_record,
     )
     return {
         "active_report_count": len(coverage),
@@ -212,13 +212,13 @@ def build_report(
     coverage = _report_coverage(resolved_vault, report_paths)
     actions = _action_items(resolved_vault, coverage)
     manifest_alignment = reference_manifest_alignment(resolved_vault)
-    current_canonical_report_state = external_report_current_canonical_state(resolved_vault)
+    canonical_artifact_freshness_state_record = canonical_artifact_freshness_state(resolved_vault)
     summary = _summary(
         coverage=coverage,
         actions=actions,
         archived_report_count=archived_report_count(resolved_vault),
         manifest_alignment=manifest_alignment,
-        current_canonical_report_state=current_canonical_report_state,
+        canonical_artifact_freshness_state_record=canonical_artifact_freshness_state_record,
     )
     status = (
         "attention"

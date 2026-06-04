@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import hypothesis.strategies as st
 from hypothesis import given
+from ops.scripts.source_revision_runtime import resolve_source_revision
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from ops.scripts.release.external_report_lifecycle_runtime import (
     ACTION_LIFECYCLE_CURRENTLY_VALID,
@@ -11,11 +14,74 @@ from ops.scripts.release.external_report_lifecycle_runtime import (
     ACTION_LIFECYCLE_RESOLVED,
     ACTION_LIFECYCLE_SUPERSEDED,
     ACTION_LIFECYCLES,
+    canonical_artifact_freshness_state,
     classify_external_report_action_lifecycle,
     external_report_action_lifecycle_record,
     external_report_action_lifecycle_summary,
-    external_report_current_canonical_state,
 )
+
+
+def _artifact_freshness_payload(
+    vault: Path,
+    *,
+    artifact_count: int,
+    stale_artifact_count: int,
+    operational_attention_artifact_count: int,
+    source_revision: str | None = None,
+    source_tree_fingerprint: str | None = None,
+) -> dict:
+    return {
+        "artifact_kind": "artifact_freshness_report",
+        "artifact_status": "current",
+        "currentness": {"status": "current"},
+        "source_revision": source_revision or resolve_source_revision(vault).revision,
+        "source_tree_fingerprint": (
+            source_tree_fingerprint or release_source_tree_fingerprint(vault)
+        ),
+        "status": "pass",
+        "summary": {
+            "artifact_count": artifact_count,
+            "stale_artifact_count": stale_artifact_count,
+            "operational_attention_artifact_count": operational_attention_artifact_count,
+        },
+    }
+
+
+def _artifact_freshness_state(
+    *,
+    artifact_count: int,
+    stale_artifact_count: int,
+    operational_attention_artifact_count: int,
+) -> dict:
+    return {
+        "evidence_status": "current",
+        "evidence_path": "ops/reports/artifact-freshness-report.json",
+        "stale_artifact_count": stale_artifact_count,
+        "total_artifact_count": artifact_count,
+        "operational_attention_artifact_count": operational_attention_artifact_count,
+        "summary": f"{stale_artifact_count} stale / {artifact_count} total; "
+        f"{operational_attention_artifact_count} operational attention",
+        "reason_id": "artifact_freshness_report_current",
+        "owner_target": "artifact-freshness",
+    }
+
+
+def _unavailable_artifact_freshness_state(
+    *, evidence_status: str, reason_id: str
+) -> dict:
+    return {
+        "evidence_status": evidence_status,
+        "evidence_path": "ops/reports/artifact-freshness-report.json",
+        "stale_artifact_count": None,
+        "total_artifact_count": None,
+        "operational_attention_artifact_count": None,
+        "summary": (
+            f"artifact freshness evidence {evidence_status}; "
+            "current canonical artifact freshness state unavailable"
+        ),
+        "reason_id": reason_id,
+        "owner_target": "artifact-freshness",
+    }
 
 
 @given(
@@ -24,7 +90,6 @@ from ops.scripts.release.external_report_lifecycle_runtime import (
             "resolved",
             "historical_46_stale",
             "superseded",
-            "currently_valid_5_stale",
             "currently_valid_generic",
         ]
     )
@@ -37,14 +102,12 @@ def test_property_10_external_report_lifecycle_partition_and_active_set_derivati
         "resolved": "implemented runtime evidence is now present",
         "historical_46_stale": "top-level canonical report 46/46 stale",
         "superseded": "superseded by the 2026-05-29 revalidation report",
-        "currently_valid_5_stale": "current state is 5 stale / 47 total with priority 3",
         "currently_valid_generic": "current active external report item needs operator action",
     }
     status_by_hint = {
         "resolved": "implemented",
         "historical_46_stale": "planned",
         "superseded": "planned",
-        "currently_valid_5_stale": "planned",
         "currently_valid_generic": "requires_release_run_verification",
     }
     item = {
@@ -76,42 +139,108 @@ def test_property_10_external_report_lifecycle_partition_and_active_set_derivati
         assert record["is_active"] is True
 
 
-def test_current_external_report_state_falls_back_to_revalidated_5_of_47_counts() -> None:
-    state = external_report_current_canonical_state()
+def test_missing_artifact_freshness_report_returns_unavailable_state() -> None:
+    state = canonical_artifact_freshness_state()
 
-    assert state["stale_report_count"] == 5
-    assert state["total_report_count"] == 47
-    assert state["priority_stale_report_count"] == 3
-    assert "5 stale / 47 total" in state["summary"]
+    assert state == _unavailable_artifact_freshness_state(
+        evidence_status="missing",
+        reason_id="artifact_freshness_report_not_provided",
+    )
 
 
-def test_current_external_report_state_uses_artifact_freshness_summary(tmp_path) -> None:
+def test_current_external_report_state_uses_artifact_freshness_summary(
+    tmp_path: Path,
+) -> None:
     report_path = tmp_path / "ops" / "reports" / "artifact-freshness-report.json"
     report_path.parent.mkdir(parents=True)
     report_path.write_text(
         json.dumps(
-            {
-                "summary": {
-                    "artifact_count": 123,
-                    "stale_artifact_count": 0,
-                    "operational_attention_artifact_count": 0,
-                }
-            }
+            _artifact_freshness_payload(
+                tmp_path,
+                artifact_count=123,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+            )
         ),
         encoding="utf-8",
     )
 
-    state = external_report_current_canonical_state(tmp_path)
+    state = canonical_artifact_freshness_state(tmp_path)
     summary = external_report_action_lifecycle_summary(
         [],
-        current_canonical_report_state=state,
+        canonical_artifact_freshness_state_record=state,
     )
 
-    assert state["stale_report_count"] == 0
-    assert state["total_report_count"] == 123
-    assert state["priority_stale_report_count"] == 0
-    assert "0 stale / 123 total" in state["summary"]
-    assert summary["current_canonical_report_state"] == state
+    assert state == _artifact_freshness_state(
+        artifact_count=123,
+        stale_artifact_count=0,
+        operational_attention_artifact_count=0,
+    )
+    assert summary["canonical_artifact_freshness_state"] == state
+
+
+def test_invalid_artifact_freshness_json_returns_unavailable_state(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "ops" / "reports" / "artifact-freshness-report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("{", encoding="utf-8")
+
+    state = canonical_artifact_freshness_state(tmp_path)
+
+    assert state == _unavailable_artifact_freshness_state(
+        evidence_status="invalid",
+        reason_id="artifact_freshness_report_invalid",
+    )
+
+
+def test_invalid_artifact_freshness_summary_returns_unavailable_state(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "ops" / "reports" / "artifact-freshness-report.json"
+    report_path.parent.mkdir(parents=True)
+    payload = _artifact_freshness_payload(
+        tmp_path,
+        artifact_count=123,
+        stale_artifact_count=0,
+        operational_attention_artifact_count=0,
+    )
+    payload["summary"].pop("artifact_count")
+    report_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    state = canonical_artifact_freshness_state(tmp_path)
+
+    assert state == _unavailable_artifact_freshness_state(
+        evidence_status="invalid",
+        reason_id="artifact_freshness_summary_artifact_count_invalid",
+    )
+
+
+def test_artifact_freshness_source_identity_mismatch_returns_unavailable_state(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "ops" / "reports" / "artifact-freshness-report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(
+            _artifact_freshness_payload(
+                tmp_path,
+                artifact_count=123,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+                source_revision=resolve_source_revision(tmp_path).revision,
+                source_tree_fingerprint="previous-fingerprint",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    state = canonical_artifact_freshness_state(tmp_path)
+
+    assert state == _unavailable_artifact_freshness_state(
+        evidence_status="source_identity_mismatch",
+        reason_id="artifact_freshness_source_tree_fingerprint_mismatch",
+    )
 
 
 def test_46_of_46_stale_claim_is_historical_not_current() -> None:

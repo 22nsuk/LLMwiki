@@ -88,7 +88,7 @@ repo-shared defaults는 아래 rung만 사용한다.
 | `valuation-policy-auditor.toml` | `gpt-5.5` + `xhigh` | same-eval promotion, policy exception, decision-weight 과대평가 여부를 감사할 때 |
 | `release-authority-auditor.toml` | `gpt-5.5` + `xhigh` | release-run/sealed/auto-promotion authority blocker와 stale evidence 원인을 분리할 때 |
 | `goal-runtime-triage-auditor.toml` | `gpt-5.5` + `xhigh` | goal runtime trial admission, quarantine, next-run repair, readiness blockers를 분류할 때 |
-| `external-report-action-auditor.toml` | `gpt-5.5` + `high` | external report prose, action matrix, remediation backlog, improvement observations의 구현/보류 상태를 대조할 때 |
+| `external-report-action-auditor.toml` | `gpt-5.5` + `high` | external report prose, action matrix status/lifecycle, remediation backlog, improvement observations의 구현/보류 상태를 대조할 때 |
 
 ### Role boundaries
 
@@ -102,8 +102,9 @@ repo-shared defaults는 아래 rung만 사용한다.
   다룬다. Release auto-promotion pass 여부는 `release-authority-auditor`나
   parent release closeout이 판단한다.
 - `external-report-action-auditor`는 보고서 권고와 repo evidence의 대응관계를
-  분류한다. 실제 archive, matrix refresh, backlog mutation은 parent가 명시한
-  Make/script lane으로만 진행한다.
+  action status, lifecycle, evidence currentness로 나눠 분류한다. 실제 archive,
+  matrix refresh, backlog mutation은 parent가 명시한 Make/script lane으로만
+  진행한다.
 
 ## Routing guidance for this repo
 

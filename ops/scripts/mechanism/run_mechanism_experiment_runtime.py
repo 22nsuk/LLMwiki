@@ -11,6 +11,7 @@ from ops.scripts.policy_runtime import (
     workspace_preparation_mode_from_policy,
 )
 from ops.scripts.promotion_decision_registry_runtime import decision_from_report
+from ops.scripts.run_id_runtime import reject_template_placeholder_run_id
 from ops.scripts.runtime_context import RuntimeContext
 
 from .mechanism_run_capture_runtime import (
@@ -187,6 +188,10 @@ def _run_mechanism_experiment_request(
     request: RunMechanismExperimentRequest,
 ) -> dict[str, Any]:
     vault = vault.resolve()
+    try:
+        reject_template_placeholder_run_id(request.run_id)
+    except ValueError as exc:
+        raise RunMechanismExperimentUsageError(str(exc)) from exc
     resolution = _resolve_experiment_inputs(
         vault,
         run_id=request.run_id,

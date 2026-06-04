@@ -16,6 +16,7 @@ from ops.scripts.external_report_lifecycle_runtime import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.source_revision_runtime import resolve_source_revision
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from ops.scripts.release.release_closeout_finality_attestation import (
@@ -79,6 +80,72 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         path = self.vault / rel_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    def _artifact_freshness_payload(
+        self,
+        *,
+        artifact_count: int,
+        stale_artifact_count: int,
+        operational_attention_artifact_count: int,
+        status: str = "pass",
+        currentness_status: str = "current",
+        source_revision: str | None = None,
+        source_tree_fingerprint: str | None = None,
+    ) -> dict:
+        return {
+            "artifact_kind": "artifact_freshness_report",
+            "artifact_status": "current",
+            "currentness": {"status": currentness_status},
+            "source_revision": source_revision or resolve_source_revision(self.vault).revision,
+            "source_tree_fingerprint": (
+                source_tree_fingerprint or release_source_tree_fingerprint(self.vault)
+            ),
+            "status": status,
+            "summary": {
+                "artifact_count": artifact_count,
+                "stale_artifact_count": stale_artifact_count,
+                "operational_attention_artifact_count": operational_attention_artifact_count,
+            },
+        }
+
+    def _artifact_freshness_state(
+        self,
+        *,
+        artifact_count: int,
+        stale_artifact_count: int,
+        operational_attention_artifact_count: int,
+    ) -> dict:
+        return {
+            "evidence_status": "current",
+            "evidence_path": "ops/reports/artifact-freshness-report.json",
+            "stale_artifact_count": stale_artifact_count,
+            "total_artifact_count": artifact_count,
+            "operational_attention_artifact_count": operational_attention_artifact_count,
+            "summary": f"{stale_artifact_count} stale / {artifact_count} total; "
+            f"{operational_attention_artifact_count} operational attention",
+            "reason_id": "artifact_freshness_report_current",
+            "owner_target": "artifact-freshness",
+        }
+
+    def _unavailable_artifact_freshness_state(
+        self,
+        *,
+        evidence_status: str,
+        reason_id: str,
+    ) -> dict:
+        return {
+            "evidence_status": evidence_status,
+            "evidence_path": "ops/reports/artifact-freshness-report.json",
+            "stale_artifact_count": None,
+            "total_artifact_count": None,
+            "operational_attention_artifact_count": None,
+            "summary": (
+                f"artifact freshness evidence {evidence_status}; "
+                "current canonical artifact freshness state unavailable"
+            ),
+            "reason_id": reason_id,
+            "owner_target": "artifact-freshness",
+        }
 
     def _write_support_reports(self) -> None:
         self._write_json(
@@ -287,14 +354,11 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
         self._write_json(
             "ops/reports/artifact-freshness-report.json",
-            {
-                "status": "pass",
-                "summary": {
-                    "artifact_count": 12,
-                    "stale_artifact_count": 0,
-                    "operational_attention_artifact_count": 0,
-                },
-            },
+            self._artifact_freshness_payload(
+                artifact_count=12,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+            ),
         )
 
         report = build_report(self.vault, context=fixed_context())
@@ -304,13 +368,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(report["summary"]["reference_manifest_alignment_status"], "drift")
         self.assertEqual(report["summary"]["reference_manifest_missing_active_report_count"], 2)
         self.assertEqual(
-            report["summary"]["current_canonical_report_state"],
-            {
-                "stale_report_count": 0,
-                "total_report_count": 12,
-                "priority_stale_report_count": 0,
-                "summary": "0 stale / 12 total; 0 priority stale",
-            },
+            report["summary"]["canonical_artifact_freshness_state"],
+            self._artifact_freshness_state(
+                artifact_count=12,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+            ),
         )
         self.assertEqual(
             report["reference_manifest_alignment"]["missing_active_report_paths"],
@@ -377,6 +440,126 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         ][0]
         self.assertEqual(self_evidence["status"], report["status"])
         self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_matrix_reflects_latest_artifact_freshness_currentness_input(self) -> None:
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nexternal report lifecycle.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/release.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            self._artifact_freshness_payload(
+                artifact_count=12,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+            ),
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+        self.assertEqual(
+            report["summary"]["canonical_artifact_freshness_state"],
+            self._artifact_freshness_state(
+                artifact_count=12,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+            ),
+        )
+
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            self._artifact_freshness_payload(
+                artifact_count=12,
+                stale_artifact_count=3,
+                operational_attention_artifact_count=2,
+                status="attention",
+            ),
+        )
+
+        refreshed_report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            refreshed_report["summary"]["canonical_artifact_freshness_state"],
+            self._artifact_freshness_state(
+                artifact_count=12,
+                stale_artifact_count=3,
+                operational_attention_artifact_count=2,
+            ),
+        )
+        self.assertEqual(validate_with_schema(refreshed_report, load_schema(SCHEMA_PATH)), [])
+
+    def test_matrix_ignores_stale_artifact_freshness_currentness_input(self) -> None:
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nexternal report lifecycle.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/release.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            self._artifact_freshness_payload(
+                artifact_count=12,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+                currentness_status="stale",
+            ),
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            report["summary"]["canonical_artifact_freshness_state"],
+            self._unavailable_artifact_freshness_state(
+                evidence_status="stale",
+                reason_id="artifact_freshness_currentness_not_current",
+            ),
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_matrix_ignores_artifact_freshness_source_identity_mismatch(self) -> None:
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nexternal report lifecycle.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/release.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            self._artifact_freshness_payload(
+                artifact_count=12,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+                source_revision="previous-revision",
+                source_tree_fingerprint="previous-fingerprint",
+            ),
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            report["summary"]["canonical_artifact_freshness_state"],
+            self._unavailable_artifact_freshness_state(
+                evidence_status="source_identity_mismatch",
+                reason_id="artifact_freshness_source_revision_mismatch",
+            ),
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_binary_active_report_is_operator_only_action_not_unmatched(self) -> None:

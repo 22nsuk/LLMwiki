@@ -26,7 +26,9 @@ pytestmark = pytest.mark.public
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLAN_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-run-ready-plan.schema.json"
 ZERO_SHA256 = "0" * 64
-READY_PLAN_GOLDEN_SHA256 = "c387acf93be7bac0a469b3a6c29f75d0de7d75c06e2f13cf0742aa296d7d2d3b"
+READY_PLAN_GOLDEN_SHA256 = (
+    "64b602874c8cd2d0d55999e6fa7a0dd1a5cd70edfe4cf2ca680a74c955b5406f"
+)
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",
     "wiki/",
@@ -116,7 +118,9 @@ def _counts() -> dict[str, int]:
     }
 
 
-def _test_execution_summary_payload(*, suite: str, represents_full_suite: bool) -> dict[str, object]:
+def _test_execution_summary_payload(
+    *, suite: str, represents_full_suite: bool
+) -> dict[str, object]:
     full_suite_status = "represented" if represents_full_suite else "not_represented"
     suite_scope = "full_suite" if represents_full_suite else "report_contract_summary"
     return {
@@ -131,7 +135,9 @@ def _test_execution_summary_payload(*, suite: str, represents_full_suite: bool) 
         "suite": suite,
         "suite_scope": suite_scope,
         "represents_full_suite": represents_full_suite,
-        "not_full_suite_reason": "" if represents_full_suite else "report-contract fixture",
+        "not_full_suite_reason": ""
+        if represents_full_suite
+        else "report-contract fixture",
         "full_suite_evidence": {
             "status": full_suite_status,
             "required_command": "make test-execution-summary-full-current-or-refresh",
@@ -405,7 +411,9 @@ def _source_package_smoke_payload(source_zip: dict[str, object]) -> dict[str, ob
     }
 
 
-def _source_package_clean_extract_payload(source_zip: dict[str, object]) -> dict[str, object]:
+def _source_package_clean_extract_payload(
+    source_zip: dict[str, object],
+) -> dict[str, object]:
     clean_source_zip = {
         "path": source_zip["path"],
         "exists": source_zip["exists"],
@@ -555,7 +563,9 @@ def _release_run_manifest_payload(source_zip: dict[str, object]) -> dict[str, ob
 def _write_current_run_ready_evidence(vault: Path) -> None:
     source_zip = _file_identity(vault, "build/release/LLMwiki-source.zip")
     evidence = {
-        "build/release/release-run-manifest.json": _release_run_manifest_payload(source_zip),
+        "build/release/release-run-manifest.json": _release_run_manifest_payload(
+            source_zip
+        ),
         "ops/reports/test-execution-summary-full.json": _test_execution_summary_payload(
             suite="full",
             represents_full_suite=True,
@@ -575,8 +585,12 @@ def _write_current_run_ready_evidence(vault: Path) -> None:
             source_command="python -m ops.scripts.release.release_smoke --vault . --profile fast",
             archive_file=source_zip,
         ),
-        "build/source-package-smoke/source-package-smoke.json": _source_package_smoke_payload(source_zip),
-        "ops/reports/source-package-clean-extract.json": _source_package_clean_extract_payload(source_zip),
+        "build/source-package-smoke/source-package-smoke.json": _source_package_smoke_payload(
+            source_zip
+        ),
+        "ops/reports/source-package-clean-extract.json": _source_package_clean_extract_payload(
+            source_zip
+        ),
     }
     for rel_path, payload in evidence.items():
         _write_json(vault, rel_path, payload)
@@ -600,7 +614,9 @@ def _patch_plan_repo(
     )
 
 
-def _run_ready_plan_bytes(vault: Path, *, out_path: str = "tmp/release-run-ready-plan.json") -> bytes:
+def _run_ready_plan_bytes(
+    vault: Path, *, out_path: str = "tmp/release-run-ready-plan.json"
+) -> bytes:
     _copy_plan_schema(vault)
     _write_current_run_ready_evidence(vault)
     with _patch_plan_repo():
@@ -642,7 +658,9 @@ def test_release_run_ready_uses_source_package_check_for_stage2_evidence() -> No
     ]
 
 
-def test_run_ready_plan_reports_dirty_worktree_before_expensive_refresh(tmp_path: Path) -> None:
+def test_run_ready_plan_reports_dirty_worktree_before_expensive_refresh(
+    tmp_path: Path,
+) -> None:
     vault = tmp_path
     _copy_plan_schema(vault)
 
@@ -650,15 +668,31 @@ def test_run_ready_plan_reports_dirty_worktree_before_expensive_refresh(tmp_path
         plan = build_run_ready_plan(vault, context=fixed_context())
 
     assert plan["plan_status"] == "blocked"
+    assert plan["summary_mode"] == "blocked_next_target_plan"
     assert plan["minimal_next_target"] == "release-worktree-clean-check"
+    assert plan["next_targets"][0] == "release-worktree-clean-check"
+    assert "git_worktree_dirty" in plan["reason_codes"]
+    assert plan["duration_summary"]["duration_budget_status"] == "within_budget"
+    assert (
+        plan["duration_summary"]["all_stale_targets_duration_budget_status"]
+        == "over_budget"
+    )
+    assert (
+        plan["duration_summary"]["blocked_expensive_duration_budget_status"]
+        == "over_budget"
+    )
     assert plan["stale_evidence_causes"][0]["node"] == "release_preflight"
     assert plan["stale_evidence_causes"][0]["handoff_class"] == "codehealth_source_fix"
     assert "git_worktree_dirty" in plan["nodes"][0]["issues"]
+    assert plan["nodes"][0]["reason_codes"] == ["git_worktree_dirty"]
+    assert plan["nodes"][0]["duration_budget_status"] == "within_budget"
     assert plan["boundary"]["local_only_generated_artifacts_not_promoted"] is True
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
-def test_run_ready_plan_selects_stale_full_suite_as_minimal_next_target(tmp_path: Path) -> None:
+def test_run_ready_plan_selects_stale_full_suite_as_minimal_next_target(
+    tmp_path: Path,
+) -> None:
     vault = tmp_path
     _copy_plan_schema(vault)
     _write_json(
@@ -678,12 +712,34 @@ def test_run_ready_plan_selects_stale_full_suite_as_minimal_next_target(tmp_path
     full_suite_node = plan["nodes"][1]
     assert full_suite_node["name"] == "test_execution_summary_full"
     assert "source_tree_fingerprint_stale" in full_suite_node["issues"]
-    assert plan["minimal_next_target"] == "test-execution-summary-full-current-or-refresh"
+    assert "source_tree_fingerprint_stale" in full_suite_node["reason_codes"]
+    assert full_suite_node["next_targets"] == [
+        "test-execution-summary-full-current-or-refresh"
+    ]
+    assert full_suite_node["duration_budget_status"] == "over_budget"
+    assert (
+        plan["minimal_next_target"] == "test-execution-summary-full-current-or-refresh"
+    )
+    assert plan["next_targets"][0] == "test-execution-summary-full-current-or-refresh"
+    assert "source_tree_fingerprint_stale" in plan["reason_codes"]
+    assert plan["duration_summary"]["duration_budget_status"] == "over_budget"
+    assert (
+        plan["duration_summary"]["all_stale_targets_duration_budget_status"]
+        == "over_budget"
+    )
+    assert (
+        plan["duration_summary"]["blocked_expensive_duration_budget_status"]
+        == "over_budget"
+    )
+    assert plan["duration_summary"]["estimated_next_target_seconds"] == 7200
     assert plan["stale_evidence_causes"][0]["handoff_class"] == "local_evidence_refresh"
+    assert plan["stale_evidence_causes"][0]["duration_budget_status"] == "over_budget"
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
-def test_run_ready_plan_is_ready_when_all_public_evidence_is_current(tmp_path: Path) -> None:
+def test_run_ready_plan_is_ready_when_all_public_evidence_is_current(
+    tmp_path: Path,
+) -> None:
     vault = tmp_path
     _copy_plan_schema(vault)
     _write_current_run_ready_evidence(vault)
@@ -692,12 +748,27 @@ def test_run_ready_plan_is_ready_when_all_public_evidence_is_current(tmp_path: P
         plan = build_run_ready_plan(vault, context=fixed_context())
 
     assert plan["plan_status"] == "ready"
+    assert plan["summary_mode"] == "ready_reuse_plan"
     assert plan["minimal_next_target"] == ""
+    assert plan["next_targets"] == []
+    assert plan["reason_codes"] == []
+    assert plan["duration_summary"]["duration_budget_status"] == "not_required"
+    assert (
+        plan["duration_summary"]["all_stale_targets_duration_budget_status"]
+        == "not_required"
+    )
+    assert (
+        plan["duration_summary"]["blocked_expensive_duration_budget_status"]
+        == "not_required"
+    )
+    assert plan["duration_summary"]["blocked_expensive_gate_count"] == 0
     assert plan["authority_manifest_alignment"]["alignment_status"] == "current"
     assert plan["stale_evidence_causes"] == []
     assert all(node["can_reuse"] for node in plan["nodes"])
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
-    assert write_run_ready_plan(vault, plan, "build/release/release-run-ready-plan.json").exists()
+    assert write_run_ready_plan(
+        vault, plan, "build/release/release-run-ready-plan.json"
+    ).exists()
 
 
 def test_run_ready_plan_selects_stale_authority_manifest_as_minimal_next_target(
@@ -723,7 +794,9 @@ def test_run_ready_plan_selects_stale_authority_manifest_as_minimal_next_target(
     assert "source_revision_stale" in alignment["issues"]
     assert "source_tree_fingerprint_stale" in alignment["issues"]
     assert plan["stale_evidence_causes"][0]["node"] == "authority_manifest"
-    assert plan["stale_evidence_causes"][0]["minimal_next_target"] == "release-run-ready"
+    assert (
+        plan["stale_evidence_causes"][0]["minimal_next_target"] == "release-run-ready"
+    )
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
@@ -808,9 +881,13 @@ def test_run_ready_plan_allows_ephemeral_full_smoke_archive(tmp_path: Path) -> N
     with _patch_plan_repo():
         plan = build_run_ready_plan(vault, context=fixed_context())
 
-    full_smoke_node = next(node for node in plan["nodes"] if node["name"] == "release_smoke_full")
+    full_smoke_node = next(
+        node for node in plan["nodes"] if node["name"] == "release_smoke_full"
+    )
     distribution_node = next(
-        node for node in plan["nodes"] if node["name"] == "release_distribution_zip_smoke"
+        node
+        for node in plan["nodes"]
+        if node["name"] == "release_distribution_zip_smoke"
     )
     assert full_smoke_node["can_reuse"] is True
     assert "referenced_file_stale" not in full_smoke_node["issues"]
@@ -826,7 +903,9 @@ def test_run_ready_plan_writes_byte_stable_ready_golden(tmp_path: Path) -> None:
     assert first_bytes == second_bytes
     assert first_bytes.endswith(b"\n")
     assert first_bytes == (
-        json.dumps(json.loads(first_bytes), ensure_ascii=False, indent=2).encode("utf-8")
+        json.dumps(json.loads(first_bytes), ensure_ascii=False, indent=2).encode(
+            "utf-8"
+        )
         + b"\n"
     )
     assert hashlib.sha256(first_bytes).hexdigest() == READY_PLAN_GOLDEN_SHA256
@@ -839,7 +918,9 @@ def test_run_ready_plan_rejects_schema_invalid_passing_evidence(tmp_path: Path) 
     full_summary_path = vault / "ops" / "reports" / "test-execution-summary-full.json"
     invalid_full_summary = json.loads(full_summary_path.read_text(encoding="utf-8"))
     del invalid_full_summary["counts"]
-    _write_json(vault, "ops/reports/test-execution-summary-full.json", invalid_full_summary)
+    _write_json(
+        vault, "ops/reports/test-execution-summary-full.json", invalid_full_summary
+    )
 
     with _patch_plan_repo():
         plan = build_run_ready_plan(vault, context=fixed_context())
@@ -852,7 +933,9 @@ def test_run_ready_plan_rejects_schema_invalid_passing_evidence(tmp_path: Path) 
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
-def test_run_ready_plan_boundary_excludes_private_roots_and_operator_signoff(tmp_path: Path) -> None:
+def test_run_ready_plan_boundary_excludes_private_roots_and_operator_signoff(
+    tmp_path: Path,
+) -> None:
     vault = tmp_path
     _copy_plan_schema(vault)
 
@@ -896,7 +979,9 @@ def test_run_ready_plan_boundary_excludes_private_roots_and_operator_signoff(tmp
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
-def test_run_ready_plan_private_sentinels_do_not_change_ready_golden(tmp_path: Path) -> None:
+def test_run_ready_plan_private_sentinels_do_not_change_ready_golden(
+    tmp_path: Path,
+) -> None:
     baseline_bytes = _run_ready_plan_bytes(tmp_path / "baseline")
     sentinel_vault = tmp_path / "with-private-sentinels"
     _write_private_sentinels(sentinel_vault)
@@ -906,7 +991,10 @@ def test_run_ready_plan_private_sentinels_do_not_change_ready_golden(tmp_path: P
     _assert_no_forbidden_private_prefixes(json.loads(sentinel_bytes))
 
 
-def test_plan_mode_writes_only_requested_sidecar_without_authority_promotion(tmp_path: Path) -> None:
+def test_plan_mode_writes_only_requested_sidecar_without_authority_promotion(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     vault = tmp_path
     _copy_plan_schema(vault)
 
@@ -922,29 +1010,48 @@ def test_plan_mode_writes_only_requested_sidecar_without_authority_promotion(tmp
         )
 
     assert returncode == 0
+    stdout = capsys.readouterr().out
+    assert "release_run_ready_plan_status=blocked" in stdout
+    assert "summary_mode=blocked_next_target_plan" in stdout
+    assert (
+        "minimal_next_target=test-execution-summary-full-current-or-refresh" in stdout
+    )
+    assert "duration_budget_status=over_budget" in stdout
+    assert "all_stale_targets_duration_budget_status=over_budget" in stdout
+    assert "blocked_expensive_duration_budget_status=over_budget" in stdout
+    assert "duration_budget_seconds=300" in stdout
+    assert "estimated_next_target_seconds=7200" in stdout
+    assert "blocked_expensive_gate_count=" in stdout
+    assert "next_targets=test-execution-summary-full-current-or-refresh" in stdout
+    assert "reason_codes=not_loadable" in stdout
     assert (vault / "tmp" / "release-run-ready-plan.json").is_file()
     assert not (vault / "build" / "release" / "release-run-manifest.json").exists()
     assert not (vault / "ops" / "operator" / "operator-release-summary.json").exists()
     assert not (vault / "ops" / "reports").exists()
 
 
-def test_command_step_records_reused_summary_mode_for_public_current(tmp_path: Path) -> None:
+def test_command_step_records_reused_summary_mode_for_public_current(
+    tmp_path: Path,
+) -> None:
     vault = tmp_path
 
-    with patch(
-        "ops.scripts.release.release_run_ready.run_with_timeout",
-        return_value=TimedProcessResult(
-            args=["make", "release-public-current"],
-            returncode=0,
-            stdout="public check summary is current; reused ops/reports/public-check-summary.json",
-            stderr="",
-            timed_out=False,
-            timeout_seconds=60,
-            termination_reason="completed",
+    with (
+        patch(
+            "ops.scripts.release.release_run_ready.run_with_timeout",
+            return_value=TimedProcessResult(
+                args=["make", "release-public-current"],
+                returncode=0,
+                stdout="public check summary is current; reused ops/reports/public-check-summary.json",
+                stderr="",
+                timed_out=False,
+                timeout_seconds=60,
+                termination_reason="completed",
+            ),
         ),
-    ), patch(
-        "ops.scripts.release.release_run_ready.release_source_tree_fingerprint",
-        return_value="fp-current",
+        patch(
+            "ops.scripts.release.release_run_ready.release_source_tree_fingerprint",
+            return_value="fp-current",
+        ),
     ):
         step = _command_step(
             vault=vault,
@@ -957,7 +1064,9 @@ def test_command_step_records_reused_summary_mode_for_public_current(tmp_path: P
     assert step["summary_mode"] == "reused"
 
 
-def test_command_step_records_executed_summary_mode_for_mixed_source_package_step(tmp_path: Path) -> None:
+def test_command_step_records_executed_summary_mode_for_mixed_source_package_step(
+    tmp_path: Path,
+) -> None:
     vault = tmp_path
     stdout = "\n".join(
         [
@@ -966,20 +1075,23 @@ def test_command_step_records_executed_summary_mode_for_mixed_source_package_ste
         ]
     )
 
-    with patch(
-        "ops.scripts.release.release_run_ready.run_with_timeout",
-        return_value=TimedProcessResult(
-            args=["make", "release-source-package-check"],
-            returncode=0,
-            stdout=stdout,
-            stderr="",
-            timed_out=False,
-            timeout_seconds=60,
-            termination_reason="completed",
+    with (
+        patch(
+            "ops.scripts.release.release_run_ready.run_with_timeout",
+            return_value=TimedProcessResult(
+                args=["make", "release-source-package-check"],
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+                timed_out=False,
+                timeout_seconds=60,
+                termination_reason="completed",
+            ),
         ),
-    ), patch(
-        "ops.scripts.release.release_run_ready.release_source_tree_fingerprint",
-        return_value="fp-current",
+        patch(
+            "ops.scripts.release.release_run_ready.release_source_tree_fingerprint",
+            return_value="fp-current",
+        ),
     ):
         step = _command_step(
             vault=vault,

@@ -769,9 +769,9 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
     case.assertEqual(
         _recipe_lines(text, "generated-artifact-finality-suffix"),
         [
+            "$(MAKE) artifact-freshness",
             "$(MAKE) external-report-action-matrix",
             "$(MAKE) generated-artifact-index",
-            "$(MAKE) artifact-freshness",
         ],
     )
     case.assertIn(
@@ -987,6 +987,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "make dev-install",
             "make static",
             "make local-cache-clean",
+            "make local-tool-state-clean",
             "make uv-cache-prune",
             "make strict-preview-audit",
             "make test-report-contract-core",
@@ -1109,13 +1110,29 @@ class MakefileStaticGateTests(unittest.TestCase):
             "LOCAL_CACHE_CLEAN_PATHS ?= .pytest_cache .hypothesis .ruff_cache .mypy_cache $(TOOL_CACHE_ROOT)",
             text,
         )
+        self.assertIn(
+            "LOCAL_TOOL_STATE_CLEAN_PATHS ?= .agents .obsidian .serena .ouroboros .ouroboros_eval_artifact.md",
+            text,
+        )
         self.assertIn("LOCAL_CACHE_CLEAN_FIND_ROOTS ?= ops tests tools", text)
         self.assertIn("rm -rf $(LOCAL_CACHE_CLEAN_PATHS)", block)
         self.assertIn("find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type d -name __pycache__", block)
         self.assertIn("find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type f", block)
+        self.assertNotIn("LOCAL_TOOL_STATE_CLEAN_PATHS", block)
+        self.assertNotIn(".kiro", block)
         self.assertNotIn(".venv", block)
         self.assertNotIn("ops/reports", block)
         self.assertNotIn("build/release", block)
+
+    def test_local_tool_state_clean_is_explicit_and_keeps_migration_state_out(self) -> None:
+        text = _makefile_text()
+        block = _target_block(text, "local-tool-state-clean")
+
+        self.assertIn("local-tool-state-clean", _target_block(text, ".PHONY"))
+        self.assertIn("rm -rf $(LOCAL_TOOL_STATE_CLEAN_PATHS)", block)
+        self.assertNotIn(".kiro", block)
+        self.assertNotIn(".venv", block)
+        self.assertNotIn("ops/reports", block)
 
     def test_uv_cache_prune_keeps_global_uv_cleanup_explicit_and_non_destructive(self) -> None:
         text = _makefile_text()

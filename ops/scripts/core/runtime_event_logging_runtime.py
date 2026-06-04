@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .output_runtime import write_output_text
+from .run_id_runtime import reject_template_placeholder_run_id
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import RUNTIME_EVENT_SCHEMA_PATH
 from .schema_runtime import load_schema_with_vault_override, validate_or_raise
@@ -124,6 +125,8 @@ def append_runtime_event(
 ) -> str:
     append_request = _append_runtime_event_request(request, legacy_fields)
     event_request = append_request.event
+    if event_request.run_id:
+        reject_template_placeholder_run_id(event_request.run_id)
     event = build_runtime_event(event_request)
     schema = load_schema_with_vault_override(vault, RUNTIME_EVENT_SCHEMA)
     validate_or_raise(event, schema, context="runtime event schema validation failed")

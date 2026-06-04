@@ -7,6 +7,7 @@ from pathlib import Path
 from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
 from ops.scripts.output_runtime import write_output_text
 from ops.scripts.policy_runtime import report_path
+from ops.scripts.run_id_runtime import reject_template_placeholder_run_id
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     PLANNING_VALIDATION_SCHEMA_PATH,
@@ -148,6 +149,10 @@ def _scaffold_run_dir(
     run_id: str,
     request: ScaffoldRunDirRequest,
 ) -> Path:
+    try:
+        reject_template_placeholder_run_id(run_id)
+    except ValueError as exc:
+        raise RunMechanismExperimentUsageError(str(exc)) from exc
     run_dir = vault / "runs" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     if not request.starter_bundle_dir.exists():

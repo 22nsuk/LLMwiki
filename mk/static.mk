@@ -13,13 +13,14 @@ MYPY_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/mypy/$(TOOL_CACHE_PLATFORM)
 RUFF_CACHE_FLAGS ?= --cache-dir $(RUFF_CACHE_DIR)
 MYPY_CACHE_FLAGS ?= --cache-dir $(MYPY_CACHE_DIR)
 LOCAL_CACHE_CLEAN_PATHS ?= .pytest_cache .hypothesis .ruff_cache .mypy_cache $(TOOL_CACHE_ROOT)
+LOCAL_TOOL_STATE_CLEAN_PATHS ?= .agents .obsidian .serena .ouroboros .ouroboros_eval_artifact.md
 LOCAL_CACHE_CLEAN_FIND_ROOTS ?= ops tests tools
 UV_CACHE_PRUNE_FLAGS ?=
 UV ?= uv
 UV_CANONICAL_INDEX_URL ?= https://pypi.org/simple
 UV_LOCK_CHECK_INDEX_FLAGS ?= --default-index "$(UV_CANONICAL_INDEX_URL)"
 
-.PHONY: static ruff ruff-strict-preview strict-preview-audit typecheck mypy-strict-preview uv-lock-check local-cache-clean uv-cache-prune
+.PHONY: static ruff ruff-strict-preview strict-preview-audit typecheck mypy-strict-preview uv-lock-check local-cache-clean local-tool-state-clean uv-cache-prune
 
 static: uv-lock-check ruff typecheck
 
@@ -45,6 +46,9 @@ local-cache-clean:
 	rm -rf $(LOCAL_CACHE_CLEAN_PATHS)
 	find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type d -name __pycache__ -prune -exec rm -rf {} +
 	find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+
+local-tool-state-clean:
+	rm -rf $(LOCAL_TOOL_STATE_CLEAN_PATHS)
 
 uv-cache-prune:
 	$(UV) cache prune $(UV_CACHE_PRUNE_FLAGS)

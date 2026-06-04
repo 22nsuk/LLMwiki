@@ -20,10 +20,14 @@
     "currentness",
     "plan_status",
     "execution_mode",
+    "summary_mode",
     "minimal_next_target",
+    "next_targets",
+    "reason_codes",
     "nodes",
     "authority_manifest_alignment",
     "stale_evidence_causes",
+    "duration_summary",
     "boundary"
   ],
   "properties": {
@@ -53,7 +57,18 @@
     },
     "plan_status": { "type": "string", "enum": ["ready", "blocked"] },
     "execution_mode": { "type": "string", "const": "run_ready_preflight_plan_only" },
+    "summary_mode": { "type": "string", "enum": ["ready_reuse_plan", "blocked_next_target_plan"] },
     "minimal_next_target": { "type": "string" },
+    "next_targets": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
     "nodes": {
       "type": "array",
       "minItems": 1,
@@ -105,6 +120,7 @@
       "type": "array",
       "items": { "$ref": "#/$defs/cause" }
     },
+    "duration_summary": { "$ref": "#/$defs/duration_summary" },
     "boundary": {
       "type": "object",
       "additionalProperties": false,
@@ -139,7 +155,12 @@
         "source_tree_fingerprint",
         "input_fingerprint",
         "can_reuse",
-        "issues"
+        "issues",
+        "reason_codes",
+        "next_targets",
+        "estimated_refresh_duration_seconds",
+        "duration_budget_seconds",
+        "duration_budget_status"
       ],
       "properties": {
         "name": { "type": "string", "minLength": 1 },
@@ -183,6 +204,22 @@
           },
           "uniqueItems": true
         },
+        "reason_codes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "next_targets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "estimated_refresh_duration_seconds": { "type": "integer", "minimum": 0 },
+        "duration_budget_seconds": { "type": "integer", "minimum": 0 },
+        "duration_budget_status": {
+          "type": "string",
+          "enum": ["not_required", "within_budget", "over_budget", "unbudgeted"]
+        },
         "diagnostics": {
           "type": "object",
           "additionalProperties": true
@@ -197,9 +234,14 @@
         "node",
         "path",
         "issues",
+        "reason_codes",
         "summary",
         "minimal_next_target",
+        "next_targets",
         "cost_class",
+        "estimated_duration_seconds",
+        "duration_budget_seconds",
+        "duration_budget_status",
         "handoff_class"
       ],
       "properties": {
@@ -211,13 +253,70 @@
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true
         },
+        "reason_codes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
         "summary": { "type": "string", "minLength": 1 },
         "minimal_next_target": { "type": "string", "minLength": 1 },
+        "next_targets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
         "cost_class": { "type": "string", "enum": ["cheap", "medium", "expensive"] },
+        "estimated_duration_seconds": { "type": "integer", "minimum": 0 },
+        "duration_budget_seconds": { "type": "integer", "minimum": 0 },
+        "duration_budget_status": {
+          "type": "string",
+          "enum": ["not_required", "within_budget", "over_budget", "unbudgeted"]
+        },
         "handoff_class": {
           "type": "string",
           "enum": ["codehealth_source_fix", "local_evidence_refresh"]
         }
+      }
+    },
+    "duration_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "duration_budget_seconds",
+        "estimated_next_target_seconds",
+        "estimated_all_stale_targets_seconds",
+        "duration_budget_status",
+        "all_stale_targets_duration_budget_status",
+        "blocked_expensive_duration_seconds",
+        "blocked_expensive_duration_budget_status",
+        "next_targets",
+        "expensive_gate_count",
+        "blocked_expensive_gate_count"
+      ],
+      "properties": {
+        "duration_budget_seconds": { "type": "integer", "minimum": 0 },
+        "estimated_next_target_seconds": { "type": "integer", "minimum": 0 },
+        "estimated_all_stale_targets_seconds": { "type": "integer", "minimum": 0 },
+        "duration_budget_status": {
+          "type": "string",
+          "enum": ["not_required", "within_budget", "over_budget", "unbudgeted"]
+        },
+        "all_stale_targets_duration_budget_status": {
+          "type": "string",
+          "enum": ["not_required", "within_budget", "over_budget", "unbudgeted"]
+        },
+        "blocked_expensive_duration_seconds": { "type": "integer", "minimum": 0 },
+        "blocked_expensive_duration_budget_status": {
+          "type": "string",
+          "enum": ["not_required", "within_budget", "over_budget", "unbudgeted"]
+        },
+        "next_targets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "expensive_gate_count": { "type": "integer", "minimum": 0 },
+        "blocked_expensive_gate_count": { "type": "integer", "minimum": 0 }
       }
     }
   }

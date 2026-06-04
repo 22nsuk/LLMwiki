@@ -100,9 +100,9 @@ FINALITY_RESETTLE_TARGETS = [
 ]
 
 GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS = [
+    "artifact-freshness",
     "external-report-action-matrix",
     "generated-artifact-index",
-    "artifact-freshness",
 ]
 
 GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS = [
@@ -110,9 +110,9 @@ GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS = [
 ]
 
 GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS = [
+    "artifact-freshness",
     "external-report-action-matrix",
     "generated-artifact-index",
-    "artifact-freshness",
 ]
 PLANNER_CLOSEOUT_FALLBACK_TARGETS = [
     "workflow-dependency-planner",

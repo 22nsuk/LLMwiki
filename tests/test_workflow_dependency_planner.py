@@ -70,9 +70,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "generated-artifact-script-output:\n"
             "\t$(MAKE) script-output-surfaces\n"
             "generated-artifact-finality-suffix:\n"
+            "\t$(MAKE) artifact-freshness\n"
             "\t$(MAKE) external-report-action-matrix\n"
             "\t$(MAKE) generated-artifact-index\n"
-            "\t$(MAKE) artifact-freshness\n"
             "script-output-surfaces:\n"
             "\t@echo surfaces\n"
             "external-report-action-matrix:\n"
@@ -283,9 +283,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(
             workflow["steps"][1]["fanout_targets"],
             [
+                "artifact-freshness",
                 "external-report-action-matrix",
                 "generated-artifact-index",
-                "artifact-freshness",
             ],
         )
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
@@ -305,9 +305,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "generated-artifact-finality-suffix",
                 "canonical_report_finality_suffix_changed",
                 [
+                    "artifact-freshness",
                     "external-report-action-matrix",
                     "generated-artifact-index",
-                    "artifact-freshness",
                 ],
             ),
             (

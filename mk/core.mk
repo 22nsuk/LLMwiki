@@ -20,7 +20,8 @@ help:
 		"" \
 		"Source checks:" \
 		"  make static                       run Ruff and mypy base gates" \
-		"  make local-cache-clean            remove safe local Python/tool caches" \
+		"  make local-cache-clean            remove safe local Python caches" \
+		"  make local-tool-state-clean       remove ignored local tool state" \
 		"  make uv-cache-prune               prune unreachable global uv cache objects" \
 		"  make ruff-strict-preview          run strict Ruff preview across ops/scripts tests tools" \
 		"  make mypy-strict-preview          run strict mypy preview across ops/scripts tests tools" \

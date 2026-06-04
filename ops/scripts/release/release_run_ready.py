@@ -71,6 +71,13 @@ DEFAULT_PLAN_OUT = "build/release/release-run-ready-plan.json"
 PLAN_SCHEMA_PATH = "ops/schemas/release-run-ready-plan.schema.json"
 DEFAULT_TIMEOUT_SECONDS = 7200
 PLAN_SOURCE_COMMAND = "python -m ops.scripts.release_run_ready --vault . --plan"
+TEST_LANE_REGISTRY_PATH = "ops/test-lane-registry.json"
+DEFAULT_PLAN_DURATION_BUDGET_SECONDS = 300
+FALLBACK_COST_CLASS_DURATION_SECONDS = {
+    "cheap": 60,
+    "medium": 300,
+    "expensive": DEFAULT_TIMEOUT_SECONDS,
+}
 
 
 @dataclass(frozen=True)
@@ -210,7 +217,11 @@ def _summary_mode(name: str, *, stdout_tail: str, stderr_tail: str) -> str:
             "source package smoke evidence is current; reused",
             "source package clean extract evidence is current; reused",
         )
-        return "reused" if all(signal in combined for signal in required_signals) else "executed"
+        return (
+            "reused"
+            if all(signal in combined for signal in required_signals)
+            else "executed"
+        )
     return "executed"
 
 
@@ -226,13 +237,21 @@ def _command_step(
     started = time.monotonic()
     result = run_with_timeout(command, cwd=vault, timeout_seconds=timeout_seconds)
     after = release_source_tree_fingerprint(vault)
-    status = "pass" if result.returncode == 0 and not result.timed_out and after == expected_fingerprint else "fail"
+    status = (
+        "pass"
+        if result.returncode == 0
+        and not result.timed_out
+        and after == expected_fingerprint
+        else "fail"
+    )
     stdout_tail = sanitize_report_text(vault, _tail(result.stdout))
     stderr_tail = sanitize_report_text(vault, _tail(result.stderr))
     return {
         "name": name,
         "status": status,
-        "summary_mode": _summary_mode(name, stdout_tail=stdout_tail, stderr_tail=stderr_tail),
+        "summary_mode": _summary_mode(
+            name, stdout_tail=stdout_tail, stderr_tail=stderr_tail
+        ),
         "command": [sanitize_report_text(vault, item) for item in command],
         "returncode": result.returncode,
         "duration_ms": int(round((time.monotonic() - started) * 1000)),
@@ -250,9 +269,7 @@ def _synthetic_preflight(vault: Path, expected_fingerprint: str) -> dict[str, An
     ignored_count = ignored_tracked_file_count(vault)
     status = (
         "pass"
-        if fingerprint == expected_fingerprint
-        and clean
-        and ignored_count == 0
+        if fingerprint == expected_fingerprint and clean and ignored_count == 0
         else "fail"
     )
     return {
@@ -291,6 +308,81 @@ def _unique_issue_values(values: list[str]) -> list[str]:
     return result
 
 
+def _unique_text_values(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            result.append(value)
+    return result
+
+
+def _load_json_dict(path: Path) -> dict[str, Any]:
+    try:
+        payload = load_optional_json_object_with_diagnostics(path)[0]
+    except OSError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _plan_duration_config(vault: Path) -> tuple[int, dict[str, int]]:
+    registry = _load_json_dict(vault / TEST_LANE_REGISTRY_PATH)
+    changed_path_minimums = registry.get("changed_path_minimums")
+    config = changed_path_minimums if isinstance(changed_path_minimums, dict) else {}
+    budget = int(
+        config.get(
+            "default_duration_budget_seconds", DEFAULT_PLAN_DURATION_BUDGET_SECONDS
+        )
+        or 0
+    )
+    raw_durations = config.get("command_duration_seconds")
+    if not isinstance(raw_durations, dict):
+        return budget, {}
+    durations: dict[str, int] = {}
+    for command, duration in raw_durations.items():
+        command_text = str(command).strip()
+        if not command_text:
+            continue
+        try:
+            durations[command_text] = max(0, int(duration))
+        except (TypeError, ValueError):
+            continue
+    return budget, durations
+
+
+def _target_duration_seconds(
+    target: str,
+    *,
+    cost_class: str,
+    command_duration_seconds: dict[str, int],
+) -> int:
+    command = f"make {target}"
+    return command_duration_seconds.get(
+        command,
+        FALLBACK_COST_CLASS_DURATION_SECONDS.get(
+            cost_class, DEFAULT_PLAN_DURATION_BUDGET_SECONDS
+        ),
+    )
+
+
+def _duration_budget_status(
+    *,
+    estimated_duration_seconds: int,
+    duration_budget_seconds: int,
+    required: bool,
+) -> str:
+    if not required:
+        return "not_required"
+    if duration_budget_seconds <= 0:
+        return "unbudgeted"
+    return (
+        "within_budget"
+        if estimated_duration_seconds <= duration_budget_seconds
+        else "over_budget"
+    )
+
+
 def _revision_is_current(observed: str, current_revision: str) -> bool:
     if not observed:
         return True
@@ -320,7 +412,9 @@ def _currentness_status(payload: dict[str, Any]) -> str:
     return str(currentness.get("status", "")).strip()
 
 
-def _referenced_file_is_current(vault: Path, payload: dict[str, Any], field: str) -> bool:
+def _referenced_file_is_current(
+    vault: Path, payload: dict[str, Any], field: str
+) -> bool:
     if not field:
         return True
     reference = payload.get(field)
@@ -345,7 +439,11 @@ def _semantic_plan_issues(
     issues: list[str] = []
     if str(payload.get("producer", "")).strip() != spec.expected_producer:
         issues.append("producer_mismatch")
-    if spec.expected_source_command and str(payload.get("source_command", "")).strip() != spec.expected_source_command:
+    if (
+        spec.expected_source_command
+        and str(payload.get("source_command", "")).strip()
+        != spec.expected_source_command
+    ):
         issues.append("source_command_mismatch")
     if _currentness_status(payload) != "current":
         issues.append("currentness_not_current")
@@ -354,9 +452,15 @@ def _semantic_plan_issues(
     input_fingerprints = payload.get("input_fingerprints")
     if not isinstance(input_fingerprints, dict) or not input_fingerprints:
         issues.append("input_fingerprints_missing")
-    if spec.expected_profile and str(payload.get("profile", "")).strip() != spec.expected_profile:
+    if (
+        spec.expected_profile
+        and str(payload.get("profile", "")).strip() != spec.expected_profile
+    ):
         issues.append("profile_mismatch")
-    if spec.expected_suite and str(payload.get("suite", "")).strip() != spec.expected_suite:
+    if (
+        spec.expected_suite
+        and str(payload.get("suite", "")).strip() != spec.expected_suite
+    ):
         issues.append("suite_mismatch")
     if spec.require_full_suite and not bool(payload.get("represents_full_suite")):
         issues.append("full_suite_evidence_missing")
@@ -376,9 +480,13 @@ def _json_plan_node(
     spec: RunReadyPlanSpec,
     current_fingerprint: str,
     current_revision: str,
+    duration_budget_seconds: int,
+    command_duration_seconds: dict[str, int],
 ) -> dict[str, Any]:
     identity = _file_identity(vault, spec.path)
-    payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, spec.path))
+    payload, diagnostics = load_optional_json_object_with_diagnostics(
+        _resolve(vault, spec.path)
+    )
     if diagnostics.get("status") != "ok":
         payload = {}
     artifact_kind = str(payload.get("artifact_kind", "")).strip()
@@ -388,7 +496,9 @@ def _json_plan_node(
     issues: list[str] = []
     if diagnostics.get("status") != "ok":
         issues.append("not_loadable")
-    elif _schema_errors_for_payload(vault, schema_path=spec.schema_path, payload=payload):
+    elif _schema_errors_for_payload(
+        vault, schema_path=spec.schema_path, payload=payload
+    ):
         issues.append("schema_invalid")
     if artifact_kind != spec.expected_artifact_kind:
         issues.append("artifact_kind_mismatch")
@@ -401,6 +511,12 @@ def _json_plan_node(
     if spec.require_pass and status != "pass":
         issues.append("not_pass")
     issues = _unique_issue_values(issues)
+    estimated_refresh_duration_seconds = _target_duration_seconds(
+        spec.refresh_target,
+        cost_class=spec.cost_class,
+        command_duration_seconds=command_duration_seconds,
+    )
+    can_reuse = not issues
     return {
         "name": spec.name,
         "path": identity["path"],
@@ -415,8 +531,17 @@ def _json_plan_node(
         "source_revision": source_revision,
         "source_tree_fingerprint": source_tree_fingerprint,
         "input_fingerprint": identity["sha256"],
-        "can_reuse": not issues,
+        "can_reuse": can_reuse,
         "issues": issues,
+        "reason_codes": issues,
+        "next_targets": [] if can_reuse else [spec.refresh_target],
+        "estimated_refresh_duration_seconds": estimated_refresh_duration_seconds,
+        "duration_budget_seconds": duration_budget_seconds,
+        "duration_budget_status": _duration_budget_status(
+            estimated_duration_seconds=estimated_refresh_duration_seconds,
+            duration_budget_seconds=duration_budget_seconds,
+            required=not can_reuse,
+        ),
     }
 
 
@@ -425,6 +550,8 @@ def _preflight_plan_node(
     *,
     current_fingerprint: str,
     current_revision: str,
+    duration_budget_seconds: int,
+    command_duration_seconds: dict[str, int],
 ) -> dict[str, Any]:
     clean = git_clean(vault)
     remote = remote_sync(vault)
@@ -434,6 +561,13 @@ def _preflight_plan_node(
         issues.append("git_worktree_dirty")
     if ignored_count != 0:
         issues.append("ignored_tracked_files_present")
+    issues = _unique_issue_values(issues)
+    estimated_refresh_duration_seconds = _target_duration_seconds(
+        "release-worktree-clean-check",
+        cost_class="cheap",
+        command_duration_seconds=command_duration_seconds,
+    )
+    can_reuse = not issues
     return {
         "name": "release_preflight",
         "path": ".",
@@ -448,8 +582,17 @@ def _preflight_plan_node(
         "source_revision": current_revision,
         "source_tree_fingerprint": current_fingerprint,
         "input_fingerprint": current_fingerprint,
-        "can_reuse": not issues,
+        "can_reuse": can_reuse,
         "issues": issues,
+        "reason_codes": issues,
+        "next_targets": [] if can_reuse else ["release-worktree-clean-check"],
+        "estimated_refresh_duration_seconds": estimated_refresh_duration_seconds,
+        "duration_budget_seconds": duration_budget_seconds,
+        "duration_budget_status": _duration_budget_status(
+            estimated_duration_seconds=estimated_refresh_duration_seconds,
+            duration_budget_seconds=duration_budget_seconds,
+            required=not can_reuse,
+        ),
         "diagnostics": {
             "git_clean": clean,
             "ignored_tracked_file_count": ignored_count,
@@ -466,33 +609,121 @@ def _plan_cause(node: dict[str, Any]) -> dict[str, Any]:
         "node": str(node["name"]),
         "path": str(node["path"]),
         "issues": issues,
+        "reason_codes": [str(reason) for reason in node.get("reason_codes", issues)],
         "summary": (
             f"{node['name']} is not reusable for release-run-ready because "
             f"{issue_text}."
         ),
         "minimal_next_target": str(node["refresh_target"]),
+        "next_targets": [str(node["refresh_target"])],
         "cost_class": str(node["cost_class"]),
+        "estimated_duration_seconds": int(
+            node.get("estimated_refresh_duration_seconds", 0) or 0
+        ),
+        "duration_budget_seconds": int(node.get("duration_budget_seconds", 0) or 0),
+        "duration_budget_status": str(node.get("duration_budget_status", "unbudgeted")),
         "handoff_class": "local_evidence_refresh"
         if str(node["name"]) != "release_preflight"
         else "codehealth_source_fix",
     }
 
 
-def _authority_manifest_cause(alignment: dict[str, Any]) -> dict[str, Any]:
+def _authority_manifest_cause(
+    alignment: dict[str, Any],
+    *,
+    duration_budget_seconds: int,
+    command_duration_seconds: dict[str, int],
+) -> dict[str, Any]:
     issues = [str(issue) for issue in alignment.get("issues", [])]
-    issue_text = ",".join(issues) or str(alignment.get("alignment_status", "not_current"))
+    issue_text = ",".join(issues) or str(
+        alignment.get("alignment_status", "not_current")
+    )
+    estimated_duration_seconds = _target_duration_seconds(
+        "release-run-ready",
+        cost_class="expensive",
+        command_duration_seconds=command_duration_seconds,
+    )
     return {
         "id": "authority_manifest_not_current",
         "node": "authority_manifest",
         "path": str(alignment.get("path", DEFAULT_OUT)),
         "issues": issues or [issue_text],
+        "reason_codes": issues or [issue_text],
         "summary": (
             "build/release/release-run-manifest.json is not current for "
             f"release-run-ready because {issue_text}."
         ),
         "minimal_next_target": "release-run-ready",
+        "next_targets": ["release-run-ready"],
         "cost_class": "expensive",
+        "estimated_duration_seconds": estimated_duration_seconds,
+        "duration_budget_seconds": duration_budget_seconds,
+        "duration_budget_status": _duration_budget_status(
+            estimated_duration_seconds=estimated_duration_seconds,
+            duration_budget_seconds=duration_budget_seconds,
+            required=True,
+        ),
         "handoff_class": "local_evidence_refresh",
+    }
+
+
+def _duration_summary(
+    *,
+    nodes: list[dict[str, Any]],
+    causes: list[dict[str, Any]],
+    duration_budget_seconds: int,
+) -> dict[str, Any]:
+    next_targets = _unique_text_values(
+        [str(cause.get("minimal_next_target", "")) for cause in causes]
+    )
+    unique_durations: dict[str, int] = {}
+    for cause in causes:
+        target = str(cause.get("minimal_next_target", ""))
+        if not target:
+            continue
+        unique_durations[target] = max(
+            unique_durations.get(target, 0),
+            int(cause.get("estimated_duration_seconds", 0) or 0),
+        )
+    estimated_next_target_seconds = (
+        int(causes[0].get("estimated_duration_seconds", 0) or 0) if causes else 0
+    )
+    estimated_all_stale_targets_seconds = sum(unique_durations.values())
+    blocked_expensive_duration_seconds = sum(
+        int(cause.get("estimated_duration_seconds", 0) or 0)
+        for cause in causes
+        if cause["cost_class"] == "expensive"
+    )
+    blocked_expensive_gate_count = sum(
+        1
+        for node in nodes
+        if node["cost_class"] == "expensive" and not node["can_reuse"]
+    ) + sum(1 for cause in causes if cause["node"] == "authority_manifest")
+    return {
+        "duration_budget_seconds": duration_budget_seconds,
+        "estimated_next_target_seconds": estimated_next_target_seconds,
+        "estimated_all_stale_targets_seconds": estimated_all_stale_targets_seconds,
+        "duration_budget_status": _duration_budget_status(
+            estimated_duration_seconds=estimated_next_target_seconds,
+            duration_budget_seconds=duration_budget_seconds,
+            required=bool(causes),
+        ),
+        "all_stale_targets_duration_budget_status": _duration_budget_status(
+            estimated_duration_seconds=estimated_all_stale_targets_seconds,
+            duration_budget_seconds=duration_budget_seconds,
+            required=bool(causes),
+        ),
+        "blocked_expensive_duration_seconds": blocked_expensive_duration_seconds,
+        "blocked_expensive_duration_budget_status": _duration_budget_status(
+            estimated_duration_seconds=blocked_expensive_duration_seconds,
+            duration_budget_seconds=duration_budget_seconds,
+            required=blocked_expensive_gate_count > 0,
+        ),
+        "next_targets": next_targets,
+        "expensive_gate_count": sum(
+            1 for node in nodes if node["cost_class"] == "expensive"
+        ),
+        "blocked_expensive_gate_count": blocked_expensive_gate_count,
     }
 
 
@@ -505,11 +736,14 @@ def build_run_ready_plan(
     generated_at = runtime_context.isoformat_z()
     fingerprint = release_source_tree_fingerprint(vault)
     revision = git_commit(vault)
+    duration_budget_seconds, command_duration_seconds = _plan_duration_config(vault)
     nodes = [
         _preflight_plan_node(
             vault,
             current_fingerprint=fingerprint,
             current_revision=revision,
+            duration_budget_seconds=duration_budget_seconds,
+            command_duration_seconds=command_duration_seconds,
         )
     ]
     nodes.extend(
@@ -518,6 +752,8 @@ def build_run_ready_plan(
             spec=spec,
             current_fingerprint=fingerprint,
             current_revision=revision,
+            duration_budget_seconds=duration_budget_seconds,
+            command_duration_seconds=command_duration_seconds,
         )
         for spec in PLAN_SPECS
     )
@@ -529,8 +765,17 @@ def build_run_ready_plan(
     )
     causes = [_plan_cause(node) for node in nodes if not node["can_reuse"]]
     if authority_alignment["alignment_status"] != "current":
-        causes.append(_authority_manifest_cause(authority_alignment))
+        causes.append(
+            _authority_manifest_cause(
+                authority_alignment,
+                duration_budget_seconds=duration_budget_seconds,
+                command_duration_seconds=command_duration_seconds,
+            )
+        )
     minimal_next_target = str(causes[0]["minimal_next_target"]) if causes else ""
+    next_targets = _unique_text_values(
+        [str(cause.get("minimal_next_target", "")) for cause in causes]
+    )
     plan_status = "ready" if not causes else "blocked"
     return {
         "$schema": PLAN_SCHEMA_PATH,
@@ -541,10 +786,7 @@ def build_run_ready_plan(
         "source_revision": revision,
         "source_tree_fingerprint": fingerprint,
         "input_fingerprints": {
-            **{
-                str(node["name"]): str(node["input_fingerprint"])
-                for node in nodes
-            },
+            **{str(node["name"]): str(node["input_fingerprint"]) for node in nodes},
             "authority_manifest": str(authority_alignment["input_fingerprint"]),
         },
         "schema_version": 1,
@@ -554,10 +796,26 @@ def build_run_ready_plan(
         "currentness": {"status": "current", "checked_at": generated_at},
         "plan_status": plan_status,
         "execution_mode": "run_ready_preflight_plan_only",
+        "summary_mode": "ready_reuse_plan"
+        if plan_status == "ready"
+        else "blocked_next_target_plan",
         "minimal_next_target": minimal_next_target,
+        "next_targets": next_targets,
+        "reason_codes": _unique_text_values(
+            [
+                str(reason)
+                for cause in causes
+                for reason in cause.get("reason_codes", [])
+            ]
+        ),
         "nodes": nodes,
         "authority_manifest_alignment": authority_alignment,
         "stale_evidence_causes": causes,
+        "duration_summary": _duration_summary(
+            nodes=nodes,
+            causes=causes,
+            duration_budget_seconds=duration_budget_seconds,
+        ),
         "boundary": {
             "local_only_generated_artifacts_not_promoted": True,
             "ignored_evidence_refresh_lane": "release-evidence-sync/full-vault",
@@ -566,7 +824,9 @@ def build_run_ready_plan(
     }
 
 
-def write_run_ready_plan(vault: Path, plan: dict[str, Any], out_path: str | None) -> Path:
+def write_run_ready_plan(
+    vault: Path, plan: dict[str, Any], out_path: str | None
+) -> Path:
     return write_schema_backed_report(
         SchemaBackedReportWriteRequest(
             vault=vault,
@@ -612,12 +872,22 @@ def run_release_ready(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the single-authority release readiness workflow.")
+    parser = argparse.ArgumentParser(
+        description="Run the single-authority release readiness workflow."
+    )
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)
-    parser.add_argument("--plan", action="store_true", help="Write a read-only release-run-ready cost plan.")
+    parser.add_argument(
+        "--plan",
+        action="store_true",
+        help="Write a read-only release-run-ready cost plan.",
+    )
     parser.add_argument("--plan-out", default=DEFAULT_PLAN_OUT)
-    parser.add_argument("--require-ready", action="store_true", help="Fail plan mode when evidence is not reusable.")
+    parser.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="Fail plan mode when evidence is not reusable.",
+    )
     parser.add_argument("--make-bin", default="make")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
     return parser.parse_args(argv)
@@ -631,8 +901,30 @@ def main(argv: list[str] | None = None) -> int:
         path = write_run_ready_plan(vault, plan, args.plan_out)
         print(display_path(vault, path))
         print(f"release_run_ready_plan_status={plan['plan_status']}")
+        print(f"summary_mode={plan['summary_mode']}")
         if plan["minimal_next_target"]:
             print(f"minimal_next_target={plan['minimal_next_target']}")
+        duration_summary = plan["duration_summary"]
+        print(f"duration_budget_status={duration_summary['duration_budget_status']}")
+        print(
+            "all_stale_targets_duration_budget_status="
+            f"{duration_summary['all_stale_targets_duration_budget_status']}"
+        )
+        print(
+            "blocked_expensive_duration_budget_status="
+            f"{duration_summary['blocked_expensive_duration_budget_status']}"
+        )
+        print(f"duration_budget_seconds={duration_summary['duration_budget_seconds']}")
+        print(
+            "estimated_next_target_seconds="
+            f"{duration_summary['estimated_next_target_seconds']}"
+        )
+        print(
+            "blocked_expensive_gate_count="
+            f"{duration_summary['blocked_expensive_gate_count']}"
+        )
+        print("next_targets=" + ",".join(plan["next_targets"]))
+        print("reason_codes=" + ",".join(plan["reason_codes"]))
         return 1 if args.require_ready and plan["plan_status"] != "ready" else 0
     manifest = run_release_ready(
         vault=vault,

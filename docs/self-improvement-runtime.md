@@ -179,15 +179,15 @@ drifting apart. Release promotion still requires the separate
 
 `generated-artifact-converge` is now the generated-report finality suffix, not
 the owner of every generated contract fixture. It refreshes
-`external-report-action-matrix`, `generated-artifact-index`, and
-`artifact-freshness` in that order. `script-output-surfaces` is a separate
+`artifact-freshness`, `external-report-action-matrix`, and
+`generated-artifact-index` in that order. `script-output-surfaces` is a separate
 semantic registry slice owned by `generated-artifact-script-output`; it no
 longer carries generated-at, source-revision, source-tree-fingerprint, or
 currentness envelope fields in the tracked fixture.
 
 `release-finality-resettle` uses only the finality suffix
-(`external-report-action-matrix -> generated-artifact-index ->
-artifact-freshness`) before `release-closeout-fixed-point` and finality verify.
+(`artifact-freshness -> external-report-action-matrix ->
+generated-artifact-index`) before `release-closeout-fixed-point` and finality verify.
 The workflow planner now records that fan-out explicitly in each selected step's
 `fanout_targets` field so the repair suffix is inspectable rather than implicit
 in Make recipes alone.

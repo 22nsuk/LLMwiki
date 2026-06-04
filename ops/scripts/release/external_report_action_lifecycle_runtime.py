@@ -5,6 +5,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.source_revision_runtime import resolve_source_revision
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+
 ACTION_LIFECYCLE_RESOLVED = "resolved"
 ACTION_LIFECYCLE_HISTORICALLY_TRUE = "historically_true"
 ACTION_LIFECYCLE_SUPERSEDED = "superseded"
@@ -15,75 +18,199 @@ ACTION_LIFECYCLES = {
     ACTION_LIFECYCLE_SUPERSEDED,
     ACTION_LIFECYCLE_CURRENTLY_VALID,
 }
-CURRENT_EXTERNAL_REPORT_STALE_TOTAL = 47
-CURRENT_EXTERNAL_REPORT_STALE_COUNT = 5
-CURRENT_EXTERNAL_REPORT_PRIORITY_STALE_COUNT = 3
 ARTIFACT_FRESHNESS_REPORT_PATH = "ops/reports/artifact-freshness-report.json"
+ARTIFACT_FRESHNESS_ARTIFACT_KIND = "artifact_freshness_report"
+ARTIFACT_FRESHNESS_OWNER_TARGET = "artifact-freshness"
+EVIDENCE_STATUS_CURRENT = "current"
+EVIDENCE_STATUS_MISSING = "missing"
+EVIDENCE_STATUS_UNREADABLE = "unreadable"
+EVIDENCE_STATUS_INVALID = "invalid"
+EVIDENCE_STATUS_STALE = "stale"
+EVIDENCE_STATUS_SOURCE_IDENTITY_MISMATCH = "source_identity_mismatch"
 STALE_46_OF_46_RE = re.compile(r"\b46\s*/\s*46\b.*\bstale\b|\bstale\b.*\b46\s*/\s*46\b", re.I)
-STALE_5_OF_47_RE = re.compile(r"\b5\b.*\bstale\b.*\b47\b|\b47\b.*\b5\b.*\bstale\b", re.I)
 SUPERSEDED_CLAIM_RE = re.compile(r"\b(superseded|no longer current|historical(?:ly)? true)\b", re.I)
 
 
-def _integer_summary_value(summary: dict[str, Any], key: str, fallback: int) -> int:
+def _integer_summary_value(summary: dict[str, Any], key: str) -> int | None:
     value = summary.get(key)
     if isinstance(value, int):
         return value
-    return fallback
+    return None
 
 
-def _current_canonical_state_from_artifact_freshness(payload: dict[str, Any]) -> dict[str, Any] | None:
-    summary = payload.get("summary")
-    if not isinstance(summary, dict):
-        return None
-    stale_count = _integer_summary_value(summary, "stale_artifact_count", CURRENT_EXTERNAL_REPORT_STALE_COUNT)
-    total_count = _integer_summary_value(summary, "artifact_count", CURRENT_EXTERNAL_REPORT_STALE_TOTAL)
-    priority_stale_count = _integer_summary_value(
-        summary,
-        "operational_attention_artifact_count",
-        stale_count,
-    )
+def _artifact_freshness_state(
+    *,
+    evidence_status: str,
+    reason_id: str,
+    stale_artifact_count: int | None = None,
+    total_artifact_count: int | None = None,
+    operational_attention_artifact_count: int | None = None,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    if summary is None:
+        summary = (
+            f"{stale_artifact_count} stale / {total_artifact_count} total; "
+            f"{operational_attention_artifact_count} operational attention"
+        )
     return {
-        "stale_report_count": stale_count,
-        "total_report_count": total_count,
-        "priority_stale_report_count": priority_stale_count,
-        "summary": f"{stale_count} stale / {total_count} total; {priority_stale_count} priority stale",
+        "evidence_status": evidence_status,
+        "evidence_path": ARTIFACT_FRESHNESS_REPORT_PATH,
+        "stale_artifact_count": stale_artifact_count,
+        "total_artifact_count": total_artifact_count,
+        "operational_attention_artifact_count": operational_attention_artifact_count,
+        "summary": summary,
+        "reason_id": reason_id,
+        "owner_target": ARTIFACT_FRESHNESS_OWNER_TARGET,
     }
 
 
-def _read_artifact_freshness_report(vault: Path) -> dict[str, Any] | None:
+def _artifact_freshness_unavailable_state(*, evidence_status: str, reason_id: str) -> dict[str, Any]:
+    return _artifact_freshness_state(
+        evidence_status=evidence_status,
+        reason_id=reason_id,
+        summary=(
+            f"artifact freshness evidence {evidence_status}; "
+            "current canonical artifact freshness state unavailable"
+        ),
+    )
+
+
+def _artifact_freshness_rejection_reason(
+    payload: dict[str, Any],
+    *,
+    current_source_revision: str | None,
+    current_source_tree_fingerprint: str | None,
+) -> tuple[str, str] | None:
+    currentness = payload.get("currentness")
+    if payload.get("artifact_kind") != ARTIFACT_FRESHNESS_ARTIFACT_KIND:
+        return EVIDENCE_STATUS_INVALID, "artifact_freshness_kind_mismatch"
+    if payload.get("artifact_status") != "current":
+        return EVIDENCE_STATUS_STALE, "artifact_freshness_artifact_status_not_current"
+    if not isinstance(currentness, dict) or currentness.get("status") != "current":
+        return EVIDENCE_STATUS_STALE, "artifact_freshness_currentness_not_current"
+    observed_source_revision = str(payload.get("source_revision", "")).strip()
+    observed_source_tree_fingerprint = str(payload.get("source_tree_fingerprint", "")).strip()
+    if not observed_source_revision or not current_source_revision:
+        return EVIDENCE_STATUS_SOURCE_IDENTITY_MISMATCH, "artifact_freshness_source_revision_missing"
+    if not observed_source_tree_fingerprint or not current_source_tree_fingerprint:
+        return (
+            EVIDENCE_STATUS_SOURCE_IDENTITY_MISMATCH,
+            "artifact_freshness_source_tree_fingerprint_missing",
+        )
+    if observed_source_revision != current_source_revision:
+        return EVIDENCE_STATUS_SOURCE_IDENTITY_MISMATCH, "artifact_freshness_source_revision_mismatch"
+    if observed_source_tree_fingerprint != current_source_tree_fingerprint:
+        return (
+            EVIDENCE_STATUS_SOURCE_IDENTITY_MISMATCH,
+            "artifact_freshness_source_tree_fingerprint_mismatch",
+        )
+    return None
+
+
+def _artifact_freshness_summary_rejection_reason(payload: dict[str, Any]) -> tuple[str, str] | None:
+    summary = payload.get("summary")
+    if not isinstance(summary, dict):
+        return EVIDENCE_STATUS_INVALID, "artifact_freshness_summary_missing"
+    for field in (
+        "artifact_count",
+        "stale_artifact_count",
+        "operational_attention_artifact_count",
+    ):
+        value = summary.get(field)
+        if not isinstance(value, int) or value < 0:
+            return EVIDENCE_STATUS_INVALID, f"artifact_freshness_summary_{field}_invalid"
+    return None
+
+
+def _canonical_artifact_freshness_state_from_report(
+    payload: dict[str, Any],
+    *,
+    current_source_revision: str | None,
+    current_source_tree_fingerprint: str | None,
+) -> dict[str, Any] | None:
+    rejection_reason = _artifact_freshness_rejection_reason(
+        payload,
+        current_source_revision=current_source_revision,
+        current_source_tree_fingerprint=current_source_tree_fingerprint,
+    )
+    if rejection_reason is not None:
+        return None
+    if _artifact_freshness_summary_rejection_reason(payload) is not None:
+        return None
+    summary = payload.get("summary")
+    assert isinstance(summary, dict)
+    stale_artifact_count = _integer_summary_value(summary, "stale_artifact_count")
+    total_artifact_count = _integer_summary_value(summary, "artifact_count")
+    operational_attention_artifact_count = _integer_summary_value(summary, "operational_attention_artifact_count")
+    assert stale_artifact_count is not None
+    assert total_artifact_count is not None
+    assert operational_attention_artifact_count is not None
+    return _artifact_freshness_state(
+        evidence_status=EVIDENCE_STATUS_CURRENT,
+        reason_id="artifact_freshness_report_current",
+        stale_artifact_count=stale_artifact_count,
+        total_artifact_count=total_artifact_count,
+        operational_attention_artifact_count=operational_attention_artifact_count,
+    )
+
+
+def _read_artifact_freshness_report(vault: Path) -> tuple[dict[str, Any] | None, str | None]:
     path = vault / ARTIFACT_FRESHNESS_REPORT_PATH
     if not path.is_file():
-        return None
+        return None, EVIDENCE_STATUS_MISSING
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
+    except OSError:
+        return None, EVIDENCE_STATUS_UNREADABLE
+    except json.JSONDecodeError:
+        return None, EVIDENCE_STATUS_INVALID
     if not isinstance(payload, dict):
-        return None
-    return payload
+        return None, EVIDENCE_STATUS_INVALID
+    return payload, None
 
 
-def external_report_current_canonical_state(
+def canonical_artifact_freshness_state(
     vault: Path | None = None,
     *,
     artifact_freshness_report: dict[str, Any] | None = None,
+    current_source_revision: str | None = None,
+    current_source_tree_fingerprint: str | None = None,
 ) -> dict[str, Any]:
+    read_issue: str | None = None
     if artifact_freshness_report is None and vault is not None:
-        artifact_freshness_report = _read_artifact_freshness_report(vault)
+        artifact_freshness_report, read_issue = _read_artifact_freshness_report(vault)
+    fallback_evidence_status = read_issue or EVIDENCE_STATUS_MISSING
+    fallback_reason_id = (
+        f"artifact_freshness_report_{fallback_evidence_status}"
+        if read_issue is not None
+        else "artifact_freshness_report_not_provided"
+    )
     if artifact_freshness_report is not None:
-        state = _current_canonical_state_from_artifact_freshness(artifact_freshness_report)
+        if vault is not None:
+            current_source_revision = current_source_revision or resolve_source_revision(vault).revision
+            current_source_tree_fingerprint = (
+                current_source_tree_fingerprint or release_source_tree_fingerprint(vault)
+            )
+        rejection = _artifact_freshness_rejection_reason(
+            artifact_freshness_report,
+            current_source_revision=current_source_revision,
+            current_source_tree_fingerprint=current_source_tree_fingerprint,
+        )
+        if rejection is None:
+            rejection = _artifact_freshness_summary_rejection_reason(artifact_freshness_report)
+        if rejection is not None:
+            fallback_evidence_status, fallback_reason_id = rejection
+        state = _canonical_artifact_freshness_state_from_report(
+            artifact_freshness_report,
+            current_source_revision=current_source_revision,
+            current_source_tree_fingerprint=current_source_tree_fingerprint,
+        )
         if state is not None:
             return state
-    return {
-        "stale_report_count": CURRENT_EXTERNAL_REPORT_STALE_COUNT,
-        "total_report_count": CURRENT_EXTERNAL_REPORT_STALE_TOTAL,
-        "priority_stale_report_count": CURRENT_EXTERNAL_REPORT_PRIORITY_STALE_COUNT,
-        "summary": (
-            f"{CURRENT_EXTERNAL_REPORT_STALE_COUNT} stale / "
-            f"{CURRENT_EXTERNAL_REPORT_STALE_TOTAL} total; "
-            f"{CURRENT_EXTERNAL_REPORT_PRIORITY_STALE_COUNT} priority stale"
-        ),
-    }
+    return _artifact_freshness_unavailable_state(
+        evidence_status=fallback_evidence_status,
+        reason_id=fallback_reason_id,
+    )
 
 
 def classify_external_report_action_lifecycle(action_item: dict[str, Any]) -> str:
@@ -98,8 +225,6 @@ def classify_external_report_action_lifecycle(action_item: dict[str, Any]) -> st
         return ACTION_LIFECYCLE_HISTORICALLY_TRUE
     if SUPERSEDED_CLAIM_RE.search(claim_text):
         return ACTION_LIFECYCLE_SUPERSEDED
-    if STALE_5_OF_47_RE.search(claim_text):
-        return ACTION_LIFECYCLE_CURRENTLY_VALID
     if str(action_item.get("current_status", "")).strip() == "implemented":
         return ACTION_LIFECYCLE_RESOLVED
     return ACTION_LIFECYCLE_CURRENTLY_VALID
@@ -120,7 +245,7 @@ def external_report_action_lifecycle_record(action_item: dict[str, Any]) -> dict
 def external_report_action_lifecycle_summary(
     items: list[dict[str, Any]],
     *,
-    current_canonical_report_state: dict[str, Any] | None = None,
+    canonical_artifact_freshness_state_record: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     counts = {lifecycle: 0 for lifecycle in sorted(ACTION_LIFECYCLES)}
     for item in items:
@@ -145,6 +270,6 @@ def external_report_action_lifecycle_summary(
             for item in items
             if str(item.get("lifecycle", "")).strip() != ACTION_LIFECYCLE_CURRENTLY_VALID
         ],
-        "current_canonical_report_state": current_canonical_report_state
-        or external_report_current_canonical_state(),
+        "canonical_artifact_freshness_state": canonical_artifact_freshness_state_record
+        or canonical_artifact_freshness_state(),
     }

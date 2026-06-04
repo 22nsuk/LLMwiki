@@ -44,7 +44,10 @@ def test_property_4_lint_promotion_order_sorts_by_remaining_violations(
     combined = set(plan_counts) | set(audit_counts)
     assert order == sorted(
         combined,
-        key=lambda rule: (max(plan_counts.get(rule, 0), audit_counts.get(rule, 0)), rule),
+        key=lambda rule: (
+            max(plan_counts.get(rule, 0), audit_counts.get(rule, 0)),
+            rule,
+        ),
     )
 
     zero_rules = [
@@ -65,7 +68,7 @@ def test_property_4_lint_promotion_order_sorts_by_remaining_violations(
 
 def test_lint_promotion_order_does_not_treat_missing_audit_rule_as_zero_debt() -> None:
     plan = {"remaining_violations": {"B": 4, "I": 0}}
-    audit = {"ruff": {"rule_counts": {}}}
+    audit: dict[str, object] = {"ruff": {"rule_counts": {}}}
 
     assert lint_promotion_order(plan, audit) == ["I", "B"]
 
@@ -74,7 +77,9 @@ def test_lint_promotion_order_aggregates_audit_rule_ids_for_family_debt() -> Non
     plan = {"remaining_violations": {"B": 0, "I": 0}}
     audit = {"ruff": {"rule_counts": {"B904": 2}}}
 
-    assert lint_promotion_order(plan, audit).index("I") < lint_promotion_order(plan, audit).index("B")
+    assert lint_promotion_order(plan, audit).index("I") < lint_promotion_order(
+        plan, audit
+    ).index("B")
 
 
 @given(remaining_violations=st.integers(min_value=0, max_value=1000))

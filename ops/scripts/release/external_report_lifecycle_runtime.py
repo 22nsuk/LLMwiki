@@ -39,10 +39,10 @@ from .external_report_action_lifecycle_runtime import (
     ACTION_LIFECYCLE_RESOLVED,
     ACTION_LIFECYCLE_SUPERSEDED,
     ACTION_LIFECYCLES,
+    canonical_artifact_freshness_state,
     classify_external_report_action_lifecycle,
     external_report_action_lifecycle_record,
     external_report_action_lifecycle_summary,
-    external_report_current_canonical_state,
 )
 from .external_report_inventory_runtime import (
     ARCHIVE_STATUS_RE,
@@ -80,10 +80,10 @@ _ACTION_LIFECYCLE_COMPAT_EXPORTS = (
     ACTION_LIFECYCLE_RESOLVED,
     ACTION_LIFECYCLE_SUPERSEDED,
     ACTION_LIFECYCLES,
+    canonical_artifact_freshness_state,
     classify_external_report_action_lifecycle,
     external_report_action_lifecycle_record,
     external_report_action_lifecycle_summary,
-    external_report_current_canonical_state,
 )
 _ACTION_CATALOG_COMPAT_EXPORTS = (
     ACTION_CATALOG,

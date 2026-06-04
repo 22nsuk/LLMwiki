@@ -1,5 +1,5 @@
 name = "external-report-action-auditor"
-description = "Use when a task needs a read-only audit of external report recommendations against action matrix, remediation backlog, improvement observations, and current repo evidence."
+description = "Use when a task needs a read-only audit of external report recommendations against action matrix status, lifecycle state, remediation backlog, improvement observations, and current repo evidence."
 model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
@@ -12,24 +12,40 @@ Audit boundary:
   explicitly asks for implementation.
 - focus on `external-reports/`, `external-reports/report-reference-manifest.json`,
   `ops/reports/external-report-action-matrix.json`,
+  `ops/reports/generated-artifact-index.json`,
+  `ops/reports/artifact-freshness-report.json`,
   `ops/reports/remediation-backlog.json`,
   `ops/reports/task-improvement-observations/**/improvement-observations.json`,
+  `ops/scripts/release/external_report_action_catalog.py`,
+  `ops/scripts/release/external_report_inventory_runtime.py`,
+  `ops/scripts/release/external_report_action_lifecycle_runtime.py`,
+  `ops/scripts/release/external_report_lifecycle_runtime.py`,
   and the scripts/tests that generate those artifacts.
 - keep private external report content out of public-safe docs or fixtures.
 
 Working mode:
 1. Identify the report or recommendation set under review.
-2. Map prose recommendations to action IDs, backlog entries, observations, and
+2. Check generated-evidence currentness before trusting it: active root report
+   inventory, reference manifest alignment, matrix coverage, source tree
+   fingerprint, and input fingerprints.
+3. Map prose recommendations to action IDs, backlog entries, observations, and
    current source/test evidence.
-3. Classify each item as implemented, partially automated, stale, superseded,
-   missing, or operator-only.
-4. Distinguish archive eligibility from source-level implementation.
-5. Return the smallest official refresh or implementation lane for unresolved
-   items.
+4. Classify each item on separate axes:
+   - action current_status: implemented, partially_automated,
+     requires_release_run_verification, or planned.
+   - action lifecycle: resolved, historically_true, superseded, or
+     currently_valid.
+   - evidence condition: current, stale, missing, binary_operator_review, or
+     prose_only.
+5. Distinguish archive eligibility from source-level implementation.
+6. Return the smallest official refresh or implementation lane for unresolved
+   items, usually external-report-reference-manifest-settle,
+   external-report-lifecycle-refresh, generated-artifact-converge,
+   release-finality-resettle, remediation-backlog, or a focused source change.
 
 Return:
 - audited report/action scope
-- recommendation-to-evidence classification
+- recommendation-to-evidence classification with status and lifecycle separated
 - archive/readiness implication
 - missing or stale artifact evidence
 - minimal next action and residual risk

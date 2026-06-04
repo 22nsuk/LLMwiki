@@ -36,7 +36,10 @@ surface comparison; this document owns release evidence and staged authority.
   run-ready refresh spends test/package cycles. It writes a local plan sidecar
   only; ignored evidence remains release-lane context, not public source. Reuse
   requires schema-valid evidence with matching producer, currentness,
-  source-fingerprint, revision, and lane-specific semantics.
+  source-fingerprint, revision, and lane-specific semantics. Its stdout and
+  JSON sidecar expose summary mode, duration-budget status, reason codes, and
+  exact next targets; the runnable authority still belongs to
+  `make release-run-ready`.
 - `make release-run-ready-plan-check`: check-only form of the planner that fails
   when existing evidence is not reusable.
 - `make release-run-ready-check`: revalidate the existing manifest against the
@@ -91,7 +94,10 @@ surface comparison; this document owns release evidence and staged authority.
   of regenerated local residue. Pass `GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY=1`
   only when you intentionally want to remove allowlisted ignored residue such as
   source-package extracts and local tool caches; current release authority,
-  private corpus roots, and run provenance are retained.
+  private corpus roots, and run provenance are retained. Ignored run logs with
+  missing, malformed, or path-incomplete fingerprint evidence are reported as
+  `retention_blockers`; apply mode leaves them in place while deleting only
+  candidates already classified as safe.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as
@@ -400,7 +406,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   target that should run before spending the full run-ready cycle. A passing
   status field alone is insufficient for reuse; the planner also validates the
   report schema, producer, currentness envelope, source identity, and relevant
-  package/test semantics.
+  package/test semantics. The plan also exposes `summary_mode`, exact
+  `next_targets`, `reason_codes`, and `duration_summary` so expensive gate
+  refreshes are visible before the authoritative `release-run-ready` writer is
+  run.
 - `ops/reports/release-smoke-report.json` is local diagnostic evidence and is
   not a final release authority. `release-run-ready` refreshes or reuses the
   current full smoke report; preseal uses the current-check lane and fails fast
@@ -448,8 +457,13 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   as `resolved`, `historically_true`, `superseded`, or `currently_valid`.
   Historical claims such as an older stale report count must not be rendered as
   current state; use the regenerated action matrix and artifact-freshness
-  summary for live counts. Excluded stale canonical reports need an explicit
-  non-canonical marker, and preserved stale payloads need a preservation reason.
+  summary for live counts. If current, source-bound artifact-freshness evidence
+  is missing, stale, invalid, or source-mismatched, the action matrix reports
+  `canonical_artifact_freshness_state.evidence_status` and leaves count fields
+  unavailable instead of falling back to older fixed counts; refresh the
+  `artifact-freshness` owner target to restore live counts. Excluded stale
+  canonical reports need an explicit non-canonical marker, and preserved stale
+  payloads need a preservation reason.
 - `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
   and the release-run manifest.
 - `tmp/` holds scratch checks and candidate files that must not become authority.

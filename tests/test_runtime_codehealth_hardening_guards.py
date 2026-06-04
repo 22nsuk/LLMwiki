@@ -5,6 +5,7 @@ import json
 import re
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 import hypothesis.strategies as st
@@ -32,23 +33,44 @@ RUNTIME_CODEHEALTH_TIME_GUARD_PATHS = (
     REPO_ROOT / "ops" / "scripts" / "eval" / "type_uplift_plan.py",
     REPO_ROOT / "ops" / "scripts" / "eval" / "uplift_promotion_runtime.py",
     REPO_ROOT / "ops" / "scripts" / "mechanism" / "auto_improve_readiness_runtime.py",
-    REPO_ROOT / "ops" / "scripts" / "mechanism" / "auto_improve_maintenance_decision_runtime.py",
-    REPO_ROOT / "ops" / "scripts" / "mechanism" / "mutation_proposal_promotion_runtime.py",
+    REPO_ROOT
+    / "ops"
+    / "scripts"
+    / "mechanism"
+    / "auto_improve_maintenance_decision_runtime.py",
+    REPO_ROOT
+    / "ops"
+    / "scripts"
+    / "mechanism"
+    / "mutation_proposal_promotion_runtime.py",
     REPO_ROOT / "ops" / "scripts" / "release" / "release_closeout_envelope_runtime.py",
     REPO_ROOT / "ops" / "scripts" / "release" / "release_evidence_dashboard.py",
-    REPO_ROOT / "ops" / "scripts" / "release" / "release_evidence_dashboard_render_runtime.py",
+    REPO_ROOT
+    / "ops"
+    / "scripts"
+    / "release"
+    / "release_evidence_dashboard_render_runtime.py",
     REPO_ROOT / "ops" / "scripts" / "release" / "release_run_ready.py",
     REPO_ROOT / "ops" / "scripts" / "release" / "release_status_surface.py",
 )
 
 RUNTIME_CODEHEALTH_PUBLIC_TEXT_PATHS = (
-    REPO_ROOT / ".kiro" / "specs" / "runtime-codehealth-hardening" / "requirements.md",
-    REPO_ROOT / ".kiro" / "specs" / "runtime-codehealth-hardening" / "design.md",
-    REPO_ROOT / ".kiro" / "specs" / "runtime-codehealth-hardening" / "tasks.md",
     REPO_ROOT / "docs" / "development.md",
     REPO_ROOT / "docs" / "release.md",
     REPO_ROOT / "ops" / "runtime-decomposition-plan.md",
     *RUNTIME_CODEHEALTH_TIME_GUARD_PATHS,
+)
+LOCAL_ONLY_PUBLIC_TEXT_PREFIXES = (
+    ".agents/",
+    ".kiro/",
+    ".obsidian/",
+    ".ouroboros/",
+    ".serena/",
+    "external-reports/",
+    "raw/",
+    "runs/",
+    "system/",
+    "wiki/",
 )
 
 DIRECT_WALL_CLOCK_RE = re.compile(
@@ -66,7 +88,9 @@ def _seed_uplift_vault(vault: Path) -> None:
     (vault / "tests").mkdir(exist_ok=True)
     (vault / "tools").mkdir(exist_ok=True)
     (vault / "ops" / "scripts" / "alpha.py").write_text("x = 1\n", encoding="utf-8")
-    (vault / "tests" / "test_alpha.py").write_text("def test_alpha(): pass\n", encoding="utf-8")
+    (vault / "tests" / "test_alpha.py").write_text(
+        "def test_alpha(): pass\n", encoding="utf-8"
+    )
     (vault / "tools" / "helper.py").write_text("print('ok')\n", encoding="utf-8")
     (vault / "tools" / "ruff_strict_preview.py").write_text("", encoding="utf-8")
     (vault / "tools" / "strict_preview_audit.py").write_text("", encoding="utf-8")
@@ -75,7 +99,7 @@ def _seed_uplift_vault(vault: Path) -> None:
         "MYPY_TARGETS ?= ops/scripts tests tools\n"
         "MYPY_STRICT_PREVIEW_TARGETS ?= ops/scripts tests tools\n"
         "ruff-strict-preview:\n"
-        "\tpython tools/ruff_strict_preview.py --targets \"$(RUFF_STRICT_PREVIEW_TARGETS)\"\n",
+        '\tpython tools/ruff_strict_preview.py --targets "$(RUFF_STRICT_PREVIEW_TARGETS)"\n',
         encoding="utf-8",
     )
     (vault / "pyproject.toml").write_text(
@@ -144,14 +168,26 @@ def _envelope_stub(_vault: Path, **kwargs: object) -> dict[str, object]:
     }
 
 
-def _cheap_report_patches(vault: Path) -> tuple[object, ...]:
+def _cheap_report_patches(vault: Path) -> tuple[Any, ...]:
     policy = {"version": 4}
     resolved_policy = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
     return (
-        mock.patch("ops.scripts.eval.lint_uplift_plan.load_policy", return_value=(policy, resolved_policy)),
-        mock.patch("ops.scripts.eval.type_uplift_plan.load_policy", return_value=(policy, resolved_policy)),
-        mock.patch("ops.scripts.eval.lint_uplift_plan.build_canonical_report_envelope", side_effect=_envelope_stub),
-        mock.patch("ops.scripts.eval.type_uplift_plan.build_canonical_report_envelope", side_effect=_envelope_stub),
+        mock.patch(
+            "ops.scripts.eval.lint_uplift_plan.load_policy",
+            return_value=(policy, resolved_policy),
+        ),
+        mock.patch(
+            "ops.scripts.eval.type_uplift_plan.load_policy",
+            return_value=(policy, resolved_policy),
+        ),
+        mock.patch(
+            "ops.scripts.eval.lint_uplift_plan.build_canonical_report_envelope",
+            side_effect=_envelope_stub,
+        ),
+        mock.patch(
+            "ops.scripts.eval.type_uplift_plan.build_canonical_report_envelope",
+            side_effect=_envelope_stub,
+        ),
     )
 
 
@@ -244,7 +280,9 @@ def test_runtime_codehealth_changed_modules_do_not_use_direct_wall_clock() -> No
         text = path.read_text(encoding="utf-8")
         for line_number, line in enumerate(text.splitlines(), start=1):
             if DIRECT_WALL_CLOCK_RE.search(line):
-                offenders.append(f"{path.relative_to(REPO_ROOT)}:{line_number}: {line.strip()}")
+                offenders.append(
+                    f"{path.relative_to(REPO_ROOT)}:{line_number}: {line.strip()}"
+                )
 
     assert offenders == []
 
@@ -259,7 +297,22 @@ def test_runtime_codehealth_public_text_does_not_leak_local_absolute_paths() -> 
         text = path.read_text(encoding="utf-8")
         for line_number, line in enumerate(text.splitlines(), start=1):
             if LOCAL_PATH_RE.search(line):
-                offenders.append(f"{path.relative_to(REPO_ROOT)}:{line_number}: {line.strip()}")
+                offenders.append(
+                    f"{path.relative_to(REPO_ROOT)}:{line_number}: {line.strip()}"
+                )
 
     assert scanned_paths
+    assert offenders == []
+
+
+def test_runtime_codehealth_public_text_guard_uses_public_safe_surfaces() -> None:
+    offenders = [
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in RUNTIME_CODEHEALTH_PUBLIC_TEXT_PATHS
+        if any(
+            path.relative_to(REPO_ROOT).as_posix().startswith(prefix)
+            for prefix in LOCAL_ONLY_PUBLIC_TEXT_PREFIXES
+        )
+    ]
+
     assert offenders == []

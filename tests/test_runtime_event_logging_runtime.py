@@ -98,6 +98,22 @@ class RuntimeEventLoggingRuntimeTests(unittest.TestCase):
             written = json.loads((vault / rel_path).read_text(encoding="utf-8"))
             self.assertEqual(written["component"], "Auto Improve Session")
 
+    def test_append_runtime_event_rejects_template_placeholder_run_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+
+            with self.assertRaisesRegex(ValueError, "template placeholder run id"):
+                append_runtime_event(
+                    vault,
+                    context=fixed_context(),
+                    component="planning_gate_validate",
+                    phase="starter",
+                    decision="pass",
+                    run_id="run-YYYYMMDD-slug",
+                )
+
+            self.assertFalse((vault / "runs" / "run-YYYYMMDD-slug").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

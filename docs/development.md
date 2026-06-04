@@ -128,6 +128,9 @@ Use `make local-cache-clean` to remove only ignored, regenerable local caches:
 source `__pycache__` / `*.pyc` / `*.pyo` under `ops`, `tests`, and `tools`.
 The target intentionally leaves `.venv`, global uv caches, `ops/reports`,
 `build/release`, `runs`, and corpus/private surfaces alone.
+Use `make local-tool-state-clean` only when you explicitly want to remove
+ignored local tool/editor state such as `.agents`, `.obsidian`, `.serena`,
+`.ouroboros`, and `.ouroboros_eval_artifact.md`.
 When the global uv cache itself is too large, use `make uv-cache-prune`; it
 runs `uv cache prune` without `--force`, removing only unreachable uv cache
 objects. Do not use `uv cache clean` as routine hygiene because it clears all uv

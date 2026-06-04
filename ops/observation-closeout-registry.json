@@ -3,40 +3,13 @@
   "artifact_kind": "observation_closeout_registry",
   "retained_observations": [
     {
-      "path": "ops/reports/task-improvement-observations/task-20260524-active-report-full-scope-reconciliation/improvement-observations.json",
-      "observation_id": "strict_preview_full_scope_burndown",
+      "path": "ops/reports/task-improvement-observations/task-20260604-external-report-anti-slop-followups/improvement-observations.json",
+      "observation_id": "historical_run_log_placeholder_retention_policy",
       "status": "planned",
-      "retained_reason": "Strict-preview burn-down is intentionally tracked as broad lint/type debt rather than deleted from local evidence.",
-      "next_action": "Continue strict-preview burn-down through lint/type uplift work.",
-      "exit_condition": "Close when strict-preview audit reports no full-scope burn-down blockers or the item is superseded by a narrower registered observation.",
-      "owner_or_lane": "strict-preview-audit"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260529-active-external-report-current-code-reconciliation/improvement-observations.json",
-      "observation_id": "strict_preview_and_command_identity_backlog",
-      "status": "planned",
-      "retained_reason": "Strict-preview zero-burn and command identity normalization remain broad runtime semantics work; current release and external-report closeout did not implement that full scope.",
-      "next_action": "Finish strict-preview zero-burn with strict-preview audit, then implement command identity normalization under focused tests before making it a release currentness rule.",
-      "exit_condition": "Close when strict-preview zero-burn and command identity normalization have source-backed tests or a replacement registered observation owns the remaining scope.",
-      "owner_or_lane": "static-and-command-identity"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260531-release-evidence-sync-test-cost-governance/improvement-observations.json",
-      "observation_id": "report_contract_all_marker_cost_20260531",
-      "status": "planned",
-      "retained_reason": "Report-contract all-lane cost governance still needs duration budget reporting and explicit current-check routing beyond the xdist and currentness improvements already made.",
-      "next_action": "Reserve the all-lane for checkpoint or CI proof, add duration budget reporting for broad gates, and keep local external-report drift behind refresh or current-check contracts.",
-      "exit_condition": "Close when report-contract all-lane reports deterministic duration budget status and has explicit current-check routing separate from final proof.",
-      "owner_or_lane": "report-contract-cost-governance"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260531-release-evidence-sync-test-cost-governance/improvement-observations.json",
-      "observation_id": "release_run_ready_cost_plan_20260531",
-      "status": "planned",
-      "retained_reason": "Release-run-ready planning is improved and in use, but registry-backed planner reason codes and duration budgets for expensive gates remain future hardening.",
-      "next_action": "Extend release-run-ready and release-evidence planner outputs with duration summaries and changed-fingerprint reason codes while preserving release-run-ready as final authority.",
-      "exit_condition": "Close when release-run-ready planning reports duration summaries and changed-fingerprint reason codes without replacing release-run-ready authority.",
-      "owner_or_lane": "release-run-ready-plan"
+      "retained_reason": "Historical zero-byte run log cleanup now applies safe candidates independently, but five archived logs remain as retention_blockers because their run-artifact fingerprints are missing or do not record the log path.",
+      "next_action": "Resolve the five fingerprint retention blockers without deleting arbitrary run evidence, then rerun generated-artifact-retention-clean and refresh artifact-freshness.",
+      "exit_condition": "Close when historical zero-byte command logs are classified by retention policy and artifact-freshness no longer reports placeholder-log noise.",
+      "owner_or_lane": "historical-run-log-retention"
     }
   ]
 }
