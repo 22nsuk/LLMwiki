@@ -32,6 +32,7 @@
     "dirty_entries",
     "dirty_source_paths",
     "dirty_generated_paths",
+    "authority_readback",
     "authority_inputs",
     "summary"
   ],
@@ -55,7 +56,7 @@
     "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
     "blocker_class": {
       "type": "string",
-      "enum": ["none", "authority_stale", "source_tree_changed"]
+      "enum": ["none", "authority_stale", "source_tree_changed", "generated_canonical_dirty"]
     },
     "owning_target": { "type": "string", "minLength": 1 },
     "minimal_next_target": { "type": "string", "minLength": 1 },
@@ -81,6 +82,7 @@
       "items": { "type": "string", "minLength": 1 },
       "uniqueItems": true
     },
+    "authority_readback": { "$ref": "#/$defs/authority_readback" },
     "authority_inputs": {
       "type": "array",
       "items": { "$ref": "#/$defs/authority_input" }
@@ -92,6 +94,7 @@
         "dirty_source_path_count",
         "dirty_generated_path_count",
         "authority_stale_count",
+        "authority_readback_status",
         "fingerprint_changed_since_snapshot",
         "revision_changed_since_snapshot"
       ],
@@ -99,6 +102,7 @@
         "dirty_source_path_count": { "type": "integer", "minimum": 0 },
         "dirty_generated_path_count": { "type": "integer", "minimum": 0 },
         "authority_stale_count": { "type": "integer", "minimum": 0 },
+        "authority_readback_status": { "type": "string", "enum": ["pass", "attention"] },
         "fingerprint_changed_since_snapshot": { "type": "boolean" },
         "revision_changed_since_snapshot": { "type": "boolean" }
       }
@@ -122,6 +126,31 @@
         "path": { "type": "string" },
         "xy": { "type": "string" },
         "category": { "type": "string" }
+      }
+    },
+    "authority_readback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evaluated",
+        "blocker_class",
+        "owning_target",
+        "minimal_next_target",
+        "authority_stale_count",
+        "authority_inputs"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "attention"] },
+        "evaluated": { "type": "boolean" },
+        "blocker_class": { "type": "string", "enum": ["none", "authority_stale"] },
+        "owning_target": { "type": "string", "minLength": 1 },
+        "minimal_next_target": { "type": "string", "minLength": 1 },
+        "authority_stale_count": { "type": "integer", "minimum": 0 },
+        "authority_inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/authority_input" }
+        }
       }
     },
     "authority_input": {

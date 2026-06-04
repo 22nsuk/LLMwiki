@@ -78,12 +78,17 @@ ALLOWED_REPEATED_CONVERGE_TARGETS = {
 }
 FORBIDDEN_POST_COMMIT_FINALIZER_TARGETS = {
     "release-auto-promotion-ready-invalidate",
+    "release-authority-settle",
     "release-authority-sealed-preflight",
     "release-evidence-converge",
     "release-evidence-dashboard-report",
     "release-clean-blocker-ledger",
+    "generated-artifact-converge",
+    "generated-artifact-script-output",
+    "release-finality-resettle",
     "test-execution-summary-full-current-or-refresh",
     "test-execution-summary-full-refresh",
+    "test-execution-summary-current-or-refresh",
 }
 
 
@@ -502,22 +507,14 @@ def _release_post_commit_finalizer_sequence_check(
     invocations: list[dict[str, Any]],
 ) -> dict[str, Any]:
     expected = [
-        "release-smoke-fast-refresh-check",
-        "release-freshness-sensitive-evidence-refresh",
-        "goal-worktree-guard",
-        "goal-runtime-certificate",
-        "learning-readiness-signoff-refresh",
-        "test-execution-summary-current-or-refresh",
+        "script-output-surfaces-check",
+        "release-smoke-fast-current-check",
+        "test-execution-summary-current-check",
         "test-execution-summary-full-current-check",
-        "sync-public-policy",
-        "public-check-summary",
-        "generated-artifact-converge",
-        "learning-readiness-signoff-revalidation",
-        "release-closeout-summary-report",
-        "release-evidence-cohort-report",
-        "auto-improve-readiness-report-body",
-        "release-lane-summary",
-        "release-finality-resettle",
+        "sync-public-policy-check",
+        "public-check-summary-current-check",
+        "artifact-freshness-check",
+        "release-closeout-finality-verify",
     ]
     check = _check_subsequence(
         "release_post_commit_finalizer_sequence",
@@ -525,16 +522,16 @@ def _release_post_commit_finalizer_sequence_check(
         expected,
         details=(
             "release-post-commit-finalize must stay a focused HEAD-bound suffix: "
-            "cheap/currentness refreshes, one late-report pass, then the narrow "
-            "release-finality-resettle wrapper."
+            "current/check-only surfaces first, terminal finality verify, then "
+            "the non-mutating post-commit readback."
         ),
     )
-    if invocations and str(invocations[-1]["target"]) != "release-finality-resettle":
+    if invocations and str(invocations[-1]["target"]) != "release-closeout-finality-verify":
         check["status"] = "fail"
         check["violations"].append(
             {
-                "expected_role": "release-finality-resettle",
-                "reason": "finality_resettle_must_be_last_make_invocation",
+                "expected_role": "release-closeout-finality-verify",
+                "reason": "finality_verify_must_be_last_make_invocation",
             }
         )
     return check

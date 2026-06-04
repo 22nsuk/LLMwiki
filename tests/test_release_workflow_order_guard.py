@@ -158,13 +158,13 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "release-converge-all-surfaces",
                 "release-converge",
                 "release-converge-post",
-                "release-smoke-fast-refresh-check",
-                "release-freshness-sensitive-evidence-refresh",
-                "goal-worktree-guard",
-                "goal-runtime-certificate",
-                "learning-readiness-signoff-refresh",
-                "test-execution-summary-current-or-refresh",
+                "script-output-surfaces-check",
+                "release-smoke-fast-current-check",
+                "test-execution-summary-current-check",
                 "test-execution-summary-full-current-check",
+                "sync-public-policy-check",
+                "public-check-summary-current-check",
+                "artifact-freshness-check",
                 "release-check-all-surfaces",
                 "sync-public-policy",
                 "public-check-summary",
@@ -240,22 +240,14 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-source-ready-commit:\n"
             "\t@true\n"
             "release-post-commit-finalize:\n"
-            "\t$(MAKE) release-smoke-fast-refresh-check\n"
-            "\t$(MAKE) release-freshness-sensitive-evidence-refresh\n"
-            "\t$(MAKE) goal-worktree-guard\n"
-            "\t$(MAKE) goal-runtime-certificate\n"
-            "\t$(MAKE) learning-readiness-signoff-refresh\n"
-            "\t$(MAKE) test-execution-summary-current-or-refresh\n"
+            "\t$(MAKE) script-output-surfaces-check\n"
+            "\t$(MAKE) release-smoke-fast-current-check\n"
+            "\t$(MAKE) test-execution-summary-current-check\n"
             "\t$(MAKE) test-execution-summary-full-current-check\n"
-            "\t$(MAKE) sync-public-policy\n"
-            "\t$(MAKE) public-check-summary\n"
-            "\t$(MAKE) generated-artifact-converge\n"
-            "\t$(MAKE) learning-readiness-signoff-revalidation\n"
-            "\t$(MAKE) release-closeout-summary-report\n"
-            "\t$(MAKE) release-evidence-cohort-report\n"
-            "\t$(MAKE) auto-improve-readiness-report-body\n"
-            "\t$(MAKE) release-lane-summary\n"
-            "\t$(MAKE) release-finality-resettle\n"
+            "\t$(MAKE) sync-public-policy-check\n"
+            "\t$(MAKE) public-check-summary-current-check\n"
+            "\t$(MAKE) artifact-freshness-check\n"
+            "\t$(MAKE) release-closeout-finality-verify\n"
             "release-source-ready-status:\n"
             "\t@true\n"
             "release-check-all-surfaces:\n"
@@ -266,19 +258,19 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t@true\n"
             "public-check-all:\n"
             "\t@true\n"
-            "release-smoke-fast-refresh-check:\n"
+            "script-output-surfaces-check:\n"
             "\t@true\n"
-            "release-freshness-sensitive-evidence-refresh:\n"
+            "release-smoke-fast-current-check:\n"
             "\t@true\n"
-            "goal-worktree-guard:\n"
-            "\t@true\n"
-            "goal-runtime-certificate:\n"
-            "\t@true\n"
-            "learning-readiness-signoff-refresh:\n"
-            "\t@true\n"
-            "test-execution-summary-current-or-refresh:\n"
+            "test-execution-summary-current-check:\n"
             "\t@true\n"
             "test-execution-summary-full-current-check:\n"
+            "\t@true\n"
+            "sync-public-policy-check:\n"
+            "\t@true\n"
+            "public-check-summary-current-check:\n"
+            "\t@true\n"
+            "artifact-freshness-check:\n"
             "\t@true\n"
             "goal-runtime-local-evidence-refresh:\n"
             "\t@true\n"
@@ -287,7 +279,6 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "remediation-backlog:\n"
             "\t@true\n"
             "generated-artifact-converge:\n"
-            "\t$(MAKE) generated-artifact-script-output\n"
             "\t$(MAKE) generated-artifact-finality-suffix\n"
             "generated-artifact-script-output:\n"
             "\t$(MAKE) script-output-surfaces\n"
@@ -437,9 +428,9 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         makefile = self.vault.joinpath("Makefile")
         makefile.write_text(
             makefile.read_text(encoding="utf-8").replace(
-                "\t$(MAKE) release-closeout-summary-report\n",
-                "\t$(MAKE) release-closeout-summary-report\n"
-                "\t$(MAKE) release-closeout-summary-report\n",
+                "\t$(MAKE) artifact-freshness-check\n",
+                "\t$(MAKE) artifact-freshness-check\n"
+                "\t$(MAKE) artifact-freshness-check\n",
             ),
             encoding="utf-8",
         )
@@ -453,7 +444,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")
-        self.assertEqual(check["violations"][0]["target"], "release-closeout-summary-report")
+        self.assertEqual(check["violations"][0]["target"], "artifact-freshness-check")
         self.assertEqual(
             check["violations"][0]["reason"],
             "unexpected_repeated_post_commit_target",

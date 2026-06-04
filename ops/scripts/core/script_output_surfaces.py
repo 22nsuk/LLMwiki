@@ -2,20 +2,16 @@ from __future__ import annotations
 
 import argparse
 import ast
-import datetime as dt
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
-from .artifact_freshness_runtime import build_canonical_report_envelope
 from .artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
 from .output_runtime import display_path
-from .policy_runtime import load_policy
-from .runtime_context import RuntimeContext
 from .schema_runtime import load_schema, validate_with_schema
 
 DEFAULT_OUT = "ops/script-output-surfaces.json"
@@ -118,11 +114,10 @@ def build_registry(
     vault: Path,
     *,
     policy_path: str | None = None,
-    context: RuntimeContext | None = None,
+    context: object | None = None,
 ) -> dict[str, Any]:
     resolved_vault = vault.resolve()
-    policy, resolved_policy_path = load_policy(resolved_vault, policy_path)
-    runtime_context = context or RuntimeContext.from_policy(policy)
+    del policy_path, context
     script_paths = [path.relative_to(resolved_vault).as_posix() for path in _script_files(resolved_vault)]
     surfaces: list[dict[str, Any]] = []
     for path in (resolved_vault / item for item in script_paths):
@@ -150,33 +145,18 @@ def build_registry(
             }
         )
     return {
-        **build_canonical_report_envelope(
-            resolved_vault,
-            generated_at=runtime_context.isoformat_z(),
-            artifact_kind="script_output_surfaces",
-            producer=PRODUCER,
-            source_command="python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
-            resolved_policy_path=resolved_policy_path,
-            schema_path=SCHEMA_PATH,
-            source_paths=["ops/scripts/core/script_output_surfaces.py"],
-            path_group_inputs={"ops_scripts": script_paths},
-            text_inputs={
-                "classification_values": "\n".join(CLASSIFICATION_VALUES),
-                "source_tree_scope": "include_prefixes:ops/scripts",
-            },
-            source_tree_excluded_files=(DEFAULT_OUT,),
-            source_tree_included_prefixes=SOURCE_TREE_INCLUDED_PREFIXES,
-        ),
+        "$schema": SCHEMA_PATH,
+        "artifact_kind": "script_output_surfaces",
+        "producer": PRODUCER,
         "source_tree_scope": {
             "mode": "include_prefixes",
             "include_prefixes": list(SOURCE_TREE_INCLUDED_PREFIXES),
         },
         "version": 1,
         "description": (
-            "Generated inventory for ops/scripts output path surfaces. "
+            "Semantic inventory for ops/scripts output path surfaces. "
             "Tests compare this registry with the live AST-derived inventory."
         ),
-        "generated_by": PRODUCER,
         "classification_values": list(CLASSIFICATION_VALUES),
         "surfaces": surfaces,
     }
@@ -203,16 +183,6 @@ def _resolve_registry_path(vault: Path, out_path: str | None) -> Path:
     return path
 
 
-def _context_from_generated_at(generated_at: str) -> RuntimeContext:
-    try:
-        instant = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
-    except ValueError:
-        instant = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
-    if instant.tzinfo is None:
-        instant = instant.replace(tzinfo=dt.UTC)
-    return RuntimeContext(display_timezone=dt.UTC, clock=lambda: instant)
-
-
 def _surface_map(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {
         str(item.get("path", "")): item
@@ -232,8 +202,6 @@ def _registry_check_diagnostics(actual: dict[str, Any], expected: dict[str, Any]
         if actual_surfaces[path] != expected_surfaces[path]
     )
     return {
-        "actual_source_tree_fingerprint": str(actual.get("source_tree_fingerprint", "")),
-        "expected_source_tree_fingerprint": str(expected.get("source_tree_fingerprint", "")),
         "added_paths": sorted(expected_paths - actual_paths),
         "removed_paths": sorted(actual_paths - expected_paths),
         "changed_paths": changed_paths,
@@ -243,7 +211,6 @@ def _registry_check_diagnostics(actual: dict[str, Any], expected: dict[str, Any]
 def _registry_is_current(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
     return (
         actual.get("source_tree_scope") == expected.get("source_tree_scope")
-        and actual.get("source_tree_fingerprint") == expected.get("source_tree_fingerprint")
         and actual.get("classification_values") == expected.get("classification_values")
         and actual.get("surfaces") == expected.get("surfaces")
     )
@@ -276,7 +243,6 @@ def check_registry(vault: Path, *, policy_path: str | None = None, stored_path: 
     expected = build_registry(
         vault,
         policy_path=policy_path,
-        context=_context_from_generated_at(str(actual.get("generated_at", ""))),
     )
     if _registry_is_current(actual, expected):
         print(f"{display_path(vault, registry_path)} is current")
@@ -294,7 +260,11 @@ def check_registry(vault: Path, *, policy_path: str | None = None, stored_path: 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
-    parser.add_argument("--policy", default=None, help="Policy path relative to the vault.")
+    parser.add_argument(
+        "--policy",
+        default=None,
+        help="Accepted for CLI compatibility; the semantic registry does not use policy state.",
+    )
     parser.add_argument("--out", default=DEFAULT_OUT, help="Output path for the generated registry.")
     parser.add_argument(
         "--stored",

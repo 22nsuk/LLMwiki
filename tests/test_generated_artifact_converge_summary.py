@@ -15,21 +15,8 @@ class GeneratedArtifactConvergeSummaryTests(unittest.TestCase):
     def test_after_summary_distinguishes_semantic_changes_from_envelope_churn(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            script_output = vault / "ops" / "script-output-surfaces.json"
             freshness = vault / "ops" / "reports" / "artifact-freshness-report.json"
-            script_output.parent.mkdir(parents=True)
             freshness.parent.mkdir(parents=True)
-            script_output.write_text(
-                json.dumps(
-                    {
-                        "artifact_kind": "script_output_surfaces",
-                        "generated_at": "2026-05-01T00:00:00Z",
-                        "source_tree_fingerprint": "old",
-                        "surfaces": [{"path": "a.py"}],
-                    }
-                ),
-                encoding="utf-8",
-            )
             freshness.write_text(
                 json.dumps(
                     {
@@ -43,17 +30,6 @@ class GeneratedArtifactConvergeSummaryTests(unittest.TestCase):
 
             before = build_report(vault, phase="before")
             write_report(vault, before, "tmp/generated-artifact-converge-summary.before.json")
-            script_output.write_text(
-                json.dumps(
-                    {
-                        "artifact_kind": "script_output_surfaces",
-                        "generated_at": "2026-05-02T00:00:00Z",
-                        "source_tree_fingerprint": "new",
-                        "surfaces": [{"path": "a.py"}],
-                    }
-                ),
-                encoding="utf-8",
-            )
             freshness.write_text(
                 json.dumps(
                     {
@@ -68,12 +44,6 @@ class GeneratedArtifactConvergeSummaryTests(unittest.TestCase):
             after = build_report(vault, phase="after")
             by_target = {item["target"]: item for item in after["target_summaries"]}
 
-            self.assertEqual(by_target["script-output-surfaces"]["status"], "noop")
-            self.assertTrue(by_target["script-output-surfaces"]["raw_changed"])
-            self.assertEqual(
-                by_target["script-output-surfaces"]["change_classification"],
-                "envelope_or_raw_only_changed",
-            )
             self.assertEqual(by_target["artifact-freshness"]["status"], "changed")
             self.assertEqual(
                 by_target["artifact-freshness"]["semantic_changed_paths"],

@@ -43,7 +43,7 @@ help:
 		"Release:" \
 		"  make changed-path-minimum-plan    write advisory changed-path test plan" \
 		"  make release-run-ready            converge and verify run-ready evidence" \
-		"  make release-post-commit-finalize resettle evidence after source commit" \
+		"  make release-post-commit-finalize check post-commit evidence readback" \
 		"  make release-sealed-run-ready     verify sealed release readiness" \
 		"  make release-auto-promotion-ready verify auto-promotion readiness"
 

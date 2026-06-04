@@ -48,7 +48,7 @@ cbm-reset-local:
 	@test -n "$(CBM_PUBLIC_OUT)" && test "$(CBM_PUBLIC_OUT)" != "/" || { printf '%s\n' "refusing to reset unsafe CBM_PUBLIC_OUT=$(CBM_PUBLIC_OUT)"; exit 2; }
 	rm -rf "$(CBM_CACHE_DIR)" "$(CBM_PUBLIC_OUT)"
 
-public-check-summary: script-output-surfaces
+public-check-summary: script-output-surfaces-check
 	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT)" --out "$(PUBLIC_CHECK_SUMMARY_OUT)" --schema ops/schemas/public-check-summary.schema.json --expected-artifact-kind public_check_summary --expected-producer ops.scripts.public_check_summary
 

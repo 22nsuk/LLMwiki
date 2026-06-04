@@ -118,16 +118,23 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
         with self._patch_current_repo():
             report = build_report(self.vault, mode="verify", context=fixed_context())
 
-        self.assertEqual(report["status"], "attention")
-        self.assertEqual(report["blocker_class"], "authority_stale")
-        self.assertEqual(report["owning_target"], "release-auto-promotion-preflight")
-        self.assertEqual(report["minimal_next_target"], "release-auto-promotion-preflight")
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["blocker_class"], "none")
+        self.assertEqual(report["owning_target"], "release-post-commit-finalize")
+        self.assertEqual(report["minimal_next_target"], "release-check-all-surfaces")
+        self.assertEqual(report["authority_readback"]["status"], "attention")
+        self.assertEqual(report["authority_readback"]["blocker_class"], "authority_stale")
+        self.assertEqual(
+            report["authority_readback"]["minimal_next_target"],
+            "release-auto-promotion-preflight",
+        )
         self.assertEqual(report["authority_inputs"][0]["issues"], ["source_revision_stale"])
         self.assertEqual(report["summary"]["authority_stale_count"], 1)
+        self.assertEqual(report["summary"]["authority_readback_status"], "attention")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_report(self.vault, report).exists())
 
-    def test_cli_strict_mode_fails_on_authority_attention(self) -> None:
+    def test_cli_authority_strict_mode_fails_on_authority_attention(self) -> None:
         self._write_authority_inputs(preflight_revision="old-revision")
         self._init_clean_git()
 
@@ -151,7 +158,7 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
                     str(self.vault),
                     "--out",
                     "tmp/strict-release-post-commit-finalization.json",
-                    "--fail-on-attention",
+                    "--fail-on-authority-attention",
                 ]
             )
 
@@ -162,9 +169,14 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
         )
         self.assertEqual(default_exit_code, 0)
         self.assertEqual(strict_exit_code, 1)
-        self.assertEqual(default_report["status"], "attention")
-        self.assertEqual(strict_report["status"], "attention")
-        self.assertEqual(strict_report["minimal_next_target"], "release-auto-promotion-preflight")
+        self.assertEqual(default_report["status"], "pass")
+        self.assertEqual(default_report["authority_readback"]["status"], "attention")
+        self.assertEqual(strict_report["status"], "pass")
+        self.assertEqual(strict_report["authority_readback"]["status"], "attention")
+        self.assertEqual(
+            strict_report["authority_readback"]["minimal_next_target"],
+            "release-auto-promotion-preflight",
+        )
 
     def test_source_tracked_drift_fails_and_returns_to_prepare(self) -> None:
         self._init_clean_git()
@@ -181,7 +193,7 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
         self.assertEqual(report["dirty_generated_paths"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_generated_canonical_drift_is_reported_without_source_failure(self) -> None:
+    def test_generated_canonical_drift_is_attention_without_source_failure(self) -> None:
         self._write_authority_inputs()
         self._init_clean_git()
         (self.vault / "ops/script-output-surfaces.json").write_text(
@@ -192,8 +204,9 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
         with self._patch_current_repo():
             report = build_report(self.vault, mode="verify", context=fixed_context())
 
-        self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["blocker_class"], "none")
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["blocker_class"], "generated_canonical_dirty")
+        self.assertEqual(report["minimal_next_target"], "release-source-ready-prepare")
         self.assertEqual(report["dirty_source_paths"], [])
         self.assertEqual(report["dirty_generated_paths"], ["ops/script-output-surfaces.json"])
         self.assertEqual(report["changed_paths"], ["ops/script-output-surfaces.json"])
@@ -260,6 +273,7 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
             report = build_report(self.vault, mode="verify", context=fixed_context())
 
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["authority_readback"]["status"], "pass")
         self.assertEqual(report["blocker_class"], "none")
         self.assertNotIn(
             "release-auto-promotion-ready",
@@ -283,6 +297,7 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
             report = build_report(self.vault, mode="verify", context=fixed_context())
 
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["authority_readback"]["status"], "pass")
         self.assertEqual(report["authority_inputs"][0]["status"], "fail")
         self.assertEqual(report["authority_inputs"][0]["issues"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])

@@ -66,7 +66,6 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "test-execution-summary:\n"
             "\t@echo tests\n"
             "generated-artifact-converge:\n"
-            "\t$(MAKE) generated-artifact-script-output\n"
             "\t$(MAKE) generated-artifact-finality-suffix\n"
             "generated-artifact-script-output:\n"
             "\t$(MAKE) script-output-surfaces\n"
@@ -314,14 +313,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             (
                 "mk/artifact.mk",
                 "generated_artifact_converge_closeout",
-                "generated-artifact-converge",
+                "generated-artifact-script-output",
                 "generated_artifact_converge_contract_changed",
-                [
-                    "script-output-surfaces",
-                    "external-report-action-matrix",
-                    "generated-artifact-index",
-                    "artifact-freshness",
-                ],
+                ["script-output-surfaces"],
             ),
         ]
         for changed_path, workflow_id, target, reason_code, fanout in cases:

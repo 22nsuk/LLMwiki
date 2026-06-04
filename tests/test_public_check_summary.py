@@ -519,30 +519,13 @@ class PublicCheckSummaryTests(unittest.TestCase):
                     {
                         "$schema": "ops/schemas/script-output-surfaces.schema.json",
                         "artifact_kind": "script_output_surfaces",
-                        "generated_at": "2026-05-09T09:00:00Z",
                         "producer": "ops.scripts.script_output_surfaces",
-                        "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
-                        "source_revision": "source_package_without_git",
-                        "source_tree_fingerprint": "intentionally-different",
-                        "input_fingerprints": {
-                            "policy": "a",
-                            "schema": "b",
-                            "artifact_envelope_schema": "c",
-                            "source_paths": "d",
-                            "ops_scripts": "e",
-                            "classification_values": "f"
-                        },
-                        "schema_version": 1,
-                        "artifact_status": "current",
-                        "retention_policy": "canonical_report",
-                        "encoding": "utf-8",
-                        "currentness": {
-                            "status": "current",
-                            "checked_at": "2026-05-09T09:00:00Z"
+                        "source_tree_scope": {
+                            "mode": "include_prefixes",
+                            "include_prefixes": ["ops/scripts"]
                         },
                         "version": 1,
                         "description": "test fixture",
-                        "generated_by": "ops.scripts.script_output_surfaces",
                         "classification_values": ["repo_artifact"],
                         "surfaces": []
                     },

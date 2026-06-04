@@ -120,27 +120,26 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh.
 - `make release-source-ready`: source-ready commit flow. Mutating convergence happens
   in `release-source-ready-prepare` before the commit; `release-post-commit-finalize`
-  then resettles revision-bound evidence for the new HEAD before
+  then checks revision-bound evidence for the new HEAD before
   `release-source-ready-post-verify` runs as a write-free check. Operator
   release summary is local-only evidence and is refreshed during the prepare
   convergence flow.
 - `make release-post-commit-finalize`: official post-commit evidence suffix for
-  source-ready commits. It refreshes focused/currentness and freshness-sensitive
-  reports before finality, checks existing full-pytest evidence for currentness
-  without refreshing it, verifies finality, and fails if source fingerprint or
-  source contract paths drift while generated/local evidence is being resettled.
-  Revision-bound tracked generated
-  evidence such as `ops/script-output-surfaces.json` is reported as
-  `dirty_generated_paths`; that blocks promotion cleanliness through the normal
-  worktree guard but does not make this suffix a source-drift failure. It does
-  not require the worktree to be promotion-clean before or after the suffix, and
-  it does not refresh full pytest evidence, staged authority manifests, or
-  action lifecycle cleanup. It also does not replace `release-run-ready`,
+  source-ready commits. It runs check/current-only surfaces, verifies finality,
+  and fails if source fingerprint or source contract paths drift. Dirty tracked
+  generated evidence is `attention` and points back to
+  `release-source-ready-prepare`. It does not refresh full pytest evidence,
+  staged authority manifests, report writer clusters, or action lifecycle
+  cleanup. It also does not replace `release-run-ready`,
   `release-sealed-run-ready`, or `release-auto-promotion-ready` authority.
-  When those staged authority sidecars are stale, its report may remain
-  `attention` with the owning authority target as `minimal_next_target` while
-  the post-commit evidence suffix itself completes.
+  When those staged authority sidecars are stale, the top-level post-commit
+  status may still pass while `authority_readback.status=attention` names the
+  owning authority target.
   `make head-aligned-evidence-converge` is a compatibility alias for this target.
+- `make release-authority-settle`: explicit staged-authority writer lane for
+  unattended promotion. It runs report finality fixed point once, then
+  preflight, run-ready, preseal, sealed-run-ready, and auto-promotion-ready
+  manifests, and ends with artifact freshness plus check-only authority readback.
 - `make changed-path-minimum-plan`: advisory changed-path cost planner. It reads
   `ops/test-lane-registry.json` and an optional
   `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST`, emits minimal suggested
@@ -237,9 +236,11 @@ Currentness is also objective. Reuse or operator-facing `current` should come
 from the live HEAD/source-fingerprint/domain checks owned by the relevant lane,
 not from a report's self-declared `current` field alone.
 After a source-ready commit, use `make release-post-commit-finalize` before
-claiming release evidence is settled for that HEAD. `make release-check-finalized`
-is retained only as a compatibility alias for `release-check`; it is not a
-mutating finalization target.
+claiming release evidence is aligned for that HEAD. Use
+`make release-authority-settle` only when staged release authority should be
+rewritten for unattended promotion. `make release-check-finalized` is retained
+only as a compatibility alias for `release-check`; it is not a mutating
+finalization target.
 
 ## Remote Governance
 

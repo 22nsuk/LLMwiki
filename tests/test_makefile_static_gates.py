@@ -750,7 +750,6 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         _recipe_lines(text, "generated-artifact-converge"),
         [
             '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase before --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)"',
-            "$(MAKE) generated-artifact-script-output",
             "$(MAKE) generated-artifact-finality-suffix",
             '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase after --before "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)" --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT)"',
         ],
@@ -800,7 +799,6 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
         "OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT ?= tmp/outcome-provenance-gate-policy.candidate.json",
         "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
         "SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json",
-        "SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT ?= tmp/script-output-surfaces.candidate.json",
         "GENERATED_ARTIFACT_RETENTION_CLEAN_OUT ?= tmp/generated-artifact-retention-clean.json",
         "GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY ?=",
         "CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json",
@@ -819,12 +817,12 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
 def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: str) -> None:
     script_output_block = _target_block(text, "script-output-surfaces")
     case.assertIn(
-        '$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT)"',
+        '$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)"',
         script_output_block,
     )
-    case.assertIn("ops.scripts.canonical_artifact_promote", script_output_block)
-    case.assertIn("--preserve-existing-on-semantic-match", script_output_block)
-    case.assertIn("--semantic-match-includes-source-tree-fingerprint", script_output_block)
+    case.assertNotIn("ops.scripts.canonical_artifact_promote", script_output_block)
+    case.assertNotIn("--preserve-existing-on-semantic-match", script_output_block)
+    case.assertNotIn("--semantic-match-includes-source-tree-fingerprint", script_output_block)
     script_output_check_block = _target_block(text, "script-output-surfaces-check")
     case.assertIn("script-output-surfaces-check", _target_block(text, ".PHONY"))
     case.assertIn("ops.scripts.script_output_surfaces", script_output_check_block)
@@ -1380,6 +1378,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "release-auto-promotion-ready-plan",
             "release-auto-promotion-operator-summary",
             "release-auto-promotion-ready-check",
+            "release-authority-settle",
             "release-builder-full",
         ):
             with self.subTest(target=target):
@@ -2155,6 +2154,25 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) release-auto-promotion-preflight", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-auto-promotion-preseal", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-sealed-run-ready-check", auto_promotion_block)
+        self.assertEqual(
+            _recipe_lines(text, "release-authority-settle"),
+            [
+                "$(MAKE) release-finality-resettle",
+                "$(MAKE) release-auto-promotion-preflight",
+                "$(MAKE) release-run-ready",
+                "$(MAKE) release-auto-promotion-preseal",
+                "$(MAKE) release-sealed-run-ready",
+                "$(MAKE) release-auto-promotion-ready",
+                "$(MAKE) release-closeout-finality-verify",
+                "$(MAKE) artifact-freshness-check",
+                "$(MAKE) release-auto-promotion-preflight-check",
+                "$(MAKE) release-run-ready-check",
+                "$(MAKE) release-auto-promotion-preseal-check",
+                "$(MAKE) release-sealed-run-ready-check",
+                "$(MAKE) release-auto-promotion-ready-check",
+                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention',
+            ],
+        )
         for release_target in (
             "release-auto-promotion-goal-run-id-guard",
             "release-auto-promotion-preflight",
@@ -2166,6 +2184,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "release-auto-promotion-operator-summary",
             "release-auto-promotion-ready",
             "release-auto-promotion-ready-check",
+            "release-authority-settle",
         ):
             seen: set[str] = set()
             stack = [release_target]
@@ -2342,37 +2361,31 @@ class MakefileStaticGateTests(unittest.TestCase):
             finalizer_lines,
             [
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
-                "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) release-freshness-sensitive-evidence-refresh",
-                "$(MAKE) goal-worktree-guard",
-                "$(MAKE) goal-runtime-certificate",
-                "$(MAKE) learning-readiness-signoff-refresh",
-                "$(MAKE) test-execution-summary-current-or-refresh",
+                "$(MAKE) script-output-surfaces-check",
+                "$(MAKE) release-smoke-fast-current-check",
+                "$(MAKE) test-execution-summary-current-check",
                 "$(MAKE) test-execution-summary-full-current-check",
-                "$(MAKE) sync-public-policy",
-                "$(MAKE) public-check-summary",
-                "$(MAKE) generated-artifact-converge",
-                "$(MAKE) learning-readiness-signoff-revalidation",
-                "$(MAKE) release-closeout-summary-report",
-                "$(MAKE) release-evidence-cohort-report RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
-                "$(MAKE) auto-improve-readiness-report-body",
-                "$(MAKE) release-lane-summary",
-                "$(MAKE) release-finality-resettle",
-                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)"',
+                "$(MAKE) sync-public-policy-check",
+                "$(MAKE) public-check-summary-current-check",
+                "$(MAKE) artifact-freshness-check",
+                "$(MAKE) release-closeout-finality-verify",
+                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention',
             ],
         )
         forbidden_default_refreshes = {
             "$(MAKE) release-evidence-converge",
             "$(MAKE) test-execution-summary-full-current-or-refresh",
             "$(MAKE) test-execution-summary-full-refresh",
+            "$(MAKE) test-execution-summary-current-or-refresh",
             "$(MAKE) release-auto-promotion-ready-invalidate",
             "$(MAKE) release-authority-sealed-preflight",
             "$(MAKE) release-evidence-dashboard-report",
             "$(MAKE) release-clean-blocker-ledger",
+            "$(MAKE) generated-artifact-converge",
+            "$(MAKE) release-finality-resettle",
         }
         self.assertEqual(forbidden_default_refreshes & set(finalizer_lines), set())
-        self.assertEqual(finalizer_lines.count("$(MAKE) release-finality-resettle"), 1)
-        self.assertEqual(finalizer_lines.count("$(MAKE) generated-artifact-converge"), 1)
+        self.assertEqual(finalizer_lines.count("$(MAKE) release-closeout-finality-verify"), 1)
         self.assertIn("--mode verify", finalizer_lines[-1])
 
     def test_release_closeout_summary_report_target_is_write_only(self) -> None:
@@ -4548,10 +4561,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-closeout-publish-script-output-surfaces",
             (
-                "ops.scripts.canonical_artifact_promote",
-                "--candidate \"$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)\"",
+                "ops.scripts.script_output_surfaces",
                 "--out \"$(SCRIPT_OUTPUT_SURFACES_OUT)\"",
-                "--preserve-existing-on-semantic-match",
             ),
         )
         _assert_recipe_contains_tokens(

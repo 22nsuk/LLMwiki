@@ -17,7 +17,6 @@ SEMANTIC_VOLATILE_KEYS = {
     "producer_input_fingerprint",
 }
 TARGET_OUTPUT_PATHS = {
-    "script-output-surfaces": ("ops/script-output-surfaces.json",),
     "external-report-action-matrix": ("ops/reports/external-report-action-matrix.json",),
     "generated-artifact-index": (
         "ops/operator/artifact-relocation-audit.json",

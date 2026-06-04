@@ -194,6 +194,30 @@ def _first_stale_authority(authority_inputs: list[dict[str, Any]]) -> dict[str, 
     return None
 
 
+def _authority_readback(
+    authority_inputs: list[dict[str, Any]],
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    stale_authority = _first_stale_authority(authority_inputs)
+    evaluated = mode != "snapshot"
+    stale_count = sum(1 for item in authority_inputs if not item["current"])
+    minimal_next_target = (
+        str(stale_authority["owning_target"])
+        if evaluated and stale_authority is not None
+        else "release-auto-promotion-ready"
+    )
+    return {
+        "status": "attention" if evaluated and stale_authority is not None else "pass",
+        "evaluated": evaluated,
+        "blocker_class": "authority_stale" if evaluated and stale_authority is not None else "none",
+        "owning_target": minimal_next_target,
+        "minimal_next_target": minimal_next_target,
+        "authority_stale_count": stale_count,
+        "authority_inputs": authority_inputs,
+    }
+
+
 def build_report(
     vault: Path,
     *,
@@ -222,7 +246,7 @@ def build_report(
         current_revision=current_revision,
         current_fingerprint=current_fingerprint,
     )
-    stale_authority = _first_stale_authority(authority)
+    authority_readback = _authority_readback(authority, mode=mode)
 
     fingerprint_changed_since_snapshot = bool(
         previous_fingerprint and previous_fingerprint != current_fingerprint
@@ -233,11 +257,11 @@ def build_report(
         blocker_class = "source_tree_changed"
         owning_target = "release-source-ready-prepare"
         minimal_next_target = "release-source-ready-prepare"
-    elif stale_authority is not None and mode != "snapshot":
+    elif dirty_generated_paths:
         status = "attention"
-        blocker_class = "authority_stale"
-        owning_target = str(stale_authority["owning_target"])
-        minimal_next_target = str(stale_authority["owning_target"])
+        blocker_class = "generated_canonical_dirty"
+        owning_target = "release-source-ready-prepare"
+        minimal_next_target = "release-source-ready-prepare"
     else:
         status = "pass"
         blocker_class = "none"
@@ -290,11 +314,13 @@ def build_report(
         "dirty_entries": dirty_entries,
         "dirty_source_paths": dirty_source_paths,
         "dirty_generated_paths": dirty_generated_paths,
+        "authority_readback": authority_readback,
         "authority_inputs": authority,
         "summary": {
             "dirty_source_path_count": len(dirty_source_paths),
             "dirty_generated_path_count": len(dirty_generated_paths),
-            "authority_stale_count": sum(1 for item in authority if not item["current"]),
+            "authority_stale_count": authority_readback["authority_stale_count"],
+            "authority_readback_status": authority_readback["status"],
             "fingerprint_changed_since_snapshot": fingerprint_changed_since_snapshot,
             "revision_changed_since_snapshot": revision_changed_since_snapshot,
         },
@@ -325,6 +351,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Return nonzero when finalization reports attention, for strict Make target use.",
     )
+    parser.add_argument(
+        "--fail-on-authority-attention",
+        action="store_true",
+        help="Return nonzero when nested release authority readback reports attention.",
+    )
     parser.add_argument("--policy-path")
     return parser.parse_args(argv)
 
@@ -341,8 +372,12 @@ def main(argv: list[str] | None = None) -> int:
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))
     print(f"release_post_commit_finalization_status={report['status']}")
+    print(f"release_authority_readback_status={report['authority_readback']['status']}")
     if report["status"] == "fail" or (
         args.fail_on_attention and report["status"] == "attention"
+    ) or (
+        args.fail_on_authority_attention
+        and report["authority_readback"]["status"] == "attention"
     ):
         return 1
     return 0

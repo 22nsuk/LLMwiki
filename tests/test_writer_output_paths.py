@@ -19,7 +19,6 @@ from ops.scripts.policy_runtime import load_policy
 from ops.scripts.promotion_gate import main as promotion_gate_main
 from ops.scripts.raw_registry_export import main as raw_registry_export_main
 from ops.scripts.raw_registry_preflight import main as raw_registry_preflight_main
-from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     RAW_REGISTRY_EXPORT_SCHEMA_PATH,
     WIKI_MANIFEST_SCHEMA_PATH,
@@ -97,13 +96,6 @@ def _ops_script_files() -> list[str]:
 
 def _script_output_surface_registry() -> dict:
     return json.loads(SCRIPT_OUTPUT_SURFACES.read_text(encoding="utf-8"))
-
-
-def _runtime_context_for_generated_at(iso_z: str) -> RuntimeContext:
-    import datetime as dt
-
-    instant = dt.datetime.fromisoformat(iso_z.replace("Z", "+00:00"))
-    return RuntimeContext(display_timezone=dt.UTC, clock=lambda: instant)
 
 
 def _isolated_child_env() -> dict[str, str]:
@@ -206,7 +198,6 @@ class WriterOutputPathsTest(unittest.TestCase):
         )
         self.assertEqual(registry["artifact_kind"], "script_output_surfaces")
         self.assertEqual(registry["producer"], "ops.scripts.script_output_surfaces")
-        self.assertEqual(registry["currentness"]["status"], "current")
         self.assertEqual(
             registry["source_tree_scope"],
             {"mode": "include_prefixes", "include_prefixes": ["ops/scripts"]},
@@ -228,14 +219,10 @@ class WriterOutputPathsTest(unittest.TestCase):
     )
     def test_script_output_surface_registry_matches_current_ast_inventory(self) -> None:
         actual = _script_output_surface_registry()
-        expected = build_script_output_surface_registry(
-            REPO_ROOT,
-            context=_runtime_context_for_generated_at(str(actual.get("generated_at"))),
-        )
+        expected = build_script_output_surface_registry(REPO_ROOT)
 
         self.maxDiff = None
         self.assertEqual(actual["source_tree_scope"], expected["source_tree_scope"])
-        self.assertEqual(actual["source_tree_fingerprint"], expected["source_tree_fingerprint"])
         self.assertEqual(actual["surfaces"], expected["surfaces"])
         self.assertEqual(actual["classification_values"], expected["classification_values"])
 
@@ -248,16 +235,17 @@ class WriterOutputPathsTest(unittest.TestCase):
         self.assertIn("ops/script-output-surfaces.json is current", result.stdout)
         self.assertEqual(SCRIPT_OUTPUT_SURFACES.read_bytes(), before)
 
-    def test_script_output_surfaces_check_ignores_source_revision_only_drift(self) -> None:
+    def test_script_output_surfaces_check_fails_missing_semantic_contract_field(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             stored = Path(temp_dir) / "script-output-surfaces.json"
             payload = _script_output_surface_registry()
-            payload["source_revision"] = "older-but-same-script-surface"
+            payload.pop("producer")
             stored.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
             result = _run_script_output_surfaces_check(stored)
 
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("schema validation failed", result.stderr)
 
     def test_script_output_surfaces_check_fails_on_stale_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -284,7 +272,7 @@ class WriterOutputPathsTest(unittest.TestCase):
         self.assertIn("schema validation failed", result.stderr)
         self.assertIn("not an AST inventory mismatch", result.stderr)
 
-    def test_script_output_surface_registry_source_tree_fingerprint_is_scoped_to_ops_scripts(self) -> None:
+    def test_script_output_surface_registry_tracks_surface_semantics_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -299,18 +287,18 @@ class WriterOutputPathsTest(unittest.TestCase):
             (vault / "README.md").write_text("# changed outside scope\n", encoding="utf-8")
             outside_scope = build_script_output_surface_registry(vault)
             self.assertEqual(
-                outside_scope["source_tree_fingerprint"],
-                baseline["source_tree_fingerprint"],
+                outside_scope["surfaces"],
+                baseline["surfaces"],
             )
 
             (vault / "ops" / "scripts" / "example.py").write_text(
-                "VALUE = 2\n",
+                "parser.add_argument('--out')\n",
                 encoding="utf-8",
             )
             inside_scope = build_script_output_surface_registry(vault)
             self.assertNotEqual(
-                inside_scope["source_tree_fingerprint"],
-                baseline["source_tree_fingerprint"],
+                inside_scope["surfaces"],
+                baseline["surfaces"],
             )
 
     def test_output_option_writers_are_classified(self) -> None:

@@ -1,5 +1,4 @@
 SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json
-SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT ?= tmp/script-output-surfaces.candidate.json
 CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json
 CLOSURE_REGISTRY_ENVELOPE_REGISTRY ?= all
 GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json
@@ -71,7 +70,6 @@ refresh-generated: refresh-generated-core refresh-generated-observability
 
 generated-artifact-converge:
 	$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase before --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)"
-	$(MAKE) generated-artifact-script-output
 	$(MAKE) generated-artifact-finality-suffix
 	$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase after --before "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)" --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT)"
 
@@ -87,8 +85,7 @@ generated-artifact-retention-clean:
 	$(PYTHON) -m ops.scripts.generated_artifact_retention_clean --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_RETENTION_CLEAN_OUT)" $(if $(GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY),--apply,)
 
 script-output-surfaces:
-	$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT)"
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)" --schema ops/schemas/script-output-surfaces.schema.json --expected-artifact-kind script_output_surfaces --expected-producer ops.scripts.script_output_surfaces --preserve-existing-on-semantic-match --semantic-match-includes-source-tree-fingerprint
+	$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)"
 
 script-output-surfaces-check:
 	$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --stored "$(SCRIPT_OUTPUT_SURFACES_OUT)" --check

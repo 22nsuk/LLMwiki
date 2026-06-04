@@ -175,31 +175,16 @@ drifting apart. Release promotion still requires the separate
 `make release-run-ready`, `make release-sealed-run-ready`, and
 `make release-auto-promotion-ready` manifest authorities for the committed tree.
 
-`generated-artifact-converge` is currently a writer bundle, not a per-writer
-selector: it refreshes `script-output-surfaces`,
+`generated-artifact-converge` is now the generated-report finality suffix, not
+the owner of every generated contract fixture. It refreshes
 `external-report-action-matrix`, `generated-artifact-index`, and
-`artifact-freshness` in that order. Downstream finality repair keeps the same
-coarse granularity. `release-finality-resettle` can therefore request that
-whole suffix when tracked canonical generated drift is detected even if a
-narrower currentness check such as `public-check-summary-current-check` still
-remains reusable. When a repair path feels broader than the triggering drift,
-the fix is to split the suffix into smaller repair lanes or narrow the owning
-currentness authority, not to weaken currentness checks.
+`artifact-freshness` in that order. `script-output-surfaces` is a separate
+semantic registry slice owned by `generated-artifact-script-output`; it no
+longer carries generated-at, source-revision, source-tree-fingerprint, or
+currentness envelope fields in the tracked fixture.
 
-The first narrow-authority slice now exists for `script-output-surfaces`:
-its canonical `source_tree_fingerprint` is scoped to `ops/scripts/**` rather
-than the entire release source tree, and the payload records that scope as
-`source_tree_scope.mode=include_prefixes` with `include_prefixes=["ops/scripts"]`.
-This makes unrelated public-doc or root-file edits stop invalidating that
-writer's own currentness signal while preserving a strict dependency on the
-actual script inventory it describes.
-
-The next preparation slice split the generated-artifact repair bundle into an
-explicit aggregate plus suffix-aware subtargets. `generated-artifact-converge`
-still means the full writer bundle, but it now expands into
-`generated-artifact-script-output` followed by
-`generated-artifact-finality-suffix`. `release-finality-resettle` uses only the
-finality suffix (`external-report-action-matrix -> generated-artifact-index ->
+`release-finality-resettle` uses only the finality suffix
+(`external-report-action-matrix -> generated-artifact-index ->
 artifact-freshness`) before `release-closeout-fixed-point` and finality verify.
 The workflow planner now records that fan-out explicitly in each selected step's
 `fanout_targets` field so the repair suffix is inspectable rather than implicit

@@ -100,7 +100,6 @@ FINALITY_RESETTLE_TARGETS = [
 ]
 
 GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS = [
-    "script-output-surfaces",
     "external-report-action-matrix",
     "generated-artifact-index",
     "artifact-freshness",
@@ -163,8 +162,9 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "workflow_id": "generated_artifact_converge_closeout",
         "recommended_lane": "generated-artifact-converge",
         "reason_code": "generated_artifact_converge_contract_changed",
-        "description": "Generated-artifact orchestration, source inventory, index, or freshness contract changed; run the full generated-artifact aggregate instead of a suffix-only repair.",
+        "description": "Generated-artifact orchestration, source inventory, index, or freshness contract changed; refresh the script-output slice explicitly before the generated-report suffix.",
         "targets": [
+            "generated-artifact-script-output",
             "generated-artifact-converge",
             "release-closeout-fixed-point",
             "tmp-json-clean",
