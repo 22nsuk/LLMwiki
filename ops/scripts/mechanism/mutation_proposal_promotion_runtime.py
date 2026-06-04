@@ -180,17 +180,15 @@ def reported_blocked_proposal_count(
     proposals: list[dict],
     empty_queue_blockers: list[dict],
 ) -> int:
-    blocked_proposal_count = sum(1 for proposal in proposals if proposal["blocked_by"])
-    if proposals:
-        return blocked_proposal_count
-    return len(empty_queue_blockers)
+    if not proposals:
+        return len(empty_queue_blockers)
+    return sum(1 for proposal in proposals if not isinstance(proposal.get("blocked_by"), list) or proposal["blocked_by"])
 
 
 def report_status(*, enabled: bool, proposals: list[dict]) -> str:
-    if not enabled:
-        return "attention"
-    if not proposals:
-        return "attention"
-    if not any(not proposal.get("blocked_by") for proposal in proposals):
-        return "attention"
-    return "pass"
+    if enabled and any(
+        isinstance(proposal.get("blocked_by"), list) and not proposal["blocked_by"]
+        for proposal in proposals
+    ):
+        return "pass"
+    return "attention"

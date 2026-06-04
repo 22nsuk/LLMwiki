@@ -83,6 +83,10 @@ def test_report_status_and_blocked_count_are_pure_gate_rules() -> None:
     assert report_status(enabled=False, proposals=[{"blocked_by": []}]) == "attention"
     assert report_status(enabled=True, proposals=[]) == "attention"
     assert report_status(enabled=True, proposals=[{"blocked_by": ["recent_log_overlap"]}]) == "attention"
+    assert report_status(
+        enabled=True,
+        proposals=[{"blocked_by": ["recent_log_overlap"]}, {"blocked_by": []}],
+    ) == "pass"
     assert report_status(enabled=True, proposals=[{"blocked_by": []}]) == "pass"
 
     assert reported_blocked_proposal_count(
@@ -90,3 +94,10 @@ def test_report_status_and_blocked_count_are_pure_gate_rules() -> None:
         [{"reason": "fallback"}],
     ) == 1
     assert reported_blocked_proposal_count([], [{"reason": "fallback"}]) == 1
+
+
+def test_report_status_requires_explicit_unblocked_proposal_shape() -> None:
+    malformed_queue = [{"proposal_id": "missing-blocked-by"}]
+
+    assert report_status(enabled=True, proposals=malformed_queue) == "attention"
+    assert reported_blocked_proposal_count(malformed_queue, []) == 1
