@@ -88,7 +88,7 @@ else:
 
 
 PRODUCER = "ops.scripts.backfill_archived_run_artifacts"
-SCRIPT_PATH = "ops/scripts/backfill_archived_run_artifacts.py"
+SCRIPT_PATH = "ops/scripts/core/backfill_archived_run_artifacts.py"
 RUN_ARTIFACT_SCAN_ROOT = Path("runs")
 BACKFILL_PROVENANCE_PROPERTY = "urn:openai:archived-run-backfill"
 ARCHIVE_REASON = "run_artifact_embedded_envelope_backfill"
@@ -467,7 +467,7 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         filename="changed-files-manifest.json",
         schema_path=CHANGED_FILES_MANIFEST_SCHEMA_PATH,
         artifact_kind="changed_files_manifest",
-        source_paths=(SCRIPT_PATH, "ops/scripts/mechanism_run_workspace_runtime.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/mechanism/mechanism_run_workspace_runtime.py"),
         derive_generated_at=_changed_files_manifest_generated_at,
     ),
     "planning-validation.json": ArchivedRunArtifactSpec(
@@ -476,8 +476,8 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         artifact_kind="planning_validation",
         source_paths=(
             SCRIPT_PATH,
-            "ops/scripts/finalize_run_state_runtime.py",
-            "ops/scripts/planning_gate_validate_runtime.py",
+            "ops/scripts/mechanism/finalize_run_state_runtime.py",
+            "ops/scripts/mechanism/planning_gate_validate_runtime.py",
         ),
         derive_generated_at=_planning_validation_generated_at,
     ),
@@ -487,8 +487,8 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         artifact_kind="proposal_snapshot",
         source_paths=(
             SCRIPT_PATH,
-            "ops/scripts/mechanism_run_scaffold_runtime.py",
-            "ops/scripts/mechanism_run_scaffold_templates_runtime.py",
+            "ops/scripts/mechanism/mechanism_run_scaffold_runtime.py",
+            "ops/scripts/mechanism/mechanism_run_scaffold_templates_runtime.py",
         ),
         derive_generated_at=_proposal_snapshot_generated_at,
     ),
@@ -496,28 +496,34 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         filename="promotion-report.json",
         schema_path=PROMOTION_REPORT_SCHEMA_PATH,
         artifact_kind="promotion_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/promotion_gate_mechanism_report_runtime.py"),
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/mechanism/promotion_gate_mechanism_report_runtime.py",
+        ),
         derive_generated_at=_promotion_report_generated_at,
     ),
     "run-ledger.json": ArchivedRunArtifactSpec(
         filename="run-ledger.json",
         schema_path=RUN_LEDGER_SCHEMA_PATH,
         artifact_kind="run_ledger",
-        source_paths=(SCRIPT_PATH, "ops/scripts/mechanism_run_ledger_runtime.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/mechanism/mechanism_run_ledger_runtime.py"),
         derive_generated_at=_run_ledger_generated_at,
     ),
     "behavior-delta.json": ArchivedRunArtifactSpec(
         filename="behavior-delta.json",
         schema_path=BEHAVIOR_DELTA_SCHEMA_PATH,
         artifact_kind="behavior_delta",
-        source_paths=(SCRIPT_PATH, "ops/scripts/behavior_delta_runtime.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/core/behavior_delta_runtime.py"),
         derive_generated_at=_payload_generated_at,
     ),
     "run-artifact-fingerprint.json": ArchivedRunArtifactSpec(
         filename="run-artifact-fingerprint.json",
         schema_path=RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH,
         artifact_kind="run_artifact_fingerprint",
-        source_paths=(SCRIPT_PATH, "ops/scripts/observability_artifact_fingerprint_runtime.py"),
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/core/observability_artifact_fingerprint_runtime.py",
+        ),
         derive_generated_at=_payload_generated_at,
     ),
     "baseline-mechanism-assessment.json": ArchivedRunArtifactSpec(
@@ -606,63 +612,72 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         filename="source-english-summary-slug-manifest-2026-04-22.json",
         schema_path=SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         artifact_kind="source_slug_curation_manifest",
-        source_paths=(SCRIPT_PATH, "ops/scripts/source_slug_curation.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/core/source_slug_curation.py"),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "raw-intake-promotion-profiles-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="raw-intake-promotion-profiles-2026-04-22.json",
         schema_path=RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
         artifact_kind="raw_intake_promotion_profile_bundle",
-        source_paths=(SCRIPT_PATH, "ops/scripts/raw_intake_promotion_scaffold_runtime.py"),
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/registry/raw_intake_promotion_scaffold_runtime.py",
+        ),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "raw-intake-promotion-render-after-concept-integration-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="raw-intake-promotion-render-after-concept-integration-2026-04-22.json",
         schema_path=RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
         artifact_kind="raw_intake_promotion_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/raw_intake_promotion.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/registry/raw_intake_promotion.py"),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "raw-intake-promotion-validate-after-concept-integration-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="raw-intake-promotion-validate-after-concept-integration-2026-04-22.json",
         schema_path=RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
         artifact_kind="raw_intake_promotion_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/raw_intake_promotion_validation_runtime.py"),
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/registry/raw_intake_promotion_validation_runtime.py",
+        ),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "raw-intake-promotion-validate-final-tree-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="raw-intake-promotion-validate-final-tree-2026-04-22.json",
         schema_path=RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
         artifact_kind="raw_intake_promotion_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/raw_intake_promotion_validation_runtime.py"),
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/registry/raw_intake_promotion_validation_runtime.py",
+        ),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "source-english-summary-slug-validate-final-tree-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="source-english-summary-slug-validate-final-tree-2026-04-22.json",
         schema_path=SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
         artifact_kind="source_slug_curation_validation_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/source_slug_curation.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/core/source_slug_curation.py"),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "raw-registry-preflight-final-tree-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="raw-registry-preflight-final-tree-2026-04-22.json",
         schema_path=RAW_INTAKE_FINAL_TREE_VALIDATION_REPORT_SCHEMA_PATH,
         artifact_kind="raw_intake_final_tree_validation_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/raw_registry_preflight.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/registry/raw_registry_preflight.py"),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "wiki-lint-final-tree-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="wiki-lint-final-tree-2026-04-22.json",
         schema_path=RAW_INTAKE_FINAL_TREE_VALIDATION_REPORT_SCHEMA_PATH,
         artifact_kind="raw_intake_final_tree_validation_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/wiki_lint.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/eval/wiki_lint.py"),
         derive_generated_at=_raw_intake_generated_at,
     ),
     "wiki-stage2-final-tree-2026-04-22.json": ArchivedRunArtifactSpec(
         filename="wiki-stage2-final-tree-2026-04-22.json",
         schema_path=RAW_INTAKE_FINAL_TREE_VALIDATION_REPORT_SCHEMA_PATH,
         artifact_kind="raw_intake_final_tree_validation_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/wiki_stage2_eval.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/eval/wiki_stage2_eval.py"),
         derive_generated_at=_raw_intake_generated_at,
     ),
 }

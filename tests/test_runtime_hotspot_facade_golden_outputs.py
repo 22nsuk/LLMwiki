@@ -72,7 +72,7 @@ GOLDEN_DIGESTS = {
     "mutation_proposal": "4fbf9571de3c1a95be6e8ccb31cf040521f2985192929e201f5b5d17387e1f80",
     "release_evidence_dashboard": "62538ade77a6af4439be4c044058fb328a036c645f1bc8d0257ae115f2987dc2",
     "release_closeout_summary": "417fe51900acc02ff5917f6918e52248593e4a224e7d5358f3705d201152c280",
-    "auto_improve_session_bundle": "9e340c714ea513897f73b58b969ed8463073fc88703a277aa0a21ab4cbab1b48",
+    "auto_improve_session_bundle": "6ea6f13694faef14ffbb94b079f9ecf5a07e65c85a534fc144a8f5aaa62fd03e",
 }
 GOLDEN_CHECK_COMMAND = "make runtime-hotspot-goldens-check"
 

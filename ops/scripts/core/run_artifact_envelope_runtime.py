@@ -48,19 +48,21 @@ def _canonical_payload_text(payload: dict[str, Any]) -> str:
     normalized = dict(payload)
     metadata = normalized.get("metadata")
     if isinstance(metadata, dict):
+        normalized_metadata = dict(metadata)
         properties = [
             item
-            for item in metadata.get("properties", [])
+            for item in normalized_metadata.get("properties", [])
             if not (
                 isinstance(item, dict)
                 and str(item.get("name", "")).strip() == "urn:openai:artifact-envelope"
             )
         ]
         if properties:
-            normalized["metadata"] = {
-                **metadata,
-                "properties": properties,
-            }
+            normalized_metadata["properties"] = properties
+        else:
+            normalized_metadata.pop("properties", None)
+        if normalized_metadata:
+            normalized["metadata"] = normalized_metadata
         else:
             normalized.pop("metadata", None)
     return json.dumps(

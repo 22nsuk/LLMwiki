@@ -60,18 +60,6 @@ def _embedded_envelope(payload: dict) -> dict:
     raise AssertionError("missing embedded artifact envelope")
 
 
-def _canonical_source_path(rel_path: str) -> str:
-    normalized = Path(rel_path).as_posix()
-    if (REPO_ROOT / normalized).exists():
-        return normalized
-    parts = normalized.split("/")
-    if len(parts) == 3 and parts[:2] == ["ops", "scripts"] and parts[2].endswith(".py"):
-        matches = sorted((REPO_ROOT / "ops" / "scripts").glob(f"*/{parts[2]}"))
-        if len(matches) == 1:
-            return matches[0].relative_to(REPO_ROOT).as_posix()
-    return ""
-
-
 class RunArtifactEnvelopeRuntimeTests(unittest.TestCase):
     def test_envelope_fingerprints_payload_content(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -91,6 +79,38 @@ class RunArtifactEnvelopeRuntimeTests(unittest.TestCase):
                 vault,
                 "runs/run-envelope/behavior-delta.json",
                 changed_payload,
+                schema_path="ops/schemas/behavior-delta.schema.json",
+            )
+
+            first_fingerprint = _embedded_envelope(first)["input_fingerprints"][
+                "run_artifact_payload_before_envelope"
+            ]
+            second_fingerprint = _embedded_envelope(second)["input_fingerprints"][
+                "run_artifact_payload_before_envelope"
+            ]
+            self.assertNotEqual(first_fingerprint, second_fingerprint)
+
+    def test_envelope_fingerprint_preserves_non_envelope_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            first_payload = _behavior_delta_payload()
+            first_payload["metadata"] = {"operator": "alpha", "properties": []}
+            second_payload = _behavior_delta_payload()
+            second_payload["metadata"] = {"operator": "beta", "properties": []}
+
+            first = maybe_embed_run_artifact_envelope(
+                vault,
+                "runs/run-envelope/behavior-delta.json",
+                first_payload,
+                schema_path="ops/schemas/behavior-delta.schema.json",
+            )
+            second = maybe_embed_run_artifact_envelope(
+                vault,
+                "runs/run-envelope/behavior-delta.json",
+                second_payload,
                 schema_path="ops/schemas/behavior-delta.schema.json",
             )
 
@@ -139,7 +159,7 @@ class RunArtifactEnvelopeRuntimeTests(unittest.TestCase):
         unresolved: list[str] = []
         for spec in ARCHIVED_RUN_ARTIFACT_SPECS.values():
             for rel_path in spec.source_paths:
-                if not _canonical_source_path(rel_path):
+                if not (REPO_ROOT / Path(rel_path).as_posix()).exists():
                     unresolved.append(f"{spec.filename}: {rel_path}")
 
         self.assertEqual(unresolved, [])

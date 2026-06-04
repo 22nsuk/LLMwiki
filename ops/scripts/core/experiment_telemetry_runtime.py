@@ -42,6 +42,14 @@ def _normalize_timeout_result(value: object) -> dict | None:
     }
 
 
+def _canonicalize_json_value(value: object) -> object:
+    if isinstance(value, dict):
+        return {key: _canonicalize_json_value(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        return [_canonicalize_json_value(item) for item in value]
+    return value
+
+
 def load_json(path: Path) -> dict:
     return read_json_object(path)
 
@@ -220,6 +228,10 @@ def write_run_telemetry(vault: Path, run_id: str, payload: dict) -> str:
         normalized_payload,
         schema_path=RUN_TELEMETRY_SCHEMA,
     )
+    canonical_payload = _canonicalize_json_value(normalized_payload)
+    if not isinstance(canonical_payload, dict):  # pragma: no cover - defensive type guard
+        raise TypeError("run telemetry payload canonicalization returned a non-object")
+    normalized_payload = canonical_payload
     write_vault_schema_validated_json(
         vault,
         rel_path,

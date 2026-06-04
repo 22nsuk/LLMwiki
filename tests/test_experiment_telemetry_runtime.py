@@ -220,6 +220,78 @@ class ExperimentTelemetryRuntimeTests(unittest.TestCase):
             self.assertFalse(timeout_result["stdout_received"])
             self.assertFalse(timeout_result["stderr_received"])
 
+    def test_write_run_telemetry_is_byte_stable_for_equivalent_payload_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            base_payload = {
+                "run_id": "run-telemetry-byte-stable",
+                "generated_at": "2026-04-16T00:00:00Z",
+                "proposal_snapshot": "",
+                "scope_freeze": "",
+                "routing_reports": [],
+                "executor_reports": [],
+                "workspace_preparation": {
+                    "mode": "full_copy",
+                    "baseline_file_count": 3,
+                    "copied_file_count": 3,
+                    "phase_durations": {
+                        "digest": 0.1,
+                        "copy": 0.2,
+                        "total": 0.3,
+                    },
+                },
+                "decision": "",
+                "finalized": True,
+                "finalize_result": {
+                    "shadow_apply_report": {"status": "pass", "changed": False},
+                    "rollback_rehearsal_report": {"status": "pass"},
+                    "live_applied": True,
+                    "apply_mode": "live",
+                    "apply_status": "live_applied",
+                },
+            }
+            reordered_payload = {
+                "finalize_result": {
+                    "apply_status": "live_applied",
+                    "apply_mode": "live",
+                    "live_applied": True,
+                    "rollback_rehearsal_report": {"status": "pass"},
+                    "shadow_apply_report": {"changed": False, "status": "pass"},
+                },
+                "finalized": True,
+                "decision": "",
+                "workspace_preparation": {
+                    "phase_durations": {
+                        "total": 0.3,
+                        "copy": 0.2,
+                        "digest": 0.1,
+                    },
+                    "copied_file_count": 3,
+                    "baseline_file_count": 3,
+                    "mode": "full_copy",
+                },
+                "executor_reports": [],
+                "routing_reports": [],
+                "scope_freeze": "",
+                "proposal_snapshot": "",
+                "generated_at": "2026-04-16T00:00:00Z",
+                "run_id": "run-telemetry-byte-stable",
+            }
+
+            rel_path = write_run_telemetry(vault, "run-telemetry-byte-stable", base_payload)
+            first_bytes = (vault / rel_path).read_bytes()
+            rel_path = write_run_telemetry(
+                vault,
+                "run-telemetry-byte-stable",
+                reordered_payload,
+            )
+            second_bytes = (vault / rel_path).read_bytes()
+
+            self.assertEqual(first_bytes, second_bytes)
+
     def test_write_run_telemetry_rejects_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

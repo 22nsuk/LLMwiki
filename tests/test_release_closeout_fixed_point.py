@@ -85,14 +85,22 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
 
-    def _write_artifact_freshness_fixed_point_debt(self, *, has_debt: bool) -> None:
+    def _write_artifact_freshness_fixed_point_debt(
+        self,
+        *,
+        has_debt: bool,
+        debt_kind: str = "schema",
+    ) -> None:
         record: dict[str, Any] = {
             "path": DEFAULT_OUT,
             "schema_validation_status": "pass",
+            "currentness_status": "current",
+            "source_revision_status": "current",
+            "source_tree_fingerprint_status": "current",
             "issues": [],
             "schema_validation_errors": [],
         }
-        if has_debt:
+        if has_debt and debt_kind == "schema":
             record.update(
                 {
                     "schema_validation_status": "fail",
@@ -102,6 +110,20 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
                     ],
                 }
             )
+        elif has_debt and debt_kind == "currentness":
+            record.update(
+                {
+                    "currentness_status": "stale",
+                    "source_revision_status": "stale",
+                    "source_tree_fingerprint_status": "stale",
+                    "issues": [
+                        "source_revision_mismatch",
+                        "source_tree_fingerprint_mismatch",
+                    ],
+                }
+            )
+        elif has_debt:
+            raise ValueError(f"unsupported fixed-point debt_kind: {debt_kind}")
         self._write_tracked_payload(
             ARTIFACT_FRESHNESS_REPORT_PATH,
             {
@@ -555,7 +577,9 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(result["bootstrap_required"], True)
         self.assertEqual(len(result["passes"]), 1)
         self.assertTrue(result["initial_fixed_point_freshness_debt"]["has_schema_debt"])
+        self.assertTrue(result["initial_fixed_point_freshness_debt"]["has_freshness_debt"])
         self.assertFalse(result["final_fixed_point_freshness_debt"]["has_schema_debt"])
+        self.assertFalse(result["final_fixed_point_freshness_debt"]["has_freshness_debt"])
         self.assertGreaterEqual(calls.count("artifact-freshness"), 1)
         fixed_point = json.loads((self.vault / DEFAULT_OUT).read_text(encoding="utf-8"))
         self.assertEqual(fixed_point["status"], "pass")
@@ -563,7 +587,61 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             validate_with_schema(fixed_point, load_schema(SCHEMA_PATH)), []
         )
 
-    def test_post_promote_bootstrap_skips_when_artifact_freshness_has_no_fixed_point_schema_debt(
+    def test_post_promote_bootstrap_refreshes_fixed_point_currentness_debt_in_artifact_freshness(
+        self,
+    ) -> None:
+        self._write_artifact_freshness_fixed_point_debt(
+            has_debt=True,
+            debt_kind="currentness",
+        )
+        calls: list[str] = []
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            target = argv[1]
+            calls.append(target)
+            if target == "artifact-freshness":
+                self._write_artifact_freshness_fixed_point_debt(has_debt=False)
+            if target in TARGET_TO_TRACKED_PATH:
+                self._write_tracked_payload(
+                    TARGET_TO_TRACKED_PATH[target],
+                    {"target": target, "stable": True},
+                )
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        result = bootstrap_post_promote_freshness(
+            self.vault,
+            max_bootstrap_passes=2,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["bootstrap_required"], True)
+        self.assertEqual(len(result["passes"]), 1)
+        initial_debt = result["initial_fixed_point_freshness_debt"]
+        final_debt = result["final_fixed_point_freshness_debt"]
+        self.assertFalse(initial_debt["has_schema_debt"])
+        self.assertTrue(initial_debt["has_freshness_debt"])
+        self.assertEqual(initial_debt["source_revision_status"], "stale")
+        self.assertFalse(final_debt["has_freshness_debt"])
+        self.assertGreaterEqual(calls.count("artifact-freshness"), 1)
+
+    def test_post_promote_bootstrap_skips_when_artifact_freshness_has_no_fixed_point_debt(
         self,
     ) -> None:
         self._write_artifact_freshness_fixed_point_debt(has_debt=False)
@@ -597,4 +675,5 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(result["status"], "pass")
         self.assertEqual(result["bootstrap_required"], False)
         self.assertEqual(result["passes"], [])
+        self.assertFalse(result["initial_fixed_point_freshness_debt"]["has_freshness_debt"])
         self.assertEqual(calls, [])

@@ -43,6 +43,13 @@ DEFAULT_TIMEOUT_SECONDS = 600
 ARTIFACT_FRESHNESS_REPORT_PATH = "ops/reports/artifact-freshness-report.json"
 DEFAULT_BOOTSTRAP_CANDIDATE_PREFIX = "tmp/release-closeout-fixed-point.bootstrap"
 FIXED_POINT_SCHEMA_DEBT_ISSUE = "schema_validation_failed"
+FIXED_POINT_FRESHNESS_DEBT_ISSUES = {
+    FIXED_POINT_SCHEMA_DEBT_ISSUE,
+    "source_revision_mismatch",
+    "source_tree_fingerprint_mismatch",
+    "source_revision_unknown",
+    "source_tree_fingerprint_unknown",
+}
 
 CommandRunner = Callable[[Sequence[str], Path, int, Mapping[str, str]], dict[str, Any]]
 
@@ -635,6 +642,7 @@ def _fixed_point_freshness_debt_record(vault: Path) -> dict[str, Any]:
             "path": DEFAULT_OUT,
             "present": False,
             "has_schema_debt": False,
+            "has_freshness_debt": False,
             "load_status": str(diagnostics.get("status", "unknown")),
             "issues": [],
             "schema_validation_errors": [],
@@ -657,11 +665,27 @@ def _fixed_point_freshness_debt_record(vault: Path) -> dict[str, Any]:
             str(item.get("schema_validation_status", "")).strip() == "fail"
             and FIXED_POINT_SCHEMA_DEBT_ISSUE in issues
         )
+        currentness_status = str(item.get("currentness_status", "")).strip()
+        source_revision_status = str(item.get("source_revision_status", "")).strip()
+        source_tree_fingerprint_status = str(
+            item.get("source_tree_fingerprint_status", "")
+        ).strip()
+        has_freshness_debt = (
+            has_schema_debt
+            or currentness_status in {"stale", "unknown"}
+            or source_revision_status in {"stale", "unknown"}
+            or source_tree_fingerprint_status in {"stale", "unknown"}
+            or any(str(issue) in FIXED_POINT_FRESHNESS_DEBT_ISSUES for issue in issues)
+        )
         return {
             "path": DEFAULT_OUT,
             "present": True,
             "has_schema_debt": has_schema_debt,
+            "has_freshness_debt": has_freshness_debt,
             "load_status": "ok",
+            "currentness_status": currentness_status,
+            "source_revision_status": source_revision_status,
+            "source_tree_fingerprint_status": source_tree_fingerprint_status,
             "issues": [str(issue) for issue in issues],
             "schema_validation_errors": [
                 str(error) for error in schema_validation_errors
@@ -671,6 +695,7 @@ def _fixed_point_freshness_debt_record(vault: Path) -> dict[str, Any]:
         "path": DEFAULT_OUT,
         "present": False,
         "has_schema_debt": False,
+        "has_freshness_debt": False,
         "load_status": "ok",
         "issues": [],
         "schema_validation_errors": [],
@@ -1172,7 +1197,7 @@ def bootstrap_post_promote_freshness(
     initial_debt = _fixed_point_freshness_debt_record(vault)
     passes: list[dict[str, Any]] = []
 
-    if not initial_debt["has_schema_debt"]:
+    if not initial_debt["has_freshness_debt"]:
         return {
             "status": "pass",
             "bootstrap_required": False,
@@ -1238,7 +1263,7 @@ def bootstrap_post_promote_freshness(
             }
         )
         passes.append(pass_record)
-        if not final_debt["has_schema_debt"]:
+        if not final_debt["has_freshness_debt"]:
             return {
                 "status": "pass",
                 "bootstrap_required": True,
@@ -1257,7 +1282,7 @@ def bootstrap_post_promote_freshness(
         "passes": passes,
         "initial_fixed_point_freshness_debt": initial_debt,
         "final_fixed_point_freshness_debt": final_debt,
-        "reason": "fixed_point_freshness_schema_debt_persisted",
+        "reason": "fixed_point_freshness_debt_persisted",
     }
 
 
@@ -1549,7 +1574,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--bootstrap-post-promote",
         action="store_true",
-        help="After canonical promotion, refresh artifact-freshness and the fixed-point report if freshness still records fixed-point schema debt.",
+        help="After canonical promotion, refresh artifact-freshness and the fixed-point report if freshness still records fixed-point debt.",
     )
     parser.add_argument("--bootstrap-max-passes", type=int, default=2)
     parser.add_argument(
