@@ -334,6 +334,143 @@ def _run_artifact_fingerprint_confirmation(
     }
 
 
+def _run_command_log_symlink_retention_record(
+    vault: Path, rel_path: str
+) -> dict[str, Any]:
+    owning_run = _owning_run_path(rel_path)
+    return {
+        **_path_record(vault, rel_path, category="historical_zero_byte_run_command_log"),
+        "artifact_role": "run_log_placeholder",
+        "size_bytes": 0,
+        "owning_run": owning_run,
+        "run_id": _run_id_from_owning_path(owning_run),
+        "delete_allowed": False,
+        "reason": "run command log path is a symlink",
+    }
+
+
+def _run_command_log_base_record(
+    vault: Path,
+    *,
+    rel_path: str,
+    owning_run: str,
+    run_id: str,
+    size_bytes: int,
+) -> dict[str, Any]:
+    return {
+        **_path_record(vault, rel_path, category="historical_zero_byte_run_command_log"),
+        "artifact_role": "run_log_placeholder",
+        "size_bytes": size_bytes,
+        "owning_run": owning_run,
+        "run_id": run_id,
+        "evidence_paths": [ARTIFACT_FRESHNESS_REPORT_PATH],
+        **_run_artifact_fingerprint_confirmation(
+            vault,
+            owning_run=owning_run,
+            rel_path=rel_path,
+        ),
+    }
+
+
+def _run_command_log_retained_record(
+    record: dict[str, Any],
+    reason: str,
+    *,
+    blocking_reference: str | None = None,
+    extra: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {**record, "delete_allowed": False, "reason": reason}
+    if blocking_reference:
+        result["blocking_reference"] = blocking_reference
+    if extra:
+        result.update(extra)
+    return result
+
+
+def _run_command_log_delete_record(
+    record: dict[str, Any],
+    reason: str,
+) -> dict[str, Any]:
+    return {**record, "delete_allowed": True, "reason": reason}
+
+
+def _run_command_log_fingerprint_blocker(
+    record: dict[str, Any],
+) -> dict[str, Any] | None:
+    reason = record.get("fingerprint_blocking_reason")
+    if not reason:
+        return None
+    return _run_command_log_retained_record(
+        record,
+        str(reason),
+        blocking_reference=str(record["fingerprint_path"]),
+    )
+
+
+def _classify_run_command_log_record(
+    record: dict[str, Any],
+    *,
+    rel_path: str,
+    owning_run: str,
+    run_id: str,
+    closed_run_ids: set[str],
+    freshness_paths: set[str],
+    freshness_reason: str,
+    lock_blocker: dict[str, str] | None,
+    blocking_reference: str | None,
+) -> dict[str, Any]:
+    if not record["ignored"]:
+        return _run_command_log_retained_record(
+            record,
+            "zero-byte run command log is not ignored by git",
+        )
+    if lock_blocker is not None:
+        return _run_command_log_retained_record(
+            record,
+            "goal runtime lock blocks run-log cleanup",
+            blocking_reference=lock_blocker["path"],
+            extra={"lock_blocking_reason": lock_blocker["reason"]},
+        )
+    if freshness_reason:
+        return _run_command_log_retained_record(
+            record,
+            freshness_reason,
+            blocking_reference=ARTIFACT_FRESHNESS_REPORT_PATH,
+        )
+    if rel_path not in freshness_paths:
+        return _run_command_log_retained_record(
+            record,
+            "artifact freshness report does not list this zero-byte run log placeholder",
+            blocking_reference=ARTIFACT_FRESHNESS_REPORT_PATH,
+        )
+    if blocking_reference:
+        return _run_command_log_retained_record(
+            record,
+            "current evidence references owning run",
+            blocking_reference=blocking_reference,
+        )
+    if _is_archived_run(owning_run):
+        fingerprint_blocker = _run_command_log_fingerprint_blocker(record)
+        if fingerprint_blocker is not None:
+            return fingerprint_blocker
+        return _run_command_log_delete_record(
+            record,
+            "archived run zero-byte command log placeholder",
+        )
+    if run_id in closed_run_ids:
+        fingerprint_blocker = _run_command_log_fingerprint_blocker(record)
+        if fingerprint_blocker is not None:
+            return fingerprint_blocker
+        return _run_command_log_delete_record(
+            record,
+            "closed rework run zero-byte command log placeholder",
+        )
+    return _run_command_log_retained_record(
+        record,
+        "run is not archived or closed by rework-closures evidence",
+    )
+
+
 def _template_run_residue_record(vault: Path, rel_path: str) -> dict[str, Any]:
     record = _path_record(vault, rel_path, category="template_run_residue")
     path = vault / rel_path
@@ -375,24 +512,12 @@ def _run_command_log_retention_records(vault: Path) -> list[dict[str, Any]]:
     for path in sorted(runs_root.rglob("*")):
         if path.name not in RUN_COMMAND_LOG_FILENAMES:
             continue
+        try:
+            rel_path = path.relative_to(vault).as_posix()
+        except ValueError:
+            continue
         if path.is_symlink():
-            try:
-                rel_path = path.relative_to(vault).as_posix()
-            except ValueError:
-                continue
-            records.append(
-                {
-                    **_path_record(
-                        vault, rel_path, category="historical_zero_byte_run_command_log"
-                    ),
-                    "artifact_role": "run_log_placeholder",
-                    "size_bytes": 0,
-                    "owning_run": _owning_run_path(rel_path),
-                    "run_id": _run_id_from_owning_path(_owning_run_path(rel_path)),
-                    "delete_allowed": False,
-                    "reason": "run command log path is a symlink",
-                }
-            )
+            records.append(_run_command_log_symlink_retention_record(vault, rel_path))
             continue
         if not path.is_file():
             continue
@@ -402,7 +527,6 @@ def _run_command_log_retention_records(vault: Path) -> list[dict[str, Any]]:
             continue
         if size_bytes != 0:
             continue
-        rel_path = path.relative_to(vault).as_posix()
         owning_run = _owning_run_path(rel_path)
         run_id = _run_id_from_owning_path(owning_run)
         blocking_reference = _blocking_run_reference(
@@ -411,111 +535,26 @@ def _run_command_log_retention_records(vault: Path) -> list[dict[str, Any]]:
             run_id=run_id,
             evidence=reference_evidence,
         )
-        fingerprint = _run_artifact_fingerprint_confirmation(
+        record = _run_command_log_base_record(
             vault,
-            owning_run=owning_run,
             rel_path=rel_path,
+            owning_run=owning_run,
+            run_id=run_id,
+            size_bytes=size_bytes,
         )
-        record = {
-            **_path_record(
-                vault, rel_path, category="historical_zero_byte_run_command_log"
-            ),
-            "artifact_role": "run_log_placeholder",
-            "size_bytes": size_bytes,
-            "owning_run": owning_run,
-            "run_id": run_id,
-            "evidence_paths": [ARTIFACT_FRESHNESS_REPORT_PATH],
-            **fingerprint,
-        }
-        if not record["ignored"]:
-            records.append(
-                {
-                    **record,
-                    "delete_allowed": False,
-                    "reason": "zero-byte run command log is not ignored by git",
-                }
+        records.append(
+            _classify_run_command_log_record(
+                record,
+                rel_path=rel_path,
+                owning_run=owning_run,
+                run_id=run_id,
+                closed_run_ids=closed_run_ids,
+                freshness_paths=freshness_paths,
+                freshness_reason=freshness_reason,
+                lock_blocker=lock_blocker,
+                blocking_reference=blocking_reference,
             )
-        elif lock_blocker is not None:
-            records.append(
-                {
-                    **record,
-                    "delete_allowed": False,
-                    "reason": "goal runtime lock blocks run-log cleanup",
-                    "blocking_reference": lock_blocker["path"],
-                    "lock_blocking_reason": lock_blocker["reason"],
-                }
-            )
-        elif freshness_reason:
-            records.append(
-                {
-                    **record,
-                    "delete_allowed": False,
-                    "reason": freshness_reason,
-                    "blocking_reference": ARTIFACT_FRESHNESS_REPORT_PATH,
-                }
-            )
-        elif rel_path not in freshness_paths:
-            records.append(
-                {
-                    **record,
-                    "delete_allowed": False,
-                    "reason": "artifact freshness report does not list this zero-byte run log placeholder",
-                    "blocking_reference": ARTIFACT_FRESHNESS_REPORT_PATH,
-                }
-            )
-        elif blocking_reference:
-            records.append(
-                {
-                    **record,
-                    "delete_allowed": False,
-                    "reason": "current evidence references owning run",
-                    "blocking_reference": blocking_reference,
-                }
-            )
-        elif _is_archived_run(owning_run):
-            if record.get("fingerprint_blocking_reason"):
-                records.append(
-                    {
-                        **record,
-                        "delete_allowed": False,
-                        "reason": str(record["fingerprint_blocking_reason"]),
-                        "blocking_reference": str(record["fingerprint_path"]),
-                    }
-                )
-            else:
-                records.append(
-                    {
-                        **record,
-                        "delete_allowed": True,
-                        "reason": "archived run zero-byte command log placeholder",
-                    }
-                )
-        elif run_id in closed_run_ids:
-            if record.get("fingerprint_blocking_reason"):
-                records.append(
-                    {
-                        **record,
-                        "delete_allowed": False,
-                        "reason": str(record["fingerprint_blocking_reason"]),
-                        "blocking_reference": str(record["fingerprint_path"]),
-                    }
-                )
-            else:
-                records.append(
-                    {
-                        **record,
-                        "delete_allowed": True,
-                        "reason": "closed rework run zero-byte command log placeholder",
-                    }
-                )
-        else:
-            records.append(
-                {
-                    **record,
-                    "delete_allowed": False,
-                    "reason": "run is not archived or closed by rework-closures evidence",
-                }
-            )
+        )
     return records
 
 
@@ -566,33 +605,43 @@ def _orphan_goal_state_records(vault: Path) -> list[dict[str, Any]]:
     return records
 
 
-def build_report(vault: Path, *, apply: bool = False) -> dict[str, Any]:
-    resolved_vault = vault.resolve()
-    delete_candidates = [
-        _path_record(resolved_vault, rel_path, category="regenerated_residue")
+def _delete_candidate_records(
+    vault: Path, run_log_retention: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    records = [
+        _path_record(vault, rel_path, category="regenerated_residue")
         for rel_path in DELETE_CANDIDATE_PATHS
     ]
-    delete_candidates.extend(
-        _path_record(resolved_vault, rel_path, category="disposable_diagnostic")
+    records.extend(
+        _path_record(vault, rel_path, category="disposable_diagnostic")
         for rel_path in DISPOSABLE_DIAGNOSTIC_PATHS
     )
-    delete_candidates.extend(
-        _template_run_residue_record(resolved_vault, rel_path)
+    records.extend(
+        _template_run_residue_record(vault, rel_path)
         for rel_path in TEMPLATE_RUN_RESIDUE_PATHS
     )
-    run_log_retention = _run_command_log_retention_records(resolved_vault)
-    delete_candidates.extend(
-        item for item in run_log_retention if item["delete_allowed"]
-    )
-    retained = [
+    records.extend(item for item in run_log_retention if item["delete_allowed"])
+    return records
+
+
+def _retained_records(
+    vault: Path, run_log_retention: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    records = [
         {
-            **_path_record(resolved_vault, rel_path, category="protected_surface"),
+            **_path_record(vault, rel_path, category="protected_surface"),
             "delete_allowed": False,
         }
         for rel_path in PROTECTED_PATHS
     ]
-    retained.extend(_orphan_goal_state_records(resolved_vault))
-    retained.extend(item for item in run_log_retention if not item["delete_allowed"])
+    records.extend(_orphan_goal_state_records(vault))
+    records.extend(item for item in run_log_retention if not item["delete_allowed"])
+    return records
+
+
+def _delete_candidate_blockers(
+    delete_candidates: list[dict[str, Any]],
+) -> list[dict[str, str]]:
     blockers = [
         {
             "path": item["path"],
@@ -609,15 +658,13 @@ def build_report(vault: Path, *, apply: bool = False) -> dict[str, Any]:
         for item in delete_candidates
         if item["exists"] and item["ignored"] and not item.get("delete_allowed", True)
     )
-    active_lock_blocker = _goal_runtime_lock_blocker(resolved_vault)
-    if apply and active_lock_blocker is not None:
-        blockers.append(
-            {
-                "path": active_lock_blocker["path"],
-                "reason": active_lock_blocker["reason"],
-            }
-        )
-    retention_blockers = [
+    return blockers
+
+
+def _retention_blocker_records(
+    run_log_retention: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    return [
         {
             "path": item["path"],
             "reason": str(item["reason"]),
@@ -630,25 +677,79 @@ def build_report(vault: Path, *, apply: bool = False) -> dict[str, Any]:
         for item in run_log_retention
         if item["exists"] and item.get("reason") in RUN_LOG_BLOCKING_REASONS
     ]
+
+
+def _run_log_apply_blockers(
+    vault: Path, delete_candidates: list[dict[str, Any]]
+) -> list[dict[str, str]]:
+    return [
+        {
+            "path": item["path"],
+            "reason": "run command log changed before deletion",
+        }
+        for item in delete_candidates
+        if item["category"] == "historical_zero_byte_run_command_log"
+        and not _empty_regular_run_log_file(vault / item["path"])
+    ]
+
+
+def _delete_allowed_candidates(
+    vault: Path, delete_candidates: list[dict[str, Any]]
+) -> list[str]:
     deleted_paths: list[str] = []
-    apply_blockers = []
-    if apply and not blockers:
-        apply_blockers = [
+    for item in delete_candidates:
+        if not item["exists"] or not item.get("delete_allowed", True):
+            continue
+        _delete_path(vault / item["path"])
+        deleted_paths.append(item["path"])
+    return deleted_paths
+
+
+def _retention_summary(
+    *,
+    delete_candidates: list[dict[str, Any]],
+    retained: list[dict[str, Any]],
+    run_log_retention: list[dict[str, Any]],
+    deleted_paths: list[str],
+    blockers: list[dict[str, str]],
+    retention_blockers: list[dict[str, str]],
+) -> dict[str, int]:
+    return {
+        "delete_candidate_count": sum(1 for item in delete_candidates if item["exists"]),
+        "deleted_count": len(deleted_paths),
+        "retained_existing_count": sum(1 for item in retained if item["exists"]),
+        "blocker_count": len(blockers),
+        "retention_blocker_count": len(retention_blockers),
+        "run_log_placeholder_count": len(run_log_retention),
+        "run_log_delete_candidate_count": sum(
+            1 for item in run_log_retention if item["delete_allowed"]
+        ),
+        "run_log_retained_count": sum(
+            1 for item in run_log_retention if not item["delete_allowed"]
+        ),
+    }
+
+
+def build_report(vault: Path, *, apply: bool = False) -> dict[str, Any]:
+    resolved_vault = vault.resolve()
+    run_log_retention = _run_command_log_retention_records(resolved_vault)
+    delete_candidates = _delete_candidate_records(resolved_vault, run_log_retention)
+    retained = _retained_records(resolved_vault, run_log_retention)
+    blockers = _delete_candidate_blockers(delete_candidates)
+    active_lock_blocker = _goal_runtime_lock_blocker(resolved_vault)
+    if apply and active_lock_blocker is not None:
+        blockers.append(
             {
-                "path": item["path"],
-                "reason": "run command log changed before deletion",
+                "path": active_lock_blocker["path"],
+                "reason": active_lock_blocker["reason"],
             }
-            for item in delete_candidates
-            if item["category"] == "historical_zero_byte_run_command_log"
-            and not _empty_regular_run_log_file(resolved_vault / item["path"])
-        ]
-    blockers.extend(apply_blockers)
+        )
+    retention_blockers = _retention_blocker_records(run_log_retention)
+    deleted_paths: list[str] = []
     if apply and not blockers:
-        for item in delete_candidates:
-            if not item["exists"] or not item.get("delete_allowed", True):
-                continue
-            _delete_path(resolved_vault / item["path"])
-            deleted_paths.append(item["path"])
+        blockers.extend(_run_log_apply_blockers(resolved_vault, delete_candidates))
+    if apply and not blockers:
+        deleted_paths = _delete_allowed_candidates(resolved_vault, delete_candidates)
     status = "fail" if blockers else "attention" if retention_blockers else "pass"
     cleanup_status = "blocked" if blockers else "applied" if apply else "dry_run"
     retention_status = "attention" if retention_blockers else "pass"
@@ -672,22 +773,14 @@ def build_report(vault: Path, *, apply: bool = False) -> dict[str, Any]:
         "deleted_paths": deleted_paths,
         "blockers": blockers,
         "retention_blockers": retention_blockers,
-        "summary": {
-            "delete_candidate_count": sum(
-                1 for item in delete_candidates if item["exists"]
-            ),
-            "deleted_count": len(deleted_paths),
-            "retained_existing_count": sum(1 for item in retained if item["exists"]),
-            "blocker_count": len(blockers),
-            "retention_blocker_count": len(retention_blockers),
-            "run_log_placeholder_count": len(run_log_retention),
-            "run_log_delete_candidate_count": sum(
-                1 for item in run_log_retention if item["delete_allowed"]
-            ),
-            "run_log_retained_count": sum(
-                1 for item in run_log_retention if not item["delete_allowed"]
-            ),
-        },
+        "summary": _retention_summary(
+            delete_candidates=delete_candidates,
+            retained=retained,
+            run_log_retention=run_log_retention,
+            deleted_paths=deleted_paths,
+            blockers=blockers,
+            retention_blockers=retention_blockers,
+        ),
     }
 
 

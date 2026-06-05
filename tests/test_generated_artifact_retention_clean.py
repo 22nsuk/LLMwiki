@@ -7,9 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from ops.scripts.generated_artifact_retention_clean import EMPTY_SHA256, build_report
+
+from ops.scripts.core import generated_artifact_retention_clean as retention_clean
 
 pytestmark = pytest.mark.report_contract
 
@@ -42,24 +45,28 @@ class GeneratedArtifactRetentionCleanTests(unittest.TestCase):
         )
         return vault
 
-    def _write_freshness_placeholders(self, vault: Path, *paths: str) -> None:
+    def _write_freshness_items(
+        self, vault: Path, items: list[dict[str, Any]]
+    ) -> None:
         report_path = vault / "ops/reports/artifact-freshness-report.json"
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(
-            json.dumps(
-                {
-                    "run_log_placeholders": [
-                        {
-                            "path": path,
-                            "artifact_role": "run_log_placeholder",
-                            "size_bytes": 0,
-                            "classification": "empty_run_command_log_placeholder",
-                        }
-                        for path in paths
-                    ]
-                }
-            ),
+            json.dumps({"run_log_placeholders": items}),
             encoding="utf-8",
+        )
+
+    def _write_freshness_placeholders(self, vault: Path, *paths: str) -> None:
+        self._write_freshness_items(
+            vault,
+            [
+                {
+                    "path": path,
+                    "artifact_role": "run_log_placeholder",
+                    "size_bytes": 0,
+                    "classification": "empty_run_command_log_placeholder",
+                }
+                for path in paths
+            ],
         )
 
     def _write_run_artifact_fingerprint(
@@ -381,6 +388,58 @@ class GeneratedArtifactRetentionCleanTests(unittest.TestCase):
             self.assertEqual(report["deleted_paths"], [])
             self.assertTrue(archived_log.is_file())
 
+    def test_run_log_placeholder_blocks_mismatched_freshness_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = self._vault(Path(temp_dir))
+            rel_path = "runs/archive/run-wrong-freshness/repo-health.stdout.txt"
+            archived_log = vault / rel_path
+            archived_log.parent.mkdir(parents=True)
+            archived_log.write_text("", encoding="utf-8")
+            self._write_run_artifact_fingerprint(
+                vault, "runs/archive/run-wrong-freshness", rel_path
+            )
+            self._write_freshness_items(
+                vault,
+                [
+                    {
+                        "path": rel_path,
+                        "artifact_role": "run_log_placeholder",
+                        "size_bytes": 0,
+                        "classification": "not_a_run_command_log_placeholder",
+                    }
+                ],
+            )
+
+            report = build_report(vault, apply=True)
+
+            self._assert_single_retention_blocker(
+                report,
+                path=rel_path,
+                reason="artifact freshness report does not list this zero-byte run log placeholder",
+                blocking_reference="ops/reports/artifact-freshness-report.json",
+            )
+            self.assertEqual(report["deleted_paths"], [])
+            self.assertTrue(archived_log.is_file())
+
+    def test_run_log_placeholder_blocks_symlink_command_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = self._vault(Path(temp_dir))
+            rel_path = "runs/archive/run-symlink/repo-health.stdout.txt"
+            archived_log = vault / rel_path
+            archived_log.parent.mkdir(parents=True)
+            (archived_log.parent / "target.txt").write_text("", encoding="utf-8")
+            archived_log.symlink_to("target.txt")
+
+            report = build_report(vault, apply=True)
+
+            self._assert_single_retention_blocker(
+                report,
+                path=rel_path,
+                reason="run command log path is a symlink",
+            )
+            self.assertEqual(report["deleted_paths"], [])
+            self.assertTrue(archived_log.is_symlink())
+
     def test_run_log_placeholder_blocks_unignored_command_log(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = self._vault(Path(temp_dir))
@@ -495,6 +554,38 @@ class GeneratedArtifactRetentionCleanTests(unittest.TestCase):
                 "runs/archive/run-path-not-recorded/run-artifact-fingerprint.json",
             )
             self.assertTrue(archived_log.is_file())
+
+    def test_apply_blocks_run_log_that_changes_before_deletion(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = self._vault(Path(temp_dir))
+            rel_path = "runs/archive/run-race/repo-health.stdout.txt"
+            archived_log = vault / rel_path
+            archived_log.parent.mkdir(parents=True)
+            archived_log.write_text("", encoding="utf-8")
+            self._write_run_artifact_fingerprint(vault, "runs/archive/run-race", rel_path)
+            self._write_freshness_placeholders(vault, rel_path)
+
+            def changed_before_delete(path: Path) -> bool:
+                path.write_text("changed\n", encoding="utf-8")
+                return False
+
+            with patch.object(
+                retention_clean,
+                "_empty_regular_run_log_file",
+                side_effect=changed_before_delete,
+            ):
+                report = build_report(vault, apply=True)
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(report["cleanup_status"], "blocked")
+            self.assertEqual(report["retention_status"], "pass")
+            self.assertEqual(report["gate_effect"], "blocks_execution")
+            self.assertEqual(
+                report["blockers"],
+                [{"path": rel_path, "reason": "run command log changed before deletion"}],
+            )
+            self.assertEqual(report["deleted_paths"], [])
+            self.assertEqual(archived_log.read_text(encoding="utf-8"), "changed\n")
 
     def test_run_log_placeholder_blocks_live_goal_runtime_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
