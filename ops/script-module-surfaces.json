@@ -105,18 +105,18 @@
         "PLANNING_VALIDATION_SCHEMA",
         "PROMOTION_REPORT_SCHEMA",
         "PROPOSAL_SNAPSHOT_SCHEMA",
-        "RUN_LEDGER_SCHEMA",
         "RUNTIME_OWNED_STARTER_FILES",
+        "RUN_LEDGER_SCHEMA",
         "SEED_SCHEMA",
         "SHELL_CONTROL_TOKENS",
-        "timestamp",
         "_command_argv",
         "_default_check_command",
         "_load_mutation_proposal",
         "_normalize_target_rel_paths",
         "_prepare_execution_commands",
         "_resolve_command_executable",
-        "_resolve_experiment_inputs"
+        "_resolve_experiment_inputs",
+        "timestamp"
       ]
     },
     {
@@ -140,8 +140,8 @@
       "direct_script_entrypoint": true,
       "exports": [
         "ARTIFACT_SCHEMAS",
-        "ArtifactLoadError",
         "OPTIONAL_ARTIFACT_SCHEMAS",
+        "ArtifactLoadError",
         "PlanningArtifactError",
         "load_artifact",
         "main",
@@ -155,6 +155,7 @@
       "role": "cli_facade",
       "direct_script_entrypoint": true,
       "exports": [
+        "MechanismClassReportRequest",
         "PromotionGateArtifactDecodeError",
         "PromotionGateArtifactMissingError",
         "PromotionGateArtifactSchemaError",
@@ -162,7 +163,6 @@
         "build_signoff",
         "main",
         "mechanism_class_report",
-        "MechanismClassReportRequest",
         "page_class_report"
       ]
     },
@@ -185,10 +185,10 @@
       "role": "compatibility_facade",
       "direct_script_entrypoint": false,
       "exports": [
-        "_registry_frontmatter_alignment_pass",
         "_locator_raw_path_corpus_consistency_pass",
-        "registry_frontmatter_alignment_pass",
-        "locator_raw_path_corpus_consistency_pass"
+        "_registry_frontmatter_alignment_pass",
+        "locator_raw_path_corpus_consistency_pass",
+        "registry_frontmatter_alignment_pass"
       ]
     },
     {
@@ -196,13 +196,13 @@
       "role": "compatibility_facade",
       "direct_script_entrypoint": false,
       "exports": [
-        "registry_review_exempt_paths",
-        "registry_entry_target_report_path",
-        "registry_topic_family",
-        "registry_topic_subfamily",
-        "registry_entry_line_span",
+        "_backlog_entry_age_days",
         "_parse_registry_iso_date",
-        "_backlog_entry_age_days"
+        "registry_entry_line_span",
+        "registry_entry_target_report_path",
+        "registry_review_exempt_paths",
+        "registry_topic_family",
+        "registry_topic_subfamily"
       ]
     },
     {
@@ -210,10 +210,10 @@
       "role": "compatibility_facade",
       "direct_script_entrypoint": false,
       "exports": [
-        "_summary_shard_review_candidate_pass",
         "_backlog_refactor_threshold_pass",
-        "summary_shard_review_candidate_pass",
-        "backlog_refactor_threshold_pass"
+        "_summary_shard_review_candidate_pass",
+        "backlog_refactor_threshold_pass",
+        "summary_shard_review_candidate_pass"
       ]
     },
     {
@@ -256,32 +256,32 @@
       "role": "compatibility_facade",
       "direct_script_entrypoint": false,
       "exports": [
-        "RegistryLintEmitter",
         "RegistryInventoryContext",
+        "RegistryLintEmitter",
         "RegistryLintPaths",
-        "_registry_lint_paths",
+        "_backlog_entry_age_days",
+        "_backlog_refactor_threshold_pass",
+        "_locator_raw_path_corpus_consistency_pass",
+        "_parse_registry_iso_date",
+        "_raw_inventory_consistency_pass",
+        "_registry_frontmatter_alignment_pass",
         "_registry_inventory_context_pass",
+        "_registry_lint_paths",
         "_registry_page_presence_pass",
+        "_registry_source_target_page_naming_pass",
         "_registry_summary_consistency_pass",
         "_shared_registry_inventory_diagnostics_pass",
-        "_raw_inventory_consistency_pass",
-        "_registry_source_target_page_naming_pass",
-        "registry_review_exempt_paths",
+        "_summary_shard_review_candidate_pass",
+        "backlog_refactor_threshold_pass",
+        "lint_registry_contract",
+        "locator_raw_path_corpus_consistency_pass",
+        "registry_entry_line_span",
         "registry_entry_target_report_path",
+        "registry_frontmatter_alignment_pass",
+        "registry_review_exempt_paths",
         "registry_topic_family",
         "registry_topic_subfamily",
-        "registry_entry_line_span",
-        "_parse_registry_iso_date",
-        "_backlog_entry_age_days",
-        "_summary_shard_review_candidate_pass",
-        "_backlog_refactor_threshold_pass",
-        "summary_shard_review_candidate_pass",
-        "backlog_refactor_threshold_pass",
-        "_registry_frontmatter_alignment_pass",
-        "_locator_raw_path_corpus_consistency_pass",
-        "registry_frontmatter_alignment_pass",
-        "locator_raw_path_corpus_consistency_pass",
-        "lint_registry_contract"
+        "summary_shard_review_candidate_pass"
       ]
     }
   ]
