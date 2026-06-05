@@ -42,9 +42,8 @@ from ops.scripts.schema_runtime import (
     validate_with_schema,
 )
 from ops.scripts.source_tree_fingerprint_runtime import (
-    DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT,
     producer_input_fingerprint,
-    release_source_tree_change_sample,
+    release_source_tree_divergence_diagnostics,
     release_source_tree_fingerprint,
 )
 
@@ -1180,47 +1179,6 @@ def _evaluate_source(
     raise ValueError(f"unsupported release closeout source: {spec.name}")
 
 
-def _source_tree_divergence_diagnostics(
-    vault: Path,
-    components: list[dict[str, Any]],
-    *,
-    current_source_tree_fingerprint: str,
-) -> dict[str, Any]:
-    diagnostics: list[dict[str, Any]] = []
-    for item in components:
-        if item.get("load_status") != "ok":
-            continue
-        source_tree_fingerprint = str(item.get("source_tree_fingerprint", "")).strip()
-        modified_after_generated_at = bool(item.get("modified_after_generated_at"))
-        matches_current_source_tree_fingerprint = (
-            bool(source_tree_fingerprint)
-            and source_tree_fingerprint == current_source_tree_fingerprint
-        )
-        if matches_current_source_tree_fingerprint and not modified_after_generated_at:
-            continue
-        sample = release_source_tree_change_sample(
-            vault,
-            generated_at=str(item.get("generated_at", "")).strip(),
-            path_limit=DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT,
-        )
-        diagnostics.append(
-            {
-                "name": str(item.get("name", "")).strip(),
-                "path": str(item.get("path", "")).strip(),
-                "generated_at": str(item.get("generated_at", "")).strip(),
-                "source_tree_fingerprint": source_tree_fingerprint,
-                "matches_current_source_tree_fingerprint": matches_current_source_tree_fingerprint,
-                "modified_after_generated_at": modified_after_generated_at,
-                "changed_after_generated_at_count": int(sample["changed_after_generated_at_count"]),
-                "changed_after_generated_at": list(sample["changed_after_generated_at"]),
-            }
-        )
-    return {
-        "path_limit": DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT,
-        "components": diagnostics,
-    }
-
-
 def _source_tree_coherence(
     vault: Path,
     components: list[dict[str, Any]],
@@ -1279,7 +1237,7 @@ def _source_tree_coherence(
                 ],
             )
         )
-    divergence_diagnostics = _source_tree_divergence_diagnostics(
+    divergence_diagnostics = release_source_tree_divergence_diagnostics(
         vault,
         loaded_components,
         current_source_tree_fingerprint=current_source_tree_fingerprint,

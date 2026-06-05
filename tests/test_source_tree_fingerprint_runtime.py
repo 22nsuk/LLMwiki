@@ -10,6 +10,7 @@ import pytest
 from ops.scripts.source_tree_fingerprint_runtime import (
     producer_input_fingerprint,
     release_source_tree_change_sample,
+    release_source_tree_divergence_diagnostics,
     release_source_tree_fingerprint,
 )
 
@@ -212,5 +213,56 @@ class SourceTreeFingerprintRuntimeTests(unittest.TestCase):
         self.assertEqual(sample["changed_after_generated_at_count"], 1)
         self.assertEqual(
             sample["changed_after_generated_at"],
+            [{"path": "ops/scripts/example.py", "mtime": "2026-04-29T08:00:01Z"}],
+        )
+
+    def test_release_source_tree_divergence_diagnostics_reports_noncurrent_components(self) -> None:
+        self._write("ops/scripts/example.py", "print('tracked')\n")
+        self._set_mtime("ops/scripts/example.py", "2026-04-29T08:00:01Z")
+        components = [
+            {
+                "load_status": "ok",
+                "name": "current",
+                "path": "ops/reports/current.json",
+                "generated_at": "2026-04-29T08:00:00Z",
+                "source_tree_fingerprint": "current-fingerprint",
+                "modified_after_generated_at": False,
+            },
+            {
+                "load_status": "ok",
+                "name": "fingerprint_drift",
+                "path": "ops/reports/fingerprint-drift.json",
+                "generated_at": "2026-04-29T08:00:00Z",
+                "source_tree_fingerprint": "old-fingerprint",
+                "modified_after_generated_at": False,
+            },
+            {
+                "load_status": "ok",
+                "name": "mtime_drift",
+                "path": "ops/reports/mtime-drift.json",
+                "generated_at": "2026-04-29T08:00:00Z",
+                "source_tree_fingerprint": "current-fingerprint",
+                "modified_after_generated_at": True,
+            },
+            {
+                "load_status": "missing",
+                "name": "missing",
+                "path": "ops/reports/missing.json",
+            },
+        ]
+
+        diagnostics = release_source_tree_divergence_diagnostics(
+            self.vault,
+            components,
+            current_source_tree_fingerprint="current-fingerprint",
+        )
+
+        self.assertEqual(diagnostics["path_limit"], 10)
+        by_name = {item["name"]: item for item in diagnostics["components"]}
+        self.assertEqual(set(by_name), {"fingerprint_drift", "mtime_drift"})
+        self.assertFalse(by_name["fingerprint_drift"]["matches_current_source_tree_fingerprint"])
+        self.assertTrue(by_name["mtime_drift"]["matches_current_source_tree_fingerprint"])
+        self.assertEqual(
+            by_name["mtime_drift"]["changed_after_generated_at"],
             [{"path": "ops/scripts/example.py", "mtime": "2026-04-29T08:00:01Z"}],
         )

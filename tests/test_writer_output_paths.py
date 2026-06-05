@@ -359,115 +359,61 @@ class WriterOutputPathsTest(unittest.TestCase):
                 self.assertIn("resolve_output_path", names)
                 self.assertIn("resolve_repo_output_path", names)
 
-    def test_wiki_eval_cli_writes_relative_out_under_vault(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault = Path(temp_dir) / "vault"
-            launcher = Path(temp_dir) / "launcher"
-            vault.mkdir()
-            launcher.mkdir()
-            seed_minimal_vault(vault)
-
-            self.run_main(
+    def test_wiki_report_clis_write_relative_out_under_vault(self) -> None:
+        cases: tuple[tuple[str, Callable[[list[str] | None], None], str, str], ...] = (
+            (
+                "wiki_eval",
                 wiki_eval_main,
-                "--vault",
-                str(vault),
-                "--out",
                 "reports/eval/report.json",
-                cwd=launcher,
-            )
-
-            report_path = vault / "reports" / "eval" / "report.json"
-            self.assertTrue(report_path.exists())
-            report = json.loads(report_path.read_text(encoding="utf-8"))
-            self.assertEqual(report["status"], "pass")
-
-    def test_wiki_lint_cli_writes_relative_out_under_vault(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault = Path(temp_dir) / "vault"
-            launcher = Path(temp_dir) / "launcher"
-            vault.mkdir()
-            launcher.mkdir()
-            seed_minimal_vault(vault)
-
-            self.run_main(
+                "reports/eval/report.json",
+            ),
+            (
+                "wiki_lint",
                 wiki_lint_main,
-                "--vault",
-                str(vault),
-                "--out",
                 "reports/lint/report.json",
-                cwd=launcher,
-            )
-
-            report_path = vault / "reports" / "lint" / "report.json"
-            self.assertTrue(report_path.exists())
-            report = json.loads(report_path.read_text(encoding="utf-8"))
-            self.assertEqual(report["status"], "pass")
-
-    def test_wiki_lint_cli_normalizes_windows_separator_relative_out_under_vault(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault = Path(temp_dir) / "vault"
-            launcher = Path(temp_dir) / "launcher"
-            vault.mkdir()
-            launcher.mkdir()
-            seed_minimal_vault(vault)
-
-            self.run_main(
+                "reports/lint/report.json",
+            ),
+            (
+                "wiki_lint_windows_separator",
                 wiki_lint_main,
-                "--vault",
-                str(vault),
-                "--out",
                 "reports\\lint\\windows-path-report.json",
-                cwd=launcher,
-            )
-
-            report_path = vault / "reports" / "lint" / "windows-path-report.json"
-            self.assertTrue(report_path.exists())
-            report = json.loads(report_path.read_text(encoding="utf-8"))
-            self.assertEqual(report["status"], "pass")
-
-    def test_wiki_eval_coverage_cli_writes_relative_out_under_vault(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault = Path(temp_dir) / "vault"
-            launcher = Path(temp_dir) / "launcher"
-            vault.mkdir()
-            launcher.mkdir()
-            seed_minimal_vault(vault)
-
-            self.run_main(
+                "reports/lint/windows-path-report.json",
+            ),
+            (
+                "wiki_eval_coverage",
                 wiki_eval_coverage_main,
-                "--vault",
-                str(vault),
-                "--out",
                 "reports/eval-coverage/report.json",
-                cwd=launcher,
-            )
-
-            report_path = vault / "reports" / "eval-coverage" / "report.json"
-            self.assertTrue(report_path.exists())
-            report = json.loads(report_path.read_text(encoding="utf-8"))
-            self.assertEqual(report["status"], "pass")
-
-    def test_wiki_stage2_eval_cli_writes_relative_out_under_vault(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault = Path(temp_dir) / "vault"
-            launcher = Path(temp_dir) / "launcher"
-            vault.mkdir()
-            launcher.mkdir()
-            seed_minimal_vault(vault)
-
-            self.run_main(
+                "reports/eval-coverage/report.json",
+            ),
+            (
+                "wiki_stage2_eval",
                 wiki_stage2_eval_main,
-                "--vault",
-                str(vault),
-                "--out",
                 "reports/stage2/report.json",
-                cwd=launcher,
-            )
+                "reports/stage2/report.json",
+            ),
+        )
 
-            report_path = vault / "reports" / "stage2" / "report.json"
-            self.assertTrue(report_path.exists())
-            report = json.loads(report_path.read_text(encoding="utf-8"))
-            self.assertEqual(report["status"], "pass")
+        for name, main_fn, out_arg, expected_relative_path in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp_dir:
+                vault = Path(temp_dir) / "vault"
+                launcher = Path(temp_dir) / "launcher"
+                vault.mkdir()
+                launcher.mkdir()
+                seed_minimal_vault(vault)
+
+                self.run_main(
+                    main_fn,
+                    "--vault",
+                    str(vault),
+                    "--out",
+                    out_arg,
+                    cwd=launcher,
+                )
+
+                report_path = vault / expected_relative_path
+                self.assertTrue(report_path.exists())
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                self.assertEqual(report["status"], "pass")
 
     def test_planning_gate_validate_cli_writes_relative_out_under_vault(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

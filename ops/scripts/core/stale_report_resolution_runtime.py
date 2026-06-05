@@ -135,13 +135,9 @@ def _normalise_resolution_input(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def validate_stale_report_resolutions(
+def _normalise_resolution_records(
     records: list[dict[str, Any]],
-    *,
-    required_report_paths: tuple[str, ...] = STALE_CANONICAL_REPORT_PATHS,
-) -> dict[str, Any]:
-    required = tuple(_normalized_repo_path(path) for path in required_report_paths)
-    required_set = set(required)
+) -> tuple[list[dict[str, Any]], dict[str, list[dict[str, Any]]], list[dict[str, str]]]:
     normalised_records: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
     by_path: dict[str, list[dict[str, Any]]] = {}
@@ -153,17 +149,13 @@ def validate_stale_report_resolutions(
             continue
         normalised_records.append(record)
         by_path.setdefault(record["report_path"], []).append(record)
+    return normalised_records, by_path, errors
 
-    missing_reports = [path for path in required if path not in by_path]
-    duplicate_reports = sorted(path for path, items in by_path.items() if len(items) > 1)
-    unexpected_reports = sorted(path for path in by_path if path not in required_set)
-    for path in missing_reports:
-        errors.append(_record_error(path, "missing_decision", "stale report has no decision"))
-    for path in duplicate_reports:
-        errors.append(_record_error(path, "duplicate_decision", "stale report has multiple decisions"))
-    for path in unexpected_reports:
-        errors.append(_record_error(path, "unexpected_report", "report is outside the stale canonical set"))
 
+def _validate_normalised_stale_resolution_records(
+    records: list[dict[str, Any]],
+) -> dict[str, list[Any]]:
+    errors: list[dict[str, str]] = []
     retained_not_head_aligned_reports: list[str] = []
     excluded_without_marker_reports: list[str] = []
     preserved_without_reason_reports: list[str] = []
@@ -171,7 +163,7 @@ def validate_stale_report_resolutions(
     canonical_retained_reports: list[str] = []
     excluded_reports: list[str] = []
 
-    for record in normalised_records:
+    for record in records:
         report_path = str(record["report_path"])
         decision = str(record["decision"])
         if decision not in STALE_REPORT_DECISIONS:
@@ -252,8 +244,40 @@ def validate_stale_report_resolutions(
             if not resolved:
                 priority_unresolved_reports.append(report_path)
 
-    all_retained_head_aligned = not retained_not_head_aligned_reports
-    priority_reports_resolved = not priority_unresolved_reports
+    return {
+        "errors": errors,
+        "canonical_retained_reports": canonical_retained_reports,
+        "excluded_reports": excluded_reports,
+        "retained_not_head_aligned_reports": retained_not_head_aligned_reports,
+        "excluded_without_marker_reports": excluded_without_marker_reports,
+        "preserved_without_reason_reports": preserved_without_reason_reports,
+        "priority_unresolved_reports": priority_unresolved_reports,
+    }
+
+
+def validate_stale_report_resolutions(
+    records: list[dict[str, Any]],
+    *,
+    required_report_paths: tuple[str, ...] = STALE_CANONICAL_REPORT_PATHS,
+) -> dict[str, Any]:
+    required = tuple(_normalized_repo_path(path) for path in required_report_paths)
+    required_set = set(required)
+    normalised_records, by_path, errors = _normalise_resolution_records(records)
+
+    missing_reports = [path for path in required if path not in by_path]
+    duplicate_reports = sorted(path for path, items in by_path.items() if len(items) > 1)
+    unexpected_reports = sorted(path for path in by_path if path not in required_set)
+    for path in missing_reports:
+        errors.append(_record_error(path, "missing_decision", "stale report has no decision"))
+    for path in duplicate_reports:
+        errors.append(_record_error(path, "duplicate_decision", "stale report has multiple decisions"))
+    for path in unexpected_reports:
+        errors.append(_record_error(path, "unexpected_report", "report is outside the stale canonical set"))
+
+    record_validation = _validate_normalised_stale_resolution_records(normalised_records)
+    errors.extend(record_validation["errors"])
+    all_retained_head_aligned = not record_validation["retained_not_head_aligned_reports"]
+    priority_reports_resolved = not record_validation["priority_unresolved_reports"]
     status = RESOLUTION_STATUS_PASS if not errors else RESOLUTION_STATUS_FAIL
     return {
         "status": status,
@@ -263,12 +287,20 @@ def validate_stale_report_resolutions(
         "missing_reports": missing_reports,
         "duplicate_reports": duplicate_reports,
         "unexpected_reports": unexpected_reports,
-        "canonical_retained_reports": sorted(set(canonical_retained_reports)),
-        "excluded_reports": sorted(set(excluded_reports)),
-        "retained_not_head_aligned_reports": sorted(set(retained_not_head_aligned_reports)),
-        "excluded_without_marker_reports": sorted(set(excluded_without_marker_reports)),
-        "preserved_without_reason_reports": sorted(set(preserved_without_reason_reports)),
-        "priority_unresolved_reports": sorted(set(priority_unresolved_reports)),
+        "canonical_retained_reports": sorted(set(record_validation["canonical_retained_reports"])),
+        "excluded_reports": sorted(set(record_validation["excluded_reports"])),
+        "retained_not_head_aligned_reports": sorted(
+            set(record_validation["retained_not_head_aligned_reports"])
+        ),
+        "excluded_without_marker_reports": sorted(
+            set(record_validation["excluded_without_marker_reports"])
+        ),
+        "preserved_without_reason_reports": sorted(
+            set(record_validation["preserved_without_reason_reports"])
+        ),
+        "priority_unresolved_reports": sorted(
+            set(record_validation["priority_unresolved_reports"])
+        ),
         "all_retained_reports_head_aligned": all_retained_head_aligned,
         "priority_reports_resolved": priority_reports_resolved,
         "errors": errors,
