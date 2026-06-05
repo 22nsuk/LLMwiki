@@ -250,10 +250,24 @@ class CiWorkflowStaticTests(unittest.TestCase):
             '--mypy-flags "--check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs" --python python',
             strict_preview_run,
         )
-        self.assertIn(
-            "python -m pytest -q tests/test_ci_workflow_static.py tests/test_makefile_static_gates.py tests/test_makefile_release_smoke_static_gates.py tests/test_makefile_test_execution_summary_gates.py tests/test_makefile_auto_improve_goal_static_gates.py tests/test_makefile_public_registry_supply_chain_gates.py tests/test_report_schema_sample_regeneration.py tests/test_report_schemas.py tests/test_ruff_strict_preview.py",
-            _run_text(_step_by_name(job, "Run Windows schema and strict-preview smoke tests")),
+        schema_static_smoke_run = _run_text(
+            _step_by_name(job, "Run Windows schema and strict-preview smoke tests")
         )
+        self.assertIn("python -m pytest -q", schema_static_smoke_run)
+        for test_path in (
+            "tests/test_ci_workflow_static.py",
+            "tests/test_makefile_static_gates.py",
+            "tests/test_makefile_release_orchestration_static_gates.py",
+            "tests/test_makefile_release_smoke_static_gates.py",
+            "tests/test_makefile_test_execution_summary_gates.py",
+            "tests/test_makefile_auto_improve_goal_static_gates.py",
+            "tests/test_makefile_public_registry_supply_chain_gates.py",
+            "tests/test_report_schema_sample_regeneration.py",
+            "tests/test_report_schemas.py",
+            "tests/test_ruff_strict_preview.py",
+        ):
+            with self.subTest(test_path=test_path):
+                self.assertIn(test_path, schema_static_smoke_run)
         upload = _step_by_name(job, "Upload Windows smoke artifact")
         self.assertEqual(upload.get("uses"), PINNED_UPLOAD_ARTIFACT_ACTION)
         upload_with = workflow_mapping(

@@ -1,50 +1,15 @@
 from __future__ import annotations
 
-import re
 import unittest
 from pathlib import Path
 
 import pytest
 
+from tests.makefile_static_helpers import _makefile_text, _recipe_lines, _target_block
+
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
-MAKEFILE = Path("Makefile")
 DOCS_RELEASE = Path("docs/release.md")
-REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _makefile_text() -> str:
-    text = MAKEFILE.read_text(encoding="utf-8")
-    for mk_file in sorted(REPO_ROOT.glob("mk/*.mk")):
-        text += "\n" + mk_file.read_text(encoding="utf-8")
-    return text
-
-
-def _target_block(text: str, target: str) -> str:
-    if target == ".PHONY":
-        matches = list(
-            re.finditer(
-                rf"^{re.escape(target)}:(?P<deps>[^\n]*)(?P<body>(?:\n\t[^\n]*)*)",
-                text,
-                flags=re.MULTILINE,
-            )
-        )
-        if not matches:
-            raise AssertionError(f"missing Makefile target: {target}")
-        return "\n".join(m.group(0) for m in matches)
-    match = re.search(
-        rf"^{re.escape(target)}:(?P<deps>[^\n]*)(?P<body>(?:\n\t[^\n]*)*)",
-        text,
-        flags=re.MULTILINE,
-    )
-    if match is None:
-        raise AssertionError(f"missing Makefile target: {target}")
-    return match.group(0)
-
-
-def _recipe_lines(text: str, target: str) -> list[str]:
-    block = _target_block(text, target)
-    return [line.strip() for line in block.splitlines()[1:] if line.startswith("\t")]
 
 
 class MakefileReleaseSmokeStaticGateTests(unittest.TestCase):

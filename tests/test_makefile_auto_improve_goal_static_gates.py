@@ -1,92 +1,19 @@
 from __future__ import annotations
 
-import re
 import unittest
-from pathlib import Path
 
 import pytest
 
+from tests.makefile_static_helpers import (
+    _assert_assignment_exists,
+    _assert_recipe_contains_tokens,
+    _assert_target_depends_on,
+    _makefile_text,
+    _recipe_lines,
+    _target_block,
+)
+
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
-
-MAKEFILE = Path("Makefile")
-REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _makefile_text() -> str:
-    text = MAKEFILE.read_text(encoding="utf-8")
-    for mk_file in sorted(REPO_ROOT.glob("mk/*.mk")):
-        text += "\n" + mk_file.read_text(encoding="utf-8")
-    return text
-
-
-def _target_block(text: str, target: str) -> str:
-    if target == ".PHONY":
-        matches = list(
-            re.finditer(
-                rf"^{re.escape(target)}:(?P<deps>[^\n]*)(?P<body>(?:\n\t[^\n]*)*)",
-                text,
-                flags=re.MULTILINE,
-            )
-        )
-        if not matches:
-            raise AssertionError(f"missing Makefile target: {target}")
-        return "\n".join(m.group(0) for m in matches)
-    match = re.search(
-        rf"^{re.escape(target)}:(?P<deps>[^\n]*)(?P<body>(?:\n\t[^\n]*)*)",
-        text,
-        flags=re.MULTILINE,
-    )
-    if match is None:
-        raise AssertionError(f"missing Makefile target: {target}")
-    return match.group(0)
-
-
-def _recipe_lines(text: str, target: str) -> list[str]:
-    block = _target_block(text, target)
-    return [line.strip() for line in block.splitlines()[1:] if line.startswith("\t")]
-
-
-def _target_dependencies(text: str, target: str) -> tuple[str, ...]:
-    header = _target_block(text, target).splitlines()[0]
-    _, _, raw_deps = header.partition(":")
-    return tuple(raw_deps.split())
-
-
-def _assert_target_depends_on(
-    case: unittest.TestCase, text: str, target: str, dependency: str
-) -> None:
-    case.assertIn(dependency, _target_dependencies(text, target))
-
-
-def _makefile_assignment_value(text: str, variable: str) -> str:
-    prefix = f"{variable} ?="
-    for line in text.splitlines():
-        if line.startswith(prefix):
-            return line[len(prefix) :].strip()
-    raise AssertionError(f"missing Makefile assignment: {variable}")
-
-
-def _assert_assignment_exists(
-    case: unittest.TestCase,
-    text: str,
-    variable: str,
-    expected_value: str | None = None,
-) -> str:
-    value = _makefile_assignment_value(text, variable)
-    if expected_value is not None:
-        case.assertEqual(value, expected_value)
-    return value
-
-
-def _assert_recipe_contains_tokens(
-    case: unittest.TestCase,
-    text: str,
-    target: str,
-    required_tokens: tuple[str, ...],
-) -> None:
-    block = _target_block(text, target)
-    missing = [token for token in required_tokens if token not in block]
-    case.assertEqual(missing, [], f"{target} recipe missing required tokens")
 
 
 class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
@@ -145,7 +72,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             ),
         )
 
-    def test_auto_improve_goal_targets_write_contract_and_status_report(self) -> None:
+    def test_auto_improve_goal_variables_defaults_and_loop_commands(self) -> None:
         text = _makefile_text()
 
         for variable, expected in (
@@ -336,6 +263,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             "--maintenance-action-plan-out \"$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)\"",
             maintenance_action_command,
         )
+
+    def test_auto_improve_goal_phony_targets_and_dependencies(self) -> None:
+        text = _makefile_text()
+
         phony = _target_block(text, ".PHONY")
         for target in (
             "codex-goal-contract",
@@ -420,11 +351,6 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "goal-runtime-run-admission")
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-status", "auto-improve-goal-contract")
-        admission_block = _target_block(text, "goal-runtime-run-admission")
-        self.assertIn(
-            "$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)",
-            admission_block,
-        )
         _assert_target_depends_on(self, text, "goal-runtime-run-admission-resume", "goal-runtime-run-admission")
         _assert_target_depends_on(
             self,
@@ -444,6 +370,15 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
         _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
+
+    def test_auto_improve_goal_admission_lock_and_contract_recipes(self) -> None:
+        text = _makefile_text()
+
+        admission_block = _target_block(text, "goal-runtime-run-admission")
+        self.assertIn(
+            "$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)",
+            admission_block,
+        )
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -692,6 +627,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--out \"$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)\"",
             ),
         )
+
+    def test_auto_improve_goal_local_evidence_and_closeout_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -928,6 +867,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             "$(MAKE) goal-runtime-local-evidence-converge",
             _recipe_lines(text, "goal-runtime-publish-local-evidence")[0],
         )
+
+    def test_auto_improve_goal_runner_finalize_and_certificate_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -1001,4 +944,3 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--expected-artifact-kind goal_runtime_certificate",
             ),
         )
-
