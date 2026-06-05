@@ -11,6 +11,7 @@
     "status",
     "summary",
     "modules",
+    "unclassified_modules",
     "unresolved_modules"
   ],
   "properties": {
@@ -27,6 +28,11 @@
         "pyproject_script_count",
         "makefile_module_invocation_count",
         "direct_fallback_module_count",
+        "lifecycle_policy_module_count",
+        "public_cli_module_count",
+        "transitional_installed_module_count",
+        "installed_non_public_module_count",
+        "unclassified_module_count",
         "unresolved_module_count"
       ],
       "properties": {
@@ -34,6 +40,11 @@
         "pyproject_script_count": { "type": "integer", "minimum": 0 },
         "makefile_module_invocation_count": { "type": "integer", "minimum": 0 },
         "direct_fallback_module_count": { "type": "integer", "minimum": 0 },
+        "lifecycle_policy_module_count": { "type": "integer", "minimum": 0 },
+        "public_cli_module_count": { "type": "integer", "minimum": 0 },
+        "transitional_installed_module_count": { "type": "integer", "minimum": 0 },
+        "installed_non_public_module_count": { "type": "integer", "minimum": 0 },
+        "unclassified_module_count": { "type": "integer", "minimum": 0 },
         "unresolved_module_count": { "type": "integer", "minimum": 0 }
       }
     },
@@ -42,7 +53,19 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["module", "path", "aliases", "sources"],
+        "required": [
+          "module",
+          "path",
+          "aliases",
+          "sources",
+          "lifecycle",
+          "install_state",
+          "console_scripts",
+          "direct_fallback",
+          "make_targets",
+          "replacement",
+          "removal_ready"
+        ],
         "properties": {
           "module": { "type": "string", "minLength": 1 },
           "path": { "type": "string" },
@@ -52,12 +75,61 @@
           },
           "sources": {
             "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "pyproject_scripts",
+                "makefile_module_invocations",
+                "direct_fallback_modules"
+              ]
+            }
+          },
+          "lifecycle": {
+            "type": "string",
+            "enum": [
+              "public_cli",
+              "make_only",
+              "report_generator",
+              "helper",
+              "test_only",
+              "legacy_delete",
+              "unclassified"
+            ]
+          },
+          "install_state": {
+            "type": "string",
+            "enum": [
+              "public_cli",
+              "transitional_installed",
+              "not_installed",
+              "unclassified"
+            ]
+          },
+          "console_scripts": {
+            "type": "array",
             "items": { "type": "string", "minLength": 1 }
+          },
+          "direct_fallback": {
+            "type": "boolean"
+          },
+          "make_targets": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "replacement": {
+            "type": "string"
+          },
+          "removal_ready": {
+            "type": "boolean"
           }
         }
       }
     },
     "unresolved_modules": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "unclassified_modules": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
     }

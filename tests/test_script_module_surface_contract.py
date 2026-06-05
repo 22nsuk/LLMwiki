@@ -15,16 +15,27 @@ pytestmark = pytest.mark.public
 SCRIPTS_DIR = Path("ops/scripts")
 SCRIPT_OUTPUT_SURFACES = Path("ops/script-output-surfaces.json")
 PYPROJECT = Path("pyproject.toml")
+SCRIPT_LIFECYCLE_POLICY = Path("ops/script-lifecycle-policy.json")
+SCRIPT_LIFECYCLE_POLICY_SCHEMA = Path("ops/schemas/script-lifecycle-policy.schema.json")
 SCRIPT_MODULE_SURFACES = Path("ops/script-module-surfaces.json")
 SCRIPT_MODULE_SURFACES_SCHEMA = Path("ops/schemas/script-module-surfaces.schema.json")
 CONSOLE_SCRIPT_PREFIX = "llm-wiki-"
-ALLOWED_PROJECT_SCRIPT_ALIASES = {
-    "llm-wiki-status": "ops.scripts.release.release_status_surface:main",
+INSTALLED_POLICY_STATES = {"public_cli", "transitional_installed"}
+PUBLIC_CLI_COMMANDS = {
+    "llm-wiki-finalize-run",
+    "llm-wiki-improvement-observations",
+    "llm-wiki-planning-gate-validate",
+    "llm-wiki-run-mechanism-experiment",
+    "llm-wiki-status",
 }
 
 
 def _load_contract() -> dict:
     return json.loads(SCRIPT_MODULE_SURFACES.read_text(encoding="utf-8"))
+
+
+def _load_lifecycle_policy() -> dict:
+    return json.loads(SCRIPT_LIFECYCLE_POLICY.read_text(encoding="utf-8"))
 
 
 def _fallback_eligible_paths() -> set[str]:
@@ -44,13 +55,15 @@ def _project_scripts() -> dict[str, str]:
     return {str(name): str(target) for name, target in scripts.items()}
 
 
-def _console_command_for_direct_script(path: str) -> str:
-    stem = Path(path).stem.removesuffix("_runtime")
-    return f"{CONSOLE_SCRIPT_PREFIX}{stem.replace('_', '-')}"
-
-
-def _console_target_for_direct_script(path: str) -> str:
-    return f"{path.removesuffix('.py').replace('/', '.')}:main"
+def _policy_project_scripts() -> dict[str, str]:
+    expected: dict[str, str] = {}
+    for module in _load_lifecycle_policy()["modules"]:
+        if module["install_state"] not in INSTALLED_POLICY_STATES:
+            continue
+        target = f"{module['canonical_module']}:main"
+        for command in module["console_scripts"]:
+            expected[command] = target
+    return expected
 
 
 def _script_files() -> set[str]:
@@ -109,6 +122,67 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
 
         self.assertEqual(validate_with_schema(contract, schema), [])
 
+    def test_lifecycle_policy_schema_validates(self) -> None:
+        policy = _load_lifecycle_policy()
+        schema = load_schema(SCRIPT_LIFECYCLE_POLICY_SCHEMA)
+
+        self.assertEqual(validate_with_schema(policy, schema), [])
+
+    def test_lifecycle_policy_paths_exist_and_modules_are_unique(self) -> None:
+        policy = _load_lifecycle_policy()
+        modules = [module["canonical_module"] for module in policy["modules"]]
+        paths = [module["path"] for module in policy["modules"]]
+
+        self.assertEqual(len(modules), len(set(modules)))
+        self.assertEqual(len(paths), len(set(paths)))
+        for module in policy["modules"]:
+            with self.subTest(module=module["canonical_module"]):
+                self.assertTrue(module["path"].startswith("ops/scripts/"))
+                self.assertTrue(Path(module["path"]).is_file())
+                self.assertEqual(
+                    Path(module["path"]).with_suffix("").as_posix().replace("/", "."),
+                    module["canonical_module"],
+                )
+
+    def test_lifecycle_policy_install_states_match_console_script_exposure(self) -> None:
+        for module in _load_lifecycle_policy()["modules"]:
+            with self.subTest(module=module["canonical_module"]):
+                if module["install_state"] in INSTALLED_POLICY_STATES:
+                    self.assertTrue(module["console_scripts"])
+                else:
+                    self.assertEqual(module["console_scripts"], [])
+
+    def test_lifecycle_policy_installed_surface_is_public_cli_allowlist(self) -> None:
+        policy = _load_lifecycle_policy()
+        public_commands = {
+            command
+            for module in policy["modules"]
+            if module["install_state"] == "public_cli"
+            for command in module["console_scripts"]
+        }
+        transitional_modules = [
+            module["canonical_module"]
+            for module in policy["modules"]
+            if module["install_state"] == "transitional_installed"
+        ]
+
+        self.assertEqual(public_commands, PUBLIC_CLI_COMMANDS)
+        self.assertEqual(transitional_modules, [])
+        self.assertEqual(set(_project_scripts()), PUBLIC_CLI_COMMANDS)
+
+    def test_not_installed_lifecycle_entries_have_replacement_paths(self) -> None:
+        for module in _load_lifecycle_policy()["modules"]:
+            if module["install_state"] != "not_installed":
+                continue
+            with self.subTest(module=module["canonical_module"]):
+                self.assertTrue(module["replacement"])
+
+    def test_lifecycle_policy_is_packaged_with_ops_control_files(self) -> None:
+        pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+        package_data = pyproject["tool"]["setuptools"]["package-data"]["ops"]
+
+        self.assertIn("script-lifecycle-policy.json", package_data)
+
     def test_stable_import_surfaces_match_literal_all_exports(self) -> None:
         contract = _load_contract()
 
@@ -150,15 +224,8 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
                 if path in entrypoints:
                     self.assertEqual(surface["role"], "cli_facade")
 
-    def test_project_scripts_are_canonical_cli_for_direct_wrappers(self) -> None:
-        entrypoints = _fallback_eligible_paths()
-        expected = {
-            _console_command_for_direct_script(path): _console_target_for_direct_script(path)
-            for path in entrypoints
-        }
-        expected.update(ALLOWED_PROJECT_SCRIPT_ALIASES)
-
-        self.assertEqual(_project_scripts(), expected)
+    def test_project_scripts_match_lifecycle_installed_console_scripts(self) -> None:
+        self.assertEqual(_project_scripts(), _policy_project_scripts())
 
     def test_project_script_targets_resolve_to_main_bindings(self) -> None:
         for command, target in sorted(_project_scripts().items()):

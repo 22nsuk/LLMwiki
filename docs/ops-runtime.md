@@ -30,8 +30,9 @@ Make orchestration, and helper scripts.
 - `public/`: public export, public check, and CBM public export.
 - `test/`: test execution summary and lane registry runtime.
 
-After editable install, public CLIs are exposed as `llm-wiki-*` console scripts
-from `pyproject.toml`. Make targets are the preferred operator entrypoint.
+After editable install, lifecycle policy public CLIs are exposed as
+`llm-wiki-*` console scripts from `pyproject.toml`. Make targets are the
+preferred operator entrypoint for report generators and maintenance lanes.
 
 ## Generated Artifacts
 
@@ -57,6 +58,6 @@ authority by themselves.
 ## Compatibility Surface
 
 Some flat module paths such as `python -m ops.scripts.release_smoke` continue to
-work through compatibility routing. New docs should prefer Make targets,
-`llm-wiki-*` console scripts, or canonical package paths such as
-`ops.scripts.release.release_smoke`.
+work through compatibility routing. New docs should prefer Make targets or
+canonical package paths such as `ops.scripts.release.release_smoke`; use
+`llm-wiki-*` only for lifecycle policy public CLIs.

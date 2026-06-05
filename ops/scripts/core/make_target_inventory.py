@@ -39,11 +39,15 @@ else:
 DEFAULT_OUT = "tmp/make-target-inventory.json"
 PRODUCER = "ops.scripts.make_target_inventory"
 TARGET_RE = re.compile(r"^([A-Za-z0-9_.%/@-][A-Za-z0-9_.%/@ -]*):(?:\s|$)")
+SCRIPT_MODULE_RE = re.compile(
+    r"-m\s+(ops\.scripts\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\b"
+)
 
 
 def _parse_makefile(content: str) -> tuple[list[str], list[dict[str, Any]]]:
     phony: list[str] = []
     targets: list[dict[str, Any]] = []
+    current_targets: list[dict[str, Any]] = []
     for line_number, line in enumerate(content.splitlines(), start=1):
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -52,15 +56,30 @@ def _parse_makefile(content: str) -> tuple[list[str], list[dict[str, Any]]]:
             phony.extend(item for item in stripped.split(":", 1)[1].split() if item)
             continue
         if line.startswith(("\t", " ")):
+            module_invocations = SCRIPT_MODULE_RE.findall(line)
+            if module_invocations:
+                for target in current_targets:
+                    target["module_invocations"].extend(module_invocations)
             continue
         if "?=" in line or ":=" in line or "+=" in line or line.count("=") == 1 and ":" not in line:
             continue
         match = TARGET_RE.match(line)
         if match is None:
+            current_targets = []
             continue
         names = [item.strip() for item in match.group(1).split() if item.strip()]
+        current_targets = []
         for name in names:
-            targets.append({"name": name, "line": line_number, "phony": name in phony})
+            target = {
+                "name": name,
+                "line": line_number,
+                "phony": name in phony,
+                "module_invocations": [],
+            }
+            targets.append(target)
+            current_targets.append(target)
+    for target in targets:
+        target["module_invocations"] = sorted(set(target["module_invocations"]))
     return sorted(set(phony)), targets
 
 
@@ -105,6 +124,7 @@ def build_report(
         "summary": {
             "target_count": len(target_names),
             "phony_count": len(phony),
+            "module_invocation_count": sum(len(item["module_invocations"]) for item in targets),
             "missing_phony_definition_count": len(missing_phony_definitions),
             "non_phony_target_count": len(non_phony_targets),
         },

@@ -130,7 +130,7 @@ The target intentionally leaves `.venv`, global uv caches, `ops/reports`,
 `build/release`, `runs`, and corpus/private surfaces alone.
 Use `make local-tool-state-clean` only when you explicitly want to remove
 ignored local tool/editor state such as `.agents`, `.obsidian`, `.serena`,
-`.ouroboros`, and `.ouroboros_eval_artifact.md`.
+`.vscode`, `.ouroboros`, and `.ouroboros_eval_artifact.md`.
 When the global uv cache itself is too large, use `make uv-cache-prune`; it
 runs `uv cache prune` without `--force`, removing only unreachable uv cache
 objects. Do not use `uv cache clean` as routine hygiene because it clears all uv
@@ -170,7 +170,7 @@ hand-maintained pytest marker expressions.
 
 ## Editing Discipline
 
-- Prefer Make targets and `llm-wiki-*` console scripts in docs.
+- Prefer Make targets in docs; use `llm-wiki-*` only for lifecycle policy public CLIs.
 - Use canonical package paths such as `ops.scripts.release.release_smoke` when a module path is needed.
 - Keep flat `ops.scripts.<name>` references as compatibility notes only.
 - If a contract changes, update the related docs, tests, schema, and policy in the same patch.

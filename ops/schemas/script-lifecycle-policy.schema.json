@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Script Lifecycle Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "version",
+    "description",
+    "lifecycle_values",
+    "install_state_values",
+    "modules"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "ops/schemas/script-lifecycle-policy.schema.json"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lifecycle_values": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/lifecycle"
+      }
+    },
+    "install_state_values": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/installState"
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/module"
+      }
+    }
+  },
+  "$defs": {
+    "lifecycle": {
+      "type": "string",
+      "enum": [
+        "public_cli",
+        "make_only",
+        "report_generator",
+        "helper",
+        "test_only",
+        "legacy_delete"
+      ]
+    },
+    "installState": {
+      "type": "string",
+      "enum": [
+        "public_cli",
+        "transitional_installed",
+        "not_installed"
+      ]
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_module",
+        "path",
+        "lifecycle",
+        "install_state",
+        "console_scripts",
+        "replacement",
+        "removal_ready",
+        "rationale"
+      ],
+      "properties": {
+        "canonical_module": {
+          "type": "string",
+          "pattern": "^ops\\.scripts\\.[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+$"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^ops/scripts/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+\\.py$"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/lifecycle"
+        },
+        "install_state": {
+          "$ref": "#/$defs/installState"
+        },
+        "console_scripts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^llm-wiki-[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        "replacement": {
+          "type": "string"
+        },
+        "removal_ready": {
+          "type": "boolean"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

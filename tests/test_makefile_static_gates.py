@@ -1111,7 +1111,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "LOCAL_TOOL_STATE_CLEAN_PATHS ?= .agents .obsidian .serena .ouroboros .ouroboros_eval_artifact.md",
+            "LOCAL_TOOL_STATE_CLEAN_PATHS ?= .agents .obsidian .serena .vscode .ouroboros .ouroboros_eval_artifact.md",
             text,
         )
         self.assertIn("LOCAL_CACHE_CLEAN_FIND_ROOTS ?= ops tests tools", text)

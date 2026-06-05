@@ -20,6 +20,7 @@ pytestmark = pytest.mark.public
 SCRIPTS_DIR = Path("ops/scripts")
 SURFACES_REGISTRY = Path("ops/script-output-surfaces.json")
 PYPROJECT = Path("pyproject.toml")
+SCRIPT_LIFECYCLE_POLICY = Path("ops/script-lifecycle-policy.json")
 MAKE_FILES = [Path("Makefile"), *sorted(Path("mk").glob("*.mk"))]
 DIRECT_SCRIPT_BRANCH = 'if __package__ in (None, ""):  # pragma: no cover - direct script fallback'
 REPO_ROOT_BOOTSTRAP = 'sys.path.insert(0, str(Path(__file__).resolve().parents[3]))'
@@ -30,6 +31,7 @@ DEPENDENCY_IMPORT_FAILURE_ALLOWLIST = {
     "ops/scripts/core/schema_runtime.py",
     "ops/scripts/core/yaml_runtime.py",
 }
+INSTALLED_POLICY_STATES = {"public_cli", "transitional_installed"}
 
 
 def _fallback_eligible_paths() -> set[str]:
@@ -47,6 +49,15 @@ def _project_script_module_targets() -> set[str]:
     payload = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     scripts = payload["project"]["scripts"]
     return {str(target).split(":", maxsplit=1)[0] for target in scripts.values()}
+
+
+def _lifecycle_project_script_module_targets() -> set[str]:
+    payload = json.loads(SCRIPT_LIFECYCLE_POLICY.read_text(encoding="utf-8"))
+    return {
+        str(module["canonical_module"])
+        for module in payload["modules"]
+        if module["install_state"] in INSTALLED_POLICY_STATES
+    }
 
 
 def _makefile_module_names() -> set[str]:
@@ -120,7 +131,7 @@ class ImportFallbackContractTests(unittest.TestCase):
         }
         all_targets = sorted(project_targets | flat_targets | direct_fallback_targets)
 
-        self.assertEqual(len(project_targets), 82)
+        self.assertEqual(project_targets, _lifecycle_project_script_module_targets())
         self.assertTrue(flat_targets)
         self.assertTrue(direct_fallback_targets)
         for module_name in all_targets:

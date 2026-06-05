@@ -100,12 +100,14 @@
       "required": [
         "target_count",
         "phony_count",
+        "module_invocation_count",
         "missing_phony_definition_count",
         "non_phony_target_count"
       ],
       "properties": {
         "target_count": { "type": "integer", "minimum": 0 },
         "phony_count": { "type": "integer", "minimum": 0 },
+        "module_invocation_count": { "type": "integer", "minimum": 0 },
         "missing_phony_definition_count": { "type": "integer", "minimum": 0 },
         "non_phony_target_count": { "type": "integer", "minimum": 0 }
       }
@@ -119,11 +121,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "line", "phony"],
+        "required": ["name", "line", "phony", "module_invocations"],
         "properties": {
           "name": { "type": "string", "minLength": 1 },
           "line": { "type": "integer", "minimum": 1 },
-          "phony": { "type": "boolean" }
+          "phony": { "type": "boolean" },
+          "module_invocations": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
         }
       }
     },

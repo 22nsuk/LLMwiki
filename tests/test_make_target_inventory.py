@@ -50,8 +50,10 @@ class MakeTargetInventoryTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["summary"]["target_count"], 2)
         self.assertEqual(report["summary"]["phony_count"], 2)
+        self.assertEqual(report["summary"]["module_invocation_count"], 0)
         self.assertEqual(report["missing_phony_definitions"], [])
         self.assertEqual(report["non_phony_targets"], [])
+        self.assertEqual(report["targets"][0]["module_invocations"], [])
         self.assertEqual(validate_with_schema(report, load_schema(MAKE_TARGET_INVENTORY_SCHEMA_PATH)), [])
 
     def test_non_phony_targets_are_visible_attention(self) -> None:
@@ -104,6 +106,35 @@ class MakeTargetInventoryTests(unittest.TestCase):
             "mk/release.mk",
             report["input_fingerprints"],
         )
+
+    def test_recipe_module_invocations_are_recorded_per_target(self) -> None:
+        (self.vault / "Makefile").write_text(
+            ".PHONY: alpha beta\n"
+            "alpha beta:\n"
+            "\t$(PYTHON) -m ops.scripts.core.sample_report --vault .\n"
+            "gamma:\n"
+            "\t$(PYTHON) -m ops.scripts.release.sample_release --vault .\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        targets = {target["name"]: target for target in report["targets"]}
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["summary"]["module_invocation_count"], 3)
+        self.assertEqual(
+            targets["alpha"]["module_invocations"],
+            ["ops.scripts.core.sample_report"],
+        )
+        self.assertEqual(
+            targets["beta"]["module_invocations"],
+            ["ops.scripts.core.sample_report"],
+        )
+        self.assertEqual(
+            targets["gamma"]["module_invocations"],
+            ["ops.scripts.release.sample_release"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(MAKE_TARGET_INVENTORY_SCHEMA_PATH)), [])
 
     def test_inventory_write_report_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())

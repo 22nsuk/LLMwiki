@@ -168,6 +168,45 @@ class ObservabilityArtifactsRuntimeTests(unittest.TestCase):
             self.assertEqual(payload["repo_provenance_snapshot"]["report_sha256"], hashlib.sha256(provenance_bytes).hexdigest())
             self.assertEqual(payload["artifacts"][0]["sha256"], hashlib.sha256(telemetry_bytes).hexdigest())
 
+    def test_run_artifact_fingerprint_writes_archive_path_for_archived_only_run(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "run-archived-fingerprint"
+            run_dir = vault / "runs" / "archive" / run_id
+            run_dir.mkdir(parents=True)
+            archived_stdout = run_dir / "mutation-command.stdout.txt"
+            archived_stdout.write_text("", encoding="utf-8")
+
+            rel_path = write_run_artifact_fingerprint(
+                vault,
+                run_id,
+                context=fixed_context(),
+            )
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            stdout_entry = next(
+                item
+                for item in payload["artifacts"]
+                if item["path"] == f"runs/archive/{run_id}/mutation-command.stdout.txt"
+            )
+
+            self.assertEqual(
+                rel_path,
+                f"runs/archive/{run_id}/run-artifact-fingerprint.json",
+            )
+            self.assertFalse((vault / "runs" / run_id).exists())
+            self.assertEqual(stdout_entry["artifact_role"], "command_stdout")
+            self.assertEqual(stdout_entry["schema"], "")
+            self.assertEqual(stdout_entry["size_bytes"], 0)
+            self.assertEqual(stdout_entry["sha256"], hashlib.sha256(b"").hexdigest())
+            self.assertFalse(
+                payload["repo_provenance_snapshot"]["exists_at_run_start"]
+            )
+            self.assertEqual(payload["repo_provenance_snapshot"]["report_sha256"], "")
+
     def test_run_artifact_fingerprint_classifies_timeout_failure_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

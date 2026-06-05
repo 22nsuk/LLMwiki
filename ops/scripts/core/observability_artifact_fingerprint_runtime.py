@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .observability_artifacts_shared_runtime import (
     load_optional_json,
+    run_dir_candidates,
     run_rel,
     write_schema_backed_json,
 )
@@ -98,20 +99,53 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _run_dir(vault: Path, run_id: str) -> Path:
+    candidates = run_dir_candidates(vault, run_id)
+    if candidates:
+        return candidates[0]
+    return vault / "runs" / run_id
+
+
+def _run_artifact_fingerprint_rel_path(vault: Path, run_id: str) -> str:
+    run_dir = _run_dir(vault, run_id)
+    return report_path(vault, run_dir / "run-artifact-fingerprint.json") or run_rel(
+        run_id, "run-artifact-fingerprint.json"
+    )
+
+
+def _is_archived_run_dir(vault: Path, run_dir: Path) -> bool:
+    try:
+        run_dir.resolve().relative_to((vault / "runs" / "archive").resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _empty_provenance_snapshot() -> dict[str, object]:
+    return {
+        "report_path": "ops/reports/supply-chain-provenance.json",
+        "report_sha256": "",
+        "report_generated_at": "",
+        "report_status": "",
+        "exists_at_run_start": False,
+    }
+
+
 def build_run_artifact_fingerprint(
     vault: Path,
     run_id: str,
     *,
     context: RuntimeContext,
 ) -> dict:
-    run_dir = vault / "runs" / run_id
+    run_dir = _run_dir(vault, run_id)
+    fingerprint_rel_path = _run_artifact_fingerprint_rel_path(vault, run_id)
     artifacts = []
     total_size = 0
     schema_backed_count = 0
     if run_dir.exists():
         for path in sorted(item for item in run_dir.rglob("*") if item.is_file()):
             rel_path = report_path(vault, path)
-            if rel_path == run_rel(run_id, "run-artifact-fingerprint.json"):
+            if rel_path == fingerprint_rel_path:
                 continue
             schema_rel = _artifact_schema(rel_path)
             size = path.stat().st_size
@@ -129,14 +163,8 @@ def build_run_artifact_fingerprint(
             )
 
     provenance_path = vault / "ops" / "reports" / "supply-chain-provenance.json"
-    provenance_snapshot = {
-        "report_path": "ops/reports/supply-chain-provenance.json",
-        "report_sha256": "",
-        "report_generated_at": "",
-        "report_status": "",
-        "exists_at_run_start": False,
-    }
-    if provenance_path.exists():
+    provenance_snapshot = _empty_provenance_snapshot()
+    if not _is_archived_run_dir(vault, run_dir) and provenance_path.exists():
         provenance_payload = load_optional_json(provenance_path) or {}
         provenance_snapshot["report_sha256"] = _sha256(provenance_path)
         provenance_snapshot["report_generated_at"] = str(provenance_payload.get("generated_at", ""))
@@ -165,7 +193,7 @@ def write_run_artifact_fingerprint(
     context: RuntimeContext,
 ) -> str:
     payload = build_run_artifact_fingerprint(vault, run_id, context=context)
-    rel_path = run_rel(run_id, "run-artifact-fingerprint.json")
+    rel_path = _run_artifact_fingerprint_rel_path(vault, run_id)
     payload = maybe_embed_run_artifact_envelope(
         vault,
         rel_path,

@@ -66,6 +66,7 @@ LOCAL_ONLY_PUBLIC_TEXT_PREFIXES = (
     ".obsidian/",
     ".ouroboros/",
     ".serena/",
+    ".vscode/",
     "external-reports/",
     "raw/",
     "runs/",

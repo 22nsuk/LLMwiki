@@ -43,7 +43,8 @@ your change type.
 
 - Keep one PR focused on one purpose.
 - Update docs, tests, schema, and policy together when a contract changes.
-- Prefer Make targets and installed `llm-wiki-*` console scripts in user-facing docs.
+- Prefer Make targets in user-facing docs; use `llm-wiki-*` only for lifecycle
+  policy public CLIs.
 - Do not copy private corpus content, raw inventory, live run artifacts, or external report bodies into public surfaces.
 - Run `make sync-public-policy` when adding a public file, public prefix, or durable generated report exception.
 - Review `.codex/agents/` changes together with role intent, rung selection, and routing contracts.
