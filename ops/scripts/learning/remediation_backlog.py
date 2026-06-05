@@ -347,56 +347,82 @@ def _repeated_auto_session_item_ids_for_blocker(vault: Path, blocker_id: str) ->
     return item_ids
 
 
-def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, dict[str, Any]]:
-    overrides: dict[str, dict[str, Any]] = {}
+def _learning_review_evidence_overrides(
+    vault: Path,
+    *,
+    generated_at: str,
+) -> dict[str, dict[str, Any]]:
     learning_signoff = load_learning_readiness_signoff_summary(vault, generated_at=generated_at)
-    if bool(learning_signoff.get("active")):
-        for item_id in LEARNING_REVIEW_REQUIRED_ITEM_IDS:
-            overrides[item_id] = {
+    if not bool(learning_signoff.get("active")):
+        return {}
+    return {
+        item_id: {
+            "status": "deferred",
+            "reason": (
+                "Operator learning-readiness signoff accepts this promotion risk; "
+                "learning improvement claims remain review-gated until readiness metrics pass."
+            ),
+            "evidence_paths": [SIGNOFF_REPORT_REL_PATH],
+        }
+        for item_id in LEARNING_REVIEW_REQUIRED_ITEM_IDS
+    }
+
+
+def _goal_runtime_certificate_evidence_override(vault: Path) -> dict[str, dict[str, Any]]:
+    if _valid_verified_goal_runtime_certificate(vault):
+        return {
+            GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID: {
+                "status": "closed",
+                "reason": "Verified goal-runtime-certificate evidence is present.",
+                "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
+            }
+        }
+    if _goal_runtime_certificate_waiting_for_release_authority(vault):
+        return {
+            GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID: {
                 "status": "deferred",
                 "reason": (
-                    "Operator learning-readiness signoff accepts this promotion risk; "
-                    "learning improvement claims remain review-gated until readiness metrics pass."
+                    "Deferred as a post-seal runtime-certificate gate: the goal run, "
+                    "session evidence, and run artifacts are clean, and the remaining "
+                    "certificate blockers depend on release authority/sealed evidence."
                 ),
-                "evidence_paths": [SIGNOFF_REPORT_REL_PATH],
+                "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
             }
-    if _valid_verified_goal_runtime_certificate(vault):
-        overrides[GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID] = {
-            "status": "closed",
-            "reason": "Verified goal-runtime-certificate evidence is present.",
-            "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
         }
-    elif _goal_runtime_certificate_waiting_for_release_authority(vault):
-        overrides[GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID] = {
-            "status": "deferred",
-            "reason": (
-                "Deferred as a post-seal runtime-certificate gate: the goal run, "
-                "session evidence, and run artifacts are clean, and the remaining "
-                "certificate blockers depend on release authority/sealed evidence."
-            ),
-            "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
-        }
-    elif _goal_runtime_certificate_owned_by_final_promotion(vault):
-        overrides[GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID] = {
-            "status": "deferred",
-            "reason": (
-                "Deferred to the release auto-promotion final goal-runtime certificate "
-                "gate: current certificate evidence is present and still blocks final "
-                "promotion, but it should not also create a remediation-backlog retry "
-                "blocker."
-            ),
-            "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
-        }
-    if _goal_worktree_guard_currently_clean(vault):
-        for item_id in GOAL_WORKTREE_GUARD_FAILURE_ITEM_IDS:
-            overrides[item_id] = {
-                "status": "closed",
+    if _goal_runtime_certificate_owned_by_final_promotion(vault):
+        return {
+            GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID: {
+                "status": "deferred",
                 "reason": (
-                    "Current goal-worktree-guard evidence is pass/clean; the historical "
-                    "dirty-worktree promotion blocker has been reconciled."
+                    "Deferred to the release auto-promotion final goal-runtime certificate "
+                    "gate: current certificate evidence is present and still blocks final "
+                    "promotion, but it should not also create a remediation-backlog retry "
+                    "blocker."
                 ),
-                "evidence_paths": [GOAL_WORKTREE_GUARD_PATH],
+                "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
             }
+        }
+    return {}
+
+
+def _goal_worktree_guard_evidence_overrides(vault: Path) -> dict[str, dict[str, Any]]:
+    if not _goal_worktree_guard_currently_clean(vault):
+        return {}
+    return {
+        item_id: {
+            "status": "closed",
+            "reason": (
+                "Current goal-worktree-guard evidence is pass/clean; the historical "
+                "dirty-worktree promotion blocker has been reconciled."
+            ),
+            "evidence_paths": [GOAL_WORKTREE_GUARD_PATH],
+        }
+        for item_id in GOAL_WORKTREE_GUARD_FAILURE_ITEM_IDS
+    }
+
+
+def _goal_status_echo_evidence_overrides(vault: Path) -> dict[str, dict[str, Any]]:
+    overrides: dict[str, dict[str, Any]] = {}
     if _artifact_contract_currently_clean(vault):
         overrides[GOAL_STATUS_ARTIFACT_CONTRACT_FAILURE_ITEM_ID] = {
             "status": "closed",
@@ -470,6 +496,11 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
             ),
             "evidence_paths": [RELEASE_EVIDENCE_COHORT_PATH],
         }
+    return overrides
+
+
+def _repeat_blocker_evidence_overrides(vault: Path) -> dict[str, dict[str, Any]]:
+    overrides: dict[str, dict[str, Any]] = {}
     if _recent_log_overlap_queue_unblocked(vault):
         reason = (
             "Closed by current mutation-proposal evidence: the proposal queue has a "
@@ -496,6 +527,16 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
             ),
             "evidence_paths": [RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH],
         }
+    return overrides
+
+
+def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, dict[str, Any]]:
+    overrides: dict[str, dict[str, Any]] = {}
+    overrides.update(_learning_review_evidence_overrides(vault, generated_at=generated_at))
+    overrides.update(_goal_runtime_certificate_evidence_override(vault))
+    overrides.update(_goal_worktree_guard_evidence_overrides(vault))
+    overrides.update(_goal_status_echo_evidence_overrides(vault))
+    overrides.update(_repeat_blocker_evidence_overrides(vault))
     return overrides
 
 
@@ -643,10 +684,8 @@ def collect_backlog_items(
 ) -> list[dict[str, Any]]:
     negative_lessons = load_optional_json_object(vault / negative_lessons_path)
     synopsis = load_optional_json_object(vault / session_synopsis_path)
-    status_overrides = {
-        **_evidence_status_overrides(vault, generated_at=generated_at),
-        **_status_overrides(vault),
-    }
+    status_overrides = _evidence_status_overrides(vault, generated_at=generated_at)
+    status_overrides.update(_status_overrides(vault))
     items_by_id: dict[str, dict[str, Any]] = {}
     active_negative_lesson_blocker_ids: set[str] = set()
     for lesson in _dict_list(negative_lessons.get("lessons")):

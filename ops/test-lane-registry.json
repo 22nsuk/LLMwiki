@@ -448,6 +448,7 @@
         "selectors": [
           "tests/test_test_execution_summary.py",
           "tests/test_makefile_static_gates.py",
+          "tests/test_makefile_public_registry_supply_chain_gates.py",
           "tests/test_ci_workflow_static.py",
           "tests/test_mechanism_navigation_index.py",
           "tests/test_cli_surface_inventory.py",

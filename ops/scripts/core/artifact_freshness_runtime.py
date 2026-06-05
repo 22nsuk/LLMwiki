@@ -199,6 +199,15 @@ class _ArtifactFreshnessCountSummary:
     operational_attention_issue_count: int
 
 
+@dataclass(frozen=True)
+class _ArtifactRecordCurrentnessState:
+    declared_currentness_status: str
+    source_tree_fingerprint_status: str
+    source_revision_status: str
+    currentness_status: str
+    issues: list[str]
+
+
 @dataclass
 class ArtifactFreshnessContext:
     vault: Path
@@ -723,6 +732,52 @@ def _artifact_record_schema_state(
     return schema_validation_status, schema_validation_errors, issues
 
 
+def _artifact_record_currentness_state(
+    vault: Path,
+    *,
+    rel_path: str,
+    normalized_payload: dict[str, Any],
+    declared_currentness_status: str,
+    schema_validation_status: str,
+    freshness_context: ArtifactFreshnessContext | None,
+) -> _ArtifactRecordCurrentnessState:
+    source_tree_fingerprint_status = _source_tree_fingerprint_status(
+        vault=vault,
+        rel_path=rel_path,
+        normalized_payload=normalized_payload,
+        schema_validation_status=schema_validation_status,
+        freshness_context=freshness_context,
+    )
+    source_revision_status = _source_revision_status(
+        vault=vault,
+        rel_path=rel_path,
+        normalized_payload=normalized_payload,
+        schema_validation_status=schema_validation_status,
+        freshness_context=freshness_context,
+    )
+    currentness_status = _computed_currentness_status(
+        declared_currentness_status=declared_currentness_status,
+        source_tree_fingerprint_status=source_tree_fingerprint_status,
+        source_revision_status=source_revision_status,
+    )
+    issues: list[str] = []
+    if source_tree_fingerprint_status == "stale":
+        issues.append("source_tree_fingerprint_mismatch")
+    elif source_tree_fingerprint_status == "unknown":
+        issues.append("source_tree_fingerprint_unknown")
+    if source_revision_status == "stale":
+        issues.append("source_revision_mismatch")
+    elif source_revision_status == "unknown":
+        issues.append("source_revision_unknown")
+    return _ArtifactRecordCurrentnessState(
+        declared_currentness_status=declared_currentness_status,
+        source_tree_fingerprint_status=source_tree_fingerprint_status,
+        source_revision_status=source_revision_status,
+        currentness_status=currentness_status,
+        issues=issues,
+    )
+
+
 def _json_artifact_record(
     vault: Path,
     path: Path,
@@ -768,40 +823,24 @@ def _json_artifact_record(
         freshness_context=freshness_context,
     )
     issues.extend(schema_issues)
-    declared_currentness_status = currentness_status
-    source_tree_fingerprint_status = _source_tree_fingerprint_status(
+    currentness = _artifact_record_currentness_state(
         vault=vault,
         rel_path=rel_path,
         normalized_payload=normalized_payload,
+        declared_currentness_status=currentness_status,
         schema_validation_status=schema_validation_status,
         freshness_context=freshness_context,
     )
-    source_revision_status = _source_revision_status(
-        vault=vault,
-        rel_path=rel_path,
-        normalized_payload=normalized_payload,
-        schema_validation_status=schema_validation_status,
-        freshness_context=freshness_context,
-    )
-    currentness_status = _computed_currentness_status(
-        declared_currentness_status=declared_currentness_status,
-        source_tree_fingerprint_status=source_tree_fingerprint_status,
-        source_revision_status=source_revision_status,
-    )
-    if source_tree_fingerprint_status == "stale":
-        issues.append("source_tree_fingerprint_mismatch")
-    elif source_tree_fingerprint_status == "unknown":
-        issues.append("source_tree_fingerprint_unknown")
-    if source_revision_status == "stale":
-        issues.append("source_revision_mismatch")
-    elif source_revision_status == "unknown":
-        issues.append("source_revision_unknown")
+    issues.extend(currentness.issues)
     safe_to_backfill = _safe_to_backfill(
         utf8_ok=utf8_ok,
         json_ok=json_ok,
         schema_validation_status=schema_validation_status,
         mtime_status=mtime_status,
-    ) and source_tree_fingerprint_status != "stale" and source_revision_status != "stale"
+    ) and (
+        currentness.source_tree_fingerprint_status != "stale"
+        and currentness.source_revision_status != "stale"
+    )
     mtime_sensitive = mtime_status == "stale"
     issues = sorted(set(issues))
     stable_contract_issues = matching_issues(issues, STABLE_CONTRACT_ISSUES)
@@ -819,10 +858,10 @@ def _json_artifact_record(
         "generated_at": generated_at,
         "artifact_status": str(fields["artifact_status"]),
         "retention_policy": str(fields["retention_policy"]),
-        "declared_currentness_status": declared_currentness_status,
-        "source_revision_status": source_revision_status,
-        "source_tree_fingerprint_status": source_tree_fingerprint_status,
-        "currentness_status": currentness_status,
+        "declared_currentness_status": currentness.declared_currentness_status,
+        "source_revision_status": currentness.source_revision_status,
+        "source_tree_fingerprint_status": currentness.source_tree_fingerprint_status,
+        "currentness_status": currentness.currentness_status,
         "file_mtime_utc": _format_mtime(source_mtime),
         "mtime_source": mtime_source,
         "mtime_status": mtime_status,
