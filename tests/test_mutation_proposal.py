@@ -302,6 +302,91 @@ class MutationProposalTest(unittest.TestCase):
                 ],
             )
 
+    def test_closed_repeated_discard_alternate_survives_when_original_mode_disallowed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "remediation-backlog.json",
+                {
+                    "status": "attention",
+                    "summary": {"open_total_count": 0},
+                    "items": [
+                        {
+                            "item_id": "negative_lesson_discard_equal_score_secondary_eligibility",
+                            "blocker_id": "discard_equal_score_secondary_eligibility",
+                            "status": "closed",
+                            "severity": "blocks_repeat",
+                            "repair_target": (
+                                "Change the mechanism or evidence predicate before rerunning "
+                                "another DISCARD attempt with same_eval_reason_code="
+                                "equal_score_secondary_eligibility."
+                            ),
+                            "next_action": "Closed by predicate repair evidence.",
+                        },
+                    ],
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+            policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
+            policy_path.write_text(
+                policy_path.read_text(encoding="utf-8").replace(
+                    "  allowed_failure_modes:\n"
+                    "    - branch_growth_without_test_growth\n"
+                    "    - high_complexity_low_test_pressure\n"
+                    "    - schema_change_without_test_guardrails\n"
+                    "    - policy_surface_growth_without_eval_gain\n"
+                    "    - repeated_same_eval_or_discard\n"
+                    "    - repeated_same_eval_after_promote\n"
+                    "    - repeated_discard_runs\n"
+                    "    - bootstrap_history_insufficient\n"
+                    "    - recent_log_overlap_queue_blocked\n"
+                    "    - next_run_failure_repair\n",
+                    "  allowed_failure_modes:\n"
+                    "    - branch_growth_without_test_growth\n"
+                    "    - high_complexity_low_test_pressure\n"
+                    "    - schema_change_without_test_guardrails\n"
+                    "    - policy_surface_growth_without_eval_gain\n"
+                    "    - repeated_same_eval_or_discard\n"
+                    "    - repeated_same_eval_after_promote\n"
+                    "    - bootstrap_history_insufficient\n"
+                    "    - recent_log_overlap_queue_blocked\n"
+                    "    - next_run_failure_repair\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+            policy, policy_path = load_policy(vault)
+            report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            schema = load_schema(vault / "ops" / "schemas" / "mutation-proposals.schema.json")
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["proposals_emitted"], 3)
+            proposals_by_source = {proposal["source_candidate_type"]: proposal for proposal in report["proposals"]}
+            stagnation = proposals_by_source["mechanism_eval_stagnation_candidate"]
+            self.assertEqual(stagnation["failure_mode"], "repeated_same_eval_after_promote")
+            self.assertEqual(stagnation["metrics_triggered"], ["stage1_same_eval_rate"])
+            self.assertNotIn(
+                "repeated_discard_runs",
+                {proposal["failure_mode"] for proposal in report["proposals"]},
+            )
+            self.assertEqual(
+                report["diagnostics"]["skipped_candidates"],
+                [
+                    {
+                        "candidate_id": "mechanism_eval_stagnation_candidate__promotion-gate",
+                        "reason": "closed_remediation_backlog_resolution",
+                        "detail": (
+                            "closed remediation backlog item(s): "
+                            "negative_lesson_discard_equal_score_secondary_eligibility"
+                        ),
+                    }
+                ],
+            )
+
     def test_closed_repeated_discard_remediation_stays_terminal_without_other_signal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

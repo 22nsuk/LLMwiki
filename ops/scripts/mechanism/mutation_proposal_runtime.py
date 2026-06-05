@@ -399,6 +399,38 @@ def _candidate_has_signal_for_failure_mode(candidate: dict, failure_mode: str) -
     return bool(metrics)
 
 
+def _candidate_fields_after_closed_remediation(
+    candidate: dict,
+    fields: dict,
+    *,
+    remediation_backlog_report: dict,
+) -> tuple[dict, dict, str | None]:
+    closed_resolution_detail = _candidate_suppressed_by_closed_remediation(
+        candidate,
+        failure_mode=fields["failure_mode"],
+        remediation_backlog_report=remediation_backlog_report,
+    )
+    if not closed_resolution_detail:
+        return candidate, fields, None
+
+    alternate_candidate = _alternate_candidate_for_closed_failure_mode(
+        candidate,
+        closed_failure_mode=fields["failure_mode"],
+    )
+    if alternate_candidate is None:
+        raise CandidateSuppressedByClosedRemediation(closed_resolution_detail)
+    alternate_fields = proposal_fields_for_candidate(
+        alternate_candidate,
+        MECHANISM_CANDIDATE_REGISTRY,
+    )
+    if not _candidate_has_signal_for_failure_mode(
+        alternate_candidate,
+        alternate_fields["failure_mode"],
+    ):
+        raise CandidateSuppressedByClosedRemediation(closed_resolution_detail)
+    return alternate_candidate, alternate_fields, closed_resolution_detail
+
+
 def _auto_improve_session_report_paths(vault: Path) -> list[str]:
     session_dir = vault / DEFAULT_AUTO_IMPROVE_SESSIONS_DIR
     if not session_dir.is_dir():
@@ -1689,42 +1721,21 @@ def _proposal_from_candidate(
         "supporting_targets": candidate_supporting_targets,
     }
     fields = proposal_fields_for_candidate(current_candidate, MECHANISM_CANDIDATE_REGISTRY)
-    if fields["failure_mode"] not in allowed_failure_modes:
-        return None
-    closed_resolution_detail = _candidate_suppressed_by_closed_remediation(
+    current_candidate, fields, closed_resolution_detail = _candidate_fields_after_closed_remediation(
         current_candidate,
-        failure_mode=fields["failure_mode"],
+        fields,
         remediation_backlog_report=remediation_backlog_report,
     )
-    if closed_resolution_detail:
-        alternate_candidate = _alternate_candidate_for_closed_failure_mode(
-            current_candidate,
-            closed_failure_mode=fields["failure_mode"],
+    if fields["failure_mode"] not in allowed_failure_modes:
+        return None
+    if closed_resolution_detail and skipped_candidates is not None:
+        skipped_candidates.append(
+            {
+                "candidate_id": candidate.get("candidate_id", "<unknown>"),
+                "reason": "closed_remediation_backlog_resolution",
+                "detail": closed_resolution_detail,
+            }
         )
-        if alternate_candidate is None:
-            raise CandidateSuppressedByClosedRemediation(closed_resolution_detail)
-        alternate_fields = proposal_fields_for_candidate(
-            alternate_candidate,
-            MECHANISM_CANDIDATE_REGISTRY,
-        )
-        if (
-            alternate_fields["failure_mode"] not in allowed_failure_modes
-            or not _candidate_has_signal_for_failure_mode(
-                alternate_candidate,
-                alternate_fields["failure_mode"],
-            )
-        ):
-            raise CandidateSuppressedByClosedRemediation(closed_resolution_detail)
-        if skipped_candidates is not None:
-            skipped_candidates.append(
-                {
-                    "candidate_id": candidate.get("candidate_id", "<unknown>"),
-                    "reason": "closed_remediation_backlog_resolution",
-                    "detail": closed_resolution_detail,
-                }
-            )
-        current_candidate = alternate_candidate
-        fields = alternate_fields
     if current_candidate.get("_closed_failure_mode_fallback") is True:
         supporting_targets = []
     else:
