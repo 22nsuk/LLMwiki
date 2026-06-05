@@ -128,10 +128,12 @@ structural-complexity repair, so the queue should prefer a smaller runnable
 rotation target instead of starting a run that admission will immediately block.
 
 Between runs, prefer `make goal-runtime-between-run-settle` before starting the
-next trial. It runs the same pre-run cleanup, republishes run-local evidence to
-the global report surfaces, and verifies the fixed point. It is meant for the
-gap after a run finishes and before a repair/resume run starts; release closeout
-still uses the release-specific cleanup lane described in `docs/release.md`.
+next trial. It refreshes generated core reports, runs quarantine preflight for
+active history cleanup, then applies the same pre-run cleanup, republishes
+run-local evidence to the global report surfaces, and verifies the fixed point.
+It is meant for the gap after a run finishes and before a repair/resume run
+starts; release closeout still uses the release-specific cleanup lane described
+in `docs/release.md`.
 When the previous session's maintenance evidence contains a `queue_action` with
 `runner_action=resume_session_with_additional_proposal_budget`, use
 `make auto-improve-goal-maintenance-action` instead of a manual resume. The

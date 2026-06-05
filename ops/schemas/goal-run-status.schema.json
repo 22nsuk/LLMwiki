@@ -25,6 +25,7 @@
     "runtime_certificate",
     "periodic_evidence",
     "session_synopsis",
+    "auto_improve_session",
     "artifacts",
     "promotion_guard",
     "blockers",
@@ -304,6 +305,33 @@
         "recent_blocker_count": { "type": "integer", "minimum": 0 },
         "evidence_gap_count": { "type": "integer", "minimum": 0 },
         "next_action": { "type": "string" }
+      }
+    },
+    "auto_improve_session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "link_status",
+        "report_path",
+        "status",
+        "generated_at",
+        "stop_reason",
+        "completion_class",
+        "iteration_count",
+        "promoted_iteration_count"
+      ],
+      "properties": {
+        "link_status": {
+          "type": "string",
+          "enum": ["linked", "missing"]
+        },
+        "report_path": { "type": "string" },
+        "status": { "type": "string" },
+        "generated_at": { "type": "string" },
+        "stop_reason": { "type": "string" },
+        "completion_class": { "type": "string" },
+        "iteration_count": { "type": "integer", "minimum": 0 },
+        "promoted_iteration_count": { "type": "integer", "minimum": 0 }
       }
     },
     "artifacts": {

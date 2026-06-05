@@ -582,6 +582,7 @@ def assess_execution_readiness(inputs: ReadinessInputs) -> ExecutionReadinessAss
             queue_ready=inputs.queue_ready,
             proposals_emitted=inputs.proposals_emitted,
             blocked_reasons=inputs.blocked_reasons,
+            runnable_proposal_ids=inputs.runnable_proposal_ids,
             seed_runs=inputs.seed_runs,
         ),
     )

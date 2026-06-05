@@ -69,13 +69,14 @@ GOAL_HEARTBEAT_INTERVAL_SECONDS ?= 300
 GOAL_CHECKPOINT_INTERVAL_SECONDS ?= 1800
 GOAL_CHECKPOINT_COMMAND_TIMEOUT_SECONDS ?= 900
 GOAL_MAINTAIN_UNTIL_BUDGET ?= 0
+GOAL_MAINTAIN_UNTIL_BUDGET_FLAG ?= $(if $(filter 1 true yes on,$(strip $(GOAL_MAINTAIN_UNTIL_BUDGET))),--maintain-until-budget,)
 GOAL_MAINTENANCE_INTERVAL_SECONDS ?= 300
 GOAL_POST_PROMOTE_MAINTENANCE_CYCLES ?= 1
 GOAL_EXECUTOR ?= codex_exec
 GOAL_ARTIFACT_CLASS ?= system_mechanism
 GOAL_ALLOW_LEARNING_UNCERTAIN ?=
-GOAL_RUN_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --session-id "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,) $(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,) --maintenance-interval-seconds "$(GOAL_MAINTENANCE_INTERVAL_SECONDS)" --post-promote-maintenance-cycles "$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)"
-GOAL_RESUME_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --resume-session "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,) $(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,) --maintenance-interval-seconds "$(GOAL_MAINTENANCE_INTERVAL_SECONDS)" --post-promote-maintenance-cycles "$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)"
+GOAL_RUN_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --session-id "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,) $(GOAL_MAINTAIN_UNTIL_BUDGET_FLAG) --maintenance-interval-seconds "$(GOAL_MAINTENANCE_INTERVAL_SECONDS)" --post-promote-maintenance-cycles "$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)"
+GOAL_RESUME_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --resume-session "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,) $(GOAL_MAINTAIN_UNTIL_BUDGET_FLAG) --maintenance-interval-seconds "$(GOAL_MAINTENANCE_INTERVAL_SECONDS)" --post-promote-maintenance-cycles "$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)"
 GOAL_MAINTENANCE_ACTION_NEXT_MAX_PROPOSALS ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --resume-session "$(GOAL_RUN_ID)" --print-maintenance-action-next-max-proposals --maintenance-action-plan-out "$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)"
 GOAL_FINAL_STATUS ?= stopped
 GOAL_COMPLETED_AT ?=
@@ -176,6 +177,7 @@ goal-runtime-pre-run-cleanup:
 
 goal-runtime-between-run-settle: goal-runtime-lock-check goal-runtime-python-preflight
 	$(MAKE) refresh-generated-core
+	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-pre-run-cleanup
 	$(MAKE) goal-runtime-publish-local-evidence
 	$(MAKE) goal-runtime-fixed-point-check

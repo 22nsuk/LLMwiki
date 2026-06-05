@@ -4081,6 +4081,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             ("GOAL_MAX_PROPOSALS", "1"),
             ("GOAL_MAX_CONSECUTIVE_FAILURES", "1"),
             ("GOAL_MAINTAIN_UNTIL_BUDGET", "0"),
+            (
+                "GOAL_MAINTAIN_UNTIL_BUDGET_FLAG",
+                "$(if $(filter 1 true yes on,$(strip $(GOAL_MAINTAIN_UNTIL_BUDGET))),--maintain-until-budget,)",
+            ),
             ("GOAL_MAINTENANCE_INTERVAL_SECONDS", "300"),
             ("GOAL_POST_PROMOTE_MAINTENANCE_CYCLES", "1"),
             ("GOAL_EXECUTOR", "codex_exec"),
@@ -4103,7 +4107,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("--executor \"$(GOAL_EXECUTOR)\"", run_command)
         self.assertIn("--class \"$(GOAL_ARTIFACT_CLASS)\"", run_command)
         self.assertIn("$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)", run_command)
-        self.assertIn("$(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,)", run_command)
+        self.assertIn("$(GOAL_MAINTAIN_UNTIL_BUDGET_FLAG)", run_command)
+        self.assertNotIn("$(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,)", run_command)
         self.assertIn("--maintenance-interval-seconds \"$(GOAL_MAINTENANCE_INTERVAL_SECONDS)\"", run_command)
         self.assertIn(
             "--post-promote-maintenance-cycles \"$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)\"",
@@ -4119,7 +4124,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "--max-consecutive-failures \"$(GOAL_MAX_CONSECUTIVE_FAILURES)\"",
             resume_command,
         )
-        self.assertIn("$(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,)", resume_command)
+        self.assertIn("$(GOAL_MAINTAIN_UNTIL_BUDGET_FLAG)", resume_command)
+        self.assertNotIn("$(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,)", resume_command)
         self.assertIn("--maintenance-interval-seconds \"$(GOAL_MAINTENANCE_INTERVAL_SECONDS)\"", resume_command)
         self.assertIn(
             "--post-promote-maintenance-cycles \"$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)\"",
@@ -4288,6 +4294,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-between-run-settle",
             (
                 "$(MAKE) refresh-generated-core",
+                "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-publish-local-evidence",
                 "$(MAKE) goal-runtime-fixed-point-check",
@@ -4305,6 +4312,15 @@ class MakefileStaticGateTests(unittest.TestCase):
                 admission_recipe.index("$(MAKE) goal-runtime-local-evidence-converge"),
                 admission_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
             )
+        settle_recipe = _recipe_lines(text, "goal-runtime-between-run-settle")
+        self.assertLess(
+            settle_recipe.index("$(MAKE) refresh-generated-core"),
+            settle_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
+        )
+        self.assertLess(
+            settle_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
+            settle_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
+        )
         for admission_target in (
             "goal-runtime-run-admission-converge",
             "goal-runtime-run-admission-local-refresh",

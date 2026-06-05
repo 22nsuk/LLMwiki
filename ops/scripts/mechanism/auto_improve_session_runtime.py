@@ -16,6 +16,7 @@ from ops.scripts.promotion_decision_registry_runtime import (
 )
 
 from .auto_improve_next_run_decision_runtime import normalize_next_run_decisions
+from .auto_improve_session_completion_runtime import completion_class_for_session
 
 TERMINAL_NON_BLOCKING_OUTCOMES = frozenset({"promoted"})
 TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted"})
@@ -503,6 +504,11 @@ def normalize_session_report(vault: Path, session: dict) -> dict[str, Any]:
         session.get("next_run_decisions")
     )
     normalized["learning_summary"] = build_learning_summary(vault, normalized)
+    if str(normalized.get("status", "")).strip() == "complete":
+        normalized["completion_class"] = completion_class_for_session(
+            normalized,
+            stop_reason=str(normalized.get("stop_reason", "")).strip(),
+        )
     return normalized
 
 

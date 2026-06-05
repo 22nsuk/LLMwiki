@@ -95,6 +95,29 @@ class GoalRunStatusTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def _seed_auto_improve_session(self, run_id: str, *, include_completion_class: bool = True) -> None:
+        path = self.vault / "ops" / "reports" / "auto-improve-sessions" / f"{run_id}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "status": "complete",
+            "generated_at": "2026-05-17T12:00:00Z",
+            "stop_reason": "proposal_budget_exhausted",
+            "iterations": [
+                {
+                    "index": 1,
+                    "status": "promoted",
+                    "decision": "PROMOTE",
+                    "outcome": "promoted",
+                }
+            ],
+        }
+        if include_completion_class:
+            payload["completion_class"] = "bounded_success_after_promotion"
+        path.write_text(
+            json.dumps(payload, sort_keys=True),
+            encoding="utf-8",
+        )
+
     def _seed_full_gate_reports(self) -> None:
         reports = self.vault / "ops" / "reports"
         reports.mkdir(parents=True, exist_ok=True)
@@ -206,6 +229,11 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(report["session_synopsis"]["link_status"], "linked")
         self.assertEqual(report["session_synopsis"]["recent_blocker_count"], 2)
         self.assertEqual(report["session_synopsis"]["next_action"], "Trial only; do not promote.")
+        self.assertEqual(report["auto_improve_session"]["link_status"], "missing")
+        self.assertEqual(
+            report["auto_improve_session"]["report_path"],
+            "ops/reports/auto-improve-sessions/20260517-trial.json",
+        )
         self.assertEqual(report["artifacts"]["status_report_path"], "ops/reports/goal-run-status.json")
         self.assertEqual(
             report["artifacts"]["checkpoint_command_log_path"],
@@ -413,7 +441,12 @@ class GoalRunStatusTests(unittest.TestCase):
         written_paths = write_run_artifacts(self.vault, report)
 
         self.assertEqual(report_path, self.vault / DEFAULT_STATUS_PATH)
-        self.assertTrue((self.vault / "runs" / "goal-20260517-trial" / "status.md").is_file())
+        status_markdown = self.vault / "runs" / "goal-20260517-trial" / "status.md"
+        self.assertTrue(status_markdown.is_file())
+        self.assertIn(
+            "- auto_improve_session: ops/reports/auto-improve-sessions/20260517-trial.json",
+            status_markdown.read_text(encoding="utf-8"),
+        )
         self.assertEqual(len(written_paths), 3)
         resume_metadata = json.loads(
             (self.vault / "runs" / "goal-20260517-trial" / "resume-metadata.json").read_text(
@@ -527,8 +560,155 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(final["health"]["heartbeat_status"], "stale")
         self.assertEqual(validate_with_schema(final, load_schema(SCHEMA_PATH)), [])
 
+    def test_goal_run_status_blocked_refresh_preserves_prior_run_clock(self) -> None:
+        self._seed_goal_contract()
+        initial = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                started_at="2026-05-17T10:00:00Z",
+                last_heartbeat_at="2026-05-17T10:05:00Z",
+                last_checkpoint_at="2026-05-17T10:05:00Z",
+                last_command_heartbeat_at="2026-05-17T10:05:00Z",
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=2,
+                command_timeout_seconds=1800,
+                last_stdout_at="2026-05-17T10:04:00Z",
+                last_command_returncode=-1,
+                last_command_termination_reason="blocked",
+                context=context_at(10, 5),
+            )
+        )
+        write_report(self.vault, initial)
+        write_run_artifacts(self.vault, initial)
+
+        refreshed = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                context=context_at(12, 5),
+            )
+        )
+
+        self.assertEqual(refreshed["run"]["status"], "blocked")
+        self.assertEqual(refreshed["run"]["started_at"], "2026-05-17T10:00:00Z")
+        self.assertEqual(refreshed["run"]["updated_at"], "2026-05-17T12:05:00Z")
+        self.assertEqual(refreshed["observability"]["last_heartbeat_at"], "2026-05-17T10:05:00Z")
+        self.assertEqual(refreshed["observability"]["last_checkpoint_at"], "2026-05-17T10:05:00Z")
+        self.assertEqual(
+            refreshed["observability"]["last_command_heartbeat_at"],
+            "2026-05-17T10:05:00Z",
+        )
+        self.assertEqual(refreshed["observability"]["command_observation_mode"], "process_heartbeat")
+        self.assertEqual(refreshed["observability"]["command_heartbeat_count"], 2)
+        self.assertEqual(refreshed["observability"]["command_timeout_seconds"], 1800)
+        self.assertEqual(refreshed["observability"]["last_stdout_at"], "2026-05-17T10:04:00Z")
+        self.assertEqual(
+            refreshed["observability"]["last_command_termination_reason"],
+            "blocked",
+        )
+        self.assertEqual(refreshed["health"]["heartbeat_status"], "stale")
+        self.assertEqual(refreshed["health"]["checkpoint_status"], "stale")
+        self.assertEqual(refreshed["health"]["command_heartbeat_status"], "stale")
+        self.assertEqual(refreshed["status"], "attention")
+        self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_blocked_clock_preservation_is_run_local(self) -> None:
+        self._seed_goal_contract()
+        prior = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial-a",
+                status="blocked",
+                started_at="2026-05-17T10:00:00Z",
+                last_heartbeat_at="2026-05-17T10:05:00Z",
+                last_checkpoint_at="2026-05-17T10:05:00Z",
+                last_command_heartbeat_at="2026-05-17T10:05:00Z",
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=2,
+                command_timeout_seconds=1800,
+                last_command_termination_reason="blocked",
+                context=context_at(10, 5),
+            )
+        )
+        write_report(self.vault, prior)
+        write_run_artifacts(self.vault, prior)
+
+        next_run = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial-b",
+                status="blocked",
+                context=context_at(12, 5),
+            )
+        )
+
+        self.assertEqual(next_run["run"]["run_id"], "20260517-trial-b")
+        self.assertEqual(next_run["run"]["started_at"], "2026-05-17T12:05:00Z")
+        self.assertEqual(next_run["observability"]["last_heartbeat_at"], "2026-05-17T12:05:00Z")
+        self.assertEqual(next_run["observability"]["last_checkpoint_at"], "2026-05-17T12:05:00Z")
+        self.assertEqual(next_run["observability"]["last_command_heartbeat_at"], "")
+        self.assertEqual(next_run["observability"]["command_observation_mode"], "")
+        self.assertEqual(next_run["observability"]["command_heartbeat_count"], 0)
+        self.assertEqual(next_run["observability"]["command_timeout_seconds"], 0)
+        self.assertEqual(
+            next_run["observability"]["last_command_termination_reason"],
+            "",
+        )
+        self.assertEqual(validate_with_schema(next_run, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_blocked_refresh_prefers_explicit_observability(self) -> None:
+        self._seed_goal_contract()
+        initial = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                started_at="2026-05-17T10:00:00Z",
+                last_heartbeat_at="2026-05-17T10:05:00Z",
+                last_checkpoint_at="2026-05-17T10:05:00Z",
+                last_command_heartbeat_at="2026-05-17T10:05:00Z",
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=2,
+                command_timeout_seconds=1800,
+                context=context_at(10, 5),
+            )
+        )
+        write_report(self.vault, initial)
+        write_run_artifacts(self.vault, initial)
+
+        refreshed = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                last_heartbeat_at="2026-05-17T12:04:00Z",
+                last_command_heartbeat_at="2026-05-17T12:03:00Z",
+                command_heartbeat_count=3,
+                command_timeout_seconds=2400,
+                context=context_at(12, 5),
+            )
+        )
+
+        self.assertEqual(refreshed["run"]["started_at"], "2026-05-17T10:00:00Z")
+        self.assertEqual(refreshed["observability"]["last_heartbeat_at"], "2026-05-17T12:04:00Z")
+        self.assertEqual(refreshed["observability"]["last_checkpoint_at"], "2026-05-17T10:05:00Z")
+        self.assertEqual(
+            refreshed["observability"]["last_command_heartbeat_at"],
+            "2026-05-17T12:03:00Z",
+        )
+        self.assertEqual(refreshed["observability"]["command_heartbeat_count"], 3)
+        self.assertEqual(refreshed["observability"]["command_timeout_seconds"], 2400)
+        self.assertEqual(refreshed["health"]["heartbeat_status"], "current")
+        self.assertEqual(refreshed["health"]["checkpoint_status"], "stale")
+        self.assertEqual(refreshed["health"]["command_heartbeat_status"], "current")
+        self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
+
     def test_goal_run_status_refresh_preserves_terminal_runner_status(self) -> None:
         self._seed_goal_contract()
+        self._seed_auto_improve_session("20260517-trial", include_completion_class=False)
         final = build_report(
             GoalRunStatusRequest(
                 vault=self.vault,
@@ -567,6 +747,17 @@ class GoalRunStatusTests(unittest.TestCase):
             refreshed["observability"]["last_command_termination_reason"],
             "completed",
         )
+        self.assertEqual(refreshed["auto_improve_session"]["link_status"], "linked")
+        self.assertEqual(
+            refreshed["auto_improve_session"]["report_path"],
+            "ops/reports/auto-improve-sessions/20260517-trial.json",
+        )
+        self.assertEqual(refreshed["auto_improve_session"]["status"], "complete")
+        self.assertEqual(
+            refreshed["auto_improve_session"]["completion_class"],
+            "bounded_success_after_promotion",
+        )
+        self.assertEqual(refreshed["auto_improve_session"]["promoted_iteration_count"], 1)
         self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
 
     def test_goal_run_status_requires_existing_persistent_goal_contract(self) -> None:

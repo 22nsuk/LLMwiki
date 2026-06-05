@@ -813,6 +813,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             _assert_successful_run_telemetry(self, artifacts)
             _assert_successful_runtime_events_and_learning(self, artifacts)
             session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(result["completion_class"], "bounded_success_after_promotion")
+            self.assertEqual(session["completion_class"], "bounded_success_after_promotion")
             maintenance = session["maintenance"]
             self.assertEqual(maintenance["completion_condition"], "post_promote_cycle_limit")
             self.assertEqual(maintenance["stop_reason"], "post_promote_cycle_limit_reached")
@@ -863,6 +865,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
             maintenance = session["maintenance"]
             self.assertEqual(result["stop_reason"], "proposal_budget_exhausted")
+            self.assertEqual(result["completion_class"], "bounded_success_after_promotion")
+            self.assertEqual(session["completion_class"], "bounded_success_after_promotion")
             self.assertEqual(monotonic["now"], 300)
             self.assertEqual(maintenance["status"], "complete")
             self.assertEqual(maintenance["mode"], "proposal_budget_runtime_maintenance")
@@ -1927,6 +1931,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             )
             stale_session = dict(session)
             stale_session["generated_at"] = "2026-04-14T00:00:00Z"
+            stale_session.pop("completion_class", None)
             (vault / result["session_report"]).write_text(
                 json.dumps(stale_session, ensure_ascii=False, indent=2),
                 encoding="utf-8",
@@ -1944,6 +1949,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             self.assertEqual(refresh_result["status"], session["status"])
             self.assertEqual(refresh_result["stop_reason"], session["stop_reason"])
+            self.assertEqual(refresh_result["completion_class"], session["completion_class"])
+            self.assertEqual(refreshed["completion_class"], session["completion_class"])
             self.assertGreaterEqual(refreshed["generated_at"], decision_observed_at)
             self.assertGreaterEqual(refreshed["generated_at"], "2026-04-16T00:00:00Z")
             self.assertEqual(refresh_result["generated_at"], refreshed["generated_at"])

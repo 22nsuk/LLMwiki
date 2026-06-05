@@ -1204,6 +1204,18 @@
       "type": "string",
       "minLength": 1
     },
+    "completion_class": {
+      "type": "string",
+      "enum": [
+        "bounded_success_after_promotion",
+        "proposal_budget_exhausted",
+        "queue_exhausted",
+        "time_budget_exhausted",
+        "failure_budget_exhausted",
+        "blocked_repair_required",
+        "stopped"
+      ]
+    },
     "metadata": {
       "type": "object"
     }

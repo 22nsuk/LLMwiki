@@ -21,6 +21,7 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 
+from .auto_improve_session_completion_runtime import completion_class_for_session
 from .goal_runtime_certificate import (
     DEFAULT_RUNTIME_MODE,
     build_runtime_certificate,
@@ -37,11 +38,13 @@ from .goal_runtime_resume import mapping_field, resume_metadata_from_report
 DEFAULT_STATUS_PATH = "ops/reports/goal-run-status.json"
 DEFAULT_RUN_ROOT_TEMPLATE = "runs/goal-{run_id}"
 SESSION_SYNOPSIS_PATH = "ops/reports/session-synopsis.json"
+AUTO_IMPROVE_SESSION_REPORT_DIR = "ops/reports/auto-improve-sessions"
 PRODUCER = "ops.scripts.goal_run_status"
 SCHEMA_PATH = "ops/schemas/goal-run-status.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_run_status --vault ."
 TERMINAL_RUN_STATUSES = {"completed", "failed", "stopped"}
 STATUS_REFRESH_RUN_STATUSES = {"running", "blocked"}
+PRIOR_CLOCK_RUN_STATUSES = {"running", "paused", "blocked", *TERMINAL_RUN_STATUSES}
 
 
 @dataclass(frozen=True)
@@ -160,6 +163,76 @@ def _session_synopsis_link(vault: Path) -> dict[str, Any]:
     }
 
 
+def _promoted_iteration_count(iterations: object) -> int:
+    if not isinstance(iterations, list):
+        return 0
+    return sum(
+        1
+        for item in iterations
+        if isinstance(item, Mapping)
+        and (
+            str(item.get("decision", "")).strip() == "PROMOTE"
+            or str(item.get("outcome", "")).strip() == "promoted"
+            or str(item.get("status", "")).strip() == "promoted"
+        )
+    )
+
+
+def _auto_improve_session_report_path(run_id: str) -> str:
+    return f"{AUTO_IMPROVE_SESSION_REPORT_DIR}/{run_id}.json" if run_id else ""
+
+
+def _auto_improve_session_completion_class(session: Mapping[str, Any]) -> str:
+    completion_class = str(session.get("completion_class", "")).strip()
+    if completion_class:
+        return completion_class
+    if str(session.get("status", "")).strip() != "complete":
+        return ""
+    return completion_class_for_session(
+        session,
+        stop_reason=str(session.get("stop_reason", "")).strip(),
+    )
+
+
+def _auto_improve_session_link(vault: Path, run_id: str) -> dict[str, Any]:
+    report_path = _auto_improve_session_report_path(run_id)
+    if not report_path:
+        return {
+            "link_status": "missing",
+            "report_path": "",
+            "status": "",
+            "generated_at": "",
+            "stop_reason": "",
+            "completion_class": "",
+            "iteration_count": 0,
+            "promoted_iteration_count": 0,
+        }
+    session = load_optional_json_object(vault / report_path)
+    if not session:
+        return {
+            "link_status": "missing",
+            "report_path": report_path,
+            "status": "",
+            "generated_at": "",
+            "stop_reason": "",
+            "completion_class": "",
+            "iteration_count": 0,
+            "promoted_iteration_count": 0,
+        }
+    iterations = session.get("iterations")
+    iteration_count = len(iterations) if isinstance(iterations, list) else 0
+    return {
+        "link_status": "linked",
+        "report_path": report_path,
+        "status": str(session.get("status", "")).strip(),
+        "generated_at": str(session.get("generated_at", "")).strip(),
+        "stop_reason": str(session.get("stop_reason", "")).strip(),
+        "completion_class": _auto_improve_session_completion_class(session),
+        "iteration_count": iteration_count,
+        "promoted_iteration_count": _promoted_iteration_count(iterations),
+    }
+
+
 def _request_from_legacy(
     vault_or_request: Path | GoalRunStatusRequest,
     legacy_fields: dict[str, Any],
@@ -176,7 +249,7 @@ def _prior_status_for_run(vault: Path, request: GoalRunStatusRequest) -> Mapping
     prior_run = mapping_field(prior_report, "run")
     prior_status = str(prior_run.get("status", "")).strip()
     same_run = str(prior_run.get("run_id", "")).strip() == request.run_id
-    if same_run and prior_status in {"running", "paused", *TERMINAL_RUN_STATUSES}:
+    if same_run and prior_status in PRIOR_CLOCK_RUN_STATUSES:
         return prior_report
     return {}
 
@@ -363,6 +436,7 @@ def build_report(
         run_mode=request.runtime_mode,
     )
     session_synopsis = _session_synopsis_link(vault)
+    auto_improve_session = _auto_improve_session_link(vault, request.run_id)
     blockers = list(
         dict.fromkeys(
             [
@@ -391,11 +465,15 @@ def build_report(
                 "ops/scripts/mechanism/goal_runtime_maintenance.py",
                 "ops/scripts/mechanism/goal_runtime_certificate.py",
                 "ops/scripts/mechanism/goal_runtime_resume.py",
+                "ops/scripts/mechanism/auto_improve_session_completion_runtime.py",
                 "ops/scripts/core/codex_goal_client.py",
                 "ops/schemas/goal-run-status.schema.json",
                 "ops/schemas/codex-goal-contract.schema.json",
             ],
-            file_inputs={"goal_contract": request.goal_contract_path},
+            file_inputs={
+                "goal_contract": request.goal_contract_path,
+                "auto_improve_session": auto_improve_session["report_path"],
+            },
             text_inputs={"session_synopsis_link": SESSION_SYNOPSIS_PATH},
             source_tree_excluded_files=(request.status_report_path,),
         ),
@@ -444,6 +522,7 @@ def build_report(
         "runtime_certificate": runtime_certificate,
         "periodic_evidence": periodic_evidence,
         "session_synopsis": session_synopsis,
+        "auto_improve_session": auto_improve_session,
         "artifacts": {
             "status_report_path": paths.status_report_path,
             "status_markdown_path": paths.status_markdown_path,
@@ -479,6 +558,7 @@ def build_status_markdown(report: Mapping[str, Any]) -> str:
     runtime_certificate = mapping_field(report, "runtime_certificate")
     periodic_evidence = mapping_field(report, "periodic_evidence")
     session_synopsis = mapping_field(report, "session_synopsis")
+    auto_improve_session = mapping_field(report, "auto_improve_session")
     blockers = report.get("blockers") if isinstance(report.get("blockers"), list) else []
     blocker_text = "\n".join(f"- {item}" for item in blockers) if blockers else "- none"
     missing_due = periodic_evidence.get("missing_due_checkpoint_ids", [])
@@ -518,6 +598,9 @@ def build_status_markdown(report: Mapping[str, Any]) -> str:
             f"- checkpoint_command_log: {checkpoint_command_log}",
             f"- session_synopsis: {session_synopsis.get('report_path', '')}",
             f"- session_synopsis_status: {session_synopsis.get('status', '')}",
+            f"- auto_improve_session: {auto_improve_session.get('report_path', '')}",
+            f"- auto_improve_session_status: {auto_improve_session.get('status', '')}",
+            f"- auto_improve_session_completion_class: {auto_improve_session.get('completion_class', '')}",
             "",
             "## Promotion Blockers",
             blocker_text,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,6 +13,36 @@ class SessionCompletionDependencies:
     write_session_report: Callable[..., Path]
     write_promotion_decision_trends: Callable[..., str]
     write_outcome_metrics_report: Callable[..., str]
+
+
+def _last_iteration_was_promoted(session: Mapping[str, Any]) -> bool:
+    iterations = session.get("iterations")
+    if not isinstance(iterations, list) or not iterations:
+        return False
+    last_iteration = iterations[-1]
+    if not isinstance(last_iteration, Mapping):
+        return False
+    return (
+        str(last_iteration.get("decision", "")).strip() == "PROMOTE"
+        or str(last_iteration.get("outcome", "")).strip() == "promoted"
+        or str(last_iteration.get("status", "")).strip() == "promoted"
+    )
+
+
+def completion_class_for_session(session: Mapping[str, Any], *, stop_reason: str) -> str:
+    if stop_reason == "proposal_budget_exhausted" and _last_iteration_was_promoted(session):
+        return "bounded_success_after_promotion"
+    if stop_reason == "proposal_budget_exhausted":
+        return "proposal_budget_exhausted"
+    if stop_reason == "queue_exhausted":
+        return "queue_exhausted"
+    if stop_reason == "time_budget_exhausted":
+        return "time_budget_exhausted"
+    if stop_reason == "failure_budget_exhausted":
+        return "failure_budget_exhausted"
+    if stop_reason == "repeated_blocker_backlog_required":
+        return "blocked_repair_required"
+    return "stopped"
 
 
 def complete_auto_improve_session(
@@ -28,6 +58,8 @@ def complete_auto_improve_session(
 ) -> dict[str, Any]:
     session["status"] = "complete"
     session["stop_reason"] = stop_reason
+    completion_class = completion_class_for_session(session, stop_reason=stop_reason)
+    session["completion_class"] = completion_class
     dependencies.write_session_report(vault, session, context=context)
     promotion_decision_trends = dependencies.write_promotion_decision_trends(
         vault,
@@ -51,5 +83,6 @@ def complete_auto_improve_session(
         "outcome_metrics": outcome_metrics,
         "iterations": len(session["iterations"]),
         "stop_reason": stop_reason,
+        "completion_class": completion_class,
         "run_ids": session["run_ids"],
     }

@@ -672,13 +672,20 @@ def _readiness_next_action(
     queue_ready: bool,
     proposals_emitted: int,
     blocked_reasons: list[str],
+    runnable_proposal_ids: list[str],
     seed_runs: list[str],
 ) -> str:
     if queue_ready:
+        proposal_detail = (
+            f" Run proposal `{runnable_proposal_ids[0]}` next."
+            if runnable_proposal_ids
+            else ""
+        )
         return (
             "Queue is non-empty. After `make check-serial` and `make public-check-serial`, "
             f"start bounded goal-native auto-improve with `{AUTO_IMPROVE_GOAL_RUN_COMMAND}` "
             "so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
+            f"{proposal_detail}"
         )
     if proposals_emitted > 0:
         blocked_suffix = (

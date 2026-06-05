@@ -683,6 +683,24 @@ def _executor_prompt_text(
             "Treat the role sandbox_mode above as the write contract, and rely on the "
             "parent apply guardrails for live-repo mutation.\n"
         )
+    structural_budget_guardrails = ""
+    if request.role == "worker":
+        structural_budget_guardrails = (
+            "Worker structural budget guardrails:\n"
+            "- The parent run creates `changed-files-manifest.json` and "
+            "`structural-complexity-budget.json` after worker execution; do not "
+            "generate or require those artifacts inside the worker phase.\n"
+            "- Repo-health re-checks structural budget using the actual changed "
+            "source and `tests/**` files, and a non-pass result can skip "
+            "promotion even when executor roles report pass.\n"
+            "- Keep touched structure bounded: prefer reusing existing helpers, "
+            "simplifying adjacent code, and focused assertions over broad "
+            "branches, copied fixtures, or large new test blocks.\n"
+            "- If the smallest correct fix must add substantial structure, "
+            "explain why in `diagnostics.notes` and include the focused "
+            "validation that covers the added behavior.\n"
+            "\n"
+        )
     prompt_text = f"""You are executing the `{request.role}` role for LLM Wiki vNext.
 
 Role profile:
@@ -706,7 +724,7 @@ Repository write boundary:
 - never edit `raw/`, `wiki/`, or non-log `system/` pages.
 - do not rewrite unrelated files or expand scope.
 
-Execution environment guidance:
+{structural_budget_guardrails}Execution environment guidance:
 - Required Python focused check lane uses workspace-local `.venv/bin/python`: `{PROJECT_CHECK_LANE}`.
 - Use `{PROJECT_FULL_REGRESSION_LANE}` for developer full regression and `{PROJECT_RELEASE_EVIDENCE_LANE}` for release-grade full-suite evidence.
 - Do not run bare `python -m pytest` or selectorless `.venv/bin/python -m pytest` when `.venv/bin/python` is present.

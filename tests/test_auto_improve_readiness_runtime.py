@@ -3351,6 +3351,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             {blocker["id"] for blocker in report["learning_claim_blockers"]},
         )
         self.assertIn("Queue is non-empty", report["next_action"])
+        self.assertIn(
+            "Run proposal `recent_log_overlap_queue_blocked__auto-improve-readiness-constants-runtime` next.",
+            report["next_action"],
+        )
         checks = {check["id"]: check for check in report["checks"]}
         self.assertTrue(checks["fallback_target_history_requirement_met"]["pass"])
         self.assertIn(

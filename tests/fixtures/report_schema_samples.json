@@ -1372,7 +1372,8 @@
       "repeated_same_eval_or_discard__example"
     ],
     "path": "ops/reports/auto-improve-sessions/auto-improve-2026-04-15.json",
-    "stop_reason": "proposal_budget_exhausted"
+    "stop_reason": "proposal_budget_exhausted",
+    "completion_class": "bounded_success_after_promotion"
   },
   "outcome_metrics": {
     "$schema": "ops/schemas/outcome-metrics.schema.json",

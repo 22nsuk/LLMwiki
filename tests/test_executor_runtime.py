@@ -363,6 +363,19 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("Repository-required local skills", prompt)
             self.assertIn("$CODEX_HOME/skills/<skill>/SKILL.md", prompt)
             self.assertIn("do not fail solely because the system available-skills list omitted", prompt)
+            self.assertIn("Worker structural budget guardrails:", prompt)
+            self.assertIn("changed-files-manifest.json", prompt)
+            self.assertIn("do not generate or require those artifacts inside the worker phase", prompt)
+            self.assertIn("actual changed source and `tests/**` files", prompt)
+            self.assertIn("skip promotion even when executor roles report pass", prompt)
+            self.assertLess(
+                prompt.index("Repository write boundary:"),
+                prompt.index("Worker structural budget guardrails:"),
+            )
+            self.assertLess(
+                prompt.index("Worker structural budget guardrails:"),
+                prompt.index("Execution environment guidance:"),
+            )
             self.assertNotIn(str(vault).replace("\\", "/"), prompt)
             event_log = vault / "runs" / "run-executor" / "runtime-events.jsonl"
             events = [json.loads(line) for line in event_log.read_text(encoding="utf-8").splitlines()]
@@ -435,6 +448,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("-p no:cacheprovider", prompt)
             self.assertIn("Executor roles run before repo-health capture", prompt)
             self.assertIn("candidate-mechanism-assessment.json", prompt)
+            self.assertNotIn("Worker structural budget guardrails:", prompt)
+            self.assertNotIn("do not generate or require those artifacts inside the worker phase", prompt)
 
     def test_validator_prompt_characterization_preserves_json_template_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

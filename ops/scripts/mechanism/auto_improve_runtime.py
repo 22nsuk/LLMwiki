@@ -823,6 +823,7 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
         schema_path=AUTO_IMPROVE_SESSION_SCHEMA,
         source_paths=[
             "ops/scripts/mechanism/auto_improve_runtime.py",
+            "ops/scripts/mechanism/auto_improve_session_completion_runtime.py",
             "ops/scripts/mechanism/auto_improve_session_runtime.py",
             "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
             "ops/scripts/core/artifact_freshness_runtime.py",
@@ -870,6 +871,7 @@ def refresh_auto_improve_session_report(
         "generated_at": str(refreshed.get("generated_at", "")).strip(),
         "status": str(refreshed.get("status", "")).strip(),
         "stop_reason": str(refreshed.get("stop_reason", "")).strip(),
+        "completion_class": str(refreshed.get("completion_class", "")).strip(),
     }
 
 

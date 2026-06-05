@@ -632,6 +632,7 @@ class ReportSchemaContractTest(unittest.TestCase):
         report = self.samples["auto_improve_session"]
         schema = self.schemas["auto_improve_session"]
         self.assertEqual(validate_with_schema(report, schema), [])
+        self.assertEqual(report["completion_class"], "bounded_success_after_promotion")
 
         missing_outcome_metrics = copy.deepcopy(report)
         missing_outcome_metrics["rollups"].pop("outcome_metrics", None)
@@ -645,6 +646,14 @@ class ReportSchemaContractTest(unittest.TestCase):
         self.assertIn(
             "$: missing required property 'learning_summary'",
             validate_with_schema(missing_learning_summary, schema),
+        )
+
+        invalid_completion_class = copy.deepcopy(report)
+        invalid_completion_class["completion_class"] = "successish"
+        invalid_errors = validate_with_schema(invalid_completion_class, schema)
+        self.assertTrue(
+            any("$.completion_class" in item and "expected one of" in item for item in invalid_errors),
+            invalid_errors,
         )
 
     def test_sample_supply_chain_provenance_validates_and_requires_inputs(self) -> None:
