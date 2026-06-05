@@ -1096,9 +1096,12 @@ def _release_owned_artifact_freshness_attention(vault: Path, payload: dict[str, 
         raw_issues = item.get("issues")
         issues = [str(issue).strip() for issue in raw_issues] if isinstance(raw_issues, list) else []
         if any(
-            issue == "source_tree_fingerprint_mismatch"
-            or issue == "source_tree_fingerprint_unknown"
-            or issue == "test_target_missing"
+            issue
+            in {
+                "source_tree_fingerprint_mismatch",
+                "source_tree_fingerprint_unknown",
+                "test_target_missing",
+            }
             or issue.startswith("test_target_fingerprint_mismatch")
             for issue in issues
         ):

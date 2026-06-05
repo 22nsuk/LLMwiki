@@ -9,6 +9,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "tools" / "strict_preview_audit.py"
+STRICT_CANDIDATE_SELECT = "PTH201"
 MODULE_SPEC = importlib.util.spec_from_file_location("strict_preview_audit", MODULE_PATH)
 if MODULE_SPEC is None or MODULE_SPEC.loader is None:  # pragma: no cover
     raise RuntimeError(f"failed to load strict preview audit helper from {MODULE_PATH}")
@@ -65,7 +66,7 @@ class StrictPreviewAuditTests(unittest.TestCase):
             report = STRICT_PREVIEW_AUDIT.build_report(
                 Path(temp_dir),
                 targets=["ops/scripts", "tests", "tools"],
-                ruff_select="B,SIM,UP,I",
+                ruff_select=STRICT_CANDIDATE_SELECT,
                 ruff_cache_dir="tmp/tool-cache/ruff/wsl",
                 mypy_flags=["--check-untyped-defs"],
                 python_executable="python",
@@ -89,7 +90,7 @@ class StrictPreviewAuditTests(unittest.TestCase):
             report = STRICT_PREVIEW_AUDIT.build_report(
                 Path(temp_dir),
                 targets=["ops/scripts"],
-                ruff_select="B,SIM,UP,I",
+                ruff_select=STRICT_CANDIDATE_SELECT,
                 mypy_flags=["--check-untyped-defs"],
                 python_executable="python",
                 command_runner=runner,

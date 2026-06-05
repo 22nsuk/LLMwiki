@@ -94,10 +94,8 @@ def safe_repo_relative_path(value: object) -> str | None:
     normalized = normalize_repo_path_text(value)
     if (
         normalized is None
-        or normalized == "."
-        or normalized == ".."
-        or normalized.startswith("../")
-        or normalized.startswith("/")
+        or normalized in {".", ".."}
+        or normalized.startswith(("../", "/"))
     ):
         return None
     return normalized

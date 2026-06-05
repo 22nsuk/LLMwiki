@@ -429,7 +429,7 @@ def _base_phase_requirements(
     fingerprint: str,
     current_revision: str,
 ) -> list[RequirementSpec]:
-    requirements = [
+    return [
         *_goal_run_identity_requirements(
             checks,
             inputs,
@@ -479,7 +479,6 @@ def _base_phase_requirements(
             "Renew or resolve learning readiness before spending run/seal cycles.",
         ),
     ]
-    return requirements
 
 
 def _preseal_phase_requirements(

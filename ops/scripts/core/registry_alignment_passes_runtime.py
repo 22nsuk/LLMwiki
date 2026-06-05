@@ -6,11 +6,7 @@ from .frontmatter_runtime import validate_source_frontmatter_against_registry
 from .policy_runtime import report_path
 from .registry_diagnostics_runtime import (
     RegistryDiagnosticEmitter as RegistryLintEmitter,
-)
-from .registry_diagnostics_runtime import (
     RegistryInventoryContext,
-)
-from .registry_diagnostics_runtime import (
     RegistryPaths as RegistryLintPaths,
 )
 
@@ -92,8 +88,7 @@ def _registry_frontmatter_alignment_pass(
     for stem, path in pages.items():
         relative_path = report_path(vault, path)
         if not (
-            relative_path.startswith("wiki/source--")
-            or relative_path.startswith("system/source--")
+            relative_path.startswith(("wiki/source--", "system/source--"))
         ):
             continue
         frontmatter = frontmatters.get(stem)
@@ -236,8 +231,8 @@ locator_raw_path_corpus_consistency_pass = _locator_raw_path_corpus_consistency_
 
 
 __all__ = [
-    "_registry_frontmatter_alignment_pass",
     "_locator_raw_path_corpus_consistency_pass",
-    "registry_frontmatter_alignment_pass",
+    "_registry_frontmatter_alignment_pass",
     "locator_raw_path_corpus_consistency_pass",
+    "registry_frontmatter_alignment_pass",
 ]

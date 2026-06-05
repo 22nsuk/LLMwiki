@@ -19,26 +19,16 @@ from ops.scripts.source_revision_runtime import resolve_source_revision
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 from ops.scripts.test.test_execution_command_runtime import (
     build_execution_environment,
-)
-from ops.scripts.test.test_execution_command_runtime import (
     toolchain_fingerprint as _toolchain_fingerprint,
 )
 from ops.scripts.test.test_execution_evidence_runtime import (
     evidence_artifact_consistency as _evidence_artifact_consistency,
-)
-from ops.scripts.test.test_execution_evidence_runtime import (
     nodeid_outcome_consistency as _nodeid_outcome_consistency,
-)
-from ops.scripts.test.test_execution_evidence_runtime import (
     sha256_text as _sha256_text,
 )
 from ops.scripts.test.test_execution_selection_runtime import (
     FULL_SUITE_SCOPES,
-)
-from ops.scripts.test.test_execution_selection_runtime import (
     apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
-)
-from ops.scripts.test.test_execution_selection_runtime import (
     suite_coverage as _suite_coverage,
 )
 from ops.scripts.test.test_execution_summary import (

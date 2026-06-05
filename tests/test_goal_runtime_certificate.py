@@ -10,19 +10,13 @@ import pytest
 from ops.scripts.codex_goal_client import get_goal, set_goal
 from ops.scripts.goal_run_status import (
     GoalRunStatusRequest,
-    write_run_artifacts,
-)
-from ops.scripts.goal_run_status import (
     build_report as build_goal_run_status_report,
-)
-from ops.scripts.goal_run_status import (
     write_report as write_goal_run_status_report,
+    write_run_artifacts,
 )
 from ops.scripts.goal_runtime_certificate_report import (
     RUNNER_PRODUCER,
     GoalRuntimeCertificateRequest,
-)
-from ops.scripts.goal_runtime_certificate_report import (
     build_report as build_certificate_report,
 )
 from ops.scripts.runtime_context import RuntimeContext

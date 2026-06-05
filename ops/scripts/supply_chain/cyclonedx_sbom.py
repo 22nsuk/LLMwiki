@@ -153,7 +153,6 @@ def _tool_components() -> list[dict[str, Any]]:
 
 
 def _envelope_file_inputs(vault: Path, provenance_report: dict) -> dict[str, str]:
-    file_inputs: dict[str, str] = {}
     candidate_inputs = {
         "pyproject": "pyproject.toml",
         "lock": "uv.lock",
@@ -161,10 +160,11 @@ def _envelope_file_inputs(vault: Path, provenance_report: dict) -> dict[str, str
     workflow_path = provenance_report.get("ci_install_proof", {}).get("workflow_path")
     if isinstance(workflow_path, str) and workflow_path.strip():
         candidate_inputs["ci_workflow"] = workflow_path.strip()
-    for name, rel_path in candidate_inputs.items():
-        if (vault / rel_path).exists():
-            file_inputs[name] = rel_path
-    return file_inputs
+    return {
+        name: rel_path
+        for name, rel_path in candidate_inputs.items()
+        if (vault / rel_path).exists()
+    }
 
 
 def _embedded_artifact_envelope_property(artifact_envelope: dict[str, Any]) -> dict[str, str]:

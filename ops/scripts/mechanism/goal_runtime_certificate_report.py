@@ -7,6 +7,7 @@ import json
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -29,11 +30,7 @@ from .goal_runtime_certificate import (
     RUNTIME_MODES,
     evidence_statuses,
     runtime_duration_seconds,
-)
-from .goal_runtime_certificate import (
     runtime_mode as contract_runtime_mode,
-)
-from .goal_runtime_certificate import (
     session_requirements as contract_session_requirements,
 )
 
@@ -332,7 +329,7 @@ def _max_gap_seconds(times: list[dt.datetime]) -> int:
         return 0
     return max(
         int((right - left).total_seconds())
-        for left, right in zip(times, times[1:], strict=False)
+        for left, right in pairwise(times)
     )
 
 

@@ -1556,10 +1556,13 @@ class MakefileStaticGateTests(unittest.TestCase):
     def test_ruff_strict_preview_target_uses_full_scope_targets(self) -> None:
         text = _makefile_text()
 
-        self.assertIn("RUFF_STRICT_PREVIEW_RULES ?= B,SIM,UP,I", text)
+        self.assertIn(
+            "RUFF_STRICT_PREVIEW_RULES ?= PTH201",
+            text,
+        )
         self.assertIn("RUFF_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)", text)
         self.assertIn(
-            '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)" --cache-dir "$(RUFF_CACHE_DIR)"',
+            '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)" --cache-dir "$(RUFF_CACHE_DIR)" --exit-zero',
             _target_block(text, "ruff-strict-preview"),
         )
 

@@ -22,10 +22,8 @@ from ops.scripts.gate_effect_vocabulary import (
 )
 from ops.scripts.learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,
-    learning_readiness_signoff_summary,
-)
-from ops.scripts.learning_readiness_signoff_state import (
     SUPPORTED_BLOCKER_ID as SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID,
+    learning_readiness_signoff_summary,
 )
 from ops.scripts.learning_readiness_vocabulary import (
     EXECUTION_NO_RUNNABLE_PROPOSAL_BLOCKER_ID,
@@ -557,8 +555,7 @@ def assess_execution_readiness(inputs: ReadinessInputs) -> ExecutionReadinessAss
     reasons.extend(
         gap
         for gap in inputs.queue_evidence_gaps
-        if gap.startswith("mechanism_review.status=attention")
-        or gap.startswith("mutation_proposal.status=attention")
+        if gap.startswith(("mechanism_review.status=attention", "mutation_proposal.status=attention"))
     )
     if inputs.proposals_emitted > 0 and not inputs.queue_ready:
         if inputs.blocked_reasons:

@@ -276,7 +276,7 @@ def build_report(
         "missing_required_watch_paths": missing_required_watch_paths,
     }
 
-    report = {
+    return {
         **build_canonical_report_envelope(
             vault,
             generated_at=generated_at,
@@ -319,7 +319,6 @@ def build_report(
         "drift_watch_list": drift_watch_list,
     }
 
-    return report
 
 
 def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> Path:

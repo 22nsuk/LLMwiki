@@ -18,13 +18,11 @@ from ops.scripts.core.release_authority_state_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_DISTRIBUTION_ZIP,
+    DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
     _file_identity,
     _resolve,
     _status_label,
     git_commit,
-)
-from ops.scripts.release.release_run_manifest import (
-    DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint

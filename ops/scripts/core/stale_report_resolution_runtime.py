@@ -54,10 +54,7 @@ SEALED_SIDECAR_STATUS_INCOMPLETE = "incomplete"
 def _normalized_repo_path(path: str | Path) -> str:
     normalized = normalize_repo_path_text(Path(path).as_posix())
     if (
-        normalized is None
-        or normalized in {".", ".."}
-        or normalized.startswith("../")
-        or normalized.startswith("/")
+        normalized is None or normalized in {".", ".."} or normalized.startswith(("../", "/"))
     ):
         raise ValueError(f"path must be vault-relative: {path}")
     return normalized

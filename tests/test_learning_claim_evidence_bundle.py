@@ -15,8 +15,6 @@ from ops.scripts.learning_claim_evidence_bundle import (
 )
 from ops.scripts.learning_confirmed_legacy_reconstruction import (
     build_report as build_legacy_reconstruction,
-)
-from ops.scripts.learning_confirmed_legacy_reconstruction import (
     write_report as write_legacy_reconstruction,
 )
 from ops.scripts.runtime_context import RuntimeContext

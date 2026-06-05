@@ -243,7 +243,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
         )
         strict_preview_run = _run_text(_step_by_name(job, "Run Windows strict preview smoke"))
         self.assertIn(
-            'python .\\tools\\strict_preview_audit.py --vault . --out tmp\\strict-preview-audit-windows.json --targets "ops/scripts tests tools" --ruff-select B,SIM,UP,I',
+            'python .\\tools\\strict_preview_audit.py --vault . --out tmp\\strict-preview-audit-windows.json --targets "ops/scripts tests tools" --ruff-select PTH201',
             strict_preview_run,
         )
         self.assertIn(

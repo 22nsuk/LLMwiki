@@ -462,7 +462,7 @@ def write_routing_provenance_aggregate(
         phase="routing_provenance_aggregate",
         decision="written",
         artifact_path=written_rel_path,
-        duration_ms=int(round((context.utcnow() - started_at).total_seconds() * 1000)),
+        duration_ms=round((context.utcnow() - started_at).total_seconds() * 1000),
         session_id=session_id,
         policy_version=dict(session.get("policy", {})).get("version", ""),
     )

@@ -217,10 +217,7 @@ def _normalize_sparse_copy_entry(value: str) -> str:
     raw = str(value).strip().replace("\\", "/").rstrip("/")
     normalized = normalize_repo_path_text(raw)
     if (
-        normalized is None
-        or normalized in {".", ".."}
-        or normalized.startswith("../")
-        or normalized.startswith("/")
+        normalized is None or normalized in {".", ".."} or normalized.startswith(("../", "/"))
     ):
         raise RunMechanismExperimentUsageError(f"invalid sparse workspace copy entry: {value}")
     return normalized

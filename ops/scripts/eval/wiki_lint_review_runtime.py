@@ -422,8 +422,7 @@ def content_quality_advisory_candidates(
     for stem, path in sorted(pages.items()):
         relative_path = report_path(vault, path)
         if not (
-            relative_path.startswith("wiki/concept--")
-            or relative_path.startswith("wiki/synthesis--")
+            relative_path.startswith(("wiki/concept--", "wiki/synthesis--"))
         ):
             continue
 

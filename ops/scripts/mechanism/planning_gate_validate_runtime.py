@@ -19,8 +19,10 @@ from ops.scripts.starter_bundle_runtime import (
     starter_bundle_path,
 )
 
-from . import planning_gate_artifact_runtime as planning_gate_artifact_runtime
-from . import planning_gate_report_runtime as planning_gate_report_runtime
+from . import (
+    planning_gate_artifact_runtime as planning_gate_artifact_runtime,
+    planning_gate_report_runtime as planning_gate_report_runtime,
+)
 
 ARTIFACT_SCHEMAS = planning_gate_artifact_runtime.ARTIFACT_SCHEMAS
 OPTIONAL_ARTIFACT_SCHEMAS = planning_gate_artifact_runtime.OPTIONAL_ARTIFACT_SCHEMAS

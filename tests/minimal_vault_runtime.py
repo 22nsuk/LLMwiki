@@ -11,14 +11,8 @@ import yaml
 from tests.minimal_vault_seed_core import seed_minimal_vault as _seed_minimal_vault
 from tests.minimal_vault_seed_smoke import (
     seed_doc_audit_smoke_vault as _seed_doc_audit_smoke_vault,
-)
-from tests.minimal_vault_seed_smoke import (
     seed_eval_coverage_smoke_vault as _seed_eval_coverage_smoke_vault,
-)
-from tests.minimal_vault_seed_smoke import (
     seed_open_question_smoke_vault as _seed_open_question_smoke_vault,
-)
-from tests.minimal_vault_seed_smoke import (
     seed_registry_review_smoke_vault as _seed_registry_review_smoke_vault,
 )
 

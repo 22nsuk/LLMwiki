@@ -114,7 +114,7 @@ def stable_wiki_inbound_linkers(inbound_linkers: Iterable[str]) -> list[str]:
     return sorted(
         linker
         for linker in inbound_linkers
-        if linker.startswith("concept--") or linker.startswith("synthesis--")
+        if linker.startswith(("concept--", "synthesis--"))
     )
 
 

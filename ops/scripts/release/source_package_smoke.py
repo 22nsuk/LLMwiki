@@ -125,7 +125,7 @@ def _run_command(
         "name": name,
         "command": [sanitize_report_text(display_vault, item, temp_roots=temp_roots) for item in command],
         "returncode": result.returncode,
-        "duration_ms": int(round((time.monotonic() - started) * 1000)),
+        "duration_ms": round((time.monotonic() - started) * 1000),
         "status": "pass" if result.returncode == 0 and not result.timed_out else "fail",
         "stdout_tail": sanitize_report_text(display_vault, _tail(result.stdout), temp_roots=temp_roots),
         "stderr_tail": sanitize_report_text(display_vault, _tail(result.stderr), temp_roots=temp_roots),

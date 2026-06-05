@@ -21,16 +21,10 @@ from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fing
 
 from ops.scripts.release.release_closeout_finality_attestation import (
     BATCH_MANIFEST_PATH,
+    DEFAULT_OUT as FINALITY_ATTESTATION_PATH,
     FIXED_POINT_REPORT_PATH,
     SELF_CHECK_PATH,
-)
-from ops.scripts.release.release_closeout_finality_attestation import (
-    DEFAULT_OUT as FINALITY_ATTESTATION_PATH,
-)
-from ops.scripts.release.release_closeout_finality_attestation import (
     build_report as build_finality_attestation_report,
-)
-from ops.scripts.release.release_closeout_finality_attestation import (
     write_report as write_finality_attestation,
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -433,11 +427,11 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(report["summary"]["reference_manifest_missing_active_report_count"], 0)
         self.assertEqual(report["summary"]["reference_manifest_stale_reference_count"], 0)
         self.assertEqual(actions["external_report_lifecycle"]["current_status"], "implemented")
-        self_evidence = [
+        self_evidence = next(
             item
             for item in actions["external_report_lifecycle"]["evidence"]
             if item["path"] == "ops/reports/external-report-action-matrix.json"
-        ][0]
+        )
         self.assertEqual(self_evidence["status"], report["status"])
         self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
@@ -1150,12 +1144,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "source_package_distribution_binding",
             "release_evidence_bundle_and_attestation",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
-        }:
+        ):
             self.assertEqual(actions[action_id]["current_status"], "implemented")
             self.assertEqual(actions[action_id]["status_reason_ids"], [])
             self.assertEqual(actions[action_id]["status_reason_details"], [])
@@ -1176,11 +1170,11 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "source_package_distribution_binding",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
-        }:
+        ):
             self.assertEqual(actions[action_id]["current_status"], "implemented")
         self.assertEqual(
             actions["release_evidence_bundle_and_attestation"]["current_status"],
@@ -1732,7 +1726,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "goal_contract_schema",
             "codex_goal_adapter",
             "codex_goal_prompt_generator",
@@ -1743,7 +1737,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "selected_contract_currentness_gate",
             "git_worktree_goal_guard",
             "goal_runtime_transient_cleanup_gate",
-        }:
+        ):
             self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
         cleanup_gate_evidence = actions["goal_runtime_transient_cleanup_gate"]["evidence"]
         self.assertFalse(
@@ -1766,11 +1760,11 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
 
         completed_report = build_report(self.vault, context=fixed_context())
         completed_actions = {item["action_id"]: item for item in completed_report["action_items"]}
-        for action_id in {
+        for action_id in (
             "goal_contract_schema",
             "codex_goal_adapter",
             "auto_improve_goal_contract_input",
-        }:
+        ):
             self.assertEqual(completed_actions[action_id]["current_status"], "implemented", action_id)
 
     def test_selected_contract_gate_accepts_attention_freshness_with_current_contract(self) -> None:
@@ -2189,12 +2183,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "source_package_distribution_binding",
             "release_evidence_bundle_and_attestation",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
-        }:
+        ):
             self.assertEqual(
                 actions[action_id]["current_status"],
                 "implemented",
@@ -2236,12 +2230,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "source_package_distribution_binding",
             "release_evidence_bundle_and_attestation",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
-        }:
+        ):
             self.assertEqual(
                 actions[action_id]["current_status"],
                 "requires_release_run_verification",
@@ -2289,12 +2283,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "source_package_distribution_binding",
             "release_evidence_bundle_and_attestation",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
-        }:
+        ):
             self.assertEqual(actions[action_id]["current_status"], "implemented")
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
 
@@ -2326,12 +2320,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "source_package_distribution_binding",
             "release_evidence_bundle_and_attestation",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
-        }:
+        ):
             self.assertEqual(actions[action_id]["current_status"], "implemented")
 
     def test_release_verified_actions_block_authoritative_dashboard_not_run(self) -> None:
@@ -2362,12 +2356,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "source_package_distribution_binding",
             "release_evidence_bundle_and_attestation",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
-        }:
+        ):
             self.assertEqual(
                 actions[action_id]["current_status"],
                 "requires_release_run_verification",
@@ -2411,12 +2405,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in {
+        for action_id in (
             "source_package_distribution_binding",
             "release_evidence_bundle_and_attestation",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
-        }:
+        ):
             self.assertEqual(
                 actions[action_id]["current_status"],
                 "requires_release_run_verification",

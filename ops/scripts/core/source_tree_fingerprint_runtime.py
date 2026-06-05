@@ -228,7 +228,7 @@ def _iter_release_source_entries(
     entries: list[_FileEntry] = []
     try:
         with os.scandir(root) as iterator:
-            dir_entries = sorted(list(iterator), key=lambda entry: entry.name)
+            dir_entries = sorted(iterator, key=lambda entry: entry.name)
     except OSError:
         return entries
     for entry in dir_entries:
@@ -313,7 +313,7 @@ def _should_descend(rel_dir: str, included_prefixes: tuple[str, ...] = ()) -> bo
 
 def _sha256_file(path: str) -> str:
     digest = hashlib.sha256()
-    with open(path, "rb") as handle:
+    with Path(path).open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()

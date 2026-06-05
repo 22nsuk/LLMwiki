@@ -9,20 +9,12 @@ from ops.scripts.path_runtime import normalize_repo_path_text
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.raw_registry_preflight import (
     DEFAULT_OUT as RAW_REGISTRY_PREFLIGHT_REPORT_OUT,
-)
-from ops.scripts.raw_registry_preflight import (
     REPRODUCIBILITY_DEFAULT_OUT as RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_OUT,
-)
-from ops.scripts.raw_registry_preflight import (
     build_reproducibility_report,
     load_stored_preflight_report,
-    write_reproducibility_report,
-)
-from ops.scripts.raw_registry_preflight import (
     preflight as raw_registry_preflight,
-)
-from ops.scripts.raw_registry_preflight import (
     write_report as write_raw_registry_preflight_report,
+    write_reproducibility_report,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
@@ -30,11 +22,7 @@ from ops.scripts.schema_constants_runtime import (
 )
 from ops.scripts.script_output_surfaces import (
     DEFAULT_OUT as SCRIPT_OUTPUT_SURFACES_TARGET,
-)
-from ops.scripts.script_output_surfaces import (
     build_registry as build_script_output_surface_registry,
-)
-from ops.scripts.script_output_surfaces import (
     write_registry as write_script_output_surface_registry,
 )
 

@@ -9,17 +9,17 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import (
-        build_canonical_report_envelope,  # noqa: PLC0415
+        build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
+    from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
-        ARTIFACT_RELOCATION_AUDIT_SCHEMA_PATH,  # noqa: PLC0415
+        ARTIFACT_RELOCATION_AUDIT_SCHEMA_PATH,
     )
 else:
     from .artifact_freshness_runtime import build_canonical_report_envelope

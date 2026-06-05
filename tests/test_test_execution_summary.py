@@ -32,15 +32,13 @@ from ops.scripts.test_execution_summary import (
     classify_interpreter_path,
     classify_status,
     collect_pytest_nodeid_digest,
+    main as summary_main,
     parse_pytest_counts,
     resolve_pytest_target_paths,
     reusable_summary_is_current,
     reuse_currentness_diagnostics,
     reuse_currentness_diagnostics_from_state,
     semantic_command,
-)
-from ops.scripts.test_execution_summary import (
-    main as summary_main,
 )
 
 from tests.minimal_vault_runtime import seed_minimal_vault

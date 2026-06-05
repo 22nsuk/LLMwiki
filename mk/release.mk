@@ -407,7 +407,7 @@ release-package-current:
 	$(MAKE) release-package-current-or-refresh
 
 release-package-current-check:
-	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"
 
 release-package-current-or-refresh:
 	@if $(MAKE) release-package-current-check; then \
@@ -450,7 +450,7 @@ release-seal-current:
 	$(MAKE) release-evidence-closeout-sealed-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT="$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST="$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST="$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"
 
 release-distribution-zip: release-distribution-zip-lane-guard
-	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_DISTRIBUTION_ZIP_OUT)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_DISTRIBUTION_ZIP_OUT)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"
 
 release-distribution-zip-lane-guard:
 	$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-distribution-zip
@@ -522,21 +522,21 @@ release-smoke-lane-guard:
 	$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-smoke
 
 release-smoke: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)"
 
 release-smoke-full: release-smoke
 
 release-smoke-full-reuse: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)" --reuse-if-current --reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)" --reuse-if-current --reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"
 
 release-smoke-full-current-check: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"
 
 release-smoke-fast: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"
 
 release-smoke-fast-current-check: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_FAST_OUT)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_FAST_OUT)"
 
 release-smoke-fast-refresh-check:
 	@if $(MAKE) release-smoke-fast-current-check; then \

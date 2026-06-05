@@ -9,15 +9,13 @@ from pathlib import Path
 import pytest
 from ops.scripts.raw_registry_cross_environment_matrix import (
     build_matrix_report,
-)
-from ops.scripts.raw_registry_cross_environment_matrix import (
     main as matrix_main,
-)
-from ops.scripts.raw_registry_cross_environment_matrix import (
     write_report as write_matrix_report,
 )
-from ops.scripts.raw_registry_preflight import preflight
-from ops.scripts.raw_registry_preflight import write_report as write_preflight_report
+from ops.scripts.raw_registry_preflight import (
+    preflight,
+    write_report as write_preflight_report,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH,

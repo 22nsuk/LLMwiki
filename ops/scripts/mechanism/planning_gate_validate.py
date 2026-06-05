@@ -32,8 +32,8 @@ else:
 
 __all__ = [
     "ARTIFACT_SCHEMAS",
-    "ArtifactLoadError",
     "OPTIONAL_ARTIFACT_SCHEMAS",
+    "ArtifactLoadError",
     "PlanningArtifactError",
     "load_artifact",
     "main",

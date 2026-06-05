@@ -37,8 +37,6 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
-    )
-    from ops.scripts.promotion_gate_mechanism_runtime import (
         mechanism_class_report as build_mechanism_class_report,
     )
     from ops.scripts.promotion_gate_page_runtime import (
@@ -47,8 +45,6 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_stage2,
         evaluate_wiki,
         lint_wiki,
-    )
-    from ops.scripts.promotion_gate_page_runtime import (
         page_class_report as build_page_class_report,
     )
 else:
@@ -80,8 +76,6 @@ else:
         MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
-    )
-    from .promotion_gate_mechanism_runtime import (
         mechanism_class_report as build_mechanism_class_report,
     )
     from .promotion_gate_page_runtime import (
@@ -90,12 +84,11 @@ else:
         evaluate_stage2,
         evaluate_wiki,
         lint_wiki,
-    )
-    from .promotion_gate_page_runtime import (
         page_class_report as build_page_class_report,
     )
 
 __all__ = [
+    "MechanismClassReportRequest",
     "PromotionGateArtifactDecodeError",
     "PromotionGateArtifactMissingError",
     "PromotionGateArtifactSchemaError",
@@ -103,7 +96,6 @@ __all__ = [
     "build_signoff",
     "main",
     "mechanism_class_report",
-    "MechanismClassReportRequest",
     "page_class_report",
 ]
 

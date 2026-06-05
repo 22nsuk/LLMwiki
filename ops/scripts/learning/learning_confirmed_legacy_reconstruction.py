@@ -240,7 +240,7 @@ def _reconstruction_row(vault: Path, run_id: str, families: list[str]) -> dict[s
         status = "blocked"
     elif not reconstruction_needed:
         status = "not_needed"
-    elif digest_reconstruction_needed and not behavior_delta_sha256 or secondary_reconstruction_needed and (not parsed_strict or not parsed_axes):
+    elif (digest_reconstruction_needed and not behavior_delta_sha256) or (secondary_reconstruction_needed and (not parsed_strict or not parsed_axes)):
         status = "blocked"
     else:
         status = "reconstructed"

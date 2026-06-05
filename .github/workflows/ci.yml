@@ -194,7 +194,7 @@ jobs:
 
       - name: Run Windows strict preview smoke
         run: |
-          python .\tools\strict_preview_audit.py --vault . --out tmp\strict-preview-audit-windows.json --targets "ops/scripts tests tools" --ruff-select B,SIM,UP,I --mypy-flags "--check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs" --python python
+          python .\tools\strict_preview_audit.py --vault . --out tmp\strict-preview-audit-windows.json --targets "ops/scripts tests tools" --ruff-select PTH201 --mypy-flags "--check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs" --python python
 
       - name: Run Windows schema and strict-preview smoke tests
         run: |

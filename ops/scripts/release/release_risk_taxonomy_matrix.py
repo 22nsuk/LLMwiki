@@ -11,16 +11,16 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import (
-        build_canonical_report_envelope,  # noqa: PLC0415
+        build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
+    from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_repo_artifact_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
-    from ops.scripts.release_risk_taxonomy_runtime import (  # noqa: PLC0415
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.release_risk_taxonomy_runtime import (
         ADVISORY_REVIEW_BACKLOG,
         CLEAN_LANE_BLOCKS,
         CONDITIONAL_OPERATOR_REVIEW,
@@ -28,9 +28,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         RELEASE_RISK_TAXONOMY_PATH,
         load_release_risk_taxonomy,
     )
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
-        RELEASE_RISK_TAXONOMY_MATRIX_SCHEMA_PATH,  # noqa: PLC0415
+        RELEASE_RISK_TAXONOMY_MATRIX_SCHEMA_PATH,
     )
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope

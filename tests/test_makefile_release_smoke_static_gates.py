@@ -35,7 +35,7 @@ class MakefileReleaseSmokeStaticGateTests(unittest.TestCase):
         )
         self.assertIn("RELEASE_SMOKE_REUSE_FROM ?= $(RELEASE_SMOKE_OUT)", text)
         self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)"',
+            '$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)"',
             _target_block(text, "release-smoke"),
         )
         self.assertIn("release-smoke-full: release-smoke", text)
@@ -47,7 +47,7 @@ class MakefileReleaseSmokeStaticGateTests(unittest.TestCase):
         self.assertIn("--reuse-only", current_check_block)
         self.assertIn('--out "$(RELEASE_SMOKE_CURRENT_CHECK_OUT)"', current_check_block)
         self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"',
+            '$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"',
             _target_block(text, "release-smoke-fast"),
         )
         fast_current_check_block = _target_block(text, "release-smoke-fast-current-check")

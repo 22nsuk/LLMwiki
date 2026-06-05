@@ -23,8 +23,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.supply_chain_artifact_model import build_model
     from ops.scripts.supply_chain_provenance import (
         build_report as build_supply_chain_provenance_report,
+        sha256_file,
     )
-    from ops.scripts.supply_chain_provenance import sha256_file
 else:
     from ops.scripts.artifact_freshness_runtime import (
         build_canonical_report_envelope,
@@ -41,8 +41,8 @@ else:
     from .supply_chain_artifact_model import build_model
     from .supply_chain_provenance import (
         build_report as build_supply_chain_provenance_report,
+        sha256_file,
     )
-    from .supply_chain_provenance import sha256_file
 
 
 DEFAULT_OUT = "ops/reports/in-toto-statement.json"

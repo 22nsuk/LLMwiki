@@ -12,8 +12,8 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.runtime_context import RuntimeContext
 else:
     from .output_runtime import display_path
     from .runtime_context import RuntimeContext
@@ -82,14 +82,7 @@ def _makefile_script_module_targets(vault: Path) -> dict[str, list[str]]:
                 if line and not line.startswith(("\t", " ")):
                     stripped = line.strip()
                     if (
-                        not stripped
-                        or stripped.startswith("#")
-                        or stripped.startswith(".PHONY:")
-                        or "?=" in line
-                        or ":=" in line
-                        or "+=" in line
-                        or line.count("=") == 1
-                        and ":" not in line
+                        not stripped or stripped.startswith(("#", ".PHONY:")) or "?=" in line or ":=" in line or "+=" in line or (line.count("=") == 1 and ":" not in line)
                     ):
                         current_targets = []
                     elif ":" in line:
@@ -182,28 +175,24 @@ def build_report(vault: Path, *, context: RuntimeContext | None = None) -> dict[
             "console_scripts": sorted(set(entry["console_scripts"])),
             "make_targets": sorted(set(entry["make_targets"])),
             "sources": sorted(set(entry["sources"])),
-            **{
-                "lifecycle": str(
-                    lifecycle_policy.get(str(entry["module"]), {}).get(
-                        "lifecycle", "unclassified"
-                    )
-                ),
-                "install_state": str(
-                    lifecycle_policy.get(str(entry["module"]), {}).get(
-                        "install_state", "unclassified"
-                    )
-                ),
-                "replacement": str(
-                    lifecycle_policy.get(str(entry["module"]), {}).get(
-                        "replacement", ""
-                    )
-                ),
-                "removal_ready": bool(
-                    lifecycle_policy.get(str(entry["module"]), {}).get(
-                        "removal_ready", False
-                    )
-                ),
-            },
+            "lifecycle": str(
+                lifecycle_policy.get(str(entry["module"]), {}).get(
+                    "lifecycle", "unclassified"
+                )
+            ),
+            "install_state": str(
+                lifecycle_policy.get(str(entry["module"]), {}).get(
+                    "install_state", "unclassified"
+                )
+            ),
+            "replacement": str(
+                lifecycle_policy.get(str(entry["module"]), {}).get("replacement", "")
+            ),
+            "removal_ready": bool(
+                lifecycle_policy.get(str(entry["module"]), {}).get(
+                    "removal_ready", False
+                )
+            ),
         }
         for entry in entries_by_key.values()
     ]

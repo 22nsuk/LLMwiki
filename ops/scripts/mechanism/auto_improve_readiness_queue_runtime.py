@@ -519,7 +519,7 @@ def _same_eval_telemetry_summary(
         and item["secondary_improvement_axes_present"]
         and item["behavior_delta_digest_present"]
     )
-    complete = run_count == 0 or complete_count == run_count
+    complete = run_count in (0, complete_count)
     return {
         "status": "not_applicable"
         if run_count == 0

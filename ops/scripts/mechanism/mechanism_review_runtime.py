@@ -21,6 +21,7 @@ from .mechanism_review_candidate_runtime import (
     apply_historical_calibration,
     bootstrap_diagnostics,
     build_candidate_for_history,
+    build_candidates as build_review_candidates,
     candidate_requirements_by_type,
     candidate_slug,
     candidate_template,
@@ -32,9 +33,6 @@ from .mechanism_review_candidate_runtime import (
     non_trigger_diagnostics,
     sorted_run_ids,
     trend_candidate_requirements_for_policy,
-)
-from .mechanism_review_candidate_runtime import (
-    build_candidates as build_review_candidates,
 )
 from .mechanism_review_history_runtime import (
     MechanismRunSnapshot,

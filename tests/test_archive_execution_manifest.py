@@ -12,8 +12,10 @@ from ops.scripts.archive_execution_manifest import (
     build_report,
     write_report,
 )
-from ops.scripts.generated_artifact_index import build_report as build_index_report
-from ops.scripts.generated_artifact_index import write_report as write_index_report
+from ops.scripts.generated_artifact_index import (
+    build_report as build_index_report,
+    write_report as write_index_report,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 

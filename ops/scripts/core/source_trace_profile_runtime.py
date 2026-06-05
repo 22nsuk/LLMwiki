@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -157,7 +156,7 @@ def classify_source_trace_targets(
             exists = resolved.exists()
             classification_path = (
                 resolved_path
-                if normalized_ref.startswith(("/", "../")) or os.path.isabs(normalized_ref)
+                if normalized_ref.startswith(("/", "../")) or Path(normalized_ref).is_absolute()
                 else normalized_ref
             )
             status = (

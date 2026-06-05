@@ -354,7 +354,7 @@ def _default_runner(
         env=env,
     )
     payload = _command_result_payload(result, vault=cwd)
-    payload["duration_ms"] = int(round((time.monotonic() - started_at) * 1000))
+    payload["duration_ms"] = round((time.monotonic() - started_at) * 1000)
     return payload
 
 
@@ -490,7 +490,7 @@ def _writer_cost_rows(
                 "run_count": run_count,
                 "selected_iteration_count": len(selected_iterations),
                 "total_duration_ms": total,
-                "average_duration_ms": int(round(total / run_count))
+                "average_duration_ms": round(total / run_count)
                 if run_count
                 else 0,
                 "max_duration_ms": max(durations) if durations else 0,
@@ -790,8 +790,7 @@ def _freshness_signal(freshness_record: dict[str, Any]) -> tuple[str, list[str]]
     schema_validation_status = str(
         freshness_record.get("schema_validation_status", "")
     ).strip()
-    freshness_status = "attention" if issues or schema_validation_status == "fail" else "pass"
-    return schema_validation_status, issues if freshness_status == "attention" else issues
+    return schema_validation_status, issues
 
 
 def _dry_run_tracked_artifact_record(

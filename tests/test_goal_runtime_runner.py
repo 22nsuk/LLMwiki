@@ -11,6 +11,11 @@ from pathlib import Path
 import pytest
 from ops.scripts.codex_goal_client import set_goal
 from ops.scripts.command_runtime import FakeProcess, FakeProcessBackend
+from ops.scripts.goal_run_status import (
+    GoalRunStatusRequest,
+    build_report as build_goal_run_status_report,
+    write_report as write_goal_run_status_report,
+)
 from ops.scripts.goal_runtime_runner import (
     CheckpointCommandExecution,
     GoalRuntimeRunnerRequest,
@@ -145,6 +150,63 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
                 "2026-05-17T12:00:01Z",
                 "2026-05-17T12:00:02Z",
             ],
+        )
+
+    def test_runner_final_status_clears_prior_falsey_observability(self) -> None:
+        prior = build_goal_run_status_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="running",
+                started_at="2026-05-17T11:50:00Z",
+                last_heartbeat_at="2026-05-17T11:50:00Z",
+                last_checkpoint_at="2026-05-17T11:50:00Z",
+                last_command_heartbeat_at="2026-05-17T11:50:00Z",
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=4,
+                command_timeout_seconds=99,
+                last_command_returncode=7,
+                last_command_timed_out=True,
+                resume_from_checkpoint=True,
+                resume_command="python stale-resume.py",
+                context=context_at(11, 50),
+            )
+        )
+        write_goal_run_status_report(self.vault, prior)
+        process = FakeProcess(communicate_side_effect=[('{"ok": true}\n', "")])
+        process.returncode = 0
+
+        exit_code = run_goal_runtime_command(
+            GoalRuntimeRunnerRequest(
+                vault=self.vault,
+                command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],
+                run_id="20260517-trial",
+                goal_contract_path="ops/reports/codex-goal-contract.json",
+                result_out="tmp/session-result.json",
+                heartbeat_interval_seconds=1,
+                checkpoint_interval_seconds=2,
+                timeout_seconds=5,
+                context=fixed_context(),
+                backend=FakeProcessBackend(process),
+                monotonic_clock=SteppedClock([0.0, 0.0, 0.0]),
+            )
+        )
+
+        self.assertEqual(exit_code, 0)
+        status = json.loads(
+            (self.vault / "ops" / "reports" / "goal-run-status.json").read_text(encoding="utf-8")
+        )
+        observability = status["observability"]
+        self.assertEqual(status["run"]["status"], "completed")
+        self.assertEqual(observability["command_heartbeat_count"], 0)
+        self.assertEqual(observability["command_timeout_seconds"], 5)
+        self.assertEqual(observability["last_command_returncode"], 0)
+        self.assertFalse(observability["last_command_timed_out"])
+        self.assertEqual(observability["last_command_termination_reason"], "completed")
+        self.assertFalse(observability["resume_from_checkpoint"])
+        self.assertEqual(
+            observability["resume_command"],
+            "python -m ops.scripts.auto_improve_loop",
         )
 
     def test_runner_finalizes_failed_command_status_and_exit_code(self) -> None:

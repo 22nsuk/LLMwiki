@@ -33,20 +33,14 @@ from ops.scripts.runtime_context import RuntimeContext
 from .goal_run_status import (
     DEFAULT_STATUS_PATH,
     GoalRunStatusRequest,
-    goal_run_artifact_paths,
-    write_run_artifacts,
-)
-from .goal_run_status import (
     build_report as build_goal_run_status_report,
-)
-from .goal_run_status import (
+    goal_run_artifact_paths,
     write_report as write_goal_run_status_report,
+    write_run_artifacts,
 )
 from .goal_runtime_certificate import DEFAULT_RUNTIME_MODE, DEFAULT_RUNTIME_SECONDS
 from .goal_runtime_lock import (
     DEFAULT_LOCK_PATH as DEFAULT_WORKSPACE_LOCK_PATH,
-)
-from .goal_runtime_lock import (
     GoalRuntimeWorkspaceLock,
     GoalRuntimeWorkspaceLockActive,
     acquire_workspace_lock,

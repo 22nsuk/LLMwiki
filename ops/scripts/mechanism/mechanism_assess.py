@@ -648,9 +648,7 @@ def verification_cost_evidence(
         score = max(score, 4)
         reasons.append("many_targets")
     if any(
-        rel_path.startswith("ops/schemas/")
-        or rel_path.startswith("ops/policies/")
-        or rel_path in INTERFACE_SCRIPTS
+        rel_path.startswith(("ops/schemas/", "ops/policies/")) or rel_path in INTERFACE_SCRIPTS
         for rel_path in target_paths
     ):
         score = max(score, 4)

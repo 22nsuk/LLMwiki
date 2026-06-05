@@ -84,8 +84,7 @@ def candidate_slug(primary_targets: list[str]) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     if slug:
         return slug
-    digest = hashlib.sha1("|".join(primary_targets).encode("utf-8")).hexdigest()[:12]
-    return digest
+    return hashlib.sha1("|".join(primary_targets).encode("utf-8")).hexdigest()[:12]
 
 
 def clamp_priority(value: int) -> int:

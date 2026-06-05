@@ -149,7 +149,7 @@ def _matches_semantic_volatile_path(path: tuple[str, ...]) -> bool:
         if len(path) != len(volatile_path):
             continue
         if all(
-            expected == "*" or actual == expected
+            expected in ("*", actual)
             for actual, expected in zip(path, volatile_path, strict=False)
         ):
             return True

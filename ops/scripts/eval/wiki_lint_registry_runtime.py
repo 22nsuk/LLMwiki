@@ -11,32 +11,14 @@ from ops.scripts.registry_alignment_passes_runtime import (
 )
 from ops.scripts.registry_diagnostics_runtime import (
     RegistryDiagnosticEmitter as RegistryLintEmitter,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     RegistryInventoryContext,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     RegistryPaths as RegistryLintPaths,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     registry_diagnostic_paths as _registry_lint_paths,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     registry_inventory_context_pass as _registry_inventory_context_pass,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     registry_page_presence_pass as _registry_page_presence_pass,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     registry_raw_inventory_consistency_pass as _raw_inventory_consistency_pass,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     registry_shared_inventory_diagnostics_pass as _shared_registry_inventory_diagnostics_pass,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     registry_source_target_page_naming_pass as _registry_source_target_page_naming_pass,
-)
-from ops.scripts.registry_diagnostics_runtime import (
     registry_summary_consistency_pass as _registry_summary_consistency_pass,
 )
 from ops.scripts.registry_pass_support_runtime import (
@@ -157,30 +139,30 @@ def lint_registry_contract(
 
 
 __all__ = [
-    "RegistryLintEmitter",
     "RegistryInventoryContext",
+    "RegistryLintEmitter",
     "RegistryLintPaths",
-    "_registry_lint_paths",
+    "_backlog_entry_age_days",
+    "_backlog_refactor_threshold_pass",
+    "_locator_raw_path_corpus_consistency_pass",
+    "_parse_registry_iso_date",
+    "_raw_inventory_consistency_pass",
+    "_registry_frontmatter_alignment_pass",
     "_registry_inventory_context_pass",
+    "_registry_lint_paths",
     "_registry_page_presence_pass",
+    "_registry_source_target_page_naming_pass",
     "_registry_summary_consistency_pass",
     "_shared_registry_inventory_diagnostics_pass",
-    "_raw_inventory_consistency_pass",
-    "_registry_source_target_page_naming_pass",
-    "registry_review_exempt_paths",
+    "_summary_shard_review_candidate_pass",
+    "backlog_refactor_threshold_pass",
+    "lint_registry_contract",
+    "locator_raw_path_corpus_consistency_pass",
+    "registry_entry_line_span",
     "registry_entry_target_report_path",
+    "registry_frontmatter_alignment_pass",
+    "registry_review_exempt_paths",
     "registry_topic_family",
     "registry_topic_subfamily",
-    "registry_entry_line_span",
-    "_parse_registry_iso_date",
-    "_backlog_entry_age_days",
-    "_summary_shard_review_candidate_pass",
-    "_backlog_refactor_threshold_pass",
     "summary_shard_review_candidate_pass",
-    "backlog_refactor_threshold_pass",
-    "_registry_frontmatter_alignment_pass",
-    "_locator_raw_path_corpus_consistency_pass",
-    "registry_frontmatter_alignment_pass",
-    "locator_raw_path_corpus_consistency_pass",
-    "lint_registry_contract",
 ]

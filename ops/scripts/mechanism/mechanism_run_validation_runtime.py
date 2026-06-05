@@ -340,7 +340,7 @@ def changed_files_scope_state(
         )
     )
     normalized_scope = sorted(
-        set(normalize_changed_file_path(path) for path in raw_declared_scope)
+        {normalize_changed_file_path(path) for path in raw_declared_scope}
     )
     changed_paths = changed_file_paths(bundle)
     return ChangedFilesScopeState(

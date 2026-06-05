@@ -1,5 +1,5 @@
 RUFF_TARGETS ?= ops/scripts tests tools
-RUFF_STRICT_PREVIEW_RULES ?= B,SIM,UP,I
+RUFF_STRICT_PREVIEW_RULES ?= PTH201
 STRICT_PREVIEW_AUDIT_TARGETS ?= ops/scripts tests tools
 STRICT_PREVIEW_AUDIT_OUT ?= tmp/strict-preview-audit.json
 RUFF_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)
@@ -31,7 +31,7 @@ ruff:
 	$(PYTHON) -m ruff check $(RUFF_CACHE_FLAGS) $(RUFF_TARGETS)
 
 ruff-strict-preview:
-	$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)" --cache-dir "$(RUFF_CACHE_DIR)"
+	$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)" --cache-dir "$(RUFF_CACHE_DIR)" --exit-zero
 
 strict-preview-audit:
 	$(PYTHON) tools/strict_preview_audit.py --vault "$(VAULT)" --out "$(STRICT_PREVIEW_AUDIT_OUT)" --targets "$(STRICT_PREVIEW_AUDIT_TARGETS)" --ruff-select "$(RUFF_STRICT_PREVIEW_RULES)" --ruff-cache-dir "$(RUFF_CACHE_DIR)" --mypy-flags "$(MYPY_CACHE_FLAGS) $(MYPY_STRICT_PREVIEW_FLAGS)" --python "$(firstword $(PYTHON))"

@@ -30,8 +30,6 @@ from tests.test_release_run_ready import (
     _copy_plan_schema,
     _patch_plan_repo,
     _write_current_run_ready_evidence,
-)
-from tests.test_release_run_ready import (
     fixed_context as fixed_run_ready_context,
 )
 from tests.test_supply_chain_provenance import (

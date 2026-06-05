@@ -15,12 +15,10 @@ from ops.scripts.artifact_io_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_DISTRIBUTION_ZIP,
+    DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
     _file_identity,
     _resolve,
     git_commit,
-)
-from ops.scripts.release.release_run_manifest import (
-    DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
 )
 from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_BATCH_MANIFEST,

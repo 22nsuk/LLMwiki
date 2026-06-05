@@ -701,7 +701,7 @@ def _executor_prompt_text(
             "validation that covers the added behavior.\n"
             "\n"
         )
-    prompt_text = f"""You are executing the `{request.role}` role for LLM Wiki vNext.
+    return f"""You are executing the `{request.role}` role for LLM Wiki vNext.
 
 Role profile:
 - name: `{profile_name}`
@@ -763,7 +763,6 @@ JSON template:
 {json.dumps(template, ensure_ascii=False, indent=2)}
 ```
 """
-    return prompt_text
 
 
 def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
@@ -1093,7 +1092,7 @@ def _append_executor_runtime_event(
         phase="executor",
         decision=summary.decision,
         artifact_path=run_rel(run_id, f"{role}-executor-report.json"),
-        duration_ms=int(round((time.monotonic() - started_at) * 1000)),
+        duration_ms=round((time.monotonic() - started_at) * 1000),
         run_id=run_id,
         policy_version=_read_policy_version(scope_freeze),
         proposal_id=str(scope_freeze.get("proposal_id", "")).strip(),

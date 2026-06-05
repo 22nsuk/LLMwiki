@@ -1335,9 +1335,7 @@ def github_native_security_automation_status(
     pinned_uses = [
         use
         for use in external_uses
-        if re.search(r"@[0-9a-f]{40}\b", use)
-        or use.startswith("./")
-        or use.startswith("docker://sha256:")
+        if re.search(r"@[0-9a-f]{40}\b", use) or use.startswith(("./", "docker://sha256:"))
     ]
     all_external_uses_pinned = bool(external_uses) and len(pinned_uses) == len(external_uses)
     if (
@@ -1826,9 +1824,7 @@ def action_status_reason_details(
                     ],
                 )
             )
-        elif reason_id.startswith("release_finality_") or reason_id.startswith(
-            "release_closeout_fixed_point_"
-        ):
+        elif reason_id.startswith(("release_finality_", "release_closeout_fixed_point_")):
             details.append(
                 _reason_detail(
                     reason_id,
@@ -1840,9 +1836,7 @@ def action_status_reason_details(
                     ],
                 )
             )
-        elif reason_id.startswith("release_dashboard_") or reason_id.startswith(
-            "release_authority_"
-        ) or reason_id.startswith("release_closeout_"):
+        elif reason_id.startswith(("release_dashboard_", "release_authority_", "release_closeout_")):
             details.append(
                 _reason_detail(
                     reason_id,

@@ -29,12 +29,10 @@ from ops.scripts.release.auto_promotion_manifest_sections import (
 )
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
+    _resolve,
 )
-from ops.scripts.release.release_run_manifest import _resolve
 from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_OUT as DEFAULT_SEALED_RUN_MANIFEST,
-)
-from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )
@@ -475,7 +473,7 @@ def _operator_policy_requirements(
     operator: dict[str, Any],
     learning_revalidation_status: str,
 ) -> list[RequirementSpec]:
-    operator_requirements = [
+    return [
         RequirementSpec(
             checks["source_zip_policy_match"],
             "source_zip_policy_not_match",
@@ -537,7 +535,6 @@ def _operator_policy_requirements(
             "Run learning-readiness-signoff-revalidation and refresh operator summary.",
         ),
     ]
-    return operator_requirements
 
 
 def _operator_zero_count_requirements(operator: dict[str, Any]) -> list[RequirementSpec]:

@@ -10,15 +10,15 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.public_surface_policy import (  # noqa: PLC0415
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
         PUBLIC_EXCLUDED_SEGMENTS,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
     )
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.runtime_context import RuntimeContext
 else:
     from ..core.output_runtime import display_path
     from ..core.runtime_context import RuntimeContext

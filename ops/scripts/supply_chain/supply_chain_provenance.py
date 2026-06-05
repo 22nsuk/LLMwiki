@@ -12,7 +12,7 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (  # noqa: PLC0415
+    from ops.scripts.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
@@ -207,7 +207,7 @@ def parse_requirements(vault: Path, rel_path: str) -> tuple[list[dict], dict]:
         text = raw_line.strip()
         if not text or text.startswith("#"):
             continue
-        kind = "include" if text.startswith("-r ") or text.startswith("--requirement ") else "requirement"
+        kind = "include" if text.startswith(("-r ", "--requirement ")) else "requirement"
         requirements.append(
             {
                 "source": rel_path,

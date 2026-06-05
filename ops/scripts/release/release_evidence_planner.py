@@ -16,12 +16,10 @@ from ops.scripts.artifact_io_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
+    _resolve,
 )
-from ops.scripts.release.release_run_manifest import _resolve
 from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_OUT as DEFAULT_SEALED_RUN_MANIFEST,
-)
-from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )

@@ -191,7 +191,7 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     ):
         case.assertIn(assignment, text)
     case.assertIn(
-        '$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_DISTRIBUTION_ZIP_OUT)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"',
+        '$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_DISTRIBUTION_ZIP_OUT)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"',
         _target_block(text, "release-distribution-zip"),
     )
     sealed_block = _target_block(text, "release-evidence-closeout-sealed")

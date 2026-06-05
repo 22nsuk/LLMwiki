@@ -441,8 +441,7 @@ def _remote_sync_signal(
     remote_sync_reader: RemoteSyncReader,
 ) -> dict[str, Any]:
     _ = (run_manifest, run_manifest_load_status)
-    live_remote = remote_sync_reader(vault)
-    return live_remote
+    return remote_sync_reader(vault)
 
 
 def build_status_surface(

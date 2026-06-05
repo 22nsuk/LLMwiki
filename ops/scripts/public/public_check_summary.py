@@ -137,8 +137,17 @@ def _resolve_out_dir(vault: Path, out_dir: str) -> Path:
     return (vault / path).resolve()
 
 
+def _expanduser_preserving_unresolved_home(value: str) -> str:
+    if not value.startswith("~"):
+        return value
+    try:
+        return str(Path(value).expanduser())
+    except RuntimeError:
+        return value
+
+
 def _resolve_public_python(vault: Path, public_python: str) -> str:
-    expanded = os.path.expandvars(os.path.expanduser(public_python))
+    expanded = os.path.expandvars(_expanduser_preserving_unresolved_home(public_python))
     if "/" not in expanded and "\\" not in expanded:
         return expanded
     path = Path(expanded)

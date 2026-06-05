@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from ops.scripts.codex_goal_client import GoalBackendUnavailableError, set_goal
@@ -12,6 +15,7 @@ from ops.scripts.goal_run_status import (
     DEFAULT_STATUS_PATH,
     GoalRunStatusRequest,
     build_report,
+    main as goal_run_status_main,
     write_report,
     write_run_artifacts,
 )
@@ -705,6 +709,102 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(refreshed["health"]["checkpoint_status"], "stale")
         self.assertEqual(refreshed["health"]["command_heartbeat_status"], "current")
         self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_blocked_refresh_allows_explicit_falsey_observability(self) -> None:
+        self._seed_goal_contract()
+        initial = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                started_at="2026-05-17T10:00:00Z",
+                last_heartbeat_at="2026-05-17T10:05:00Z",
+                last_checkpoint_at="2026-05-17T10:05:00Z",
+                last_command_heartbeat_at="2026-05-17T10:05:00Z",
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=2,
+                command_timeout_seconds=1800,
+                last_command_returncode=7,
+                last_command_timed_out=True,
+                resume_from_checkpoint=True,
+                resume_command="python -m ops.scripts.goal_runtime_runner --resume",
+                context=context_at(10, 5),
+            )
+        )
+        write_report(self.vault, initial)
+        write_run_artifacts(self.vault, initial)
+
+        refreshed = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                command_heartbeat_count=0,
+                command_timeout_seconds=0,
+                last_command_returncode=-1,
+                last_command_timed_out=False,
+                resume_from_checkpoint=False,
+                context=context_at(12, 5),
+            )
+        )
+
+        observability = refreshed["observability"]
+        self.assertEqual(observability["command_heartbeat_count"], 0)
+        self.assertEqual(observability["command_timeout_seconds"], 0)
+        self.assertEqual(observability["last_command_returncode"], -1)
+        self.assertEqual(observability["last_command_timed_out"], False)
+        self.assertEqual(observability["resume_from_checkpoint"], False)
+        self.assertEqual(
+            observability["resume_command"],
+            "python -m ops.scripts.goal_runtime_runner --resume",
+        )
+        self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_build_report_requires_request_object(self) -> None:
+        self._seed_goal_contract()
+
+        with self.assertRaises(TypeError):
+            build_report(cast(Any, self.vault))
+
+    def test_goal_run_status_cli_omitted_resume_flag_preserves_prior_resume_state(self) -> None:
+        self._seed_goal_contract()
+        initial = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                started_at="2026-05-17T10:00:00Z",
+                last_heartbeat_at="2026-05-17T10:05:00Z",
+                last_checkpoint_at="2026-05-17T10:05:00Z",
+                resume_from_checkpoint=True,
+                resume_command="python -m ops.scripts.goal_runtime_runner --resume",
+                context=context_at(10, 5),
+            )
+        )
+        write_report(self.vault, initial)
+
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = goal_run_status_main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--run-id",
+                    "20260517-trial",
+                    "--status",
+                    "blocked",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout.getvalue().strip(), DEFAULT_STATUS_PATH)
+        refreshed = json.loads((self.vault / DEFAULT_STATUS_PATH).read_text(encoding="utf-8"))
+        self.assertEqual(refreshed["observability"]["resume_from_checkpoint"], True)
+        self.assertEqual(
+            refreshed["observability"]["resume_command"],
+            "python -m ops.scripts.goal_runtime_runner --resume",
+        )
+        self.assertEqual(refreshed["health"]["resume_status"], "ready")
 
     def test_goal_run_status_refresh_preserves_terminal_runner_status(self) -> None:
         self._seed_goal_contract()

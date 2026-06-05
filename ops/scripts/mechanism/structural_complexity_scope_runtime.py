@@ -7,10 +7,8 @@ from ops.scripts.release.release_source_ready_commit import classify_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,
-    touched_target_profiles,
-)
-from ops.scripts.structural_complexity_budget_runtime import (
     build_report as build_structural_complexity_budget_report,
+    touched_target_profiles,
 )
 
 

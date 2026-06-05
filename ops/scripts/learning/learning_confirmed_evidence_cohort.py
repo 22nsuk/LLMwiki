@@ -19,8 +19,6 @@ from ops.scripts.runtime_context import RuntimeContext
 
 from .learning_claim_evidence_bundle import (
     DEFAULT_OUT as DEFAULT_EVIDENCE_BUNDLE_PATH,
-)
-from .learning_claim_evidence_bundle import (
     SAME_EVAL_PROPOSAL_FAILURE_MODES,
     validate_learning_claim_evidence_bundle,
 )

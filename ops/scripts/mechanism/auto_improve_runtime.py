@@ -54,8 +54,6 @@ from .auto_improve_iteration_persistence_runtime import (
 from .auto_improve_iteration_runtime import (
     AutoImproveIterationDependencies,
     AutoImproveIterationRequest,
-)
-from .auto_improve_iteration_runtime import (
     run_auto_improve_iteration as run_auto_improve_iteration_helper,
 )
 from .auto_improve_maintenance_decision_runtime import (
@@ -1702,7 +1700,7 @@ def _record_maintenance_cycle(
             "observed_at": start.context.isoformat_z(),
             "cycle_started_elapsed_seconds": cycle_started_elapsed_seconds,
             "elapsed_seconds": cycle_completed_elapsed_seconds,
-            "duration_ms": int(round((time.monotonic() - cycle_started_monotonic) * 1000)),
+            "duration_ms": round((time.monotonic() - cycle_started_monotonic) * 1000),
             "status": "pass",
             "work_items": list(MAINTENANCE_WORK_ITEMS),
             "mechanism_review_report": DEFAULT_MECHANISM_REVIEW_REPORT,
@@ -1744,7 +1742,7 @@ def _record_maintenance_cycle(
         phase="proposal_budget_maintenance",
         decision="cycle_pass",
         artifact_path=str(session_report),
-        duration_ms=int(round((time.monotonic() - cycle_started_monotonic) * 1000)),
+        duration_ms=round((time.monotonic() - cycle_started_monotonic) * 1000),
         session_id=start.session_id,
         policy_version=start.policy.get("version"),
     )
@@ -1942,7 +1940,7 @@ def run_auto_improve_session(
         phase="complete",
         decision=str(result.get("stop_reason", "")).strip(),
         artifact_path=str(result.get("session_report", "")).strip(),
-        duration_ms=int(round((time.monotonic() - loop_state.start_monotonic) * 1000)),
+        duration_ms=round((time.monotonic() - loop_state.start_monotonic) * 1000),
         session_id=start.session_id,
         policy_version=start.policy.get("version"),
     )

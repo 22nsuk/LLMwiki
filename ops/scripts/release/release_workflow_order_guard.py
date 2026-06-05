@@ -10,25 +10,23 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import (
-        build_canonical_report_envelope,  # noqa: PLC0415
+        build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
+    from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.makefile_runtime import load_makefile_text  # noqa: PLC0415
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
+    from ops.scripts.makefile_runtime import load_makefile_text
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.release_closeout_fixed_point import (
-        POLICY_PATH as FIXED_POINT_POLICY_PATH,  # noqa: PLC0415
+        POLICY_PATH as FIXED_POINT_POLICY_PATH,
     )
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
-    from ops.scripts.workflow_dependency_planner import (  # noqa: PLC0415
+    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.workflow_dependency_planner import (
         MAKE_RECIPE_RE,
         TARGET_RE,
         _first_make_target,
-    )
-    from ops.scripts.workflow_dependency_planner import (
         build_report as build_workflow_dependency_report,
     )
 else:
@@ -45,8 +43,6 @@ else:
         MAKE_RECIPE_RE,
         TARGET_RE,
         _first_make_target,
-    )
-    from ops.scripts.workflow_dependency_planner import (
         build_report as build_workflow_dependency_report,
     )
 

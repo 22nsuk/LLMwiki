@@ -40,8 +40,6 @@ from .promotion_gate_mechanism_runtime import (
     MechanismGateInputs,
     MechanismPromotionReportRequest,
     collect_mechanism_gate_inputs,
-)
-from .promotion_gate_mechanism_runtime import (
     mechanism_class_report as build_mechanism_class_report,
 )
 

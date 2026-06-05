@@ -258,18 +258,17 @@ class FinalizeRunTests(unittest.TestCase):
             original_ledger = ledger_path.read_text(encoding="utf-8")
             original_planning = planning_path.read_text(encoding="utf-8")
             original_log = log_path.read_text(encoding="utf-8")
-            real_replace = __import__("os").replace
             replace_calls = {"count": 0}
 
             def fail_on_planning(src: str | Path, dst: str | Path) -> None:
                 replace_calls["count"] += 1
                 if replace_calls["count"] == 3:
                     raise OSError("simulated planning commit failure")
-                real_replace(src, dst)
+                Path(src).replace(dst)
 
             with (
                 mock.patch(
-                    "ops.scripts.filesystem_runtime.os.replace",
+                    "ops.scripts.filesystem_runtime._replace_path",
                     side_effect=fail_on_planning,
                 ),
                 self.assertRaises(FinalizeRunWriteError),
@@ -323,17 +322,16 @@ class FinalizeRunTests(unittest.TestCase):
             original_ledger = ledger_path.read_text(encoding="utf-8")
             original_planning = planning_path.read_text(encoding="utf-8")
             original_log = log_path.read_text(encoding="utf-8")
-            real_replace = __import__("os").replace
             replace_calls = {"count": 0}
 
             def fail_on_log(src: str | Path, dst: str | Path) -> None:
                 replace_calls["count"] += 1
                 if replace_calls["count"] == 4:
                     raise OSError("simulated log commit failure")
-                real_replace(src, dst)
+                Path(src).replace(dst)
 
             with (
-                mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=fail_on_log),
+                mock.patch("ops.scripts.filesystem_runtime._replace_path", side_effect=fail_on_log),
                 self.assertRaises(FinalizeRunWriteError),
             ):
                 finalize_run(vault, "run-atomic-log-fail")

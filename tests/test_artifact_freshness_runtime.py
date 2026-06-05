@@ -20,8 +20,6 @@ from ops.scripts.artifact_freshness_runtime import (
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.generated_artifact_index import (
     build_report as build_generated_artifact_index,
-)
-from ops.scripts.generated_artifact_index import (
     write_report as write_generated_artifact_index,
 )
 from ops.scripts.runtime_context import RuntimeContext
@@ -30,8 +28,6 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 from ops.scripts.test_execution_summary import (
     build_report as build_test_execution_summary,
-)
-from ops.scripts.test_execution_summary import (
     write_report as write_test_execution_summary,
 )
 

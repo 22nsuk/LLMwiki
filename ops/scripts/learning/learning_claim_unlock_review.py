@@ -17,8 +17,6 @@ from ops.scripts.runtime_context import RuntimeContext
 
 from .learning_claim_evidence_bundle import (
     DEFAULT_OUT as DEFAULT_EVIDENCE_BUNDLE_PATH,
-)
-from .learning_claim_evidence_bundle import (
     validate_learning_claim_evidence_bundle,
 )
 from .learning_claim_model import (
@@ -27,8 +25,6 @@ from .learning_claim_model import (
 )
 from .learning_confirmed_evidence_cohort import (
     DEFAULT_OUT as DEFAULT_CONFIRMED_EVIDENCE_COHORT_PATH,
-)
-from .learning_confirmed_evidence_cohort import (
     validate_learning_confirmed_evidence_cohort,
 )
 from .learning_readiness_vocabulary import learning_release_blocker_ids_from_report

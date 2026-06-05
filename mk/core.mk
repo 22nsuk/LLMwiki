@@ -23,9 +23,9 @@ help:
 		"  make local-cache-clean            remove safe local Python caches" \
 		"  make local-tool-state-clean       remove ignored local tool state" \
 		"  make uv-cache-prune               prune unreachable global uv cache objects" \
-		"  make ruff-strict-preview          run strict Ruff preview across ops/scripts tests tools" \
+		"  make ruff-strict-preview          run strict Ruff candidate-rule preview across ops/scripts tests tools" \
 		"  make mypy-strict-preview          run strict mypy preview across ops/scripts tests tools" \
-		"  make strict-preview-audit         audit strict preview debt across ops/scripts tests tools" \
+		"  make strict-preview-audit         audit strict candidate-rule preview debt across ops/scripts tests tools" \
 		"" \
 		"Report contracts:" \
 		"  make test-report-contract-core   run core report contract tests" \

@@ -14,8 +14,6 @@ from ops.scripts.core.learning_claim_state_runtime import (
 
 from .learning_claim_evidence_bundle import (
     DEFAULT_OUT as LEARNING_CLAIM_EVIDENCE_BUNDLE_PATH,
-)
-from .learning_claim_evidence_bundle import (
     validate_learning_claim_evidence_bundle,
 )
 from .learning_claim_model import learning_claim_blocker_status
@@ -212,7 +210,7 @@ def _approved_learning_claim_unlock_payload(
             if bool(machine_policy.get("confirmed_learning_improvement_allowed"))
             else ("bounded_learning_likely" if status == "auto_approved" else "human_reviewed_learning_claim")
         ),
-        "bounded_learning_claim_allowed": status == "auto_approved" or status == "approved",
+        "bounded_learning_claim_allowed": status in {"auto_approved", "approved"},
         "confirmed_learning_improvement_allowed": bool(
             machine_policy.get("confirmed_learning_improvement_allowed")
         ),

@@ -10,18 +10,18 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import (
-        build_canonical_report_envelope,  # noqa: PLC0415
+        build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
+    from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.makefile_runtime import load_makefile_text  # noqa: PLC0415
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.makefile_runtime import load_makefile_text
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
-        MAKE_TARGET_INVENTORY_SCHEMA_PATH,  # noqa: PLC0415
+        MAKE_TARGET_INVENTORY_SCHEMA_PATH,
     )
 else:
     from .artifact_freshness_runtime import build_canonical_report_envelope
@@ -61,7 +61,7 @@ def _parse_makefile(content: str) -> tuple[list[str], list[dict[str, Any]]]:
                 for target in current_targets:
                     target["module_invocations"].extend(module_invocations)
             continue
-        if "?=" in line or ":=" in line or "+=" in line or line.count("=") == 1 and ":" not in line:
+        if "?=" in line or ":=" in line or "+=" in line or (line.count("=") == 1 and ":" not in line):
             continue
         match = TARGET_RE.match(line)
         if match is None:

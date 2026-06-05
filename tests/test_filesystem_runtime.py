@@ -79,17 +79,16 @@ class FilesystemRuntimeTests(unittest.TestCase):
             beta = root / "nested" / "beta.txt"
             alpha.write_text("original-alpha\n", encoding="utf-8")
 
-            real_replace = __import__("os").replace
             call_count = {"value": 0}
 
             def flaky_replace(src: str | Path, dst: str | Path) -> None:
                 call_count["value"] += 1
                 if call_count["value"] == 2:
                     raise OSError("replace failed")
-                real_replace(src, dst)
+                Path(src).replace(dst)
 
             with (
-                mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=flaky_replace),
+                mock.patch("ops.scripts.filesystem_runtime._replace_path", side_effect=flaky_replace),
                 self.assertRaises(FilesystemTransactionError),
             ):
                 atomic_multi_write(
@@ -132,17 +131,16 @@ class FilesystemRuntimeTests(unittest.TestCase):
                 ]
             }
 
-            real_replace = __import__("os").replace
             call_count = {"value": 0}
 
             def flaky_replace(src: str | Path, dst: str | Path) -> None:
                 call_count["value"] += 1
                 if call_count["value"] == 2:
                     raise OSError("workspace apply failed")
-                real_replace(src, dst)
+                Path(src).replace(dst)
 
             with (
-                mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=flaky_replace),
+                mock.patch("ops.scripts.filesystem_runtime._replace_path", side_effect=flaky_replace),
                 self.assertRaises(FilesystemTransactionError),
             ):
                 apply_manifest_transaction(
@@ -195,18 +193,17 @@ class FilesystemRuntimeTests(unittest.TestCase):
                 ],
             }
             shadow_report_path = live_root / "runs" / "run-shadow-apply" / "shadow-apply-report.json"
-            real_replace = __import__("os").replace
             live_example_suffix = "/ops/scripts/example.py"
 
             def fail_first_live_apply(src: str | Path, dst: str | Path) -> None:
                 normalized_dst = str(dst).replace("\\", "/").casefold()
                 if normalized_dst.endswith(live_example_suffix):
                     raise OSError("live apply failed")
-                real_replace(src, dst)
+                Path(src).replace(dst)
 
             with (
                 mock.patch(
-                    "ops.scripts.filesystem_runtime.os.replace",
+                    "ops.scripts.filesystem_runtime._replace_path",
                     side_effect=fail_first_live_apply,
                 ),
                 self.assertRaisesRegex(FilesystemTransactionError, "live apply failed"),

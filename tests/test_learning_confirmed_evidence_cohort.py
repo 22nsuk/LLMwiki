@@ -7,8 +7,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.learning_claim_evidence_bundle import build_report as build_bundle
-from ops.scripts.learning_claim_evidence_bundle import write_report as write_bundle
+from ops.scripts.learning_claim_evidence_bundle import (
+    build_report as build_bundle,
+    write_report as write_bundle,
+)
 from ops.scripts.learning_confirmed_evidence_cohort import (
     build_report,
     validate_learning_confirmed_evidence_cohort,
@@ -16,8 +18,6 @@ from ops.scripts.learning_confirmed_evidence_cohort import (
 )
 from ops.scripts.learning_confirmed_legacy_reconstruction import (
     build_report as build_legacy_reconstruction,
-)
-from ops.scripts.learning_confirmed_legacy_reconstruction import (
     write_report as write_legacy_reconstruction,
 )
 from ops.scripts.runtime_context import RuntimeContext

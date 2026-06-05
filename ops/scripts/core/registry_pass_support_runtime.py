@@ -70,11 +70,11 @@ def _backlog_entry_age_days(entry: dict, *, today: dt.date) -> int | None:
 
 
 __all__ = [
-    "registry_review_exempt_paths",
+    "_backlog_entry_age_days",
+    "_parse_registry_iso_date",
+    "registry_entry_line_span",
     "registry_entry_target_report_path",
+    "registry_review_exempt_paths",
     "registry_topic_family",
     "registry_topic_subfamily",
-    "registry_entry_line_span",
-    "_parse_registry_iso_date",
-    "_backlog_entry_age_days",
 ]

@@ -37,7 +37,37 @@ llm-wiki-status = "ops.scripts.release.release_status_surface:main"
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "B", "SIM", "UP", "I"]
+select = [
+  "E4",
+  "E7",
+  "E9",
+  "F",
+  "B",
+  "SIM",
+  "UP",
+  "I",
+  "C4",
+  "RET",
+  "PIE",
+  "PERF402",
+  "PERF403",
+  "PLC0208",
+  "PLR1714",
+  "PTH105",
+  "PTH111",
+  "PTH117",
+  "PTH123",
+  "RUF007",
+  "RUF015",
+  "RUF021",
+  "RUF022",
+  "RUF034",
+  "RUF046",
+  "RUF100",
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
 
 [tool.mypy]
 python_version = "3.12"

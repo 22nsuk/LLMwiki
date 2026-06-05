@@ -15,12 +15,8 @@ from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 
 from .mechanism_assess import (
     _dedupe_preserve_order,
-    normalize_targets,
-)
-from .mechanism_assess import (
     build_report as build_mechanism_report,
-)
-from .mechanism_assess import (
+    normalize_targets,
     write_report as write_mechanism_report,
 )
 from .mechanism_run_common_runtime import (

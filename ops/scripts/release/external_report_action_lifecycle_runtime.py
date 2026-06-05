@@ -247,7 +247,7 @@ def external_report_action_lifecycle_summary(
     *,
     canonical_artifact_freshness_state_record: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    counts = {lifecycle: 0 for lifecycle in sorted(ACTION_LIFECYCLES)}
+    counts = dict.fromkeys(sorted(ACTION_LIFECYCLES), 0)
     for item in items:
         lifecycle = str(item.get("lifecycle", "")).strip()
         if lifecycle in counts:

@@ -11,23 +11,23 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import (
-        build_canonical_report_envelope,  # noqa: PLC0415
+        build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
+    from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object,
         write_schema_backed_report,
     )
-    from ops.scripts.makefile_runtime import load_makefile_text  # noqa: PLC0415
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
-    from ops.scripts.release_closeout_fixed_point import (  # noqa: PLC0415
+    from ops.scripts.makefile_runtime import load_makefile_text
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.release_closeout_fixed_point import (
         fixed_point_initial_targets_from_policy,
         fixed_point_writer_specs_from_policy,
     )
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
-        WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,  # noqa: PLC0415
+        WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,
     )
 else:
     from ops.scripts.release_closeout_fixed_point import (
@@ -601,7 +601,7 @@ def _selected_command_duration_seconds(
 ) -> dict[str, int]:
     if not command_duration_seconds:
         return {}
-    selected_estimates: dict[str, int] = {command: 0 for command in selected_commands}
+    selected_estimates: dict[str, int] = dict.fromkeys(selected_commands, 0)
     missing_estimates: set[str] = set(selected_commands)
     for item in recommendation_duration_inputs:
         commands = item["commands"]
@@ -868,7 +868,7 @@ def build_report(
     makefile_text, makefile_sources = load_makefile_text(resolved_vault)
     targets, phony, dependency_edges = _parse_makefile(makefile_text)
     manifest_paths = _read_changed_paths(resolved_vault, changed_files_manifest)
-    selected_paths = sorted(set([*(changed_paths or []), *manifest_paths]))
+    selected_paths = sorted({*(changed_paths or []), *manifest_paths})
     workflow_rules = _workflow_rules(resolved_vault)
     test_lane_registry = _test_lane_registry(resolved_vault)
     changed_path_minimum_plan = _changed_path_minimum_plan(

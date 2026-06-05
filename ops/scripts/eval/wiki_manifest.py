@@ -124,7 +124,7 @@ def release_manifest_excludes_path(rel_path: str | None) -> bool:
     normalized = normalize_repo_path_text(rel_path)
     if normalized is None or normalized == ".":
         return False
-    if normalized.startswith("/") or normalized.startswith("../"):
+    if normalized.startswith(("/", "../")):
         return False
     return not should_include(normalized, DEFAULT_EXCLUDED_FILES, DEFAULT_EXCLUDED_PREFIXES)
 

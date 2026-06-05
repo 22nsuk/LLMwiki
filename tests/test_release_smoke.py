@@ -13,13 +13,22 @@ from types import SimpleNamespace
 from unittest import mock
 
 import pytest
-from ops.scripts.release_smoke import (
+from ops.scripts.review_archive import (
+    build_review_archive,
+    write_report as write_review_archive_report,
+)
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.wiki_manifest import build_manifest
+
+from ops.scripts.release.release_smoke import (
     ARCHIVE_SELF_DESCRIPTION_PATH,
     EPHEMERAL_REPORT_PREFIX,
     FAST_DEFAULT_REPORT_OUT,
     FAST_PROFILE,
     FULL_PROFILE,
     ReleaseArchiveBuildError,
+    ReleaseSmokePartialReportRequest,
+    ReleaseSmokeReportRequest,
     _archive_budget,
     _verify_release_archive,
     build_partial_report,
@@ -37,11 +46,6 @@ from ops.scripts.release_smoke import (
     run_smoke_commands,
     write_report,
 )
-from ops.scripts.review_archive import build_review_archive
-from ops.scripts.review_archive import write_report as write_review_archive_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.wiki_manifest import build_manifest
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.integration, pytest.mark.report_contract]
@@ -361,7 +365,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             archive_path.write_text("old-bytes", encoding="utf-8")
 
             with mock.patch(
-                "ops.scripts.release_smoke._verify_release_archive",
+                "ops.scripts.release.release_smoke._verify_release_archive",
                 side_effect=ValueError("bad archive"),
             ), self.assertRaises(ReleaseArchiveBuildError) as raised:
                 build_release_archive(vault, archive_path)
@@ -417,7 +421,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             archive_path.parent.mkdir(parents=True, exist_ok=True)
             archive_path.write_text("old-bytes", encoding="utf-8")
 
-            with mock.patch("ops.scripts.release_smoke.time.time", return_value=now), self.assertRaises(
+            with mock.patch("ops.scripts.release.release_smoke.time.time", return_value=now), self.assertRaises(
                 ReleaseArchiveBuildError
             ) as raised:
                 build_release_archive(vault, archive_path)
@@ -481,7 +485,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             with contextlib.ExitStack() as stack:
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.parse_args",
+                        "ops.scripts.release.release_smoke.parse_args",
                         return_value=SimpleNamespace(
                             vault=str(vault),
                             python_bin="python-bin",
@@ -494,7 +498,7 @@ class ReleaseSmokeTest(unittest.TestCase):
                     )
                 )
                 archive_builder = stack.enter_context(
-                    mock.patch("ops.scripts.release_smoke.build_release_archive")
+                    mock.patch("ops.scripts.release.release_smoke.build_release_archive")
                 )
                 stack.enter_context(contextlib.redirect_stdout(stdout))
 
@@ -676,16 +680,18 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
             policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
             report = build_report(
-                vault,
-                archive_path,
-                extracted_vault,
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                [],
-                resolved_policy_path=policy_path,
-                policy_version=4,
-                profile=FULL_PROFILE,
-                context=context,
+                ReleaseSmokeReportRequest(
+                    vault=vault,
+                    archive_path=archive_path,
+                    extracted_vault=extracted_vault,
+                    source_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    extracted_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    command_results=[],
+                    resolved_policy_path=policy_path,
+                    policy_version=4,
+                    profile=FULL_PROFILE,
+                    context=context,
+                )
             )
             destination = write_report(vault, report, None)
 
@@ -766,7 +772,7 @@ class ReleaseSmokeTest(unittest.TestCase):
 
             progress_lengths = []
 
-            with mock.patch("ops.scripts.release_smoke.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.release.release_smoke.run_with_timeout", side_effect=fake_run):
                 results = run_smoke_commands(
                     vault,
                     "python-bin",
@@ -814,27 +820,31 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
 
             report = build_report(
-                vault,
-                archive_path,
-                extracted_vault,
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                [{
-                    "name": "wiki_lint",
-                    "command": "lint",
-                    "pass": True,
-                    "returncode": 0,
-                    "timed_out": False,
-                    "timeout_seconds": 5400,
-                    "termination_reason": "completed",
-                    "duration_ms": 100,
-                    "stdout_tail": "",
-                    "stderr_tail": "",
-                }],
-                resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
-                policy_version=4,
-                context=context,
-                ephemeral_root=ephemeral_root,
+                ReleaseSmokeReportRequest(
+                    vault=vault,
+                    archive_path=archive_path,
+                    extracted_vault=extracted_vault,
+                    source_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    extracted_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    command_results=[
+                        {
+                            "name": "wiki_lint",
+                            "command": "lint",
+                            "pass": True,
+                            "returncode": 0,
+                            "timed_out": False,
+                            "timeout_seconds": 5400,
+                            "termination_reason": "completed",
+                            "duration_ms": 100,
+                            "stdout_tail": "",
+                            "stderr_tail": "",
+                        }
+                    ],
+                    resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
+                    policy_version=4,
+                    context=context,
+                    ephemeral_root=ephemeral_root,
+                )
             )
 
         self.assertEqual(report["generated_at"], "2026-04-15T03:45:00Z")
@@ -870,16 +880,18 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
 
             report = build_report(
-                vault,
-                archive_path,
-                extracted_vault,
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                [],
-                resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
-                policy_version=4,
-                profile=FAST_PROFILE,
-                context=context,
+                ReleaseSmokeReportRequest(
+                    vault=vault,
+                    archive_path=archive_path,
+                    extracted_vault=extracted_vault,
+                    source_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    extracted_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    command_results=[],
+                    resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
+                    policy_version=4,
+                    profile=FAST_PROFILE,
+                    context=context,
+                )
             )
 
         self.assertEqual(report["profile"], FAST_PROFILE)
@@ -900,16 +912,18 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
 
             report = build_report(
-                vault,
-                archive_path,
-                extracted_vault,
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                [],
-                resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
-                policy_version=4,
-                context=context,
-                archive_reproducibility=sample_archive_reproducibility(status="fail"),
+                ReleaseSmokeReportRequest(
+                    vault=vault,
+                    archive_path=archive_path,
+                    extracted_vault=extracted_vault,
+                    source_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    extracted_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    command_results=[],
+                    resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
+                    policy_version=4,
+                    context=context,
+                    archive_reproducibility=sample_archive_reproducibility(status="fail"),
+                )
             )
 
         self.assertEqual(report["archive_reproducibility"]["status"], "fail")
@@ -936,40 +950,44 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
 
             report = build_partial_report(
-                vault,
-                archive_path,
-                extracted_vault,
-                {"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
-                None,
-                [{
-                    "name": "wiki_lint",
-                    "command": "lint",
-                    "pass": False,
-                    "returncode": 1,
-                    "timed_out": False,
-                    "timeout_seconds": 5400,
-                    "termination_reason": "completed",
-                    "duration_ms": 100,
-                    "stdout_tail": "tail",
-                    "stderr_tail": "err",
-                }],
-                resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
-                policy_version=4,
-                phase="smoke_commands",
-                message="completed 1 of 5 smoke commands",
-                error="",
-                context=context,
-                started_at_monotonic=None,
-                ephemeral_root=ephemeral_root,
-                archive_write={
-                    "status": "fail",
-                    "phase": "verify_temp_archive",
-                    "archive_path": "tmp/release.zip",
-                    "temp_path": "tmp/.release.zip.1.tmp",
-                    "quarantine_path": "tmp/.release.zip.2.quarantine",
-                    "archive_replaced": False,
-                    "error": "ValueError: bad archive",
-                },
+                ReleaseSmokePartialReportRequest(
+                    vault=vault,
+                    archive_path=archive_path,
+                    extracted_vault=extracted_vault,
+                    source_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    extracted_manifest=None,
+                    command_results=[
+                        {
+                            "name": "wiki_lint",
+                            "command": "lint",
+                            "pass": False,
+                            "returncode": 1,
+                            "timed_out": False,
+                            "timeout_seconds": 5400,
+                            "termination_reason": "completed",
+                            "duration_ms": 100,
+                            "stdout_tail": "tail",
+                            "stderr_tail": "err",
+                        }
+                    ],
+                    resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
+                    policy_version=4,
+                    phase="smoke_commands",
+                    message="completed 1 of 5 smoke commands",
+                    error="",
+                    context=context,
+                    started_at_monotonic=None,
+                    ephemeral_root=ephemeral_root,
+                    archive_write={
+                        "status": "fail",
+                        "phase": "verify_temp_archive",
+                        "archive_path": "tmp/release.zip",
+                        "temp_path": "tmp/.release.zip.1.tmp",
+                        "quarantine_path": "tmp/.release.zip.2.quarantine",
+                        "archive_replaced": False,
+                        "error": "ValueError: bad archive",
+                    },
+                )
             )
 
             destination = write_report(vault, report, "reports/release-smoke-partial.json")
@@ -1001,15 +1019,21 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
 
             report = build_report(
-                vault,
-                archive_path,
-                extracted_vault,
-                {"files": [{"path": f"{long_component}/README.md", "sha256": "a", "size_bytes": 1}]},
-                {"files": [{"path": f"{long_component}/README.md", "sha256": "a", "size_bytes": 1}]},
-                [],
-                resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
-                policy_version=4,
-                context=context,
+                ReleaseSmokeReportRequest(
+                    vault=vault,
+                    archive_path=archive_path,
+                    extracted_vault=extracted_vault,
+                    source_manifest={
+                        "files": [{"path": f"{long_component}/README.md", "sha256": "a", "size_bytes": 1}]
+                    },
+                    extracted_manifest={
+                        "files": [{"path": f"{long_component}/README.md", "sha256": "a", "size_bytes": 1}]
+                    },
+                    command_results=[],
+                    resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
+                    policy_version=4,
+                    context=context,
+                )
             )
 
         self.assertEqual(report["status"], "fail")
@@ -1035,15 +1059,21 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
 
             report = build_report(
-                vault,
-                archive_path,
-                extracted_vault,
-                {"files": [{"path": f"raw/web-snapshots/{offender}", "sha256": "a", "size_bytes": 1}]},
-                {"files": [{"path": f"raw/web-snapshots/{offender}", "sha256": "a", "size_bytes": 1}]},
-                [],
-                resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
-                policy_version=4,
-                context=context,
+                ReleaseSmokeReportRequest(
+                    vault=vault,
+                    archive_path=archive_path,
+                    extracted_vault=extracted_vault,
+                    source_manifest={
+                        "files": [{"path": f"raw/web-snapshots/{offender}", "sha256": "a", "size_bytes": 1}]
+                    },
+                    extracted_manifest={
+                        "files": [{"path": f"raw/web-snapshots/{offender}", "sha256": "a", "size_bytes": 1}]
+                    },
+                    command_results=[],
+                    resolved_policy_path=vault / "ops" / "policies" / "wiki-maintainer-policy.yaml",
+                    policy_version=4,
+                    context=context,
+                )
             )
 
         top_offender = report["archive_budget"]["top_offenders"][0]
@@ -1281,7 +1311,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             with contextlib.ExitStack() as stack:
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.parse_args",
+                        "ops.scripts.release.release_smoke.parse_args",
                         return_value=SimpleNamespace(
                             vault=str(vault),
                             python_bin="python-bin",
@@ -1295,7 +1325,7 @@ class ReleaseSmokeTest(unittest.TestCase):
                 )
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.load_policy",
+                        "ops.scripts.release.release_smoke.load_policy",
                         return_value=(
                             {
                                 "version": 4,
@@ -1310,13 +1340,13 @@ class ReleaseSmokeTest(unittest.TestCase):
                         ),
                     )
                 )
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.build_release_archive", return_value={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]}))
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.extract_release_archive", return_value=extracted_vault))
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.build_manifest", return_value={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]}))
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.run_smoke_commands", return_value=report["commands"]))
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.build_report", return_value=report))
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.write_report", return_value=report_destination))
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.sha256_file", side_effect=["a" * 64, "a" * 64]))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.build_release_archive", return_value={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]}))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.extract_release_archive", return_value=extracted_vault))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.build_manifest", return_value={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]}))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.run_smoke_commands", return_value=report["commands"]))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.build_report", return_value=report))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.write_report", return_value=report_destination))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.sha256_file", side_effect=["a" * 64, "a" * 64]))
                 stack.enter_context(contextlib.redirect_stdout(stdout))
 
                 with self.assertRaises(SystemExit) as raised:
@@ -1355,7 +1385,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             with contextlib.ExitStack() as stack:
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.parse_args",
+                        "ops.scripts.release.release_smoke.parse_args",
                         return_value=SimpleNamespace(
                             vault=str(vault),
                             python_bin="python-bin",
@@ -1369,13 +1399,13 @@ class ReleaseSmokeTest(unittest.TestCase):
                 )
                 archive_builder = stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.build_release_archive",
+                        "ops.scripts.release.release_smoke.build_release_archive",
                         side_effect=fake_build_release_archive,
                     )
                 )
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.extract_release_archive", return_value=extracted_vault))
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.build_manifest", return_value=source_manifest))
-                stack.enter_context(mock.patch("ops.scripts.release_smoke.run_smoke_commands", return_value=[]))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.extract_release_archive", return_value=extracted_vault))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.build_manifest", return_value=source_manifest))
+                stack.enter_context(mock.patch("ops.scripts.release.release_smoke.run_smoke_commands", return_value=[]))
                 stack.enter_context(contextlib.redirect_stdout(stdout))
 
                 with self.assertRaises(SystemExit) as raised:
@@ -1409,7 +1439,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             with contextlib.ExitStack() as stack:
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.parse_args",
+                        "ops.scripts.release.release_smoke.parse_args",
                         return_value=SimpleNamespace(
                             vault=str(vault),
                             python_bin="python-bin",
@@ -1423,7 +1453,7 @@ class ReleaseSmokeTest(unittest.TestCase):
                 )
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.build_release_archive",
+                        "ops.scripts.release.release_smoke.build_release_archive",
                         side_effect=RuntimeError("archive boom"),
                     )
                 )
@@ -1467,7 +1497,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             with contextlib.ExitStack() as stack:
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.parse_args",
+                        "ops.scripts.release.release_smoke.parse_args",
                         return_value=SimpleNamespace(
                             vault=str(vault),
                             python_bin="python-bin",
@@ -1481,7 +1511,7 @@ class ReleaseSmokeTest(unittest.TestCase):
                 )
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.build_release_archive",
+                        "ops.scripts.release.release_smoke.build_release_archive",
                         side_effect=ReleaseArchiveBuildError(
                             "release archive build failed before atomic replace",
                             archive_write=archive_write,
@@ -1516,7 +1546,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             with contextlib.ExitStack() as stack:
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.parse_args",
+                        "ops.scripts.release.release_smoke.parse_args",
                         return_value=SimpleNamespace(
                             vault=str(vault),
                             python_bin="python-bin",
@@ -1530,7 +1560,7 @@ class ReleaseSmokeTest(unittest.TestCase):
                 )
                 stack.enter_context(
                     mock.patch(
-                        "ops.scripts.release_smoke.build_release_archive",
+                        "ops.scripts.release.release_smoke.build_release_archive",
                         side_effect=RuntimeError("archive boom"),
                     )
                 )

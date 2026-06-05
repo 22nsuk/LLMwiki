@@ -188,8 +188,7 @@ def _normalized_title_token(value: str | None) -> str:
     if not value:
         return ""
     collapsed = re.sub(r"\s+", " ", value.replace("\u00a0", " ")).strip().lower()
-    collapsed = re.sub(r"[^0-9a-z가-힣]+", "", collapsed)
-    return collapsed
+    return re.sub(r"[^0-9a-z가-힣]+", "", collapsed)
 
 
 def _parse_date_to_iso(value: str | None) -> str | None:

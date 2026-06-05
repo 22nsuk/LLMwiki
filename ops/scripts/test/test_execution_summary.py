@@ -33,58 +33,30 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         build_execution_environment,
         classify_interpreter_path,
         classify_status,
+        display_command as _display_command,
         parse_pytest_counts,
         semantic_command,
-    )
-    from ops.scripts.test.test_execution_command_runtime import (
-        display_command as _display_command,
-    )
-    from ops.scripts.test.test_execution_command_runtime import (
         semantic_command_text as _semantic_command_text,
-    )
-    from ops.scripts.test.test_execution_command_runtime import (
         tail_text as _tail_text,
-    )
-    from ops.scripts.test.test_execution_command_runtime import (
         toolchain_fingerprint as _toolchain_fingerprint,
     )
     from ops.scripts.test.test_execution_deselection_runtime import (
         deselection_lifecycle as _deselection_lifecycle,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         load_deselection_policy as _load_deselection_policy,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         load_deselection_policy_payload as _load_deselection_policy_payload,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         parse_utc_timestamp as _parse_utc_timestamp,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         pytest_stdout_deselected_count as _pytest_stdout_deselected_count,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         structured_deselected_tests,
     )
     from ops.scripts.test.test_execution_evidence_runtime import (
         evidence_artifact_consistency as _evidence_artifact_consistency,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
         failed_nodeids as _failed_nodeids,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
         junit_artifact_identity,
+        nodeid_outcome_consistency as _nodeid_outcome_consistency,
+        sha256_file as _sha256_file,
+        sha256_text as _sha256_text,
         write_execution_log,
         write_failed_nodeids_artifact,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
-        nodeid_outcome_consistency as _nodeid_outcome_consistency,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
-        sha256_file as _sha256_file,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
-        sha256_text as _sha256_text,
     )
     from ops.scripts.test.test_execution_reuse_runtime import (
         REUSE_MISMATCH_CODES,
@@ -101,29 +73,13 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         FULL_SUITE_SHARD_PREFIX,
         RELEASE_BUILDER_FULL_SCOPES,
         REPORT_CONTRACT_SUMMARY_SUITE,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_args as _pytest_args,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_collect_modifiers as _pytest_collect_modifiers,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_collection_filter_args as _pytest_collection_filter_args,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_deselected_nodeids as _pytest_deselected_nodeids,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_selector_args as _pytest_selector_args,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         suite_coverage as _suite_coverage,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         suite_scope_for_key as _suite_scope_for_key,
     )
 else:
@@ -147,58 +103,30 @@ else:
         build_execution_environment,
         classify_interpreter_path,
         classify_status,
+        display_command as _display_command,
         parse_pytest_counts,
         semantic_command,
-    )
-    from ops.scripts.test.test_execution_command_runtime import (
-        display_command as _display_command,
-    )
-    from ops.scripts.test.test_execution_command_runtime import (
         semantic_command_text as _semantic_command_text,
-    )
-    from ops.scripts.test.test_execution_command_runtime import (
         tail_text as _tail_text,
-    )
-    from ops.scripts.test.test_execution_command_runtime import (
         toolchain_fingerprint as _toolchain_fingerprint,
     )
     from ops.scripts.test.test_execution_deselection_runtime import (
         deselection_lifecycle as _deselection_lifecycle,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         load_deselection_policy as _load_deselection_policy,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         load_deselection_policy_payload as _load_deselection_policy_payload,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         parse_utc_timestamp as _parse_utc_timestamp,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         pytest_stdout_deselected_count as _pytest_stdout_deselected_count,
-    )
-    from ops.scripts.test.test_execution_deselection_runtime import (
         structured_deselected_tests,
     )
     from ops.scripts.test.test_execution_evidence_runtime import (
         evidence_artifact_consistency as _evidence_artifact_consistency,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
         failed_nodeids as _failed_nodeids,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
         junit_artifact_identity,
+        nodeid_outcome_consistency as _nodeid_outcome_consistency,
+        sha256_file as _sha256_file,
+        sha256_text as _sha256_text,
         write_execution_log,
         write_failed_nodeids_artifact,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
-        nodeid_outcome_consistency as _nodeid_outcome_consistency,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
-        sha256_file as _sha256_file,
-    )
-    from ops.scripts.test.test_execution_evidence_runtime import (
-        sha256_text as _sha256_text,
     )
     from ops.scripts.test.test_execution_reuse_runtime import (
         REUSE_MISMATCH_CODES,
@@ -215,29 +143,13 @@ else:
         FULL_SUITE_SHARD_PREFIX,
         RELEASE_BUILDER_FULL_SCOPES,
         REPORT_CONTRACT_SUMMARY_SUITE,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_args as _pytest_args,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_collect_modifiers as _pytest_collect_modifiers,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_collection_filter_args as _pytest_collection_filter_args,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_deselected_nodeids as _pytest_deselected_nodeids,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         pytest_selector_args as _pytest_selector_args,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         suite_coverage as _suite_coverage,
-    )
-    from ops.scripts.test.test_execution_selection_runtime import (
         suite_scope_for_key as _suite_scope_for_key,
     )
 
@@ -405,7 +317,7 @@ def collect_pytest_nodeid_digest(
         timeout_seconds=timeout_seconds,
         env=collect_env,
     )
-    elapsed_ms = max(0, int(round((time.monotonic() - started_at) * 1000)))
+    elapsed_ms = max(0, round((time.monotonic() - started_at) * 1000))
     command_text = _display_command(vault, collect_command)
     if result.returncode != 0 or result.timed_out:
         return {
@@ -1098,7 +1010,7 @@ def _reused_report_for_args(
                 and diagnostics.get("result_reusable")
             )
         ):
-            report = build_reused_report(
+            return build_reused_report(
                 vault,
                 existing=existing,
                 command=args.command,
@@ -1108,7 +1020,6 @@ def _reused_report_for_args(
                 collect_nodeid_digest=collect_nodeid_digest,
                 deselection_policy_path=args.deselection_policy,
             )
-            return report
     return None
 
 
@@ -1119,7 +1030,7 @@ def _interrupted_report(
     started_at: float,
     collect_nodeid_digest: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    elapsed_ms = max(0, int(round((time.monotonic() - started_at) * 1000)))
+    elapsed_ms = max(0, round((time.monotonic() - started_at) * 1000))
     result = TimedProcessResult(
         args=[str(item) for item in args.command],
         returncode=130,
@@ -1196,7 +1107,7 @@ def _executed_report_for_args(
             130,
         )
 
-    elapsed_ms = max(0, int(round((time.monotonic() - started_at) * 1000)))
+    elapsed_ms = max(0, round((time.monotonic() - started_at) * 1000))
     report = build_report(
         vault,
         command=args.command,

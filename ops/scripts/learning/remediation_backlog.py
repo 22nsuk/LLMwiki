@@ -23,10 +23,8 @@ from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fing
 
 from .learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,
-    load_learning_readiness_signoff_summary,
-)
-from .learning_readiness_signoff_state import (
     SUPPORTED_BLOCKER_ID as SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID,
+    load_learning_readiness_signoff_summary,
 )
 
 DEFAULT_OUT = "ops/reports/remediation-backlog.json"

@@ -13,7 +13,7 @@ from typing import Any
 
 DEFAULT_TARGETS = "ops/scripts tests tools"
 DEFAULT_OUT = "tmp/strict-preview-audit.json"
-DEFAULT_RUFF_SELECT = "B,SIM,UP,I"
+DEFAULT_RUFF_SELECT = "PTH201"
 DEFAULT_MYPY_FLAGS = (
     "--check-untyped-defs",
     "--disallow-untyped-defs",
@@ -171,7 +171,7 @@ def write_report(out_path: Path, report: dict[str, Any]) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Audit strict Ruff and mypy preview debt across a target surface.",
+        description="Audit strict Ruff candidate-rule and mypy preview debt across a target surface.",
     )
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)

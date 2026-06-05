@@ -83,6 +83,10 @@ def _cleanup_staged_file(staged_path: Path | None) -> None:
         return
 
 
+def _replace_path(source: Path, destination: Path) -> None:
+    source.replace(destination)
+
+
 def _restore_text_update(path: Path, original_text: str | None) -> None:
     if original_text is None:
         try:
@@ -92,7 +96,7 @@ def _restore_text_update(path: Path, original_text: str | None) -> None:
         return
     staged_path = _stage_atomic_text(path, original_text)
     try:
-        os.replace(staged_path, path)
+        _replace_path(staged_path, path)
     finally:
         _cleanup_staged_file(staged_path)
 
@@ -101,7 +105,7 @@ def atomic_write_text(path: Path, text: str) -> Path:
     staged_path: Path | None = None
     try:
         staged_path = _stage_atomic_text(path, text)
-        os.replace(staged_path, path)
+        _replace_path(staged_path, path)
     except OSError as exc:
         raise FilesystemTransactionError(str(exc)) from exc
     finally:
@@ -171,7 +175,7 @@ def atomic_multi_write(updates: Sequence[AtomicTextUpdateSpec]) -> None:
         for update in normalized:
             if update.staged_path is None:
                 continue
-            os.replace(update.staged_path, update.path)
+            _replace_path(update.staged_path, update.path)
             update.staged_path = None
             committed_updates.append(update)
     except OSError as exc:
@@ -213,11 +217,11 @@ def stage_replace_file(source_path: Path, destination_path: Path) -> None:
             os.close(fd)
             backup_path = Path(backup_tmp)
             shutil.copy2(destination_path, backup_path)
-        os.replace(staged, destination_path)
+        _replace_path(staged, destination_path)
     except OSError as exc:
         if backup_path is not None and backup_path.exists():
             with suppress(OSError):
-                os.replace(backup_path, destination_path)
+                _replace_path(backup_path, destination_path)
         raise FilesystemTransactionError(str(exc)) from exc
     finally:
         _cleanup_staged_file(staged)
@@ -763,7 +767,7 @@ def _apply_prepared_manifest_items_in_place(
             applied.append(item)
             continue
         live_path.parent.mkdir(parents=True, exist_ok=True)
-        os.replace(item["staged_path"], live_path)
+        _replace_path(Path(item["staged_path"]), live_path)
         applied.append(item)
 
 
@@ -778,7 +782,7 @@ def _rollback_manifest_items(applied: Sequence[dict[str, Any]]) -> list[str]:
                     live_path.unlink()
             else:
                 live_path.parent.mkdir(parents=True, exist_ok=True)
-                os.replace(backup_path, live_path)
+                _replace_path(backup_path, live_path)
         except OSError as rollback_exc:
             rollback_errors.append(f"{item['rel_path']}: {rollback_exc}")
     return rollback_errors

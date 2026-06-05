@@ -46,14 +46,8 @@ from .mechanism_candidate_registry_runtime import (
 )
 from .mutation_proposal_promotion_runtime import (
     empty_queue_blockers as _empty_queue_blockers,
-)
-from .mutation_proposal_promotion_runtime import (
     report_status as _report_status,
-)
-from .mutation_proposal_promotion_runtime import (
     reported_blocked_proposal_count as _reported_blocked_proposal_count,
-)
-from .mutation_proposal_promotion_runtime import (
     source_evidence_gaps as _source_evidence_gaps,
 )
 from .next_run_repair_queue_runtime import (
@@ -913,7 +907,7 @@ def _proposal_blast_radius_score(
     for path in distinct_targets:
         if path.startswith("ops/policies/"):
             score += 15
-        elif path.startswith("ops/schemas/") or path.startswith("system/"):
+        elif path.startswith(("ops/schemas/", "system/")):
             score += 12
         elif path.startswith("ops/scripts/"):
             score += 5
@@ -961,8 +955,7 @@ def _why_now(candidate: dict, run_ids: list[str], blocked_by: list[str]) -> str:
 
 def _target_slug(primary_targets: list[str]) -> str:
     target_slug = "-".join(Path(target).stem for target in primary_targets)
-    target_slug = re.sub(r"[^a-z0-9]+", "-", target_slug.lower()).strip("-")
-    return target_slug
+    return re.sub(r"[^a-z0-9]+", "-", target_slug.lower()).strip("-")
 
 
 def _proposal_id(candidate: dict, failure_mode: str) -> str:
@@ -1423,9 +1416,7 @@ def _fallback_test_files(vault: Path, test_files: list[str]) -> list[str]:
 
 
 def _recent_log_overlap_unblock_primary_target_options(vault: Path) -> list[str]:
-    ordered: list[str] = []
-    for target in RECENT_LOG_OVERLAP_UNBLOCK_PREFERRED_TARGETS:
-        ordered.append(target)
+    ordered = list(RECENT_LOG_OVERLAP_UNBLOCK_PREFERRED_TARGETS)
 
     mechanism_dir = vault / "ops" / "scripts" / "mechanism"
     if mechanism_dir.is_dir():

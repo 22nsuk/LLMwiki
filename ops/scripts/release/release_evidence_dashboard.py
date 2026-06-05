@@ -10,17 +10,17 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.advisory_lifecycle_runtime import (  # noqa: PLC0415
+    from ops.scripts.advisory_lifecycle_runtime import (
         ADVISORY_LIFECYCLE_NOT_APPLICABLE,
         advisory_lifecycle_assessment,
         advisory_lifecycle_summary,
     )
-    from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
+    from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.core.learning_claim_state_runtime import (  # noqa: PLC0415
+    from ops.scripts.core.learning_claim_state_runtime import (
         confirmed_blocking_predicate_ids,
         confirmed_evidence_summary,
         confirmed_predicate_results,
@@ -29,20 +29,20 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         improvement_claim_status,
         learning_claim_bundle_status,
     )
-    from ops.scripts.core.release_currentness_state_runtime import (  # noqa: PLC0415
+    from ops.scripts.core.release_currentness_state_runtime import (
         live_rerun_state,
     )
-    from ops.scripts.learning.learning_claim_model import (  # noqa: PLC0415
+    from ops.scripts.learning.learning_claim_model import (
         ImprovementClaimInputs,
         improvement_claim_model,
         learning_claim_blocker_status,
     )
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.policy_runtime import load_policy  # noqa: PLC0415
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.policy_runtime import load_policy
     from ops.scripts.release.release_authority_vocabulary import (
-        REASON_MACHINE_RELEASE_NOT_ALLOWED,  # noqa: PLC0415
+        REASON_MACHINE_RELEASE_NOT_ALLOWED,
     )
-    from ops.scripts.release.release_evidence_dashboard_render_runtime import (  # noqa: PLC0415
+    from ops.scripts.release.release_evidence_dashboard_render_runtime import (
         ARTIFACT_FRESHNESS_PATH,
         CLOSEOUT_PATH,
         FIXED_POINT_COST_TREND_PATH,
@@ -53,15 +53,15 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         _render_dashboard_report,
     )
     from ops.scripts.release.release_status_v2 import (
-        release_status_v2_view_with_readiness_fallback,  # noqa: PLC0415
+        release_status_v2_view_with_readiness_fallback,
     )
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
         RELEASE_EVIDENCE_DASHBOARD_SCHEMA_PATH,
-    )  # noqa: PLC0415
+    )
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
-    )  # noqa: PLC0415
+    )
 else:
     from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,

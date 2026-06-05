@@ -281,8 +281,7 @@ def _content_quality_scaffold_result(
     if not (
         ctx.stage2_eval_policy["content_quality_scaffold_enabled"]
         and (
-            relative_path.startswith("wiki/concept--")
-            or relative_path.startswith("wiki/synthesis--")
+            relative_path.startswith(("wiki/concept--", "wiki/synthesis--"))
         )
         and isinstance(frontmatter, dict)
     ):

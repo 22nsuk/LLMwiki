@@ -63,17 +63,17 @@ class GoalRunStatusRequest:
     last_command_heartbeat_at: str = ""
     quiet_seconds: int = 0
     command_observation_mode: str = ""
-    command_heartbeat_count: int = 0
-    command_timeout_seconds: int = 0
+    command_heartbeat_count: int | None = None
+    command_timeout_seconds: int | None = None
     last_stdout_at: str = ""
     last_stderr_at: str = ""
     last_artifact_touch_at: str = ""
-    last_command_returncode: int = -1
-    last_command_timed_out: bool = False
+    last_command_returncode: int | None = None
+    last_command_timed_out: bool | None = None
     last_command_termination_reason: str = ""
     last_backoff_until: str = ""
     backoff_reason: str = ""
-    resume_from_checkpoint: bool = False
+    resume_from_checkpoint: bool | None = None
     resume_command: str = ""
     status_report_path: str = DEFAULT_STATUS_PATH
     out_path: str | None = None
@@ -88,6 +88,33 @@ class GoalRunArtifactPaths:
     audit_log_path: str
     resume_metadata_path: str
     checkpoint_command_log_path: str
+
+
+@dataclass(frozen=True)
+class _MergedRunState:
+    status: str
+    started_at: str
+    completed_at: str
+
+
+@dataclass(frozen=True)
+class _MergedObservability:
+    last_heartbeat_at: str
+    last_checkpoint_at: str
+    last_command_heartbeat_at: str
+    command_observation_mode: str
+    command_heartbeat_count: int
+    command_timeout_seconds: int
+    last_stdout_at: str
+    last_stderr_at: str
+    last_artifact_touch_at: str
+    last_command_returncode: int
+    last_command_timed_out: bool
+    last_command_termination_reason: str
+    last_backoff_until: str
+    backoff_reason: str
+    resume_from_checkpoint: bool
+    resume_command: str
 
 
 def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
@@ -233,17 +260,6 @@ def _auto_improve_session_link(vault: Path, run_id: str) -> dict[str, Any]:
     }
 
 
-def _request_from_legacy(
-    vault_or_request: Path | GoalRunStatusRequest,
-    legacy_fields: dict[str, Any],
-) -> GoalRunStatusRequest:
-    if isinstance(vault_or_request, GoalRunStatusRequest):
-        if legacy_fields:
-            raise TypeError("build_report accepts either a request object or legacy keyword fields")
-        return vault_or_request
-    return GoalRunStatusRequest(vault=Path(vault_or_request), **legacy_fields)
-
-
 def _prior_status_for_run(vault: Path, request: GoalRunStatusRequest) -> Mapping[str, Any]:
     prior_report = load_optional_json_object(vault / request.status_report_path)
     prior_run = mapping_field(prior_report, "run")
@@ -288,18 +304,38 @@ def _prior_bool_field(prior_report: Mapping[str, Any], section: str, field: str)
     return bool(value) if isinstance(value, bool) else False
 
 
-def build_report(
-    vault_or_request: Path | GoalRunStatusRequest,
-    **legacy_fields: Any,
-) -> dict[str, Any]:
-    request = _request_from_legacy(vault_or_request, legacy_fields)
-    vault = request.vault.resolve()
-    policy, resolved_policy_path = load_policy(vault, request.policy_path)
-    runtime_context = request.context or RuntimeContext.from_policy(policy)
-    generated_at = runtime_context.isoformat_z()
-    prior_report = _prior_status_for_run(vault, request)
+def _request_int_or_prior(
+    request_value: int | None,
+    prior_report: Mapping[str, Any],
+    section: str,
+    field: str,
+    *,
+    default: int = 0,
+) -> int:
+    if request_value is not None:
+        return request_value
+    return _prior_int_field(prior_report, section, field, default=default)
+
+
+def _request_bool_or_prior(
+    request_value: bool | None,
+    prior_report: Mapping[str, Any],
+    section: str,
+    field: str,
+) -> bool:
+    if request_value is not None:
+        return request_value
+    return _prior_bool_field(prior_report, section, field)
+
+
+def _merged_run_state(
+    request: GoalRunStatusRequest,
+    prior_report: Mapping[str, Any],
+    *,
+    generated_at: str,
+) -> _MergedRunState:
     preserve_terminal_status = _should_preserve_terminal_run_status(request, prior_report)
-    run_status = (
+    status = (
         _prior_text_field(prior_report, "run", "status")
         if preserve_terminal_status
         else request.status
@@ -313,85 +349,110 @@ def build_report(
         )
     )
     started_at = request.started_at or _prior_text_field(prior_report, "run", "started_at") or generated_at
-    last_heartbeat_at = (
-        request.last_heartbeat_at
-        or _prior_text_field(prior_report, "observability", "last_heartbeat_at")
-        or generated_at
+    return _MergedRunState(
+        status=status,
+        started_at=started_at,
+        completed_at=completed_at,
     )
-    last_checkpoint_at = (
-        request.last_checkpoint_at
-        or _prior_text_field(prior_report, "observability", "last_checkpoint_at")
-        or generated_at
-    )
-    last_command_heartbeat_at = (
-        request.last_command_heartbeat_at
-        or _prior_text_field(prior_report, "observability", "last_command_heartbeat_at")
-    )
-    command_observation_mode = (
-        request.command_observation_mode
-        or _prior_text_field(prior_report, "observability", "command_observation_mode")
-    )
-    command_heartbeat_count = request.command_heartbeat_count or _prior_int_field(
-        prior_report,
-        "observability",
-        "command_heartbeat_count",
-    )
-    command_timeout_seconds = request.command_timeout_seconds or _prior_int_field(
-        prior_report,
-        "observability",
-        "command_timeout_seconds",
-    )
-    last_stdout_at = request.last_stdout_at or _prior_text_field(
-        prior_report,
-        "observability",
-        "last_stdout_at",
-    )
-    last_stderr_at = request.last_stderr_at or _prior_text_field(
-        prior_report,
-        "observability",
-        "last_stderr_at",
-    )
-    last_artifact_touch_at = request.last_artifact_touch_at or _prior_text_field(
-        prior_report,
-        "observability",
-        "last_artifact_touch_at",
-    )
-    last_command_returncode = (
-        request.last_command_returncode
-        if request.last_command_returncode != -1
-        else _prior_int_field(
+
+
+def _merged_observability(
+    request: GoalRunStatusRequest,
+    prior_report: Mapping[str, Any],
+    *,
+    generated_at: str,
+) -> _MergedObservability:
+    return _MergedObservability(
+        last_heartbeat_at=(
+            request.last_heartbeat_at
+            or _prior_text_field(prior_report, "observability", "last_heartbeat_at")
+            or generated_at
+        ),
+        last_checkpoint_at=(
+            request.last_checkpoint_at
+            or _prior_text_field(prior_report, "observability", "last_checkpoint_at")
+            or generated_at
+        ),
+        last_command_heartbeat_at=(
+            request.last_command_heartbeat_at
+            or _prior_text_field(prior_report, "observability", "last_command_heartbeat_at")
+        ),
+        command_observation_mode=(
+            request.command_observation_mode
+            or _prior_text_field(prior_report, "observability", "command_observation_mode")
+        ),
+        command_heartbeat_count=_request_int_or_prior(
+            request.command_heartbeat_count,
+            prior_report,
+            "observability",
+            "command_heartbeat_count",
+        ),
+        command_timeout_seconds=_request_int_or_prior(
+            request.command_timeout_seconds,
+            prior_report,
+            "observability",
+            "command_timeout_seconds",
+        ),
+        last_stdout_at=(
+            request.last_stdout_at
+            or _prior_text_field(prior_report, "observability", "last_stdout_at")
+        ),
+        last_stderr_at=(
+            request.last_stderr_at
+            or _prior_text_field(prior_report, "observability", "last_stderr_at")
+        ),
+        last_artifact_touch_at=(
+            request.last_artifact_touch_at
+            or _prior_text_field(prior_report, "observability", "last_artifact_touch_at")
+        ),
+        last_command_returncode=_request_int_or_prior(
+            request.last_command_returncode,
             prior_report,
             "observability",
             "last_command_returncode",
             default=-1,
-        )
+        ),
+        last_command_timed_out=_request_bool_or_prior(
+            request.last_command_timed_out,
+            prior_report,
+            "observability",
+            "last_command_timed_out",
+        ),
+        last_command_termination_reason=(
+            request.last_command_termination_reason
+            or _prior_text_field(prior_report, "observability", "last_command_termination_reason")
+        ),
+        last_backoff_until=(
+            request.last_backoff_until
+            or _prior_text_field(prior_report, "observability", "last_backoff_until")
+        ),
+        backoff_reason=(
+            request.backoff_reason
+            or _prior_text_field(prior_report, "observability", "backoff_reason")
+        ),
+        resume_from_checkpoint=_request_bool_or_prior(
+            request.resume_from_checkpoint,
+            prior_report,
+            "observability",
+            "resume_from_checkpoint",
+        ),
+        resume_command=(
+            request.resume_command
+            or _prior_text_field(prior_report, "observability", "resume_command")
+        ),
     )
-    last_command_timed_out = request.last_command_timed_out or _prior_bool_field(
-        prior_report,
-        "observability",
-        "last_command_timed_out",
-    )
-    last_command_termination_reason = (
-        request.last_command_termination_reason
-        or _prior_text_field(prior_report, "observability", "last_command_termination_reason")
-    )
-    last_backoff_until = (
-        request.last_backoff_until
-        or _prior_text_field(prior_report, "observability", "last_backoff_until")
-    )
-    backoff_reason = request.backoff_reason or _prior_text_field(
-        prior_report,
-        "observability",
-        "backoff_reason",
-    )
-    resume_command = request.resume_command or _prior_text_field(
-        prior_report,
-        "observability",
-        "resume_command",
-    )
-    resume_from_checkpoint = request.resume_from_checkpoint or bool(
-        mapping_field(prior_report, "observability").get("resume_from_checkpoint", False)
-    )
+
+
+def build_report(request: GoalRunStatusRequest) -> dict[str, Any]:
+    if not isinstance(request, GoalRunStatusRequest):
+        raise TypeError("build_report expects GoalRunStatusRequest")
+    vault = request.vault.resolve()
+    policy, resolved_policy_path = load_policy(vault, request.policy_path)
+    runtime_context = request.context or RuntimeContext.from_policy(policy)
+    generated_at = runtime_context.isoformat_z()
+    prior_report = _prior_status_for_run(vault, request)
+    run_state = _merged_run_state(request, prior_report, generated_at=generated_at)
+    observability = _merged_observability(request, prior_report, generated_at=generated_at)
     backend = FileGoalBackend(vault=vault, contract_path=request.goal_contract_path)
     contract = backend.get_goal()
     contract_backend = mapping_field(contract, "goal_backend")
@@ -406,27 +467,27 @@ def build_report(
         promotion_guard=promotion_guard,
         heartbeat_interval_seconds=request.heartbeat_interval_seconds,
         checkpoint_interval_seconds=request.checkpoint_interval_seconds,
-        last_heartbeat_at=last_heartbeat_at,
-        last_checkpoint_at=last_checkpoint_at,
-        last_command_heartbeat_at=last_command_heartbeat_at,
-        last_backoff_until=last_backoff_until,
-        resume_from_checkpoint=resume_from_checkpoint,
-        resume_command=resume_command,
+        last_heartbeat_at=observability.last_heartbeat_at,
+        last_checkpoint_at=observability.last_checkpoint_at,
+        last_command_heartbeat_at=observability.last_command_heartbeat_at,
+        last_backoff_until=observability.last_backoff_until,
+        resume_from_checkpoint=observability.resume_from_checkpoint,
+        resume_command=observability.resume_command,
     )
     paths = goal_run_artifact_paths(
         request.run_id,
         status_report_path=request.status_report_path,
     )
     periodic_generated_at = (
-        completed_at
-        if run_status in TERMINAL_RUN_STATUSES and completed_at
+        run_state.completed_at
+        if run_state.status in TERMINAL_RUN_STATUSES and run_state.completed_at
         else generated_at
     )
     periodic_evidence = build_periodic_evidence(
         vault,
         generated_at=periodic_generated_at,
-        started_at=started_at,
-        last_checkpoint_at=last_checkpoint_at,
+        started_at=run_state.started_at,
+        last_checkpoint_at=observability.last_checkpoint_at,
         checkpoint_command_log_path=paths.checkpoint_command_log_path,
         checkpoints_config=PERIODIC_EVIDENCE_CHECKPOINTS,
     )
@@ -444,7 +505,7 @@ def build_report(
                     *runtime_certificate_blockers(runtime_certificate),
                     *health_blockers(
                         health,
-                        run_status=run_status,
+                        run_status=run_state.status,
                         periodic_evidence=periodic_evidence,
                     ),
             ]
@@ -491,32 +552,32 @@ def build_report(
         },
         "run": {
             "run_id": request.run_id,
-            "status": run_status,
+            "status": run_state.status,
             "runtime_mode": request.runtime_mode,
-            "started_at": started_at,
+            "started_at": run_state.started_at,
             "updated_at": generated_at,
-            "completed_at": completed_at,
+            "completed_at": run_state.completed_at,
         },
         "observability": {
             "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
             "checkpoint_interval_seconds": request.checkpoint_interval_seconds,
-            "last_heartbeat_at": last_heartbeat_at,
-            "last_checkpoint_at": last_checkpoint_at,
-            "last_command_heartbeat_at": last_command_heartbeat_at,
+            "last_heartbeat_at": observability.last_heartbeat_at,
+            "last_checkpoint_at": observability.last_checkpoint_at,
+            "last_command_heartbeat_at": observability.last_command_heartbeat_at,
             "quiet_seconds": request.quiet_seconds,
-            "command_observation_mode": command_observation_mode,
-            "command_heartbeat_count": command_heartbeat_count,
-            "command_timeout_seconds": command_timeout_seconds,
-            "last_stdout_at": last_stdout_at,
-            "last_stderr_at": last_stderr_at,
-            "last_artifact_touch_at": last_artifact_touch_at,
-            "last_command_returncode": last_command_returncode,
-            "last_command_timed_out": last_command_timed_out,
-            "last_command_termination_reason": last_command_termination_reason,
-            "last_backoff_until": last_backoff_until,
-            "backoff_reason": backoff_reason,
-            "resume_from_checkpoint": resume_from_checkpoint,
-            "resume_command": resume_command,
+            "command_observation_mode": observability.command_observation_mode,
+            "command_heartbeat_count": observability.command_heartbeat_count,
+            "command_timeout_seconds": observability.command_timeout_seconds,
+            "last_stdout_at": observability.last_stdout_at,
+            "last_stderr_at": observability.last_stderr_at,
+            "last_artifact_touch_at": observability.last_artifact_touch_at,
+            "last_command_returncode": observability.last_command_returncode,
+            "last_command_timed_out": observability.last_command_timed_out,
+            "last_command_termination_reason": observability.last_command_termination_reason,
+            "last_backoff_until": observability.last_backoff_until,
+            "backoff_reason": observability.backoff_reason,
+            "resume_from_checkpoint": observability.resume_from_checkpoint,
+            "resume_command": observability.resume_command,
         },
         "health": health,
         "runtime_certificate": runtime_certificate,
@@ -532,7 +593,7 @@ def build_report(
         },
         "promotion_guard": promotion_guard,
         "blockers": blockers,
-        "status": _status_from_blockers(run_status, blockers),
+        "status": _status_from_blockers(run_state.status, blockers),
     }
 
 
@@ -683,7 +744,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--quiet-seconds", type=int, default=0)
     parser.add_argument("--last-backoff-until", default="")
     parser.add_argument("--backoff-reason", default="")
-    parser.add_argument("--resume-from-checkpoint", action="store_true")
+    parser.add_argument("--resume-from-checkpoint", action="store_true", default=None)
     parser.add_argument("--resume-command", default="")
     parser.add_argument("--status-report-path", default=DEFAULT_STATUS_PATH)
     parser.add_argument("--out", default=DEFAULT_STATUS_PATH)

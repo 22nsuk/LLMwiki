@@ -193,15 +193,13 @@ def _writer_trends(
         ]
         previous_sample_count = len(previous_costs)
         previous_average = (
-            int(
-                round(
+            round(
                     sum(
                         int(item.get("total_duration_ms", 0) or 0)
                         for item in previous_costs
                     )
                     / previous_sample_count
                 )
-            )
             if previous_sample_count
             else 0
         )

@@ -11,11 +11,7 @@ from .candidate_rule_runtime import CandidateRuleSpec, evaluate_candidate_rules
 from .policy_runtime import report_path
 from .registry_diagnostics_runtime import (
     RegistryDiagnosticEmitter as RegistryLintEmitter,
-)
-from .registry_diagnostics_runtime import (
     RegistryInventoryContext,
-)
-from .registry_diagnostics_runtime import (
     RegistryPaths as RegistryLintPaths,
 )
 from .registry_pass_support_runtime import (
@@ -544,8 +540,8 @@ backlog_refactor_threshold_pass = _backlog_refactor_threshold_pass
 
 
 __all__ = [
-    "_summary_shard_review_candidate_pass",
     "_backlog_refactor_threshold_pass",
-    "summary_shard_review_candidate_pass",
+    "_summary_shard_review_candidate_pass",
     "backlog_refactor_threshold_pass",
+    "summary_shard_review_candidate_pass",
 ]

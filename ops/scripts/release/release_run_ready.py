@@ -254,7 +254,7 @@ def _command_step(
         ),
         "command": [sanitize_report_text(vault, item) for item in command],
         "returncode": result.returncode,
-        "duration_ms": int(round((time.monotonic() - started) * 1000)),
+        "duration_ms": round((time.monotonic() - started) * 1000),
         "source_tree_fingerprint_before": before,
         "source_tree_fingerprint_after": after,
         "stdout_tail": stdout_tail,

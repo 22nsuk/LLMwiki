@@ -18,11 +18,9 @@ from ops.scripts.release_closeout_fixed_point import (
     bootstrap_post_promote_freshness,
     build_dry_run_report,
     build_report,
+    main as fixed_point_main,
     write_dry_run_plan,
     write_dry_run_recommended_targets,
-)
-from ops.scripts.release_closeout_fixed_point import (
-    main as fixed_point_main,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema

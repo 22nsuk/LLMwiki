@@ -17,8 +17,8 @@ SUPPORTED_SUBAGENT_LADDER = {
     2: ("gpt-5.5", "high"),
     3: ("gpt-5.5", "xhigh"),
 }
-SUPPORTED_SUBAGENT_SANDBOX_MODES = set(["read-only", "workspace-write", "danger-full-access"])
-SUPPORTED_WORKSPACE_PREPARATION_MODES = set(["full_copy", "sparse_manifest"])
+SUPPORTED_SUBAGENT_SANDBOX_MODES = {"read-only", "workspace-write", "danger-full-access"}
+SUPPORTED_WORKSPACE_PREPARATION_MODES = {"full_copy", "sparse_manifest"}
 SUPPORTED_SUBAGENT_PRESSURE_DIMENSIONS = {
     "change_surface",
     "dependency_impact",
@@ -27,12 +27,10 @@ SUPPORTED_SUBAGENT_PRESSURE_DIMENSIONS = {
     "environment_risk",
 }
 SUPPORTED_PROMOTION_DECISION_VALUES = set(promotion_decision_values())
-SUPPORTED_LOG_STATUS_VALUES = set(["pending", "recorded", "not_required"])
-SUPPORTED_WARNING_BUDGET_SOURCES = set(["raw_registry_preflight", "wiki_lint"])
-SUPPORTED_PROMOTION_RULE_REDUCERS = set(
-    ["none", "status_fail_discard", "candidate_lint_status", "candidate_eval_status", "equal_score_secondary", "signoff_status", "page_repo_lint_status", "page_primary_eval_status", "page_signoff_status"]
-)
-SUPPORTED_PROMOTION_RULE_SEVERITIES = set(["info", "advisory", "warning", "blocker"])
+SUPPORTED_LOG_STATUS_VALUES = {"pending", "recorded", "not_required"}
+SUPPORTED_WARNING_BUDGET_SOURCES = {"raw_registry_preflight", "wiki_lint"}
+SUPPORTED_PROMOTION_RULE_REDUCERS = {"none", "status_fail_discard", "candidate_lint_status", "candidate_eval_status", "equal_score_secondary", "signoff_status", "page_repo_lint_status", "page_primary_eval_status", "page_signoff_status"}
+SUPPORTED_PROMOTION_RULE_SEVERITIES = {"info", "advisory", "warning", "blocker"}
 SUPPORTED_PROMOTION_RULE_ARTIFACT_DEPENDENCIES = {
     "baseline_eval_report",
     "candidate_eval_report",
@@ -371,10 +369,7 @@ def _normalize_declared_dependency_path(value: object) -> str:
     raw = value.strip().replace("\\", "/").rstrip("/")
     normalized = normalize_repo_path_text(raw)
     if (
-        normalized is None
-        or normalized in {".", ".."}
-        or normalized.startswith("../")
-        or normalized.startswith("/")
+        normalized is None or normalized in {".", ".."} or normalized.startswith(("../", "/"))
     ):
         raise ValueError(
             "invalid auto_improve_policy.workspace_preparation.declared_dependencies entry: "

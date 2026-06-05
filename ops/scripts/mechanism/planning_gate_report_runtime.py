@@ -256,7 +256,7 @@ def validate_run_dir(
             phase=phase,
             decision=report["status"],
             artifact_dir_report=artifact_dir_report,
-            duration_ms=int(round((time.monotonic() - started_at) * 1000)),
+            duration_ms=round((time.monotonic() - started_at) * 1000),
             run_ids=run_ids,
             policy_version=active_policy.get("version"),
         )

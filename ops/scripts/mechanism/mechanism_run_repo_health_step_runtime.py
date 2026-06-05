@@ -9,11 +9,9 @@ from ops.scripts.schema_constants_runtime import (
 )
 from ops.scripts.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,
+    build_report as build_structural_complexity_budget_report,
     target_paths_from_changed_files_manifest,
     touched_target_profiles,
-)
-from ops.scripts.structural_complexity_budget_runtime import (
-    build_report as build_structural_complexity_budget_report,
 )
 
 from .mechanism_run_common_runtime import (

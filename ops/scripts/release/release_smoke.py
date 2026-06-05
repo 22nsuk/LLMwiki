@@ -531,7 +531,7 @@ def _future_mtime_files(
             {
                 "path": rel_path,
                 "mtime_utc": _iso_from_timestamp(mtime),
-                "seconds_after_now": int(round(mtime - now)),
+                "seconds_after_now": round(mtime - now),
             }
         )
     return sorted(
@@ -969,7 +969,7 @@ def run_smoke_commands(
                 "timed_out": completed.timed_out,
                 "timeout_seconds": completed.timeout_seconds,
                 "termination_reason": completed.termination_reason,
-                "duration_ms": int(round((time.monotonic() - started_at) * 1000)),
+                "duration_ms": round((time.monotonic() - started_at) * 1000),
                 "stdout_tail": _tail_text(completed.stdout),
                 "stderr_tail": _tail_text(completed.stderr),
             }
@@ -991,36 +991,6 @@ def _display_release_path(vault: Path, path: Path, *, ephemeral_root: Path | Non
                 return EPHEMERAL_REPORT_PREFIX
             return f"{EPHEMERAL_REPORT_PREFIX}/{relative_text}"
     return display_path(vault, path)
-
-
-def _release_smoke_report_request(
-    request_or_vault: ReleaseSmokeReportRequest | Path,
-    legacy_args: tuple[Any, ...],
-    legacy_kwargs: dict[str, Any],
-) -> ReleaseSmokeReportRequest:
-    if isinstance(request_or_vault, ReleaseSmokeReportRequest):
-        if legacy_args or legacy_kwargs:
-            raise TypeError("ReleaseSmokeReportRequest cannot be combined with legacy args")
-        return request_or_vault
-    if len(legacy_args) != 5:
-        raise TypeError("legacy build_report requires five positional arguments after vault")
-    kwargs = dict(legacy_kwargs)
-    return ReleaseSmokeReportRequest(
-        vault=request_or_vault,
-        archive_path=cast(Path, legacy_args[0]),
-        extracted_vault=cast(Path, legacy_args[1]),
-        source_manifest=cast(dict[str, Any], legacy_args[2]),
-        extracted_manifest=cast(dict[str, Any], legacy_args[3]),
-        command_results=cast(list[dict[str, Any]], legacy_args[4]),
-        resolved_policy_path=kwargs.pop("resolved_policy_path"),
-        policy_version=kwargs.pop("policy_version"),
-        profile=kwargs.pop("profile", FULL_PROFILE),
-        archive_root_name=kwargs.pop("archive_root_name", None),
-        context=kwargs.pop("context", None),
-        ephemeral_root=kwargs.pop("ephemeral_root", None),
-        output_parent_preflight=kwargs.pop("output_parent_preflight", None),
-        archive_reproducibility=kwargs.pop("archive_reproducibility", None),
-    )
 
 
 def _render_release_smoke_report(request: ReleaseSmokeReportRequest) -> dict[str, Any]:
@@ -1102,16 +1072,7 @@ def _render_release_smoke_report(request: ReleaseSmokeReportRequest) -> dict[str
     return report
 
 
-def build_report(
-    request_or_vault: ReleaseSmokeReportRequest | Path,
-    *legacy_args: Any,
-    **legacy_kwargs: Any,
-) -> dict[str, Any]:
-    request = _release_smoke_report_request(
-        request_or_vault,
-        legacy_args,
-        legacy_kwargs,
-    )
+def build_report(request: ReleaseSmokeReportRequest) -> dict[str, Any]:
     return _render_release_smoke_report(request)
 
 
@@ -1141,41 +1102,6 @@ def _partial_manifest_comparison(source_manifest: dict, extracted_manifest: dict
     }
 
 
-def _release_smoke_partial_report_request(
-    request_or_vault: ReleaseSmokePartialReportRequest | Path,
-    legacy_args: tuple[Any, ...],
-    legacy_kwargs: dict[str, Any],
-) -> ReleaseSmokePartialReportRequest:
-    if isinstance(request_or_vault, ReleaseSmokePartialReportRequest):
-        if legacy_args or legacy_kwargs:
-            raise TypeError("ReleaseSmokePartialReportRequest cannot be combined with legacy args")
-        return request_or_vault
-    if len(legacy_args) != 5:
-        raise TypeError("legacy build_partial_report requires five positional arguments after vault")
-    kwargs = dict(legacy_kwargs)
-    return ReleaseSmokePartialReportRequest(
-        vault=request_or_vault,
-        archive_path=cast(Path, legacy_args[0]),
-        extracted_vault=cast(Path, legacy_args[1]),
-        source_manifest=cast(dict[str, Any] | None, legacy_args[2]),
-        extracted_manifest=cast(dict[str, Any] | None, legacy_args[3]),
-        command_results=cast(list[dict[str, Any]], legacy_args[4]),
-        resolved_policy_path=kwargs.pop("resolved_policy_path"),
-        policy_version=kwargs.pop("policy_version"),
-        profile=kwargs.pop("profile", FULL_PROFILE),
-        archive_root_name=kwargs.pop("archive_root_name", None),
-        phase=kwargs.pop("phase"),
-        message=kwargs.pop("message"),
-        error=kwargs.pop("error", ""),
-        context=kwargs.pop("context", None),
-        started_at_monotonic=kwargs.pop("started_at_monotonic", None),
-        ephemeral_root=kwargs.pop("ephemeral_root", None),
-        output_parent_preflight=kwargs.pop("output_parent_preflight", None),
-        archive_write=kwargs.pop("archive_write", None),
-        archive_reproducibility=kwargs.pop("archive_reproducibility", None),
-    )
-
-
 def _render_partial_release_smoke_report(
     request: ReleaseSmokePartialReportRequest,
 ) -> dict[str, Any]:
@@ -1191,7 +1117,7 @@ def _render_partial_release_smoke_report(
     elapsed_ms = (
         0
         if request.started_at_monotonic is None
-        else max(0, int(round((time.monotonic() - request.started_at_monotonic) * 1000)))
+        else max(0, round((time.monotonic() - request.started_at_monotonic) * 1000))
     )
     report = {
         **build_canonical_report_envelope(
@@ -1252,16 +1178,7 @@ def _render_partial_release_smoke_report(
     return report
 
 
-def build_partial_report(
-    request_or_vault: ReleaseSmokePartialReportRequest | Path,
-    *legacy_args: Any,
-    **legacy_kwargs: Any,
-) -> dict[str, Any]:
-    request = _release_smoke_partial_report_request(
-        request_or_vault,
-        legacy_args,
-        legacy_kwargs,
-    )
+def build_partial_report(request: ReleaseSmokePartialReportRequest) -> dict[str, Any]:
     return _render_partial_release_smoke_report(request)
 
 

@@ -10,17 +10,17 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.core.release_authority_state_runtime import (  # noqa: PLC0415
+    from ops.scripts.core.release_authority_state_runtime import (
         release_artifact_revision,
         release_artifact_stale_for_revision,
     )
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.source_revision_runtime import (
-        resolve_source_revision,  # noqa: PLC0415
+        resolve_source_revision,
     )
     from ops.scripts.source_tree_fingerprint_runtime import (
-        release_source_tree_fingerprint,  # noqa: PLC0415
+        release_source_tree_fingerprint,
     )
 else:
     from ops.scripts.core.release_authority_state_runtime import (

@@ -13,6 +13,7 @@ from ops.scripts.public_check_summary import (
     PublicCheckRequest,
     _default_command_runner,
     _public_pytest_summary_cache_path,
+    _resolve_public_python,
     build_report,
     reusable_summary_diagnostics,
     write_report,
@@ -575,6 +576,16 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual({argv[0] for argv in captured_argv}, {expected_python})
             self.assertEqual(set(captured_cwd), {public_out.resolve()})
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_unresolved_home_public_python_preserves_previous_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+
+            with patch.object(Path, "expanduser", side_effect=RuntimeError("home unavailable")):
+                resolved = _resolve_public_python(vault, "~/bin/python")
+
+            self.assertEqual(resolved, str((vault / "~/bin/python").absolute()))
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ from ops.scripts.schema_constants_runtime import STRICT_LINT_INVENTORY_SCHEMA_PA
 
 DEFAULT_OUT = "ops/reports/lint-uplift-plan.json"
 DEFAULT_TARGETS = "ops/scripts tests tools"
-DEFAULT_RUFF_SELECT = "B,SIM,UP,I"
+DEFAULT_RUFF_SELECT = "PTH201"
 STRICT_PREVIEW_AUDIT_PATH = "tmp/strict-preview-audit.json"
 PRODUCER = "ops.scripts.lint_uplift_plan"
 SOURCE_COMMAND = "python -m ops.scripts.lint_uplift_plan --vault ."
@@ -85,7 +85,7 @@ def _read_enforced_select(vault: Path) -> list[str]:
 
 
 def _audit_rule_family_counts(audit: dict[str, Any], strict_rule_families: list[str]) -> dict[str, int]:
-    family_counts = {family: 0 for family in strict_rule_families}
+    family_counts = dict.fromkeys(strict_rule_families, 0)
     ruff = audit.get("ruff")
     if not isinstance(ruff, dict):
         return family_counts

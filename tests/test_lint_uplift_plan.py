@@ -90,7 +90,7 @@ class LintUpliftPlanTests(unittest.TestCase):
             "[tool.ruff]\n"
             'target-version = "py312"\n\n'
             "[tool.ruff.lint]\n"
-            'select = ["E4", "E7", "E9", "F", "UP"]\n',
+            'select = ["E4", "E7", "E9", "F", "PTH201"]\n',
             encoding="utf-8",
         )
         (self.vault / "tmp" / "strict-preview-audit.json").write_text(
@@ -100,8 +100,7 @@ class LintUpliftPlanTests(unittest.TestCase):
                     "summary": {"total_error_count": 5, "ruff_error_count": 5},
                     "ruff": {
                         "rule_counts": {
-                            "B904": 3,
-                            "I001": 2,
+                            "PTH201": 5,
                         }
                     },
                 }
@@ -111,8 +110,11 @@ class LintUpliftPlanTests(unittest.TestCase):
 
         report = build_report(self.vault, targets=["ops/scripts", "tests", "tools"], context=fixed_context())
 
-        self.assertEqual(report["enforced_rule_families"], ["UP"])
-        self.assertEqual(report["remaining_violations"], {"B": 3, "SIM": 0, "I": 2})
+        self.assertEqual(report["enforced_rule_families"], ["PTH201"])
+        self.assertEqual(
+            report["remaining_violations"],
+            {},
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
 

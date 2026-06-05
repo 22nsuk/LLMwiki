@@ -10,13 +10,13 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import (
-        build_canonical_report_envelope,  # noqa: PLC0415
+        build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
+    from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.external_report_lifecycle_runtime import (  # noqa: PLC0415
+    from ops.scripts.external_report_lifecycle_runtime import (
         action_status_reason_details,
         action_status_reason_ids,
         canonical_artifact_freshness_state,
@@ -25,19 +25,19 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         report_coverage_item,
         status_from_evidence,
     )
-    from ops.scripts.output_runtime import display_path  # noqa: PLC0415
-    from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
-    from ops.scripts.release.external_report_action_catalog import (  # noqa: PLC0415
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.release.external_report_action_catalog import (
         ACTION_CATALOG,
         SPRINT_PRIORITIES,
     )
-    from ops.scripts.release.external_report_inventory_runtime import (  # noqa: PLC0415
+    from ops.scripts.release.external_report_inventory_runtime import (
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
         reference_manifest_alignment,
     )
-    from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
+    from ops.scripts.runtime_context import RuntimeContext
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
     from ops.scripts.artifact_io_runtime import (
@@ -129,9 +129,7 @@ def _recommended_target(
             if not isinstance(target, str) or not target:
                 continue
             if (
-                target.endswith("-check")
-                or target.endswith("-plan-check")
-                or target.endswith("-plan")
+                target.endswith(("-check", "-plan-check", "-plan"))
             ):
                 continue
             return target

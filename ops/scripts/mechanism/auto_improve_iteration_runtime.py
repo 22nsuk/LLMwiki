@@ -96,7 +96,7 @@ def _duration_ms(phase_durations: dict[str, float]) -> int:
             total += float(value)
         except (TypeError, ValueError):
             continue
-    return int(round(total * 1000))
+    return round(total * 1000)
 
 
 def execute_evaluate_iteration_phase(

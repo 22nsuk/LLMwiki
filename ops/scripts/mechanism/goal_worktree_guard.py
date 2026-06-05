@@ -136,7 +136,7 @@ def _relative_or_marker(vault: Path, raw_path: str) -> str:
         rendered = report_path(vault, path)
     except OSError:
         return "<outside-vault>"
-    if rendered.startswith("/") or rendered == ".." or rendered.startswith("../"):
+    if rendered.startswith(("/", "../")) or rendered == "..":
         return "<outside-vault>"
     return rendered
 

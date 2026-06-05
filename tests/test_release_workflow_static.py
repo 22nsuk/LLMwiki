@@ -7,39 +7,17 @@ from tests.workflow_static_helpers import (
     PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
     PINNED_DOWNLOAD_ARTIFACT_ACTION,
     PINNED_PYPI_PUBLISH_ACTION,
-    load_workflow,
-)
-from tests.workflow_static_helpers import (
     assert_locked_install_shape as _assert_locked_install_shape,
-)
-from tests.workflow_static_helpers import (
     assert_workflow_run_contains as _assert_run_contains,
-)
-from tests.workflow_static_helpers import (
     assert_workflow_uses_are_sha_pinned as _assert_workflow_uses_are_sha_pinned,
-)
-from tests.workflow_static_helpers import (
+    load_workflow,
     workflow_job as _job,
-)
-from tests.workflow_static_helpers import (
     workflow_jobs as _jobs,
-)
-from tests.workflow_static_helpers import (
     workflow_mapping as _mapping,
-)
-from tests.workflow_static_helpers import (
     workflow_on as _workflow_on,
-)
-from tests.workflow_static_helpers import (
     workflow_path_entries as _path_entries,
-)
-from tests.workflow_static_helpers import (
     workflow_run_text as _run_text,
-)
-from tests.workflow_static_helpers import (
     workflow_step as _step,
-)
-from tests.workflow_static_helpers import (
     workflow_steps as _steps,
 )
 

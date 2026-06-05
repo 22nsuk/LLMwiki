@@ -52,8 +52,7 @@ def sanitize_run_text(text: str, *, repo_root: Path) -> str:
         sanitized = re.sub(re.escape(f"{root_text}/"), "", sanitized, flags=re.IGNORECASE)
         sanitized = re.sub(re.escape(root_text), ".", sanitized, flags=re.IGNORECASE)
     sanitized = TEMP_VAULT_PREFIX_RE.sub("", sanitized)
-    sanitized = TEMP_VAULT_ROOT_RE.sub(".", sanitized)
-    return sanitized
+    return TEMP_VAULT_ROOT_RE.sub(".", sanitized)
 
 
 def _iter_run_files(runs_root: Path) -> list[Path]:

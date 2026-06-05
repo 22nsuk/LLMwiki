@@ -152,7 +152,7 @@ def _command_payload(
         "timed_out": result.timed_out,
         "timeout_seconds": result.timeout_seconds,
         "termination_reason": result.termination_reason,
-        "duration_ms": int(round((time.monotonic() - started_at) * 1000)),
+        "duration_ms": round((time.monotonic() - started_at) * 1000),
         "heartbeat_count": result.heartbeat_count,
         "heartbeat_interval_seconds": result.heartbeat_interval_seconds,
         "quiet_seconds": result.quiet_seconds,

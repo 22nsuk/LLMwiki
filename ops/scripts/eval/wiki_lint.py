@@ -172,7 +172,7 @@ class _LintAccumulator:
             warnings=[],
             review_candidates=[],
             watchlist=[],
-            link_inbound={name: 0 for name in pages},
+            link_inbound=dict.fromkeys(pages, 0),
             page_links={},
             related_links={},
             evidence_links={},
