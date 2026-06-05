@@ -258,6 +258,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "tests/test_ci_workflow_static.py",
             "tests/test_makefile_static_gates.py",
             "tests/test_makefile_release_orchestration_static_gates.py",
+            "tests/test_makefile_release_evidence_static_gates.py",
             "tests/test_makefile_release_smoke_static_gates.py",
             "tests/test_makefile_test_execution_summary_gates.py",
             "tests/test_makefile_auto_improve_goal_static_gates.py",

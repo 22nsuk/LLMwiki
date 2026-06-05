@@ -50,6 +50,7 @@ REPORT_CONTRACT_CORE_TESTS ?= \
 	tests/test_test_execution_summary.py \
 	tests/test_makefile_static_gates.py \
 	tests/test_makefile_release_orchestration_static_gates.py \
+	tests/test_makefile_release_evidence_static_gates.py \
 	tests/test_makefile_release_smoke_static_gates.py \
 	tests/test_makefile_test_execution_summary_gates.py \
 	tests/test_makefile_auto_improve_goal_static_gates.py \
@@ -105,6 +106,7 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_make_target_inventory.py \
 	tests/test_makefile_static_gates.py \
 	tests/test_makefile_release_orchestration_static_gates.py \
+	tests/test_makefile_release_evidence_static_gates.py \
 	tests/test_makefile_release_smoke_static_gates.py \
 	tests/test_makefile_test_execution_summary_gates.py \
 	tests/test_makefile_auto_improve_goal_static_gates.py \
