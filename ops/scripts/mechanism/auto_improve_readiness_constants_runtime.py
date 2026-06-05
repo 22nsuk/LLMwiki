@@ -6,30 +6,16 @@ MECHANISM_REVIEW_REPORT_REL_PATH = "ops/reports/mechanism-review-candidates.json
 MUTATION_PROPOSAL_REPORT_REL_PATH = "ops/reports/mutation-proposals.json"
 ARTIFACT_FRESHNESS_REPORT_REL_PATH = "ops/reports/artifact-freshness-report.json"
 SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH = "ops/reports/test-execution-summary.json"
-SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH = (
-    "ops/reports/source-package-clean-extract.json"
-)
+SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH = "ops/reports/source-package-clean-extract.json"
 RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH = "ops/reports/release-closeout-summary.json"
-RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH = (
-    "ops/reports/release-closeout-batch-manifest.json"
-)
-RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH = (
-    "ops/reports/release-closeout-finality-attestation.json"
-)
+RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH = "ops/reports/release-closeout-batch-manifest.json"
+RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH = "ops/reports/release-closeout-finality-attestation.json"
 RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH = "ops/reports/release-evidence-cohort.json"
-RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH = (
-    "tmp/release-closeout-post-check-finalizer.json"
-)
+RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH = "tmp/release-closeout-post-check-finalizer.json"
 REMEDIATION_BACKLOG_REPORT_REL_PATH = "ops/reports/remediation-backlog.json"
-LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH = (
-    "ops/reports/learning-confirmed-legacy-reconstruction.json"
-)
-RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH = (
-    "ops/reports/release-closeout-sealed-rehearsal-check.json"
-)
-RELEASE_AUTHORITY_PREFLIGHT_RELEASE_REPORT_REL_PATH = (
-    "build/release/release-closeout-sealed-rehearsal-check.json"
-)
+LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH = "ops/reports/learning-confirmed-legacy-reconstruction.json"
+RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH = "ops/reports/release-closeout-sealed-rehearsal-check.json"
+RELEASE_AUTHORITY_PREFLIGHT_RELEASE_REPORT_REL_PATH = "build/release/release-closeout-sealed-rehearsal-check.json"
 RELEASE_AUTHORITY_PREFLIGHT_FALLBACK_REPORT_REL_PATH = "build/release/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
 RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS = (
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
@@ -80,7 +66,7 @@ RECENT_LOG_OVERLAP_REMEDIATION = {
     "blocker_kind": "hard",
     "unblock_action_type": "chronology_advance_or_target_rotation",
     "minimum_evidence": [
-        "A refreshed mutation proposal report emits a runnable recent_log_overlap_queue_blocked__ target-rotation proposal or no longer lists recent_log_overlap in blocked_by for every emitted proposal.",
+        "A refreshed mutation proposal report emits a runnable recent_log_overlap_queue_blocked__ target-rotation proposal with mutation_proposal.queue_selection.runnable_available_count greater than 0, or no longer lists recent_log_overlap in blocked_by for every emitted proposal.",
         "auto-improve readiness reports queue.runnable_proposal_count greater than 0.",
         "The recent overlapping target chronology has advanced, the max-age window has expired, or the runnable target-rotation proposal target set no longer overlaps the recent run log.",
     ],
