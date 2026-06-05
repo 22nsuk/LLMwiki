@@ -449,6 +449,9 @@
         "selectors": [
           "tests/test_test_execution_summary.py",
           "tests/test_makefile_static_gates.py",
+          "tests/test_makefile_release_smoke_static_gates.py",
+          "tests/test_makefile_test_execution_summary_gates.py",
+          "tests/test_makefile_auto_improve_goal_static_gates.py",
           "tests/test_makefile_public_registry_supply_chain_gates.py",
           "tests/test_ci_workflow_static.py",
           "tests/test_mechanism_navigation_index.py",

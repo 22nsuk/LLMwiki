@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+import re
+import unittest
+from pathlib import Path
+
+import pytest
+
+pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+
+MAKEFILE = Path("Makefile")
+DOCS_RELEASE = Path("docs/release.md")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _makefile_text() -> str:
+    text = MAKEFILE.read_text(encoding="utf-8")
+    for mk_file in sorted(REPO_ROOT.glob("mk/*.mk")):
+        text += "\n" + mk_file.read_text(encoding="utf-8")
+    return text
+
+
+def _target_block(text: str, target: str) -> str:
+    if target == ".PHONY":
+        matches = list(
+            re.finditer(
+                rf"^{re.escape(target)}:(?P<deps>[^\n]*)(?P<body>(?:\n\t[^\n]*)*)",
+                text,
+                flags=re.MULTILINE,
+            )
+        )
+        if not matches:
+            raise AssertionError(f"missing Makefile target: {target}")
+        return "\n".join(m.group(0) for m in matches)
+    match = re.search(
+        rf"^{re.escape(target)}:(?P<deps>[^\n]*)(?P<body>(?:\n\t[^\n]*)*)",
+        text,
+        flags=re.MULTILINE,
+    )
+    if match is None:
+        raise AssertionError(f"missing Makefile target: {target}")
+    return match.group(0)
+
+
+def _recipe_lines(text: str, target: str) -> list[str]:
+    block = _target_block(text, target)
+    return [line.strip() for line in block.splitlines()[1:] if line.startswith("\t")]
+
+
+class MakefileReleaseSmokeStaticGateTests(unittest.TestCase):
+    def test_release_smoke_targets_expose_fast_and_full_profiles(self) -> None:
+        text = _makefile_text()
+
+        self.assertIn("release-smoke-fast", _target_block(text, ".PHONY"))
+        self.assertIn("release-smoke-full", _target_block(text, ".PHONY"))
+        self.assertIn("release-smoke-full-reuse", _target_block(text, ".PHONY"))
+        self.assertIn("release-smoke-full-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-smoke-fast-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-smoke-fast-refresh-check", _target_block(text, ".PHONY"))
+        self.assertIn(
+            "RELEASE_SMOKE_OUT ?= ops/reports/release-smoke-report.json", text
+        )
+        self.assertIn(
+            "RELEASE_SMOKE_FAST_OUT ?= ops/reports/release-smoke-report-fast.json",
+            text,
+        )
+        self.assertIn(
+            "RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT ?= tmp/release-smoke-report-fast-current-check.json",
+            text,
+        )
+        self.assertIn("RELEASE_SMOKE_REUSE_FROM ?= $(RELEASE_SMOKE_OUT)", text)
+        self.assertIn(
+            '$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)"',
+            _target_block(text, "release-smoke"),
+        )
+        self.assertIn("release-smoke-full: release-smoke", text)
+        reuse_block = _target_block(text, "release-smoke-full-reuse")
+        self.assertIn("--reuse-if-current", reuse_block)
+        self.assertIn('--reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"', reuse_block)
+        current_check_block = _target_block(text, "release-smoke-full-current-check")
+        self.assertIn("--reuse-if-current", current_check_block)
+        self.assertIn("--reuse-only", current_check_block)
+        self.assertIn('--out "$(RELEASE_SMOKE_CURRENT_CHECK_OUT)"', current_check_block)
+        self.assertIn(
+            '$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"',
+            _target_block(text, "release-smoke-fast"),
+        )
+        fast_current_check_block = _target_block(text, "release-smoke-fast-current-check")
+        self.assertIn("--reuse-if-current", fast_current_check_block)
+        self.assertIn("--reuse-only", fast_current_check_block)
+        self.assertIn('--reuse-from "$(RELEASE_SMOKE_FAST_OUT)"', fast_current_check_block)
+        self.assertIn(
+            '--out "$(RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT)"',
+            fast_current_check_block,
+        )
+        self.assertEqual(
+            _recipe_lines(text, "release-smoke-fast-refresh-check"),
+            [
+                '@if $(MAKE) release-smoke-fast-current-check; then \\',
+                'echo "fast release smoke evidence is current; reused $(RELEASE_SMOKE_FAST_OUT)"; \\',
+                "else \\",
+                "$(MAKE) release-smoke-fast; \\",
+                "$(MAKE) release-smoke-fast-current-check; \\",
+                "fi",
+            ],
+        )
+        release_doc_text = DOCS_RELEASE.read_text(encoding="utf-8")
+        self.assertIn(
+            "developer/package precheck이며 canonical release evidence로 쓰지 않는다",
+            release_doc_text,
+        )
+        self.assertIn(
+            "canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다",
+            release_doc_text,
+        )

@@ -49,6 +49,9 @@ FAST_SMOKE_TESTS ?= \
 REPORT_CONTRACT_CORE_TESTS ?= \
 	tests/test_test_execution_summary.py \
 	tests/test_makefile_static_gates.py \
+	tests/test_makefile_release_smoke_static_gates.py \
+	tests/test_makefile_test_execution_summary_gates.py \
+	tests/test_makefile_auto_improve_goal_static_gates.py \
 	tests/test_makefile_public_registry_supply_chain_gates.py \
 	tests/test_ci_workflow_static.py \
 	tests/test_mechanism_navigation_index.py \
@@ -100,6 +103,9 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_runtime_codehealth_hardening_guards.py \
 	tests/test_make_target_inventory.py \
 	tests/test_makefile_static_gates.py \
+	tests/test_makefile_release_smoke_static_gates.py \
+	tests/test_makefile_test_execution_summary_gates.py \
+	tests/test_makefile_auto_improve_goal_static_gates.py \
 	tests/test_makefile_public_registry_supply_chain_gates.py \
 	tests/test_manifest_export_symlink_safety.py \
 	tests/test_mechanism_navigation_index.py \

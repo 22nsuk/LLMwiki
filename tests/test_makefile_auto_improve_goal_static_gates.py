@@ -1,0 +1,1004 @@
+from __future__ import annotations
+
+import re
+import unittest
+from pathlib import Path
+
+import pytest
+
+pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+
+MAKEFILE = Path("Makefile")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _makefile_text() -> str:
+    text = MAKEFILE.read_text(encoding="utf-8")
+    for mk_file in sorted(REPO_ROOT.glob("mk/*.mk")):
+        text += "\n" + mk_file.read_text(encoding="utf-8")
+    return text
+
+
+def _target_block(text: str, target: str) -> str:
+    if target == ".PHONY":
+        matches = list(
+            re.finditer(
+                rf"^{re.escape(target)}:(?P<deps>[^\n]*)(?P<body>(?:\n\t[^\n]*)*)",
+                text,
+                flags=re.MULTILINE,
+            )
+        )
+        if not matches:
+            raise AssertionError(f"missing Makefile target: {target}")
+        return "\n".join(m.group(0) for m in matches)
+    match = re.search(
+        rf"^{re.escape(target)}:(?P<deps>[^\n]*)(?P<body>(?:\n\t[^\n]*)*)",
+        text,
+        flags=re.MULTILINE,
+    )
+    if match is None:
+        raise AssertionError(f"missing Makefile target: {target}")
+    return match.group(0)
+
+
+def _recipe_lines(text: str, target: str) -> list[str]:
+    block = _target_block(text, target)
+    return [line.strip() for line in block.splitlines()[1:] if line.startswith("\t")]
+
+
+def _target_dependencies(text: str, target: str) -> tuple[str, ...]:
+    header = _target_block(text, target).splitlines()[0]
+    _, _, raw_deps = header.partition(":")
+    return tuple(raw_deps.split())
+
+
+def _assert_target_depends_on(
+    case: unittest.TestCase, text: str, target: str, dependency: str
+) -> None:
+    case.assertIn(dependency, _target_dependencies(text, target))
+
+
+def _makefile_assignment_value(text: str, variable: str) -> str:
+    prefix = f"{variable} ?="
+    for line in text.splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix) :].strip()
+    raise AssertionError(f"missing Makefile assignment: {variable}")
+
+
+def _assert_assignment_exists(
+    case: unittest.TestCase,
+    text: str,
+    variable: str,
+    expected_value: str | None = None,
+) -> str:
+    value = _makefile_assignment_value(text, variable)
+    if expected_value is not None:
+        case.assertEqual(value, expected_value)
+    return value
+
+
+def _assert_recipe_contains_tokens(
+    case: unittest.TestCase,
+    text: str,
+    target: str,
+    required_tokens: tuple[str, ...],
+) -> None:
+    block = _target_block(text, target)
+    missing = [token for token in required_tokens if token not in block]
+    case.assertEqual(missing, [], f"{target} recipe missing required tokens")
+
+
+class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
+    def test_auto_improve_readiness_target_does_not_self_dirty_with_core_refresh(self) -> None:
+        text = _makefile_text()
+
+        self.assertIn(
+            "AUTO_IMPROVE_READINESS_OUT ?= ops/reports/auto-improve-readiness.json",
+            text,
+        )
+        self.assertIn(
+            "AUTO_IMPROVE_READINESS_CANDIDATE_OUT ?= tmp/auto-improve-readiness.candidate.json",
+            text,
+        )
+        self.assertIn("AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH ?= 0", text)
+        self.assertIn(
+            "auto-improve-readiness: auto-improve-readiness-worktree-guard",
+            text,
+        )
+        self.assertNotIn(
+            "auto-improve-readiness: refresh-generated-core",
+            text,
+        )
+        self.assertIn(
+            '$(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)"',
+            _target_block(text, "auto-improve-readiness"),
+        )
+        self.assertIn(
+            "ops.scripts.canonical_artifact_promote",
+            _target_block(text, "auto-improve-readiness"),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-readiness-report",
+            (
+                "$(MAKE) auto-improve-readiness-worktree-guard",
+                "$(MAKE) refresh-generated-core",
+                "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0",
+                "$(MAKE) remediation-backlog",
+            ),
+        )
+        self.assertIn("auto-improve-readiness-report-body:", text)
+        self.assertIn(
+            'if [ "$(AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH)" = "1" ]; then $(MAKE) auto-improve-readiness-worktree-guard; fi',
+            _target_block(text, "auto-improve-readiness-report-body"),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-readiness-worktree-guard",
+            (
+                "ops.scripts.goal_worktree_guard",
+                "--requested-mode \"$(GOAL_WORKTREE_MODE)\"",
+                "--out \"$(GOAL_WORKTREE_GUARD_OUT)\"",
+            ),
+        )
+
+    def test_auto_improve_goal_targets_write_contract_and_status_report(self) -> None:
+        text = _makefile_text()
+
+        for variable, expected in (
+            ("CODEX_GOAL_CONTRACT_OUT", "ops/reports/codex-goal-contract.json"),
+            ("CODEX_GOAL_PROMPT_OUT", "ops/reports/codex-goal-prompt.json"),
+            ("GOAL_RUN_ID", "auto-improve-trial"),
+            ("GOAL_CONTRACT_RUN_ID", "$(GOAL_RUN_ID)"),
+            ("GOAL_ACTIVE_STATE_DIR", "runs/goal-$(GOAL_CONTRACT_RUN_ID)/state"),
+            (
+                "CODEX_GOAL_ACTIVE_CONTRACT_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/codex-goal-contract.json",
+            ),
+            ("GOAL_WORKTREE_GUARD_OUT", "ops/reports/goal-worktree-guard.json"),
+            ("GOAL_WORKTREE_MODE", "git"),
+            ("GOAL_RUN_STATUS_OUT", "ops/reports/goal-run-status.json"),
+            (
+                "GOAL_ACTIVE_RUN_STATUS_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/goal-run-status.json",
+            ),
+            (
+                "GOAL_RUN_STATUS_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/goal-run-status.candidate.json",
+            ),
+            (
+                "GOAL_LOCAL_READINESS_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/auto-improve-readiness.json",
+            ),
+            (
+                "GOAL_LOCAL_READINESS_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/auto-improve-readiness.candidate.json",
+            ),
+            (
+                "GOAL_LOCAL_SESSION_SYNOPSIS_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/session-synopsis.json",
+            ),
+            (
+                "GOAL_LOCAL_SESSION_SYNOPSIS_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/session-synopsis.candidate.json",
+            ),
+            (
+                "GOAL_LOCAL_NEGATIVE_LESSONS_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/self-improvement-negative-lessons.json",
+            ),
+            (
+                "GOAL_LOCAL_NEGATIVE_LESSONS_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/self-improvement-negative-lessons.candidate.json",
+            ),
+            (
+                "GOAL_LOCAL_REMEDIATION_BACKLOG_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/remediation-backlog.json",
+            ),
+            (
+                "GOAL_LOCAL_REMEDIATION_BACKLOG_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/remediation-backlog.candidate.json",
+            ),
+            ("GOAL_RUNTIME_CERTIFICATE_OUT", "ops/reports/goal-runtime-certificate.json"),
+            (
+                "GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT",
+                "tmp/goal-runtime-certificate.candidate.json",
+            ),
+            ("GOAL_RUNTIME_CLEAN_TRANSIENT_OUT", "tmp/goal-runtime-clean-transient.json"),
+            ("GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY", "1"),
+            (
+                "GOAL_RUNTIME_CLEAN_TRANSIENT_STATUS_REPORT",
+                "$(GOAL_RUN_STATUS_OUT)",
+            ),
+            (
+                "GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT",
+                "tmp/goal-runtime-quarantine-preflight.json",
+            ),
+            (
+                "GOAL_RUNTIME_FIXED_POINT_CHECK_OUT",
+                "tmp/goal-runtime-fixed-point-check.json",
+            ),
+            (
+                "GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_OUT",
+                "tmp/goal-runtime-local-evidence-refresh.json",
+            ),
+            ("GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_MAX_ITERATIONS", "6"),
+            ("GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_TIMEOUT_SECONDS", "300"),
+            (
+                "GOAL_RUNTIME_RUN_ADMISSION_OUT",
+                "tmp/goal-runtime-run-admission.json",
+            ),
+            ("GOAL_RUNTIME_RUN_ADMISSION_MAINTENANCE_ACTION_PLAN", ""),
+            (
+                "GOAL_MAINTENANCE_ACTION_PLAN_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/maintenance-action.json",
+            ),
+            (
+                "GOAL_RUNTIME_CLOSEOUT_PLAN_OUT",
+                "tmp/goal-runtime-closeout-plan.json",
+            ),
+            ("GOAL_RUNTIME_CLOSEOUT_BUDGET", "cheap"),
+            ("GOAL_RUNTIME_CLOSEOUT_STATE_DIR", "$(GOAL_ACTIVE_STATE_DIR)/closeout"),
+            (
+                "GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT",
+                "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/script-output-surfaces.json",
+            ),
+            (
+                "GOAL_RUNTIME_CLOSEOUT_GENERATED_ARTIFACT_INDEX_OUT",
+                "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/generated-artifact-index.json",
+            ),
+            (
+                "GOAL_RUNTIME_CLOSEOUT_ARTIFACT_FRESHNESS_OUT",
+                "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/artifact-freshness-report.json",
+            ),
+            ("GOAL_RUNTIME_LOCK_PATH", "$(GOAL_RUN_LOG_DIR)/goal-runtime.lock.json"),
+            (
+                "GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT",
+                "tmp/goal-runtime-python-preflight.json",
+            ),
+            (
+                "GOAL_SESSION_RESULT_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/auto-improve-goal-session-result.json",
+            ),
+            ("GOAL_RUN_STATUS", "blocked"),
+            ("GOAL_RUNTIME_MODE", "self_improvement_loop"),
+            ("GOAL_RUNTIME_SECONDS", "21600"),
+            ("GOAL_MAX_UNATTENDED_SECONDS", "$(GOAL_RUNTIME_SECONDS)"),
+            ("GOAL_RUNNER_TIMEOUT_SECONDS", "28800"),
+            ("GOAL_MAX_MINUTES", "360"),
+            ("GOAL_MAX_PROPOSALS", "1"),
+            ("GOAL_MAX_CONSECUTIVE_FAILURES", "1"),
+            ("GOAL_MAINTAIN_UNTIL_BUDGET", "0"),
+            (
+                "GOAL_MAINTAIN_UNTIL_BUDGET_FLAG",
+                "$(if $(filter 1 true yes on,$(strip $(GOAL_MAINTAIN_UNTIL_BUDGET))),--maintain-until-budget,)",
+            ),
+            ("GOAL_MAINTENANCE_INTERVAL_SECONDS", "300"),
+            ("GOAL_POST_PROMOTE_MAINTENANCE_CYCLES", "1"),
+            ("GOAL_EXECUTOR", "codex_exec"),
+            ("GOAL_ARTIFACT_CLASS", "system_mechanism"),
+            ("GOAL_FINAL_STATUS", "stopped"),
+            ("GOAL_RUN_LOG_DIR", "build/goal-runs"),
+        ):
+            _assert_assignment_exists(self, text, variable, expected)
+        for variable in (
+            "GOAL_WORKTREE_STRICT",
+            "GOAL_ALLOW_LEARNING_UNCERTAIN",
+            "GOAL_RUNTIME_CERTIFICATE_MODE",
+            "GOAL_RUNTIME_CERTIFICATE_APPLY",
+        ):
+            _assert_assignment_exists(self, text, variable, "")
+        run_command = _assert_assignment_exists(self, text, "GOAL_RUN_COMMAND")
+        self.assertIn("ops.scripts.auto_improve_loop", run_command)
+        self.assertIn("--session-id \"$(GOAL_RUN_ID)\"", run_command)
+        self.assertIn("--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"", run_command)
+        self.assertIn("--executor \"$(GOAL_EXECUTOR)\"", run_command)
+        self.assertIn("--class \"$(GOAL_ARTIFACT_CLASS)\"", run_command)
+        self.assertIn("$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)", run_command)
+        self.assertIn("$(GOAL_MAINTAIN_UNTIL_BUDGET_FLAG)", run_command)
+        self.assertNotIn("$(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,)", run_command)
+        self.assertIn("--maintenance-interval-seconds \"$(GOAL_MAINTENANCE_INTERVAL_SECONDS)\"", run_command)
+        self.assertIn(
+            "--post-promote-maintenance-cycles \"$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)\"",
+            run_command,
+        )
+        resume_command = _assert_assignment_exists(self, text, "GOAL_RESUME_COMMAND")
+        self.assertIn("ops.scripts.auto_improve_loop", resume_command)
+        self.assertIn("--resume-session \"$(GOAL_RUN_ID)\"", resume_command)
+        self.assertIn("--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"", resume_command)
+        self.assertIn("--max-minutes \"$(GOAL_MAX_MINUTES)\"", resume_command)
+        self.assertIn("--max-proposals \"$(GOAL_MAX_PROPOSALS)\"", resume_command)
+        self.assertIn(
+            "--max-consecutive-failures \"$(GOAL_MAX_CONSECUTIVE_FAILURES)\"",
+            resume_command,
+        )
+        self.assertIn("$(GOAL_MAINTAIN_UNTIL_BUDGET_FLAG)", resume_command)
+        self.assertNotIn("$(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,)", resume_command)
+        self.assertIn("--maintenance-interval-seconds \"$(GOAL_MAINTENANCE_INTERVAL_SECONDS)\"", resume_command)
+        self.assertIn(
+            "--post-promote-maintenance-cycles \"$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)\"",
+            resume_command,
+        )
+        maintenance_action_command = _assert_assignment_exists(
+            self,
+            text,
+            "GOAL_MAINTENANCE_ACTION_NEXT_MAX_PROPOSALS",
+        )
+        self.assertIn("ops.scripts.auto_improve_loop", maintenance_action_command)
+        self.assertIn("--resume-session \"$(GOAL_RUN_ID)\"", maintenance_action_command)
+        self.assertIn(
+            "--print-maintenance-action-next-max-proposals",
+            maintenance_action_command,
+        )
+        self.assertIn(
+            "--maintenance-action-plan-out \"$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)\"",
+            maintenance_action_command,
+        )
+        phony = _target_block(text, ".PHONY")
+        for target in (
+            "codex-goal-contract",
+            "codex-goal-prompt",
+            "codex-goal-client",
+            "auto-improve-readiness-worktree-guard",
+            "auto-improve-goal-contract",
+            "goal-runtime-refresh",
+            "goal-runtime-publish-snapshot",
+            "goal-runtime-local-readiness",
+            "goal-runtime-local-session-synopsis",
+            "goal-runtime-local-negative-lessons",
+            "goal-runtime-local-remediation-backlog",
+            "goal-runtime-local-fixed-point-check",
+            "goal-runtime-local-evidence-refresh",
+            "goal-runtime-local-evidence-converge",
+            "goal-runtime-publish-local-evidence",
+            "goal-runtime-reconcile",
+            "goal-runtime-pre-run-cleanup",
+            "goal-runtime-between-run-settle",
+            "goal-runtime-closeout-plan",
+            "goal-runtime-closeout-candidate-script-output-surfaces",
+            "goal-runtime-closeout-candidate-generated-artifact-index",
+            "goal-runtime-closeout-candidate-artifact-freshness",
+            "goal-runtime-closeout-candidate-converge",
+            "goal-runtime-closeout-publish-script-output-surfaces",
+            "goal-runtime-closeout-publish",
+            "goal-runtime-closeout-finalize",
+            "goal-runtime-closeout",
+            "goal-runtime-closeout-full",
+            "goal-runtime-clean-transient",
+            "goal-runtime-quarantine-preflight",
+            "goal-runtime-fixed-point-check",
+            "goal-runtime-run-admission-converge",
+            "goal-runtime-run-admission-local-refresh",
+            "goal-runtime-run-admission",
+            "goal-runtime-run-admission-resume",
+            "goal-runtime-maintenance-action-plan",
+            "goal-runtime-lock-check",
+            "goal-runtime-lock-status",
+            "goal-runtime-lock-stop",
+            "goal-runtime-python-preflight",
+            "long-run-preflight-clean",
+            "auto-improve-goal-preflight",
+            "auto-improve-goal-run",
+            "auto-improve-goal-status",
+            "auto-improve-goal-resume",
+            "auto-improve-goal-maintenance-action",
+            "auto-improve-goal-finalize",
+            "auto-improve-goal-run-artifacts",
+            "goal-runtime-certificate",
+            "goal-worktree-guard",
+        ):
+            self.assertIn(target, phony)
+        codex_contract_header = _target_block(text, "codex-goal-contract").splitlines()[0]
+        self.assertNotIn("auto-improve-goal-contract", codex_contract_header)
+        _assert_target_depends_on(self, text, "codex-goal-prompt", "codex-goal-contract")
+        _assert_target_depends_on(self, text, "goal-runtime-refresh", "auto-improve-goal-status")
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission-converge", "goal-runtime-lock-check")
+        _assert_target_depends_on(
+            self,
+            text,
+            "goal-runtime-run-admission-converge",
+            "goal-runtime-python-preflight",
+        )
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission-local-refresh", "goal-runtime-lock-check")
+        _assert_target_depends_on(
+            self,
+            text,
+            "goal-runtime-run-admission-local-refresh",
+            "goal-runtime-python-preflight",
+        )
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission", "goal-runtime-run-admission-local-refresh")
+        _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-run-admission-converge")
+        _assert_target_depends_on(self, text, "auto-improve-goal-preflight", "goal-runtime-lock-check")
+        _assert_target_depends_on(
+            self,
+            text,
+            "auto-improve-goal-preflight",
+            "goal-runtime-python-preflight",
+        )
+        _assert_target_depends_on(self, text, "auto-improve-goal-run", "goal-runtime-run-admission")
+        _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "auto-improve-goal-status", "auto-improve-goal-contract")
+        admission_block = _target_block(text, "goal-runtime-run-admission")
+        self.assertIn(
+            "$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)",
+            admission_block,
+        )
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission-resume", "goal-runtime-run-admission")
+        _assert_target_depends_on(
+            self,
+            text,
+            "goal-runtime-maintenance-action-plan",
+            "goal-runtime-between-run-settle",
+        )
+        _assert_target_depends_on(self, text, "auto-improve-goal-resume", "goal-runtime-run-admission-resume")
+        _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-contract")
+        _assert_target_depends_on(
+            self,
+            text,
+            "auto-improve-goal-maintenance-action",
+            "goal-runtime-maintenance-action-plan",
+        )
+        _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
+        _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-run-admission-converge",
+            (
+                "$(MAKE) refresh-generated-core",
+                "$(MAKE) release-smoke-fast-refresh-check",
+                "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) goal-runtime-quarantine-preflight",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-fixed-point-check",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-run-admission-local-refresh",
+            (
+                "$(MAKE) release-smoke-fast-refresh-check",
+                "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) goal-runtime-quarantine-preflight",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-pre-run-cleanup",
+            (
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) artifact-freshness-refresh-check",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-between-run-settle",
+            (
+                "$(MAKE) refresh-generated-core",
+                "$(MAKE) goal-runtime-quarantine-preflight",
+                "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-fixed-point-check",
+            ),
+        )
+        for admission_target in (
+            "goal-runtime-pre-run-cleanup",
+        ):
+            admission_recipe = _recipe_lines(text, admission_target)
+            self.assertLess(
+                admission_recipe.index("$(MAKE) tmp-json-clean"),
+                admission_recipe.index("$(MAKE) goal-runtime-clean-transient"),
+            )
+            self.assertLess(
+                admission_recipe.index("$(MAKE) goal-runtime-local-evidence-converge"),
+                admission_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
+            )
+        settle_recipe = _recipe_lines(text, "goal-runtime-between-run-settle")
+        self.assertLess(
+            settle_recipe.index("$(MAKE) refresh-generated-core"),
+            settle_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
+        )
+        self.assertLess(
+            settle_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
+            settle_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
+        )
+        for admission_target in (
+            "goal-runtime-run-admission-converge",
+            "goal-runtime-run-admission-local-refresh",
+        ):
+            admission_recipe = _recipe_lines(text, admission_target)
+            self.assertLess(
+                admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
+                admission_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
+            )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-run-admission",
+            (
+                "ops.scripts.goal_runtime_run_admission",
+                "--out \"$(GOAL_RUNTIME_RUN_ADMISSION_OUT)\"",
+                "--quarantine-preflight-report \"$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)\"",
+                "--mutation-proposals-report \"$(MUTATION_PROPOSAL_OUT)\"",
+                "--readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
+                "--maintenance-action-plan \"$(GOAL_RUNTIME_RUN_ADMISSION_MAINTENANCE_ACTION_PLAN)\"",
+                "--strict",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-quarantine-preflight",
+            (
+                "ops.scripts.goal_runtime_quarantine_preflight",
+                "--out \"$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)\"",
+                "--mechanism-review-report \"$(MECHANISM_REVIEW_OUT)\"",
+                "--strict",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "codex-goal-client",
+            (
+                "tests/test_codex_goal_contract.py",
+                "tests/test_codex_goal_client.py",
+                "tests/test_codex_goal_prompt.py",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-contract",
+            (
+                "ops.scripts.codex_goal_client",
+                "--out \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--backend-type run_local_file",
+                "--runtime-mode \"$(GOAL_RUNTIME_MODE)\"",
+                "--max-unattended-seconds \"$(GOAL_MAX_UNATTENDED_SECONDS)\"",
+                "--max-proposals \"$(GOAL_MAX_PROPOSALS)\"",
+                "--max-consecutive-failures \"$(GOAL_MAX_CONSECUTIVE_FAILURES)\"",
+                "--goal-status-path \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--worktree-guard-report \"$(GOAL_WORKTREE_GUARD_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "codex-goal-contract",
+            (
+                "ops.scripts.codex_goal_client",
+                "--out \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+                "--backend-type file",
+                "--goal-status-path \"$(GOAL_RUN_STATUS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "codex-goal-prompt",
+            (
+                "ops.scripts.codex_goal_prompt",
+                "--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+                "--out \"$(CODEX_GOAL_PROMPT_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-lock-check",
+            (
+                "ops.scripts.goal_runtime_lock check",
+                "--lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
+                "--cleanup-stale",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-lock-status",
+            (
+                "ops.scripts.goal_runtime_lock status",
+                "--lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
+                "--json",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-lock-stop",
+            (
+                "ops.scripts.goal_runtime_lock stop",
+                "--lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
+                "--json",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-python-preflight",
+            (
+                "ops.scripts.bootstrap_preflight",
+                "--dev",
+                "--environment-class goal-runtime",
+                "--out \"$(GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-preflight",
+            (
+                "ops.scripts.goal_worktree_guard",
+                "--requested-mode \"$(GOAL_WORKTREE_MODE)\"",
+                "--out \"$(GOAL_WORKTREE_GUARD_OUT)\"",
+                "$(if $(GOAL_WORKTREE_STRICT),--strict,)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-status",
+            (
+                "ops.scripts.goal_run_status",
+                "--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--status-report-path \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_RUN_STATUS_CANDIDATE_OUT)\"",
+                "--write-run-artifacts",
+                "ops.scripts.canonical_artifact_promote",
+                "--schema ops/schemas/goal-run-status.schema.json",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-publish-snapshot",
+            (
+                "--candidate \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--out \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+                "--candidate \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_RUN_STATUS_OUT)\"",
+                "--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-clean-transient",
+            (
+                "ops.scripts.goal_runtime_clean_transient",
+                "--out \"$(GOAL_RUNTIME_CLEAN_TRANSIENT_OUT)\"",
+                "--status-report \"$(GOAL_RUNTIME_CLEAN_TRANSIENT_STATUS_REPORT)\"",
+                "$(if $(GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY),--apply,)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-fixed-point-check",
+            (
+                "ops.scripts.goal_runtime_fixed_point_check",
+                "--out \"$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-readiness",
+            (
+                "ops.scripts.auto_improve_readiness",
+                "--out \"$(GOAL_LOCAL_READINESS_CANDIDATE_OUT)\"",
+                "--remediation-backlog \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
+                "--out \"$(GOAL_LOCAL_READINESS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-session-synopsis",
+            (
+                "ops.scripts.session_synopsis",
+                "--out \"$(GOAL_LOCAL_SESSION_SYNOPSIS_CANDIDATE_OUT)\"",
+                "--auto-improve-readiness \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--goal-run-status \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-negative-lessons",
+            (
+                "ops.scripts.self_improvement_negative_lessons",
+                "--out \"$(GOAL_LOCAL_NEGATIVE_LESSONS_CANDIDATE_OUT)\"",
+                "--session-synopsis \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+                "--out \"$(GOAL_LOCAL_NEGATIVE_LESSONS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-remediation-backlog",
+            (
+                "ops.scripts.remediation_backlog",
+                "--out \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_CANDIDATE_OUT)\"",
+                "--self-improvement-negative-lessons \"$(GOAL_LOCAL_NEGATIVE_LESSONS_OUT)\"",
+                "--session-synopsis \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+                "--out \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-fixed-point-check",
+            (
+                "--codex-goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--goal-run-status \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--auto-improve-readiness \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--session-synopsis \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+                "--remediation-backlog \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
+            ),
+        )
+        reconcile_block = _target_block(text, "goal-runtime-reconcile")
+        self.assertNotIn("$(MAKE) goal-runtime-publish-snapshot", reconcile_block)
+        self.assertNotIn("$(MAKE) session-synopsis", reconcile_block)
+        self.assertNotIn("$(MAKE) remediation-backlog", reconcile_block)
+        self.assertNotIn("$(MAKE) auto-improve-readiness-report-body", reconcile_block)
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-reconcile",
+            (
+                "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-fixed-point-check",
+                "$(MAKE) generated-artifact-converge",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-plan",
+            (
+                "ops.scripts.goal_runtime_closeout",
+                "--out \"$(GOAL_RUNTIME_CLOSEOUT_PLAN_OUT)\"",
+                "--budget \"$(GOAL_RUNTIME_CLOSEOUT_BUDGET)\"",
+                "--candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-candidate-script-output-surfaces",
+            (
+                "ops.scripts.script_output_surfaces",
+                "--out \"$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-candidate-generated-artifact-index",
+            (
+                "ops.scripts.generated_artifact_index",
+                "--out \"$(GOAL_RUNTIME_CLOSEOUT_GENERATED_ARTIFACT_INDEX_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-candidate-artifact-freshness",
+            (
+                "ops.scripts.artifact_freshness_runtime",
+                "--out \"$(GOAL_RUNTIME_CLOSEOUT_ARTIFACT_FRESHNESS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-candidate-converge",
+            (
+                "$(MAKE) report-schema-samples-check",
+                "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) goal-runtime-closeout-candidate-script-output-surfaces",
+                "$(MAKE) goal-runtime-closeout-candidate-generated-artifact-index",
+                "$(MAKE) goal-runtime-closeout-candidate-artifact-freshness",
+            ),
+        )
+        candidate_block = _target_block(text, "goal-runtime-closeout-candidate-converge")
+        self.assertNotIn("$(MAKE) script-output-surfaces", candidate_block)
+        self.assertNotIn("$(MAKE) generated-artifact-index", candidate_block)
+        self.assertNotIn("$(MAKE) artifact-freshness", candidate_block)
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-publish-script-output-surfaces",
+            (
+                "ops.scripts.script_output_surfaces",
+                "--out \"$(SCRIPT_OUTPUT_SURFACES_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-publish",
+            (
+                "$(MAKE) goal-runtime-closeout-publish-script-output-surfaces",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-certificate",
+                "$(MAKE) generated-artifact-converge",
+            ),
+        )
+        self.assertEqual(
+            _recipe_lines(text, "goal-runtime-closeout-publish"),
+            [
+                "$(MAKE) goal-runtime-closeout-publish-script-output-surfaces",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-certificate",
+                "$(MAKE) generated-artifact-converge",
+            ],
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-finalize",
+            (
+                "$(MAKE) goal-runtime-fixed-point-check",
+            ),
+        )
+        self.assertNotIn(
+            "$(MAKE) generated-artifact-index",
+            _target_block(text, "goal-runtime-closeout-finalize"),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout",
+            (
+                "@set -e; \\",
+                "--budget cheap --candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\" --format targets",
+                "$(MAKE) $$target",
+                "GOAL_RUNTIME_CLOSEOUT_BUDGET=cheap",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-full",
+            (
+                "@set -e; \\",
+                "--budget full --candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\" --format targets",
+                "$(MAKE) $$target",
+                "GOAL_RUNTIME_CLOSEOUT_BUDGET=full",
+            ),
+        )
+        self.assertNotIn(
+            "test-execution-summary-full-refresh",
+            _target_block(text, "goal-runtime-closeout"),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-evidence-refresh",
+            (
+                "ops.scripts.goal_runtime_local_evidence_refresh",
+                "--out \"$(GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_OUT)\"",
+                "--max-iterations \"$(GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_MAX_ITERATIONS)\"",
+                "--timeout-seconds \"$(GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_TIMEOUT_SECONDS)\"",
+                "--codex-goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--goal-run-status \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--auto-improve-readiness \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--session-synopsis \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+                "--negative-lessons \"$(GOAL_LOCAL_NEGATIVE_LESSONS_OUT)\"",
+                "--remediation-backlog \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
+            ),
+        )
+        local_refresh_block = _target_block(text, "goal-runtime-local-evidence-refresh")
+        self.assertNotIn("$(MAKE) goal-runtime-refresh", local_refresh_block)
+        self.assertNotIn("$(MAKE) goal-runtime-local-readiness", local_refresh_block)
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-evidence-converge",
+            (
+                "$(MAKE) goal-runtime-local-evidence-refresh",
+                "$(MAKE) goal-runtime-local-fixed-point-check",
+            ),
+        )
+        self.assertEqual(
+            _target_block(text, "goal-runtime-publish-local-evidence").count(
+                "ops.scripts.canonical_artifact_promote"
+            ),
+            6,
+        )
+        self.assertIn(
+            "$(MAKE) goal-runtime-local-evidence-converge",
+            _recipe_lines(text, "goal-runtime-publish-local-evidence")[0],
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-run",
+            (
+                "ops.scripts.goal_runtime_runner",
+                "--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--run-id \"$(GOAL_RUN_ID)\"",
+                "--runtime-mode \"$(GOAL_RUNTIME_MODE)\"",
+                "--status-report-path \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--result-out \"$(GOAL_SESSION_RESULT_OUT)\"",
+                "--heartbeat-interval-seconds \"$(GOAL_HEARTBEAT_INTERVAL_SECONDS)\"",
+                "--checkpoint-interval-seconds \"$(GOAL_CHECKPOINT_INTERVAL_SECONDS)\"",
+                "--timeout-seconds \"$(GOAL_RUNNER_TIMEOUT_SECONDS)\"",
+                "--workspace-lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
+                "-- $(GOAL_RUN_COMMAND)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-resume",
+            (
+                "ops.scripts.goal_runtime_runner",
+                "--resume-from-checkpoint",
+                "--result-out \"$(GOAL_SESSION_RESULT_OUT)\"",
+                "--heartbeat-interval-seconds \"$(GOAL_HEARTBEAT_INTERVAL_SECONDS)\"",
+                "--checkpoint-interval-seconds \"$(GOAL_CHECKPOINT_INTERVAL_SECONDS)\"",
+                "--timeout-seconds \"$(GOAL_RUNNER_TIMEOUT_SECONDS)\"",
+                "--workspace-lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
+                "-- $(GOAL_RESUME_COMMAND)",
+            ),
+        )
+        self.assertNotIn("$(MAKE)", _target_block(text, "auto-improve-goal-run"))
+        self.assertNotIn("$(MAKE)", _target_block(text, "auto-improve-goal-resume"))
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-maintenance-action",
+            (
+                "GOAL_MAINTENANCE_ACTION_PLAN_OUT",
+                "$(MAKE) auto-improve-goal-resume",
+                "GOAL_MAX_PROPOSALS=\"$$next_max_proposals\"",
+                "GOAL_RUNTIME_RUN_ADMISSION_MAINTENANCE_ACTION_PLAN=\"$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)\"",
+            ),
+        )
+        self.assertNotIn("> \"$(GOAL_SESSION_RESULT_OUT)\"", _target_block(text, "auto-improve-goal-run"))
+        self.assertNotIn("> \"$(GOAL_SESSION_RESULT_OUT)\"", _target_block(text, "auto-improve-goal-resume"))
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-finalize",
+            (
+                "--status \"$(GOAL_FINAL_STATUS)\"",
+                "--completed-at \"$(GOAL_COMPLETED_AT)\"",
+                "--write-run-artifacts",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-certificate",
+            (
+                "ops.scripts.goal_runtime_certificate_report",
+                "--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--status-report \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)\"",
+                "$(if $(GOAL_RUNTIME_CERTIFICATE_MODE),--runtime-mode \"$(GOAL_RUNTIME_CERTIFICATE_MODE)\",)",
+                "$(if $(GOAL_RUNTIME_CERTIFICATE_APPLY),--apply,)",
+                "ops/schemas/goal-runtime-certificate.schema.json",
+                "--expected-artifact-kind goal_runtime_certificate",
+            ),
+        )
+
