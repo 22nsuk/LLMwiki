@@ -371,6 +371,7 @@
           "tests/test_mutation_proposal.py::MutationProposalTest::test_missing_artifact_envelope_fails_fast_for_primary_evidence",
           "tests/test_mutation_proposal.py::MutationProposalTest::test_unknown_currentness_fails_fast_for_primary_evidence",
           "tests/test_auto_improve_readiness_runtime.py",
+          "tests/test_auto_improve_readiness_queue_runtime.py",
           "tests/test_artifact_freshness_runtime.py::test_no_root_ephemeral_test_artifacts",
           "tests/test_artifact_freshness_runtime.py::ArtifactFreshnessRuntimeTests::test_report_accepts_enveloped_current_json_artifact",
           "tests/test_release_smoke.py::ReleaseSmokeTest::test_build_smoke_commands_match_release_gate_profiles",
