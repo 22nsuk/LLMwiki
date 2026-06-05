@@ -70,6 +70,31 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["routing_decision"]["allowed_rungs"], [1, 2, 3])
             self.assertEqual(report["routing_decision"]["selected_rung"], 1)
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "medium")
+            self.assertEqual(report["manual_dispatch"]["contract"], "manual_subagent_dispatch_v1")
+            self.assertEqual(report["manual_dispatch"]["selected_rung"], 1)
+            self.assertEqual(report["manual_dispatch"]["toml_fallback_role"], "instruction_surface_only")
+            self.assertEqual(
+                report["manual_dispatch"]["launch_parameters"],
+                {
+                    "profile_path": ".codex/agents/worker.toml",
+                    "model": "gpt-5.5",
+                    "model_reasoning_effort": "medium",
+                    "sandbox_mode": "workspace-write",
+                },
+            )
+            self.assertEqual(
+                report["manual_dispatch"]["dispatch_surfaces"]["ladder_compliant_surface"],
+                "controllable_launch_parameters",
+            )
+            self.assertIn(
+                "codex_exec",
+                report["manual_dispatch"]["dispatch_surfaces"]["controllable_launch"],
+            )
+            self.assertIn(
+                "fixed-reasoning",
+                report["manual_dispatch"]["dispatch_surfaces"]["platform_named_role"],
+            )
+            self.assertIn("platform named roles may ignore", report["manual_dispatch"]["operator_action"])
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
                 "sufficient_for_complexity",
@@ -229,6 +254,8 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["routing_decision"]["allowed_rungs"], [1, 2])
             self.assertEqual(report["routing_decision"]["requested_rung"], 3)
             self.assertEqual(report["routing_decision"]["selected_rung"], 2)
+            self.assertEqual(report["manual_dispatch"]["selected_rung"], 2)
+            self.assertEqual(report["manual_dispatch"]["launch_parameters"]["model_reasoning_effort"], "high")
             self.assertTrue(
                 any(
                     reason["type"] == "allowed_rung_clamp"

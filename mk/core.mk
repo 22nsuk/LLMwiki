@@ -36,6 +36,7 @@ help:
 		"  make sync-public-policy           update public mirror policy templates" \
 		"  make public-check                 export and verify the public mirror" \
 		"  make public-check-all             export and run the full public check suite" \
+		"  make cbm-smoke-public             optional CBM sidecar health check" \
 		"" \
 		"Mechanism:" \
 		"  make auto-improve-readiness       refresh maintainer readiness evidence" \

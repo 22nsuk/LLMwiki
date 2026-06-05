@@ -45,6 +45,48 @@ class CbmPublicExportError(RuntimeError):
     pass
 
 
+def _is_same_or_child(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def validate_cbm_local_paths(
+    vault: Path,
+    public_out: Path,
+    *,
+    cache_dir: Path,
+    cache_root: Path,
+) -> None:
+    resolved_vault = vault.resolve()
+    resolved_public_out = public_out.expanduser().resolve()
+    resolved_cache_dir = cache_dir.expanduser().resolve()
+    resolved_cache_root = cache_root.expanduser().resolve()
+
+    if resolved_cache_root == Path(resolved_cache_root.anchor):
+        raise CbmPublicExportError(f"refusing unsafe CBM_CACHE_ROOT={resolved_cache_root}")
+    if _is_same_or_child(resolved_cache_root, resolved_vault) or _is_same_or_child(
+        resolved_vault, resolved_cache_root
+    ):
+        raise CbmPublicExportError(
+            f"refusing CBM_CACHE_ROOT that overlaps vault: {resolved_cache_root}"
+        )
+
+    guarded_paths = {
+        "CBM_PUBLIC_OUT": resolved_public_out,
+        "CBM_CACHE_DIR": resolved_cache_dir,
+    }
+    for label, path in guarded_paths.items():
+        if path == Path(path.anchor):
+            raise CbmPublicExportError(f"refusing unsafe {label}={path}")
+        if not _is_same_or_child(path, resolved_cache_root):
+            raise CbmPublicExportError(f"{label} must be under CBM_CACHE_ROOT={resolved_cache_root}")
+        if _is_same_or_child(path, resolved_vault) or _is_same_or_child(resolved_vault, path):
+            raise CbmPublicExportError(f"refusing {label} that overlaps vault: {path}")
+
+
 def _remove_path(path: Path) -> None:
     if path.is_dir():
         shutil.rmtree(path)
@@ -125,6 +167,20 @@ def build_cbm_public_export(
     return manifest
 
 
+def format_cbm_export_summary(manifest: dict[str, Any]) -> str:
+    pruned = ",".join(manifest["pruned_public_export_paths"])
+    return "\n".join(
+        (
+            "cbm_public_export=ok",
+            f"manifest={manifest['manifest_file']}",
+            f"source_public_files={manifest['source_public_file_count']}",
+            f"index_files={manifest['source_file_count']}",
+            f"total_files={manifest['file_count']}",
+            f"pruned={pruned}",
+        )
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Build a public-safe codebase-memory-mcp index source export."
@@ -133,6 +189,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", default=str(Path(DEFAULT_PUBLIC_OUT).with_name("llmwiki-cbm-surface")))
     parser.add_argument("--cbmignore-template", default=DEFAULT_CBMIGNORE_TEMPLATE)
     parser.add_argument("--no-clean", action="store_true")
+    parser.add_argument("--cache-dir")
+    parser.add_argument("--cache-root")
+    parser.add_argument("--check-local-paths", action="store_true")
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Print a compact export summary instead of the full manifest file list.",
+    )
     return parser
 
 
@@ -143,6 +207,18 @@ def main() -> int:
     out_dir = Path(args.out)
     if not out_dir.is_absolute():
         out_dir = (vault / out_dir).resolve()
+    if args.cache_dir or args.cache_root or args.check_local_paths:
+        if not args.cache_dir or not args.cache_root:
+            parser.error("--cache-dir and --cache-root must be provided together")
+        validate_cbm_local_paths(
+            vault,
+            out_dir,
+            cache_dir=Path(args.cache_dir),
+            cache_root=Path(args.cache_root),
+        )
+        if args.check_local_paths:
+            print("cbm_local_paths=ok")
+            return 0
     cbmignore_template = Path(args.cbmignore_template)
     if not cbmignore_template.is_absolute():
         cbmignore_template = (vault / cbmignore_template).resolve()
@@ -156,7 +232,10 @@ def main() -> int:
     except CbmPublicExportError as exc:
         print(str(exc), file=sys.stderr)
         return 2
-    print(json.dumps(manifest, ensure_ascii=False, indent=2))
+    if args.summary:
+        print(format_cbm_export_summary(manifest))
+    else:
+        print(json.dumps(manifest, ensure_ascii=False, indent=2))
     return 0
 
 

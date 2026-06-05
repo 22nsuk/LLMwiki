@@ -5,7 +5,13 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.cbm_public_export import CBM_MANIFEST_NAME, build_cbm_public_export
+from ops.scripts.cbm_public_export import (
+    CBM_MANIFEST_NAME,
+    CbmPublicExportError,
+    build_cbm_public_export,
+    format_cbm_export_summary,
+    validate_cbm_local_paths,
+)
 from ops.scripts.export_public_repo import (
     DEFAULT_PUBLIC_OUT,
     build_parser,
@@ -184,6 +190,49 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertNotIn("ops/reports/workflow-dependency-planner.json", manifest["files"])
             exported_file_count = len([path for path in out_dir.rglob("*") if path.is_file()])
             self.assertEqual(manifest["file_count"], exported_file_count)
+            summary = format_cbm_export_summary(manifest)
+            self.assertIn("cbm_public_export=ok", summary)
+            self.assertIn("manifest=CBM-EXPORT-MANIFEST.json", summary)
+            self.assertIn("source_public_files=", summary)
+            self.assertIn("index_files=", summary)
+            self.assertIn("total_files=", summary)
+            self.assertIn("pruned=ops/operator,ops/reports,PUBLIC-EXPORT-MANIFEST.json", summary)
+            self.assertNotIn("tests/test_example.py", summary)
+
+    def test_cbm_local_path_guard_rejects_repo_overlapping_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            vault = root / "vault"
+            cache_root = root / "cache"
+            vault.mkdir()
+            cache_root.mkdir()
+
+            validate_cbm_local_paths(
+                vault,
+                cache_root / "public-surface",
+                cache_dir=cache_root / "index",
+                cache_root=cache_root,
+            )
+
+            for public_out in (vault, vault / "docs", root):
+                with self.subTest(public_out=public_out), self.assertRaisesRegex(
+                    CbmPublicExportError,
+                    "CBM_PUBLIC_OUT|overlaps vault",
+                ):
+                    validate_cbm_local_paths(
+                        vault,
+                        public_out,
+                        cache_dir=cache_root / "index",
+                        cache_root=cache_root,
+                    )
+
+            with self.assertRaisesRegex(CbmPublicExportError, "CBM_CACHE_DIR"):
+                validate_cbm_local_paths(
+                    vault,
+                    cache_root / "public-surface",
+                    cache_dir=vault / "tmp" / "cbm-index",
+                    cache_root=cache_root,
+                )
 
     def test_export_public_repo_can_reuse_same_output_dir(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -52,7 +52,7 @@ repo-shared defaults는 아래 rung만 사용한다.
 이 저장소에서는 `.toml`의 model/reasoning을 최종 배정값으로 보지 않는다.
 
 - `.toml`은 repo-shared fallback instruction surface다.
-- 실제 rung 선택은 부모 agent가 `ops/scripts/select_subagent_rung.py`로 계산한다.
+- 실제 rung 선택은 부모 agent가 `ops/scripts/core/select_subagent_rung.py`로 계산한다.
 - selector는 `primary_target`, `supporting_target`, `test_file`, `manual_risk_flag`를 읽고 `complexity_policy`와 `subagent_routing_policy`를 합쳐 선택한다.
 - selector report는 `escalation_reasons`, `deescalation_reasons`, `effort_sufficiency`를 함께 남겨, 왜 더 높은 effort를 쓰거나 쓰지 않았는지 audit 가능하게 한다.
 - 선택 결과는 항상 approved ladder와 role별 `allowed_rungs` 안으로 clamp된다.
@@ -64,6 +64,24 @@ repo-shared defaults는 아래 rung만 사용한다.
 - validator는 준비된 workspace의 `.venv/bin/python`을 우선 사용하고, pytest replay에는 `PYTHONDONTWRITEBYTECODE=1` 및 `-p no:cacheprovider`를 붙여 cache/bytecode 쓰기 때문에 blocked로 오판하지 않게 한다.
 - runtime executor는 non-worker role 뒤에 workspace integrity guard를 실행해, reviewer/validator/auditor가 source/control file을 바꾸면 blocking executor report로 전환한다.
 - mechanism workspace 준비는 live repo의 `.venv`를 temp workspace에 symlink로 연결해 network 없이도 동일 dependency set으로 worker/validator checks를 실행하게 한다. `.venv` 자체는 diff/apply universe에서 계속 제외된다.
+
+### Manual Dispatch Contract
+
+수동으로 subagent를 고를 때도 `.toml`의 `model_reasoning_effort`를 그대로 최종 실행값으로 쓰지 않는다.
+
+1. 부모 agent는 먼저 `python -m ops.scripts.core.select_subagent_rung --role <role>`을 실행한다.
+2. 가능한 경우 `--primary-target`, `--supporting-target`, `--test-file`, `--manual-risk-flag`를 함께 넣어 실제 작업 표면을 반영한다.
+3. 의도적으로 더 높은 floor가 필요할 때만 `--requested-rung <1|2|3>`을 추가한다. selector는 role별 `allowed_rungs` 안으로 clamp한다.
+4. repo-native `codex_exec`나 model/reasoning override를 받는 controllable
+   default/custom subagent 실행면에서는 report의
+   `manual_dispatch.launch_parameters` 값을 그대로 사용한다. 이 필드는
+   `profile_path`, `model`, `model_reasoning_effort`, `sandbox_mode`를 포함한다.
+5. platform named role 실행면처럼 role 이름이 model/reasoning을 고정하는
+   surface에서는 selector가 그 값을 override한다고 가정하지 않는다. 선택된
+   rung과 platform fixed effort가 다르면 ladder-compliant manual dispatch가
+   아니므로, controllable 실행면에 profile instruction을 전달하거나 fixed
+   effort가 선택 rung과 맞는 role/surface를 고른다.
+6. `.toml`은 role intent와 fallback instruction surface다. selector가 실행 가능한 상황에서 `.toml` 기본 effort만으로 수동 dispatch를 끝내지 않는다.
 
 ## Profiles
 

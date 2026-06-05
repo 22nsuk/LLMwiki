@@ -13,8 +13,12 @@ CBM_PUBLIC_OUT ?= $(CBM_CACHE_ROOT)/llmwiki/codebase-memory-mcp/public-surface
 CBM_CACHE_DIR ?= $(CBM_CACHE_ROOT)/codebase-memory-mcp/llmwiki-public
 CBM_IGNORE_TEMPLATE ?= ops/templates/codebase-memory-mcp.cbmignore
 CBM_PROJECT_NAME ?= $(subst /,-,$(patsubst /%,%,$(CBM_PUBLIC_OUT)))
+CBM_SMOKE_PATTERN ?= cbm_public_export
+CBM_EXPORT_FLAGS ?= --summary
+CBM_SEARCH_PATTERN ?= $(CBM_SMOKE_PATTERN)
+CBM_SEARCH_LIMIT ?= 10
 
-.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check-summary-current-or-refresh public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-reset-local
+.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check-summary-current-or-refresh public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-safe-local-paths cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-search-public cbm-smoke-public cbm-reset-local
 
 sync-public-policy:
 	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"
@@ -28,8 +32,11 @@ public-export:
 cbm-require-bin:
 	@command -v "$(CBM_BIN)" >/dev/null 2>&1 || { printf '%s\n' "codebase-memory-mcp binary not found; install a verified operator-local binary or set CBM_BIN=/path/to/codebase-memory-mcp"; exit 127; }
 
-cbm-export-public:
-	$(PYTHON) -m ops.scripts.cbm_public_export --vault "$(VAULT)" --out "$(CBM_PUBLIC_OUT)" --cbmignore-template "$(CBM_IGNORE_TEMPLATE)"
+cbm-safe-local-paths:
+	$(PYTHON) -m ops.scripts.cbm_public_export --vault "$(VAULT)" --out "$(CBM_PUBLIC_OUT)" --cache-dir "$(CBM_CACHE_DIR)" --cache-root "$(CBM_CACHE_ROOT)" --check-local-paths
+
+cbm-export-public: cbm-safe-local-paths
+	$(PYTHON) -m ops.scripts.cbm_public_export --vault "$(VAULT)" --out "$(CBM_PUBLIC_OUT)" --cbmignore-template "$(CBM_IGNORE_TEMPLATE)" $(CBM_EXPORT_FLAGS)
 
 cbm-index-public: cbm-require-bin cbm-export-public
 	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli index_repository '{"repo_path":"$(CBM_PUBLIC_OUT)"}'
@@ -43,7 +50,15 @@ cbm-schema-public: cbm-require-bin
 cbm-architecture-public: cbm-require-bin
 	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli get_architecture '{"project":"$(CBM_PROJECT_NAME)"}'
 
-cbm-reset-local:
+cbm-search-public: cbm-require-bin
+	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli search_code '{"project":"$(CBM_PROJECT_NAME)","pattern":"$(CBM_SEARCH_PATTERN)","limit":$(CBM_SEARCH_LIMIT)}'
+
+cbm-smoke-public: cbm-index-public
+	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli get_graph_schema '{"project":"$(CBM_PROJECT_NAME)"}'
+	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli get_architecture '{"project":"$(CBM_PROJECT_NAME)"}'
+	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli search_code '{"project":"$(CBM_PROJECT_NAME)","pattern":"$(CBM_SMOKE_PATTERN)","limit":5}'
+
+cbm-reset-local: cbm-safe-local-paths
 	@test -n "$(CBM_CACHE_DIR)" && test "$(CBM_CACHE_DIR)" != "/" || { printf '%s\n' "refusing to reset unsafe CBM_CACHE_DIR=$(CBM_CACHE_DIR)"; exit 2; }
 	@test -n "$(CBM_PUBLIC_OUT)" && test "$(CBM_PUBLIC_OUT)" != "/" || { printf '%s\n' "refusing to reset unsafe CBM_PUBLIC_OUT=$(CBM_PUBLIC_OUT)"; exit 2; }
 	rm -rf "$(CBM_CACHE_DIR)" "$(CBM_PUBLIC_OUT)"

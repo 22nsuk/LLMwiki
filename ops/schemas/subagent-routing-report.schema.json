@@ -14,7 +14,8 @@
     "total_structural_metrics",
     "diagnostics",
     "complexity_profile",
-    "routing_decision"
+    "routing_decision",
+    "manual_dispatch"
   ],
   "properties": {
     "$schema": {
@@ -513,6 +514,91 @@
             }
           },
           "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "manual_dispatch": {
+      "type": "object",
+      "required": [
+        "contract",
+        "source",
+        "role",
+        "selected_rung",
+        "launch_parameters",
+        "dispatch_surfaces",
+        "toml_fallback_role",
+        "operator_action"
+      ],
+      "properties": {
+        "contract": {
+          "type": "string",
+          "const": "manual_subagent_dispatch_v1"
+        },
+        "source": {
+          "type": "string",
+          "const": "subagent_routing_selector"
+        },
+        "role": {
+          "type": "string"
+        },
+        "selected_rung": {
+          "type": "integer"
+        },
+        "launch_parameters": {
+          "type": "object",
+          "required": [
+            "profile_path",
+            "model",
+            "model_reasoning_effort",
+            "sandbox_mode"
+          ],
+          "properties": {
+            "profile_path": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            },
+            "model_reasoning_effort": {
+              "type": "string"
+            },
+            "sandbox_mode": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "dispatch_surfaces": {
+          "type": "object",
+          "required": [
+            "ladder_compliant_surface",
+            "controllable_launch",
+            "platform_named_role"
+          ],
+          "properties": {
+            "ladder_compliant_surface": {
+              "type": "string",
+              "const": "controllable_launch_parameters"
+            },
+            "controllable_launch": {
+              "type": "string",
+              "minLength": 1
+            },
+            "platform_named_role": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "toml_fallback_role": {
+          "type": "string",
+          "const": "instruction_surface_only"
+        },
+        "operator_action": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": false

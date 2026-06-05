@@ -86,9 +86,11 @@ For code/ops 구조 탐색, a verified operator-local `codebase-memory-mcp` bina
 can index the public-safe export:
 
 ```bash
+make cbm-smoke-public
 make cbm-index-public
 make cbm-schema-public
 make cbm-architecture-public
+make cbm-search-public CBM_SEARCH_PATTERN=release_run_ready
 ```
 
 This is a graph-first/file-verified hinting workflow. It is not canonical

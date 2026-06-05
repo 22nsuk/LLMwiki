@@ -52,9 +52,11 @@ make auto-improve-readiness
 ## Optional codebase-memory-mcp quickstart
 
 ```bash
+make cbm-smoke-public
 make cbm-index-public
 make cbm-schema-public
 make cbm-architecture-public
+make cbm-search-public CBM_SEARCH_PATTERN=release_run_ready
 ```
 
 Set `CBM_BIN=/path/to/codebase-memory-mcp` when the binary is not on `PATH`.

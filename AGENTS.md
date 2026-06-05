@@ -130,7 +130,8 @@ full local vault가 있을 때만 추가로:
 - 표준 index source는 full-vault root가 아니라 `make cbm-index-public`이 만드는 public-safe export다.
 - repo 수정 후 graph를 신뢰하기 전에는 `make cbm-index-public`로 재색인한다. CBM은 working tree를 자동 감시하지 않는다.
 - snippet/search 결과가 `CBM_PUBLIC_OUT` cache 경로를 반환하면 같은 relative path의 repo 원본 파일로 매핑해 수정한다.
-- 구조/영향 범위 질문에서는 broad grep/read 전에 `cbm-schema-public`, `cbm-architecture-public`, graph/search/trace/detect-change 계열 query를 먼저 볼 수 있다.
+- 구조/영향 범위 질문에서는 broad grep/read 전에 `cbm-schema-public`, `cbm-architecture-public`, graph/search/trace/detect_changes 계열 query를 먼저 볼 수 있다.
+- 새 세션에서 sidecar 자체가 유효한지 확인해야 하면 `make cbm-smoke-public`로 public-safe export, index, schema, architecture, fixed search probe를 한 번에 검증할 수 있다.
 - graph 결과와 `CALLS`/`WRITES`/`CONFIGURES` 같은 edge는 candidate link, not proof이며, live file read와 Make/Pytest gate로 확인한다.
 - `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`, `ops/operator/`, `ops/reports/`는 index/query 대상이 아니다.
 - `codebase-memory-mcp install`의 자동 agent config/hook 설정이나 blocking hook으로 Read/Grep/Edit workflow를 막지 않는다.

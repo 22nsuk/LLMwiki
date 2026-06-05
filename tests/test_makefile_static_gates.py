@@ -1600,11 +1600,14 @@ class MakefileStaticGateTests(unittest.TestCase):
         phony = _target_block(text, ".PHONY")
         for target in (
             "cbm-require-bin",
+            "cbm-safe-local-paths",
             "cbm-export-public",
             "cbm-index-public",
             "cbm-list-projects-public",
             "cbm-schema-public",
             "cbm-architecture-public",
+            "cbm-search-public",
+            "cbm-smoke-public",
             "cbm-reset-local",
         ):
             with self.subTest(target=target):
@@ -1617,15 +1620,30 @@ class MakefileStaticGateTests(unittest.TestCase):
             "CBM_CACHE_DIR ?= $(CBM_CACHE_ROOT)/codebase-memory-mcp/llmwiki-public",
             "CBM_IGNORE_TEMPLATE ?= ops/templates/codebase-memory-mcp.cbmignore",
             "CBM_PROJECT_NAME ?= $(subst /,-,$(patsubst /%,%,$(CBM_PUBLIC_OUT)))",
+            "CBM_SMOKE_PATTERN ?= cbm_public_export",
+            "CBM_EXPORT_FLAGS ?= --summary",
+            "CBM_SEARCH_PATTERN ?= $(CBM_SMOKE_PATTERN)",
+            "CBM_SEARCH_LIMIT ?= 10",
         ):
             self.assertIn(assignment, text)
 
+        safe_paths_block = _target_block(text, "cbm-safe-local-paths")
+        for token in (
+            "--check-local-paths",
+            '--cache-dir "$(CBM_CACHE_DIR)"',
+            '--cache-root "$(CBM_CACHE_ROOT)"',
+        ):
+            with self.subTest(target="cbm-safe-local-paths", token=token):
+                self.assertIn(token, safe_paths_block)
+
         export_block = _target_block(text, "cbm-export-public")
+        self.assertEqual(export_block.splitlines()[0], "cbm-export-public: cbm-safe-local-paths")
         for token in (
             "ops.scripts.cbm_public_export",
             '--vault "$(VAULT)"',
             '--out "$(CBM_PUBLIC_OUT)"',
             '--cbmignore-template "$(CBM_IGNORE_TEMPLATE)"',
+            "$(CBM_EXPORT_FLAGS)",
         ):
             self.assertIn(token, export_block)
 
@@ -1641,9 +1659,30 @@ class MakefileStaticGateTests(unittest.TestCase):
             '\'{"project":"$(CBM_PROJECT_NAME)"}\'',
             _target_block(text, "cbm-architecture-public"),
         )
+        search_block = _target_block(text, "cbm-search-public")
+        self.assertIn('"pattern":"$(CBM_SEARCH_PATTERN)"', search_block)
+        self.assertIn('"limit":$(CBM_SEARCH_LIMIT)', search_block)
+        self.assertIn(
+            "make cbm-smoke-public             optional CBM sidecar health check",
+            _target_block(text, "help"),
+        )
+        smoke_block = _target_block(text, "cbm-smoke-public")
+        self.assertEqual(smoke_block.splitlines()[0], "cbm-smoke-public: cbm-index-public")
+        for token in (
+            "get_graph_schema",
+            "get_architecture",
+            "search_code",
+            '"pattern":"$(CBM_SMOKE_PATTERN)"',
+        ):
+            with self.subTest(target="cbm-smoke-public", token=token):
+                self.assertIn(token, smoke_block)
         for release_gate in ("check", "check-finalized", "release-check", "release-source-ready"):
             with self.subTest(release_gate=release_gate):
                 self.assertNotIn("cbm-", _target_block(text, release_gate))
+        self.assertEqual(
+            _target_block(text, "cbm-reset-local").splitlines()[0],
+            "cbm-reset-local: cbm-safe-local-paths",
+        )
 
     def test_codebase_memory_mcp_onboarding_is_documented_in_public_entrypoints(self) -> None:
         agents_text = Path("AGENTS.md").read_text(encoding="utf-8")
@@ -1654,8 +1693,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         for token in (
             "Optional codebase-memory-mcp sidecar",
             "make cbm-index-public",
+            "make cbm-smoke-public",
             "cbm-schema-public",
             "cbm-architecture-public",
+            "detect_changes",
             "make cbm-index-public`로 재색인",
             "`CBM_PUBLIC_OUT` cache 경로",
             "candidate link, not proof",
@@ -1669,6 +1710,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "make cbm-index-public",
             "make cbm-schema-public",
             "make cbm-architecture-public",
+            "make cbm-smoke-public",
+            "make cbm-search-public",
             "graph-first/file-verified",
             "기존 `rg` / file read workflow",
         ):
@@ -1680,6 +1723,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "make cbm-index-public",
             "make cbm-schema-public",
             "make cbm-architecture-public",
+            "make cbm-smoke-public",
+            "make cbm-search-public",
             "graph-first/file-verified",
         ):
             with self.subTest(surface="ops/README.md", token=token):
@@ -1687,14 +1732,21 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         for token in (
             "CBM_BIN=/path/to/codebase-memory-mcp",
+            "make cbm-smoke-public",
+            "make cbm-search-public",
+            "Do not run `codebase-memory-mcp install`",
             "not a dependency",
             "assistant-specific",
             "CBM-EXPORT-MANIFEST.json",
+            "compact",
+            "new worker does not yet know",
+            "exact string is already known",
             "ops/reports/",
             "Re-run `make cbm-index-public` after repo edits",
             "cache export paths",
             "Map them back to the same relative path in the repo",
             "candidate links, not proof",
+            "detect_changes",
         ):
             with self.subTest(surface="docs/codebase-memory-mcp.md", token=token):
                 self.assertIn(token, cbm_docs_text)

@@ -12,11 +12,11 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.policy_runtime import load_policy, subagent_ladder_model_effort
     from ops.scripts.runtime_context import RuntimeContext
 else:
     from .output_runtime import display_path
-    from .policy_runtime import load_policy
+    from .policy_runtime import load_policy, subagent_ladder_model_effort
     from .runtime_context import RuntimeContext
 
 
@@ -34,21 +34,34 @@ def _load_toml(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _profile_entry(vault: Path, path: Path, policy_roles: dict[str, Any]) -> dict[str, Any]:
+def _profile_entry(vault: Path, path: Path, policy: dict[str, Any]) -> dict[str, Any]:
     payload = _load_toml(path)
+    policy_roles = policy["subagent_routing_policy"]["roles"]
     rel_path = path.relative_to(vault).as_posix()
     name = str(payload.get("name", "")).strip()
     role_policy = policy_roles.get(name, {}) if name else {}
+    default_rung = int(role_policy.get("default_rung", 0)) if role_policy else 0
+    if default_rung:
+        default_model, default_reasoning_effort = subagent_ladder_model_effort(policy, default_rung)
+    else:
+        default_model, default_reasoning_effort = "", ""
+    profile_model = str(payload.get("model", "")).strip()
+    profile_reasoning_effort = str(payload.get("model_reasoning_effort", "")).strip()
     return {
         "path": rel_path,
         "name": name,
         "description_present": bool(str(payload.get("description", "")).strip()),
-        "model": str(payload.get("model", "")).strip(),
-        "model_reasoning_effort": str(payload.get("model_reasoning_effort", "")).strip(),
+        "model": profile_model,
+        "model_reasoning_effort": profile_reasoning_effort,
         "sandbox_mode": str(payload.get("sandbox_mode", "")).strip(),
         "developer_instructions_present": bool(str(payload.get("developer_instructions", "")).strip()),
         "policy_role_declared": bool(role_policy),
-        "default_rung": int(role_policy.get("default_rung", 0)) if role_policy else 0,
+        "default_rung": default_rung,
+        "default_model": default_model,
+        "default_model_reasoning_effort": default_reasoning_effort,
+        "default_model_matches_policy": bool(role_policy) and profile_model == default_model,
+        "default_reasoning_effort_matches_policy": bool(role_policy)
+        and profile_reasoning_effort == default_reasoning_effort,
         "allowed_rungs": list(role_policy.get("allowed_rungs", [])) if role_policy else [],
     }
 
@@ -62,12 +75,12 @@ def build_report(
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     resolved_vault = vault.resolve()
     policy, _resolved_policy = load_policy(resolved_vault, policy_path)
-    policy_roles = policy["subagent_routing_policy"]["roles"]
     profiles = [
-        _profile_entry(resolved_vault, path, policy_roles)
+        _profile_entry(resolved_vault, path, policy)
         for path in sorted((resolved_vault / ".codex" / "agents").glob("*.toml"))
     ]
     profile_roles = {entry["name"] for entry in profiles if entry["name"]}
+    policy_roles = policy["subagent_routing_policy"]["roles"]
     policy_role_names = set(policy_roles)
     missing_profiles = sorted(policy_role_names - profile_roles)
     extra_profiles = sorted(profile_roles - policy_role_names)
@@ -76,7 +89,20 @@ def build_report(
         for entry in profiles
         if not entry["description_present"] or not entry["developer_instructions_present"]
     ]
-    status = "pass" if not missing_profiles and not extra_profiles and not incomplete_profiles else "fail"
+    default_mismatch_profiles = [
+        entry["path"]
+        for entry in profiles
+        if entry["policy_role_declared"]
+        and (
+            not entry["default_model_matches_policy"]
+            or not entry["default_reasoning_effort_matches_policy"]
+        )
+    ]
+    status = (
+        "pass"
+        if not missing_profiles and not extra_profiles and not incomplete_profiles and not default_mismatch_profiles
+        else "fail"
+    )
     return {
         "$schema": SCHEMA_PATH,
         "artifact_kind": "subagent_profile_schema",
@@ -89,11 +115,13 @@ def build_report(
             "missing_profile_count": len(missing_profiles),
             "extra_profile_count": len(extra_profiles),
             "incomplete_profile_count": len(incomplete_profiles),
+            "default_mismatch_count": len(default_mismatch_profiles),
         },
         "profiles": profiles,
         "missing_profiles": missing_profiles,
         "extra_profiles": extra_profiles,
         "incomplete_profiles": incomplete_profiles,
+        "default_mismatch_profiles": default_mismatch_profiles,
     }
 
 

@@ -3,7 +3,7 @@
   "title": "Subagent Profile Schema Report",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "profiles", "missing_profiles", "extra_profiles", "incomplete_profiles"],
+  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "profiles", "missing_profiles", "extra_profiles", "incomplete_profiles", "default_mismatch_profiles"],
   "properties": {
     "$schema": { "type": "string", "const": "ops/schemas/subagent-profile.schema.json" },
     "artifact_kind": { "type": "string", "const": "subagent_profile_schema" },
@@ -13,13 +13,14 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["profile_count", "policy_role_count", "missing_profile_count", "extra_profile_count", "incomplete_profile_count"],
+      "required": ["profile_count", "policy_role_count", "missing_profile_count", "extra_profile_count", "incomplete_profile_count", "default_mismatch_count"],
       "properties": {
         "profile_count": { "type": "integer", "minimum": 0 },
         "policy_role_count": { "type": "integer", "minimum": 0 },
         "missing_profile_count": { "type": "integer", "minimum": 0 },
         "extra_profile_count": { "type": "integer", "minimum": 0 },
-        "incomplete_profile_count": { "type": "integer", "minimum": 0 }
+        "incomplete_profile_count": { "type": "integer", "minimum": 0 },
+        "default_mismatch_count": { "type": "integer", "minimum": 0 }
       }
     },
     "profiles": {
@@ -27,7 +28,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "name", "description_present", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions_present", "policy_role_declared", "default_rung", "allowed_rungs"],
+        "required": ["path", "name", "description_present", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions_present", "policy_role_declared", "default_rung", "default_model", "default_model_reasoning_effort", "default_model_matches_policy", "default_reasoning_effort_matches_policy", "allowed_rungs"],
         "properties": {
           "path": { "type": "string", "minLength": 1 },
           "name": { "type": "string", "minLength": 1 },
@@ -38,12 +39,17 @@
           "developer_instructions_present": { "type": "boolean" },
           "policy_role_declared": { "type": "boolean" },
           "default_rung": { "type": "integer", "minimum": 0 },
+          "default_model": { "type": "string" },
+          "default_model_reasoning_effort": { "type": "string" },
+          "default_model_matches_policy": { "type": "boolean" },
+          "default_reasoning_effort_matches_policy": { "type": "boolean" },
           "allowed_rungs": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
         }
       }
     },
     "missing_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "extra_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-    "incomplete_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    "incomplete_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "default_mismatch_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
   }
 }

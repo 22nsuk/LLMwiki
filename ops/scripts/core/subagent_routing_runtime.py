@@ -291,6 +291,44 @@ def build_routing_decision(
     }
 
 
+def build_manual_dispatch_contract(
+    *,
+    role: str,
+    profile_path: str,
+    routing_decision: dict,
+) -> dict:
+    return {
+        "contract": "manual_subagent_dispatch_v1",
+        "source": "subagent_routing_selector",
+        "role": role,
+        "selected_rung": routing_decision["selected_rung"],
+        "launch_parameters": {
+            "profile_path": profile_path,
+            "model": routing_decision["model"],
+            "model_reasoning_effort": routing_decision["reasoning_effort"],
+            "sandbox_mode": routing_decision["sandbox_mode"],
+        },
+        "dispatch_surfaces": {
+            "ladder_compliant_surface": "controllable_launch_parameters",
+            "controllable_launch": (
+                "Use repo-native codex_exec or a default/custom subagent surface that accepts "
+                "model, model_reasoning_effort, sandbox_mode, and profile instructions."
+            ),
+            "platform_named_role": (
+                "Treat platform named roles as fixed-reasoning surfaces; use them only when "
+                "their fixed model/reasoning matches the selected rung, otherwise use a "
+                "controllable launch surface."
+            ),
+        },
+        "toml_fallback_role": "instruction_surface_only",
+        "operator_action": (
+            "Launch manual subagents through a controllable surface with these selected "
+            "values; platform named roles may ignore model_reasoning_effort overrides. "
+            "Use requested_rung only to request a higher floor within the role's allowed_rungs."
+        ),
+    }
+
+
 def build_report(
     vault: Path,
     policy: dict,
@@ -370,6 +408,7 @@ def build_report(
     supporting_target_paths = [rel_path for rel_path, _ in supporting_targets]
     test_file_paths = [rel_path for rel_path, _ in test_files]
 
+    profile_path_text = report_path(vault, profile_path)
     return {
         "$schema": SUBAGENT_ROUTING_SCHEMA,
         "vault": report_path(vault, vault),
@@ -379,7 +418,7 @@ def build_report(
             "version": policy.get("version"),
         },
         "role": role,
-        "profile_path": report_path(vault, profile_path),
+        "profile_path": profile_path_text,
         "inputs": {
             "primary_targets": primary_target_paths,
             "supporting_targets": supporting_target_paths,
@@ -400,6 +439,11 @@ def build_report(
             "dimension_evidence": dimension_evidence,
         },
         "routing_decision": routing_decision,
+        "manual_dispatch": build_manual_dispatch_contract(
+            role=role,
+            profile_path=profile_path_text,
+            routing_decision=routing_decision,
+        ),
     }
 
 

@@ -30,6 +30,11 @@ class SubagentProfileSchemaTests(unittest.TestCase):
         self.assertEqual(report["summary"]["missing_profile_count"], 0)
         self.assertEqual(report["summary"]["extra_profile_count"], 0)
         self.assertEqual(report["summary"]["incomplete_profile_count"], 0)
+        self.assertEqual(report["summary"]["default_mismatch_count"], 0)
+        self.assertEqual(report["default_mismatch_profiles"], [])
+        for profile in report["profiles"]:
+            self.assertTrue(profile["default_model_matches_policy"], msg=profile["path"])
+            self.assertTrue(profile["default_reasoning_effort_matches_policy"], msg=profile["path"])
         self.assertEqual(
             validate_with_schema(report, load_schema("ops/schemas/subagent-profile.schema.json")),
             [],

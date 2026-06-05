@@ -7,10 +7,19 @@ workflow requirement.
 
 ## Standard Flow
 
+First-run health check:
+
+```bash
+make cbm-smoke-public
+```
+
+Normal refresh and navigation:
+
 ```bash
 make cbm-index-public
 make cbm-schema-public
 make cbm-architecture-public
+make cbm-search-public CBM_SEARCH_PATTERN=release_run_ready
 ```
 
 If the binary is not on `PATH`, pass it explicitly:
@@ -18,6 +27,17 @@ If the binary is not on `PATH`, pass it explicitly:
 ```bash
 make cbm-index-public CBM_BIN=/path/to/codebase-memory-mcp
 ```
+
+Do not run `codebase-memory-mcp install` as part of this repo contract. Agent
+config and hook installation is operator-local setup; repository onboarding uses
+a verified local binary or an explicit `CBM_BIN`.
+
+For a first-run health check, prefer `make cbm-smoke-public`. It builds the
+public-safe export, indexes it, prints schema and architecture summaries, and
+runs one fixed `search_code` probe so the operator can see whether graph-backed
+navigation is usable before relying on it. The export step prints a compact
+summary; the full file list remains in `CBM-EXPORT-MANIFEST.json` under the
+generated export.
 
 ## Boundary
 
@@ -49,6 +69,12 @@ files describe the sidecar index boundary, not release evidence.
 Use CBM before broad grep when the question is about structure, ownership, or
 impact. It is most useful at the beginning of these tasks:
 
+CBM is a better starting point than `rg` when a new worker does not yet know
+the owning file or exact token, because graph-backed search can surface scripts,
+Make targets, docs, and tests together. When the exact string is already known,
+prefer `rg` first; it is smaller, deterministic, and reads the live working tree
+directly.
+
 - mapping the owner of a release, runtime, schema, or public-export behavior
 - finding adjacent tests and docs before changing an `ops/scripts` contract
 - checking whether a proposed change crosses public/private/generated
@@ -58,11 +84,12 @@ impact. It is most useful at the beginning of these tasks:
 
 Practical parent workflow:
 
-1. Run `make cbm-index-public` after source edits or before a fresh structural
-   investigation if the index might be stale.
+1. Run `make cbm-smoke-public` when validating a fresh sidecar setup. For normal
+   refreshes after source edits, `make cbm-index-public` is enough.
 2. Start with `make cbm-schema-public` or `make cbm-architecture-public` for a
    repository-level map.
-3. Use CBM graph/search/trace output to choose the first files to inspect.
+3. Use `make cbm-search-public CBM_SEARCH_PATTERN=<token>` or direct
+   graph/search/trace output to choose the first files to inspect.
 4. Read those repo files directly and verify every claim with `rg`, source
    reads, schema checks, tests, or Make targets.
 5. When CBM points to `CBM_PUBLIC_OUT`, translate the path back to the same
@@ -95,3 +122,8 @@ Do not use CBM as:
 - Treat `CALLS`, `WRITES`, `CONFIGURES`, `SEMANTICALLY_RELATED`, and other graph
   edges as candidate links, not proof.
 - If graph output conflicts with live repo files, the live files and tests win.
+
+Advanced direct CLI/MCP tools are optional. Use `make cbm-list-projects-public`
+to confirm the project name, and `codebase-memory-mcp --help` for exact tool
+names such as `search_graph`, `query_graph`, `trace_path`, and
+`detect_changes`.
