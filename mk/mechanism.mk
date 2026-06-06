@@ -253,6 +253,7 @@ goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python
 	$(MAKE) goal-runtime-fixed-point-check
 
 goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight
+	$(MAKE) refresh-generated-core
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-pre-run-cleanup
 	$(MAKE) goal-runtime-quarantine-preflight

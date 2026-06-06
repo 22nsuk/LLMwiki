@@ -91,8 +91,8 @@ Promotion gate guidance:
 - If blockers remain, record the next repair in remediation/session evidence and keep promotion banned.
 
 Run admission discipline:
-- If tracked canonical reports need refresh, run `make goal-runtime-run-admission-converge`, settle those generated changes, then rerun `make goal-runtime-run-admission`.
-- Treat `make goal-runtime-run-admission` as the tracked-clean final admission check: it refreshes transient cleanup/quarantine preflight and run-local evidence before reading promotion blockers.
+- Use `make goal-runtime-run-admission-converge` when the stronger publish/fixed-point settle path is needed before final admission.
+- Treat `make goal-runtime-run-admission` as the tracked-clean final admission check: it refreshes core queue inputs, transient cleanup/quarantine preflight, and run-local evidence before reading promotion blockers.
 - Before starting or resuming a goal run, pass `make goal-runtime-run-admission` instead of relying on remembered cleanup steps.
 - If learning readiness is uncertain, start only when `GOAL_ALLOW_LEARNING_UNCERTAIN=1` or execution_policy.learning_uncertain authorizes a bounded trial.
 - Treat `tmp/goal-runtime-run-admission.json` start_status/admission_mode as the start gate: start_status=fail or admission_mode=blocked means pause and follow `recommended_next_action`.

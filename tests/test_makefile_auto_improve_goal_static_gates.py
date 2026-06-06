@@ -404,6 +404,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-run-admission-local-refresh",
             (
+                "$(MAKE) refresh-generated-core",
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-quarantine-preflight",
@@ -464,6 +465,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             "goal-runtime-run-admission-local-refresh",
         ):
             admission_recipe = _recipe_lines(text, admission_target)
+            self.assertLess(
+                admission_recipe.index("$(MAKE) refresh-generated-core"),
+                admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
+            )
             self.assertLess(
                 admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
                 admission_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
