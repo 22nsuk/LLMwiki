@@ -104,6 +104,7 @@ def build_report(
         "-m",
         "ruff",
         "check",
+        "--preview",
         "--select",
         ruff_select,
         "--statistics",
@@ -171,7 +172,7 @@ def write_report(out_path: Path, report: dict[str, Any]) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Audit strict Ruff candidate-rule and mypy preview debt across a target surface.",
+        description="Audit strict Ruff --preview candidate-rule and mypy preview debt across a target surface.",
     )
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)

@@ -51,6 +51,8 @@ class RuffStrictPreviewTests(unittest.TestCase):
             cache_dir="tmp/tool-cache/ruff/wsl",
         )
 
+        self.assertIn("--preview", command)
+        self.assertLess(command.index("--preview"), command.index("--select"))
         self.assertIn("--cache-dir", command)
         self.assertIn("tmp/tool-cache/ruff/wsl", command)
         self.assertEqual(command[-1], "ops/scripts")
@@ -63,6 +65,7 @@ class RuffStrictPreviewTests(unittest.TestCase):
         )
 
         self.assertIn("--exit-zero", command)
+        self.assertIn("--preview", command)
         self.assertLess(command.index("--exit-zero"), command.index("ops/scripts"))
 
 

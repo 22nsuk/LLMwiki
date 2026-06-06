@@ -77,6 +77,8 @@ class StrictPreviewAuditTests(unittest.TestCase):
         self.assertEqual(report["summary"]["total_error_count"], 3)
         self.assertEqual(report["targets"], ["ops/scripts", "tests", "tools"])
         self.assertEqual(report["ruff_cache_dir"], "tmp/tool-cache/ruff/wsl")
+        self.assertIn("--preview", calls[0])
+        self.assertLess(calls[0].index("--preview"), calls[0].index("--select"))
         self.assertIn("--cache-dir", calls[0])
         self.assertIn("tmp/tool-cache/ruff/wsl", calls[0])
         self.assertIn("--statistics", calls[0])

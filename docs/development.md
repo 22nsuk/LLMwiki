@@ -128,7 +128,7 @@ Pytest subprocess probes disable cacheprovider and Make exports
 from writing shared repo-local cache artifacts. The broad `PYTEST_FLAGS`
 default also includes `-p no:cacheprovider`.
 For WSL-first local work, `make static` and strict-preview Make targets keep
-Ruff and mypy caches under `tmp/tool-cache/<platform>`; WSL resolves that
+Ruff `--preview` and mypy caches under `tmp/tool-cache/<platform>`; WSL resolves that
 platform namespace to `wsl`, so it does not reuse root `.ruff_cache` or
 `.mypy_cache` metadata that may have been produced from Windows paths.
 Use `make local-cache-clean` to remove only ignored, regenerable local caches:

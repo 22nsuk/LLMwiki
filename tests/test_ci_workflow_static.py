@@ -273,6 +273,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "tests/test_report_schema_sample_regeneration.py",
             "tests/test_report_schemas.py",
             "tests/test_ruff_strict_preview.py",
+            "tests/test_strict_preview_audit.py",
         ):
             with self.subTest(test_path=test_path):
                 self.assertIn(test_path, schema_static_smoke_run)

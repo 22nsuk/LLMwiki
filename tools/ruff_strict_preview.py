@@ -26,7 +26,7 @@ def build_ruff_command(
 ) -> list[str]:
     if not targets:
         raise ValueError("strict Ruff candidate preview target list must contain at least one target")
-    command = [sys.executable, "-m", "ruff", "check", "--select", select]
+    command = [sys.executable, "-m", "ruff", "check", "--preview", "--select", select]
     if cache_dir:
         command.extend(["--cache-dir", cache_dir])
     if exit_zero:
@@ -36,7 +36,7 @@ def build_ruff_command(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run strict Ruff candidate rules on a target surface")
+    parser = argparse.ArgumentParser(description="Run strict Ruff --preview candidate rules on a target surface")
     parser.add_argument("--vault", default=".")
     parser.add_argument("--targets", default=DEFAULT_TARGETS)
     parser.add_argument("--select", default=DEFAULT_SELECT)
