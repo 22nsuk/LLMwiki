@@ -7,6 +7,8 @@ from typing import Any
 
 from ops.scripts.runtime_context import RuntimeContext
 
+from .failure_taxonomy_runtime import GENERATED_EVIDENCE_SETTLE_REQUIRED
+
 
 @dataclass(frozen=True)
 class SessionCompletionDependencies:
@@ -40,6 +42,8 @@ def completion_class_for_session(session: Mapping[str, Any], *, stop_reason: str
         return "time_budget_exhausted"
     if stop_reason == "failure_budget_exhausted":
         return "failure_budget_exhausted"
+    if stop_reason == GENERATED_EVIDENCE_SETTLE_REQUIRED:
+        return GENERATED_EVIDENCE_SETTLE_REQUIRED
     if stop_reason == "repeated_blocker_backlog_required":
         return "blocked_repair_required"
     return "stopped"

@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
+from unittest import mock
 
 from ops.scripts.executor_noop_runtime import EXECUTOR_NOOP_MUTATION_FAILURE_MARKER
 
 from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
     OPEN_DECISION_STATUS,
+)
+from ops.scripts.mechanism.failure_taxonomy_runtime import (
+    GENERATED_EVIDENCE_SETTLE_REQUIRED,
 )
 from ops.scripts.mechanism.next_run_repair_queue_runtime import (
     open_carry_forward_decisions,
@@ -145,5 +150,53 @@ def test_open_carry_forward_decisions_suppresses_resolved_structural_budget() ->
             recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
             recent_log_overlap_unblock_family="queue_unblock",
         )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_resolved_generated_evidence_settle() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        source_run_id = "run-generated-evidence-settle"
+        report_path = vault / "runs" / source_run_id / "repo-health-artifact-freshness-report-check.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(
+            json.dumps(
+                {
+                    "status": "attention",
+                    "recommended_next_action": "regenerate_stale_artifacts",
+                    "top_debt_files": [
+                        {
+                            "path": "ops/reports/generated.json",
+                            "issues": ["source_tree_fingerprint_mismatch"],
+                            "recommended_next_action": "regenerate_canonical_report",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with mock.patch(
+            "ops.scripts.mechanism.next_run_repair_queue_runtime."
+            "_current_artifact_freshness_report",
+            return_value={"status": "pass", "top_debt_files": []},
+        ):
+            open_decisions = open_carry_forward_decisions(
+                [
+                    _carry_forward_decision(
+                        failure_taxonomy=GENERATED_EVIDENCE_SETTLE_REQUIRED,
+                        proposal_family="next_run_failure_repair",
+                        proposal_id=(
+                            "next_run_failure_repair__target__"
+                            "generated-evidence-settle-required"
+                        ),
+                        source_run_id=source_run_id,
+                    )
+                ],
+                vault=vault,
+                recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+                recent_log_overlap_unblock_family="queue_unblock",
+            )
 
         assert open_decisions == []

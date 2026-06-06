@@ -17,6 +17,7 @@ from .auto_improve_iteration_persistence_runtime import (
     PersistIterationDependencies,
     PersistIterationPhaseResult,
 )
+from .failure_taxonomy_runtime import GENERATED_EVIDENCE_SETTLE_REQUIRED
 
 
 @dataclass(frozen=True)
@@ -251,6 +252,12 @@ def run_auto_improve_iteration(
         return AutoImproveIterationResult(
             consecutive_failures=next_consecutive_failures,
             stop_reason="executor_usage_limited",
+            keep_running=False,
+        )
+    if execution.outcome.outcome == GENERATED_EVIDENCE_SETTLE_REQUIRED:
+        return AutoImproveIterationResult(
+            consecutive_failures=next_consecutive_failures,
+            stop_reason=GENERATED_EVIDENCE_SETTLE_REQUIRED,
             keep_running=False,
         )
     if (

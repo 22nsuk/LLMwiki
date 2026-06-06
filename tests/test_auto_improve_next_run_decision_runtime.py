@@ -5,14 +5,20 @@ import unittest
 
 from ops.scripts.auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
+    CHOOSE_ALTERNATIVE_DECISION,
     IGNORE_RETRYABLE_DECISION,
     OPEN_DECISION_STATUS,
     REPAIR_FAILURE_ACTION,
+    SELECT_ALTERNATIVE_ACTION,
     WAIT_FOR_CAPACITY_ACTION,
     build_next_run_decision,
 )
 from ops.scripts.auto_improve_outcome_runtime import ExecutionOutcome
 from ops.scripts.runtime_context import RuntimeContext
+
+from ops.scripts.mechanism.failure_taxonomy_runtime import (
+    GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
 
 
 def _context() -> RuntimeContext:
@@ -92,6 +98,32 @@ class AutoImproveNextRunDecisionRuntimeTests(unittest.TestCase):
         self.assertEqual(decision["next_run_action"], WAIT_FOR_CAPACITY_ACTION)
         self.assertEqual(decision["status"], "closed")
         self.assertEqual(decision["target_proposal_id"], "")
+
+    def test_generated_evidence_settle_is_recorded_without_repair_target(self) -> None:
+        decision = build_next_run_decision(
+            session_id="auto-improve-session",
+            iteration=1,
+            run_id="auto-improve-session-run-01-example-runtime",
+            proposal=_proposal(),
+            outcome=ExecutionOutcome(
+                outcome=GENERATED_EVIDENCE_SETTLE_REQUIRED,
+                next_consecutive_failures=0,
+            ),
+            roles=["worker"],
+            scope_freeze_rel="runs/run-01/scope-freeze.json",
+            routing_report_rels=["runs/run-01/subagent-routing.worker.json"],
+            telemetry_rel="runs/run-01/run-telemetry.json",
+            context=_context(),
+        )
+
+        assert decision is not None
+        self.assertEqual(decision["failure_taxonomy"], GENERATED_EVIDENCE_SETTLE_REQUIRED)
+        self.assertEqual(decision["decision"], CHOOSE_ALTERNATIVE_DECISION)
+        self.assertEqual(decision["next_run_action"], SELECT_ALTERNATIVE_ACTION)
+        self.assertEqual(decision["status"], "closed")
+        self.assertEqual(decision["target_proposal_id"], "")
+        self.assertEqual(decision["blocking_role"], "repo_health")
+        self.assertIn("settle outside the repair queue", decision["reason"])
 
     def test_promotion_failure_taxonomy_override_is_carried_forward(self) -> None:
         decision = build_next_run_decision(

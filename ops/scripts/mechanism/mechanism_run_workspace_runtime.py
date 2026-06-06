@@ -818,6 +818,8 @@ def _build_repo_health_blocked_result(
 
 
 def _repo_health_failure_taxonomy(repo_health: RepoHealthStepResult) -> str:
+    if repo_health.failure_taxonomy:
+        return repo_health.failure_taxonomy
     if (
         repo_health.result["returncode"] == 0
         and repo_health.structural_complexity_budget_status != "pass"

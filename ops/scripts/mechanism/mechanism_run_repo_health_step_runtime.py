@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,6 +18,7 @@ from ops.scripts.structural_complexity_budget_runtime import (
     touched_target_profiles,
 )
 
+from .failure_taxonomy_runtime import GENERATED_EVIDENCE_SETTLE_REQUIRED
 from .mechanism_run_common_runtime import (
     CommandExecutionDependencies,
     CommandExecutionRequest,
@@ -39,6 +42,23 @@ COMPACT_ARTIFACT_FRESHNESS_OMITTED_SECTIONS = [
     "run_log_placeholders",
     "non_utf8_text_artifacts",
 ]
+GENERATED_EVIDENCE_SETTLE_ACTIONS = frozenset(
+    {
+        "add_missing_artifact_schemas",
+        "backfill_artifact_envelopes",
+        "backfill_currentness_metadata",
+        "regenerate_schema_invalid_artifacts",
+        "regenerate_stale_artifacts",
+    }
+)
+NON_SETTLE_REPO_HEALTH_OUTPUT_RE = re.compile(
+    r"(^|\n)(=+\s+FAILURES\s+=+|FAILED\s+tests/|ERROR\s+tests/)"
+    r"|\b\d+\s+failed\b"
+    r"|\bFound\s+\d+\s+errors?\b"
+    r"|\bwould reformat\b"
+    r"|(^|\n)make(?:\[\d+\])?: \*\*\*",
+    flags=re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -80,6 +100,12 @@ def _json_object(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
+def _remove_stale_repo_health_diagnostic_artifacts(workspace_vault: Path) -> None:
+    for source_rel in REPO_HEALTH_DIAGNOSTIC_ARTIFACTS:
+        with suppress(FileNotFoundError):
+            (workspace_vault / source_rel).unlink()
+
+
 def _dict_child(payload: dict[str, Any], key: str) -> dict[str, Any]:
     value = payload.get(key)
     return value if isinstance(value, dict) else {}
@@ -99,6 +125,34 @@ def _artifact_freshness_report_blocks_repo_health(
         return True
     gate_effect = str(payload.get("gate_effect", "")).strip()
     return repo_health_failed and gate_effect in {"blocks_execution", "blocks_promotion"}
+
+
+def _artifact_freshness_report_requires_generated_evidence_settle(
+    payload: dict[str, Any] | None,
+    *,
+    repo_health_failed: bool,
+    command_result: dict[str, Any],
+) -> bool:
+    if payload is None or not _artifact_freshness_report_blocks_repo_health(
+        payload,
+        repo_health_failed=repo_health_failed,
+    ):
+        return False
+    output_text = "\n".join(
+        str(command_result.get(key, "")) for key in ("stdout", "stderr")
+    )
+    if NON_SETTLE_REPO_HEALTH_OUTPUT_RE.search(output_text):
+        return False
+    recommended_next_action = str(payload.get("recommended_next_action", "")).strip()
+    if recommended_next_action in GENERATED_EVIDENCE_SETTLE_ACTIONS:
+        return True
+    currentness = payload.get("currentness", {})
+    currentness_status = (
+        str(currentness.get("status", "")).strip()
+        if isinstance(currentness, dict)
+        else ""
+    )
+    return currentness_status in {"stale", "unknown"}
 
 
 def _compact_artifact_freshness_report(payload: dict[str, Any]) -> dict[str, Any]:
@@ -198,10 +252,13 @@ def write_structural_complexity_budget_artifact(
 
 def _repo_health_decision(
     *,
+    failure_taxonomy: str,
     repo_health_passed: bool,
     repo_health_timed_out: bool,
     structural_complexity_budget_status: str,
 ) -> str:
+    if failure_taxonomy == GENERATED_EVIDENCE_SETTLE_REQUIRED:
+        return GENERATED_EVIDENCE_SETTLE_REQUIRED
     if repo_health_timed_out:
         return "repo_health_timeout"
     if not repo_health_passed:
@@ -213,10 +270,13 @@ def _repo_health_decision(
 
 def _repo_health_summary(
     *,
+    failure_taxonomy: str,
     repo_health_passed: bool,
     repo_health_timed_out: bool,
     structural_complexity_budget_status: str,
 ) -> str:
+    if failure_taxonomy == GENERATED_EVIDENCE_SETTLE_REQUIRED:
+        return "Generated evidence currentness requires settle before promotion evaluation."
     if repo_health_timed_out:
         return "Repo health command timed out before promotion evaluation."
     if not repo_health_passed:
@@ -241,6 +301,7 @@ def repo_health_step(
     diff_model: str = "full_workspace",
 ) -> RepoHealthStepResult:
     command_spec = require_prepared_command(resolution.check_command_spec)
+    _remove_stale_repo_health_diagnostic_artifacts(workspace_vault)
     command_request = CommandExecutionRequest(
         vault=vault,
         workspace_vault=workspace_vault,
@@ -255,6 +316,9 @@ def repo_health_step(
     )
     repo_health_passed = command_execution.result["returncode"] == 0
     repo_health_timed_out = bool(command_execution.result.get("timed_out"))
+    artifact_freshness_payload = _json_object(
+        workspace_vault / "tmp" / "artifact-freshness-report-check.json"
+    )
     diagnostic_artifacts = _copy_repo_health_diagnostic_artifacts(
         vault,
         workspace_vault,
@@ -289,6 +353,16 @@ def repo_health_step(
     structural_complexity_budget_status = structural_complexity_budget.status
     structural_complexity_budget_passed = structural_complexity_budget_status == "pass"
     passed = repo_health_passed and structural_complexity_budget_passed
+    failure_taxonomy = (
+        GENERATED_EVIDENCE_SETTLE_REQUIRED
+        if not repo_health_timed_out
+        and _artifact_freshness_report_requires_generated_evidence_settle(
+            artifact_freshness_payload,
+            repo_health_failed=not repo_health_passed,
+            command_result=command_execution.result,
+        )
+        else ""
+    )
     timeout_failure_rel = ""
     if repo_health_timed_out:
         timeout_failure_rel = write_command_timeout_failure(
@@ -313,6 +387,7 @@ def repo_health_step(
         run_id,
         event_type="repo_health_checked",
         summary=_repo_health_summary(
+            failure_taxonomy=failure_taxonomy,
             repo_health_passed=repo_health_passed,
             repo_health_timed_out=repo_health_timed_out,
             structural_complexity_budget_status=structural_complexity_budget_status,
@@ -326,6 +401,7 @@ def repo_health_step(
             *([timeout_failure_rel] if timeout_failure_rel else []),
         ],
         decision=_repo_health_decision(
+            failure_taxonomy=failure_taxonomy,
             repo_health_passed=repo_health_passed,
             repo_health_timed_out=repo_health_timed_out,
             structural_complexity_budget_status=structural_complexity_budget_status,
@@ -341,4 +417,5 @@ def repo_health_step(
         structural_complexity_budget_status=structural_complexity_budget_status,
         behavior_delta=behavior_delta,
         passed=passed,
+        failure_taxonomy=failure_taxonomy,
     )

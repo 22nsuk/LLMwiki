@@ -14,6 +14,8 @@ from ops.scripts.promotion_decision_registry_runtime import (
     decision_outcome,
 )
 
+from .failure_taxonomy_runtime import is_budget_consuming_failure_taxonomy
+
 TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted"})
 RETRYABLE_EXECUTOR_FAILURE_OUTCOMES = frozenset({"executor_usage_limited"})
 _USAGE_LIMIT_NOTE_MARKERS = (
@@ -156,6 +158,13 @@ def evaluate_experiment_result(result: dict, consecutive_failures: int) -> Execu
         )
     repo_health = result.get("repo_health", {})
     if isinstance(repo_health, dict) and not bool(repo_health.get("passed", True)):
+        failure_taxonomy = str(result.get("failure_taxonomy", "")).strip()
+        if failure_taxonomy and not is_budget_consuming_failure_taxonomy(failure_taxonomy):
+            return ExecutionOutcome(
+                outcome=failure_taxonomy,
+                next_consecutive_failures=consecutive_failures,
+                result=result,
+            )
         return ExecutionOutcome(
             outcome="repo_health_blocked",
             next_consecutive_failures=consecutive_failures + 1,

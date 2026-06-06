@@ -109,6 +109,7 @@ class RepoHealthStepResult:
     structural_complexity_budget_status: str
     behavior_delta: str
     passed: bool
+    failure_taxonomy: str = ""
 
 
 @dataclass(frozen=True)

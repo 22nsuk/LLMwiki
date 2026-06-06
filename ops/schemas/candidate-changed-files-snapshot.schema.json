@@ -169,6 +169,7 @@
     "capture_reason": {
       "type": "string",
       "enum": [
+        "generated_evidence_settle_required",
         "non_promoted_decision",
         "repo_health_blocked",
         "structural_complexity_non_regression"

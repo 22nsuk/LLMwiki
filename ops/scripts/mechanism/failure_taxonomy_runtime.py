@@ -8,7 +8,9 @@ from ops.scripts.promotion_decision_registry_runtime import (
     decision_record_from_report,
 )
 
+GENERATED_EVIDENCE_SETTLE_REQUIRED = "generated_evidence_settle_required"
 RETRYABLE_FAILURE_TAXONOMIES = frozenset({"executor_usage_limited"})
+SETTLE_FAILURE_TAXONOMIES = frozenset({GENERATED_EVIDENCE_SETTLE_REQUIRED})
 ACTIONABLE_FAILURE_TAXONOMIES = frozenset(
     {
         "discarded",
@@ -57,6 +59,21 @@ def is_retryable_failure_taxonomy(failure_taxonomy: str) -> bool:
     return failure_taxonomy in RETRYABLE_FAILURE_TAXONOMIES
 
 
+def is_generated_evidence_settle_required(failure_taxonomy: str) -> bool:
+    return failure_taxonomy == GENERATED_EVIDENCE_SETTLE_REQUIRED
+
+
+def is_settle_failure_taxonomy(failure_taxonomy: str) -> bool:
+    return failure_taxonomy in SETTLE_FAILURE_TAXONOMIES
+
+
+def is_budget_consuming_failure_taxonomy(failure_taxonomy: str) -> bool:
+    return not (
+        is_retryable_failure_taxonomy(failure_taxonomy)
+        or is_settle_failure_taxonomy(failure_taxonomy)
+    )
+
+
 def is_actionable_repair_failure_taxonomy(failure_taxonomy: str) -> bool:
     return (
         failure_taxonomy in ACTIONABLE_FAILURE_TAXONOMIES
@@ -78,6 +95,8 @@ def blocking_role_for_failure_taxonomy(failure_taxonomy: str, roles: list[str]) 
                 return role
         return ""
     if failure_taxonomy == "repo_health_blocked":
+        return "repo_health"
+    if failure_taxonomy == GENERATED_EVIDENCE_SETTLE_REQUIRED:
         return "repo_health"
     if failure_taxonomy == "scope_blocked":
         return "scope"

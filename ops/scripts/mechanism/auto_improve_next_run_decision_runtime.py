@@ -10,6 +10,7 @@ from ops.scripts.mechanism.failure_taxonomy_runtime import (
     failure_taxonomy_from_outcome,
     is_actionable_repair_failure_taxonomy,
     is_retryable_failure_taxonomy,
+    is_settle_failure_taxonomy,
 )
 from ops.scripts.runtime_context import RuntimeContext
 
@@ -27,6 +28,7 @@ WAIT_FOR_CAPACITY_ACTION = "wait_for_executor_capacity"
 
 OPEN_DECISION_STATUS = "open"
 CLOSED_DECISION_STATUS = "closed"
+
 
 def _list_strings(value: object) -> list[str]:
     if not isinstance(value, list):
@@ -97,6 +99,13 @@ def _decision_shape(
             WAIT_FOR_CAPACITY_ACTION,
             CLOSED_DECISION_STATUS,
             "Failure is executor capacity related, so it should not become a repair proposal.",
+        )
+    if is_settle_failure_taxonomy(failure_taxonomy):
+        return (
+            CHOOSE_ALTERNATIVE_DECISION,
+            SELECT_ALTERNATIVE_ACTION,
+            CLOSED_DECISION_STATUS,
+            "Failure requires generated evidence/currentness settle outside the repair queue.",
         )
     if not primary_targets:
         return (

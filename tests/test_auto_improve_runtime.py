@@ -26,6 +26,9 @@ from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 from ops.scripts import auto_improve_runtime
+from ops.scripts.mechanism.failure_taxonomy_runtime import (
+    GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
 from tests.minimal_vault_runtime import seed_subagent_profiles
 from tests.run_mechanism_experiment_test_utils import (
     mutation_proposal_report,
@@ -2240,6 +2243,68 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(session["iterations"][0]["decision"], "SKIPPED")
             self.assertEqual(session["quarantined_proposal_ids"], [proposal["proposal_id"]])
             self.assertEqual(session["rollups"]["telemetry"]["failure_taxonomy_counts"], {"repo_health_blocked": 1})
+
+    def test_run_auto_improve_session_stops_generated_evidence_settle_without_quarantine(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"proposals": [proposal]}
+
+            def fake_run_mechanism_experiment(
+                vault_path: Path,
+                *,
+                run_id: str,
+                scaffold_only: bool,
+                **_: object,
+            ) -> dict:
+                if scaffold_only:
+                    _seed_scaffolded_run(vault_path, run_id)
+                    return {"run_id": run_id, "scaffold_only": True}
+                return {
+                    "run_id": run_id,
+                    "decision": "SKIPPED",
+                    "failure_taxonomy": GENERATED_EVIDENCE_SETTLE_REQUIRED,
+                    "finalized": False,
+                    "finalize_result": {},
+                    "repo_health": {"passed": False, "returncode": 1},
+                }
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-generated-evidence-settle",
+                    max_proposals=1,
+                    max_minutes=90,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            decision = session["next_run_decisions"][0]
+            self.assertEqual(result["stop_reason"], GENERATED_EVIDENCE_SETTLE_REQUIRED)
+            self.assertEqual(result["completion_class"], GENERATED_EVIDENCE_SETTLE_REQUIRED)
+            self.assertEqual(
+                session["iterations"][0]["outcome"],
+                GENERATED_EVIDENCE_SETTLE_REQUIRED,
+            )
+            self.assertEqual(session.get("quarantined_proposal_ids", []), [])
+            self.assertEqual(session["loop_state"]["consecutive_failures"], 0)
+            self.assertEqual(decision["decision"], "choose_alternative")
+            self.assertEqual(decision["next_run_action"], "select_alternative_proposal")
+            self.assertEqual(decision["status"], "closed")
+            self.assertEqual(decision["target_proposal_id"], "")
 
     def test_run_auto_improve_session_hold_uses_failure_budget_without_quarantine(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

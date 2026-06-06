@@ -17,6 +17,10 @@ from ops.scripts.auto_improve_outcome_runtime import (
 )
 from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
 
+from ops.scripts.mechanism.failure_taxonomy_runtime import (
+    GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
+
 
 def _write_executor_report(
     vault: Path,
@@ -159,6 +163,20 @@ class AutoImproveOutcomeRuntimeTests(unittest.TestCase):
         self.assertEqual(outcome.outcome, "repo_health_blocked")
         self.assertEqual(outcome.next_consecutive_failures, 2)
         self.assertTrue(outcome.quarantine_proposal)
+
+    def test_evaluate_experiment_result_generated_evidence_settle_is_non_budget(self) -> None:
+        outcome = evaluate_experiment_result(
+            {
+                "decision": "SKIPPED",
+                "failure_taxonomy": GENERATED_EVIDENCE_SETTLE_REQUIRED,
+                "repo_health": {"passed": False},
+            },
+            1,
+        )
+
+        self.assertEqual(outcome.outcome, GENERATED_EVIDENCE_SETTLE_REQUIRED)
+        self.assertEqual(outcome.next_consecutive_failures, 1)
+        self.assertFalse(outcome.quarantine_proposal)
 
     def test_evaluate_experiment_result_unknown_nonblocking_decision_fails_closed_as_hold(self) -> None:
         outcome = evaluate_experiment_result(

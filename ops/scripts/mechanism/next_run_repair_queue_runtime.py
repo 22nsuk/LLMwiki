@@ -24,12 +24,36 @@ from .auto_improve_next_run_decision_runtime import (
     next_run_failure_repair_proposal_id,
 )
 from .current_target_path_runtime import current_repo_target_paths
+from .failure_taxonomy_runtime import GENERATED_EVIDENCE_SETTLE_REQUIRED
 from .noop_repair_classifier_runtime import (
     repair_decision_ended_as_noop_mutation_failure,
 )
 
 ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX = "artifact_freshness_"
 STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY = "structural_complexity_non_regression"
+GENERATED_EVIDENCE_SETTLE_ISSUES = frozenset(
+    {
+        "missing_artifact_envelope",
+        "missing_schema",
+        "schema_validation_failed",
+        "source_revision_mismatch",
+        "source_revision_unknown",
+        "source_tree_fingerprint_mismatch",
+        "source_tree_fingerprint_unknown",
+        "unknown_currentness",
+    }
+)
+GENERATED_EVIDENCE_SETTLE_ACTIONS = frozenset(
+    {
+        "add_schema_or_exclude_noncanonical_json",
+        "backfill_artifact_envelope",
+        "backfill_currentness_metadata",
+        "regenerate_artifact_from_current_schema",
+        "regenerate_canonical_report",
+        "regenerate_canonical_report_with_source_revision",
+        "regenerate_canonical_report_with_source_tree_fingerprint",
+    }
+)
 RAW_REGISTRY_REPAIR_EVIDENCE_MARKERS = (
     "ops/raw-registry.json",
     "ops/reports/raw-registry-preflight-report.json",
@@ -118,13 +142,55 @@ def _artifact_validates_against_declared_schema(vault: Path, rel_path: str) -> b
     return not validate_with_schema(payload, schema)
 
 
+def _artifact_freshness_settle_debt_paths(report: dict) -> set[str]:
+    paths: set[str] = set()
+    top_debt_files = report.get("top_debt_files", [])
+    if not isinstance(top_debt_files, list):
+        return paths
+    for item in top_debt_files:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path", "")).strip()
+        if not path:
+            continue
+        issues = {str(issue).strip() for issue in item.get("issues", [])}
+        recommended_next_action = str(item.get("recommended_next_action", "")).strip()
+        if (
+            issues & GENERATED_EVIDENCE_SETTLE_ISSUES
+            or recommended_next_action in GENERATED_EVIDENCE_SETTLE_ACTIONS
+        ):
+            paths.add(path)
+    return paths
+
+
+def _current_artifact_freshness_report(vault: Path) -> dict:
+    from ops.scripts.artifact_freshness_runtime import build_report
+
+    return build_report(vault)
+
+
+def _artifact_freshness_settle_debt_now_clean(vault: Path, report: dict) -> bool:
+    original_debt_paths = _artifact_freshness_settle_debt_paths(report)
+    if not original_debt_paths:
+        return False
+    try:
+        current_report = _current_artifact_freshness_report(vault)
+    except (OSError, TypeError, ValueError):
+        return False
+    if str(current_report.get("status", "")).strip() == "pass":
+        return True
+    return original_debt_paths.isdisjoint(
+        _artifact_freshness_settle_debt_paths(current_report)
+    )
+
+
 def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id: str) -> bool:
     report_path = vault / "runs" / source_run_id / "repo-health-artifact-freshness-report-check.json"
     try:
         report = _read_json(report_path)
     except (OSError, json.JSONDecodeError):
         return False
-    if str(report.get("status", "")).strip() != "fail":
+    if str(report.get("status", "")).strip() not in {"attention", "fail"}:
         return False
     observed_source_tree_fingerprint = str(report.get("source_tree_fingerprint", "")).strip()
     if (
@@ -145,14 +211,18 @@ def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id
         and str(item.get("path", "")).strip()
     ]
     if not schema_invalid_files:
-        return False
-    return all(_artifact_validates_against_declared_schema(vault, path) for path in schema_invalid_files)
+        return _artifact_freshness_settle_debt_now_clean(vault, report)
+    return all(
+        _artifact_validates_against_declared_schema(vault, path)
+        for path in schema_invalid_files
+    ) or _artifact_freshness_settle_debt_now_clean(vault, report)
 
 
 def _repair_decision_ended_as_clean_repo_health(vault: Path, decision: dict) -> bool:
     failure_taxonomy = str(decision.get("failure_taxonomy", "")).strip()
     if (
-        failure_taxonomy != "repo_health_blocked"
+        failure_taxonomy
+        not in {"repo_health_blocked", GENERATED_EVIDENCE_SETTLE_REQUIRED}
         and not failure_taxonomy.startswith(ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX)
     ):
         return False

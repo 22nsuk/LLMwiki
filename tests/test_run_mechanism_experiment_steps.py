@@ -39,6 +39,9 @@ from ops.scripts import (
     mechanism_run_promotion_runtime,
     mechanism_run_workspace_runtime,
 )
+from ops.scripts.mechanism.failure_taxonomy_runtime import (
+    GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
 from ops.scripts.mechanism.mechanism_run_candidate_snapshot_runtime import (
     write_candidate_changed_files_snapshot,
 )
@@ -668,6 +671,7 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             self.assertEqual(snapshot["generated_at"], "2026-04-15T03:45:00Z")
             self.assertEqual(snapshot["changed_files_manifest"], manifest_rel)
             self.assertEqual(snapshot["decision"], "DISCARD")
+            self.assertEqual(snapshot["capture_reason"], "non_promoted_decision")
             self.assertEqual(snapshot["apply_status"], "not_applicable")
             self.assertFalse(snapshot["live_applied"])
             self.assertEqual(snapshot["summary"]["total_changed_files"], 3)
@@ -685,6 +689,26 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             self.assertEqual(
                 by_path["ops/scripts/deleted.py"]["capture"],
                 {"status": "metadata_only", "reason": "candidate_deleted"},
+            )
+
+            settle_snapshot_rel = write_candidate_changed_files_snapshot(
+                vault,
+                workspace,
+                run_id="run-snapshot-settle",
+                changed_files_manifest=manifest_rel,
+                decision="SKIPPED",
+                apply_mode="canary_only",
+                apply_status="not_applicable",
+                live_applied=False,
+                capture_reason=GENERATED_EVIDENCE_SETTLE_REQUIRED,
+                context=context,
+            )
+            settle_snapshot = json.loads(
+                (vault / settle_snapshot_rel).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                settle_snapshot["capture_reason"],
+                GENERATED_EVIDENCE_SETTLE_REQUIRED,
             )
 
     def test_apply_or_discard_workspace_changes_canary_mode_preserves_live_files(self) -> None:

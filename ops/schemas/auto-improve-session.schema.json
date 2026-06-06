@@ -1212,6 +1212,7 @@
         "queue_exhausted",
         "time_budget_exhausted",
         "failure_budget_exhausted",
+        "generated_evidence_settle_required",
         "blocked_repair_required",
         "stopped"
       ]
