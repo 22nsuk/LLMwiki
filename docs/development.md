@@ -166,7 +166,8 @@ hand-maintained pytest marker expressions.
 | --- | --- | --- |
 | Docs only | `make test-public` | `make sync-public-policy-check` if public boundaries changed |
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
-| Make or CI lane | `make static` | `make test-report-contract-core` |
+| Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | proves planner recommendations and changed-path minimums |
+| Registry/Make/CI lane-contract proof | `make test-report-contract-core` | proves registry/Make/CI lane-contract parity after lane selector, CI routing, or report-contract semantics changed |
 | Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | `make complexity-budget-touched-check CHANGED_FILES_MANIFEST=<manifest>` or `STRUCTURAL_COMPLEXITY_BUDGET_TARGETS=...`; without touched inputs the target skips and the ratchet stays inactive |
 | Dependency input | `make uv-lock-check` | `make static` after any intentional lock refresh |
 | Schema/report contract | `make test-report-contract-core` | regenerate artifacts, then rerun the focused schema/report tests |

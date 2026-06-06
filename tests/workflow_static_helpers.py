@@ -61,6 +61,21 @@ def workflow_job(workflow: dict[str, object], name: str) -> dict[str, object]:
     )
 
 
+def workflow_matrix_values(job: dict[str, object], axis: str) -> tuple[str, ...]:
+    strategy = workflow_mapping(
+        job.get("strategy", {}),
+        "workflow job strategy must be a mapping",
+    )
+    matrix = workflow_mapping(
+        strategy.get("matrix", {}),
+        "workflow job matrix must be a mapping",
+    )
+    values = matrix.get(axis, [])
+    if not isinstance(values, list):
+        raise AssertionError(f"workflow job matrix axis must be a list: {axis}")
+    return tuple(str(value) for value in values)
+
+
 def workflow_steps(job: dict[str, object]) -> list[dict[str, object]]:
     steps = job.get("steps", [])
     if not isinstance(steps, list):
@@ -80,6 +95,15 @@ def workflow_run_text(step: dict[str, object]) -> str:
     if not isinstance(run, str):
         raise AssertionError("workflow step run must be a string")
     return run
+
+
+def workflow_matrix_tier_run_text(job: dict[str, object], tier: str) -> str:
+    expected_if = f"matrix.tier == '{tier}'"
+    return "\n".join(
+        workflow_run_text(step)
+        for step in workflow_steps(job)
+        if str(step.get("if", "")).strip() == expected_if and "run" in step
+    )
 
 
 def workflow_run_commands(job: dict[str, object]) -> str:

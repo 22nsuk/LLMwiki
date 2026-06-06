@@ -38,6 +38,12 @@ from tests.makefile_static_helpers import (
     _target_block,
     _target_dependencies,
 )
+from tests.workflow_static_helpers import (
+    load_workflow,
+    workflow_job,
+    workflow_matrix_tier_run_text,
+    workflow_matrix_values,
+)
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -54,6 +60,22 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def _test_lane_registry() -> dict[str, object]:
     return load_registry(REPO_ROOT)
+
+
+def _changed_path_minimum_rule(
+    registry: dict[str, object],
+    rule_id: str,
+) -> dict[str, object]:
+    changed_path_minimums = registry.get("changed_path_minimums")
+    if not isinstance(changed_path_minimums, dict):
+        raise AssertionError("registry missing changed_path_minimums object")
+    rules = changed_path_minimums.get("rules")
+    if not isinstance(rules, list):
+        raise AssertionError("registry missing changed_path_minimums.rules list")
+    for rule in rules:
+        if isinstance(rule, dict) and rule.get("rule_id") == rule_id:
+            return rule
+    raise AssertionError(f"registry missing changed-path rule: {rule_id}")
 
 
 def _makefile_assignment_items(text: str, variable: str) -> tuple[str, ...]:
@@ -730,6 +752,30 @@ class MakefileStaticGateTests(unittest.TestCase):
                 self.assertNotIn(f"- `{alias}`", development_text)
                 self.assertNotIn(alias, compatibility_names(registry, "documented_entrypoint"))
 
+    def test_development_change_type_gates_split_make_ci_proofs(self) -> None:
+        registry = _test_lane_registry()
+        development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
+        make_or_ci_rule = _changed_path_minimum_rule(registry, "make_or_ci_contract")
+        commands = make_or_ci_rule.get("commands")
+
+        self.assertIsInstance(commands, list)
+        assert isinstance(commands, list)
+        self.assertIn("make workflow-dependency-planner-check", commands)
+        changed_path_command = " + ".join(f"`{command}`" for command in commands)
+        self.assertIn(
+            f"| Make/CI changed-path minimum proof | {changed_path_command} |",
+            development_text,
+        )
+        self.assertIn(
+            "| Registry/Make/CI lane-contract proof | "
+            "`make test-report-contract-core` |",
+            development_text,
+        )
+        self.assertNotIn(
+            "| Make or CI lane | `make static` | `make test-report-contract-core` |",
+            development_text,
+        )
+
     def test_python_command_allows_interpreter_flags(self) -> None:
         text = _makefile_text()
 
@@ -1102,12 +1148,17 @@ class MakefileStaticGateTests(unittest.TestCase):
 
     def test_ci_matrix_runs_named_lane_targets(self) -> None:
         registry = _test_lane_registry()
-        workflow_text = CI_WORKFLOW.read_text(encoding="utf-8")
+        workflow = load_workflow(CI_WORKFLOW)
+        test_tier_job = workflow_job(workflow, "test-tier")
         ci_map = compatibility_map(registry, "ci_tier")
+
+        self.assertEqual(
+            workflow_matrix_values(test_tier_job, "tier"),
+            compatibility_names(registry, "ci_tier"),
+        )
 
         for tier, mapped_id in ci_map.items():
             with self.subTest(tier=tier, mapped_id=mapped_id):
-                self.assertIn(f"- {tier}", workflow_text)
                 if mapped_id in pack_by_id(registry):
                     expected_steps = pack_ci_steps(registry, mapped_id)
                     expected_entrypoint = pack_ci_entrypoint(registry, mapped_id)
@@ -1116,11 +1167,28 @@ class MakefileStaticGateTests(unittest.TestCase):
                     expected_entrypoint = lane_ci_entrypoint(registry, mapped_id)
                 self.assertTrue(expected_steps)
                 self.assertTrue(expected_entrypoint)
-                self.assertIn(f"make {expected_entrypoint}", workflow_text)
+                tier_run_text = workflow_matrix_tier_run_text(test_tier_job, tier)
+                self.assertTrue(
+                    tier_run_text,
+                    f"missing exact matrix.tier run step for {tier!r}",
+                )
+                self.assertIn(f"make {expected_entrypoint}", tier_run_text)
                 for step in expected_steps:
-                    self.assertIn(step, workflow_text)
-        self.assertIn("make release-authority-sealed-preflight", workflow_text)
-        self.assertIn("make test-fast", workflow_text)
+                    self.assertIn(step, tier_run_text)
+        self.assertIn(
+            "make release-authority-sealed-preflight",
+            workflow_matrix_tier_run_text(test_tier_job, "release-closeout-regression"),
+        )
+        self.assertIn(
+            "make test-fast",
+            workflow_matrix_tier_run_text(test_tier_job, "fast"),
+        )
+        report_contract_run_text = workflow_matrix_tier_run_text(
+            test_tier_job,
+            "report-contract",
+        )
+        self.assertIn("make test-report-contract-all", report_contract_run_text)
+        self.assertNotIn("make test-report-contract-core", report_contract_run_text)
 
     def test_readme_ci_tier_summary_matches_current_workflow_shape(self) -> None:
         registry = _test_lane_registry()
@@ -1152,6 +1220,10 @@ class MakefileStaticGateTests(unittest.TestCase):
 
     def test_registry_documents_authority_boundary_for_lane_contract(self) -> None:
         registry = _test_lane_registry()
+        release_workflow_rule = _changed_path_minimum_rule(
+            registry,
+            "release_workflow_static_contract",
+        )
 
         self.assertEqual(
             documentation_authority(registry),
@@ -1160,6 +1232,18 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertEqual(
             documentation_out_of_scope(registry),
             ("ARCHITECTURE.md", ".github/workflows/release.yml"),
+        )
+        self.assertEqual(
+            release_workflow_rule["path_patterns"],
+            [".github/workflows/release.yml"],
+        )
+        self.assertIn(
+            "tests/test_release_workflow_static.py",
+            " ".join(str(command) for command in release_workflow_rule["commands"]),
+        )
+        self.assertNotIn(
+            "tests/test_release_workflow_static.py",
+            pack_selectors(registry, "report_contract_core"),
         )
 
     def test_architecture_public_surface_includes_github_workflows(self) -> None:

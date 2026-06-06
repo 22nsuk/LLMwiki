@@ -26,6 +26,8 @@ from tests.workflow_static_helpers import (
     workflow_job,
     workflow_jobs,
     workflow_mapping,
+    workflow_matrix_tier_run_text,
+    workflow_matrix_values,
     workflow_step,
 )
 
@@ -170,27 +172,19 @@ class CiWorkflowStaticTests(unittest.TestCase):
         workflow = _workflow()
 
         test_tier_job = _job(workflow, "test-tier")
-        strategy = workflow_mapping(
-            test_tier_job.get("strategy", {}),
-            "test-tier strategy must be a mapping",
+        self.assertEqual(
+            workflow_matrix_values(test_tier_job, "tier"),
+            compatibility_names(registry, "ci_tier"),
         )
-        matrix = workflow_mapping(strategy.get("matrix", {}), "test-tier matrix must be a mapping")
-        tiers = matrix.get("tier", [])
-        self.assertIsInstance(tiers, list)
-        self.assertEqual(tuple(tiers), compatibility_names(registry, "ci_tier"))
 
     def test_ci_matrix_covers_supported_python_minor_versions(self) -> None:
         workflow = _workflow()
 
         test_tier_job = _job(workflow, "test-tier")
-        strategy = workflow_mapping(
-            test_tier_job.get("strategy", {}),
-            "test-tier strategy must be a mapping",
+        self.assertEqual(
+            workflow_matrix_values(test_tier_job, "python-version"),
+            ("3.12", "3.13", "3.14"),
         )
-        matrix = workflow_mapping(strategy.get("matrix", {}), "test-tier matrix must be a mapping")
-        versions = matrix.get("python-version", [])
-        self.assertIsInstance(versions, list)
-        self.assertEqual(tuple(versions), ("3.12", "3.13", "3.14"))
 
     def test_ci_dependency_cache_tracks_canonical_lockfile(self) -> None:
         workflow = _workflow()
@@ -201,7 +195,8 @@ class CiWorkflowStaticTests(unittest.TestCase):
 
     def test_ci_tier_commands_match_registry_contract(self) -> None:
         registry = load_registry(Path("."))
-        text = CI_WORKFLOW.read_text(encoding="utf-8")
+        workflow = _workflow()
+        test_tier_job = _job(workflow, "test-tier")
 
         for tier, mapped_id in compatibility_map(registry, "ci_tier").items():
             with self.subTest(tier=tier, mapped_id=mapped_id):
@@ -211,8 +206,20 @@ class CiWorkflowStaticTests(unittest.TestCase):
                     else lane_ci_steps(registry, mapped_id)
                 )
                 self.assertTrue(steps)
+                tier_run_text = workflow_matrix_tier_run_text(test_tier_job, tier)
+                self.assertTrue(
+                    tier_run_text,
+                    f"missing exact matrix.tier run step for {tier!r}",
+                )
                 for step in steps:
-                    self.assertIn(step, text)
+                    self.assertIn(step, tier_run_text)
+
+        report_contract_run_text = workflow_matrix_tier_run_text(
+            test_tier_job,
+            "report-contract",
+        )
+        self.assertIn("make test-report-contract-all", report_contract_run_text)
+        self.assertNotIn("make test-report-contract-core", report_contract_run_text)
 
     def test_ci_workflow_has_windows_release_smoke_job(self) -> None:
         workflow = _workflow()

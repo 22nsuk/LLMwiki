@@ -18,6 +18,18 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "workflow-dependency-planner.schema.json"
+FOCUSED_PYTEST_TEMPLATE = (
+    "PYTHONDONTWRITEBYTECODE=1 "
+    ".venv/bin/python -m pytest -q -p no:cacheprovider {path}"
+)
+FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_workflow_dependency_planner.py",
+)
+FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_release_workflow_static.py",
+)
 
 
 def fixed_context() -> RuntimeContext:
@@ -519,6 +531,29 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertTrue(plan["final_checkpoint_required"])
         self.assertFalse(plan["release_proof_replacement"])
 
+    def test_changed_path_minimum_pytest_commands_use_workspace_venv_entrypoint(
+        self,
+    ) -> None:
+        registry_path = self.vault / "ops" / "test-lane-registry.json"
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        config = registry["changed_path_minimums"]
+
+        commands = list(config["command_duration_seconds"])
+        for rule in config["rules"]:
+            commands.extend(rule["commands"])
+        pytest_commands = sorted(
+            {str(command) for command in commands if "pytest" in str(command)}
+        )
+
+        self.assertIn(FOCUSED_PYTEST_TEMPLATE, pytest_commands)
+        self.assertIn(FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND, pytest_commands)
+        self.assertIn(FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND, pytest_commands)
+        for command in pytest_commands:
+            with self.subTest(command=command):
+                self.assertNotIn("uv run python -m pytest", command)
+                self.assertIn("PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest", command)
+                self.assertIn("-p no:cacheprovider", command)
+
     def test_changed_path_minimum_plan_selects_focused_test_without_full_proof_claim(
         self,
     ) -> None:
@@ -535,7 +570,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             plan["selected_commands"],
             [
                 "make static",
-                "uv run python -m pytest tests/test_workflow_dependency_planner.py -q",
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
         self.assertEqual(plan["budget_status"], "within_budget")
@@ -544,6 +579,65 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             ["make release-run-ready"],
         )
         self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_plan_routes_release_workflow_to_focused_static_test(
+        self,
+    ) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[".github/workflows/release.yml"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "release_workflow_static")
+        self.assertEqual(plan["unknown_paths"], [])
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "make workflow-dependency-planner-check",
+                FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND,
+            ],
+        )
+        self.assertEqual(
+            plan["command_duration_seconds"],
+            {
+                "make static": 60,
+                "make workflow-dependency-planner-check": 60,
+                FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND: 30,
+            },
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 150)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(plan["path_recommendations"][0]["matched_rule_id"], "release_workflow_static_contract")
+        self.assertNotIn("make test-report-contract-core", plan["selected_commands"])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_plan_keeps_ci_workflow_on_generic_orchestration_rule(
+        self,
+    ) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[".github/workflows/ci.yml"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "orchestration")
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "make workflow-dependency-planner-check",
+            ],
+        )
+        self.assertEqual(plan["path_recommendations"][0]["matched_rule_id"], "make_or_ci_contract")
+        self.assertNotIn(FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND, plan["selected_commands"])
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_path_minimum_plan_uses_registry_owned_final_checkpoint(
@@ -572,7 +666,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             plan["selected_commands"],
             [
                 "make static",
-                "uv run python -m pytest tests/test_workflow_dependency_planner.py -q",
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
         self.assertFalse(plan["release_proof_replacement"])
@@ -696,7 +790,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make script-output-surfaces-check",
                 "make static",
                 "make workflow-dependency-planner-check",
-                "uv run python -m pytest tests/test_workflow_dependency_planner.py -q",
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
                 "make report-schema-samples-check",
             ],
         )
@@ -706,7 +800,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make script-output-surfaces-check": 30,
                 "make static": 60,
                 "make workflow-dependency-planner-check": 60,
-                "uv run python -m pytest tests/test_workflow_dependency_planner.py -q": 30,
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
                 "make report-schema-samples-check": 30,
             },
         )
