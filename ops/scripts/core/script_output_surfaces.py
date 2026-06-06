@@ -17,12 +17,12 @@ from .schema_runtime import load_schema, validate_with_schema
 DEFAULT_OUT = "ops/script-output-surfaces.json"
 SCHEMA_PATH = "ops/schemas/script-output-surfaces.schema.json"
 PRODUCER = "ops.scripts.script_output_surfaces"
+DIRECT_SCRIPT_FALLBACK_MARKER = "direct " "script " "fallback"
 CLASSIFICATION_VALUES = (
     "repo_artifact",
     "user_export",
     "mixed",
     "no_output",
-    "diagnostic_only",
 )
 USER_EXPORT_OUTPUT_OPTION_OVERRIDES = frozenset(
     {
@@ -30,7 +30,6 @@ USER_EXPORT_OUTPUT_OPTION_OVERRIDES = frozenset(
         "ops/scripts/public/export_public_repo.py",
     }
 )
-DIAGNOSTIC_ONLY_PATHS = frozenset[str]()
 SOURCE_TREE_INCLUDED_PREFIXES = ("ops/scripts",)
 
 
@@ -38,8 +37,8 @@ def _script_files(vault: Path) -> list[Path]:
     return sorted(path for path in (vault / "ops" / "scripts").rglob("*.py") if path.name != "__init__.py")
 
 
-def _script_tree(path: Path, rel_path: str) -> ast.AST:
-    return ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
+def _script_tree(source: str, rel_path: str) -> ast.AST:
+    return ast.parse(source, filename=rel_path)
 
 
 def _referenced_names(tree: ast.AST) -> set[str]:
@@ -71,6 +70,13 @@ def _has_main_block(tree: ast.AST) -> bool:
             ):
                 return True
     return False
+
+
+def _has_direct_script_fallback(source: str, tree: ast.AST) -> bool:
+    return _has_main_block(tree) and any(
+        "__package__" in line and DIRECT_SCRIPT_FALLBACK_MARKER in line
+        for line in source.splitlines()
+    )
 
 
 def _output_option_names(tree: ast.AST) -> list[str]:
@@ -105,9 +111,25 @@ def _classification(
         if rel_path in USER_EXPORT_OUTPUT_OPTION_OVERRIDES:
             return "user_export", "output option is an intentional user export surface"
         return "repo_artifact", "output option writes a repo-scoped artifact without the permissive resolver"
-    if rel_path in DIAGNOSTIC_ONLY_PATHS:
-        return "diagnostic_only", "diagnostic command without a durable output artifact"
     return "no_output", "no configurable output path surface detected"
+
+
+def _is_material_surface(
+    *,
+    classification: str,
+    output_options: list[str],
+    references_resolve_output_path: bool,
+    references_resolve_repo_output_path: bool,
+    direct_fallback_eligible: bool,
+) -> bool:
+    if classification != "no_output":
+        return True
+    return (
+        bool(output_options)
+        or references_resolve_output_path
+        or references_resolve_repo_output_path
+        or direct_fallback_eligible
+    )
 
 
 def build_registry(
@@ -122,7 +144,8 @@ def build_registry(
     surfaces: list[dict[str, Any]] = []
     for path in (resolved_vault / item for item in script_paths):
         rel_path = path.relative_to(resolved_vault).as_posix()
-        tree = _script_tree(path, rel_path)
+        source = path.read_text(encoding="utf-8")
+        tree = _script_tree(source, rel_path)
         names = _referenced_names(tree)
         output_options = _output_option_names(tree)
         references_resolve_output_path = "resolve_output_path" in names
@@ -133,6 +156,15 @@ def build_registry(
             references_resolve_output_path=references_resolve_output_path,
             references_resolve_repo_output_path=references_resolve_repo_output_path,
         )
+        direct_fallback_eligible = _has_direct_script_fallback(source, tree)
+        if not _is_material_surface(
+            classification=classification,
+            output_options=output_options,
+            references_resolve_output_path=references_resolve_output_path,
+            references_resolve_repo_output_path=references_resolve_repo_output_path,
+            direct_fallback_eligible=direct_fallback_eligible,
+        ):
+            continue
         surfaces.append(
             {
                 "path": rel_path,
@@ -140,7 +172,7 @@ def build_registry(
                 "output_options": output_options,
                 "references_resolve_output_path": references_resolve_output_path,
                 "references_resolve_repo_output_path": references_resolve_repo_output_path,
-                "direct_fallback_eligible": _has_main_block(tree),
+                "direct_fallback_eligible": direct_fallback_eligible,
                 "reason": reason,
             }
         )
@@ -154,8 +186,8 @@ def build_registry(
         },
         "version": 1,
         "description": (
-            "Semantic inventory for ops/scripts output path surfaces. "
-            "Tests compare this registry with the live AST-derived inventory."
+            "Material registry for ops/scripts output path surfaces and direct-script fallbacks. "
+            "Tests compare this registry with the live AST-derived material surface set."
         ),
         "classification_values": list(CLASSIFICATION_VALUES),
         "surfaces": surfaces,
@@ -233,7 +265,7 @@ def check_registry(vault: Path, *, policy_path: str | None = None, stored_path: 
     if schema_errors:
         print(
             "script-output-surfaces schema validation failed; this is a schema/shape "
-            "error, not an AST inventory mismatch. "
+            "error, not a material surface set mismatch. "
             "Run `make script-output-surfaces` after fixing the schema issue.\n"
             + "\n".join(schema_errors[:10]),
             file=sys.stderr,
@@ -274,7 +306,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Fail if the checked-in registry differs from the live AST-derived inventory.",
+        help="Fail if the checked-in registry differs from the live AST-derived material surface set.",
     )
     return parser.parse_args(argv)
 

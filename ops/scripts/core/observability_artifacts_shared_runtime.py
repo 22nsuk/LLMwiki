@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from .artifact_io_runtime import read_json_object, write_vault_schema_validated_json
+
+AUTO_IMPROVE_SESSION_REPORT_DIR = "ops/reports/auto-improve-sessions"
 
 
 def load_optional_json(path: Path) -> dict | None:
@@ -50,6 +53,17 @@ def _repo_rel_path(vault: Path, path: Path) -> str:
         return ""
 
 
+def _dedupe_existing_files(vault: Path, paths: list[Path]) -> list[Path]:
+    candidates: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        resolved = path.resolve()
+        if path.is_file() and resolved not in seen:
+            candidates.append(path)
+            seen.add(resolved)
+    return candidates
+
+
 def run_dir_candidates(vault: Path, run_id: str) -> list[Path]:
     run_id = str(run_id).strip()
     if not run_id:
@@ -91,6 +105,75 @@ def run_artifact_glob_rels(vault: Path, run_id: str, pattern: str) -> list[str]:
                 rel_paths.append(rel_path)
                 seen.add(rel_path)
     return rel_paths
+
+
+def auto_improve_session_report_rel(
+    session_id: str,
+    *,
+    session_reports_dir: str = AUTO_IMPROVE_SESSION_REPORT_DIR,
+) -> str:
+    session_id = str(session_id).strip()
+    if not session_id:
+        return ""
+    return f"{session_reports_dir.rstrip('/')}/{session_id}.json"
+
+
+def auto_improve_session_report_candidates(
+    vault: Path,
+    session_id: str,
+    *,
+    session_reports_dir: str = AUTO_IMPROVE_SESSION_REPORT_DIR,
+) -> list[Path]:
+    session_id = str(session_id).strip()
+    if not session_id:
+        return []
+    filename = f"{session_id}.json"
+    reports_dir = Path(session_reports_dir.rstrip("/"))
+    candidate_paths = [
+        vault / reports_dir / filename,
+        vault / reports_dir / "archive" / filename,
+        vault / "ops" / "reports" / "archive" / "auto-improve-sessions" / filename,
+        vault / "ops" / "reports" / "archive" / filename,
+    ]
+    archive_root = vault / "ops" / "reports" / "archive"
+    if archive_root.is_dir():
+        candidate_paths.extend(sorted(path for path in archive_root.rglob(filename) if path.is_file()))
+    return _dedupe_existing_files(vault, candidate_paths)
+
+
+def resolve_auto_improve_session_report_rel(
+    vault: Path,
+    session_id: str,
+    *,
+    session_reports_dir: str = AUTO_IMPROVE_SESSION_REPORT_DIR,
+) -> str:
+    for path in auto_improve_session_report_candidates(
+        vault,
+        session_id,
+        session_reports_dir=session_reports_dir,
+    ):
+        rel_path = _repo_rel_path(vault, path)
+        if rel_path:
+            return rel_path
+    return ""
+
+
+def auto_improve_session_report_rel_from_status(
+    vault: Path,
+    status_report: Mapping[str, Any],
+    *,
+    session_reports_dir: str = AUTO_IMPROVE_SESSION_REPORT_DIR,
+) -> str:
+    run = status_report.get("run")
+    run = run if isinstance(run, Mapping) else {}
+    run_id = str(run.get("run_id", "")).strip()
+    if not run_id:
+        return ""
+    return resolve_auto_improve_session_report_rel(
+        vault,
+        run_id,
+        session_reports_dir=session_reports_dir,
+    ) or auto_improve_session_report_rel(run_id, session_reports_dir=session_reports_dir)
 
 
 def list_strings_any(value: Any) -> list[str]:

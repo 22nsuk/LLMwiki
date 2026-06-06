@@ -22,6 +22,9 @@ from ops.scripts.codex_goal_client import (
     DEFAULT_WORKTREE_GUARD_REPORT_PATH,
     FileGoalBackend,
 )
+from ops.scripts.observability_artifacts_shared_runtime import (
+    auto_improve_session_report_rel_from_status,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
@@ -538,9 +541,8 @@ def _migrate_preserved_report_paths(existing_report: Mapping[str, Any]) -> dict[
     return preserved
 
 
-def _session_report_rel_path(status_report: Mapping[str, Any]) -> str:
-    run_id = str(_mapping_value(status_report, "run").get("run_id", "")).strip()
-    return f"ops/reports/auto-improve-sessions/{run_id}.json" if run_id else ""
+def _session_report_rel_path(vault: Path, status_report: Mapping[str, Any]) -> str:
+    return auto_improve_session_report_rel_from_status(vault, status_report)
 
 
 def _successful_iteration(iteration: Mapping[str, Any]) -> bool:
@@ -706,7 +708,7 @@ def _session_evidence(
     status_report: Mapping[str, Any],
     contract: Mapping[str, Any],
 ) -> dict[str, Any]:
-    rel_path = _session_report_rel_path(status_report)
+    rel_path = _session_report_rel_path(vault, status_report)
     if not rel_path:
         return _empty_session_evidence(status="missing", path="", contract=contract)
     payload = load_optional_json_object(vault / rel_path)

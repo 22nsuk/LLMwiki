@@ -30,6 +30,9 @@ from ops.scripts.observability_artifacts_runtime import (
     write_routing_provenance_aggregate,
     write_run_artifact_fingerprint,
 )
+from ops.scripts.observability_artifacts_shared_runtime import (
+    resolve_auto_improve_session_report_rel,
+)
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.proposal_scope_runtime import build_scope_freeze, write_scope_freeze
 from ops.scripts.runtime_context import RuntimeContext
@@ -864,7 +867,10 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
 
 
 def _load_session_report(vault: Path, session_id: str) -> dict:
-    path = vault / "ops" / "reports" / "auto-improve-sessions" / f"{session_id}.json"
+    rel_path = resolve_auto_improve_session_report_rel(vault, session_id)
+    if not rel_path:
+        rel_path = f"ops/reports/auto-improve-sessions/{session_id}.json"
+    path = vault / rel_path
     return read_json_object(path)
 
 

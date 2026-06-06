@@ -1477,6 +1477,8 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "ops/schemas/goal-runtime-run-admission.schema.json",
             "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
             "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
+            "ops/scripts/mechanism/goal_runtime_stale_closeout.py",
+            "ops/schemas/goal-runtime-stale-closeout.schema.json",
             "tests/test_codex_goal_contract.py",
             "tests/test_codex_goal_client.py",
             "tests/test_codex_goal_prompt.py",
@@ -1490,6 +1492,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "tests/test_goal_runtime_clean_transient.py",
             "tests/test_goal_runtime_run_admission.py",
             "tests/test_goal_runtime_quarantine_preflight.py",
+            "tests/test_goal_runtime_stale_closeout.py",
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -1501,12 +1504,16 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "\tpython -m ops.scripts.goal_runtime_clean_transient\n"
             "goal-runtime-quarantine-preflight:\n"
             "\tpython -m ops.scripts.goal_runtime_quarantine_preflight --strict\n"
+            "goal-runtime-stale-closeout:\n"
+            "\tpython -m ops.scripts.goal_runtime_stale_closeout\n"
             "goal-runtime-run-admission-converge: goal-runtime-clean-transient auto-improve-goal-preflight\n"
             "\t$(MAKE) goal-runtime-clean-transient\n"
             "\t$(MAKE) goal-runtime-quarantine-preflight\n"
+            "\t$(MAKE) goal-runtime-stale-closeout\n"
             "goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight\n"
             "\t$(MAKE) goal-runtime-clean-transient\n"
             "\t$(MAKE) goal-runtime-quarantine-preflight\n"
+            "\t$(MAKE) goal-runtime-stale-closeout\n"
             "\t$(MAKE) goal-runtime-local-evidence-converge\n"
             "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh\n"
             "\tpython -m ops.scripts.goal_runtime_run_admission --readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\" --remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\" --strict\n"
@@ -1719,7 +1726,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         (self.external / "goal.md").write_text(
             "# Goal Review\n\ngoal contract, set_goal, codex_goal_prompt, --goal-contract, "
             "goal-run-status, runtime certificate, retry-after executor backoff, selected contract, Git worktree, transient artifact cleanup, "
-            "goal-runtime-clean-transient, goal-runtime-quarantine-preflight, goal-runtime-run-admission, long-run-preflight-clean.\n",
+            "goal-runtime-clean-transient, goal-runtime-quarantine-preflight, goal-runtime-stale-closeout, goal-runtime-run-admission, long-run-preflight-clean.\n",
             encoding="utf-8",
         )
 

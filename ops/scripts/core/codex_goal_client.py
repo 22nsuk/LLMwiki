@@ -19,6 +19,9 @@ from .artifact_io_runtime import (
     read_json_object,
     write_json_object,
 )
+from .observability_artifacts_shared_runtime import (
+    auto_improve_session_report_rel_from_status,
+)
 from .output_runtime import display_path, resolve_repo_output_path
 from .policy_runtime import load_policy
 from .schema_runtime import load_schema_with_vault_override, validate_with_schema
@@ -233,9 +236,8 @@ def _successful_session_iteration(iteration: Mapping[str, Any]) -> bool:
     )
 
 
-def _session_report_path_from_status(status_report: Mapping[str, Any]) -> str:
-    run_id = str(_mapping_value(status_report, "run").get("run_id", "")).strip()
-    return f"ops/reports/auto-improve-sessions/{run_id}.json" if run_id else ""
+def _session_report_path_from_status(vault: Path, status_report: Mapping[str, Any]) -> str:
+    return auto_improve_session_report_rel_from_status(vault, status_report)
 
 
 def _completed_self_improvement_terminal_queue(
@@ -249,7 +251,7 @@ def _completed_self_improvement_terminal_queue(
         return False
     if str(run.get("runtime_mode", "")).strip() != DEFAULT_RUNTIME_MODE:
         return False
-    session_report_path = _session_report_path_from_status(status_report)
+    session_report_path = _session_report_path_from_status(vault, status_report)
     if not session_report_path:
         return False
     session = load_optional_json_object(vault / session_report_path)
@@ -706,7 +708,7 @@ def _embed_contract_artifact_envelope(
             file_inputs["auto_improve_readiness"] = readiness_report_path
             file_inputs["goal_run_status"] = goal_status_path
             status_report = load_optional_json_object(vault / goal_status_path)
-            session_report_path = _session_report_path_from_status(status_report)
+            session_report_path = _session_report_path_from_status(vault, status_report)
             if session_report_path:
                 file_inputs["auto_improve_session"] = session_report_path
         if worktree_guard_report_path.strip():

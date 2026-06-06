@@ -56,6 +56,13 @@ When a request says "full pytest", choose the lane by intent:
 The registry-backed test lane inventory is recorded in
 `ops/test-lane-registry.json`, reconciled against `mk/test.mk` and sibling
 Makefiles, and summarized for operators by `make help`.
+Treat registry surfaces by ownership rather than by name alone: raw registry
+state preserves full-vault source trace and ingest lifecycle, test-lane registry
+state owns Make/CI/pytest lane semantics, and policy registries own runtime
+validation authority. `ops/script-output-surfaces.json` is narrower: it is an
+AST-derived material output/fallback registry and should track only scripts with
+`--out`/`*-out`, `resolve_output_path`, `resolve_repo_output_path`, or an
+explicit direct-script fallback marker.
 
 Goal-runtime Codex execution has a separate outer-tool contract: the operator
 Codex CLI must resolve outside the repository `.venv`, while Python and pytest
@@ -102,13 +109,14 @@ check surfaces before refreshing expensive summaries. Finish code, docs,
 generator, policy, and schema edits first; then run the stabilizers that can
 mutate or prove generated surfaces, such as `make report-schema-samples-check`,
 `make script-output-surfaces-check`, `make script-output-surfaces` when the check
-reports stale `ops/scripts/**` inventory, targeted generated-artifact converge
-targets, and `make static`. `test-execution-summary-full-body` runs
+reports a stale material output/fallback registry, targeted generated-artifact
+converge targets, and `make static`. `test-execution-summary-full-body` runs
 `make full-pytest-generated-preflight` before the expensive full suite, so stale
 schema samples, script output surfaces, and runtime hotspot golden digests fail
-early with the owning repair target. After that point, do not edit source or docs
-unless restarting this sequence. Refresh `make test-execution-summary-current-or-refresh`
-last, and reserve `make test-execution-summary-full-current-or-refresh` for
+early with the owning repair target. After that point, do not edit source or
+docs unless restarting this sequence. Refresh
+`make test-execution-summary-current-or-refresh` last, and reserve
+`make test-execution-summary-full-current-or-refresh` for
 explicit full-proof lanes such as `make release-run-ready` or
 `make release-source-ready-prepare`. Use
 `make release-converge-preflight` before committing, which refreshes

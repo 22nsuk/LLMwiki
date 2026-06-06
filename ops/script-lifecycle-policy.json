@@ -96,6 +96,16 @@
       "replacement": "python -m ops.scripts.core.cli_surface_inventory"
     },
     {
+      "canonical_module": "ops.scripts.core.command_log_summary_backfill",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/core/command_log_summary_backfill.py",
+      "rationale": "Schema-backed local run-artifact maintenance command retained behind Make/canonical module invocation rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make command-log-summary-backfill"
+    },
+    {
       "canonical_module": "ops.scripts.core.closure_registry_envelope",
       "console_scripts": [],
       "install_state": "not_installed",
@@ -656,6 +666,16 @@
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-run-admission"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_stale_closeout",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/mechanism/goal_runtime_stale_closeout.py",
+      "rationale": "Schema-backed goal-runtime stale evidence closeout command retained behind Make/canonical module invocation rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make goal-runtime-stale-closeout"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_runner",

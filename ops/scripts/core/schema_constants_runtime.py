@@ -109,6 +109,9 @@ SUBAGENT_ROUTING_SCHEMA_PATH = "ops/schemas/subagent-routing-report.schema.json"
 PROPOSAL_SCOPE_SCHEMA_PATH = "ops/schemas/proposal-scope.schema.json"
 EXECUTOR_REPORT_SCHEMA_PATH = "ops/schemas/executor-report.schema.json"
 COMMAND_LOG_SUMMARY_SCHEMA_PATH = "ops/schemas/command-log-summary.schema.json"
+COMMAND_LOG_SUMMARY_BACKFILL_SCHEMA_PATH = (
+    "ops/schemas/command-log-summary-backfill.schema.json"
+)
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = "ops/schemas/auto-improve-session.schema.json"
 AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH = "ops/schemas/auto-improve-readiness-report.schema.json"
 CODEX_GOAL_CONTRACT_SCHEMA_PATH = "ops/schemas/codex-goal-contract.schema.json"

@@ -17,6 +17,10 @@ from ops.scripts.artifact_io_runtime import (
 )
 from ops.scripts.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
 from ops.scripts.filesystem_runtime import atomic_write_text
+from ops.scripts.observability_artifacts_shared_runtime import (
+    auto_improve_session_report_rel,
+    resolve_auto_improve_session_report_rel,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
@@ -38,7 +42,6 @@ from .goal_runtime_resume import mapping_field, resume_metadata_from_report
 DEFAULT_STATUS_PATH = "ops/reports/goal-run-status.json"
 DEFAULT_RUN_ROOT_TEMPLATE = "runs/goal-{run_id}"
 SESSION_SYNOPSIS_PATH = "ops/reports/session-synopsis.json"
-AUTO_IMPROVE_SESSION_REPORT_DIR = "ops/reports/auto-improve-sessions"
 PRODUCER = "ops.scripts.goal_run_status"
 SCHEMA_PATH = "ops/schemas/goal-run-status.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_run_status --vault ."
@@ -206,7 +209,7 @@ def _promoted_iteration_count(iterations: object) -> int:
 
 
 def _auto_improve_session_report_path(run_id: str) -> str:
-    return f"{AUTO_IMPROVE_SESSION_REPORT_DIR}/{run_id}.json" if run_id else ""
+    return auto_improve_session_report_rel(run_id)
 
 
 def _auto_improve_session_completion_class(session: Mapping[str, Any]) -> str:
@@ -222,7 +225,7 @@ def _auto_improve_session_completion_class(session: Mapping[str, Any]) -> str:
 
 
 def _auto_improve_session_link(vault: Path, run_id: str) -> dict[str, Any]:
-    report_path = _auto_improve_session_report_path(run_id)
+    report_path = resolve_auto_improve_session_report_rel(vault, run_id) or _auto_improve_session_report_path(run_id)
     if not report_path:
         return {
             "link_status": "missing",

@@ -50,6 +50,7 @@ OUTPUT_RUNTIME_FILE = "ops/scripts/core/output_runtime.py"
 SCRIPT_OUTPUT_SURFACES = Path("ops/script-output-surfaces.json")
 SCRIPT_OUTPUT_SURFACES_SCHEMA = Path("ops/schemas/script-output-surfaces.schema.json")
 OUTPUT_WRITER_CLASSIFICATIONS = {"repo_artifact", "user_export", "mixed"}
+NON_OUTPUT_MATERIAL_CLASSIFICATION = "no_output"
 PUBLIC_EXPORT_MANIFEST = REPO_ROOT / "PUBLIC-EXPORT-MANIFEST.json"
 
 
@@ -192,7 +193,7 @@ class WriterOutputPathsTest(unittest.TestCase):
             [],
             msg=(
                 "script-output-surfaces schema validation failed; this is a schema/shape "
-                "error in ops/script-output-surfaces.json, not an AST inventory mismatch: "
+                "error in ops/script-output-surfaces.json, not a material surface set mismatch: "
                 + "; ".join(schema_errors[:5])
             ),
         )
@@ -204,7 +205,7 @@ class WriterOutputPathsTest(unittest.TestCase):
         )
         self.assertEqual(
             set(registry["classification_values"]),
-            {"repo_artifact", "user_export", "mixed", "no_output", "diagnostic_only"},
+            {"repo_artifact", "user_export", "mixed", "no_output"},
         )
         paths = [entry["path"] for entry in registry["surfaces"]]
         self.assertEqual(len(paths), len(set(paths)))
@@ -212,12 +213,12 @@ class WriterOutputPathsTest(unittest.TestCase):
     @unittest.skipIf(
         PUBLIC_EXPORT_MANIFEST.exists(),
         (
-            "script-output-surfaces is generated from the ops/scripts-scoped source tree; "
-            "public exports validate schema and writer classifications without "
-            "requiring identical source revision metadata"
+            "script-output-surfaces is generated from the ops/scripts-scoped material "
+            "output/fallback set; public exports validate schema and writer "
+            "classifications without requiring identical source revision metadata"
         ),
     )
-    def test_script_output_surface_registry_matches_current_ast_inventory(self) -> None:
+    def test_script_output_surface_registry_matches_current_material_surface_set(self) -> None:
         actual = _script_output_surface_registry()
         expected = build_script_output_surface_registry(REPO_ROOT)
 
@@ -270,9 +271,9 @@ class WriterOutputPathsTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("schema validation failed", result.stderr)
-        self.assertIn("not an AST inventory mismatch", result.stderr)
+        self.assertIn("not a material surface set mismatch", result.stderr)
 
-    def test_script_output_surface_registry_tracks_surface_semantics_only(self) -> None:
+    def test_script_output_surface_registry_tracks_material_surface_semantics_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -301,6 +302,45 @@ class WriterOutputPathsTest(unittest.TestCase):
                 baseline["surfaces"],
             )
 
+    def test_script_output_surface_registry_excludes_non_material_helper_modules(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "scripts" / "helper_runtime.py").write_text(
+                "VALUE = 1\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "main_without_fallback.py").write_text(
+                "def main(): pass\n"
+                "if __name__ == \"__main__\":\n"
+                "    main()\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "direct_only.py").write_text(
+                "if __package__ in (None, \"\"):  # pragma: no cover - direct script fallback\n"
+                "    pass\n"
+                "def main(): pass\n"
+                "if __name__ == \"__main__\":\n"
+                "    main()\n",
+                encoding="utf-8",
+            )
+
+            registry = build_script_output_surface_registry(vault)
+
+        paths = {entry["path"] for entry in registry["surfaces"]}
+        self.assertNotIn("ops/scripts/helper_runtime.py", paths)
+        self.assertNotIn("ops/scripts/main_without_fallback.py", paths)
+        self.assertIn("ops/scripts/direct_only.py", paths)
+        direct_only = next(
+            entry
+            for entry in registry["surfaces"]
+            if entry["path"] == "ops/scripts/direct_only.py"
+        )
+        self.assertEqual(direct_only["classification"], NON_OUTPUT_MATERIAL_CLASSIFICATION)
+        self.assertTrue(direct_only["direct_fallback_eligible"])
+
     def test_output_option_writers_are_classified(self) -> None:
         registry_files = {entry["path"] for entry in _script_output_surface_entries() if entry["output_options"]}
         inventory_files = _files_with_output_options()
@@ -308,7 +348,7 @@ class WriterOutputPathsTest(unittest.TestCase):
             inventory_files,
             registry_files,
             msg=(
-                "output option surface mismatch: the AST inventory of scripts declaring "
+                "output option surface mismatch: the AST-derived writer inventory of scripts declaring "
                 "`--out`/`*-out` does not match ops/script-output-surfaces.json. "
                 f"missing_from_registry={sorted(inventory_files - registry_files)}; "
                 f"stale_in_registry={sorted(registry_files - inventory_files)}"
@@ -317,6 +357,17 @@ class WriterOutputPathsTest(unittest.TestCase):
         for entry in _script_output_surface_entries():
             if entry["output_options"]:
                 self.assertIn(entry["classification"], OUTPUT_WRITER_CLASSIFICATIONS)
+
+    def test_no_output_entries_are_direct_fallback_registry_entries(self) -> None:
+        for entry in _script_output_surface_entries():
+            if entry["classification"] != NON_OUTPUT_MATERIAL_CLASSIFICATION:
+                continue
+            with self.subTest(rel_path=entry["path"]):
+                self.assertEqual(entry["output_options"], [])
+                self.assertFalse(entry["references_resolve_output_path"])
+                self.assertFalse(entry["references_resolve_repo_output_path"])
+                self.assertTrue(entry["direct_fallback_eligible"])
+                self.assertIn("direct script fallback", Path(entry["path"]).read_text(encoding="utf-8"))
 
     def test_permissive_output_resolver_is_only_used_by_user_export_writers(self) -> None:
         registry_files = {

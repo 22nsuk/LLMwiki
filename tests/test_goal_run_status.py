@@ -99,8 +99,14 @@ class GoalRunStatusTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def _seed_auto_improve_session(self, run_id: str, *, include_completion_class: bool = True) -> None:
-        path = self.vault / "ops" / "reports" / "auto-improve-sessions" / f"{run_id}.json"
+    def _seed_auto_improve_session(
+        self,
+        run_id: str,
+        *,
+        include_completion_class: bool = True,
+        rel_dir: str = "ops/reports/auto-improve-sessions",
+    ) -> None:
+        path = self.vault / rel_dir / f"{run_id}.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "status": "complete",
@@ -859,6 +865,30 @@ class GoalRunStatusTests(unittest.TestCase):
         )
         self.assertEqual(refreshed["auto_improve_session"]["promoted_iteration_count"], 1)
         self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_links_archived_auto_improve_session_report(self) -> None:
+        self._seed_goal_contract()
+        self._seed_auto_improve_session(
+            "20260517-archived",
+            rel_dir="ops/reports/archive/auto-improve-sessions",
+        )
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-archived",
+                status="completed",
+                runtime_mode="self_improvement_loop",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["auto_improve_session"]["link_status"], "linked")
+        self.assertEqual(
+            report["auto_improve_session"]["report_path"],
+            "ops/reports/archive/auto-improve-sessions/20260517-archived.json",
+        )
+        self.assertEqual(report["auto_improve_session"]["status"], "complete")
 
     def test_goal_run_status_requires_existing_persistent_goal_contract(self) -> None:
         with self.assertRaisesRegex(GoalBackendUnavailableError, "goal contract does not exist"):

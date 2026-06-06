@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Command Log Summary Backfill",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "schema_version",
+    "generated_at",
+    "producer",
+    "apply",
+    "include_run_commands",
+    "close_promoted_unreferenced",
+    "delete_raw",
+    "status",
+    "summary",
+    "records",
+    "closure",
+    "fingerprints",
+    "deleted_raw_paths",
+    "stale_same_run_references",
+    "retention_after"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/command-log-summary-backfill.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "command_log_summary_backfill"
+      ]
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "apply": {
+      "type": "boolean"
+    },
+    "include_run_commands": {
+      "type": "boolean"
+    },
+    "close_promoted_unreferenced": {
+      "type": "boolean"
+    },
+    "delete_raw": {
+      "type": "boolean"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_group_count",
+        "eligible_group_count",
+        "applied_group_count",
+        "summary_path_count",
+        "fingerprint_refresh_count",
+        "reference_repair_count",
+        "closed_run_count",
+        "raw_delete_candidate_count",
+        "deleted_raw_count",
+        "stale_same_run_reference_count"
+      ],
+      "properties": {
+        "candidate_group_count": {"type": "integer", "minimum": 0},
+        "eligible_group_count": {"type": "integer", "minimum": 0},
+        "applied_group_count": {"type": "integer", "minimum": 0},
+        "summary_path_count": {"type": "integer", "minimum": 0},
+        "fingerprint_refresh_count": {"type": "integer", "minimum": 0},
+        "reference_repair_count": {"type": "integer", "minimum": 0},
+        "closed_run_count": {"type": "integer", "minimum": 0},
+        "raw_delete_candidate_count": {"type": "integer", "minimum": 0},
+        "deleted_raw_count": {"type": "integer", "minimum": 0},
+        "stale_same_run_reference_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    },
+    "closure": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "closed_run_ids"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "closed_run_ids": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "fingerprints": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "deleted_raw_paths": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "stale_same_run_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "raw_path"
+        ],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "raw_path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "retention_after": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "summary"
+      ],
+      "properties": {
+        "status": {"type": "string"},
+        "summary": {"type": "object"}
+      }
+    }
+  },
+  "$defs": {
+    "record": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "run_id",
+        "owning_run",
+        "prefix",
+        "kind",
+        "raw_paths",
+        "status",
+        "reasons",
+        "summary_path",
+        "trace_paths",
+        "reference_updates",
+        "pre_retention_reasons"
+      ],
+      "properties": {
+        "run_id": {"type": "string", "minLength": 1},
+        "owning_run": {"type": "string", "minLength": 1},
+        "prefix": {"type": "string", "minLength": 1},
+        "kind": {
+          "type": "string",
+          "enum": [
+            "executor",
+            "run_command"
+          ]
+        },
+        "raw_paths": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "eligible",
+            "applied",
+            "skipped"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "summary_path": {"type": "string", "minLength": 1},
+        "trace_paths": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "reference_updates": {
+          "type": "array",
+          "items": {"type": "object"}
+        },
+        "pre_retention_reasons": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        }
+      }
+    }
+  }
+}

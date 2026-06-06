@@ -90,6 +90,7 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_ci_workflow_static.py \
 	tests/test_clean_fixture_regeneration_guard.py \
 	tests/test_cli_surface_inventory.py \
+	tests/test_command_log_summary_backfill.py \
 	tests/test_compatibility_alias_deprecation.py \
 	tests/test_doc_graph_integrity.py \
 	tests/test_external_report_lifecycle_static.py \
@@ -99,6 +100,7 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_goal_runtime_fixed_point_check.py \
 	tests/test_goal_runtime_quarantine_preflight.py \
 	tests/test_goal_runtime_run_admission.py \
+	tests/test_goal_runtime_stale_closeout.py \
 	tests/test_improvement_observations_runtime.py \
 	tests/test_learning_readiness_signoff.py \
 	tests/test_lint_uplift_plan.py \

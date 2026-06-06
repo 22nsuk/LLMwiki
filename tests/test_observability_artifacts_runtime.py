@@ -19,6 +19,10 @@ from ops.scripts.observability_artifacts_runtime import (
     write_routing_provenance_aggregate,
     write_run_artifact_fingerprint,
 )
+from ops.scripts.observability_artifacts_shared_runtime import (
+    auto_improve_session_report_rel_from_status,
+    resolve_auto_improve_session_report_rel,
+)
 from ops.scripts.observability_routing_provenance_runtime import (
     write_latest_routing_provenance_aggregate,
 )
@@ -1325,6 +1329,40 @@ class ObservabilityArtifactsRuntimeTests(unittest.TestCase):
                 f"runs/{run_id}/proposal-snapshot.json",
             )
             self.assertEqual(payload["runs"][0]["artifacts"]["run_telemetry"], "")
+
+    def test_auto_improve_session_report_resolution_prefers_active_then_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            active = vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json"
+            archive = vault / "ops" / "reports" / "archive" / "auto-improve-sessions" / "session-a.json"
+            active.parent.mkdir(parents=True)
+            archive.parent.mkdir(parents=True)
+            active.write_text("{}", encoding="utf-8")
+            archive.write_text("{}", encoding="utf-8")
+
+            self.assertEqual(
+                resolve_auto_improve_session_report_rel(vault, "session-a"),
+                "ops/reports/auto-improve-sessions/session-a.json",
+            )
+
+            active.unlink()
+
+            self.assertEqual(
+                resolve_auto_improve_session_report_rel(vault, "session-a"),
+                "ops/reports/archive/auto-improve-sessions/session-a.json",
+            )
+
+    def test_auto_improve_session_report_status_resolution_falls_back_to_default_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            status_report = {"run": {"run_id": "missing-session"}}
+
+            self.assertEqual(
+                auto_improve_session_report_rel_from_status(vault, status_report),
+                "ops/reports/auto-improve-sessions/missing-session.json",
+            )
 
     def test_routing_provenance_aggregate_resolves_archived_session_run_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

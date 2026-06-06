@@ -4,6 +4,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from ops.scripts.observability_artifacts_shared_runtime import (
+    resolve_auto_improve_session_report_rel,
+    resolve_run_artifact_rel,
+)
+
 from .mechanism_review_history_runtime import load_optional_json
 
 JsonLoader = Callable[[Path], dict | None]
@@ -88,7 +93,8 @@ def session_report_for_run(
     cached = run_cache.get(run_id)
     if cached is not None:
         return cached
-    telemetry = load_optional_json_func(vault / "runs" / run_id / "run-telemetry.json")
+    telemetry_rel = resolve_run_artifact_rel(vault, run_id, "run-telemetry.json") or f"runs/{run_id}/run-telemetry.json"
+    telemetry = load_optional_json_func(vault / telemetry_rel)
     if not isinstance(telemetry, dict):
         run_cache[run_id] = ("", None)
         return run_cache[run_id]
@@ -102,9 +108,10 @@ def session_report_for_run(
         )
         return run_cache[run_id]
     if session_id not in cache:
-        cache[session_id] = load_optional_json_func(
-            vault / "ops" / "reports" / "auto-improve-sessions" / f"{session_id}.json"
+        session_rel = resolve_auto_improve_session_report_rel(vault, session_id) or (
+            f"ops/reports/auto-improve-sessions/{session_id}.json"
         )
+        cache[session_id] = load_optional_json_func(vault / session_rel)
     run_cache[run_id] = (session_id, cache[session_id])
     return run_cache[run_id]
 

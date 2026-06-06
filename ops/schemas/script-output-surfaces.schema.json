@@ -52,7 +52,7 @@
     },
     "classification_values": {
       "type": "array",
-      "minItems": 5,
+      "minItems": 4,
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/classification"
@@ -72,8 +72,7 @@
         "repo_artifact",
         "user_export",
         "mixed",
-        "no_output",
-        "diagnostic_only"
+        "no_output"
       ]
     },
     "surface": {

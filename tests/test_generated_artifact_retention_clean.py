@@ -375,6 +375,41 @@ class GeneratedArtifactRetentionCleanTests(unittest.TestCase):
             self.assertFalse(retained[raw_rel_path]["delete_allowed"])
             self.assertTrue(raw_log.is_file())
 
+    def test_promoted_archived_raw_run_log_retained_when_executor_report_still_references_raw(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = self._vault(Path(temp_dir))
+            raw_rel_path = "runs/archive/run-promoted/worker.stderr.txt"
+            trace_rel_path = "runs/archive/run-promoted/worker.stderr-trace.txt"
+            raw_log = vault / raw_rel_path
+            trace_log = vault / trace_rel_path
+            raw_log.parent.mkdir(parents=True)
+            raw_log.write_text("executor failure details\n", encoding="utf-8")
+            trace_log.write_text("executor failure details\n", encoding="utf-8")
+            self._write_promoted_run_telemetry(vault, "runs/archive/run-promoted")
+            self._write_command_log_summary(
+                vault,
+                owning_run="runs/archive/run-promoted",
+                raw_rel_path=raw_rel_path,
+                trace_rel_path=trace_rel_path,
+                original_path="runs/run-promoted/worker.stderr.txt",
+            )
+            (vault / "runs/archive/run-promoted/worker-executor-report.json").write_text(
+                json.dumps({"artifacts": {"stderr": "runs/run-promoted/worker.stderr.txt"}}),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault)
+
+            self._assert_single_retention_blocker(
+                report,
+                path=raw_rel_path,
+                reason="executor report still references raw command log",
+                blocking_reference="runs/archive/run-promoted/worker-executor-report.json",
+            )
+            self.assertTrue(raw_log.is_file())
+
     def test_current_evidence_reference_blocks_run_log_placeholder_cleanup(
         self,
     ) -> None:

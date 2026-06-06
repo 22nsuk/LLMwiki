@@ -11,6 +11,9 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object,
     write_schema_backed_report,
 )
+from ops.scripts.observability_artifacts_shared_runtime import (
+    auto_improve_session_report_rel_from_status,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -172,11 +175,8 @@ def _goal_status_blockers(
     return blockers
 
 
-def _session_report_path_from_status(status_report: dict[str, Any]) -> str:
-    run = status_report.get("run")
-    run = run if isinstance(run, dict) else {}
-    run_id = str(run.get("run_id", "")).strip()
-    return f"ops/reports/auto-improve-sessions/{run_id}.json" if run_id else ""
+def _session_report_path_from_status(vault: Path, status_report: dict[str, Any]) -> str:
+    return auto_improve_session_report_rel_from_status(vault, status_report)
 
 
 def _successful_session_iteration(iteration: Mapping[str, Any]) -> bool:
@@ -197,7 +197,7 @@ def _completed_self_improvement_terminal_queue(
         return False
     if str(run.get("runtime_mode", "")).strip() != "self_improvement_loop":
         return False
-    session_report_path = _session_report_path_from_status(status_report)
+    session_report_path = _session_report_path_from_status(vault, status_report)
     if not session_report_path:
         return False
     session = load_optional_json_object(vault / session_report_path)

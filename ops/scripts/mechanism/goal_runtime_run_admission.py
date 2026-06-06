@@ -19,6 +19,10 @@ from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     canonical_gate_effect,
 )
+from ops.scripts.observability_artifacts_shared_runtime import (
+    auto_improve_session_report_rel,
+    resolve_auto_improve_session_report_rel,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -160,13 +164,11 @@ def _successful_iteration(iteration: Any) -> bool:
 
 
 def _resume_session_report_path(session_id: str) -> str:
-    if not session_id:
-        return ""
-    return f"ops/reports/auto-improve-sessions/{session_id}.json"
+    return auto_improve_session_report_rel(session_id)
 
 
 def _resume_completion_context(vault: Path, session_id: str) -> dict[str, Any]:
-    path = _resume_session_report_path(session_id)
+    path = resolve_auto_improve_session_report_rel(vault, session_id) or _resume_session_report_path(session_id)
     if not path:
         return {"active": False, "session_report": ""}
     session = _load_json_object(vault, path)

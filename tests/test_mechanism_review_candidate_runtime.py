@@ -287,6 +287,51 @@ class MechanismReviewCandidateRuntimeTest(unittest.TestCase):
             self.assertIsInstance(session_report, dict)
             self.assertEqual(session_report["run_ids"], [run_id])
 
+    def test_session_report_for_run_resolves_archived_telemetry_and_session_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            run_id = "run-archived-session"
+            session_id = "archived-session"
+            run_dir = vault / "runs" / "archive" / run_id
+            run_dir.mkdir(parents=True)
+            (run_dir / "run-telemetry.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/run-telemetry.schema.json",
+                        "session_id": session_id,
+                        "run_id": run_id,
+                        "generated_at": "2026-04-15T00:00:00Z",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            session_dir = vault / "ops" / "reports" / "archive" / "auto-improve-sessions"
+            session_dir.mkdir(parents=True)
+            (session_dir / f"{session_id}.json").write_text(
+                json.dumps(
+                    {
+                        "session_id": session_id,
+                        "generated_at": "2026-04-15T12:00:00Z",
+                        "run_ids": [run_id],
+                        "learning_summary": {
+                            "session_context_status": "session_context_available",
+                        },
+                        "rollups": {"status": "present"},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            resolved_session_id, session_report = session_report_for_run(vault, run_id, {}, {})
+
+            self.assertEqual(resolved_session_id, session_id)
+            self.assertIsInstance(session_report, dict)
+            self.assertEqual(session_report["rollups"], {"status": "present"})
+
     def test_session_calibration_diagnostics_aggregates_candidates_by_family(self) -> None:
         candidates = [
             {

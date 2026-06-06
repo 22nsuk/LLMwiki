@@ -98,6 +98,20 @@ surface comparison; this document owns release evidence and staged authority.
   missing, malformed, or path-incomplete fingerprint evidence are reported as
   `retention_blockers`; apply mode leaves them in place while deleting only
   candidates already classified as safe.
+- `make command-log-summary-backfill`: prepare legacy run stdout/stderr for
+  retention cleanup by writing schema-backed `command-log-summary.json` files
+  and capped `*-trace.txt` streams, rewriting same-run executor/timeout/ledger
+  references to those traces, refreshing run-artifact fingerprints, and then
+  reporting retention status. Use `COMMAND_LOG_SUMMARY_BACKFILL_APPLY=1` with
+  `COMMAND_LOG_SUMMARY_BACKFILL_ALL=1` or a specific
+  `COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID=<run-id>` to mutate evidence. Add
+  `COMMAND_LOG_SUMMARY_BACKFILL_INCLUDE_RUN_COMMANDS=1` and
+  `COMMAND_LOG_SUMMARY_BACKFILL_CLOSE_PROMOTED_UNREFERENCED=1` only when
+  promoted finalized runs should be closed for retention. Raw deletion also
+  requires `COMMAND_LOG_SUMMARY_BACKFILL_DELETE_RAW=1` plus
+  `COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION=CONFIRM_COMMAND_LOG_RAW_DELETE`;
+  it removes only non-empty raw command logs already classified
+  `delete_allowed=true` by the retention report.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as
@@ -122,7 +136,8 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-converge`: mutating evidence convergence for release reports.
 - `make release-converge-preflight`: first refreshes the narrow
   `generated-artifact-script-output` lane so `ops/script-output-surfaces.json`
-  is current before report-contract summaries or release smoke can read it.
+  is current as a material output/fallback registry before report-contract
+  summaries or release smoke can read it.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh.
 - `make release-source-ready`: source-ready commit flow. Mutating convergence happens
   in `release-source-ready-prepare` before the commit; `release-post-commit-finalize`
@@ -172,9 +187,10 @@ surface comparison; this document owns release evidence and staged authority.
 1. Before committing a changed source tree, run `make changed-path-minimum-plan`
    when you want a cheap advisory lane, then run `make release-converge-preflight`
    or the full `make release-source-ready` flow. This keeps
-   `ops/script-output-surfaces.json` current in the same source commit instead
-   of requiring a follow-up generated-artifact commit. Release run/seal tooling
-   still does not push automatically.
+   the `ops/script-output-surfaces.json` material output/fallback registry
+   current in the same source commit instead of requiring a follow-up
+   generated-artifact commit. Release run/seal tooling still does not push
+   automatically.
 2. If unattended promotion is the intended outcome, run
    `make release-auto-promotion-preflight` before the expensive runnable stage.
    You may pass `GOAL_RUN_ID=<goal-run-id>` explicitly, but if it is omitted the
@@ -439,11 +455,11 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   cache instead of the repository canonical report path. After a refresh, the
   export-local summary is copied back into that cache and removed from the
   exported tree so the public surface stays clean. Refreshing
-  `script-output-surfaces` alone does not invalidate this summary because
-  `ops/script-output-surfaces.json` is outside the public export fingerprint
-  authority; broader reruns come from downstream generated-artifact and
-  finality repair bundles, not from `public-check-summary-current-check`
-  itself.
+  `script-output-surfaces` alone does not invalidate this summary because the
+  material output/fallback registry at `ops/script-output-surfaces.json` is
+  outside the public export fingerprint authority; broader reruns come from
+  downstream generated-artifact and finality repair bundles, not from
+  `public-check-summary-current-check` itself.
 - `ops/reports/release-closeout-finality-attestation.json` is diagnostic only;
   release authority is the staged `release-run`, `release-sealed-run`, and
   `release-auto-promotion-ready` manifests under `build/release/`.

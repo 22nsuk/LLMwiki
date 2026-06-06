@@ -107,15 +107,22 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _run_dir(vault: Path, run_id: str) -> Path:
+def _run_dir(vault: Path, run_id: str, *, run_root_rel: str | None = None) -> Path:
+    if run_root_rel:
+        return vault / run_root_rel.strip("/")
     candidates = run_dir_candidates(vault, run_id)
     if candidates:
         return candidates[0]
     return vault / "runs" / run_id
 
 
-def _run_artifact_fingerprint_rel_path(vault: Path, run_id: str) -> str:
-    run_dir = _run_dir(vault, run_id)
+def _run_artifact_fingerprint_rel_path(
+    vault: Path,
+    run_id: str,
+    *,
+    run_root_rel: str | None = None,
+) -> str:
+    run_dir = _run_dir(vault, run_id, run_root_rel=run_root_rel)
     return report_path(vault, run_dir / "run-artifact-fingerprint.json") or run_rel(
         run_id, "run-artifact-fingerprint.json"
     )
@@ -144,9 +151,14 @@ def build_run_artifact_fingerprint(
     run_id: str,
     *,
     context: RuntimeContext,
+    run_root_rel: str | None = None,
 ) -> dict:
-    run_dir = _run_dir(vault, run_id)
-    fingerprint_rel_path = _run_artifact_fingerprint_rel_path(vault, run_id)
+    run_dir = _run_dir(vault, run_id, run_root_rel=run_root_rel)
+    fingerprint_rel_path = _run_artifact_fingerprint_rel_path(
+        vault,
+        run_id,
+        run_root_rel=run_root_rel,
+    )
     artifacts = []
     total_size = 0
     schema_backed_count = 0
@@ -199,9 +211,19 @@ def write_run_artifact_fingerprint(
     run_id: str,
     *,
     context: RuntimeContext,
+    run_root_rel: str | None = None,
 ) -> str:
-    payload = build_run_artifact_fingerprint(vault, run_id, context=context)
-    rel_path = _run_artifact_fingerprint_rel_path(vault, run_id)
+    payload = build_run_artifact_fingerprint(
+        vault,
+        run_id,
+        context=context,
+        run_root_rel=run_root_rel,
+    )
+    rel_path = _run_artifact_fingerprint_rel_path(
+        vault,
+        run_id,
+        run_root_rel=run_root_rel,
+    )
     payload = maybe_embed_run_artifact_envelope(
         vault,
         rel_path,

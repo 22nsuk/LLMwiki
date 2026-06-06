@@ -144,6 +144,11 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "tmp/goal-runtime-quarantine-preflight.json",
             ),
             (
+                "GOAL_RUNTIME_STALE_CLOSEOUT_OUT",
+                "tmp/goal-runtime-stale-closeout.json",
+            ),
+            ("GOAL_RUNTIME_STALE_CLOSEOUT_APPLY", ""),
+            (
                 "GOAL_RUNTIME_FIXED_POINT_CHECK_OUT",
                 "tmp/goal-runtime-fixed-point-check.json",
             ),
@@ -299,6 +304,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             "goal-runtime-closeout-full",
             "goal-runtime-clean-transient",
             "goal-runtime-quarantine-preflight",
+            "goal-runtime-stale-closeout",
             "goal-runtime-fixed-point-check",
             "goal-runtime-run-admission-converge",
             "goal-runtime-run-admission-local-refresh",
@@ -388,6 +394,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-quarantine-preflight",
+                "$(MAKE) goal-runtime-stale-closeout",
                 "$(MAKE) goal-runtime-publish-local-evidence",
                 "$(MAKE) goal-runtime-fixed-point-check",
             ),
@@ -400,6 +407,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-quarantine-preflight",
+                "$(MAKE) goal-runtime-stale-closeout",
             ),
         )
         _assert_recipe_contains_tokens(
@@ -420,6 +428,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             (
                 "$(MAKE) refresh-generated-core",
                 "$(MAKE) goal-runtime-quarantine-preflight",
+                "$(MAKE) goal-runtime-stale-closeout",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-publish-local-evidence",
                 "$(MAKE) goal-runtime-fixed-point-check",
@@ -444,6 +453,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         )
         self.assertLess(
             settle_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
+            settle_recipe.index("$(MAKE) goal-runtime-stale-closeout"),
+        )
+        self.assertLess(
+            settle_recipe.index("$(MAKE) goal-runtime-stale-closeout"),
             settle_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
         )
         for admission_target in (
@@ -616,6 +629,16 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--out \"$(GOAL_RUNTIME_CLEAN_TRANSIENT_OUT)\"",
                 "--status-report \"$(GOAL_RUNTIME_CLEAN_TRANSIENT_STATUS_REPORT)\"",
                 "$(if $(GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY),--apply,)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-stale-closeout",
+            (
+                "ops.scripts.goal_runtime_stale_closeout",
+                "--out \"$(GOAL_RUNTIME_STALE_CLOSEOUT_OUT)\"",
+                "$(if $(GOAL_RUNTIME_STALE_CLOSEOUT_APPLY),--apply,)",
             ),
         )
         _assert_recipe_contains_tokens(

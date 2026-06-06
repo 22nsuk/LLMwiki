@@ -78,6 +78,7 @@ RUN_LOG_BLOCKING_REASONS = frozenset(
         "command log summary is missing or malformed",
         "command log summary original fingerprint mismatch",
         "command log summary trace fingerprint mismatch",
+        "executor report still references raw command log",
         "goal runtime lock blocks run-log cleanup",
         "run artifact fingerprint is missing or malformed",
         "run artifact fingerprint records non-empty command log content",
@@ -359,6 +360,14 @@ def _artifact_role_from_stream_log(filename: str) -> str:
     return "command_log"
 
 
+def _raw_stream_log_parts(filename: str) -> tuple[str, str]:
+    if filename.endswith(".stdout.txt"):
+        return filename.removesuffix(".stdout.txt"), "stdout"
+    if filename.endswith(".stderr.txt"):
+        return filename.removesuffix(".stderr.txt"), "stderr"
+    return "", ""
+
+
 def _promoted_run_telemetry(vault: Path, owning_run: str) -> bool:
     payload = _read_json_object(vault / owning_run / "run-telemetry.json")
     return payload.get("decision") == "PROMOTE" and bool(payload.get("finalized", False))
@@ -549,6 +558,34 @@ def _raw_command_log_summary_blocker(record: dict[str, Any]) -> dict[str, Any] |
     )
 
 
+def _raw_command_log_executor_report_blocker(
+    vault: Path,
+    *,
+    rel_path: str,
+    owning_run: str,
+    run_id: str,
+) -> dict[str, str] | None:
+    prefix, stream = _raw_stream_log_parts(Path(rel_path).name)
+    if not prefix or not stream:
+        return None
+    report_rel_path = f"{owning_run}/{prefix}-executor-report.json"
+    report = _read_json_object(vault / report_rel_path)
+    if not report:
+        return None
+    artifacts = report.get("artifacts")
+    if not isinstance(artifacts, dict):
+        return None
+    referenced_path = str(artifacts.get(stream, "")).strip()
+    if not referenced_path:
+        return None
+    if referenced_path in _summary_original_path_candidates(rel_path, owning_run, run_id):
+        return {
+            "blocking_reference": report_rel_path,
+            "reason": "executor report still references raw command log",
+        }
+    return None
+
+
 def _classify_raw_command_log_record(
     vault: Path,
     record: dict[str, Any],
@@ -601,6 +638,18 @@ def _classify_raw_command_log_record(
     summary_blocker = _raw_command_log_summary_blocker(enriched)
     if summary_blocker is not None:
         return summary_blocker
+    executor_report_blocker = _raw_command_log_executor_report_blocker(
+        vault,
+        rel_path=rel_path,
+        owning_run=owning_run,
+        run_id=run_id,
+    )
+    if executor_report_blocker is not None:
+        return _run_command_log_retained_record(
+            enriched,
+            executor_report_blocker["reason"],
+            blocking_reference=executor_report_blocker["blocking_reference"],
+        )
     return _run_command_log_delete_record(
         enriched,
         "promoted archived/closed raw command log covered by command-log-summary",

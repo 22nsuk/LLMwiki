@@ -183,6 +183,7 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         "generated-artifact-converge",
         "generated-artifact-script-output",
         "generated-artifact-finality-suffix",
+        "command-log-summary-backfill",
         "generated-artifact-retention-clean",
         "script-output-surfaces",
         "function-budget-refactor-proposals",
@@ -204,6 +205,14 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
         "SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json",
         "GENERATED_ARTIFACT_RETENTION_CLEAN_OUT ?= tmp/generated-artifact-retention-clean.json",
         "GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY ?=",
+        "COMMAND_LOG_SUMMARY_BACKFILL_OUT ?= tmp/command-log-summary-backfill.json",
+        "COMMAND_LOG_SUMMARY_BACKFILL_APPLY ?=",
+        "COMMAND_LOG_SUMMARY_BACKFILL_ALL ?=",
+        "COMMAND_LOG_SUMMARY_BACKFILL_INCLUDE_RUN_COMMANDS ?=",
+        "COMMAND_LOG_SUMMARY_BACKFILL_CLOSE_PROMOTED_UNREFERENCED ?=",
+        "COMMAND_LOG_SUMMARY_BACKFILL_DELETE_RAW ?=",
+        "COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION ?=",
+        "COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID ?=",
         "CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json",
         "MAKE_TARGET_INVENTORY_OUT ?= tmp/make-target-inventory.json",
         "WORKFLOW_DEPENDENCY_PLANNER_OUT ?= ops/reports/workflow-dependency-planner.json",
@@ -234,6 +243,17 @@ def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: 
     case.assertNotIn("SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT", script_output_check_block)
     case.assertNotIn("ops.scripts.canonical_artifact_promote", script_output_check_block)
     retention_clean_block = _target_block(text, "generated-artifact-retention-clean")
+    command_log_backfill_block = _target_block(text, "command-log-summary-backfill")
+    case.assertIn("command-log-summary-backfill", _target_block(text, ".PHONY"))
+    case.assertIn("ops.scripts.command_log_summary_backfill", command_log_backfill_block)
+    case.assertIn('--out "$(COMMAND_LOG_SUMMARY_BACKFILL_OUT)"', command_log_backfill_block)
+    case.assertIn("--apply", command_log_backfill_block)
+    case.assertIn("--all", command_log_backfill_block)
+    case.assertIn("--include-run-commands", command_log_backfill_block)
+    case.assertIn("--close-promoted-unreferenced", command_log_backfill_block)
+    case.assertIn("--delete-raw", command_log_backfill_block)
+    case.assertIn("--operator-confirmation", command_log_backfill_block)
+    case.assertIn("--run-id", command_log_backfill_block)
     case.assertIn("generated-artifact-retention-clean", _target_block(text, ".PHONY"))
     case.assertIn("ops.scripts.generated_artifact_retention_clean", retention_clean_block)
     case.assertIn('--out "$(GENERATED_ARTIFACT_RETENTION_CLEAN_OUT)"', retention_clean_block)

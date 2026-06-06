@@ -70,6 +70,10 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "command-log-summary.schema.json",
+    "command-log-summary-backfill.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "command-log-summary-backfill.schema.json",
     "auto-improve-session.schema.json": REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json",
     "auto-improve-readiness-report.schema.json": REPO_ROOT
     / "ops"

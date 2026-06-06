@@ -12,6 +12,7 @@ from .artifact_io_runtime import (
     write_vault_schema_validated_json,
 )
 from .executor_noop_runtime import text_has_executor_noop_mutation_failure
+from .observability_artifacts_shared_runtime import run_dir_candidates
 from .output_runtime import write_output_text
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import COMMAND_LOG_SUMMARY_SCHEMA_PATH
@@ -31,12 +32,51 @@ def run_rel(run_id: str, filename: str) -> str:
     return f"runs/{run_id}/{filename}"
 
 
-def command_log_summary_rel(run_id: str) -> str:
-    return run_rel(run_id, COMMAND_LOG_SUMMARY_FILENAME)
+def _run_root_rel(run_id: str, run_root_rel: str | None = None) -> str:
+    root = str(run_root_rel or "").strip().strip("/")
+    return root or f"runs/{run_id}"
 
 
-def command_log_trace_rel(run_id: str, prefix: str, stream: str) -> str:
-    return run_rel(run_id, f"{prefix}.{stream}-trace.txt")
+def command_log_summary_rel(run_id: str, *, run_root_rel: str | None = None) -> str:
+    return f"{_run_root_rel(run_id, run_root_rel)}/{COMMAND_LOG_SUMMARY_FILENAME}"
+
+
+def command_log_trace_rel(
+    run_id: str,
+    prefix: str,
+    stream: str,
+    *,
+    run_root_rel: str | None = None,
+) -> str:
+    return f"{_run_root_rel(run_id, run_root_rel)}/{prefix}.{stream}-trace.txt"
+
+
+def _repo_rel_path(vault: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(vault.resolve()).as_posix()
+    except ValueError:
+        return ""
+
+
+def _summary_rel_candidates(
+    vault: Path,
+    run_id: str,
+    *,
+    run_root_rel: str | None = None,
+) -> list[str]:
+    if run_root_rel:
+        return [command_log_summary_rel(run_id, run_root_rel=run_root_rel)]
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for run_dir in run_dir_candidates(vault, run_id):
+        rel_path = _repo_rel_path(vault, run_dir / COMMAND_LOG_SUMMARY_FILENAME)
+        if rel_path and rel_path not in seen:
+            candidates.append(rel_path)
+            seen.add(rel_path)
+    fallback = command_log_summary_rel(run_id)
+    if fallback not in seen:
+        candidates.append(fallback)
+    return candidates
 
 
 def _context_or_default(context: RuntimeContext | None) -> RuntimeContext:
@@ -112,8 +152,13 @@ def _diagnostic_flags(stream: str, text: str) -> list[str]:
     return flags
 
 
-def _existing_streams(vault: Path, run_id: str) -> list[dict[str, Any]]:
-    path = vault / command_log_summary_rel(run_id)
+def _existing_streams(
+    vault: Path,
+    run_id: str,
+    *,
+    run_root_rel: str | None = None,
+) -> list[dict[str, Any]]:
+    path = vault / command_log_summary_rel(run_id, run_root_rel=run_root_rel)
     payload = load_optional_json_object(path)
     streams = payload.get("streams")
     if not isinstance(streams, list):
@@ -177,6 +222,7 @@ def write_command_log_summary(
     command_argv: Sequence[str] | None = None,
     head_bytes: int = DEFAULT_HEAD_BYTES,
     tail_bytes: int = DEFAULT_TAIL_BYTES,
+    run_root_rel: str | None = None,
 ) -> str:
     runtime_context = _context_or_default(context)
     generated_at = runtime_context.isoformat_z()
@@ -193,7 +239,12 @@ def write_command_log_summary(
         except OSError:
             continue
         original_sha256 = _sha256_bytes(raw_bytes)
-        trace_rel = command_log_trace_rel(run_id, prefix, stream)
+        trace_rel = command_log_trace_rel(
+            run_id,
+            prefix,
+            stream,
+            run_root_rel=run_root_rel,
+        )
         trace_text, truncated, head_retained, tail_retained = _trace_text(
             raw_bytes,
             original_sha256=original_sha256,
@@ -228,9 +279,12 @@ def write_command_log_summary(
                 "generated_at": generated_at,
             }
         )
-    streams = _merge_streams(_existing_streams(vault, run_id), updates)
+    streams = _merge_streams(
+        _existing_streams(vault, run_id, run_root_rel=run_root_rel),
+        updates,
+    )
     payload = _summary_from_streams(run_id, streams, generated_at=generated_at)
-    rel_path = command_log_summary_rel(run_id)
+    rel_path = command_log_summary_rel(run_id, run_root_rel=run_root_rel)
     write_vault_schema_validated_json(
         vault,
         rel_path,
@@ -241,8 +295,17 @@ def write_command_log_summary(
     return rel_path
 
 
-def load_command_log_summary(vault: Path, run_id: str) -> dict[str, Any]:
-    return load_optional_json_object(vault / command_log_summary_rel(run_id))
+def load_command_log_summary(
+    vault: Path,
+    run_id: str,
+    *,
+    run_root_rel: str | None = None,
+) -> dict[str, Any]:
+    for rel_path in _summary_rel_candidates(vault, run_id, run_root_rel=run_root_rel):
+        payload = load_optional_json_object(vault / rel_path)
+        if payload:
+            return payload
+    return {}
 
 
 def command_log_summary_stream(
@@ -251,8 +314,9 @@ def command_log_summary_stream(
     *,
     prefix: str,
     stream: str,
+    run_root_rel: str | None = None,
 ) -> dict[str, Any] | None:
-    payload = load_command_log_summary(vault, run_id)
+    payload = load_command_log_summary(vault, run_id, run_root_rel=run_root_rel)
     streams = payload.get("streams")
     if not isinstance(streams, list):
         return None
@@ -271,8 +335,15 @@ def command_log_stream_has_flag(
     prefix: str,
     stream: str,
     flag: str,
+    run_root_rel: str | None = None,
 ) -> bool:
-    item = command_log_summary_stream(vault, run_id, prefix=prefix, stream=stream)
+    item = command_log_summary_stream(
+        vault,
+        run_id,
+        prefix=prefix,
+        stream=stream,
+        run_root_rel=run_root_rel,
+    )
     flags = item.get("diagnostic_flags") if isinstance(item, dict) else None
     return isinstance(flags, list) and flag in flags
 
@@ -283,8 +354,15 @@ def command_log_stream_text(
     *,
     prefix: str,
     stream: str,
+    run_root_rel: str | None = None,
 ) -> str:
-    item = command_log_summary_stream(vault, run_id, prefix=prefix, stream=stream)
+    item = command_log_summary_stream(
+        vault,
+        run_id,
+        prefix=prefix,
+        stream=stream,
+        run_root_rel=run_root_rel,
+    )
     if isinstance(item, dict):
         trace_rel = str(item.get("trace_path", "")).strip()
         trace_path = vault / trace_rel
@@ -292,7 +370,7 @@ def command_log_stream_text(
             return trace_path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             pass
-    raw_path = vault / run_rel(run_id, f"{prefix}.{stream}.txt")
+    raw_path = vault / _run_root_rel(run_id, run_root_rel) / f"{prefix}.{stream}.txt"
     try:
         return raw_path.read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -303,7 +381,12 @@ def usage_limit_flag_for_artifact(vault: Path, rel_path: str) -> bool:
     parts = Path(rel_path).parts
     if len(parts) < 3 or parts[0] != "runs":
         return False
-    run_id = parts[1]
+    if len(parts) >= 4 and parts[1] == "archive":
+        run_id = parts[2]
+        run_root_rel = f"runs/archive/{run_id}"
+    else:
+        run_id = parts[1]
+        run_root_rel = f"runs/{run_id}"
     filename = parts[-1]
     suffix = ".stderr-trace.txt"
     if not filename.endswith(suffix):
@@ -315,4 +398,5 @@ def usage_limit_flag_for_artifact(vault: Path, rel_path: str) -> bool:
         prefix=prefix,
         stream="stderr",
         flag="executor_usage_limited",
+        run_root_rel=run_root_rel,
     )

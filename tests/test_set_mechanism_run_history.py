@@ -115,6 +115,32 @@ class SetMechanismRunHistoryTests(unittest.TestCase):
                     ts="2026-04-15T00:00:00Z",
                 )
 
+    def test_set_mechanism_run_history_closes_running_ledger_for_non_active_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_dir = seed_mechanism_run_artifacts(
+                vault,
+                "run-history-running",
+                ledger_status="running",
+            )
+
+            set_mechanism_run_history(
+                vault,
+                "run-history-running",
+                status="quarantined",
+                reason="abandoned stale run",
+                by="human",
+                ts="2026-04-15T00:00:00Z",
+            )
+
+            run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(run_ledger["status"], "blocked")
+            self.assertEqual(run_ledger["events"][-1]["type"], "history_status_updated")
+            self.assertEqual(run_ledger["events"][-1]["decision"], "quarantined")
+
     def test_mechanism_review_excludes_non_active_runs_from_active_history(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

@@ -121,19 +121,23 @@ Before a new run:
 
 Run admission applies the touched structural-complexity gate to source targets,
 not generated evidence surfaces. For example, `ops/script-output-surfaces.json`
-may remain a supporting artifact to refresh after an ops script edit, but it is
-excluded from the start-time complexity budget. Mutation proposal selection also
-skips over-budget primary target options unless the proposal is explicitly a
-structural-complexity repair, so the queue should prefer a smaller runnable
-rotation target instead of starting a run that admission will immediately block.
+may remain a supporting material output/fallback registry to refresh after an
+ops script edit, but it is excluded from the start-time complexity budget.
+Mutation proposal selection also skips over-budget primary target options unless
+the proposal is explicitly a structural-complexity repair, so the queue should
+prefer a smaller runnable rotation target instead of starting a run that
+admission will immediately block.
 
 Between runs, prefer `make goal-runtime-between-run-settle` before starting the
 next trial. It refreshes generated core reports, runs quarantine preflight for
-active history cleanup, then applies the same pre-run cleanup, republishes
+active history cleanup, records stale session/ledger closeout and archive path
+resolution diagnostics, then applies the same pre-run cleanup, republishes
 run-local evidence to the global report surfaces, and verifies the fixed point.
 It is meant for the gap after a run finishes and before a repair/resume run
 starts; release closeout still uses the release-specific cleanup lane described
-in `docs/release.md`.
+in `docs/release.md`. `goal-runtime-stale-closeout` is diagnostic by default;
+rerun it with `GOAL_RUNTIME_STALE_CLOSEOUT_APPLY=1` when the report shows old
+`running` sessions or ledgers that should be closed to blocked local evidence.
 When the previous session's maintenance evidence contains a `queue_action` with
 `runner_action=resume_session_with_additional_proposal_budget`, use
 `make auto-improve-goal-maintenance-action` instead of a manual resume. The
@@ -183,9 +187,11 @@ drifting apart. Release promotion still requires the separate
 the owner of every generated contract fixture. It refreshes
 `artifact-freshness`, `external-report-action-matrix`, and
 `generated-artifact-index` in that order. `script-output-surfaces` is a separate
-semantic registry slice owned by `generated-artifact-script-output`; it no
-longer carries generated-at, source-revision, source-tree-fingerprint, or
-currentness envelope fields in the tracked fixture.
+material output/fallback registry slice owned by
+`generated-artifact-script-output`; it records scripts with material output path
+surfaces or direct-script fallback entrypoints, and no longer carries
+generated-at, source-revision, source-tree-fingerprint, or currentness envelope
+fields in the tracked fixture.
 
 `release-finality-resettle` uses only the finality suffix
 (`artifact-freshness -> external-report-action-matrix ->

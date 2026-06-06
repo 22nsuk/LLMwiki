@@ -196,6 +196,8 @@ def set_mechanism_run_history(
             "decision": status,
         }
     )
+    if status != "active" and run_ledger.get("status") == "running":
+        run_ledger["status"] = "blocked"
 
     validate_or_raise(
         promotion_report,
