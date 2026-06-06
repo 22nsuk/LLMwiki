@@ -39,6 +39,9 @@ from ops.scripts import (
     mechanism_run_promotion_runtime,
     mechanism_run_workspace_runtime,
 )
+from ops.scripts.mechanism.mechanism_run_candidate_snapshot_runtime import (
+    write_candidate_changed_files_snapshot,
+)
 from tests.run_mechanism_experiment_test_utils import seed_wrapper_vault
 
 
@@ -604,6 +607,85 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                     allowed_apply_roots=["ops/", "tests/", "system/system-log.md"],
                 )
             self.assertEqual(live_file.read_text(encoding="utf-8"), "before\n")
+
+    def test_write_candidate_changed_files_snapshot_captures_unapplied_candidate_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            workspace = Path(temp_dir) / "workspace"
+            vault.mkdir()
+            workspace.mkdir()
+            (vault / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
+            (workspace / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "scripts" / "target.py").write_text(
+                "VALUE = 'before'\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "deleted.py").write_text(
+                "DELETE_ME = True\n",
+                encoding="utf-8",
+            )
+            (workspace / "ops" / "scripts" / "target.py").write_text(
+                "VALUE = 'after'\n",
+                encoding="utf-8",
+            )
+            (workspace / "ops" / "scripts" / "added.py").write_text(
+                "ADDED = True\n",
+                encoding="utf-8",
+            )
+            context = RuntimeContext(
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
+            )
+            manifest_rel = _write_changed_files_manifest(
+                vault,
+                workspace,
+                run_id="run-snapshot",
+                primary_targets=["ops/scripts/target.py"],
+                supporting_targets=["ops/scripts/deleted.py"],
+                test_files=[],
+                context=context,
+            )
+
+            snapshot_rel = write_candidate_changed_files_snapshot(
+                vault,
+                workspace,
+                run_id="run-snapshot",
+                changed_files_manifest=manifest_rel,
+                decision="DISCARD",
+                apply_mode="live",
+                apply_status="not_applicable",
+                live_applied=False,
+                capture_reason="non_promoted_decision",
+                context=context,
+            )
+
+            snapshot = json.loads((vault / snapshot_rel).read_text(encoding="utf-8"))
+            by_path = {entry["path"]: entry for entry in snapshot["files"]}
+            self.assertEqual(
+                snapshot_rel,
+                "runs/run-snapshot/candidate-changed-files-snapshot.json",
+            )
+            self.assertEqual(snapshot["generated_at"], "2026-04-15T03:45:00Z")
+            self.assertEqual(snapshot["changed_files_manifest"], manifest_rel)
+            self.assertEqual(snapshot["decision"], "DISCARD")
+            self.assertEqual(snapshot["apply_status"], "not_applicable")
+            self.assertFalse(snapshot["live_applied"])
+            self.assertEqual(snapshot["summary"]["total_changed_files"], 3)
+            self.assertEqual(snapshot["summary"]["captured_text_files"], 2)
+            self.assertEqual(snapshot["summary"]["metadata_only_files"], 1)
+            self.assertEqual(by_path["ops/scripts/added.py"]["change_type"], "added")
+            self.assertEqual(
+                by_path["ops/scripts/added.py"]["candidate"]["content_utf8"],
+                "ADDED = True\n",
+            )
+            self.assertEqual(
+                by_path["ops/scripts/target.py"]["candidate"]["content_utf8"],
+                "VALUE = 'after'\n",
+            )
+            self.assertEqual(
+                by_path["ops/scripts/deleted.py"]["capture"],
+                {"status": "metadata_only", "reason": "candidate_deleted"},
+            )
 
     def test_apply_or_discard_workspace_changes_canary_mode_preserves_live_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

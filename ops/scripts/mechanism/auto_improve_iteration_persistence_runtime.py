@@ -66,7 +66,8 @@ PRESERVED_RUN_TELEMETRY_FIELDS = frozenset(
     {
         "metadata",
         "primary_targets", "supporting_targets", "test_files",
-        "workspace_preparation", "structural_complexity_budget", "apply_mode", "apply_status",
+        "workspace_preparation", "structural_complexity_budget",
+        "candidate_changed_files_snapshot", "apply_mode", "apply_status",
         "live_applied", "shadow_apply_report", "rollback_rehearsal_report",
         "post_mutation_generated_artifact_convergence",
     }
@@ -75,8 +76,13 @@ PRE_PROMOTION_FAILURE_ARTIFACT_OUTCOMES = frozenset({"mutation_failed", "repo_he
 PRE_PROMOTION_FAILURE_LOG_NAMES = (
     "mutation-command.stdout.txt",
     "mutation-command.stderr.txt",
+    "mutation-command.stdout-trace.txt",
+    "mutation-command.stderr-trace.txt",
     "repo-health.stdout.txt",
     "repo-health.stderr.txt",
+    "repo-health.stdout-trace.txt",
+    "repo-health.stderr-trace.txt",
+    "command-log-summary.json",
     "repo-health-artifact-freshness-report-check.json",
     "structural-complexity-budget.json",
 )

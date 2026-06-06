@@ -213,7 +213,11 @@ def _record_promotion_step(
     behavior_delta: str | None,
     decision: str,
     decision_record: dict,
+    candidate_changed_files_snapshot: str = "",
 ) -> None:
+    candidate_snapshot_artifacts = (
+        [candidate_changed_files_snapshot] if candidate_changed_files_snapshot else []
+    )
     append_ledger_event(
         vault,
         run_id,
@@ -226,6 +230,7 @@ def _record_promotion_step(
             *candidate_artifacts.values(),
             changed_files_manifest,
             *([behavior_delta] if behavior_delta else []),
+            *candidate_snapshot_artifacts,
             run_rel(run_id, IMPROVEMENT_OBSERVATIONS_FILENAME),
             run_rel(run_id, "promotion-report.json"),
         ],
@@ -330,6 +335,8 @@ def _build_completed_run_result(
             "status": planning_gate["status"],
         },
     }
+    if steps.candidate_changed_files_snapshot:
+        result["candidate_changed_files_snapshot"] = steps.candidate_changed_files_snapshot
     write_experiment_telemetry(vault, run_id=run_id, resolution=resolution, result=result)
     result["run_artifact_fingerprint"] = write_run_artifact_fingerprint(
         vault,

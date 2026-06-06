@@ -29,6 +29,9 @@ from ops.scripts.schema_constants_runtime import (
 )
 
 from .improvement_observations_runtime import IMPROVEMENT_OBSERVATIONS_FILENAME
+from .mechanism_run_candidate_snapshot_runtime import (
+    write_candidate_changed_files_snapshot,
+)
 from .mechanism_run_common_runtime import (
     CommandStepResult,
     ExperimentResolution,
@@ -426,6 +429,33 @@ def _write_behavior_delta_artifact(
     )
 
 
+def _write_candidate_changed_files_snapshot(
+    vault: Path,
+    workspace_vault: Path,
+    *,
+    run_id: str,
+    context: RuntimeContext,
+    changed_files_manifest: str,
+    decision: str,
+    apply_mode: str,
+    apply_status: str,
+    live_applied: bool,
+    capture_reason: str,
+) -> str:
+    return write_candidate_changed_files_snapshot(
+        vault,
+        workspace_vault,
+        run_id=run_id,
+        changed_files_manifest=changed_files_manifest,
+        decision=decision,
+        apply_mode=apply_mode,
+        apply_status=apply_status,
+        live_applied=live_applied,
+        capture_reason=capture_reason,
+        context=context,
+    )
+
+
 def _schema_backed_run_report_writer(
     vault: Path,
     schema_rel_path: str,
@@ -739,16 +769,10 @@ def _build_repo_health_blocked_result(
     workspace_preparation: dict,
     generated_artifact_convergence: dict,
     repo_health: RepoHealthStepResult,
+    candidate_changed_files_snapshot: str = "",
 ) -> dict:
     planning_gate = validate_run_dir(vault, scaffold.run_dir, context=resolution.context)
-    failure_taxonomy = (
-        "structural_complexity_non_regression"
-        if (
-            repo_health.result["returncode"] == 0
-            and repo_health.structural_complexity_budget_status != "pass"
-        )
-        else "repo_health_blocked"
-    )
+    failure_taxonomy = _repo_health_failure_taxonomy(repo_health)
     result = {
         "run_id": run_id,
         "run_dir": report_path(vault, scaffold.run_dir),
@@ -782,6 +806,8 @@ def _build_repo_health_blocked_result(
             "status": planning_gate["status"],
         },
     }
+    if candidate_changed_files_snapshot:
+        result["candidate_changed_files_snapshot"] = candidate_changed_files_snapshot
     write_experiment_telemetry(vault, run_id=run_id, resolution=resolution, result=result)
     result["run_artifact_fingerprint"] = write_run_artifact_fingerprint(
         vault,
@@ -789,6 +815,15 @@ def _build_repo_health_blocked_result(
         context=resolution.context,
     )
     return result
+
+
+def _repo_health_failure_taxonomy(repo_health: RepoHealthStepResult) -> str:
+    if (
+        repo_health.result["returncode"] == 0
+        and repo_health.structural_complexity_budget_status != "pass"
+    ):
+        return "structural_complexity_non_regression"
+    return "repo_health_blocked"
 
 
 def _apply_or_discard_workspace_changes(

@@ -13,6 +13,11 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 from .artifact_io_runtime import write_schema_validated_json
+from .command_log_summary_runtime import (
+    command_log_summary_rel,
+    command_log_trace_rel,
+    write_command_log_summary,
+)
 from .command_runtime import run_with_timeout
 from .experiment_telemetry_runtime import (
     append_ledger_event,
@@ -88,6 +93,7 @@ class ExecutorArtifactsPayload(TypedDict):
     output_last_message: str
     stdout: str
     stderr: str
+    command_log_summary: str
     timeout_failure: str | None
 
 
@@ -172,6 +178,9 @@ class _ExecutorArtifacts:
     output_last_message_rel: str
     stdout_rel: str
     stderr_rel: str
+    raw_stdout_rel: str
+    raw_stderr_rel: str
+    command_log_summary_rel: str
     prompt_rel: str
 
 
@@ -233,6 +242,7 @@ class _ExecutionRequest:
     sanitized_argv: list[str]
     prompt_path: Path
     timeout_seconds: int
+    context: RuntimeContext
 
 
 @dataclass(frozen=True)
@@ -615,6 +625,7 @@ def _executor_report_template(
             "output_last_message": request.artifacts.output_last_message_rel,
             "stdout": request.artifacts.stdout_rel,
             "stderr": request.artifacts.stderr_rel,
+            "command_log_summary": request.artifacts.command_log_summary_rel,
             "timeout_failure": None,
         },
         "result": {
@@ -861,8 +872,11 @@ def _codex_exec_argv(
 def _executor_artifacts(run_id: str, role: str) -> _ExecutorArtifacts:
     return _ExecutorArtifacts(
         output_last_message_rel=run_rel(run_id, f"{role}-last-message.json"),
-        stdout_rel=run_rel(run_id, f"{role}.stdout.txt"),
-        stderr_rel=run_rel(run_id, f"{role}.stderr.txt"),
+        stdout_rel=command_log_trace_rel(run_id, role, "stdout"),
+        stderr_rel=command_log_trace_rel(run_id, role, "stderr"),
+        raw_stdout_rel=run_rel(run_id, f"{role}.stdout.txt"),
+        raw_stderr_rel=run_rel(run_id, f"{role}.stderr.txt"),
+        command_log_summary_rel=command_log_summary_rel(run_id),
         prompt_rel=run_rel(run_id, f"{role}-prompt.md"),
     )
 
@@ -870,17 +884,45 @@ def _executor_artifacts(run_id: str, role: str) -> _ExecutorArtifacts:
 def _persist_executor_streams(
     *,
     artifact_root: Path,
+    run_id: str,
+    role: str,
     artifacts: _ExecutorArtifacts,
     completed: object,
     sanitize_roots: list[Path],
+    context: RuntimeContext,
+    sanitized_argv: list[str],
 ) -> None:
+    stdout = _sanitize_path_text(str(getattr(completed, "stdout", "")), roots=sanitize_roots)
+    stderr = _sanitize_path_text(str(getattr(completed, "stderr", "")), roots=sanitize_roots)
     write_output_text(
-        artifact_root / artifacts.stdout_rel,
-        _sanitize_path_text(str(getattr(completed, "stdout", "")), roots=sanitize_roots),
+        artifact_root / artifacts.raw_stdout_rel,
+        stdout,
     )
     write_output_text(
-        artifact_root / artifacts.stderr_rel,
-        _sanitize_path_text(str(getattr(completed, "stderr", "")), roots=sanitize_roots),
+        artifact_root / artifacts.raw_stderr_rel,
+        stderr,
+    )
+    write_command_log_summary(
+        artifact_root,
+        run_id,
+        role,
+        {
+            "stdout": stdout,
+            "stderr": stderr,
+            "returncode": _completed_returncode(completed),
+            "timed_out": _completed_timed_out(completed),
+            "timeout_seconds": _completed_timeout_seconds(completed, fallback=0),
+            "termination_reason": _completed_termination_reason(
+                completed,
+                timed_out=_completed_timed_out(completed),
+            ),
+        },
+        raw_paths={
+            "stdout": artifacts.raw_stdout_rel,
+            "stderr": artifacts.raw_stderr_rel,
+        },
+        context=context,
+        command_argv=sanitized_argv,
     )
 
 
@@ -954,6 +996,7 @@ def _build_executor_report(request: ExecutorReportRequest) -> ExecutorReportPayl
             "output_last_message": request.artifacts.output_last_message_rel,
             "stdout": request.artifacts.stdout_rel,
             "stderr": request.artifacts.stderr_rel,
+            "command_log_summary": request.artifacts.command_log_summary_rel,
             "timeout_failure": None,
         },
         "result": {
@@ -1015,6 +1058,7 @@ def _attach_timeout_failure(
             "output_last_message": artifacts.output_last_message_rel,
             "stdout": artifacts.stdout_rel,
             "stderr": artifacts.stderr_rel,
+            "command_log_summary": artifacts.command_log_summary_rel,
             "routing_report": routing_report_rel,
             "scope_freeze": scope_freeze_rel,
         },
@@ -1164,6 +1208,7 @@ def build_execution_request(
         sanitized_argv=sanitized_argv,
         prompt_path=prompt_path,
         timeout_seconds=timeout_seconds,
+        context=context,
     )
 
 
@@ -1499,9 +1544,13 @@ def launch_execution(request: _ExecutionRequest) -> object:
 def capture_execution_artifacts(request: _ExecutionRequest, completed: object) -> dict[str, Any] | None:
     _persist_executor_streams(
         artifact_root=request.artifact_root,
+        run_id=request.run_id,
+        role=request.role,
         artifacts=request.artifacts,
         completed=completed,
         sanitize_roots=[request.artifact_root, request.workspace_root],
+        context=request.context,
+        sanitized_argv=request.sanitized_argv,
     )
     return _read_model_output(request.artifact_root / request.artifacts.output_last_message_rel)
 
@@ -1607,9 +1656,13 @@ def execute_codex_exec_role(
         preflight_completed = _synthetic_preflight_completed(request)
         _persist_executor_streams(
             artifact_root=request.artifact_root,
+            run_id=request.run_id,
+            role=request.role,
             artifacts=request.artifacts,
             completed=preflight_completed,
             sanitize_roots=[request.artifact_root, request.workspace_root],
+            context=context,
+            sanitized_argv=request.sanitized_argv,
         )
         return persist_execution_outcome(
             request=request,

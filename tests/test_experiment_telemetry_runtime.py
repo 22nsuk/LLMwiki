@@ -9,6 +9,7 @@ from pathlib import Path
 from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
 from ops.scripts.experiment_telemetry_runtime import (
     append_ledger_event,
+    write_command_logs,
     write_run_ledger,
     write_run_telemetry,
     write_timeout_failure_artifact,
@@ -100,6 +101,58 @@ class ExperimentTelemetryRuntimeTests(unittest.TestCase):
             self.assertEqual(payload["$schema"], "ops/schemas/timeout-failure.schema.json")
             self.assertEqual(payload["phase"], "mutation_command")
             self.assertTrue(payload["result"]["timed_out"])
+
+    def test_write_command_logs_writes_summary_and_capped_trace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            context = RuntimeContext(
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 16, 0, 5, tzinfo=dt.UTC),
+            )
+
+            logs = write_command_logs(
+                vault,
+                "run-command-summary",
+                "mutation-command",
+                {
+                    "command": "python tools/mutate.py",
+                    "argv": ["python", "tools/mutate.py"],
+                    "returncode": 1,
+                    "stdout": "ok\n",
+                    "stderr": "usage limit; try again at June 6, 2026 9:30 PM\n",
+                    "timed_out": False,
+                    "timeout_seconds": 5,
+                    "termination_reason": "completed",
+                },
+                context=context,
+            )
+
+            self.assertEqual(
+                logs,
+                [
+                    "runs/run-command-summary/mutation-command.stdout.txt",
+                    "runs/run-command-summary/mutation-command.stderr.txt",
+                ],
+            )
+            summary = json.loads(
+                (
+                    vault
+                    / "runs/run-command-summary/command-log-summary.json"
+                ).read_text(encoding="utf-8")
+            )
+            stderr_stream = next(
+                item for item in summary["streams"] if item["stream"] == "stderr"
+            )
+            self.assertEqual(summary["generated_at"], "2026-04-16T00:05:00Z")
+            self.assertEqual(stderr_stream["original_path"], logs[1])
+            self.assertEqual(
+                stderr_stream["trace_path"],
+                "runs/run-command-summary/mutation-command.stderr-trace.txt",
+            )
+            self.assertIn("executor_usage_limited", stderr_stream["diagnostic_flags"])
+            self.assertTrue((vault / stderr_stream["trace_path"]).is_file())
 
     def test_write_timeout_failure_artifact_rejects_non_timeout_result(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

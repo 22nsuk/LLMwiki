@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from .artifact_io_runtime import read_json_object, write_vault_schema_validated_json
+from .command_log_summary_runtime import write_command_log_summary
 from .output_runtime import write_output_text
 from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .runtime_context import RuntimeContext
@@ -132,11 +133,21 @@ def write_command_logs(
     run_id: str,
     prefix: str,
     result: dict,
+    *,
+    context: RuntimeContext | None = None,
 ) -> list[str]:
     stdout_rel = run_rel(run_id, f"{prefix}.stdout.txt")
     stderr_rel = run_rel(run_id, f"{prefix}.stderr.txt")
     write_output_text(vault / stdout_rel, result["stdout"])
     write_output_text(vault / stderr_rel, result["stderr"])
+    write_command_log_summary(
+        vault,
+        run_id,
+        prefix,
+        result,
+        raw_paths={"stdout": stdout_rel, "stderr": stderr_rel},
+        context=context,
+    )
     return [stdout_rel, stderr_rel]
 
 

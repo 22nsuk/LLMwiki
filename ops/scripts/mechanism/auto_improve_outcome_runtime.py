@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from ops.scripts.command_log_summary_runtime import usage_limit_flag_for_artifact
 from ops.scripts.experiment_telemetry_runtime import run_rel
 from ops.scripts.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
@@ -92,6 +93,12 @@ def _executor_report_has_usage_limit(report: dict, artifact_root: Path) -> bool:
     result = report.get("result")
     if not isinstance(result, dict) or result.get("returncode") in (0, "0"):
         return False
+    artifacts = report.get("artifacts", {})
+    if isinstance(artifacts, dict) and usage_limit_flag_for_artifact(
+        artifact_root,
+        str(artifacts.get("stderr", "")).strip(),
+    ):
+        return True
     stderr = _read_report_artifact_text(report, artifact_root, "stderr")
     return bool(_USAGE_LIMIT_STDERR_RE.search(stderr))
 

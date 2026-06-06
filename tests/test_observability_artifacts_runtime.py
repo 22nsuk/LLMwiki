@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from ops.scripts.experiment_telemetry_runtime import (
+    write_command_logs,
     write_run_telemetry,
     write_timeout_failure_artifact,
 )
@@ -207,6 +208,52 @@ class ObservabilityArtifactsRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(payload["repo_provenance_snapshot"]["report_sha256"], "")
 
+    def test_run_artifact_fingerprint_classifies_command_log_summary_and_trace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "run-command-log-summary"
+            write_command_logs(
+                vault,
+                run_id,
+                "mutation-command",
+                {
+                    "command": "python tools/mutate.py",
+                    "argv": ["python", "tools/mutate.py"],
+                    "returncode": 0,
+                    "stdout": "ok\n",
+                    "stderr": "",
+                    "timed_out": False,
+                    "timeout_seconds": 5,
+                    "termination_reason": "completed",
+                },
+                context=fixed_context(),
+            )
+
+            rel_path = write_run_artifact_fingerprint(
+                vault,
+                run_id,
+                context=fixed_context(),
+            )
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            artifacts = {item["path"]: item for item in payload["artifacts"]}
+
+            self.assertEqual(
+                artifacts[f"runs/{run_id}/command-log-summary.json"]["artifact_role"],
+                "command_log_summary",
+            )
+            self.assertEqual(
+                artifacts[f"runs/{run_id}/command-log-summary.json"]["schema"],
+                "ops/schemas/command-log-summary.schema.json",
+            )
+            self.assertEqual(
+                artifacts[f"runs/{run_id}/mutation-command.stdout-trace.txt"][
+                    "artifact_role"
+                ],
+                "command_log_trace",
+            )
+
     def test_run_artifact_fingerprint_classifies_timeout_failure_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -267,6 +314,78 @@ class ObservabilityArtifactsRuntimeTests(unittest.TestCase):
             self.assertEqual(
                 structural_entry["schema"],
                 "ops/schemas/structural-complexity-budget-report.schema.json",
+            )
+
+    def test_run_artifact_fingerprint_classifies_candidate_changed_files_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "run-candidate-snapshot-fingerprint"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            _write_json(
+                run_dir / "candidate-changed-files-snapshot.json",
+                {
+                    "$schema": "ops/schemas/candidate-changed-files-snapshot.schema.json",
+                    "run_id": run_id,
+                    "generated_at": "2026-04-15T12:00:00Z",
+                    "changed_files_manifest": f"runs/{run_id}/changed-files-manifest.json",
+                    "changed_files_manifest_sha256": "0" * 64,
+                    "decision": "HOLD",
+                    "apply_mode": "live",
+                    "apply_status": "not_applicable",
+                    "live_applied": False,
+                    "capture_reason": "non_promoted_decision",
+                    "changed_files_summary": {"total_changed_files": 1},
+                    "summary": {
+                        "total_changed_files": 1,
+                        "added": 0,
+                        "modified": 1,
+                        "deleted": 0,
+                        "captured_text_files": 1,
+                        "metadata_only_files": 0,
+                        "omitted_files": 0,
+                        "captured_text_bytes": 7,
+                        "max_capture_bytes_per_file": 524288,
+                    },
+                    "files": [
+                        {
+                            "path": "ops/scripts/example.py",
+                            "change_type": "modified",
+                            "baseline": {
+                                "exists": True,
+                                "sha256": "1" * 64,
+                                "size_bytes": 6,
+                            },
+                            "candidate": {
+                                "exists": True,
+                                "sha256": "2" * 64,
+                                "size_bytes": 7,
+                                "content_encoding": "utf-8",
+                                "content_utf8": "after\n",
+                            },
+                            "capture": {"status": "captured", "reason": ""},
+                        }
+                    ],
+                },
+            )
+
+            rel_path = write_run_artifact_fingerprint(vault, run_id, context=fixed_context())
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            snapshot_entry = next(
+                item
+                for item in payload["artifacts"]
+                if item["path"] == f"runs/{run_id}/candidate-changed-files-snapshot.json"
+            )
+
+            self.assertEqual(
+                snapshot_entry["artifact_role"],
+                "candidate_changed_files_snapshot",
+            )
+            self.assertEqual(
+                snapshot_entry["schema"],
+                "ops/schemas/candidate-changed-files-snapshot.schema.json",
             )
 
     def test_run_artifact_fingerprint_uses_bundled_schema_when_vault_schema_is_absent(self) -> None:

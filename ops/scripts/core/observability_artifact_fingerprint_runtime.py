@@ -14,7 +14,9 @@ from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import (
     BEHAVIOR_DELTA_SCHEMA_PATH,
+    CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
     CHANGED_FILES_MANIFEST_SCHEMA_PATH,
+    COMMAND_LOG_SUMMARY_SCHEMA_PATH,
     EVAL_REPORT_SCHEMA_PATH,
     EXECUTOR_REPORT_SCHEMA_PATH,
     GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
@@ -46,6 +48,7 @@ RUN_FILE_SCHEMAS = {
     "proposal-snapshot.json": PROPOSAL_SNAPSHOT_SCHEMA_PATH,
     "improvement-observations.json": IMPROVEMENT_OBSERVATIONS_SCHEMA_PATH,
     "changed-files-manifest.json": CHANGED_FILES_MANIFEST_SCHEMA_PATH,
+    "candidate-changed-files-snapshot.json": CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
     "shadow-apply-report.json": SHADOW_APPLY_REPORT_SCHEMA_PATH,
     "rollback-rehearsal-report.json": ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     "behavior-delta.json": BEHAVIOR_DELTA_SCHEMA_PATH,
@@ -59,6 +62,7 @@ RUN_FILE_SCHEMAS = {
     "candidate-mechanism-assessment.json": MECHANISM_ASSESSMENT_SCHEMA_PATH,
     "scope-freeze.json": PROPOSAL_SCOPE_SCHEMA_PATH,
     "run-telemetry.json": RUN_TELEMETRY_SCHEMA_PATH,
+    "command-log-summary.json": COMMAND_LOG_SUMMARY_SCHEMA_PATH,
 }
 
 
@@ -81,6 +85,10 @@ def _artifact_role(rel_path: str) -> str:
         return "command_stdout"
     if filename.endswith(".stderr.txt"):
         return "command_stderr"
+    if filename.endswith("-trace.txt"):
+        return "command_log_trace"
+    if filename == "command-log-summary.json":
+        return "command_log_summary"
     if filename.startswith("subagent-routing.") and filename.endswith(".json"):
         return "subagent_routing_report"
     if filename.endswith("-executor-report.json"):

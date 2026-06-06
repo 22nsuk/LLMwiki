@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -333,4 +334,155 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
             self.assertIn(
                 "runs/run-steps/repo-health-artifact-freshness-report-check.json",
                 dependencies.append_ledger_event.call_args.kwargs["artifacts"],
+            )
+
+    def test_repo_health_step_compacts_passing_artifact_freshness_diagnostic_report(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            workspace = Path(temp_dir) / "workspace"
+            vault.mkdir()
+            workspace.mkdir()
+            diagnostic = workspace / "tmp" / "artifact-freshness-report-check.json"
+            diagnostic.parent.mkdir(parents=True)
+            diagnostic.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/artifact-freshness-report.schema.json",
+                        "artifact_kind": "artifact_freshness_report",
+                        "generated_at": "2026-04-24T12:00:00Z",
+                        "producer": "ops.scripts.artifact_freshness_runtime",
+                        "source_command": "make artifact-freshness-check",
+                        "source_revision": "abc",
+                        "source_tree_fingerprint": "fingerprint",
+                        "status": "pass",
+                        "gate_effect": "none",
+                        "recommended_next_action": "none",
+                        "currentness": {"status": "current"},
+                        "summary": {"artifact_count": 12},
+                        "top_debt": [],
+                        "top_debt_files": [],
+                        "debt_queues": [],
+                        "artifact_records": [{"path": "ops/reports/large.json"}],
+                        "owner_surface": {"ops_reports": 1},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            dependencies = RepoHealthStepDependencies(
+                command_argv=mock.Mock(return_value=["make", "check"]),
+                run_command=mock.Mock(
+                    return_value={
+                        "command": "make check",
+                        "argv": ["make", "check"],
+                        "returncode": 0,
+                        "stdout": "artifact freshness passed\n",
+                        "stderr": "",
+                    }
+                ),
+                write_command_logs=mock.Mock(
+                    return_value=[
+                        "runs/run-steps/repo-health.stdout.txt",
+                        "runs/run-steps/repo-health.stderr.txt",
+                    ]
+                ),
+                write_timeout_failure_artifact=mock.Mock(),
+                append_ledger_event=mock.Mock(),
+                write_changed_files_manifest=mock.Mock(
+                    return_value="runs/run-steps/changed-files-manifest.json"
+                ),
+                write_structural_complexity_budget_artifact=mock.Mock(
+                    return_value=_structural_budget_pass()
+                ),
+                write_behavior_delta_artifact=mock.Mock(
+                    return_value="runs/run-steps/behavior-delta.json"
+                ),
+                sanitize_path_text=mock.Mock(side_effect=lambda text, *, roots: text),
+            )
+
+            result = repo_health_step(
+                vault,
+                workspace,
+                run_id="run-steps",
+                resolution=_resolution(),
+                baseline_file_digests={},
+                dependencies=dependencies,
+            )
+
+            copied = vault / "runs" / "run-steps" / "repo-health-artifact-freshness-report-check.json"
+            payload = json.loads(copied.read_text(encoding="utf-8"))
+            self.assertTrue(result.passed)
+            self.assertEqual(payload["preservation_mode"], "compact_summary")
+            self.assertFalse(payload["full_scan_preserved"])
+            self.assertEqual(payload["source_artifact_kind"], "artifact_freshness_report")
+            self.assertEqual(payload["status"], "pass")
+            self.assertEqual(payload["source_tree_fingerprint"], "fingerprint")
+            self.assertEqual(payload["summary"], {"artifact_count": 12})
+            self.assertEqual(payload["top_debt_files"], [])
+            self.assertNotIn("artifact_records", payload)
+            self.assertNotIn("owner_surface", payload)
+
+    def test_repo_health_step_preserves_full_freshness_scan_when_gate_blocks(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            workspace = Path(temp_dir) / "workspace"
+            vault.mkdir()
+            workspace.mkdir()
+            diagnostic = workspace / "tmp" / "artifact-freshness-report-check.json"
+            diagnostic.parent.mkdir(parents=True)
+            original_payload = {
+                "status": "attention",
+                "gate_effect": "blocks_promotion",
+                "top_debt_files": [{"path": "ops/reports/generated.json"}],
+                "artifact_records": [{"path": "ops/reports/generated.json"}],
+            }
+            diagnostic.write_text(json.dumps(original_payload), encoding="utf-8")
+            dependencies = RepoHealthStepDependencies(
+                command_argv=mock.Mock(return_value=["make", "check"]),
+                run_command=mock.Mock(
+                    return_value={
+                        "command": "make check",
+                        "argv": ["make", "check"],
+                        "returncode": 1,
+                        "stdout": "artifact freshness attention\n",
+                        "stderr": "artifact freshness blocked promotion\n",
+                    }
+                ),
+                write_command_logs=mock.Mock(
+                    return_value=[
+                        "runs/run-steps/repo-health.stdout.txt",
+                        "runs/run-steps/repo-health.stderr.txt",
+                    ]
+                ),
+                write_timeout_failure_artifact=mock.Mock(),
+                append_ledger_event=mock.Mock(),
+                write_changed_files_manifest=mock.Mock(
+                    return_value="runs/run-steps/changed-files-manifest.json"
+                ),
+                write_structural_complexity_budget_artifact=mock.Mock(
+                    return_value=_structural_budget_pass()
+                ),
+                write_behavior_delta_artifact=mock.Mock(
+                    return_value="runs/run-steps/behavior-delta.json"
+                ),
+                sanitize_path_text=mock.Mock(side_effect=lambda text, *, roots: text),
+            )
+
+            result = repo_health_step(
+                vault,
+                workspace,
+                run_id="run-steps",
+                resolution=_resolution(),
+                baseline_file_digests={},
+                dependencies=dependencies,
+            )
+
+            copied = vault / "runs" / "run-steps" / "repo-health-artifact-freshness-report-check.json"
+            self.assertFalse(result.passed)
+            self.assertEqual(
+                json.loads(copied.read_text(encoding="utf-8")),
+                original_payload,
             )

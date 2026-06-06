@@ -170,6 +170,39 @@ class AutoImproveQueueRuntimeTests(unittest.TestCase):
         self.assertEqual(queue[0]["blocked_by"], [])
         self.assertEqual(proposals_report["proposals"][1]["blocked_by"], ["recent_log_overlap"])
 
+    def test_recent_log_overlap_queue_unblock_does_not_displace_standard_runnable(self) -> None:
+        proposals_report = {
+            "proposals": [
+                {
+                    "proposal_id": "standard-runnable",
+                    "priority": 10,
+                    "blocked_by": [],
+                },
+                {
+                    "proposal_id": "recent_log_overlap_queue_blocked__target",
+                    "family": "queue_unblock",
+                    "failure_mode": "recent_log_overlap_queue_blocked",
+                    "priority": 100,
+                    "blocked_by": ["recent_log_overlap"],
+                },
+            ]
+        }
+
+        queue = build_proposal_queue(
+            proposals_report,
+            attempted=set(),
+            quarantined=set(),
+        )
+
+        self.assertEqual(
+            [proposal["proposal_id"] for proposal in queue],
+            ["standard-runnable"],
+        )
+        self.assertEqual(
+            proposals_report["proposals"][1]["blocked_by"],
+            ["recent_log_overlap"],
+        )
+
     def test_queue_normalizes_identity_and_priority_without_mutating_source(self) -> None:
         proposals_report: dict[str, list[dict[str, object]]] = {
             "proposals": [

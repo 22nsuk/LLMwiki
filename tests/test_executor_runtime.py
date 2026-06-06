@@ -356,7 +356,22 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("--full-auto", report["command"]["argv"])
             self.assertIn("--skip-git-repo-check", report["command"]["argv"])
             self.assertIsNone(report["artifacts"]["timeout_failure"])
+            self.assertEqual(
+                report["artifacts"]["stdout"],
+                "runs/run-executor/worker.stdout-trace.txt",
+            )
+            self.assertEqual(
+                report["artifacts"]["stderr"],
+                "runs/run-executor/worker.stderr-trace.txt",
+            )
+            self.assertEqual(
+                report["artifacts"]["command_log_summary"],
+                "runs/run-executor/command-log-summary.json",
+            )
             self.assertTrue((vault / "runs" / "run-executor" / "worker-executor-report.json").exists())
+            self.assertTrue((vault / "runs" / "run-executor" / "worker.stdout.txt").exists())
+            self.assertTrue((vault / "runs" / "run-executor" / "worker.stdout-trace.txt").exists())
+            self.assertTrue((vault / "runs" / "run-executor" / "command-log-summary.json").exists())
             prompt = (vault / "runs" / "run-executor" / "worker-prompt.md").read_text(encoding="utf-8")
             self.assertIn("Return JSON only.", prompt)
             self.assertIn("proposal_snapshot", prompt)
@@ -486,7 +501,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(
                 hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "71edebc8480f47f948ddcf18b517a4eece9607546045103625e361a26630a629",
+                "a8baa0924d4094696aa592d9f86d003e2c7ce34a0d2d2c1a377260d10532ab3b",
             )
             section_positions = [
                 prompt.index(section)
@@ -543,8 +558,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
         )
         artifacts = _ExecutorArtifacts(
             output_last_message_rel="runs/run-executor/validator-last-message.json",
-            stdout_rel="runs/run-executor/validator.stdout.txt",
-            stderr_rel="runs/run-executor/validator.stderr.txt",
+            stdout_rel="runs/run-executor/validator.stdout-trace.txt",
+            stderr_rel="runs/run-executor/validator.stderr-trace.txt",
+            raw_stdout_rel="runs/run-executor/validator.stdout.txt",
+            raw_stderr_rel="runs/run-executor/validator.stderr.txt",
+            command_log_summary_rel="runs/run-executor/command-log-summary.json",
             prompt_rel="runs/run-executor/validator-prompt.md",
         )
         summary = _ExecutionSummary(
@@ -626,7 +644,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
         self.assertEqual(first_payload["diagnostics"]["notes"], ["validator blocked", "missing dependency evidence"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "bc0a25f4aeda3a4cbd2402a8f04c3b1b9580af3d6687940ee58682346dd48e52",
+            "f18d6d1402f6d6fc61594f7464827c7faede73cf4dc7da4ea7e0d26bf67049e2",
         )
 
     def test_codex_exec_prefers_workspace_virtualenv_on_path(self) -> None:
@@ -1198,6 +1216,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertEqual(timeout_failure["phase"], "executor")
             self.assertEqual(timeout_failure["role"], "worker")
             self.assertTrue(timeout_failure["result"]["timed_out"])
+            self.assertEqual(
+                timeout_failure["artifacts"]["stderr"],
+                "runs/run-executor/worker.stderr-trace.txt",
+            )
+            self.assertEqual(
+                timeout_failure["artifacts"]["command_log_summary"],
+                "runs/run-executor/command-log-summary.json",
+            )
             self.assertIn(report["artifacts"]["timeout_failure"], ledger["events"][-1]["artifacts"])
 
     def test_role_usage_limit_adds_retryable_diagnostic_note(self) -> None:

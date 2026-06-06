@@ -30,6 +30,10 @@ SCHEMA_PATHS = {
     "run-ledger.schema.json": REPO_ROOT / "ops" / "schemas" / "run-ledger.schema.json",
     "improvement-observations.schema.json": REPO_ROOT / "ops" / "schemas" / "improvement-observations.schema.json",
     "changed-files-manifest.schema.json": REPO_ROOT / "ops" / "schemas" / "changed-files-manifest.schema.json",
+    "candidate-changed-files-snapshot.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "candidate-changed-files-snapshot.schema.json",
     "clean-fixture-regeneration-guard.schema.json": REPO_ROOT
     / "ops"
     / "schemas"
@@ -62,6 +66,10 @@ SCHEMA_PATHS = {
     "subagent-routing-report.schema.json": REPO_ROOT / "ops" / "schemas" / "subagent-routing-report.schema.json",
     "proposal-scope.schema.json": REPO_ROOT / "ops" / "schemas" / "proposal-scope.schema.json",
     "executor-report.schema.json": REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json",
+    "command-log-summary.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "command-log-summary.schema.json",
     "auto-improve-session.schema.json": REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json",
     "auto-improve-readiness-report.schema.json": REPO_ROOT
     / "ops"

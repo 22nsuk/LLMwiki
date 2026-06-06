@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Command Log Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "schema_version",
+    "run_id",
+    "generated_at",
+    "producer",
+    "summary",
+    "streams"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/command-log-summary.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "command_log_summary"
+      ]
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stream_count",
+        "truncated_stream_count",
+        "original_total_bytes",
+        "trace_total_bytes"
+      ],
+      "properties": {
+        "stream_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "truncated_stream_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "original_total_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "trace_total_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "streams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "prefix",
+          "stream",
+          "original_path",
+          "original_size_bytes",
+          "original_sha256",
+          "trace_path",
+          "trace_size_bytes",
+          "trace_sha256",
+          "head_limit_bytes",
+          "tail_limit_bytes",
+          "head_retained_bytes",
+          "tail_retained_bytes",
+          "truncated",
+          "command",
+          "argv",
+          "returncode",
+          "timed_out",
+          "timeout_seconds",
+          "termination_reason",
+          "diagnostic_flags",
+          "generated_at"
+        ],
+        "properties": {
+          "prefix": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stream": {
+            "type": "string",
+            "enum": [
+              "stdout",
+              "stderr"
+            ]
+          },
+          "original_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "original_size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "original_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "trace_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "trace_size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "trace_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "head_limit_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tail_limit_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "head_retained_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tail_retained_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "command": {
+            "type": "string"
+          },
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "returncode": {
+            "type": "integer"
+          },
+          "timed_out": {
+            "type": "boolean"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "termination_reason": {
+            "type": "string"
+          },
+          "diagnostic_flags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "generated_at": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

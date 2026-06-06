@@ -90,6 +90,7 @@ class CommandExecutionRequest:
     run_id: str
     log_name: str
     command_spec: CommandSpec
+    context: RuntimeContext
 
 
 @dataclass(frozen=True)
@@ -147,6 +148,7 @@ class CompletedRunSteps:
     finalize_step: FinalizeStepResult
     workspace_apply: WorkspaceApplyResult
     workspace_preparation: dict
+    candidate_changed_files_snapshot: str
 
 
 def timestamp(context: RuntimeContext | None = None) -> str:
@@ -264,6 +266,7 @@ def execute_command_step(
         request.run_id,
         request.log_name,
         sanitized_result,
+        context=request.context,
     )
     return CommandExecutionResult(argv=argv, result=sanitized_result, logs=logs)
 

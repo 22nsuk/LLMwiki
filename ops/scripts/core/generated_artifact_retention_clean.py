@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .command_log_summary_runtime import COMMAND_LOG_SUMMARY_FILENAME
 from .gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_EXECUTION,
@@ -73,6 +74,10 @@ RUN_LOG_BLOCKING_REASONS = frozenset(
         "artifact freshness report does not list this zero-byte run log placeholder",
         "artifact freshness report is missing",
         "artifact freshness report is missing run_log_placeholders",
+        "command log summary does not record raw log path",
+        "command log summary is missing or malformed",
+        "command log summary original fingerprint mismatch",
+        "command log summary trace fingerprint mismatch",
         "goal runtime lock blocks run-log cleanup",
         "run artifact fingerprint is missing or malformed",
         "run artifact fingerprint records non-empty command log content",
@@ -136,6 +141,14 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return value if isinstance(value, dict) else {}
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _process_is_running(pid: int) -> bool:
@@ -334,6 +347,106 @@ def _run_artifact_fingerprint_confirmation(
     }
 
 
+def _raw_stream_log_filename(filename: str) -> bool:
+    return filename.endswith((".stdout.txt", ".stderr.txt"))
+
+
+def _artifact_role_from_stream_log(filename: str) -> str:
+    if filename.endswith(".stdout.txt"):
+        return "command_stdout"
+    if filename.endswith(".stderr.txt"):
+        return "command_stderr"
+    return "command_log"
+
+
+def _promoted_run_telemetry(vault: Path, owning_run: str) -> bool:
+    payload = _read_json_object(vault / owning_run / "run-telemetry.json")
+    return payload.get("decision") == "PROMOTE" and bool(payload.get("finalized", False))
+
+
+def _summary_original_path_candidates(rel_path: str, owning_run: str, run_id: str) -> set[str]:
+    candidates = {rel_path}
+    if _is_archived_run(owning_run):
+        candidates.add(f"runs/{run_id}/{Path(rel_path).name}")
+    return candidates
+
+
+def _relocated_summary_trace_path(
+    vault: Path,
+    *,
+    owning_run: str,
+    trace_rel: str,
+) -> tuple[str, Path]:
+    trace_path = vault / trace_rel
+    if trace_path.is_file():
+        return trace_rel, trace_path
+    if _is_archived_run(owning_run):
+        relocated_rel = f"{owning_run}/{Path(trace_rel).name}"
+        relocated_path = vault / relocated_rel
+        if relocated_path.is_file():
+            return relocated_rel, relocated_path
+    return trace_rel, trace_path
+
+
+def _raw_command_log_summary_confirmation(
+    vault: Path,
+    *,
+    rel_path: str,
+    owning_run: str,
+    run_id: str,
+    size_bytes: int,
+) -> dict[str, Any]:
+    summary_rel_path = f"{owning_run}/{COMMAND_LOG_SUMMARY_FILENAME}"
+    payload = _read_json_object(vault / summary_rel_path)
+    streams = payload.get("streams")
+    if not payload or not isinstance(streams, list):
+        return {
+            "summary_path": summary_rel_path,
+            "summary_status": "missing_or_malformed",
+            "summary_match_confirmed": False,
+            "summary_blocking_reason": "command log summary is missing or malformed",
+        }
+    original_path_candidates = _summary_original_path_candidates(rel_path, owning_run, run_id)
+    for item in streams:
+        if not isinstance(item, dict) or item.get("original_path") not in original_path_candidates:
+            continue
+        raw_sha256 = _sha256_file(vault / rel_path)
+        if item.get("original_size_bytes") != size_bytes or item.get("original_sha256") != raw_sha256:
+            return {
+                "summary_path": summary_rel_path,
+                "summary_status": "original_fingerprint_mismatch",
+                "summary_match_confirmed": False,
+                "summary_blocking_reason": "command log summary original fingerprint mismatch",
+            }
+        trace_rel, trace_path = _relocated_summary_trace_path(
+            vault,
+            owning_run=owning_run,
+            trace_rel=str(item.get("trace_path", "")).strip(),
+        )
+        if not trace_path.is_file() or item.get("trace_sha256") != _sha256_file(trace_path):
+            return {
+                "summary_path": summary_rel_path,
+                "summary_status": "trace_fingerprint_mismatch",
+                "summary_match_confirmed": False,
+                "summary_blocking_reason": "command log summary trace fingerprint mismatch",
+                "trace_path": trace_rel,
+            }
+        return {
+            "summary_path": summary_rel_path,
+            "summary_status": "path_recorded",
+            "summary_match_confirmed": True,
+            "trace_path": trace_rel,
+            "trace_sha256": item.get("trace_sha256"),
+            "original_sha256": raw_sha256,
+        }
+    return {
+        "summary_path": summary_rel_path,
+        "summary_status": "path_not_recorded",
+        "summary_match_confirmed": False,
+        "summary_blocking_reason": "command log summary does not record raw log path",
+    }
+
+
 def _run_command_log_symlink_retention_record(
     vault: Path, rel_path: str
 ) -> dict[str, Any]:
@@ -372,6 +485,24 @@ def _run_command_log_base_record(
     }
 
 
+def _raw_command_log_base_record(
+    vault: Path,
+    *,
+    rel_path: str,
+    owning_run: str,
+    run_id: str,
+    size_bytes: int,
+) -> dict[str, Any]:
+    return {
+        **_path_record(vault, rel_path, category="raw_command_log_with_summary"),
+        "artifact_role": _artifact_role_from_stream_log(Path(rel_path).name),
+        "size_bytes": size_bytes,
+        "owning_run": owning_run,
+        "run_id": run_id,
+        "evidence_paths": [f"{owning_run}/{COMMAND_LOG_SUMMARY_FILENAME}"],
+    }
+
+
 def _run_command_log_retained_record(
     record: dict[str, Any],
     reason: str,
@@ -404,6 +535,75 @@ def _run_command_log_fingerprint_blocker(
         record,
         str(reason),
         blocking_reference=str(record["fingerprint_path"]),
+    )
+
+
+def _raw_command_log_summary_blocker(record: dict[str, Any]) -> dict[str, Any] | None:
+    reason = record.get("summary_blocking_reason")
+    if not reason:
+        return None
+    return _run_command_log_retained_record(
+        record,
+        str(reason),
+        blocking_reference=str(record["summary_path"]),
+    )
+
+
+def _classify_raw_command_log_record(
+    vault: Path,
+    record: dict[str, Any],
+    *,
+    rel_path: str,
+    owning_run: str,
+    run_id: str,
+    closed_run_ids: set[str],
+    lock_blocker: dict[str, str] | None,
+    blocking_reference: str | None,
+) -> dict[str, Any]:
+    if not record["ignored"]:
+        return _run_command_log_retained_record(
+            record,
+            "raw run command log is not ignored by git",
+        )
+    if lock_blocker is not None:
+        return _run_command_log_retained_record(
+            record,
+            "goal runtime lock blocks run-log cleanup",
+            blocking_reference=lock_blocker["path"],
+            extra={"lock_blocking_reason": lock_blocker["reason"]},
+        )
+    if blocking_reference:
+        return _run_command_log_retained_record(
+            record,
+            "current evidence references owning run",
+            blocking_reference=blocking_reference,
+        )
+    if not (_is_archived_run(owning_run) or run_id in closed_run_ids):
+        return _run_command_log_retained_record(
+            record,
+            "run is not archived or closed by rework-closures evidence",
+        )
+    if not _promoted_run_telemetry(vault, owning_run):
+        return _run_command_log_retained_record(
+            record,
+            "run did not finish as promoted",
+        )
+    enriched = {
+        **record,
+        **_raw_command_log_summary_confirmation(
+            vault,
+            rel_path=rel_path,
+            owning_run=owning_run,
+            run_id=run_id,
+            size_bytes=int(record["size_bytes"]),
+        ),
+    }
+    summary_blocker = _raw_command_log_summary_blocker(enriched)
+    if summary_blocker is not None:
+        return summary_blocker
+    return _run_command_log_delete_record(
+        enriched,
+        "promoted archived/closed raw command log covered by command-log-summary",
     )
 
 
@@ -510,7 +710,9 @@ def _run_command_log_retention_records(vault: Path) -> list[dict[str, Any]]:
     lock_blocker = _goal_runtime_lock_blocker(vault)
     records: list[dict[str, Any]] = []
     for path in sorted(runs_root.rglob("*")):
-        if path.name not in RUN_COMMAND_LOG_FILENAMES:
+        is_zero_placeholder_name = path.name in RUN_COMMAND_LOG_FILENAMES
+        is_raw_stream_log = _raw_stream_log_filename(path.name)
+        if not (is_zero_placeholder_name or is_raw_stream_log):
             continue
         try:
             rel_path = path.relative_to(vault).as_posix()
@@ -525,7 +727,9 @@ def _run_command_log_retention_records(vault: Path) -> list[dict[str, Any]]:
             size_bytes = path.stat().st_size
         except OSError:
             continue
-        if size_bytes != 0:
+        if size_bytes == 0 and not is_zero_placeholder_name:
+            continue
+        if size_bytes != 0 and not is_raw_stream_log:
             continue
         owning_run = _owning_run_path(rel_path)
         run_id = _run_id_from_owning_path(owning_run)
@@ -535,7 +739,29 @@ def _run_command_log_retention_records(vault: Path) -> list[dict[str, Any]]:
             run_id=run_id,
             evidence=reference_evidence,
         )
-        record = _run_command_log_base_record(
+        if size_bytes == 0:
+            record = _run_command_log_base_record(
+                vault,
+                rel_path=rel_path,
+                owning_run=owning_run,
+                run_id=run_id,
+                size_bytes=size_bytes,
+            )
+            records.append(
+                _classify_run_command_log_record(
+                    record,
+                    rel_path=rel_path,
+                    owning_run=owning_run,
+                    run_id=run_id,
+                    closed_run_ids=closed_run_ids,
+                    freshness_paths=freshness_paths,
+                    freshness_reason=freshness_reason,
+                    lock_blocker=lock_blocker,
+                    blocking_reference=blocking_reference,
+                )
+            )
+            continue
+        record = _raw_command_log_base_record(
             vault,
             rel_path=rel_path,
             owning_run=owning_run,
@@ -543,14 +769,13 @@ def _run_command_log_retention_records(vault: Path) -> list[dict[str, Any]]:
             size_bytes=size_bytes,
         )
         records.append(
-            _classify_run_command_log_record(
+            _classify_raw_command_log_record(
+                vault,
                 record,
                 rel_path=rel_path,
                 owning_run=owning_run,
                 run_id=run_id,
                 closed_run_ids=closed_run_ids,
-                freshness_paths=freshness_paths,
-                freshness_reason=freshness_reason,
                 lock_blocker=lock_blocker,
                 blocking_reference=blocking_reference,
             )
@@ -682,7 +907,7 @@ def _retention_blocker_records(
 def _run_log_apply_blockers(
     vault: Path, delete_candidates: list[dict[str, Any]]
 ) -> list[dict[str, str]]:
-    return [
+    changed_zero_byte_logs = [
         {
             "path": item["path"],
             "reason": "run command log changed before deletion",
@@ -691,6 +916,22 @@ def _run_log_apply_blockers(
         if item["category"] == "historical_zero_byte_run_command_log"
         and not _empty_regular_run_log_file(vault / item["path"])
     ]
+    changed_raw_logs = [
+        {
+            "path": item["path"],
+            "reason": "run command log summary changed before deletion",
+        }
+        for item in delete_candidates
+        if item["category"] == "raw_command_log_with_summary"
+        and not _raw_command_log_summary_confirmation(
+            vault,
+            rel_path=str(item["path"]),
+            owning_run=str(item["owning_run"]),
+            run_id=str(item["run_id"]),
+            size_bytes=int(item["size_bytes"]),
+        ).get("summary_match_confirmed")
+    ]
+    return changed_zero_byte_logs + changed_raw_logs
 
 
 def _delete_allowed_candidates(

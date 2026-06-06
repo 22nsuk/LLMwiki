@@ -54,6 +54,7 @@ def execute_mutation_step(
         run_id=run_id,
         log_name="mutation-command",
         command_spec=command_spec,
+        context=resolution.context,
     )
     command_execution = execute_command_step(
         command_request,

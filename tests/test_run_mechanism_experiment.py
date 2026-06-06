@@ -148,6 +148,7 @@ class RunMechanismExperimentTests(unittest.TestCase):
             self.assertEqual(result["apply_mode"], "live")
             self.assertEqual(result["apply_status"], "live_applied")
             self.assertTrue(result["live_applied"])
+            self.assertNotIn("candidate_changed_files_snapshot", result)
             self.assertEqual(result["shadow_apply_report"], "runs/run-wrapper-promote/shadow-apply-report.json")
             self.assertEqual(
                 result["rollback_rehearsal_report"],
@@ -215,6 +216,7 @@ class RunMechanismExperimentTests(unittest.TestCase):
             self.assertEqual(run_telemetry["apply_mode"], "live")
             self.assertEqual(run_telemetry["apply_status"], "live_applied")
             self.assertTrue(run_telemetry["live_applied"])
+            self.assertNotIn("candidate_changed_files_snapshot", run_telemetry)
             self.assertEqual(
                 run_telemetry["shadow_apply_report"],
                 "runs/run-wrapper-promote/shadow-apply-report.json",
@@ -361,6 +363,9 @@ class RunMechanismExperimentTests(unittest.TestCase):
             structural_budget = json.loads(
                 (run_dir / "structural-complexity-budget.json").read_text(encoding="utf-8")
             )
+            candidate_snapshot = json.loads(
+                (run_dir / "candidate-changed-files-snapshot.json").read_text(encoding="utf-8")
+            )
             run_telemetry = json.loads((run_dir / "run-telemetry.json").read_text(encoding="utf-8"))
             run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
             run_artifact_fingerprint = json.loads(
@@ -376,7 +381,24 @@ class RunMechanismExperimentTests(unittest.TestCase):
                 "attention",
             )
             self.assertEqual(result["failure_taxonomy"], "structural_complexity_non_regression")
+            self.assertEqual(
+                result["candidate_changed_files_snapshot"],
+                "runs/run-wrapper-structural-blocked/candidate-changed-files-snapshot.json",
+            )
             self.assertEqual(structural_budget["status"], "attention")
+            self.assertEqual(candidate_snapshot["decision"], "SKIPPED")
+            self.assertEqual(
+                candidate_snapshot["capture_reason"],
+                "structural_complexity_non_regression",
+            )
+            self.assertEqual(
+                [item["path"] for item in candidate_snapshot["files"]],
+                ["ops/scripts/example.py"],
+            )
+            self.assertIn(
+                "VALUE_900 = 900",
+                candidate_snapshot["files"][0]["candidate"]["content_utf8"],
+            )
             self.assertEqual(
                 structural_budget["targets"][0]["path"],
                 "ops/scripts/example.py",
@@ -392,6 +414,10 @@ class RunMechanismExperimentTests(unittest.TestCase):
             self.assertEqual(
                 run_telemetry["failure_taxonomy"],
                 "structural_complexity_non_regression",
+            )
+            self.assertEqual(
+                run_telemetry["candidate_changed_files_snapshot"],
+                "runs/run-wrapper-structural-blocked/candidate-changed-files-snapshot.json",
             )
             repo_health_event = next(
                 event for event in run_ledger["events"] if event["type"] == "repo_health_checked"
@@ -413,6 +439,16 @@ class RunMechanismExperimentTests(unittest.TestCase):
             self.assertEqual(
                 structural_fingerprint["schema"],
                 "ops/schemas/structural-complexity-budget-report.schema.json",
+            )
+            snapshot_fingerprint = next(
+                item
+                for item in run_artifact_fingerprint["artifacts"]
+                if item["path"]
+                == "runs/run-wrapper-structural-blocked/candidate-changed-files-snapshot.json"
+            )
+            self.assertEqual(
+                snapshot_fingerprint["schema"],
+                "ops/schemas/candidate-changed-files-snapshot.schema.json",
             )
 
     def test_wrapper_sparse_manifest_uses_copied_universe_diff_from_policy(self) -> None:
@@ -819,6 +855,11 @@ class RunMechanismExperimentTests(unittest.TestCase):
             run_dir = vault / "runs" / "run-wrapper-hold-nonempty"
             promotion_report = json.loads((run_dir / "promotion-report.json").read_text(encoding="utf-8"))
             changed_manifest = json.loads((run_dir / "changed-files-manifest.json").read_text(encoding="utf-8"))
+            candidate_snapshot = json.loads(
+                (run_dir / "candidate-changed-files-snapshot.json").read_text(encoding="utf-8")
+            )
+            run_telemetry = json.loads((run_dir / "run-telemetry.json").read_text(encoding="utf-8"))
+            run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
             example_text = (vault / "ops" / "scripts" / "example.py").read_text(encoding="utf-8")
             test_text = (vault / "tests" / "test_example.py").read_text(encoding="utf-8")
 
@@ -836,10 +877,37 @@ class RunMechanismExperimentTests(unittest.TestCase):
                 "runs/run-wrapper-hold-nonempty/improvement-observations.json",
             )
             self.assertEqual(promotion_report["decision"], "HOLD")
+            self.assertEqual(
+                result["candidate_changed_files_snapshot"],
+                "runs/run-wrapper-hold-nonempty/candidate-changed-files-snapshot.json",
+            )
+            self.assertEqual(
+                run_telemetry["candidate_changed_files_snapshot"],
+                "runs/run-wrapper-hold-nonempty/candidate-changed-files-snapshot.json",
+            )
             self.assertEqual(changed_manifest["summary"]["total_changed_files"], 2)
             self.assertEqual(
                 [item["path"] for item in changed_manifest["files"]],
                 ["ops/scripts/example.py", "tests/test_example.py"],
+            )
+            self.assertEqual(candidate_snapshot["decision"], "HOLD")
+            self.assertEqual(candidate_snapshot["capture_reason"], "non_promoted_decision")
+            self.assertEqual(candidate_snapshot["summary"]["total_changed_files"], 2)
+            snapshot_files = {item["path"]: item for item in candidate_snapshot["files"]}
+            self.assertIn(
+                "if value == 0",
+                snapshot_files["ops/scripts/example.py"]["candidate"]["content_utf8"],
+            )
+            self.assertIn(
+                "test_subject_zero",
+                snapshot_files["tests/test_example.py"]["candidate"]["content_utf8"],
+            )
+            promotion_event = next(
+                event for event in run_ledger["events"] if event["type"] == "promotion_evaluated"
+            )
+            self.assertIn(
+                "runs/run-wrapper-hold-nonempty/candidate-changed-files-snapshot.json",
+                promotion_event["artifacts"],
             )
             self.assertIn("return 1", example_text)
             self.assertNotIn("test_subject_zero", test_text)
@@ -933,6 +1001,10 @@ class RunMechanismExperimentTests(unittest.TestCase):
             run_dir = vault / "runs" / "run-wrapper-discard"
             promotion_report = json.loads((run_dir / "promotion-report.json").read_text(encoding="utf-8"))
             changed_manifest = json.loads((run_dir / "changed-files-manifest.json").read_text(encoding="utf-8"))
+            candidate_snapshot = json.loads(
+                (run_dir / "candidate-changed-files-snapshot.json").read_text(encoding="utf-8")
+            )
+            run_telemetry = json.loads((run_dir / "run-telemetry.json").read_text(encoding="utf-8"))
             example_text = (vault / "ops" / "scripts" / "example.py").read_text(encoding="utf-8")
 
             self.assertEqual(capture_reports.call_count, 2)
@@ -945,8 +1017,27 @@ class RunMechanismExperimentTests(unittest.TestCase):
             self.assertEqual(result["improvement_observations"], "runs/run-wrapper-discard/improvement-observations.json")
             self.assertEqual(promotion_report["decision"], "DISCARD")
             self.assertEqual(
+                result["candidate_changed_files_snapshot"],
+                "runs/run-wrapper-discard/candidate-changed-files-snapshot.json",
+            )
+            self.assertEqual(
+                run_telemetry["candidate_changed_files_snapshot"],
+                "runs/run-wrapper-discard/candidate-changed-files-snapshot.json",
+            )
+            self.assertEqual(
                 [item["path"] for item in changed_manifest["files"]],
                 ["README.md", "ops/scripts/example.py"],
+            )
+            snapshot_files = {item["path"]: item for item in candidate_snapshot["files"]}
+            self.assertEqual(candidate_snapshot["decision"], "DISCARD")
+            self.assertEqual(candidate_snapshot["summary"]["total_changed_files"], 2)
+            self.assertEqual(
+                snapshot_files["README.md"]["candidate"]["content_utf8"],
+                "workspace-only out of scope change\n",
+            )
+            self.assertIn(
+                "return 2",
+                snapshot_files["ops/scripts/example.py"]["candidate"]["content_utf8"],
             )
             scope_check = next(
                 check for check in promotion_report["checks"] if check["id"] == "changed_files_manifest_scope"

@@ -15,6 +15,9 @@ PROMOTION_REPORT_SCHEMA_PATH = "ops/schemas/promotion-report.schema.json"
 PROPOSAL_SNAPSHOT_SCHEMA_PATH = "ops/schemas/proposal-snapshot.schema.json"
 IMPROVEMENT_OBSERVATIONS_SCHEMA_PATH = "ops/schemas/improvement-observations.schema.json"
 CHANGED_FILES_MANIFEST_SCHEMA_PATH = "ops/schemas/changed-files-manifest.schema.json"
+CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH = (
+    "ops/schemas/candidate-changed-files-snapshot.schema.json"
+)
 SHADOW_APPLY_REPORT_SCHEMA_PATH = "ops/schemas/shadow-apply-report.schema.json"
 ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH = "ops/schemas/rollback-rehearsal-report.schema.json"
 BEHAVIOR_DELTA_SCHEMA_PATH = "ops/schemas/behavior-delta.schema.json"
@@ -105,6 +108,7 @@ REVIEW_ARCHIVE_REPORT_SCHEMA_PATH = "ops/schemas/review-archive-report.schema.js
 SUBAGENT_ROUTING_SCHEMA_PATH = "ops/schemas/subagent-routing-report.schema.json"
 PROPOSAL_SCOPE_SCHEMA_PATH = "ops/schemas/proposal-scope.schema.json"
 EXECUTOR_REPORT_SCHEMA_PATH = "ops/schemas/executor-report.schema.json"
+COMMAND_LOG_SUMMARY_SCHEMA_PATH = "ops/schemas/command-log-summary.schema.json"
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = "ops/schemas/auto-improve-session.schema.json"
 AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH = "ops/schemas/auto-improve-readiness-report.schema.json"
 CODEX_GOAL_CONTRACT_SCHEMA_PATH = "ops/schemas/codex-goal-contract.schema.json"
@@ -184,6 +188,7 @@ PLANNING_GATE_OPTIONAL_ARTIFACT_SCHEMAS = {
     "proposal-snapshot.json": PROPOSAL_SNAPSHOT_SCHEMA_PATH,
     "improvement-observations.json": IMPROVEMENT_OBSERVATIONS_SCHEMA_PATH,
     "changed-files-manifest.json": CHANGED_FILES_MANIFEST_SCHEMA_PATH,
+    "candidate-changed-files-snapshot.json": CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
     "shadow-apply-report.json": SHADOW_APPLY_REPORT_SCHEMA_PATH,
     "rollback-rehearsal-report.json": ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     "behavior-delta.json": BEHAVIOR_DELTA_SCHEMA_PATH,

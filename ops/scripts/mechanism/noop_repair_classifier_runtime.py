@@ -4,6 +4,10 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.command_log_summary_runtime import (
+    command_log_stream_has_flag,
+    command_log_stream_text,
+)
 from ops.scripts.executor_noop_runtime import text_has_executor_noop_mutation_failure
 
 from .auto_improve_next_run_decision_runtime import (
@@ -20,12 +24,22 @@ def is_next_run_failure_repair_source(decision: Mapping[str, Any]) -> bool:
 
 
 def run_has_noop_mutation_failure(vault: Path, source_run_id: str) -> bool:
-    stderr_path = vault / "runs" / source_run_id / "mutation-command.stderr.txt"
-    try:
-        stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return False
-    return text_has_executor_noop_mutation_failure(stderr_text)
+    if command_log_stream_has_flag(
+        vault,
+        source_run_id,
+        prefix="mutation-command",
+        stream="stderr",
+        flag="executor_noop_mutation_failure",
+    ):
+        return True
+    return text_has_executor_noop_mutation_failure(
+        command_log_stream_text(
+            vault,
+            source_run_id,
+            prefix="mutation-command",
+            stream="stderr",
+        )
+    )
 
 
 def repair_decision_ended_as_noop_mutation_failure(

@@ -87,6 +87,7 @@
         "output_last_message",
         "stdout",
         "stderr",
+        "command_log_summary",
         "timeout_failure"
       ],
       "properties": {
@@ -100,6 +101,9 @@
           "type": "string"
         },
         "stderr": {
+          "type": "string"
+        },
+        "command_log_summary": {
           "type": "string"
         },
         "timeout_failure": {

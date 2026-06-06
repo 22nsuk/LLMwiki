@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -90,6 +91,46 @@ class GeneratedArtifactRetentionCleanTests(unittest.TestCase):
                             "schema": "",
                             "size_bytes": size_bytes,
                             "sha256": sha256,
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def _write_promoted_run_telemetry(self, vault: Path, owning_run: str) -> None:
+        telemetry_path = vault / owning_run / "run-telemetry.json"
+        telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+        telemetry_path.write_text(
+            json.dumps({"decision": "PROMOTE", "finalized": True}),
+            encoding="utf-8",
+        )
+
+    def _write_command_log_summary(
+        self,
+        vault: Path,
+        *,
+        owning_run: str,
+        raw_rel_path: str,
+        trace_rel_path: str,
+        original_path: str | None = None,
+    ) -> None:
+        raw_path = vault / raw_rel_path
+        trace_path = vault / trace_rel_path
+        summary_path = vault / owning_run / "command-log-summary.json"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_bytes = raw_path.read_bytes()
+        trace_bytes = trace_path.read_bytes()
+        summary_path.write_text(
+            json.dumps(
+                {
+                    "streams": [
+                        {
+                            "original_path": original_path or raw_rel_path,
+                            "original_size_bytes": len(raw_bytes),
+                            "original_sha256": hashlib.sha256(raw_bytes).hexdigest(),
+                            "trace_path": trace_rel_path,
+                            "trace_sha256": hashlib.sha256(trace_bytes).hexdigest(),
                         }
                     ]
                 }
@@ -274,6 +315,65 @@ class GeneratedArtifactRetentionCleanTests(unittest.TestCase):
             )
             self.assertTrue(current_log.is_file())
             self.assertIn("runs", retained)
+
+    def test_promoted_archived_raw_run_log_deletes_only_with_summary_fingerprint(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = self._vault(Path(temp_dir))
+            raw_rel_path = "runs/archive/run-promoted/worker.stderr.txt"
+            trace_rel_path = "runs/archive/run-promoted/worker.stderr-trace.txt"
+            raw_log = vault / raw_rel_path
+            trace_log = vault / trace_rel_path
+            raw_log.parent.mkdir(parents=True)
+            raw_log.write_text("executor failure details\n", encoding="utf-8")
+            trace_log.write_text("executor failure details\n", encoding="utf-8")
+            self._write_promoted_run_telemetry(vault, "runs/archive/run-promoted")
+            self._write_command_log_summary(
+                vault,
+                owning_run="runs/archive/run-promoted",
+                raw_rel_path=raw_rel_path,
+                trace_rel_path=trace_rel_path,
+                original_path="runs/run-promoted/worker.stderr.txt",
+            )
+
+            report = build_report(vault, apply=True)
+
+            candidates = {item["path"]: item for item in report["delete_candidates"]}
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                candidates[raw_rel_path]["reason"],
+                "promoted archived/closed raw command log covered by command-log-summary",
+            )
+            self.assertIn(raw_rel_path, report["deleted_paths"])
+            self.assertFalse(raw_log.exists())
+            self.assertTrue(trace_log.is_file())
+            self.assertTrue(
+                (vault / "runs/archive/run-promoted/command-log-summary.json").is_file()
+            )
+
+    def test_promoted_archived_raw_run_log_missing_summary_is_retention_blocker(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = self._vault(Path(temp_dir))
+            raw_rel_path = "runs/archive/run-missing-summary/worker.stderr.txt"
+            raw_log = vault / raw_rel_path
+            raw_log.parent.mkdir(parents=True)
+            raw_log.write_text("executor failure details\n", encoding="utf-8")
+            self._write_promoted_run_telemetry(vault, "runs/archive/run-missing-summary")
+
+            report = build_report(vault)
+
+            retained = {item["path"]: item for item in report["retained"]}
+            self._assert_single_retention_blocker(
+                report,
+                path=raw_rel_path,
+                reason="command log summary is missing or malformed",
+                blocking_reference="runs/archive/run-missing-summary/command-log-summary.json",
+            )
+            self.assertFalse(retained[raw_rel_path]["delete_allowed"])
+            self.assertTrue(raw_log.is_file())
 
     def test_current_evidence_reference_blocks_run_log_placeholder_cleanup(
         self,

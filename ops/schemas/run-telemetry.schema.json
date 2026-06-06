@@ -130,6 +130,9 @@
     "behavior_delta_digest": {
       "type": "string"
     },
+    "candidate_changed_files_snapshot": {
+      "type": "string"
+    },
     "structural_complexity_budget": {
       "type": "string"
     },

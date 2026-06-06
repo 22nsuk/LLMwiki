@@ -160,6 +160,9 @@
         "stderr": {
           "type": "string"
         },
+        "command_log_summary": {
+          "type": "string"
+        },
         "executor_report": {
           "type": "string"
         },

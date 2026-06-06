@@ -204,6 +204,15 @@
       "reason": "uses repo artifact resolver"
     },
     {
+      "path": "ops/scripts/core/command_log_summary_runtime.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "no configurable output path surface detected"
+    },
+    {
       "path": "ops/scripts/core/command_runtime.py",
       "classification": "no_output",
       "output_options": [],
@@ -1808,6 +1817,15 @@
     },
     {
       "path": "ops/scripts/mechanism/mechanism_review_session_calibration_runtime.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_run_candidate_snapshot_runtime.py",
       "classification": "no_output",
       "output_options": [],
       "references_resolve_output_path": false,

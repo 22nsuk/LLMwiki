@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from ops.scripts.schema_constants_runtime import (
     STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
@@ -29,6 +31,14 @@ REPO_HEALTH_DIAGNOSTIC_ARTIFACTS = {
     "tmp/artifact-freshness-report-check.json": "repo-health-artifact-freshness-report-check.json",
 }
 STRUCTURAL_COMPLEXITY_BUDGET_RUN_ARTIFACT = "structural-complexity-budget.json"
+COMPACT_ARTIFACT_FRESHNESS_OMITTED_SECTIONS = [
+    "artifact_records",
+    "owner_surface",
+    "root_ephemeral_patterns",
+    "root_ephemeral_artifacts",
+    "run_log_placeholders",
+    "non_utf8_text_artifacts",
+]
 
 
 @dataclass(frozen=True)
@@ -62,11 +72,86 @@ def _command_execution_dependencies(
     )
 
 
+def _json_object(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _dict_child(payload: dict[str, Any], key: str) -> dict[str, Any]:
+    value = payload.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _list_child(payload: dict[str, Any], key: str) -> list[Any]:
+    value = payload.get(key)
+    return value if isinstance(value, list) else []
+
+
+def _artifact_freshness_report_blocks_repo_health(
+    payload: dict[str, Any],
+    *,
+    repo_health_failed: bool,
+) -> bool:
+    if str(payload.get("status", "")).strip() == "fail":
+        return True
+    gate_effect = str(payload.get("gate_effect", "")).strip()
+    return repo_health_failed and gate_effect in {"blocks_execution", "blocks_promotion"}
+
+
+def _compact_artifact_freshness_report(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "artifact_kind": "repo_health_artifact_freshness_report_check_summary",
+        "schema_version": 1,
+        "preservation_mode": "compact_summary",
+        "full_scan_preserved": False,
+        "source_path": "tmp/artifact-freshness-report-check.json",
+        "source_artifact_kind": str(payload.get("artifact_kind", "")).strip(),
+        "generated_at": str(payload.get("generated_at", "")).strip(),
+        "producer": str(payload.get("producer", "")).strip(),
+        "source_command": str(payload.get("source_command", "")).strip(),
+        "source_revision": str(payload.get("source_revision", "")).strip(),
+        "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")).strip(),
+        "status": str(payload.get("status", "")).strip(),
+        "gate_effect": str(payload.get("gate_effect", "")).strip(),
+        "recommended_next_action": str(payload.get("recommended_next_action", "")).strip(),
+        "currentness": _dict_child(payload, "currentness"),
+        "summary": _dict_child(payload, "summary"),
+        "top_debt": _list_child(payload, "top_debt"),
+        "top_debt_files": _list_child(payload, "top_debt_files"),
+        "debt_queues": _list_child(payload, "debt_queues"),
+        "omitted_sections": COMPACT_ARTIFACT_FRESHNESS_OMITTED_SECTIONS,
+    }
+
+
+def _write_artifact_freshness_diagnostic(
+    source: Path,
+    destination: Path,
+    *,
+    repo_health_failed: bool,
+) -> None:
+    payload = _json_object(source)
+    if payload is None or _artifact_freshness_report_blocks_repo_health(
+        payload,
+        repo_health_failed=repo_health_failed,
+    ):
+        destination.write_bytes(source.read_bytes())
+        return
+    destination.write_text(
+        json.dumps(_compact_artifact_freshness_report(payload), indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _copy_repo_health_diagnostic_artifacts(
     vault: Path,
     workspace_vault: Path,
     *,
     run_id: str,
+    repo_health_failed: bool,
 ) -> list[str]:
     copied: list[str] = []
     run_dir = vault / "runs" / run_id
@@ -76,7 +161,14 @@ def _copy_repo_health_diagnostic_artifacts(
             continue
         destination = run_dir / destination_name
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(source.read_bytes())
+        if destination_name == "repo-health-artifact-freshness-report-check.json":
+            _write_artifact_freshness_diagnostic(
+                source,
+                destination,
+                repo_health_failed=repo_health_failed,
+            )
+        else:
+            destination.write_bytes(source.read_bytes())
         copied.append(f"runs/{run_id}/{destination_name}")
     return copied
 
@@ -155,15 +247,19 @@ def repo_health_step(
         run_id=run_id,
         log_name="repo-health",
         command_spec=command_spec,
+        context=resolution.context,
     )
     command_execution = execute_command_step(
         command_request,
         dependencies=_command_execution_dependencies(dependencies),
     )
+    repo_health_passed = command_execution.result["returncode"] == 0
+    repo_health_timed_out = bool(command_execution.result.get("timed_out"))
     diagnostic_artifacts = _copy_repo_health_diagnostic_artifacts(
         vault,
         workspace_vault,
         run_id=run_id,
+        repo_health_failed=not repo_health_passed,
     )
     changed_files_manifest = dependencies.write_changed_files_manifest(
         vault,
@@ -190,8 +286,6 @@ def repo_health_step(
         resolution=resolution,
         changed_files_manifest=changed_files_manifest,
     )
-    repo_health_passed = command_execution.result["returncode"] == 0
-    repo_health_timed_out = bool(command_execution.result.get("timed_out"))
     structural_complexity_budget_status = structural_complexity_budget.status
     structural_complexity_budget_passed = structural_complexity_budget_status == "pass"
     passed = repo_health_passed and structural_complexity_budget_passed

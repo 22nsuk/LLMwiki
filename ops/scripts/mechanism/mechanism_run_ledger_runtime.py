@@ -54,8 +54,15 @@ def append_ledger_event(
     )
 
 
-def write_command_logs(vault: Path, run_id: str, prefix: str, result: dict[str, Any]) -> list[str]:
-    return telemetry_write_command_logs(vault, run_id, prefix, result)
+def write_command_logs(
+    vault: Path,
+    run_id: str,
+    prefix: str,
+    result: dict[str, Any],
+    *,
+    context: RuntimeContext | None = None,
+) -> list[str]:
+    return telemetry_write_command_logs(vault, run_id, prefix, result, context=context)
 
 
 def write_timeout_failure_artifact(
@@ -150,6 +157,13 @@ def write_experiment_telemetry(
         payload["timeout_failure_artifacts"] = timeout_failure_artifacts
     if isinstance(result.get("behavior_delta"), str) and result["behavior_delta"].strip():
         payload["behavior_delta"] = result["behavior_delta"]
+    if (
+        isinstance(result.get("candidate_changed_files_snapshot"), str)
+        and result["candidate_changed_files_snapshot"].strip()
+    ):
+        payload["candidate_changed_files_snapshot"] = result[
+            "candidate_changed_files_snapshot"
+        ]
     if (
         isinstance(result.get("structural_complexity_budget"), str)
         and result["structural_complexity_budget"].strip()

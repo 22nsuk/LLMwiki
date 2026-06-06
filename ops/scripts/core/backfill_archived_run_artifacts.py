@@ -28,6 +28,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
         BEHAVIOR_DELTA_SCHEMA_PATH,
+        CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
         CHANGED_FILES_MANIFEST_SCHEMA_PATH,
         GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
         MECHANISM_ASSESSMENT_SCHEMA_PATH,
@@ -64,6 +65,7 @@ else:
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import (
         BEHAVIOR_DELTA_SCHEMA_PATH,
+        CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
         CHANGED_FILES_MANIFEST_SCHEMA_PATH,
         GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
         MECHANISM_ASSESSMENT_SCHEMA_PATH,
@@ -469,6 +471,17 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         artifact_kind="changed_files_manifest",
         source_paths=(SCRIPT_PATH, "ops/scripts/mechanism/mechanism_run_workspace_runtime.py"),
         derive_generated_at=_changed_files_manifest_generated_at,
+    ),
+    "candidate-changed-files-snapshot.json": ArchivedRunArtifactSpec(
+        filename="candidate-changed-files-snapshot.json",
+        schema_path=CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
+        artifact_kind="candidate_changed_files_snapshot",
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/mechanism/mechanism_run_candidate_snapshot_runtime.py",
+            "ops/scripts/mechanism/mechanism_run_workspace_runtime.py",
+        ),
+        derive_generated_at=_payload_generated_at,
     ),
     "planning-validation.json": ArchivedRunArtifactSpec(
         filename="planning-validation.json",

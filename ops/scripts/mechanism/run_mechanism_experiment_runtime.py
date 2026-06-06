@@ -53,9 +53,11 @@ from .mechanism_run_workspace_runtime import (
     _execute_mutation_step,
     _prepare_candidate_report_workspace,
     _prepare_workspace_copy,
+    _repo_health_failure_taxonomy,
     _repo_health_step,
     _run_command,
     _snapshot_repo_file_digests,
+    _write_candidate_changed_files_snapshot,
     _write_changed_files_manifest,
 )
 from .post_mutation_generated_artifact_convergence_runtime import (
@@ -157,6 +159,7 @@ class _WorkspaceExperimentResult:
     promotion: PromotionStepResult
     finalize_step: FinalizeStepResult
     workspace_apply: WorkspaceApplyResult
+    candidate_changed_files_snapshot: str
 
 
 def _mechanism_temp_dir_parent() -> str | None:
@@ -252,11 +255,12 @@ def _run_mechanism_experiment_request(
             generated_artifact_convergence=result.generated_artifact_convergence,
             repo_health=result.repo_health,
             promotion=result.promotion,
-            finalize_step=result.finalize_step,
-            workspace_apply=result.workspace_apply,
-            workspace_preparation=result.workspace_preparation,
-        ),
-    )
+                finalize_step=result.finalize_step,
+                workspace_apply=result.workspace_apply,
+                workspace_preparation=result.workspace_preparation,
+                candidate_changed_files_snapshot=result.candidate_changed_files_snapshot,
+            ),
+        )
 
 
 def _resolve_apply_mode(
@@ -301,6 +305,154 @@ def _record_post_mutation_generated_artifact_convergence(
     return summary
 
 
+def _capture_candidate_artifacts_from_workspace(
+    vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    resolution: Any,
+    workspace_vault: Path,
+    workspace: Any,
+) -> dict[str, Any]:
+    with _mechanism_temporary_directory(
+        prefix=f"{request.run_id}-candidate-report-workspace-"
+    ) as candidate_report_workspace_root:
+        candidate_report_vault = _prepare_candidate_report_workspace(
+            vault,
+            workspace_vault,
+            run_id=request.run_id,
+            workspace_root=candidate_report_workspace_root,
+            baseline_file_digests=workspace.baseline_file_digests,
+            diff_model=str(workspace.telemetry.get("diff_model", "full_workspace")),
+        )
+        return _capture_candidate_step(
+            vault,
+            workspace_vault,
+            run_id=request.run_id,
+            resolution=resolution,
+            report_source_vault=candidate_report_vault,
+        )
+
+
+def _repo_health_blocked_phase_result(
+    vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    scaffold: Any,
+    resolution: Any,
+    baseline_artifacts: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+    workspace_vault: Path,
+    workspace_preparation: dict[str, Any],
+    generated_artifact_convergence: dict[str, Any],
+    repo_health: RepoHealthStepResult,
+) -> dict[str, Any]:
+    candidate_changed_files_snapshot = _write_candidate_changed_files_snapshot(
+        vault,
+        workspace_vault,
+        run_id=request.run_id,
+        context=resolution.context,
+        changed_files_manifest=repo_health.changed_files_manifest,
+        decision="SKIPPED",
+        apply_mode=_resolve_apply_mode(request, resolution),
+        apply_status="not_applicable",
+        live_applied=False,
+        capture_reason=_repo_health_failure_taxonomy(repo_health),
+    )
+    return _build_repo_health_blocked_result(
+        vault,
+        run_id=request.run_id,
+        scaffold=scaffold,
+        resolution=resolution,
+        baseline_artifacts=baseline_artifacts,
+        candidate_artifacts=candidate_artifacts,
+        workspace_preparation=workspace_preparation,
+        generated_artifact_convergence=generated_artifact_convergence,
+        repo_health=repo_health,
+        candidate_changed_files_snapshot=candidate_changed_files_snapshot,
+    )
+
+
+def _promotion_workspace_phase_result(
+    vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    resolution: Any,
+    baseline_artifacts: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+    workspace_vault: Path,
+    workspace_preparation: dict[str, Any],
+    mutation_step: CommandStepResult,
+    generated_artifact_convergence: dict[str, Any],
+    repo_health: RepoHealthStepResult,
+) -> _WorkspaceExperimentResult:
+    promotion = _evaluate_promotion_step(
+        vault,
+        run_id=request.run_id,
+        resolution=resolution,
+        changed_files_manifest=repo_health.changed_files_manifest,
+        behavior_delta=repo_health.behavior_delta,
+        require_signoff=request.require_signoff,
+        signoff_status=request.signoff_status,
+        signoff_by=request.signoff_by,
+        signoff_ts=request.signoff_ts,
+    )
+    canonical_decision = decision_from_report(promotion.report, require_record=True)
+    workspace_apply = _apply_or_discard_workspace_changes(
+        vault,
+        workspace_vault,
+        run_id=request.run_id,
+        context=resolution.context,
+        decision=canonical_decision,
+        changed_files_manifest=repo_health.changed_files_manifest,
+        allowed_apply_roots=resolution.policy["auto_improve_policy"]["allowed_apply_roots"],
+        apply_mode=_resolve_apply_mode(request, resolution),
+    )
+    candidate_changed_files_snapshot = ""
+    if canonical_decision in {"HOLD", "DISCARD"} and not workspace_apply.live_applied:
+        candidate_changed_files_snapshot = _write_candidate_changed_files_snapshot(
+            vault,
+            workspace_vault,
+            run_id=request.run_id,
+            context=resolution.context,
+            changed_files_manifest=repo_health.changed_files_manifest,
+            decision=canonical_decision,
+            apply_mode=workspace_apply.apply_mode,
+            apply_status=workspace_apply.apply_status,
+            live_applied=workspace_apply.live_applied,
+            capture_reason="non_promoted_decision",
+        )
+    _record_promotion_step(
+        vault,
+        run_id=request.run_id,
+        resolution=resolution,
+        baseline_artifacts=baseline_artifacts,
+        candidate_artifacts=candidate_artifacts,
+        changed_files_manifest=repo_health.changed_files_manifest,
+        behavior_delta=repo_health.behavior_delta,
+        decision=canonical_decision,
+        decision_record=promotion.report["decision_record"],
+        candidate_changed_files_snapshot=candidate_changed_files_snapshot,
+    )
+    finalize_step = _finalize_step(
+        vault,
+        run_id=request.run_id,
+        promotion_report=promotion.report,
+        finalize=request.finalize and workspace_apply.live_applied,
+        context=resolution.context,
+    )
+    return _WorkspaceExperimentResult(
+        workspace_preparation=workspace_preparation,
+        mutation_step=mutation_step,
+        generated_artifact_convergence=generated_artifact_convergence,
+        candidate_artifacts=candidate_artifacts,
+        repo_health=repo_health,
+        promotion=promotion,
+        finalize_step=finalize_step,
+        workspace_apply=workspace_apply,
+        candidate_changed_files_snapshot=candidate_changed_files_snapshot,
+    )
+
+
 def _run_workspace_experiment_phase(
     vault: Path,
     *,
@@ -336,24 +488,13 @@ def _run_workspace_experiment_phase(
             resolution=resolution,
             workspace_vault=workspace_vault,
         )
-        with _mechanism_temporary_directory(
-            prefix=f"{request.run_id}-candidate-report-workspace-"
-        ) as candidate_report_workspace_root:
-            candidate_report_vault = _prepare_candidate_report_workspace(
-                vault,
-                workspace_vault,
-                run_id=request.run_id,
-                workspace_root=candidate_report_workspace_root,
-                baseline_file_digests=workspace.baseline_file_digests,
-                diff_model=str(workspace.telemetry.get("diff_model", "full_workspace")),
-            )
-            candidate_artifacts = _capture_candidate_step(
-                vault,
-                workspace_vault,
-                run_id=request.run_id,
-                resolution=resolution,
-                report_source_vault=candidate_report_vault,
-            )
+        candidate_artifacts = _capture_candidate_artifacts_from_workspace(
+            vault,
+            request=request,
+            resolution=resolution,
+            workspace_vault=workspace_vault,
+            workspace=workspace,
+        )
         repo_health = _repo_health_step(
             vault,
             workspace_vault,
@@ -363,65 +504,28 @@ def _run_workspace_experiment_phase(
             diff_model=str(workspace.telemetry.get("diff_model", "full_workspace")),
         )
         if not repo_health.passed:
-            return _build_repo_health_blocked_result(
+            return _repo_health_blocked_phase_result(
                 vault,
-                run_id=request.run_id,
+                request=request,
                 scaffold=scaffold,
                 resolution=resolution,
                 baseline_artifacts=baseline_artifacts,
                 candidate_artifacts=candidate_artifacts,
+                workspace_vault=workspace_vault,
                 workspace_preparation=workspace.telemetry,
                 generated_artifact_convergence=generated_artifact_convergence,
                 repo_health=repo_health,
             )
 
-        promotion = _evaluate_promotion_step(
+        return _promotion_workspace_phase_result(
             vault,
-            run_id=request.run_id,
-            resolution=resolution,
-            changed_files_manifest=repo_health.changed_files_manifest,
-            behavior_delta=repo_health.behavior_delta,
-            require_signoff=request.require_signoff,
-            signoff_status=request.signoff_status,
-            signoff_by=request.signoff_by,
-            signoff_ts=request.signoff_ts,
-        )
-        canonical_decision = decision_from_report(promotion.report, require_record=True)
-        workspace_apply = _apply_or_discard_workspace_changes(
-            vault,
-            workspace_vault,
-            run_id=request.run_id,
-            context=resolution.context,
-            decision=canonical_decision,
-            changed_files_manifest=repo_health.changed_files_manifest,
-            allowed_apply_roots=resolution.policy["auto_improve_policy"]["allowed_apply_roots"],
-            apply_mode=_resolve_apply_mode(request, resolution),
-        )
-        _record_promotion_step(
-            vault,
-            run_id=request.run_id,
+            request=request,
             resolution=resolution,
             baseline_artifacts=baseline_artifacts,
             candidate_artifacts=candidate_artifacts,
-            changed_files_manifest=repo_health.changed_files_manifest,
-            behavior_delta=repo_health.behavior_delta,
-            decision=canonical_decision,
-            decision_record=promotion.report["decision_record"],
-        )
-        finalize_step = _finalize_step(
-            vault,
-            run_id=request.run_id,
-            promotion_report=promotion.report,
-            finalize=request.finalize and workspace_apply.live_applied,
-            context=resolution.context,
-        )
-        return _WorkspaceExperimentResult(
+            workspace_vault=workspace_vault,
             workspace_preparation=workspace.telemetry,
             mutation_step=mutation_step,
             generated_artifact_convergence=generated_artifact_convergence,
-            candidate_artifacts=candidate_artifacts,
             repo_health=repo_health,
-            promotion=promotion,
-            finalize_step=finalize_step,
-            workspace_apply=workspace_apply,
         )
