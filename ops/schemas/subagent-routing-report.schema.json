@@ -30,6 +30,82 @@
     "generated_at": {
       "type": "string"
     },
+    "artifact_kind": {
+      "type": "string",
+      "const": "subagent_routing_report"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "ephemeral",
+        "canonical_report",
+        "archive"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
     "policy": {
       "type": "object",
       "required": [

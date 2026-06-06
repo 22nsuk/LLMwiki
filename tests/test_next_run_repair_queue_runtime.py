@@ -200,3 +200,61 @@ def test_open_carry_forward_decisions_suppresses_resolved_generated_evidence_set
             )
 
         assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_resolved_repo_health_generated_evidence() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        source_run_id = "run-repo-health-generated-evidence"
+        report_path = vault / "runs" / source_run_id / "repo-health-artifact-freshness-report-check.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(
+            json.dumps(
+                {
+                    "status": "attention",
+                    "source_tree_fingerprint": "candidate-workspace-fingerprint",
+                    "recommended_next_action": "backfill_artifact_envelope",
+                    "top_debt_files": [
+                        {
+                            "path": "ops/reports/subagent-routing-report.json",
+                            "issues": ["missing_artifact_envelope", "unknown_currentness"],
+                            "recommended_next_action": "backfill_artifact_envelope",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with mock.patch(
+            "ops.scripts.mechanism.next_run_repair_queue_runtime."
+            "_current_artifact_freshness_report",
+            return_value={
+                "status": "attention",
+                "top_debt_files": [
+                    {
+                        "path": "runs/old-run/command-log-summary.json",
+                        "issues": ["missing_artifact_envelope", "unknown_currentness"],
+                        "recommended_next_action": "backfill_artifact_envelope",
+                    }
+                ],
+            },
+        ):
+            open_decisions = open_carry_forward_decisions(
+                [
+                    _carry_forward_decision(
+                        failure_taxonomy="repo_health_blocked",
+                        proposal_family="next_run_failure_repair",
+                        proposal_id=(
+                            "next_run_failure_repair__target__"
+                            "repo-health-blocked"
+                        ),
+                        source_run_id=source_run_id,
+                    )
+                ],
+                vault=vault,
+                recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+                recent_log_overlap_unblock_family="queue_unblock",
+            )
+
+        assert open_decisions == []

@@ -15,6 +15,7 @@ from ops.scripts.mechanism_assess import (
     target_structural_profiles,
 )
 
+from .artifact_envelope_runtime import build_canonical_report_envelope
 from .artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
@@ -31,6 +32,9 @@ from .runtime_context import RuntimeContext
 from .schema_constants_runtime import SUBAGENT_ROUTING_SCHEMA_PATH
 
 SUBAGENT_ROUTING_SCHEMA = SUBAGENT_ROUTING_SCHEMA_PATH
+PRODUCER = "ops.scripts.subagent_routing_runtime"
+SOURCE_COMMAND = "python -m ops.scripts.select_subagent_rung"
+ARTIFACT_KIND = "subagent_routing_report"
 
 
 def dedupe_preserve_order(values: list[str]) -> list[str]:
@@ -409,10 +413,34 @@ def build_report(
     test_file_paths = [rel_path for rel_path, _ in test_files]
 
     profile_path_text = report_path(vault, profile_path)
+    generated_at = runtime_context.isoformat_z()
+    envelope = build_canonical_report_envelope(
+        vault,
+        generated_at=generated_at,
+        artifact_kind=ARTIFACT_KIND,
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SUBAGENT_ROUTING_SCHEMA,
+        source_paths=[
+            "ops/scripts/core/select_subagent_rung.py",
+            "ops/scripts/core/subagent_routing_runtime.py",
+            "ops/scripts/mechanism/mechanism_assess.py",
+        ],
+        text_inputs={
+            "role": role,
+            "primary_targets": "\n".join(primary_target_paths),
+            "supporting_targets": "\n".join(supporting_target_paths),
+            "test_files": "\n".join(test_file_paths),
+            "manual_risk_flags": "\n".join(validated_manual_risk_flags),
+            "requested_rung": "" if validated_requested_rung is None else str(validated_requested_rung),
+        },
+    )
     return {
+        **envelope,
         "$schema": SUBAGENT_ROUTING_SCHEMA,
         "vault": report_path(vault, vault),
-        "generated_at": runtime_context.isoformat_z(),
+        "generated_at": generated_at,
         "policy": {
             "path": report_path(vault, resolved_policy_path),
             "version": policy.get("version"),

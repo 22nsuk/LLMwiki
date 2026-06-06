@@ -192,12 +192,6 @@ def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id
         return False
     if str(report.get("status", "")).strip() not in {"attention", "fail"}:
         return False
-    observed_source_tree_fingerprint = str(report.get("source_tree_fingerprint", "")).strip()
-    if (
-        observed_source_tree_fingerprint
-        and observed_source_tree_fingerprint != release_source_tree_fingerprint(vault)
-    ):
-        return False
     top_debt_files = report.get("top_debt_files", [])
     if not isinstance(top_debt_files, list):
         return False
@@ -210,6 +204,13 @@ def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id
         }
         and str(item.get("path", "")).strip()
     ]
+    observed_source_tree_fingerprint = str(report.get("source_tree_fingerprint", "")).strip()
+    source_tree_mismatch = (
+        bool(observed_source_tree_fingerprint)
+        and observed_source_tree_fingerprint != release_source_tree_fingerprint(vault)
+    )
+    if source_tree_mismatch and schema_invalid_files:
+        return False
     if not schema_invalid_files:
         return _artifact_freshness_settle_debt_now_clean(vault, report)
     return all(

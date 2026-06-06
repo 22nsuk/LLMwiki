@@ -5,6 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ops.scripts.artifact_freshness_payload_runtime import (
+    ENVELOPE_REQUIRED_FIELDS,
+    has_artifact_envelope,
+)
 from ops.scripts.schema_runtime import load_schema, validate_or_raise
 from ops.scripts.select_subagent_rung import main as select_subagent_rung_main
 
@@ -36,6 +40,12 @@ class SubagentRoutingTest(unittest.TestCase):
 
             report = self.run_selector(vault, "--role", "explorer")
 
+            self.assertTrue(has_artifact_envelope(report))
+            self.assertTrue(all(field in report for field in ENVELOPE_REQUIRED_FIELDS))
+            self.assertEqual(report["artifact_kind"], "subagent_routing_report")
+            self.assertEqual(report["artifact_status"], "current")
+            self.assertEqual(report["retention_policy"], "canonical_report")
+            self.assertEqual(report["currentness"]["status"], "current")
             self.assertEqual(report["inputs"]["primary_targets"], [])
             self.assertEqual(report["complexity_profile"]["complexity_score"], 0)
             self.assertEqual(report["routing_decision"]["score_band"], "low")
