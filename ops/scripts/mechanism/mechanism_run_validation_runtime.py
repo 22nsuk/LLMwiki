@@ -132,11 +132,14 @@ def path_in_declared_scope(path: str, declared_targets: list[str]) -> bool:
 
 
 def normalize_changed_file_path(path: str) -> str:
+    invalid_prefix = "!invalid-repo-path:"
     normalized = normalize_repo_path_text(path)
-    normalized_path = path if normalized is None else normalized
+    normalized_path = normalized if normalized is not None else f"{invalid_prefix}<blank:{path!r}>"
     return (
-        f"!invalid-repo-path:{normalized_path}"
-        if normalized_path == ".." or normalized_path.startswith(("../", "/"))
+        normalized_path
+        if normalized_path.startswith(invalid_prefix)
+        else f"{invalid_prefix}{normalized_path}"
+        if normalized_path in {".", ".."} or normalized_path.startswith(("../", "/"))
         else normalized_path
     )
 

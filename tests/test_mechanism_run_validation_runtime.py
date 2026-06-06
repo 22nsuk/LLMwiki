@@ -543,6 +543,33 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
         self.assertEqual(check["status"], "FAIL")
         self.assertIn("!invalid-repo-path:../outside.py", check["detail"])
 
+    def test_changed_files_scope_rejects_blank_self_declared_manifest_paths(self) -> None:
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": changed_files_manifest(
+                    " ",
+                    changed_files=[
+                        {
+                            "path": " ",
+                            "change_type": "modified",
+                        }
+                    ],
+                ),
+                "run_ledger_report": run_ledger("ops/scripts/example.py"),
+            }
+        )
+
+        check = build_changed_files_scope_gate_check(bundle)
+
+        self.assertEqual(check["status"], "FAIL")
+        self.assertIn("!invalid-repo-path:<blank:' '>", check["detail"])
+
     def test_primary_target_touch_discard_detail_names_scope_and_changed_files(self) -> None:
         bundle = normalize_mechanism_artifact_bundle(
             {

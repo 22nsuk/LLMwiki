@@ -1040,6 +1040,94 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(plan["blockers"], ["no unattempted runnable proposal is available"])
             self.assertEqual(plan["next_max_proposals"], 1)
 
+    def test_maintenance_action_plan_refreshes_stale_queue_action_for_current_repair(self) -> None:
+        cases = [
+            (
+                {
+                    "proposal_id": "next_run_failure_repair__example-runtime__repo-health-blocked",
+                    "family": "next_run_failure_repair",
+                    "failure_mode": "next_run_failure_repair",
+                    "blocked_by": [],
+                },
+                "stable_runnable_queue",
+            ),
+            (
+                {
+                    "proposal_id": "recent_log_overlap_queue_blocked__example-runtime",
+                    "family": "queue_unblock",
+                    "failure_mode": "recent_log_overlap_queue_blocked",
+                    "blocked_by": ["recent_log_overlap"],
+                },
+                "recent_log_overlap_queue_blocked",
+            ),
+        ]
+        for proposal_fields, expected_reason in cases:
+            with (
+                self.subTest(proposal_id=proposal_fields["proposal_id"]),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                vault = Path(temp_dir) / "vault"
+                session_id = "auto-session-maintenance-action-refresh"
+                old_proposal_id = "recent_log_overlap_queue_blocked__old-runtime"
+                session_dir = vault / "ops" / "reports" / "auto-improve-sessions"
+                session_dir.mkdir(parents=True)
+                (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+                current_proposal = {
+                    **mutation_proposal_report("ops/scripts/example.py")["proposals"][0],
+                    **proposal_fields,
+                    "priority": 100,
+                }
+                (vault / auto_improve_runtime.DEFAULT_MUTATION_PROPOSAL_REPORT).write_text(
+                    json.dumps({"proposals": [current_proposal]}),
+                    encoding="utf-8",
+                )
+                (session_dir / f"{session_id}.json").write_text(
+                    json.dumps(
+                        {
+                            "budget": {"max_proposals": 1},
+                            "iterations": [{"proposal_id": old_proposal_id}],
+                            "attempted_proposal_ids": [old_proposal_id],
+                            "quarantined_proposal_ids": [],
+                            "maintenance": {
+                                "queue_action": {
+                                    "status": "action_required",
+                                    "reason": "recent_log_overlap_queue_blocked",
+                                    "proposal_ids": [old_proposal_id],
+                                    "runner_action": (
+                                        auto_improve_runtime.MAINTENANCE_ACTION_RUNNER_ACTION
+                                    ),
+                                    "proposal_budget_increment": 1,
+                                    "resume_target": (
+                                        auto_improve_runtime.MAINTENANCE_ACTION_RESUME_TARGET
+                                    ),
+                                }
+                            },
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+
+                plan = auto_improve_runtime.maintenance_action_resume_plan(
+                    vault,
+                    session_id=session_id,
+                )
+
+                self.assertTrue(plan["decisions"]["can_resume"])
+                self.assertEqual(plan["blockers"], [])
+                self.assertEqual(
+                    plan["selected_proposal"]["proposal_id"],
+                    proposal_fields["proposal_id"],
+                )
+                self.assertEqual(plan["queue_action"]["reason"], expected_reason)
+                self.assertEqual(
+                    plan["queue_action"]["proposal_ids"],
+                    [proposal_fields["proposal_id"]],
+                )
+                self.assertEqual(
+                    plan["actionable_queue_snapshot"],
+                    [proposal_fields["proposal_id"]],
+                )
+
     def test_maintenance_action_plan_blocks_stale_queue_action_and_invalid_increment(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

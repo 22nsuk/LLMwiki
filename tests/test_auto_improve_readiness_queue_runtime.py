@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
+from ops.scripts.auto_improve_readiness_queue_runtime import readiness_queue_state
 from ops.scripts.auto_improve_readiness_runtime import (
     build_readiness_report,
     readiness_can_run,
@@ -21,6 +22,73 @@ from tests.auto_improve_readiness_test_runtime import (
 class AutoImproveReadinessQueueRuntimeTests(
     AutoImproveReadinessRuntimeFixture, unittest.TestCase
 ):
+    def test_readiness_queue_state_owns_queue_derivation(self) -> None:
+        reports = {
+            "outcome_metrics": {
+                "summary": {
+                    "attempts_considered": 7,
+                    "session_reports_considered": 0,
+                }
+            },
+            "mechanism_review": {
+                "status": "attention",
+                "summary": {"candidates_emitted": 1},
+                "diagnostics": {"bootstrap": {"status": "needs_history"}},
+            },
+            "mutation_proposal": {
+                "status": "attention",
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 1,
+                    "queue_pressure_summary": "1 proposal, 1 blocked",
+                },
+                "diagnostics": {
+                    "evidence_gaps": ["candidate evidence gap"],
+                    "queue_selection": {
+                        "blocked_available_count": 1,
+                        "blocked_reason_counts": [
+                            {"reason": "recent_log_overlap", "count": 1}
+                        ],
+                    },
+                },
+                "proposals": [
+                    {
+                        "proposal_id": "proposal-blocked",
+                        "blocked_by": ["recent_log_overlap"],
+                    }
+                ],
+            },
+        }
+
+        state = readiness_queue_state(self.vault, reports)
+
+        self.assertFalse(state.queue_ready)
+        self.assertEqual(state.proposals_emitted, 1)
+        self.assertEqual(state.runnable_proposal_ids, [])
+        self.assertEqual(state.blocked_proposal_count, 1)
+        self.assertEqual(state.blocked_reason_counts, {"recent_log_overlap": 1})
+        self.assertEqual(
+            state.blocked_proposal_ids,
+            {"recent_log_overlap": ["proposal-blocked"]},
+        )
+        self.assertEqual(state.blocked_reasons, ["recent_log_overlap"])
+        self.assertEqual(state.seed_runs, [])
+        self.assertEqual(state.history_requirement, 0)
+        self.assertIn(
+            "mechanism_review.status=attention",
+            state.queue_evidence_gaps[0],
+        )
+        self.assertIn(
+            "mutation_proposal.status=attention",
+            state.queue_evidence_gaps[1],
+        )
+        self.assertIn("candidate evidence gap", state.queue_evidence_gaps)
+        self.assertIn(
+            "proposal blockers active: recent_log_overlap",
+            state.queue_evidence_gaps,
+        )
+
     def test_build_readiness_report_passes_when_queue_is_nonempty(self) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",

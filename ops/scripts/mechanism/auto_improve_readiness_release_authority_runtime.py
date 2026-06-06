@@ -69,29 +69,10 @@ def _release_gate_summaries(reports: dict[str, dict[str, Any]]) -> dict[str, dic
         reports["artifact_finalization"],
         release_finality_summary=release_finality,
     )
-    finality_attested = artifact_finalization.get("source_status") == "finality_attested_pass"
-
     release_closeout = _release_closeout_summary_gate(reports["release_closeout"])
-    if finality_attested and release_closeout.get("status") != "pass":
-        release_closeout = {
-            **release_closeout,
-            "status": "pass",
-            "source_status": "pass",
-            "release_blocking": False,
-            "summary": f"{release_closeout['summary']} (overridden by finality_attested_pass)",
-        }
-
     release_evidence_cohort = _release_evidence_cohort_summary(
         reports["release_evidence_cohort"]
     )
-    if finality_attested and release_evidence_cohort.get("status") != "pass":
-        release_evidence_cohort = {
-            **release_evidence_cohort,
-            "status": "pass",
-            "source_status": "pass",
-            "release_blocking": False,
-            "summary": f"{release_evidence_cohort['summary']} (overridden by finality_attested_pass)",
-        }
 
     artifact_freshness = reports["artifact_freshness"]
     selected_contract_attention = [
@@ -396,8 +377,15 @@ def _release_evidence_cohort_summary(payload: dict[str, Any]) -> dict[str, Any]:
     clean_lane_contract_status = (
         str(release_summary.get("clean_lane_contract_status", "")).strip() or "unknown"
     )
-    gate_pass = strict_same_fingerprint and clean_lane_contract_status == "pass"
+    source_status_pass = summary["status"] == "pass"
+    gate_pass = (
+        source_status_pass
+        and strict_same_fingerprint
+        and clean_lane_contract_status == "pass"
+    )
     signal_ids: list[str] = []
+    if not source_status_pass:
+        signal_ids.append("release_evidence_cohort_status_not_pass")
     if not strict_same_fingerprint:
         signal_ids.append("release_lineage_not_strict_same_fingerprint")
     if clean_lane_contract_status != "pass":

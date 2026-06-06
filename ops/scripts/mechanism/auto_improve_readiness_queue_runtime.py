@@ -17,6 +17,8 @@ from .auto_improve_readiness_constants_runtime import (
     RECENT_OUTCOME_REWORK_REMEDIATION,
     SAME_EVAL_PROPOSAL_FAILURE_MODES,
 )
+from .auto_improve_readiness_learning_runtime import _build_loop_health_summary
+from .auto_improve_readiness_release_authority_runtime import _dict_field
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,27 @@ class ReadinessQueue:
         }
 
 
+@dataclass(frozen=True)
+class ReadinessQueueState:
+    outcome_summary: dict[str, Any]
+    review_summary: dict[str, Any]
+    proposal_summary: dict[str, Any]
+    proposal_diagnostics: dict[str, Any]
+    loop_health_summary: dict[str, Any]
+    same_eval_telemetry_summary: dict[str, Any]
+    queue_evidence_gaps: list[str]
+    proposals_emitted: int
+    runnable_proposal_ids: list[str]
+    blocked_proposal_count: int
+    blocked_reason_counts: dict[str, int]
+    blocked_proposal_ids: dict[str, list[str]]
+    blocked_reasons: list[str]
+    queue_ready: bool
+    seed_runs: list[str]
+    history_requirement: int
+    additional_runs_needed: int
+
+
 def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -94,6 +117,39 @@ def _int_value(value: object, default: int = 0) -> int:
         except (TypeError, ValueError):
             return default
     return default
+
+
+def _upstream_attention_summaries(
+    *,
+    review_report: dict[str, Any],
+    proposal_report: dict[str, Any],
+    review_summary: dict[str, Any],
+    proposal_summary: dict[str, Any],
+) -> list[str]:
+    summaries: list[str] = []
+
+    review_status = str(review_report.get("status", "")).strip()
+    review_bootstrap = review_report.get("diagnostics", {}).get("bootstrap", {})
+    if review_status == "attention":
+        bootstrap_status = str(review_bootstrap.get("status", "")).strip()
+        candidates_emitted = int(review_summary.get("candidates_emitted", 0) or 0)
+        detail = bootstrap_status or "attention"
+        summaries.append(
+            f"mechanism_review.status=attention ({detail}; candidates_emitted={candidates_emitted})"
+        )
+
+    proposal_status = str(proposal_report.get("status", "")).strip()
+    if proposal_status == "attention":
+        proposals_emitted = int(proposal_summary.get("proposals_emitted", 0) or 0)
+        queue_pressure_summary = str(
+            proposal_summary.get("queue_pressure_summary", "")
+        ).strip()
+        detail = queue_pressure_summary or "attention"
+        summaries.append(
+            f"mutation_proposal.status=attention ({detail}; proposals_emitted={proposals_emitted})"
+        )
+
+    return summaries
 
 
 def _runnable_proposal_ids(mutation_proposal_report: dict[str, Any]) -> list[str]:
@@ -204,6 +260,36 @@ def _blocked_proposal_count(
         or proposal_summary.get("blocked_proposal_count", 0)
         or 0
     )
+
+
+def _queue_evidence_gaps(
+    *,
+    review_report: dict[str, Any],
+    proposal_report: dict[str, Any],
+    review_summary: dict[str, Any],
+    proposal_summary: dict[str, Any],
+    proposal_diagnostics: dict[str, Any],
+    proposals_emitted: int,
+    queue_ready: bool,
+    blocked_reasons: list[str],
+) -> list[str]:
+    evidence_gaps = [
+        *_upstream_attention_summaries(
+            review_report=review_report,
+            proposal_report=proposal_report,
+            review_summary=review_summary,
+            proposal_summary=proposal_summary,
+        ),
+        *_string_list(proposal_diagnostics.get("evidence_gaps", [])),
+    ]
+    if proposals_emitted <= 0 or queue_ready:
+        return evidence_gaps
+    blocked_detail = (
+        f"proposal blockers active: {', '.join(blocked_reasons)}"
+        if blocked_reasons
+        else "all emitted proposals are currently blocked"
+    )
+    return [*evidence_gaps, blocked_detail]
 
 
 def _proposal_blocker_remediation(
@@ -575,6 +661,62 @@ def _fallback_history_requirement(
             max(additional_runs_needed, default=0),
         )
     return 0, 0
+
+
+def readiness_queue_state(
+    vault: Path,
+    reports: dict[str, dict[str, Any]],
+) -> ReadinessQueueState:
+    outcome_summary = _dict_field(reports["outcome_metrics"], "summary")
+    review_summary = _dict_field(reports["mechanism_review"], "summary")
+    proposal_summary = _dict_field(reports["mutation_proposal"], "summary")
+    proposal_diagnostics = _dict_field(reports["mutation_proposal"], "diagnostics")
+    loop_health_summary = _build_loop_health_summary(vault)
+    same_eval_telemetry_summary = _same_eval_telemetry_summary(
+        vault, reports["mutation_proposal"]
+    )
+    proposals_emitted = int(proposal_summary.get("proposals_emitted", 0) or 0)
+    runnable_proposal_ids = _runnable_proposal_ids(reports["mutation_proposal"])
+    blocked_proposal_count = _blocked_proposal_count(
+        proposal_summary, proposal_diagnostics
+    )
+    blocked_reason_counts = _blocked_reason_counts(reports["mutation_proposal"])
+    blocked_proposal_ids = _blocked_proposal_ids_by_reason(reports["mutation_proposal"])
+    blocked_reasons = list(blocked_reason_counts)
+    queue_ready = bool(runnable_proposal_ids)
+    queue_evidence_gaps = _queue_evidence_gaps(
+        review_report=reports["mechanism_review"],
+        proposal_report=reports["mutation_proposal"],
+        review_summary=review_summary,
+        proposal_summary=proposal_summary,
+        proposal_diagnostics=proposal_diagnostics,
+        proposals_emitted=proposals_emitted,
+        queue_ready=queue_ready,
+        blocked_reasons=blocked_reasons,
+    )
+    seed_runs = _matching_fallback_seed_runs(vault)
+    history_requirement, additional_runs_needed = _fallback_history_requirement(
+        reports["mechanism_review"]
+    )
+    return ReadinessQueueState(
+        outcome_summary=outcome_summary,
+        review_summary=review_summary,
+        proposal_summary=proposal_summary,
+        proposal_diagnostics=proposal_diagnostics,
+        loop_health_summary=loop_health_summary,
+        same_eval_telemetry_summary=same_eval_telemetry_summary,
+        queue_evidence_gaps=queue_evidence_gaps,
+        proposals_emitted=proposals_emitted,
+        runnable_proposal_ids=runnable_proposal_ids,
+        blocked_proposal_count=blocked_proposal_count,
+        blocked_reason_counts=blocked_reason_counts,
+        blocked_proposal_ids=blocked_proposal_ids,
+        blocked_reasons=blocked_reasons,
+        queue_ready=queue_ready,
+        seed_runs=seed_runs,
+        history_requirement=history_requirement,
+        additional_runs_needed=additional_runs_needed,
+    )
 
 
 def _checks(

@@ -29,6 +29,7 @@ from .noop_repair_classifier_runtime import (
 )
 
 ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX = "artifact_freshness_"
+STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY = "structural_complexity_non_regression"
 RAW_REGISTRY_REPAIR_EVIDENCE_MARKERS = (
     "ops/raw-registry.json",
     "ops/reports/raw-registry-preflight-report.json",
@@ -159,6 +160,46 @@ def _repair_decision_ended_as_clean_repo_health(vault: Path, decision: dict) -> 
     if not source_run_id:
         return False
     return _repo_health_artifact_freshness_failure_now_clean(vault, source_run_id)
+
+
+def _structural_complexity_targets_pass(vault: Path, targets: list[str]) -> bool:
+    primary_targets = current_repo_target_paths(vault, targets)
+    if not primary_targets:
+        return False
+    try:
+        from ops.scripts.structural_complexity_budget_runtime import (
+            DEFAULT_TARGET_PROFILES,
+            build_report,
+            touched_target_profiles,
+        )
+
+        report = build_report(
+            vault,
+            target_profiles=touched_target_profiles(
+                DEFAULT_TARGET_PROFILES,
+                primary_targets,
+            ),
+        )
+    except (OSError, TypeError, ValueError):
+        return False
+    target_statuses = {
+        str(target.get("path", "")).strip(): str(target.get("status", "")).strip()
+        for target in report.get("targets", [])
+        if isinstance(target, dict)
+    }
+    return all(target_statuses.get(target) == "pass" for target in primary_targets)
+
+
+def _repair_decision_ended_as_clean_structural_complexity(
+    vault: Path,
+    decision: dict,
+) -> bool:
+    if str(decision.get("failure_taxonomy", "")).strip() != STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY:
+        return False
+    return _structural_complexity_targets_pass(
+        vault,
+        [str(target) for target in decision.get("primary_targets", [])],
+    )
 
 
 def _text_has_raw_registry_repair_marker(text: str) -> bool:
@@ -324,6 +365,11 @@ def open_carry_forward_decisions(
         ):
             continue
         if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
+            continue
+        if vault is not None and _repair_decision_ended_as_clean_structural_complexity(
+            vault,
+            decision,
+        ):
             continue
         if vault is not None and _repair_decision_ended_as_clean_raw_registry(vault, decision):
             continue

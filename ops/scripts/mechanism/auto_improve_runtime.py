@@ -61,6 +61,7 @@ from .auto_improve_maintenance_decision_runtime import (
     MAINTENANCE_ACTION_RUNNER_ACTION,
     _expected_maintenance_cycle_count,
     _maintenance_cycle_queue_metadata,
+    _maintenance_queue_action,
 )
 from .auto_improve_outcome_runtime import (
     apply_execution_outcome,
@@ -414,6 +415,23 @@ def _proposal_repairs_repeat_backlog(proposal: Mapping[str, Any] | None) -> bool
         family == "next_run_failure_repair"
         or failure_mode == "next_run_failure_repair"
         or proposal_id.startswith("next_run_failure_repair__")
+    )
+
+
+def _proposal_refreshes_stale_maintenance_queue(proposal: Mapping[str, Any] | None) -> bool:
+    if _proposal_repairs_repeat_backlog(proposal):
+        return True
+    if not isinstance(proposal, Mapping):
+        return False
+    if _list_text(proposal.get("blocked_by")):
+        return False
+    proposal_id = str(proposal.get("proposal_id", "")).strip()
+    family = str(proposal.get("family", "")).strip()
+    failure_mode = str(proposal.get("failure_mode", "")).strip()
+    return (
+        family == "queue_unblock"
+        and failure_mode == "recent_log_overlap_queue_blocked"
+        and proposal_id.startswith("recent_log_overlap_queue_blocked__")
     )
 
 
@@ -1606,12 +1624,20 @@ def maintenance_action_resume_plan(
         return base_plan
     selected_proposal_id = str(selected.get("proposal_id", "")).strip()
     if action_proposal_ids and selected_proposal_id not in action_proposal_ids:
-        base_plan["blockers"] = ["selected proposal is not in the maintenance action queue"]
-        base_plan["recommended_next_action"] = (
-            "Run make goal-runtime-between-run-settle so readiness and mutation proposal "
-            "queue evidence converge, then rerun the maintenance action."
-        )
-        return base_plan
+        if (
+            selected_proposal_id in actionable_queue
+            and _proposal_refreshes_stale_maintenance_queue(selected)
+        ):
+            queue_action_payload = _maintenance_queue_action(actionable_queue)
+            queue_action_payload["proposal_budget_increment"] = increment
+            base_plan["queue_action"] = queue_action_payload
+        else:
+            base_plan["blockers"] = ["selected proposal is not in the maintenance action queue"]
+            base_plan["recommended_next_action"] = (
+                "Run make goal-runtime-between-run-settle so readiness and mutation proposal "
+                "queue evidence converge, then rerun the maintenance action."
+            )
+            return base_plan
     next_budget = max(current_budget + increment, current_iterations + 1)
     base_plan.update(
         {

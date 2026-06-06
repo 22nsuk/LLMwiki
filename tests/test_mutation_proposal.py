@@ -2597,24 +2597,22 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "next_run_decisions": [
                         {
-                            "decision_id": "next-run-decision:run-a:structural",
+                            "decision_id": "next-run-decision:run-a:review",
                             "observed_at": "2026-04-14T02:00:00Z",
                             "session_id": "auto-session-a",
                             "iteration": 3,
                             "source_run_id": source_run_id,
                             "proposal_id": "next_run_failure_repair__example-runtime__validation-blocked",
                             "source_candidate_id": "next-run-decision:prior:validation",
-                            "target_proposal_id": (
-                                "next_run_failure_repair__example-runtime__structural-complexity-non-regression"
-                            ),
+                            "target_proposal_id": "next_run_failure_repair__example-runtime__review-blocked",
                             "proposal_family": "next_run_failure_repair",
                             "proposal_tier": "supporting",
-                            "failure_taxonomy": "structural_complexity_non_regression",
-                            "blocking_role": "promotion_gate",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
                             "decision": "carry_forward",
                             "next_run_action": "repair_failure",
                             "status": "open",
-                            "reason": "structural non-regression should remain bounded to exact source evidence",
+                            "reason": "review repair should remain bounded to exact source evidence",
                             "quarantined_source_proposal": False,
                             "primary_targets": [primary_target],
                             "supporting_targets": ["ops/script-output-surfaces.json"],
@@ -2638,6 +2636,95 @@ class MutationProposalTest(unittest.TestCase):
 
             self.assertIn(source_session, repair["supporting_targets"])
             self.assertIn(diagnostic_session, repair["supporting_targets"])
+
+    def test_resolved_structural_next_run_decision_does_not_emit_repair_proposal(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            primary_target = "ops/scripts/mechanism/auto_improve_readiness_runtime.py"
+            (vault / primary_target).write_text(
+                "def ready() -> bool:\n    return True\n",
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_auto_improve_readiness_runtime.py").write_text(
+                "def test_ready():\n    assert True\n",
+                encoding="utf-8",
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:structural",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 3,
+                            "source_run_id": (
+                                "auto-session-a-run-03-auto-improve-readiness-runtime"
+                            ),
+                            "proposal_id": (
+                                "next_run_failure_repair__auto-improve-readiness-runtime__"
+                                "repo-health-blocked"
+                            ),
+                            "source_candidate_id": "next-run-decision:prior:repo-health",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__auto-improve-readiness-runtime__"
+                                "structural-complexity-non-regression"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "structural_complexity_non_regression",
+                            "blocking_role": "promotion_gate",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": (
+                                "structural non-regression is already resolved in the "
+                                "current target"
+                            ),
+                            "quarantined_source_proposal": False,
+                            "primary_targets": [primary_target],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": [
+                                "tests/test_auto_improve_readiness_runtime.py"
+                            ],
+                            "evidence_paths": [
+                                (
+                                    "runs/auto-session-a-run-03-auto-improve-readiness-runtime/"
+                                    "structural-complexity-budget.json"
+                                )
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertFalse(
+                any(
+                    proposal["failure_mode"] == "next_run_failure_repair"
+                    for proposal in proposal_report["proposals"]
+                )
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"],
+                {
+                    "session_reports_scanned": 1,
+                    "decisions_considered": 1,
+                    "open_carry_forward_decisions": 0,
+                    "repair_proposals_emitted": 0,
+                    "decision_counts": {"carry_forward": 1},
+                    "action_counts": {"repair_failure": 1},
+                    "selected_target_proposal_ids": [],
+                },
+            )
 
     def test_consumed_next_run_decision_does_not_emit_repair_proposal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

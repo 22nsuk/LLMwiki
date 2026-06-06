@@ -292,6 +292,64 @@ class AutoImproveReadinessReleaseAuthorityRuntimeTests(unittest.TestCase):
             ["machine_release_not_allowed"],
         )
 
+    def test_finality_attestation_does_not_mask_missing_release_evidence(self) -> None:
+        reports = _pass_release_reports()
+        reports["release_closeout"] = {}
+        reports["release_evidence_cohort"] = {}
+        reports["artifact_finalization"] = {}
+
+        summaries = _release_gate_summaries(reports)
+        blocker_ids = {
+            blocker["id"] for blocker in _release_gate_blockers(summaries)
+        }
+
+        self.assertEqual(summaries["artifact_finalization"]["status"], "pass")
+        self.assertEqual(
+            summaries["artifact_finalization"]["source_status"],
+            "finality_attested_pass",
+        )
+        self.assertEqual(summaries["release_closeout"]["status"], "not_run")
+        self.assertEqual(summaries["release_closeout"]["source_status"], "missing")
+        self.assertEqual(summaries["release_evidence_cohort"]["status"], "not_run")
+        self.assertEqual(
+            summaries["release_evidence_cohort"]["source_status"], "missing"
+        )
+        self.assertIn("promotion_blocked_by_release_closeout_summary_failure", blocker_ids)
+        self.assertIn("promotion_blocked_by_release_lineage_mismatch", blocker_ids)
+        self.assertNotIn(
+            "promotion_blocked_by_artifact_finalization_failure",
+            blocker_ids,
+        )
+
+    def test_release_evidence_cohort_source_status_blocks_clean_lineage(self) -> None:
+        for source_status in ("fail", "unknown"):
+            with self.subTest(source_status=source_status):
+                reports = _pass_release_reports()
+                reports["release_evidence_cohort"]["status"] = source_status
+
+                summaries = _release_gate_summaries(reports)
+                blockers = {
+                    blocker["id"]: blocker
+                    for blocker in _release_gate_blockers(summaries)
+                }
+
+                cohort_summary = summaries["release_evidence_cohort"]
+                self.assertEqual(cohort_summary["status"], "fail")
+                self.assertEqual(cohort_summary["source_status"], source_status)
+                self.assertTrue(cohort_summary["release_blocking"])
+                self.assertEqual(
+                    cohort_summary["signal_ids"],
+                    ["release_evidence_cohort_status_not_pass"],
+                )
+                blocker = blockers["promotion_blocked_by_release_lineage_mismatch"]
+                self.assertEqual(
+                    blocker["signal_ids"],
+                    ["release_evidence_cohort_status_not_pass"],
+                )
+                self.assertIn(f"status={source_status}", blocker["reason"])
+                self.assertIn("strict_same_fingerprint=true", blocker["reason"])
+                self.assertIn("clean_lane_contract_status=pass", blocker["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

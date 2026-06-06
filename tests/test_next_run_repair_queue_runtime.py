@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
+
+from ops.scripts.executor_noop_runtime import EXECUTOR_NOOP_MUTATION_FAILURE_MARKER
+
 from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
     OPEN_DECISION_STATUS,
@@ -7,6 +12,7 @@ from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
 from ops.scripts.mechanism.next_run_repair_queue_runtime import (
     open_carry_forward_decisions,
 )
+from tests.test_mechanism_assess import seed_policy
 
 
 def _carry_forward_decision(**overrides: object) -> dict[str, object]:
@@ -85,3 +91,59 @@ def test_open_carry_forward_decisions_suppresses_superseded_queue_rotation() -> 
     )
 
     assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_noop_mutation_repair() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        source_run_id = "run-noop-repair"
+        stderr_path = vault / "runs" / source_run_id / "mutation-command.stderr.txt"
+        stderr_path.parent.mkdir(parents=True, exist_ok=True)
+        stderr_path.write_text(
+            f"worker {EXECUTOR_NOOP_MUTATION_FAILURE_MARKER}; primary_targets=[target]\n",
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="mutation_failed",
+                    proposal_family="next_run_failure_repair",
+                    proposal_id="next_run_failure_repair__target__repo-health-blocked",
+                    source_run_id=source_run_id,
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_resolved_structural_budget() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_readiness_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def ready():\n    return True\n", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-readiness-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []

@@ -61,8 +61,7 @@ ITERATION_TELEMETRY_MERGED_FIELDS = frozenset(
     }
 )
 
-# Run-telemetry fields produced earlier in the run that later iteration writes
-# should preserve unless an explicit overwrite or merge rule applies.
+# Preserve earlier run-telemetry fields unless an explicit overwrite or merge rule applies.
 PRESERVED_RUN_TELEMETRY_FIELDS = frozenset(
     {
         "metadata",
@@ -72,9 +71,7 @@ PRESERVED_RUN_TELEMETRY_FIELDS = frozenset(
         "post_mutation_generated_artifact_convergence",
     }
 )
-PRE_PROMOTION_FAILURE_ARTIFACT_OUTCOMES = frozenset(
-    {"mutation_failed", "repo_health_blocked"}
-)
+PRE_PROMOTION_FAILURE_ARTIFACT_OUTCOMES = frozenset({"mutation_failed", "repo_health_blocked"})
 PRE_PROMOTION_FAILURE_LOG_NAMES = (
     "mutation-command.stdout.txt",
     "mutation-command.stderr.txt",
@@ -91,6 +88,8 @@ DISCARD_NON_REGRESSION_CHECK_IDS = (
     "tests_non_regression",
 )
 PROMOTION_CHECK_STATUS_VALUES = frozenset({"PASS", "WARN", "FAIL"})
+
+
 @dataclass(frozen=True)
 class PersistIterationPhaseResult:
     consecutive_failures: int

@@ -34,7 +34,9 @@ from ops.scripts.mechanism_run_scaffold_templates_runtime import (
     initial_run_ledger,
     placeholder_promotion_report,
 )
+from ops.scripts.policy_runtime import load_policy
 from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
+from ops.scripts.python_function_budget_runtime import python_function_budget_candidates
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema
 
@@ -42,6 +44,7 @@ from ops.scripts import auto_improve_iteration_persistence_runtime
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.report_contract
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _expected_timeout_summary(
@@ -165,9 +168,31 @@ def _write_placeholder_history_run(vault: Path, run_id: str) -> None:
 
 
 class AutoImproveIterationRuntimeTests(unittest.TestCase):
+    def test_iteration_persistence_runtime_stays_under_function_budget(self) -> None:
+        policy, _ = load_policy(REPO_ROOT)
+        runtime_profile = policy["system_refactor_policy"]["python_function_review"]["profiles"][
+            "runtime"
+        ]
+
+        candidates = python_function_budget_candidates(
+            REPO_ROOT,
+            {
+                "profiles": {
+                    "runtime": {
+                        **runtime_profile,
+                        "include_prefixes": [
+                            "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+                        ],
+                    }
+                }
+            },
+        )
+
+        self.assertEqual(candidates, [])
+
     def test_run_telemetry_preservation_contract_matches_schema_surface(self) -> None:
         schema = load_schema(
-            Path(__file__).resolve().parents[1] / "ops" / "schemas" / "run-telemetry.schema.json"
+            REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json"
         )
         schema_fields = set(schema["properties"]) - {"$schema"}
         written_fields = auto_improve_iteration_persistence_runtime.ITERATION_TELEMETRY_WRITTEN_FIELDS
