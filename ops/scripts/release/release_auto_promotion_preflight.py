@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,36 @@ SCHEMA_PATH = "ops/schemas/release-auto-promotion-preflight.schema.json"
 PRODUCER = "ops.scripts.release_auto_promotion_preflight"
 SOURCE_COMMAND = "python -m ops.scripts.release_auto_promotion_preflight --vault ."
 PHASES = {"preflight", "preseal"}
+
+
+@dataclass(frozen=True)
+class _PreflightRequirementInputs:
+    checks: dict[str, bool]
+    inputs: dict[str, dict[str, Any]]
+    phase: str
+    identity: dict[str, Any]
+    auto: dict[str, Any]
+    remediation: dict[str, Any]
+    learning: dict[str, Any]
+    closeout: dict[str, Any]
+    cohort: dict[str, Any]
+    fingerprint: str
+    current_revision: str
+
+
+@dataclass(frozen=True)
+class _PreflightManifestPayloadRequest:
+    generated_at: str
+    commit: str
+    fingerprint: str
+    phase: str
+    status: str
+    inputs: dict[str, dict[str, Any]]
+    goal_run_identity: dict[str, Any]
+    diagnostics: dict[str, Any]
+    checks: dict[str, bool]
+    blockers: list[dict[str, Any]]
+    final_promotion_blockers: list[dict[str, Any]]
 
 
 def _dict(payload: Any) -> dict[str, Any]:
@@ -708,81 +739,55 @@ def _preseal_checks(
     }
 
 
-def _preflight_requirements(
-    checks: dict[str, bool],
-    inputs: dict[str, dict[str, Any]],
-    *,
-    phase: str,
-    identity: dict[str, Any],
-    auto: dict[str, Any],
-    remediation: dict[str, Any],
-    learning: dict[str, Any],
-    closeout: dict[str, Any],
-    cohort: dict[str, Any],
-    fingerprint: str,
-    current_revision: str,
-) -> list[RequirementSpec]:
+def _preflight_requirements(request: _PreflightRequirementInputs) -> list[RequirementSpec]:
     requirements = _base_phase_requirements(
-        checks,
-        inputs,
-        identity=identity,
-        auto=auto,
-        remediation=remediation,
-        learning=learning,
-        fingerprint=fingerprint,
-        current_revision=current_revision,
+        request.checks,
+        request.inputs,
+        identity=request.identity,
+        auto=request.auto,
+        remediation=request.remediation,
+        learning=request.learning,
+        fingerprint=request.fingerprint,
+        current_revision=request.current_revision,
     )
-    if phase == "preseal":
+    if request.phase == "preseal":
         requirements.extend(
             _preseal_phase_requirements(
-                checks,
-                inputs,
-                closeout=closeout,
-                cohort=cohort,
-                fingerprint=fingerprint,
-                current_revision=current_revision,
+                request.checks,
+                request.inputs,
+                closeout=request.closeout,
+                cohort=request.cohort,
+                fingerprint=request.fingerprint,
+                current_revision=request.current_revision,
             )
         )
     return requirements
 
 
-def _preflight_manifest_payload(
-    *,
-    generated_at: str,
-    commit: str,
-    fingerprint: str,
-    phase: str,
-    status: str,
-    inputs: dict[str, dict[str, Any]],
-    goal_run_identity: dict[str, Any],
-    diagnostics: dict[str, Any],
-    checks: dict[str, bool],
-    blockers: list[dict[str, Any]],
-    final_promotion_blockers: list[dict[str, Any]],
-) -> dict[str, Any]:
+def _preflight_manifest_payload(request: _PreflightManifestPayloadRequest) -> dict[str, Any]:
     return {
         "$schema": SCHEMA_PATH,
         "artifact_kind": "release_auto_promotion_preflight",
-        "generated_at": generated_at,
+        "generated_at": request.generated_at,
         "producer": PRODUCER,
         "source_command": SOURCE_COMMAND,
-        "source_revision": commit,
-        "source_tree_fingerprint": fingerprint,
-        "input_fingerprints": input_fingerprints(inputs),
+        "source_revision": request.commit,
+        "source_tree_fingerprint": request.fingerprint,
+        "input_fingerprints": input_fingerprints(request.inputs),
         "schema_version": 1,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_diagnostic",
         "encoding": "utf-8",
-        "currentness": {"status": "current", "checked_at": generated_at},
-        "phase": phase,
-        "status": status,
-        "goal_run_identity": goal_run_identity,
-        "inputs": inputs,
-        "diagnostics": diagnostics,
-        "checks": checks,
-        "blockers": blockers,
-        "final_promotion_blockers": final_promotion_blockers,
-        "failures": _unique_failures([str(blocker["id"]) for blocker in blockers]),
+        "currentness": {"status": "current", "checked_at": request.generated_at},
+        "phase": request.phase,
+        "status": request.status,
+        "goal_run_identity": request.goal_run_identity,
+        "inputs": request.inputs,
+        "diagnostics": request.diagnostics,
+        "checks": request.checks,
+        "blockers": request.blockers,
+        "final_promotion_blockers": request.final_promotion_blockers,
+        "failures": _unique_failures([str(blocker["id"]) for blocker in request.blockers]),
     }
 
 
@@ -841,17 +846,19 @@ def build_manifest(
         current_revision=commit,
     )
     requirements = _preflight_requirements(
-        checks,
-        inputs,
-        phase=phase,
-        identity=identity,
-        auto=auto,
-        remediation=remediation,
-        learning=learning,
-        closeout=closeout,
-        cohort=cohort,
-        fingerprint=fingerprint,
-        current_revision=commit,
+        _PreflightRequirementInputs(
+            checks=checks,
+            inputs=inputs,
+            phase=phase,
+            identity=identity,
+            auto=auto,
+            remediation=remediation,
+            learning=learning,
+            closeout=closeout,
+            cohort=cohort,
+            fingerprint=fingerprint,
+            current_revision=commit,
+        )
     )
     blockers: list[dict[str, Any]] = []
     append_requirement_blockers(blockers, requirements)
@@ -866,17 +873,19 @@ def build_manifest(
         "evidence_cohort": cohort,
     }
     return _preflight_manifest_payload(
-        generated_at=generated_at,
-        commit=commit,
-        fingerprint=fingerprint,
-        phase=phase,
-        status=status,
-        inputs=inputs,
-        goal_run_identity=identity,
-        diagnostics=diagnostics,
-        checks=checks,
-        blockers=blockers,
-        final_promotion_blockers=final_promotion_blockers,
+        _PreflightManifestPayloadRequest(
+            generated_at=generated_at,
+            commit=commit,
+            fingerprint=fingerprint,
+            phase=phase,
+            status=status,
+            inputs=inputs,
+            goal_run_identity=identity,
+            diagnostics=diagnostics,
+            checks=checks,
+            blockers=blockers,
+            final_promotion_blockers=final_promotion_blockers,
+        )
     )
 
 
