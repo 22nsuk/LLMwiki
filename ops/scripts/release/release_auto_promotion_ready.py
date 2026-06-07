@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +66,21 @@ STRICT_ZERO_GATE_ATTENTION_FIELDS = (
 STRICT_ZERO_LEARNING_CLAIM_FIELDS = (
     "learning_claim_blocking_family_count",
 )
+
+
+@dataclass(frozen=True)
+class _ReadyRequirementInputs:
+    checks: dict[str, bool]
+    inputs: dict[str, dict[str, Any]]
+    run_payload: dict[str, Any]
+    sealed_payload: dict[str, Any]
+    operator: dict[str, Any]
+    auto_improve: dict[str, Any]
+    preflight: dict[str, Any]
+    preseal: dict[str, Any]
+    goal_run_status: dict[str, Any]
+    goal_runtime_certificate: dict[str, Any]
+    fingerprint: str
 
 
 def _dict(payload: Any) -> dict[str, Any]:
@@ -799,43 +815,34 @@ def _ready_checks(
     }
 
 
-def _ready_requirements(
-    checks: dict[str, bool],
-    inputs: dict[str, dict[str, Any]],
-    *,
-    run_payload: dict[str, Any],
-    sealed_payload: dict[str, Any],
-    operator: dict[str, Any],
-    auto_improve: dict[str, Any],
-    preflight: dict[str, Any],
-    preseal: dict[str, Any],
-    goal_run_status: dict[str, Any],
-    goal_runtime_certificate: dict[str, Any],
-    fingerprint: str,
-) -> list[RequirementSpec]:
-    preflight_goal_run_id = str(_dict(preflight.get("goal_run_identity")).get("effective_run_id", "")).strip()
-    preseal_goal_run_id = str(_dict(preseal.get("goal_run_identity")).get("effective_run_id", "")).strip()
+def _ready_requirements(request: _ReadyRequirementInputs) -> list[RequirementSpec]:
+    preflight_goal_run_id = str(
+        _dict(request.preflight.get("goal_run_identity")).get("effective_run_id", "")
+    ).strip()
+    preseal_goal_run_id = str(
+        _dict(request.preseal.get("goal_run_identity")).get("effective_run_id", "")
+    ).strip()
     return [
         *_phase_evidence_requirements(
-            checks,
-            inputs,
-            preflight,
+            request.checks,
+            request.inputs,
+            request.preflight,
             input_key="auto_promotion_preflight",
             source="auto_promotion_preflight",
             phase="preflight",
-            fingerprint=fingerprint,
+            fingerprint=request.fingerprint,
         ),
         *_phase_evidence_requirements(
-            checks,
-            inputs,
-            preseal,
+            request.checks,
+            request.inputs,
+            request.preseal,
             input_key="auto_promotion_preseal",
             source="auto_promotion_preseal",
             phase="preseal",
-            fingerprint=fingerprint,
+            fingerprint=request.fingerprint,
         ),
         RequirementSpec(
-            checks["auto_promotion_goal_run_identity_match"],
+            request.checks["auto_promotion_goal_run_identity_match"],
             "auto_promotion_goal_run_identity_mismatch",
             "auto_promotion_preflight|auto_promotion_preseal",
             "$.goal_run_identity.effective_run_id",
@@ -845,30 +852,34 @@ def _ready_requirements(
             "Regenerate preflight and preseal with the same explicit GOAL_RUN_ID.",
         ),
         *goal_runtime_verification_requirements(
-            checks,
-            inputs,
-            selected_goal_run_id=_selected_goal_run_id(preflight, preseal),
-            goal_run_status=goal_run_status,
-            goal_runtime_certificate=goal_runtime_certificate,
-            fingerprint=fingerprint,
+            request.checks,
+            request.inputs,
+            selected_goal_run_id=_selected_goal_run_id(request.preflight, request.preseal),
+            goal_run_status=request.goal_run_status,
+            goal_runtime_certificate=request.goal_runtime_certificate,
+            fingerprint=request.fingerprint,
         ),
         *_manifest_evidence_requirements(
-            checks,
-            inputs,
+            request.checks,
+            request.inputs,
             {
-                "run_manifest": run_payload,
-                "sealed_run_manifest": sealed_payload,
-                "operator_summary": operator,
+                "run_manifest": request.run_payload,
+                "sealed_run_manifest": request.sealed_payload,
+                "operator_summary": request.operator,
             },
-            fingerprint=fingerprint,
+            fingerprint=request.fingerprint,
         ),
-        *_operator_policy_requirements(checks, operator, str(operator["learning_revalidation_status"])),
-        *_operator_zero_count_requirements(operator),
+        *_operator_policy_requirements(
+            request.checks,
+            request.operator,
+            str(request.operator["learning_revalidation_status"]),
+        ),
+        *_operator_zero_count_requirements(request.operator),
         *_auto_improve_requirements(
-            checks,
-            inputs,
-            auto_improve,
-            fingerprint=fingerprint,
+            request.checks,
+            request.inputs,
+            request.auto_improve,
+            fingerprint=request.fingerprint,
         ),
     ]
 
@@ -972,17 +983,19 @@ def build_manifest(
         revision=commit,
     )
     requirements = _ready_requirements(
-        checks,
-        inputs,
-        run_payload=run_payload,
-        sealed_payload=sealed_payload,
-        operator=operator,
-        auto_improve=auto_improve,
-        preflight=preflight,
-        preseal=preseal,
-        goal_run_status=goal_status,
-        goal_runtime_certificate=goal_certificate,
-        fingerprint=fingerprint,
+        _ReadyRequirementInputs(
+            checks=checks,
+            inputs=inputs,
+            run_payload=run_payload,
+            sealed_payload=sealed_payload,
+            operator=operator,
+            auto_improve=auto_improve,
+            preflight=preflight,
+            preseal=preseal,
+            goal_run_status=goal_status,
+            goal_runtime_certificate=goal_certificate,
+            fingerprint=fingerprint,
+        )
     )
     blockers: list[dict[str, Any]] = []
     append_requirement_blockers(blockers, requirements)
