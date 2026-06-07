@@ -239,6 +239,63 @@ class SessionSynopsisTests(unittest.TestCase):
             )
             self.assertEqual(report["recommended_seed_runs"][0]["run_id"], "run-seed-a")
 
+    def test_goal_status_blockers_describe_runner_backed_repairs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_synopsis_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/goal-run-status.json",
+                {
+                    "status": "attention",
+                    "goal": {"contract_id": "goal-20260517-auto-improve-runtime"},
+                    "run": {
+                        "run_id": "20260517-trial",
+                        "status": "blocked",
+                        "runtime_mode": "self_improvement_loop",
+                    },
+                    "health": {
+                        "promotion_status": "blocked",
+                        "can_promote_result": False,
+                        "checkpoint_status": "stale",
+                    },
+                    "blockers": [
+                        "heartbeat stale",
+                        "checkpoint stale",
+                        "periodic evidence checkpoint missing",
+                        "git_worktree_dirty",
+                        "custom runtime drift",
+                    ],
+                    "runtime_certificate": {"status": "pending"},
+                    "periodic_evidence": {"status": "missing_due_evidence"},
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+            blocker_repairs = {
+                blocker["id"]: blocker["repair_target"]
+                for blocker in report["recent_blockers"]
+                if blocker["source"] == "goal_run_status.blockers"
+            }
+            self.assertIn("goal-runtime runner", blocker_repairs["goal_status_heartbeat_stale"])
+            self.assertIn("goal-runtime runner", blocker_repairs["goal_status_checkpoint_stale"])
+            self.assertIn(
+                "checkpoint command",
+                blocker_repairs["goal_status_periodic_evidence_checkpoint_missing"],
+            )
+            self.assertIn(
+                "dirty-worktree blocker",
+                blocker_repairs["goal_status_git_worktree_dirty"],
+            )
+            self.assertIn(
+                "runner-backed evidence",
+                blocker_repairs["goal_status_custom_runtime_drift"],
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_readiness_blocker_supersedes_goal_status_echo(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

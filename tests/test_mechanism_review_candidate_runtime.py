@@ -26,7 +26,7 @@ from ops.scripts.mechanism_review_session_calibration_runtime import (
 from ops.scripts.policy_runtime import load_policy, report_path
 
 from ops.scripts import mechanism_review_candidate_runtime
-from tests.test_mechanism_review import (
+from tests.mechanism_review_test_utils import (
     REPO_ROOT,
     changed_files_manifest,
     eval_report,

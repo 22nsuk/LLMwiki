@@ -30,6 +30,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         BEHAVIOR_DELTA_SCHEMA_PATH,
         CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
         CHANGED_FILES_MANIFEST_SCHEMA_PATH,
+        COMMAND_LOG_SUMMARY_SCHEMA_PATH,
         GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
         MECHANISM_ASSESSMENT_SCHEMA_PATH,
         PLANNING_VALIDATION_SCHEMA_PATH,
@@ -67,6 +68,7 @@ else:
         BEHAVIOR_DELTA_SCHEMA_PATH,
         CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
         CHANGED_FILES_MANIFEST_SCHEMA_PATH,
+        COMMAND_LOG_SUMMARY_SCHEMA_PATH,
         GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
         MECHANISM_ASSESSMENT_SCHEMA_PATH,
         PLANNING_VALIDATION_SCHEMA_PATH,
@@ -536,6 +538,17 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         source_paths=(
             SCRIPT_PATH,
             "ops/scripts/core/observability_artifact_fingerprint_runtime.py",
+        ),
+        derive_generated_at=_payload_generated_at,
+    ),
+    "command-log-summary.json": ArchivedRunArtifactSpec(
+        filename="command-log-summary.json",
+        schema_path=COMMAND_LOG_SUMMARY_SCHEMA_PATH,
+        artifact_kind="command_log_summary",
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/core/command_log_summary_runtime.py",
+            "ops/scripts/core/command_log_summary_backfill.py",
         ),
         derive_generated_at=_payload_generated_at,
     ),

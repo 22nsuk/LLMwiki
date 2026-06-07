@@ -139,6 +139,26 @@ def _goal_runtime_certificate(status_report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _goal_status_repair_target(blocker: str) -> str:
+    if blocker == "self-improvement loop certificate incomplete":
+        return "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
+    if "sealed authority" in blocker:
+        return "Refresh sealed authority preflight evidence before promotion."
+    if blocker in {"heartbeat stale", "checkpoint stale"}:
+        return (
+            "Resume or rerun through goal-runtime runner so fresh heartbeat/checkpoint "
+            "observability is recorded, then refresh goal run status."
+        )
+    if blocker == "periodic evidence checkpoint missing":
+        return (
+            "Resume or rerun through goal-runtime runner so the due periodic evidence "
+            "checkpoint command is recorded, then refresh goal run status."
+        )
+    if blocker == "git_worktree_dirty":
+        return "Clean the Git worktree or defer the dirty-worktree blocker before refreshing goal run status."
+    return "Resolve the active goal-run blocker with runner-backed evidence, then refresh goal run status."
+
+
 def _goal_status_blockers(
     status_report: dict[str, Any],
     runtime_certificate: dict[str, Any],
@@ -158,18 +178,13 @@ def _goal_status_blockers(
             continue
         if blocker_id in DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS:
             continue
-        repair_target = "Refresh goal run status and close the active blocker before resuming."
-        if blocker == "self-improvement loop certificate incomplete":
-            repair_target = "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
-        elif "sealed authority" in blocker:
-            repair_target = "Refresh sealed authority preflight evidence before promotion."
         blockers.append(
             {
                 "id": blocker_id,
                 "source": "goal_run_status.blockers",
                 "status": "open",
                 "reason": blocker,
-                "repair_target": repair_target,
+                "repair_target": _goal_status_repair_target(blocker),
             }
         )
     return blockers

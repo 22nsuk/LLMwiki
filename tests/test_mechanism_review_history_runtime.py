@@ -11,7 +11,7 @@ from ops.scripts.mechanism_review_history_runtime import (
 )
 from ops.scripts.policy_runtime import load_policy
 
-from tests.test_mechanism_review import (
+from tests.mechanism_review_test_utils import (
     changed_files_manifest,
     eval_report,
     mechanism_report,

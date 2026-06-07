@@ -23,6 +23,12 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 import tests.test_release_closeout_summary as closeout_fixture
 import tests.test_release_evidence_dashboard as dashboard_fixture
+from tests.auto_improve_test_utils import (
+    _fake_successful_mechanism_experiment,
+    _incrementing_runtime_context,
+    _load_successful_auto_improve_artifacts,
+)
+from tests.minimal_vault_runtime import seed_subagent_profiles
 from tests.mutation_proposal_test_runtime import (
     ENVELOPE_SCHEMA_PATH,
     fixed_context as mutation_fixed_context,
@@ -30,12 +36,8 @@ from tests.mutation_proposal_test_runtime import (
     seed_vault as seed_mutation_vault,
     write_json_exact,
 )
-from tests.test_auto_improve_runtime import (
-    _fake_successful_mechanism_experiment,
-    _incrementing_runtime_context,
-    _load_successful_auto_improve_artifacts,
+from tests.run_mechanism_experiment_test_utils import (
     mutation_proposal_report as auto_improve_mutation_proposal_report,
-    seed_subagent_profiles,
     seed_wrapper_vault,
 )
 from tests.test_release_closeout_summary import (
@@ -56,9 +58,9 @@ AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve
 
 GOLDEN_DIGESTS = {
     "mutation_proposal": "02866271a5c6d7bdf59845a542243125236b5b3a656b4414086165a048926071",
-    "release_evidence_dashboard": "c24bad9922232387a63e734337856846bea80d34101c5f3fc930424460c6b5e5",
-    "release_closeout_summary": "cbcbbb8f01355b3820b31b6be4ec3d1cf10d1d5c14fa97252a298bd5187d57c1",
-    "auto_improve_session_bundle": "85b21decc31ad49bfc016bcd7f12452753fbe18f5388ce3e798a752abb92cb4d",
+    "release_evidence_dashboard": "a7bf1f5d77621876c93701155e8cfb39fd029da27c468cdb7b35f6038c6a9a53",
+    "release_closeout_summary": "223cccca649f13263258d0a6bb46d723f2ce1c8d69ee385aa11a1af0c49a2c44",
+    "auto_improve_session_bundle": "f40081cef32d89a0434bbc1ef66d39cf7f2c63b961c06242df6d93beca5f3c98",
 }
 GOLDEN_CHECK_COMMAND = "make runtime-hotspot-goldens-check"
 

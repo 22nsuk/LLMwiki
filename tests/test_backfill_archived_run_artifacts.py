@@ -288,6 +288,86 @@ def test_backfill_archived_run_artifacts_supports_convergence_and_timeout_auxili
             assert record.get("issues") == []
 
 
+def test_backfill_archived_run_artifacts_supports_command_log_summary() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        run_id = "legacy-command-log-summary-run"
+        rel_path = f"runs/archive/{run_id}/command-log-summary.json"
+        (vault / rel_path).parent.mkdir(parents=True, exist_ok=True)
+        _write_json(
+            vault / rel_path,
+            {
+                "$schema": "ops/schemas/command-log-summary.schema.json",
+                "artifact_kind": "command_log_summary",
+                "schema_version": 1,
+                "run_id": run_id,
+                "generated_at": "2026-04-28T05:40:00Z",
+                "producer": "ops.scripts.command_log_summary_runtime",
+                "summary": {
+                    "stream_count": 1,
+                    "truncated_stream_count": 0,
+                    "original_total_bytes": 5,
+                    "trace_total_bytes": 5,
+                },
+                "streams": [
+                    {
+                        "prefix": "repo-health",
+                        "stream": "stdout",
+                        "original_path": f"runs/archive/{run_id}/repo-health.stdout.txt",
+                        "original_size_bytes": 5,
+                        "original_sha256": "0" * 64,
+                        "trace_path": f"runs/archive/{run_id}/repo-health.stdout-trace.txt",
+                        "trace_size_bytes": 5,
+                        "trace_sha256": "0" * 64,
+                        "head_limit_bytes": 16384,
+                        "tail_limit_bytes": 16384,
+                        "head_retained_bytes": 5,
+                        "tail_retained_bytes": 0,
+                        "truncated": False,
+                        "command": "make static",
+                        "argv": ["make", "static"],
+                        "returncode": 0,
+                        "timed_out": False,
+                        "timeout_seconds": 5400,
+                        "termination_reason": "completed",
+                        "diagnostic_flags": [],
+                        "generated_at": "2026-04-28T05:40:00Z",
+                    }
+                ],
+            },
+        )
+
+        written = backfill_archived_run_artifacts(vault, context=fixed_context())
+        freshness_report = build_report(vault, context=fixed_context())
+        payload = _read_json(vault / rel_path)
+        embedded_envelope = json.loads(_metadata_property(payload, EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY) or "{}")
+        provenance = json.loads(_metadata_property(payload, BACKFILL_PROVENANCE_PROPERTY) or "{}")
+        record = next(
+            item
+            for item in freshness_report.get("artifact_records", [])
+            if item.get("path") == rel_path
+        )
+
+        assert written == [rel_path]
+        assert validate_with_schema(
+            payload,
+            load_schema(REPO_ROOT / "ops" / "schemas" / "command-log-summary.schema.json"),
+        ) == []
+        assert embedded_envelope.get("artifact_kind") == "command_log_summary"
+        assert embedded_envelope.get("artifact_status") == "archived"
+        assert embedded_envelope.get("retention_policy") == "archive"
+        assert embedded_envelope.get("generated_at") == "2026-04-28T05:40:00Z"
+        assert embedded_envelope.get("currentness", {}).get("status") == "current"
+        assert provenance.get("source_artifact") == rel_path
+        assert provenance.get("generated_at_source") == "payload.generated_at"
+        assert record.get("has_artifact_envelope") is True
+        assert record.get("schema_validation_status") == "pass"
+        assert "missing_artifact_envelope" not in record.get("issues", [])
+        assert "unknown_currentness" not in record.get("issues", [])
+
+
 def test_backfill_archived_run_artifacts_embeds_archived_envelopes_and_clears_freshness_debt() -> None:
     _require_full_vault_run_fixtures()
     with tempfile.TemporaryDirectory() as temp_dir:
