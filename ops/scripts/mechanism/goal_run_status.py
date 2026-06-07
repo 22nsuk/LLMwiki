@@ -448,6 +448,162 @@ def _merged_observability(
     )
 
 
+def _promotion_guard(contract: Mapping[str, Any]) -> dict[str, Any]:
+    promotion_guard = contract.get("promotion_guard")
+    return promotion_guard if isinstance(promotion_guard, dict) else {}
+
+
+def _promotion_blockers(promotion_guard: Mapping[str, Any]) -> list[str]:
+    raw_blockers = promotion_guard.get("promotion_blockers")
+    return [str(item) for item in raw_blockers] if isinstance(raw_blockers, list) else []
+
+
+def _goal_status_source_paths() -> list[str]:
+    return [
+        "ops/scripts/mechanism/goal_run_status.py",
+        "ops/scripts/mechanism/goal_run_status_artifacts_runtime.py",
+        "ops/scripts/mechanism/goal_runtime_backoff.py",
+        "ops/scripts/mechanism/goal_runtime_maintenance.py",
+        "ops/scripts/mechanism/goal_runtime_certificate.py",
+        "ops/scripts/mechanism/goal_runtime_resume.py",
+        "ops/scripts/mechanism/auto_improve_session_completion_runtime.py",
+        "ops/scripts/core/codex_goal_client.py",
+        "ops/schemas/goal-run-status.schema.json",
+        "ops/schemas/codex-goal-contract.schema.json",
+    ]
+
+
+def _goal_status_file_inputs(
+    request: GoalRunStatusRequest,
+    auto_improve_session: Mapping[str, Any],
+) -> dict[str, str]:
+    return {
+        "goal_contract": request.goal_contract_path,
+        "auto_improve_session": str(auto_improve_session.get("report_path", "")).strip(),
+    }
+
+
+def _goal_payload(
+    *,
+    request: GoalRunStatusRequest,
+    contract: Mapping[str, Any],
+    backend: FileGoalBackend,
+    backend_name: str,
+) -> dict[str, Any]:
+    return {
+        "contract_path": request.goal_contract_path,
+        "contract_sha256": _canonical_json_digest(contract),
+        "contract_status": "loaded",
+        "contract_id": str(contract.get("contract_id", "")).strip(),
+        "objective": str(contract.get("objective", "")).strip(),
+        "goal_status": str(contract.get("status", "")).strip(),
+        "backend": {
+            "name": backend_name,
+            "process_persistent": backend.process_persistent,
+        },
+    }
+
+
+def _run_payload(
+    *,
+    request: GoalRunStatusRequest,
+    run_state: _MergedRunState,
+    generated_at: str,
+) -> dict[str, Any]:
+    return {
+        "run_id": request.run_id,
+        "status": run_state.status,
+        "runtime_mode": request.runtime_mode,
+        "started_at": run_state.started_at,
+        "updated_at": generated_at,
+        "completed_at": run_state.completed_at,
+    }
+
+
+def _observability_payload(
+    *,
+    request: GoalRunStatusRequest,
+    observability: _MergedObservability,
+) -> dict[str, Any]:
+    return {
+        "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
+        "checkpoint_interval_seconds": request.checkpoint_interval_seconds,
+        "last_heartbeat_at": observability.last_heartbeat_at,
+        "last_checkpoint_at": observability.last_checkpoint_at,
+        "last_command_heartbeat_at": observability.last_command_heartbeat_at,
+        "quiet_seconds": request.quiet_seconds,
+        "command_observation_mode": observability.command_observation_mode,
+        "command_heartbeat_count": observability.command_heartbeat_count,
+        "command_timeout_seconds": observability.command_timeout_seconds,
+        "last_stdout_at": observability.last_stdout_at,
+        "last_stderr_at": observability.last_stderr_at,
+        "last_artifact_touch_at": observability.last_artifact_touch_at,
+        "last_command_returncode": observability.last_command_returncode,
+        "last_command_timed_out": observability.last_command_timed_out,
+        "last_command_termination_reason": observability.last_command_termination_reason,
+        "last_backoff_until": observability.last_backoff_until,
+        "backoff_reason": observability.backoff_reason,
+        "resume_from_checkpoint": observability.resume_from_checkpoint,
+        "resume_command": observability.resume_command,
+    }
+
+
+def _artifacts_payload(paths: GoalRunArtifactPaths) -> dict[str, str]:
+    return {
+        "status_report_path": paths.status_report_path,
+        "status_markdown_path": paths.status_markdown_path,
+        "audit_log_path": paths.audit_log_path,
+        "resume_metadata_path": paths.resume_metadata_path,
+        "checkpoint_command_log_path": paths.checkpoint_command_log_path,
+    }
+
+
+def _goal_status_blockers(
+    *,
+    promotion_blockers: list[str],
+    runtime_certificate: Mapping[str, Any],
+    health: Mapping[str, Any],
+    run_state: _MergedRunState,
+    periodic_evidence: Mapping[str, Any],
+) -> list[str]:
+    return list(
+        dict.fromkeys(
+            [
+                *promotion_blockers,
+                *runtime_certificate_blockers(runtime_certificate),
+                *health_blockers(
+                    health,
+                    run_status=run_state.status,
+                    periodic_evidence=periodic_evidence,
+                ),
+            ]
+        )
+    )
+
+
+def _goal_status_envelope(
+    *,
+    vault: Path,
+    generated_at: str,
+    resolved_policy_path: Path,
+    request: GoalRunStatusRequest,
+    auto_improve_session: Mapping[str, Any],
+) -> dict[str, Any]:
+    return build_canonical_report_envelope(
+        vault,
+        generated_at=generated_at,
+        artifact_kind="goal_run_status",
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        source_paths=_goal_status_source_paths(),
+        file_inputs=_goal_status_file_inputs(request, auto_improve_session),
+        text_inputs={"session_synopsis_link": SESSION_SYNOPSIS_PATH},
+        source_tree_excluded_files=(request.status_report_path,),
+    )
+
+
 def build_report(request: GoalRunStatusRequest) -> dict[str, Any]:
     if not isinstance(request, GoalRunStatusRequest):
         raise TypeError("build_report expects GoalRunStatusRequest")
@@ -462,11 +618,8 @@ def build_report(request: GoalRunStatusRequest) -> dict[str, Any]:
     contract = backend.get_goal()
     contract_backend = mapping_field(contract, "goal_backend")
     backend_name = str(contract_backend.get("backend_type", "")).strip() or backend.name
-    promotion_guard = contract.get("promotion_guard")
-    if not isinstance(promotion_guard, dict):
-        promotion_guard = {}
-    raw_blockers = promotion_guard.get("promotion_blockers")
-    promotion_blockers = [str(item) for item in raw_blockers] if isinstance(raw_blockers, list) else []
+    promotion_guard = _promotion_guard(contract)
+    promotion_blockers = _promotion_blockers(promotion_guard)
     health = build_goal_health(
         generated_at=generated_at,
         promotion_guard=promotion_guard,
@@ -503,100 +656,42 @@ def build_report(request: GoalRunStatusRequest) -> dict[str, Any]:
     )
     session_synopsis = _session_synopsis_link(vault)
     auto_improve_session = _auto_improve_session_link(vault, request.run_id)
-    blockers = list(
-        dict.fromkeys(
-            [
-                    *promotion_blockers,
-                    *runtime_certificate_blockers(runtime_certificate),
-                    *health_blockers(
-                        health,
-                        run_status=run_state.status,
-                        periodic_evidence=periodic_evidence,
-                    ),
-            ]
-        )
+    blockers = _goal_status_blockers(
+        promotion_blockers=promotion_blockers,
+        runtime_certificate=runtime_certificate,
+        health=health,
+        run_state=run_state,
+        periodic_evidence=periodic_evidence,
     )
     return {
-        **build_canonical_report_envelope(
-            vault,
+        **_goal_status_envelope(
+            vault=vault,
             generated_at=generated_at,
-            artifact_kind="goal_run_status",
-            producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
-            schema_path=SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/mechanism/goal_run_status.py",
-                "ops/scripts/mechanism/goal_run_status_artifacts_runtime.py",
-                "ops/scripts/mechanism/goal_runtime_backoff.py",
-                "ops/scripts/mechanism/goal_runtime_maintenance.py",
-                "ops/scripts/mechanism/goal_runtime_certificate.py",
-                "ops/scripts/mechanism/goal_runtime_resume.py",
-                "ops/scripts/mechanism/auto_improve_session_completion_runtime.py",
-                "ops/scripts/core/codex_goal_client.py",
-                "ops/schemas/goal-run-status.schema.json",
-                "ops/schemas/codex-goal-contract.schema.json",
-            ],
-            file_inputs={
-                "goal_contract": request.goal_contract_path,
-                "auto_improve_session": auto_improve_session["report_path"],
-            },
-            text_inputs={"session_synopsis_link": SESSION_SYNOPSIS_PATH},
-            source_tree_excluded_files=(request.status_report_path,),
+            request=request,
+            auto_improve_session=auto_improve_session,
         ),
-        "goal": {
-            "contract_path": request.goal_contract_path,
-            "contract_sha256": _canonical_json_digest(contract),
-            "contract_status": "loaded",
-            "contract_id": str(contract.get("contract_id", "")).strip(),
-            "objective": str(contract.get("objective", "")).strip(),
-            "goal_status": str(contract.get("status", "")).strip(),
-            "backend": {
-                "name": backend_name,
-                "process_persistent": backend.process_persistent,
-            },
-        },
-        "run": {
-            "run_id": request.run_id,
-            "status": run_state.status,
-            "runtime_mode": request.runtime_mode,
-            "started_at": run_state.started_at,
-            "updated_at": generated_at,
-            "completed_at": run_state.completed_at,
-        },
-        "observability": {
-            "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
-            "checkpoint_interval_seconds": request.checkpoint_interval_seconds,
-            "last_heartbeat_at": observability.last_heartbeat_at,
-            "last_checkpoint_at": observability.last_checkpoint_at,
-            "last_command_heartbeat_at": observability.last_command_heartbeat_at,
-            "quiet_seconds": request.quiet_seconds,
-            "command_observation_mode": observability.command_observation_mode,
-            "command_heartbeat_count": observability.command_heartbeat_count,
-            "command_timeout_seconds": observability.command_timeout_seconds,
-            "last_stdout_at": observability.last_stdout_at,
-            "last_stderr_at": observability.last_stderr_at,
-            "last_artifact_touch_at": observability.last_artifact_touch_at,
-            "last_command_returncode": observability.last_command_returncode,
-            "last_command_timed_out": observability.last_command_timed_out,
-            "last_command_termination_reason": observability.last_command_termination_reason,
-            "last_backoff_until": observability.last_backoff_until,
-            "backoff_reason": observability.backoff_reason,
-            "resume_from_checkpoint": observability.resume_from_checkpoint,
-            "resume_command": observability.resume_command,
-        },
+        "goal": _goal_payload(
+            request=request,
+            contract=contract,
+            backend=backend,
+            backend_name=backend_name,
+        ),
+        "run": _run_payload(
+            request=request,
+            run_state=run_state,
+            generated_at=generated_at,
+        ),
+        "observability": _observability_payload(
+            request=request,
+            observability=observability,
+        ),
         "health": health,
         "runtime_certificate": runtime_certificate,
         "periodic_evidence": periodic_evidence,
         "session_synopsis": session_synopsis,
         "auto_improve_session": auto_improve_session,
-        "artifacts": {
-            "status_report_path": paths.status_report_path,
-            "status_markdown_path": paths.status_markdown_path,
-            "audit_log_path": paths.audit_log_path,
-            "resume_metadata_path": paths.resume_metadata_path,
-            "checkpoint_command_log_path": paths.checkpoint_command_log_path,
-        },
+        "artifacts": _artifacts_payload(paths),
         "promotion_guard": promotion_guard,
         "blockers": blockers,
         "status": _status_from_blockers(run_state.status, blockers),

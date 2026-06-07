@@ -213,6 +213,22 @@ class GoalRunStatusTests(unittest.TestCase):
 
         self.assertEqual(report["artifact_kind"], "goal_run_status")
         self.assertEqual(report["status"], "attention")
+        self.assertEqual(
+            {
+                "source_paths",
+                "goal_contract",
+                "auto_improve_session",
+            }
+            & set(report["input_fingerprints"]),
+            {
+                "source_paths",
+                "goal_contract",
+                "auto_improve_session",
+            },
+        )
+        self.assertRegex(report["input_fingerprints"]["goal_contract"], r"^[0-9a-f]{64}$")
+        self.assertRegex(report["input_fingerprints"]["source_paths"], r"^[0-9a-f]{64}$")
+        self.assertEqual(report["input_fingerprints"]["auto_improve_session"], "missing")
         self.assertEqual(report["goal"]["backend"]["process_persistent"], True)
         self.assertEqual(report["goal"]["contract_id"], "goal-20260517-auto-improve-runtime")
         self.assertRegex(report["goal"]["contract_sha256"], r"^[0-9a-f]{64}$")

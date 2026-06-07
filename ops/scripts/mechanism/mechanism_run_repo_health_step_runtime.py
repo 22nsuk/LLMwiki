@@ -68,6 +68,13 @@ class StructuralComplexityBudgetStepResult:
 
 
 @dataclass(frozen=True)
+class _RepoHealthEvidenceArtifacts:
+    changed_files_manifest: str
+    structural_complexity_budget: StructuralComplexityBudgetStepResult
+    behavior_delta: str
+
+
+@dataclass(frozen=True)
 class RepoHealthStepDependencies:
     command_argv: Callable[..., list[str]]
     run_command: Callable[..., dict]
@@ -290,6 +297,48 @@ def _repo_health_summary(
     return "Repo health command and post-worker structural complexity budget passed before promotion evaluation."
 
 
+def _write_repo_health_evidence_artifacts(
+    vault: Path,
+    workspace_vault: Path,
+    *,
+    run_id: str,
+    resolution: ExperimentResolution,
+    baseline_file_digests: dict[str, str],
+    dependencies: RepoHealthStepDependencies,
+    diff_model: str,
+) -> _RepoHealthEvidenceArtifacts:
+    changed_files_manifest = dependencies.write_changed_files_manifest(
+        vault,
+        workspace_vault,
+        run_id=run_id,
+        primary_targets=resolution.primary_targets,
+        supporting_targets=resolution.supporting_targets,
+        test_files=resolution.test_files,
+        baseline_file_digests=baseline_file_digests,
+        diff_model=diff_model,
+        context=resolution.context,
+    )
+    structural_complexity_budget = dependencies.write_structural_complexity_budget_artifact(
+        vault,
+        workspace_vault,
+        run_id=run_id,
+        resolution=resolution,
+        changed_files_manifest=changed_files_manifest,
+    )
+    behavior_delta = dependencies.write_behavior_delta_artifact(
+        vault,
+        workspace_vault,
+        run_id=run_id,
+        resolution=resolution,
+        changed_files_manifest=changed_files_manifest,
+    )
+    return _RepoHealthEvidenceArtifacts(
+        changed_files_manifest=changed_files_manifest,
+        structural_complexity_budget=structural_complexity_budget,
+        behavior_delta=behavior_delta,
+    )
+
+
 def repo_health_step(
     vault: Path,
     workspace_vault: Path,
@@ -325,31 +374,18 @@ def repo_health_step(
         run_id=run_id,
         repo_health_failed=not repo_health_passed,
     )
-    changed_files_manifest = dependencies.write_changed_files_manifest(
+    evidence_artifacts = _write_repo_health_evidence_artifacts(
         vault,
         workspace_vault,
         run_id=run_id,
-        primary_targets=resolution.primary_targets,
-        supporting_targets=resolution.supporting_targets,
-        test_files=resolution.test_files,
+        resolution=resolution,
         baseline_file_digests=baseline_file_digests,
+        dependencies=dependencies,
         diff_model=diff_model,
-        context=resolution.context,
     )
-    structural_complexity_budget = dependencies.write_structural_complexity_budget_artifact(
-        vault,
-        workspace_vault,
-        run_id=run_id,
-        resolution=resolution,
-        changed_files_manifest=changed_files_manifest,
-    )
-    behavior_delta = dependencies.write_behavior_delta_artifact(
-        vault,
-        workspace_vault,
-        run_id=run_id,
-        resolution=resolution,
-        changed_files_manifest=changed_files_manifest,
-    )
+    changed_files_manifest = evidence_artifacts.changed_files_manifest
+    structural_complexity_budget = evidence_artifacts.structural_complexity_budget
+    behavior_delta = evidence_artifacts.behavior_delta
     structural_complexity_budget_status = structural_complexity_budget.status
     structural_complexity_budget_passed = structural_complexity_budget_status == "pass"
     passed = repo_health_passed and structural_complexity_budget_passed

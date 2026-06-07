@@ -82,6 +82,36 @@ class GoalRuntimeCloseoutTests(unittest.TestCase):
         )
 
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(
+            {
+                "source_paths",
+                "budget",
+                "source_fingerprint",
+                "release_smoke",
+                "source_package",
+                "public_check",
+                "full_suite",
+            }
+            & set(report["input_fingerprints"]),
+            {
+                "source_paths",
+                "budget",
+                "source_fingerprint",
+                "release_smoke",
+                "source_package",
+                "public_check",
+                "full_suite",
+            },
+        )
+        self.assertEqual(
+            [
+                "candidate_convergence",
+                "expensive_evidence",
+                "canonical_publish",
+                "post_publish_finalization",
+            ],
+            list(dict.fromkeys(item["phase_group"] for item in report["phase_decisions"])),
+        )
         self.assertFalse(report["summary"]["full_suite_required"])
         self.assertEqual(report["summary"]["blocked_by_budget_count"], 0)
         self.assertNotIn("test-execution-summary-full-refresh", report["recommended_targets"])

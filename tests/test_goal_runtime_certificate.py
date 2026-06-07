@@ -259,6 +259,37 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             report["session_evidence"]["allow_zero_maintenance_cycles_for_certificate"]
         )
         self.assertEqual(report["command_observability"]["status"], "clean")
+        self.assertEqual(report["run_artifacts"]["status"], "clean")
+        self.assertEqual(report["run_artifacts"]["audit_event_count"], 7)
+        self.assertTrue(report["run_artifacts"]["runner_command_audit_current"])
+        self.assertEqual(
+            [
+                (item["artifact"], item["status"])
+                for item in report["run_artifacts"]["checks"]
+            ],
+            [
+                ("status_markdown_path", "present"),
+                ("resume_metadata_path", "present"),
+                ("audit_log_path", "present"),
+                ("status_markdown_current", "pass"),
+                ("resume_metadata_current", "pass"),
+                ("audit_log_current", "pass"),
+                ("audit_log_command_observability_current", "pass"),
+            ],
+        )
+        self.assertEqual(
+            {
+                "run_status_markdown",
+                "run_resume_metadata",
+                "run_audit_log",
+            }
+            & set(report["input_fingerprints"]),
+            {
+                "run_status_markdown",
+                "run_resume_metadata",
+                "run_audit_log",
+            },
+        )
         self.assertEqual(report["diagnosis"]["certificate_claim_status"], "eligible")
         self.assertTrue(report["diagnosis"]["certifiable"])
         self.assertFalse(

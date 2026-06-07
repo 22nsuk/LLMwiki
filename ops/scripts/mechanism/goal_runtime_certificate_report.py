@@ -68,6 +68,17 @@ class GoalRuntimeCertificateRequest:
     context: RuntimeContext | None = None
 
 
+@dataclass(frozen=True)
+class _RunArtifactPresence:
+    status_markdown_path: Path
+    status_markdown_present: bool
+    resume_metadata_path: Path
+    resume_metadata_present: bool
+    audit_log_path: Path
+    audit_log_present: bool
+    checks: tuple[dict[str, Any], ...]
+
+
 def _mapping_value(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     value = payload.get(key)
     return value if isinstance(value, Mapping) else {}
@@ -138,6 +149,166 @@ def _load_audit_events(path: Path) -> list[dict[str, Any]]:
     return events
 
 
+def _artifact_rel_path(artifacts: Mapping[str, Any], field: str) -> str:
+    return str(artifacts.get(field, "")).strip()
+
+
+def _artifact_path_check(
+    vault: Path,
+    artifacts: Mapping[str, Any],
+    field: str,
+) -> tuple[Path, bool, dict[str, Any]]:
+    rel_path = _artifact_rel_path(artifacts, field)
+    absolute = vault / rel_path if rel_path else vault / "__missing_goal_runtime_artifact__"
+    present = bool(rel_path) and absolute.is_file()
+    return (
+        absolute,
+        present,
+        {
+            "artifact": field,
+            "path": rel_path,
+            "status": "present" if present else "missing",
+        },
+    )
+
+
+def _run_artifact_presence(
+    vault: Path,
+    artifacts: Mapping[str, Any],
+) -> _RunArtifactPresence:
+    checks: list[dict[str, Any]] = []
+    status_markdown_path, status_markdown_present, status_markdown_check = (
+        _artifact_path_check(vault, artifacts, "status_markdown_path")
+    )
+    resume_metadata_path, resume_metadata_present, resume_metadata_check = _artifact_path_check(
+        vault,
+        artifacts,
+        "resume_metadata_path",
+    )
+    audit_log_path, audit_log_present, audit_log_check = _artifact_path_check(
+        vault,
+        artifacts,
+        "audit_log_path",
+    )
+    checks.extend((status_markdown_check, resume_metadata_check, audit_log_check))
+    return _RunArtifactPresence(
+        status_markdown_path=status_markdown_path,
+        status_markdown_present=status_markdown_present,
+        resume_metadata_path=resume_metadata_path,
+        resume_metadata_present=resume_metadata_present,
+        audit_log_path=audit_log_path,
+        audit_log_present=audit_log_present,
+        checks=tuple(checks),
+    )
+
+
+def _status_markdown_current(path: Path, *, present: bool, run: Mapping[str, Any]) -> bool:
+    if not present:
+        return False
+    text = path.read_text(encoding="utf-8")
+    return f"- status: {run.get('status', '')}" in text
+
+
+def _resume_metadata_current(
+    path: Path,
+    *,
+    present: bool,
+    run_id: str,
+    contract_sha256: str,
+) -> bool:
+    resume_metadata = load_optional_json_object(path)
+    return (
+        present
+        and str(resume_metadata.get("run_id", "")).strip() == run_id
+        and str(resume_metadata.get("contract_sha256", "")).strip() == contract_sha256
+    )
+
+
+def _matching_goal_status_audit_events(
+    audit_events: list[dict[str, Any]],
+    *,
+    generated_at: str,
+    run_id: str,
+    run_status: str,
+) -> list[dict[str, Any]]:
+    return [
+        event
+        for event in audit_events
+        if str(event.get("event", "")).strip() == "goal_run_status_written"
+        and str(event.get("generated_at", "")).strip() == generated_at
+        and str(event.get("run_id", "")).strip() == run_id
+        and str(event.get("run_status", "")).strip() == run_status
+    ]
+
+
+def _command_observability_matches(
+    event: Mapping[str, Any],
+    observability: Mapping[str, Any],
+) -> bool:
+    return (
+        str(event.get("command_observation_mode", "")).strip()
+        == str(observability.get("command_observation_mode", "")).strip()
+        and _integer_value(event.get("command_heartbeat_count"))
+        == _integer_value(observability.get("command_heartbeat_count"))
+        and _integer_value(event.get("last_command_returncode"))
+        == _integer_value(observability.get("last_command_returncode"))
+        and _bool_value(event.get("last_command_timed_out"))
+        == _bool_value(observability.get("last_command_timed_out"))
+        and str(event.get("last_command_termination_reason", "")).strip()
+        == str(observability.get("last_command_termination_reason", "")).strip()
+    )
+
+
+def _runner_completion_command_observability_matches(
+    event: Mapping[str, Any],
+    *,
+    observability: Mapping[str, Any],
+    run_id: str,
+    run_status: str,
+    completed_at: str,
+) -> bool:
+    if str(event.get("event", "")).strip() != "goal_run_status_written":
+        return False
+    if str(event.get("writer", "")).strip() != RUNNER_PRODUCER:
+        return False
+    if str(event.get("run_id", "")).strip() != run_id:
+        return False
+    if str(event.get("run_status", "")).strip() != run_status:
+        return False
+    if not _command_observability_matches(event, observability):
+        return False
+    if completed_at:
+        return str(event.get("generated_at", "")).strip() == completed_at
+    return True
+
+
+def _runner_command_audit_current(
+    *,
+    matching_events: list[dict[str, Any]],
+    audit_events: list[dict[str, Any]],
+    observability: Mapping[str, Any],
+    run_id: str,
+    run_status: str,
+    completed_at: str,
+) -> bool:
+    for event in matching_events:
+        if (
+            _command_observability_matches(event, observability)
+            and str(event.get("writer", "")).strip() == RUNNER_PRODUCER
+        ):
+            return True
+    return any(
+        _runner_completion_command_observability_matches(
+            event,
+            observability=observability,
+            run_id=run_id,
+            run_status=run_status,
+            completed_at=completed_at,
+        )
+        for event in audit_events
+    )
+
+
 def _run_artifacts(vault: Path, status_report: Mapping[str, Any]) -> dict[str, Any]:
     artifacts = _mapping_value(status_report, "artifacts")
     run = _mapping_value(status_report, "run")
@@ -145,118 +316,78 @@ def _run_artifacts(vault: Path, status_report: Mapping[str, Any]) -> dict[str, A
     observability = _mapping_value(status_report, "observability")
     generated_at = str(status_report.get("generated_at", "")).strip()
     run_id = str(run.get("run_id", "")).strip()
+    run_status = str(run.get("status", "")).strip()
     contract_sha256 = str(goal.get("contract_sha256", "")).strip()
-    checks: list[dict[str, Any]] = []
+    presence = _run_artifact_presence(vault, artifacts)
+    checks = list(presence.checks)
 
-    def path_check(field: str) -> tuple[str, Path, bool]:
-        rel_path = str(artifacts.get(field, "")).strip()
-        absolute = vault / rel_path if rel_path else vault / "__missing_goal_runtime_artifact__"
-        present = bool(rel_path) and absolute.is_file()
-        checks.append(
-            {
-                "artifact": field,
-                "path": rel_path,
-                "status": "present" if present else "missing",
-            }
-        )
-        return rel_path, absolute, present
-
-    _, status_markdown_path, status_markdown_present = path_check("status_markdown_path")
-    _, resume_metadata_path, resume_metadata_present = path_check("resume_metadata_path")
-    _, audit_log_path, audit_log_present = path_check("audit_log_path")
-
-    status_markdown_current = False
-    if status_markdown_present:
-        text = status_markdown_path.read_text(encoding="utf-8")
-        status_markdown_current = f"- status: {run.get('status', '')}" in text
+    status_markdown_current = _status_markdown_current(
+        presence.status_markdown_path,
+        present=presence.status_markdown_present,
+        run=run,
+    )
     checks.append(
         {
             "artifact": "status_markdown_current",
-            "path": str(artifacts.get("status_markdown_path", "")).strip(),
+            "path": _artifact_rel_path(artifacts, "status_markdown_path"),
             "status": "pass" if status_markdown_current else "fail",
         }
     )
 
-    resume_metadata = load_optional_json_object(resume_metadata_path)
-    resume_metadata_current = (
-        resume_metadata_present
-        and str(resume_metadata.get("run_id", "")).strip() == run_id
-        and str(resume_metadata.get("contract_sha256", "")).strip() == contract_sha256
+    resume_metadata_current = _resume_metadata_current(
+        presence.resume_metadata_path,
+        present=presence.resume_metadata_present,
+        run_id=run_id,
+        contract_sha256=contract_sha256,
     )
     checks.append(
         {
             "artifact": "resume_metadata_current",
-            "path": str(artifacts.get("resume_metadata_path", "")).strip(),
+            "path": _artifact_rel_path(artifacts, "resume_metadata_path"),
             "status": "pass" if resume_metadata_current else "fail",
         }
     )
 
-    audit_events = _load_audit_events(audit_log_path)
-    matching_events = [
-        event
-        for event in audit_events
-        if str(event.get("event", "")).strip() == "goal_run_status_written"
-        and str(event.get("generated_at", "")).strip() == generated_at
-        and str(event.get("run_id", "")).strip() == run_id
-        and str(event.get("run_status", "")).strip() == str(run.get("status", "")).strip()
-    ]
+    audit_events = _load_audit_events(presence.audit_log_path)
+    matching_events = _matching_goal_status_audit_events(
+        audit_events,
+        generated_at=generated_at,
+        run_id=run_id,
+        run_status=run_status,
+    )
     matching_audit_event = bool(matching_events)
     checks.append(
         {
             "artifact": "audit_log_current",
-            "path": str(artifacts.get("audit_log_path", "")).strip(),
+            "path": _artifact_rel_path(artifacts, "audit_log_path"),
             "status": "pass" if matching_audit_event else "fail",
         }
     )
-    def command_observability_matches(event: Mapping[str, Any]) -> bool:
-        return (
-            str(event.get("command_observation_mode", "")).strip()
-            == str(observability.get("command_observation_mode", "")).strip()
-            and _integer_value(event.get("command_heartbeat_count"))
-            == _integer_value(observability.get("command_heartbeat_count"))
-            and _integer_value(event.get("last_command_returncode"))
-            == _integer_value(observability.get("last_command_returncode"))
-            and _bool_value(event.get("last_command_timed_out"))
-            == _bool_value(observability.get("last_command_timed_out"))
-            and str(event.get("last_command_termination_reason", "")).strip()
-            == str(observability.get("last_command_termination_reason", "")).strip()
-        )
 
-    matching_command_observability = any(command_observability_matches(event) for event in matching_events)
-    completed_at = str(run.get("completed_at", "")).strip()
-
-    def runner_completion_command_observability_matches(event: Mapping[str, Any]) -> bool:
-        if str(event.get("event", "")).strip() != "goal_run_status_written":
-            return False
-        if str(event.get("writer", "")).strip() != RUNNER_PRODUCER:
-            return False
-        if str(event.get("run_id", "")).strip() != run_id:
-            return False
-        if str(event.get("run_status", "")).strip() != str(run.get("status", "")).strip():
-            return False
-        if not command_observability_matches(event):
-            return False
-        if completed_at:
-            return str(event.get("generated_at", "")).strip() == completed_at
-        return True
-
-    runner_command_audit_current = any(
-        command_observability_matches(event)
-        and str(event.get("writer", "")).strip() == RUNNER_PRODUCER
+    matching_command_observability = any(
+        _command_observability_matches(event, observability)
         for event in matching_events
-    ) or any(runner_completion_command_observability_matches(event) for event in audit_events)
+    )
+    runner_command_audit_current = _runner_command_audit_current(
+        matching_events=matching_events,
+        audit_events=audit_events,
+        observability=observability,
+        run_id=run_id,
+        run_status=run_status,
+        completed_at=str(run.get("completed_at", "")).strip(),
+    )
     checks.append(
         {
             "artifact": "audit_log_command_observability_current",
-            "path": str(artifacts.get("audit_log_path", "")).strip(),
+            "path": _artifact_rel_path(artifacts, "audit_log_path"),
             "status": "pass" if matching_command_observability else "fail",
         }
     )
 
     clean = (
-        status_markdown_present
-        and resume_metadata_present
-        and audit_log_present
+        presence.status_markdown_present
+        and presence.resume_metadata_present
+        and presence.audit_log_present
         and status_markdown_current
         and resume_metadata_current
         and matching_audit_event

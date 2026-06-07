@@ -60,11 +60,11 @@ from .auto_improve_iteration_runtime import (
     run_auto_improve_iteration as run_auto_improve_iteration_helper,
 )
 from .auto_improve_maintenance_decision_runtime import (
-    MAINTENANCE_ACTION_RESUME_TARGET,
+    MAINTENANCE_ACTION_RESUME_TARGET as MAINTENANCE_ACTION_RESUME_TARGET,
     MAINTENANCE_ACTION_RUNNER_ACTION,
     _expected_maintenance_cycle_count,
     _maintenance_cycle_queue_metadata,
-    _maintenance_queue_action,
+    build_maintenance_action_resume_plan,
 )
 from .auto_improve_outcome_runtime import (
     apply_execution_outcome,
@@ -418,23 +418,6 @@ def _proposal_repairs_repeat_backlog(proposal: Mapping[str, Any] | None) -> bool
         family == "next_run_failure_repair"
         or failure_mode == "next_run_failure_repair"
         or proposal_id.startswith("next_run_failure_repair__")
-    )
-
-
-def _proposal_refreshes_stale_maintenance_queue(proposal: Mapping[str, Any] | None) -> bool:
-    if _proposal_repairs_repeat_backlog(proposal):
-        return True
-    if not isinstance(proposal, Mapping):
-        return False
-    if _list_text(proposal.get("blocked_by")):
-        return False
-    proposal_id = str(proposal.get("proposal_id", "")).strip()
-    family = str(proposal.get("family", "")).strip()
-    failure_mode = str(proposal.get("failure_mode", "")).strip()
-    return (
-        family == "queue_unblock"
-        and failure_mode == "recent_log_overlap_queue_blocked"
-        and proposal_id.startswith("recent_log_overlap_queue_blocked__")
     )
 
 
@@ -1551,121 +1534,13 @@ def maintenance_action_resume_plan(
     mutation_proposals_report_path: str = DEFAULT_MUTATION_PROPOSAL_REPORT,
 ) -> dict[str, Any]:
     session = _load_session_report(vault, session_id)
-    maintenance = _mapping_value(session, "maintenance")
-    queue_action = _mapping_value(maintenance, "queue_action")
-    queue_action_payload: dict[str, Any] = {
-        "status": "none",
-        "reason": "",
-        "proposal_ids": [],
-        "runner_action": "none",
-        "proposal_budget_increment": 0,
-        "resume_target": "",
-        "recommended_next_step": "",
-    }
-    queue_action_payload.update(dict(queue_action))
-    if not isinstance(queue_action_payload.get("proposal_ids"), list):
-        queue_action_payload["proposal_ids"] = []
-    current_budget = _int_value(_mapping_value(session, "budget").get("max_proposals"))
-    current_iterations = len(session.get("iterations", [])) if isinstance(session.get("iterations"), list) else 0
-    base_plan: dict[str, Any] = {
-        "artifact_kind": "goal_runtime_maintenance_action_plan",
-        "producer": "ops.scripts.auto_improve_runtime",
-        "session_id": session_id,
-        "status": "attention",
-        "current_max_proposals": current_budget,
-        "current_iteration_count": current_iterations,
-        "next_max_proposals": current_budget,
-        "queue_action": queue_action_payload,
-        "selected_proposal": {
-            "proposal_id": "",
-            "family": "",
-            "failure_mode": "",
-        },
-        "blockers": [],
-        "recommended_next_action": "",
-        "decisions": {
-            "can_resume": False,
-            "requires_budget_increment": False,
-        },
-    }
-    if str(queue_action_payload.get("status", "")).strip() != "action_required":
-        base_plan["status"] = "pass"
-        base_plan["recommended_next_action"] = "No maintenance queue action requires a resume."
-        return base_plan
-    if str(queue_action_payload.get("runner_action", "")).strip() != MAINTENANCE_ACTION_RUNNER_ACTION:
-        base_plan["blockers"] = ["maintenance queue action has no executable runner action"]
-        base_plan["recommended_next_action"] = (
-            "Refresh maintenance evidence, then rerun maintenance action planning."
-        )
-        return base_plan
-    increment = _int_value(queue_action_payload.get("proposal_budget_increment"))
-    if increment < 1:
-        base_plan["blockers"] = ["maintenance queue action has invalid proposal budget increment"]
-        base_plan["recommended_next_action"] = (
-            "Refresh maintenance evidence so queue_action.proposal_budget_increment "
-            "declares the explicit resume budget increase."
-        )
-        return base_plan
-    proposals_report = load_optional_json_object(vault / mutation_proposals_report_path)
-    proposals = proposals_report.get("proposals")
-    if not isinstance(proposals, list):
-        base_plan["blockers"] = ["mutation proposal report is missing or invalid"]
-        base_plan["recommended_next_action"] = (
-            "Run make mutation-proposal or make goal-runtime-between-run-settle, "
-            "then rerun the maintenance action."
-        )
-        return base_plan
-    selected, actionable_queue = _select_next_proposal(
-        {"proposals": proposals},
-        attempted=set(_list_text(session.get("attempted_proposal_ids"))),
-        quarantined=set(_list_text(session.get("quarantined_proposal_ids"))),
+    return build_maintenance_action_resume_plan(
+        session,
+        session_id=session_id,
+        mutation_proposals_report_loader=lambda: load_optional_json_object(
+            vault / mutation_proposals_report_path
+        ),
     )
-    action_proposal_ids = set(_list_text(queue_action_payload.get("proposal_ids")))
-    if not selected:
-        base_plan["blockers"] = ["no unattempted runnable proposal is available"]
-        base_plan["recommended_next_action"] = (
-            "Refresh mutation proposals and readiness. If the queue remains blocked, "
-            "the maintenance action cannot complete by adding proposal budget alone."
-        )
-        return base_plan
-    selected_proposal_id = str(selected.get("proposal_id", "")).strip()
-    if action_proposal_ids and selected_proposal_id not in action_proposal_ids:
-        if (
-            selected_proposal_id in actionable_queue
-            and _proposal_refreshes_stale_maintenance_queue(selected)
-        ):
-            queue_action_payload = _maintenance_queue_action(actionable_queue)
-            queue_action_payload["proposal_budget_increment"] = increment
-            base_plan["queue_action"] = queue_action_payload
-        else:
-            base_plan["blockers"] = ["selected proposal is not in the maintenance action queue"]
-            base_plan["recommended_next_action"] = (
-                "Run make goal-runtime-between-run-settle so readiness and mutation proposal "
-                "queue evidence converge, then rerun the maintenance action."
-            )
-            return base_plan
-    next_budget = max(current_budget + increment, current_iterations + 1)
-    base_plan.update(
-        {
-            "status": "pass",
-            "next_max_proposals": next_budget,
-            "selected_proposal": {
-                "proposal_id": selected_proposal_id,
-                "family": str(selected.get("family", "")).strip(),
-                "failure_mode": str(selected.get("failure_mode", "")).strip(),
-            },
-            "recommended_next_action": (
-                f"Run make {MAINTENANCE_ACTION_RESUME_TARGET} with "
-                f"GOAL_MAX_PROPOSALS={next_budget}."
-            ),
-            "decisions": {
-                "can_resume": True,
-                "requires_budget_increment": next_budget > current_budget,
-            },
-            "actionable_queue_snapshot": actionable_queue,
-        }
-    )
-    return base_plan
 
 
 def write_maintenance_action_resume_plan(

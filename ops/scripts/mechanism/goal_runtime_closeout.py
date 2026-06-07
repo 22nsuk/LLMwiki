@@ -369,17 +369,8 @@ def _transaction_contract(*, budget: str, candidate_root: str) -> dict[str, Any]
     }
 
 
-def build_report(request: GoalRuntimeCloseoutRequest) -> dict[str, Any]:
-    vault = request.vault.resolve()
-    policy, resolved_policy_path = load_policy(vault, request.policy_path)
-    context = request.context or RuntimeContext.from_policy(policy)
-    source_fingerprint = release_source_tree_fingerprint(vault)
-    git_status, git_entries = _git_status_entries(vault)
-    source_dirty_count = sum(1 for item in git_entries if item["category"] == "source")
-    generated_dirty_count = sum(1 for item in git_entries if item["category"] == "generated")
-
-    decisions: list[dict[str, Any]] = []
-    decisions.extend(
+def _candidate_convergence_decisions() -> list[dict[str, Any]]:
+    return [
         _decision(
             _phase_id("candidate_converge", target),
             phase_group="candidate_convergence",
@@ -393,17 +384,12 @@ def build_report(request: GoalRuntimeCloseoutRequest) -> dict[str, Any]:
             budget_class="cheap",
         )
         for target in CANDIDATE_CONVERGE_TARGETS
-    )
-    targets = [GOAL_RUNTIME_CANDIDATE_CONVERGE_TARGET]
+    ]
 
-    evidence_decisions, evidence_targets = _evidence_decisions(
-        vault,
-        source_fingerprint=source_fingerprint,
-        budget=request.budget,
-    )
-    decisions.extend(evidence_decisions)
-    targets.extend(evidence_targets)
-    publish_ready = not _has_budget_block(evidence_decisions)
+
+def _canonical_publish_decisions(*, publish_ready: bool) -> tuple[list[dict[str, Any]], list[str]]:
+    decisions: list[dict[str, Any]] = []
+    targets: list[str] = []
     if publish_ready:
         decisions.extend(
             _decision(
@@ -429,29 +415,125 @@ def build_report(request: GoalRuntimeCloseoutRequest) -> dict[str, Any]:
             for target in POST_PUBLISH_FINALIZATION_TARGETS
         )
         targets.append(GOAL_RUNTIME_FINALIZE_TARGET)
-    else:
-        decisions.extend(
-            _decision(
-                _phase_id("publish", target),
-                phase_group="canonical_publish",
-                decision="skip",
-                target=target,
-                reason="canonical publish is skipped until stale expensive evidence is refreshed with the full closeout budget",
-                budget_class="cheap",
-            )
-            for target in PUBLISH_TARGETS
+        return decisions, targets
+
+    decisions.extend(
+        _decision(
+            _phase_id("publish", target),
+            phase_group="canonical_publish",
+            decision="skip",
+            target=target,
+            reason="canonical publish is skipped until stale expensive evidence is refreshed with the full closeout budget",
+            budget_class="cheap",
         )
-        decisions.extend(
-            _decision(
-                _phase_id("finalization", target),
-                phase_group="post_publish_finalization",
-                decision="skip",
-                target=target,
-                reason="post-publish finalization is skipped because the publish boundary was not entered",
-                budget_class="cheap",
-            )
-            for target in POST_PUBLISH_FINALIZATION_TARGETS
+        for target in PUBLISH_TARGETS
+    )
+    decisions.extend(
+        _decision(
+            _phase_id("finalization", target),
+            phase_group="post_publish_finalization",
+            decision="skip",
+            target=target,
+            reason="post-publish finalization is skipped because the publish boundary was not entered",
+            budget_class="cheap",
         )
+        for target in POST_PUBLISH_FINALIZATION_TARGETS
+    )
+    return decisions, targets
+
+
+def _closeout_source_paths() -> list[str]:
+    return [
+        "ops/scripts/mechanism/goal_runtime_closeout.py",
+        "ops/schemas/goal-runtime-closeout-plan.schema.json",
+        "mk/mechanism.mk",
+    ]
+
+
+def _closeout_file_inputs(vault: Path) -> dict[str, str]:
+    return {
+        report.phase_id: report.path
+        for report in EVIDENCE_REPORTS
+        if (vault / report.path).exists()
+    }
+
+
+def _closeout_envelope(
+    *,
+    vault: Path,
+    generated_at: str,
+    resolved_policy_path: Path,
+    request: GoalRuntimeCloseoutRequest,
+    source_fingerprint: str,
+) -> dict[str, Any]:
+    return build_canonical_report_envelope(
+        vault,
+        generated_at=generated_at,
+        artifact_kind="goal_runtime_closeout_plan",
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        source_paths=_closeout_source_paths(),
+        file_inputs=_closeout_file_inputs(vault),
+        text_inputs={
+            "budget": request.budget,
+            "source_fingerprint": source_fingerprint,
+        },
+        source_tree_excluded_files=(request.out_path or DEFAULT_OUT,),
+    )
+
+
+def _budget_payload(budget: str) -> dict[str, Any]:
+    return {
+        "mode": budget,
+        "full_suite_max_runs": 1,
+        "expensive_evidence_allowed": budget == "full",
+        "cheap_closeout_never_runs_full_suite": budget == "cheap",
+    }
+
+
+def _source_snapshot_payload(
+    *,
+    source_fingerprint: str,
+    git_status: str,
+    source_dirty_count: int,
+    generated_dirty_count: int,
+    git_entries: list[dict[str, str]],
+) -> dict[str, Any]:
+    return {
+        "source_tree_fingerprint": source_fingerprint,
+        "git_status": git_status,
+        "source_dirty_count": source_dirty_count,
+        "generated_dirty_count": generated_dirty_count,
+        "generated_dirty_allowed_during_candidate_convergence": True,
+        "dirty_entries": git_entries,
+    }
+
+
+def build_report(request: GoalRuntimeCloseoutRequest) -> dict[str, Any]:
+    vault = request.vault.resolve()
+    policy, resolved_policy_path = load_policy(vault, request.policy_path)
+    context = request.context or RuntimeContext.from_policy(policy)
+    source_fingerprint = release_source_tree_fingerprint(vault)
+    git_status, git_entries = _git_status_entries(vault)
+    source_dirty_count = sum(1 for item in git_entries if item["category"] == "source")
+    generated_dirty_count = sum(1 for item in git_entries if item["category"] == "generated")
+
+    decisions = _candidate_convergence_decisions()
+    targets = [GOAL_RUNTIME_CANDIDATE_CONVERGE_TARGET]
+
+    evidence_decisions, evidence_targets = _evidence_decisions(
+        vault,
+        source_fingerprint=source_fingerprint,
+        budget=request.budget,
+    )
+    decisions.extend(evidence_decisions)
+    targets.extend(evidence_targets)
+    publish_ready = not _has_budget_block(evidence_decisions)
+    publish_decisions, publish_targets = _canonical_publish_decisions(publish_ready=publish_ready)
+    decisions.extend(publish_decisions)
+    targets.extend(publish_targets)
     recommended_targets = _dedupe_preserve_order(targets)
     summary = _summary(
         source_dirty_count=source_dirty_count,
@@ -460,50 +542,27 @@ def build_report(request: GoalRuntimeCloseoutRequest) -> dict[str, Any]:
         targets=recommended_targets,
     )
     return {
-        **build_canonical_report_envelope(
-            vault,
+        **_closeout_envelope(
+            vault=vault,
             generated_at=context.isoformat_z(),
-            artifact_kind="goal_runtime_closeout_plan",
-            producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
-            schema_path=SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/mechanism/goal_runtime_closeout.py",
-                "ops/schemas/goal-runtime-closeout-plan.schema.json",
-                "mk/mechanism.mk",
-            ],
-            file_inputs={
-                report.phase_id: report.path
-                for report in EVIDENCE_REPORTS
-                if (vault / report.path).exists()
-            },
-            text_inputs={
-                "budget": request.budget,
-                "source_fingerprint": source_fingerprint,
-            },
-            source_tree_excluded_files=(request.out_path or DEFAULT_OUT,),
+            request=request,
+            source_fingerprint=source_fingerprint,
         ),
         "vault": report_path(vault, vault),
         "status": summary["status"],
-        "budget": {
-            "mode": request.budget,
-            "full_suite_max_runs": 1,
-            "expensive_evidence_allowed": request.budget == "full",
-            "cheap_closeout_never_runs_full_suite": request.budget == "cheap",
-        },
+        "budget": _budget_payload(request.budget),
         "transaction": _transaction_contract(
             budget=request.budget,
             candidate_root=request.candidate_root,
         ),
-        "source_snapshot": {
-            "source_tree_fingerprint": source_fingerprint,
-            "git_status": git_status,
-            "source_dirty_count": source_dirty_count,
-            "generated_dirty_count": generated_dirty_count,
-            "generated_dirty_allowed_during_candidate_convergence": True,
-            "dirty_entries": git_entries,
-        },
+        "source_snapshot": _source_snapshot_payload(
+            source_fingerprint=source_fingerprint,
+            git_status=git_status,
+            source_dirty_count=source_dirty_count,
+            generated_dirty_count=generated_dirty_count,
+            git_entries=git_entries,
+        ),
         "summary": summary,
         "phase_decisions": decisions,
         "recommended_targets": recommended_targets,

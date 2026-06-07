@@ -91,6 +91,28 @@ class GoalRuntimeRunAdmissionRequest:
     context: RuntimeContext | None = None
 
 
+@dataclass(frozen=True)
+class _AdmissionReports:
+    cleanup: dict[str, Any]
+    quarantine_preflight: dict[str, Any]
+    fixed_point: dict[str, Any]
+    guard: dict[str, Any]
+    mutation_proposals: dict[str, Any]
+    readiness: dict[str, Any]
+    remediation_backlog: dict[str, Any]
+    goal_contract: dict[str, Any]
+    goal_run_status: dict[str, Any]
+    resume_completion: dict[str, Any]
+    maintenance_action_plan: dict[str, Any]
+    runtime_certificate: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _AdmissionReportInputs:
+    file_inputs: dict[str, str]
+    inputs: dict[str, str]
+
+
 def _load_json_object(vault: Path, rel_path: str) -> dict[str, Any]:
     try:
         payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
@@ -1273,115 +1295,176 @@ def _recommended_next_action(checks: list[dict[str, Any]], decisions: dict[str, 
     return "Start `make auto-improve-goal-run`."
 
 
-def build_report(
+def _coerce_admission_request(
     request: GoalRuntimeRunAdmissionRequest | Path,
-    **legacy_fields: Any,
-) -> dict[str, Any]:
+    legacy_fields: dict[str, Any],
+) -> GoalRuntimeRunAdmissionRequest:
     if isinstance(request, GoalRuntimeRunAdmissionRequest):
         if legacy_fields:
             raise TypeError("build_report accepts either a request object or legacy keyword fields")
-        active_request = request
-    else:
-        active_request = GoalRuntimeRunAdmissionRequest(vault=Path(request), **legacy_fields)
-    vault = active_request.vault.resolve()
-    policy, resolved_policy_path = load_policy(vault, active_request.policy_path)
-    context = active_request.context or RuntimeContext.from_policy(policy)
-    cleanup = _load_json_object(vault, active_request.cleanup_report_path)
-    quarantine_preflight = _load_json_object(vault, active_request.quarantine_preflight_report_path)
-    fixed_point = _load_json_object(vault, active_request.fixed_point_report_path)
-    guard = _load_json_object(vault, active_request.goal_worktree_guard_report_path)
-    mutation_proposals = _load_json_object(vault, active_request.mutation_proposals_report_path)
-    readiness = _load_json_object(vault, active_request.readiness_report_path)
-    remediation_backlog = _load_json_object(vault, active_request.remediation_backlog_report_path)
-    goal_contract = _load_json_object(vault, active_request.goal_contract_path)
-    goal_run_status = _load_json_object(vault, active_request.goal_run_status_path)
-    resume_completion = _resume_completion_context(vault, active_request.resume_session_id)
-    maintenance_action_plan = (
-        _load_json_object(vault, active_request.maintenance_action_plan_path)
-        if active_request.maintenance_action_plan_path
-        else {}
-    )
-    runtime_certificate = _load_json_object(
-        vault,
-        active_request.runtime_certificate_report_path,
-    )
-    checks = [
-        _cleanup_check(cleanup, active_request.cleanup_report_path),
-        _quarantine_preflight_check(
-            quarantine_preflight,
+        return request
+    return GoalRuntimeRunAdmissionRequest(vault=Path(request), **legacy_fields)
+
+
+def _load_admission_reports(
+    vault: Path,
+    active_request: GoalRuntimeRunAdmissionRequest,
+) -> _AdmissionReports:
+    return _AdmissionReports(
+        cleanup=_load_json_object(vault, active_request.cleanup_report_path),
+        quarantine_preflight=_load_json_object(
+            vault,
             active_request.quarantine_preflight_report_path,
         ),
-        _fixed_point_check(fixed_point, active_request.fixed_point_report_path),
-        _worktree_check(guard, active_request.goal_worktree_guard_report_path),
-        _mutation_queue_check(
-            mutation_proposals,
+        fixed_point=_load_json_object(vault, active_request.fixed_point_report_path),
+        guard=_load_json_object(vault, active_request.goal_worktree_guard_report_path),
+        mutation_proposals=_load_json_object(
+            vault,
             active_request.mutation_proposals_report_path,
-            resume_completion=resume_completion,
+        ),
+        readiness=_load_json_object(vault, active_request.readiness_report_path),
+        remediation_backlog=_load_json_object(
+            vault,
+            active_request.remediation_backlog_report_path,
+        ),
+        goal_contract=_load_json_object(vault, active_request.goal_contract_path),
+        goal_run_status=_load_json_object(vault, active_request.goal_run_status_path),
+        resume_completion=_resume_completion_context(vault, active_request.resume_session_id),
+        maintenance_action_plan=(
+            _load_json_object(vault, active_request.maintenance_action_plan_path)
+            if active_request.maintenance_action_plan_path
+            else {}
+        ),
+        runtime_certificate=_load_json_object(
+            vault,
+            active_request.runtime_certificate_report_path,
+        ),
+    )
+
+
+def _maintenance_action_checks(
+    active_request: GoalRuntimeRunAdmissionRequest,
+    reports: _AdmissionReports,
+) -> list[dict[str, Any]]:
+    if not active_request.maintenance_action_plan_path:
+        return []
+    return [
+        _maintenance_action_plan_check(
+            reports.maintenance_action_plan,
+            active_request.maintenance_action_plan_path,
+            mutation_proposals=reports.mutation_proposals,
+            mutation_proposals_path=active_request.mutation_proposals_report_path,
+            readiness=reports.readiness,
+            readiness_path=active_request.readiness_report_path,
+            resume_session_id=active_request.resume_session_id,
+        )
+    ]
+
+
+def _start_admission_checks(
+    vault: Path,
+    active_request: GoalRuntimeRunAdmissionRequest,
+    reports: _AdmissionReports,
+    *,
+    context: RuntimeContext,
+) -> list[dict[str, Any]]:
+    return [
+        _cleanup_check(reports.cleanup, active_request.cleanup_report_path),
+        _quarantine_preflight_check(
+            reports.quarantine_preflight,
+            active_request.quarantine_preflight_report_path,
+        ),
+        _fixed_point_check(reports.fixed_point, active_request.fixed_point_report_path),
+        _worktree_check(reports.guard, active_request.goal_worktree_guard_report_path),
+        _mutation_queue_check(
+            reports.mutation_proposals,
+            active_request.mutation_proposals_report_path,
+            resume_completion=reports.resume_completion,
         ),
         _readiness_mutation_proposal_currentness_check(
             vault,
-            mutation_proposals,
+            reports.mutation_proposals,
             active_request.mutation_proposals_report_path,
-            readiness,
+            reports.readiness,
             active_request.readiness_report_path,
-            resume_completion=resume_completion,
+            resume_completion=reports.resume_completion,
         ),
         _structural_complexity_budget_start_check(
             vault,
-            mutation_proposals,
+            reports.mutation_proposals,
             active_request.mutation_proposals_report_path,
             context=context,
-            resume_completion=resume_completion,
+            resume_completion=reports.resume_completion,
         ),
         _readiness_execution_check(
-            readiness,
+            reports.readiness,
             active_request.readiness_report_path,
-            resume_completion=resume_completion,
+            resume_completion=reports.resume_completion,
         ),
         _readiness_learning_uncertain_check(
-            readiness,
+            reports.readiness,
             active_request.readiness_report_path,
-            contract=goal_contract,
+            contract=reports.goal_contract,
             contract_path=active_request.goal_contract_path,
             allow_learning_uncertain=active_request.allow_learning_uncertain,
-            resume_completion=resume_completion,
+            resume_completion=reports.resume_completion,
         ),
-        *(
-            [
-                _maintenance_action_plan_check(
-                    maintenance_action_plan,
-                    active_request.maintenance_action_plan_path,
-                    mutation_proposals=mutation_proposals,
-                    mutation_proposals_path=active_request.mutation_proposals_report_path,
-                    readiness=readiness,
-                    readiness_path=active_request.readiness_report_path,
-                    resume_session_id=active_request.resume_session_id,
-                )
-            ]
-            if active_request.maintenance_action_plan_path
-            else []
+        *_maintenance_action_checks(active_request, reports),
+    ]
+
+
+def _promotion_admission_checks(
+    active_request: GoalRuntimeRunAdmissionRequest,
+    reports: _AdmissionReports,
+) -> list[dict[str, Any]]:
+    return [
+        _readiness_promotion_check(reports.readiness, active_request.readiness_report_path),
+        _worktree_promotion_check(
+            reports.guard,
+            active_request.goal_worktree_guard_report_path,
         ),
-        _readiness_promotion_check(readiness, active_request.readiness_report_path),
-        _worktree_promotion_check(guard, active_request.goal_worktree_guard_report_path),
-        _remediation_backlog_check(remediation_backlog, active_request.remediation_backlog_report_path),
+        _remediation_backlog_check(
+            reports.remediation_backlog,
+            active_request.remediation_backlog_report_path,
+        ),
         _durable_goal_authority_check(
-            contract=goal_contract,
+            contract=reports.goal_contract,
             contract_path=active_request.goal_contract_path,
-            goal_run_status=goal_run_status,
+            goal_run_status=reports.goal_run_status,
             goal_run_status_path=active_request.goal_run_status_path,
-            runtime_certificate=runtime_certificate,
+            runtime_certificate=reports.runtime_certificate,
             runtime_certificate_path=active_request.runtime_certificate_report_path,
         ),
     ]
-    summary = _summary(checks)
-    decisions = {
+
+
+def _admission_checks(
+    vault: Path,
+    active_request: GoalRuntimeRunAdmissionRequest,
+    reports: _AdmissionReports,
+    *,
+    context: RuntimeContext,
+) -> list[dict[str, Any]]:
+    return [
+        *_start_admission_checks(vault, active_request, reports, context=context),
+        *_promotion_admission_checks(active_request, reports),
+    ]
+
+
+def _admission_decisions(summary: dict[str, Any]) -> dict[str, bool]:
+    return {
         "can_start_goal_runtime": summary["start_blocker_count"] == 0,
         "can_mutate_candidate": summary["start_blocker_count"] == 0,
         "can_promote_result_later": summary["start_blocker_count"] == 0
         and summary["promotion_blocker_count"] == 0,
         "should_pause_before_run": summary["start_blocker_count"] > 0,
     }
-    file_inputs = {
+
+
+def _base_admission_file_inputs(
+    active_request: GoalRuntimeRunAdmissionRequest,
+) -> dict[str, str]:
+    return {
         "cleanup_report": active_request.cleanup_report_path,
         "quarantine_preflight_report": active_request.quarantine_preflight_report_path,
         "fixed_point_report": active_request.fixed_point_report_path,
@@ -1393,6 +1476,13 @@ def build_report(
         "goal_run_status": active_request.goal_run_status_path,
         "runtime_certificate_report": active_request.runtime_certificate_report_path,
     }
+
+
+def _admission_report_inputs(
+    active_request: GoalRuntimeRunAdmissionRequest,
+    resume_completion: dict[str, Any],
+) -> _AdmissionReportInputs:
+    file_inputs = _base_admission_file_inputs(active_request)
     inputs = dict(file_inputs)
     if active_request.maintenance_action_plan_path:
         file_inputs["maintenance_action_plan"] = active_request.maintenance_action_plan_path
@@ -1401,23 +1491,60 @@ def build_report(
     if resume_session_report:
         file_inputs["resume_session_report"] = resume_session_report
         inputs["resume_session_report"] = resume_session_report
+    return _AdmissionReportInputs(file_inputs=file_inputs, inputs=inputs)
+
+
+def _admission_source_paths() -> list[str]:
+    return [
+        "ops/scripts/mechanism/goal_runtime_run_admission.py",
+        "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
+        "ops/schemas/goal-runtime-run-admission.schema.json",
+        "mk/mechanism.mk",
+    ]
+
+
+def _admission_envelope(
+    vault: Path,
+    active_request: GoalRuntimeRunAdmissionRequest,
+    *,
+    context: RuntimeContext,
+    resolved_policy_path: str,
+    file_inputs: dict[str, str],
+) -> dict[str, Any]:
+    return build_canonical_report_envelope(
+        vault,
+        generated_at=context.isoformat_z(),
+        artifact_kind="goal_runtime_run_admission",
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        source_paths=_admission_source_paths(),
+        file_inputs=file_inputs,
+        source_tree_excluded_files=(active_request.out_path or DEFAULT_OUT,),
+    )
+
+
+def build_report(
+    request: GoalRuntimeRunAdmissionRequest | Path,
+    **legacy_fields: Any,
+) -> dict[str, Any]:
+    active_request = _coerce_admission_request(request, legacy_fields)
+    vault = active_request.vault.resolve()
+    policy, resolved_policy_path = load_policy(vault, active_request.policy_path)
+    context = active_request.context or RuntimeContext.from_policy(policy)
+    reports = _load_admission_reports(vault, active_request)
+    checks = _admission_checks(vault, active_request, reports, context=context)
+    summary = _summary(checks)
+    decisions = _admission_decisions(summary)
+    report_inputs = _admission_report_inputs(active_request, reports.resume_completion)
     return {
-        **build_canonical_report_envelope(
+        **_admission_envelope(
             vault,
-            generated_at=context.isoformat_z(),
-            artifact_kind="goal_runtime_run_admission",
-            producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
+            active_request,
+            context=context,
             resolved_policy_path=resolved_policy_path,
-            schema_path=SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/mechanism/goal_runtime_run_admission.py",
-                "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
-                "ops/schemas/goal-runtime-run-admission.schema.json",
-                "mk/mechanism.mk",
-            ],
-            file_inputs=file_inputs,
-            source_tree_excluded_files=(active_request.out_path or DEFAULT_OUT,),
+            file_inputs=report_inputs.file_inputs,
         ),
         "vault": report_path(vault, vault),
         "status": _status(decisions),
@@ -1427,7 +1554,7 @@ def build_report(
         "decisions": decisions,
         "summary": summary,
         "recommended_next_action": _recommended_next_action(checks, decisions),
-        "inputs": inputs,
+        "inputs": report_inputs.inputs,
         "checks": checks,
     }
 

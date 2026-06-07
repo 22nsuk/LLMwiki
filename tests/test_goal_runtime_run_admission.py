@@ -233,6 +233,18 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertGreater(report["summary"]["promotion_blocker_count"], 0)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_build_report_accepts_legacy_path_kwargs(self) -> None:
+        report = build_report(
+            self.vault,
+            context=fixed_context(),
+            allow_learning_uncertain=True,
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["start_status"], "pass")
+        self.assertTrue(report["decisions"]["can_start_goal_runtime"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_blocks_start_when_readiness_and_mutation_queue_are_stale(self) -> None:
         mutation_report = {
             "artifact_kind": "mutation_proposals_report",
