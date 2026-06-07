@@ -86,6 +86,16 @@ class PublicCheckRequest:
     heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS
 
 
+@dataclass(frozen=True)
+class _PublicExportSnapshot:
+    public_out_path: Path
+    manifest: dict[str, Any]
+    negative_assertions: dict[str, Any]
+    boundary_status: dict[str, str]
+    export_root_fingerprint: str
+    manifest_path: Path
+
+
 def _sha256_file(path: Path) -> str:
     try:
         return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -430,16 +440,7 @@ def _public_pytest_command(commands: list[dict[str, Any]]) -> dict[str, Any]:
     return {}
 
 
-def build_report(
-    vault: Path,
-    request: PublicCheckRequest | None = None,
-    *,
-    context: RuntimeContext | None = None,
-    command_runner: CommandRunner | None = None,
-) -> dict[str, Any]:
-    request = request or PublicCheckRequest()
-    policy, resolved_policy_path = load_policy(vault, None)
-    runtime_context = context or RuntimeContext.from_policy(policy)
+def _collect_public_export_snapshot(vault: Path, request: PublicCheckRequest) -> _PublicExportSnapshot:
     public_out_path = _resolve_out_dir(vault, request.public_out)
     manifest = export_public_repo(vault, public_out_path)
     export_records = _export_file_records(public_out_path, manifest)
@@ -455,26 +456,30 @@ def build_report(
         manifest,
         negative_assertions,
     )
-    export_root_fingerprint = _canonical_sha256(export_records)
     manifest_path = public_out_path / str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
-    pytest_summary_path = _public_pytest_summary_path(public_out_path)
-    pytest_summary_cache_path = _public_pytest_summary_cache_path()
-    runner = command_runner or (
-        lambda argv, cwd, timeout_seconds: _default_command_runner(
-            argv,
-            cwd,
-            timeout_seconds,
-            public_python=public_python,
-            heartbeat_interval_seconds=request.heartbeat_interval_seconds,
-        )
+    return _PublicExportSnapshot(
+        public_out_path=public_out_path,
+        manifest=manifest,
+        negative_assertions=negative_assertions,
+        boundary_status=boundary_status,
+        export_root_fingerprint=_canonical_sha256(export_records),
+        manifest_path=manifest_path,
     )
-    public_python = _resolve_public_python(vault, request.public_python)
+
+
+def _public_check_command_specs(
+    *,
+    public_python: str,
+    request: PublicCheckRequest,
+    public_out_path: Path,
+    pytest_summary_cache_path: Path,
+) -> list[tuple[str, list[str], Path | None]]:
     pytest_summary_command, pytest_summary_relative_path = _pytest_public_summary_command(
         public_python=public_python,
         request=request,
         reuse_from=pytest_summary_cache_path,
     )
-    commands_to_run: list[tuple[str, list[str], Path | None]] = [
+    return [
         (
             "ruff",
             [public_python, "-m", "ruff", "check", *shlex.split(request.ruff_targets)],
@@ -491,6 +496,26 @@ def build_report(
             public_out_path / pytest_summary_relative_path,
         ),
     ]
+
+
+def _run_public_check_commands(
+    vault: Path,
+    request: PublicCheckRequest,
+    public_out_path: Path,
+    command_runner: CommandRunner | None,
+) -> list[dict[str, Any]]:
+    public_python = _resolve_public_python(vault, request.public_python)
+    pytest_summary_path = _public_pytest_summary_path(public_out_path)
+    pytest_summary_cache_path = _public_pytest_summary_cache_path()
+    runner = command_runner or (
+        lambda argv, cwd, timeout_seconds: _default_command_runner(
+            argv,
+            cwd,
+            timeout_seconds,
+            public_python=public_python,
+            heartbeat_interval_seconds=request.heartbeat_interval_seconds,
+        )
+    )
     commands = [
         _command_record(
             command_id=command_id,
@@ -499,17 +524,95 @@ def build_report(
             display_vault=vault,
             timeout_seconds=request.timeout_seconds,
             command_runner=runner,
-            pytest_summary_path=pytest_summary_path,
+            pytest_summary_path=summary_path,
         )
-        for command_id, argv, pytest_summary_path in commands_to_run
+        for command_id, argv, summary_path in _public_check_command_specs(
+            public_python=public_python,
+            request=request,
+            public_out_path=public_out_path,
+            pytest_summary_cache_path=pytest_summary_cache_path,
+        )
     ]
     _persist_public_pytest_summary(pytest_summary_path, pytest_summary_cache_path)
     _remove_optional_file(pytest_summary_path)
+    return commands
+
+
+def _public_check_status(commands: list[dict[str, Any]], negative_assertions: dict[str, Any]) -> str:
     command_status = _overall_status(commands)
     assertion_status = _negative_assertion_status(negative_assertions)
-    status = command_status if command_status != "pass" else assertion_status
+    return command_status if command_status != "pass" else assertion_status
+
+
+def _summary_payload(
+    vault: Path,
+    export: _PublicExportSnapshot,
+    commands: list[dict[str, Any]],
+    status: str,
+) -> dict[str, Any]:
     pytest_counts = commands[-1].get("pytest_counts", {})
     public_pytest_command = _public_pytest_command(commands)
+    return {
+        "public_export_status": "pass",
+        "public_check_status": status,
+        "export_file_count": _int_value(export.manifest.get("file_count", 0)),
+        "export_source_file_count": _int_value(export.manifest.get("source_file_count", 0)),
+        "export_root_fingerprint": export.export_root_fingerprint,
+        "public_export_manifest_sha256": _sha256_file(export.manifest_path),
+        "public_surface_policy_sha256": _sha256_file(vault / "ops/scripts/public/public_surface_policy.py"),
+        "command_count": len(commands),
+        "command_fail_count": sum(1 for command in commands if command["status"] != "pass"),
+        "negative_assertion_fail_count": sum(
+            1
+            for assertion in export.negative_assertions.values()
+            if isinstance(assertion, dict) and assertion.get("status") != "pass"
+        ),
+        **export.boundary_status,
+        "pytest_passed": int(pytest_counts.get("passed", 0) or 0),
+        "pytest_failed": int(pytest_counts.get("failed", 0) or 0),
+        "pytest_errors": int(pytest_counts.get("errors", 0) or 0),
+        "pytest_skipped": int(pytest_counts.get("skipped", 0) or 0),
+        "timeout_command_count": sum(1 for command in commands if command["timed_out"]),
+        "max_command_heartbeat_count": max(
+            (int(command.get("heartbeat_count", 0) or 0) for command in commands),
+            default=0,
+        ),
+        "max_command_quiet_seconds": max(
+            (int(command.get("quiet_seconds", 0) or 0) for command in commands),
+            default=0,
+        ),
+        "public_pytest_heartbeat_count": int(public_pytest_command.get("heartbeat_count", 0) or 0),
+        "public_pytest_quiet_seconds": int(public_pytest_command.get("quiet_seconds", 0) or 0),
+        "public_pytest_termination_reason": str(
+            public_pytest_command.get("termination_reason", "not_run")
+        ),
+        "public_pytest_signal_sent": str(public_pytest_command.get("signal_sent", "none")),
+        "public_pytest_final_state_observed": str(
+            public_pytest_command.get("final_state_observed", "not_run")
+        ),
+    }
+
+
+def _public_export_payload(vault: Path, export: _PublicExportSnapshot) -> dict[str, Any]:
+    return {
+        "output_dir": _display_external_path(export.public_out_path, vault),
+        "manifest_file": str(export.manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json")),
+        "file_count": _int_value(export.manifest.get("file_count", 0)),
+        "source_file_count": _int_value(export.manifest.get("source_file_count", 0)),
+        "export_root_fingerprint": export.export_root_fingerprint,
+        "manifest_sha256": _sha256_file(export.manifest_path),
+    }
+
+
+def _render_public_check_report(
+    vault: Path,
+    policy: dict[str, Any],
+    resolved_policy_path: Path,
+    runtime_context: RuntimeContext,
+    export: _PublicExportSnapshot,
+    commands: list[dict[str, Any]],
+) -> dict[str, Any]:
+    status = _public_check_status(commands, export.negative_assertions)
     source_paths = [
         "Makefile",
         "ops/scripts/public/public_check_summary.py",
@@ -538,56 +641,38 @@ def build_report(
         "vault": report_path(vault, vault),
         "policy": {"path": report_path(vault, resolved_policy_path), "version": policy.get("version")},
         "status": status,
-        "summary": {
-            "public_export_status": "pass",
-            "public_check_status": status,
-            "export_file_count": _int_value(manifest.get("file_count", 0)),
-            "export_source_file_count": _int_value(manifest.get("source_file_count", 0)),
-            "export_root_fingerprint": export_root_fingerprint,
-            "public_export_manifest_sha256": _sha256_file(manifest_path),
-            "public_surface_policy_sha256": _sha256_file(vault / "ops/scripts/public/public_surface_policy.py"),
-            "command_count": len(commands),
-            "command_fail_count": sum(1 for command in commands if command["status"] != "pass"),
-            "negative_assertion_fail_count": sum(
-                1
-                for assertion in negative_assertions.values()
-                if isinstance(assertion, dict) and assertion.get("status") != "pass"
-            ),
-            **boundary_status,
-            "pytest_passed": int(pytest_counts.get("passed", 0) or 0),
-            "pytest_failed": int(pytest_counts.get("failed", 0) or 0),
-            "pytest_errors": int(pytest_counts.get("errors", 0) or 0),
-            "pytest_skipped": int(pytest_counts.get("skipped", 0) or 0),
-            "timeout_command_count": sum(1 for command in commands if command["timed_out"]),
-            "max_command_heartbeat_count": max(
-                (int(command.get("heartbeat_count", 0) or 0) for command in commands),
-                default=0,
-            ),
-            "max_command_quiet_seconds": max(
-                (int(command.get("quiet_seconds", 0) or 0) for command in commands),
-                default=0,
-            ),
-            "public_pytest_heartbeat_count": int(public_pytest_command.get("heartbeat_count", 0) or 0),
-            "public_pytest_quiet_seconds": int(public_pytest_command.get("quiet_seconds", 0) or 0),
-            "public_pytest_termination_reason": str(
-                public_pytest_command.get("termination_reason", "not_run")
-            ),
-            "public_pytest_signal_sent": str(public_pytest_command.get("signal_sent", "none")),
-            "public_pytest_final_state_observed": str(
-                public_pytest_command.get("final_state_observed", "not_run")
-            ),
-        },
-        "public_export": {
-            "output_dir": _display_external_path(public_out_path, vault),
-            "manifest_file": str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json")),
-            "file_count": _int_value(manifest.get("file_count", 0)),
-            "source_file_count": _int_value(manifest.get("source_file_count", 0)),
-            "export_root_fingerprint": export_root_fingerprint,
-            "manifest_sha256": _sha256_file(manifest_path),
-        },
-        "public_export_negative_assertions": negative_assertions,
+        "summary": _summary_payload(vault, export, commands, status),
+        "public_export": _public_export_payload(vault, export),
+        "public_export_negative_assertions": export.negative_assertions,
         "commands": commands,
     }
+
+
+def build_report(
+    vault: Path,
+    request: PublicCheckRequest | None = None,
+    *,
+    context: RuntimeContext | None = None,
+    command_runner: CommandRunner | None = None,
+) -> dict[str, Any]:
+    request = request or PublicCheckRequest()
+    policy, resolved_policy_path = load_policy(vault, None)
+    runtime_context = context or RuntimeContext.from_policy(policy)
+    export = _collect_public_export_snapshot(vault, request)
+    commands = _run_public_check_commands(
+        vault,
+        request=request,
+        public_out_path=export.public_out_path,
+        command_runner=command_runner,
+    )
+    return _render_public_check_report(
+        vault,
+        policy,
+        resolved_policy_path,
+        runtime_context,
+        export,
+        commands,
+    )
 
 
 def write_report(vault: Path, report: dict[str, Any], out_path: str = DEFAULT_OUT) -> Path:

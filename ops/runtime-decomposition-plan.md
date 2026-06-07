@@ -134,6 +134,16 @@ No dead or duplicate implementation is intentionally preserved by this plan.
 Future extraction tasks must update this ledger before leaving any redundant
 compatibility wrapper, shim, or unused helper behind.
 
+### P2 Deferral Ledger
+
+Use this ledger when a function-budget proposal is real but the only safe fix
+would require an intentional public façade migration rather than a private
+helper extraction.
+
+| Item | Status | Reason | Revisit condition |
+| --- | --- | --- | --- |
+| `ops/scripts/release/release_evidence_planner.py::build_plan()` | Explicitly defer | The remaining budget trigger is `parameter_count` only: the public keyword façade carries explicit release evidence path overrides exposed through `parse_args()`/`main()` and is imported directly by tests. Moving the body behind a private request object would not remove the AST-level parameter count, while collapsing the signature into a public request object would violate the current façade-preservation rule. | Revisit only as an intentional release planner API migration with compatibility tests, docs, and Make/CLI review. |
+
 ## Entry Documents
 
 - Repository overview: [../README.md](../README.md)

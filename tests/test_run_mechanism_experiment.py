@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -43,6 +44,369 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _artifact_by_path(run_artifact_fingerprint: dict[str, Any], path: str) -> dict[str, Any]:
+    return next(item for item in run_artifact_fingerprint["artifacts"] if item["path"] == path)
+
+
+def _full_promote_artifacts(vault: Path, run_dir: Path) -> dict[str, Any]:
+    return {
+        "promotion_report": _read_json(run_dir / "promotion-report.json"),
+        "run_artifact_fingerprint": _read_json(run_dir / "run-artifact-fingerprint.json"),
+        "promotion_decision_trends": _read_json(
+            vault / "ops" / "reports" / "promotion-decision-trends.json"
+        ),
+        "run_ledger": _read_json(run_dir / "run-ledger.json"),
+        "planning_validation": _read_json(run_dir / "planning-validation.json"),
+        "changed_manifest": _read_json(run_dir / "changed-files-manifest.json"),
+        "shadow_apply_report": _read_json(run_dir / "shadow-apply-report.json"),
+        "rollback_rehearsal_report": _read_json(run_dir / "rollback-rehearsal-report.json"),
+        "behavior_delta": _read_json(run_dir / "behavior-delta.json"),
+        "structural_budget": _read_json(run_dir / "structural-complexity-budget.json"),
+        "run_telemetry": _read_json(run_dir / "run-telemetry.json"),
+        "baseline_eval": _read_json(run_dir / "baseline-eval.json"),
+        "candidate_lint": _read_json(run_dir / "candidate-lint.json"),
+        "candidate_mechanism": _read_json(run_dir / "candidate-mechanism-assessment.json"),
+        "system_log": (vault / "system" / "system-log.md").read_text(encoding="utf-8"),
+        "example_text": (vault / "ops" / "scripts" / "example.py").read_text(encoding="utf-8"),
+        "test_text": (vault / "tests" / "test_example.py").read_text(encoding="utf-8"),
+    }
+
+
+def _assert_full_promote_result(case: unittest.TestCase, result: dict[str, Any]) -> None:
+    case.assertEqual(result["decision"], "PROMOTE")
+    case.assertEqual(result["decision_record"]["decision"], "PROMOTE")
+    case.assertTrue(result["finalized"])
+    case.assertEqual(result["planning_gate"]["phase"], "mechanism_finalized")
+    case.assertEqual(result["planning_gate"]["status"], "pass")
+    case.assertEqual(result["changed_files_manifest"], "runs/run-wrapper-promote/changed-files-manifest.json")
+    case.assertEqual(
+        result["structural_complexity_budget"],
+        "runs/run-wrapper-promote/structural-complexity-budget.json",
+    )
+    case.assertEqual(result["behavior_delta"], "runs/run-wrapper-promote/behavior-delta.json")
+    case.assertEqual(result["workspace_preparation"]["mode"], "full_copy")
+    case.assertEqual(
+        result["workspace_preparation"]["copied_file_count"],
+        result["workspace_preparation"]["baseline_file_count"],
+    )
+    case.assertGreaterEqual(result["workspace_preparation"]["phase_durations"]["digest"], 0.0)
+    case.assertGreaterEqual(result["workspace_preparation"]["phase_durations"]["copy"], 0.0)
+    case.assertGreaterEqual(result["workspace_preparation"]["phase_durations"]["total"], 0.0)
+    case.assertEqual(result["apply_mode"], "live")
+    case.assertEqual(result["apply_status"], "live_applied")
+    case.assertTrue(result["live_applied"])
+    case.assertNotIn("candidate_changed_files_snapshot", result)
+    case.assertEqual(result["shadow_apply_report"], "runs/run-wrapper-promote/shadow-apply-report.json")
+    case.assertEqual(
+        result["rollback_rehearsal_report"],
+        "runs/run-wrapper-promote/rollback-rehearsal-report.json",
+    )
+    case.assertEqual(result["improvement_observations"], "runs/run-wrapper-promote/improvement-observations.json")
+    case.assertEqual(result["run_artifact_fingerprint"], "runs/run-wrapper-promote/run-artifact-fingerprint.json")
+    case.assertEqual(result["promotion_decision_trends"], "ops/reports/promotion-decision-trends.json")
+
+
+def _assert_full_promote_artifact_fingerprints(
+    case: unittest.TestCase,
+    run_artifact_fingerprint: dict[str, Any],
+) -> None:
+    case.assertEqual(run_artifact_fingerprint["summary"]["artifact_count"], len(run_artifact_fingerprint["artifacts"]))
+    case.assertIn(
+        "runs/run-wrapper-promote/run-telemetry.json",
+        [item["path"] for item in run_artifact_fingerprint["artifacts"]],
+    )
+    expected_entries = (
+        (
+            "runs/run-wrapper-promote/behavior-delta.json",
+            "behavior_delta",
+            "ops/schemas/behavior-delta.schema.json",
+        ),
+        (
+            "runs/run-wrapper-promote/shadow-apply-report.json",
+            "shadow_apply_report",
+            "ops/schemas/shadow-apply-report.schema.json",
+        ),
+        (
+            "runs/run-wrapper-promote/rollback-rehearsal-report.json",
+            "rollback_rehearsal_report",
+            "ops/schemas/rollback-rehearsal-report.schema.json",
+        ),
+        (
+            "runs/run-wrapper-promote/structural-complexity-budget.json",
+            "structural_complexity_budget",
+            "ops/schemas/structural-complexity-budget-report.schema.json",
+        ),
+    )
+    for path, role, schema in expected_entries:
+        entry = _artifact_by_path(run_artifact_fingerprint, path)
+        case.assertEqual(entry["artifact_role"], role)
+        case.assertEqual(entry["schema"], schema)
+
+
+def _assert_full_promote_ledger_and_telemetry(
+    case: unittest.TestCase,
+    result: dict[str, Any],
+    artifacts: dict[str, Any],
+) -> None:
+    promotion_report = artifacts["promotion_report"]
+    run_telemetry = artifacts["run_telemetry"]
+    run_ledger = artifacts["run_ledger"]
+    case.assertEqual(promotion_report["log"]["status"], "recorded")
+    case.assertEqual(promotion_report["decision_record"]["decision"], "PROMOTE")
+    case.assertEqual(run_telemetry["decision_record"]["decision"], "PROMOTE")
+    case.assertEqual(artifacts["promotion_decision_trends"]["decision_counts"], {"PROMOTE": 1})
+    case.assertEqual(run_ledger["status"], "complete")
+    rehearsed_event = next(event for event in run_ledger["events"] if event["type"] == "workspace_rollback_rehearsed")
+    case.assertIn("runs/run-wrapper-promote/rollback-rehearsal-report.json", rehearsed_event["artifacts"])
+    applied_event = next(event for event in run_ledger["events"] if event["type"] == "workspace_applied")
+    case.assertIn("runs/run-wrapper-promote/shadow-apply-report.json", applied_event["artifacts"])
+    case.assertIn("runs/run-wrapper-promote/rollback-rehearsal-report.json", applied_event["artifacts"])
+    finalized_event = next(event for event in run_ledger["events"] if event["type"] == "finalized")
+    case.assertEqual(finalized_event["decision_event"]["decision"], "PROMOTE")
+    case.assertEqual(artifacts["planning_validation"]["status"], "PASS")
+    case.assertEqual(
+        promotion_report["inputs"]["behavior_delta"],
+        "runs/run-wrapper-promote/behavior-delta.json",
+    )
+    case.assertEqual(run_telemetry["behavior_delta"], "runs/run-wrapper-promote/behavior-delta.json")
+    case.assertEqual(
+        run_telemetry["structural_complexity_budget"],
+        "runs/run-wrapper-promote/structural-complexity-budget.json",
+    )
+    case.assertEqual(run_telemetry["apply_mode"], "live")
+    case.assertEqual(run_telemetry["apply_status"], "live_applied")
+    case.assertTrue(run_telemetry["live_applied"])
+    case.assertNotIn("candidate_changed_files_snapshot", run_telemetry)
+    case.assertEqual(run_telemetry["shadow_apply_report"], "runs/run-wrapper-promote/shadow-apply-report.json")
+    case.assertEqual(
+        run_telemetry["rollback_rehearsal_report"],
+        "runs/run-wrapper-promote/rollback-rehearsal-report.json",
+    )
+    case.assertEqual(run_telemetry["workspace_preparation"], result["workspace_preparation"])
+
+
+def _assert_full_promote_output_artifacts(
+    case: unittest.TestCase,
+    run_dir: Path,
+    artifacts: dict[str, Any],
+) -> None:
+    case.assertEqual(artifacts["baseline_eval"]["generated_at"], "2026-04-15T03:45:00Z")
+    case.assertEqual(artifacts["candidate_lint"]["generated_at"], "2026-04-15T03:45:00Z")
+    case.assertEqual(artifacts["candidate_mechanism"]["generated_at"], "2026-04-15T03:45:00Z")
+    case.assertEqual(artifacts["changed_manifest"]["summary"]["total_changed_files"], 2)
+    case.assertEqual(
+        [item["path"] for item in artifacts["changed_manifest"]["files"]],
+        ["ops/scripts/example.py", "tests/test_example.py"],
+    )
+    shadow_apply_report = artifacts["shadow_apply_report"]
+    case.assertEqual(shadow_apply_report["generated_at"], "2026-04-15T03:45:00Z")
+    case.assertEqual(shadow_apply_report["status"], "ready_for_live_apply")
+    case.assertEqual(shadow_apply_report["summary"]["total_changed_files"], 2)
+    case.assertEqual(
+        [item["path"] for item in shadow_apply_report["files"]],
+        ["ops/scripts/example.py", "tests/test_example.py"],
+    )
+    rollback_rehearsal_report = artifacts["rollback_rehearsal_report"]
+    case.assertEqual(rollback_rehearsal_report["generated_at"], "2026-04-15T03:45:00Z")
+    case.assertEqual(rollback_rehearsal_report["status"], "pass")
+    case.assertEqual(rollback_rehearsal_report["summary"]["total_changed_files"], 2)
+    case.assertEqual(rollback_rehearsal_report["summary"]["apply_verified"], 2)
+    case.assertEqual(rollback_rehearsal_report["summary"]["rollback_verified"], 2)
+    case.assertEqual(rollback_rehearsal_report["summary"]["failed"], 0)
+    case.assertEqual(
+        [item["path"] for item in rollback_rehearsal_report["files"]],
+        ["ops/scripts/example.py", "tests/test_example.py"],
+    )
+    case.assertTrue(artifacts["behavior_delta"]["summary"]["behavior_changed"])
+    case.assertEqual(artifacts["structural_budget"]["artifact_kind"], "structural_complexity_budget_report")
+    case.assertEqual(artifacts["structural_budget"]["status"], "pass")
+    case.assertEqual(
+        [item["target"] for item in artifacts["behavior_delta"]["deltas"]],
+        ["ops/scripts/example.py", "tests/test_example.py"],
+    )
+    case.assertIn("Finalize mechanism run run-wrapper-promote (PROMOTE)", artifacts["system_log"])
+    case.assertTrue((run_dir / "baseline-eval.json").exists())
+    case.assertTrue((run_dir / "candidate-eval.json").exists())
+    case.assertTrue((run_dir / "improvement-observations.json").exists())
+    case.assertIn("return 1 if value > 0 else -1", artifacts["example_text"])
+    case.assertIn("test_subject_zero", artifacts["test_text"])
+    case.assertTrue((run_dir / "mutation-command.stdout.txt").exists())
+    case.assertTrue((run_dir / "repo-health.stdout.txt").exists())
+
+
+def _seed_ephemeral_noise_surfaces(vault: Path) -> None:
+    (vault / ".obsidian").mkdir(exist_ok=True)
+    (vault / ".obsidian" / "workspace.json").write_text('{"workspace": "live"}\n', encoding="utf-8")
+    (vault / ".venv").mkdir(exist_ok=True)
+    (vault / ".venv" / "marker.txt").write_text("live env marker\n", encoding="utf-8")
+    (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+    (vault / "ops" / "reports" / "raw-registry-preflight-report.json").write_text(
+        '{"status": "live"}\n',
+        encoding="utf-8",
+    )
+    (vault / "tmp").mkdir(exist_ok=True)
+    (vault / "tmp" / "artifact-freshness-report-check.json").write_text(
+        '{"status": "live"}\n',
+        encoding="utf-8",
+    )
+    (vault / "tmp" / "script-output-surfaces.candidate.json").write_text(
+        '{"candidate": true}\n',
+        encoding="utf-8",
+    )
+
+
+def _ephemeral_noise_capture_reports(case: unittest.TestCase, vault: Path) -> Any:
+    def fake_capture_reports(
+        _vault: Path,
+        *,
+        run_id: str,
+        phase: str,
+        policy: dict,
+        policy_path_text: str,
+        primary_targets: list[str],
+        supporting_targets: list[str],
+        test_files: list[str],
+        artifact_vault: Path | None = None,
+        context: RuntimeContext | None = None,
+    ) -> dict:
+        case.assertEqual(run_id, "run-wrapper-ephemeral-noise")
+        case.assertEqual(policy_path_text, "ops/policies/wiki-maintainer-policy.yaml")
+        case.assertTrue(policy)
+        case.assertIn(artifact_vault, {None, vault.resolve()})
+        return write_stubbed_capture_artifacts(
+            vault,
+            run_id=run_id,
+            phase=phase,
+            primary_targets=primary_targets,
+            supporting_targets=supporting_targets,
+            test_files=test_files,
+        )
+
+    return fake_capture_reports
+
+
+def _ephemeral_noise_run_command(case: unittest.TestCase, vault: Path) -> Any:
+    def fake_run_command(
+        command: str,
+        *,
+        cwd: Path,
+        timeout_seconds: int,
+        argv: list[str] | None = None,
+    ) -> dict:
+        case.assertNotEqual(cwd, vault.resolve())
+        case.assertEqual(cwd.name, "vault")
+        case.assertIsNotNone(argv)
+        if "repo health ok" in command:
+            return successful_command_result(command, stdout="repo health ok\n")
+        (cwd / "ops" / "scripts" / "example.py").write_text(
+            "def subject(value):\n"
+            "    if value == 0:\n"
+            "        return 0\n"
+            "    return 1 if value > 0 else -1\n",
+            encoding="utf-8",
+        )
+        test_path = cwd / "tests" / "test_example.py"
+        test_path.write_text(
+            test_path.read_text(encoding="utf-8") + "\n\ndef test_subject_zero():\n    assert True\n",
+            encoding="utf-8",
+        )
+        (cwd / ".obsidian").mkdir(parents=True, exist_ok=True)
+        (cwd / ".obsidian" / "workspace.json").write_text('{"workspace": "noise"}\n', encoding="utf-8")
+        (cwd / ".venv" / "lib64" / "python3.12" / "site-packages").mkdir(parents=True, exist_ok=True)
+        (cwd / ".venv" / "lib64" / "python3.12" / "site-packages" / "noise.py").write_text(
+            "sentinel = 1\n",
+            encoding="utf-8",
+        )
+        (cwd / "ops" / "reports" / "raw-registry-preflight-report.json").write_text(
+            '{"status": "candidate"}\n',
+            encoding="utf-8",
+        )
+        (cwd / "ops" / "script-output-surfaces.json").write_text(
+            '{"status": "fresh"}\n',
+            encoding="utf-8",
+        )
+        (cwd / "tmp" / "artifact-freshness-report-check.json").write_text(
+            '{"status": "candidate"}\n',
+            encoding="utf-8",
+        )
+        (cwd / "tmp" / "script-output-surfaces.candidate.json").unlink()
+        return successful_command_result(command, stdout="mutation applied\n")
+
+    return fake_run_command
+
+
+def _ephemeral_noise_promotion_report_builder() -> Any:
+    return forced_promotion_report_builder(
+        PromotionReportCallExpectation(
+            run_id="run-wrapper-ephemeral-noise",
+            primary_targets=("ops/scripts/example.py",),
+            supporting_targets=(),
+            log_summary="Wrapper-driven mechanism experiment ignores ephemeral workspace noise",
+            require_signoff=False,
+            signoff_status="approved",
+            signoff_by="human",
+            signoff_ts="2026-04-15T00:00:00Z",
+            changed_files_manifest_path="runs/run-wrapper-ephemeral-noise/changed-files-manifest.json",
+            behavior_delta_path="runs/run-wrapper-ephemeral-noise/behavior-delta.json",
+        ),
+        ForcedPromotionReportPatch(
+            decision="PROMOTE",
+            checks=(
+                {
+                    "id": "changed_files_manifest_scope",
+                    "status": "PASS",
+                    "detail": "thin wrapper smoke keeps the PASS decision visible to the caller",
+                },
+            ),
+        ),
+    )
+
+
+def _assert_ephemeral_noise_manifest(
+    case: unittest.TestCase,
+    *,
+    result: dict[str, Any],
+    promotion_report: dict[str, Any],
+    changed_manifest: dict[str, Any],
+    capture_reports: Any,
+    run_command: Any,
+    build_promotion_report: Any,
+    validate_run_dir: Any,
+) -> None:
+    case.assertEqual(capture_reports.call_count, 2)
+    case.assertEqual(run_command.call_count, 2)
+    build_promotion_report.assert_called_once()
+    validate_run_dir.assert_called_once()
+    case.assertEqual(result["decision"], "PROMOTE")
+    case.assertEqual(result["planning_gate"]["phase"], "mechanism_evaluated")
+    case.assertEqual(result["planning_gate"]["status"], "pass")
+    case.assertEqual(
+        result["improvement_observations"],
+        "runs/run-wrapper-ephemeral-noise/improvement-observations.json",
+    )
+    scope_check = next(check for check in promotion_report["checks"] if check["id"] == "changed_files_manifest_scope")
+    case.assertEqual(scope_check["status"], "PASS")
+    case.assertEqual(
+        [item["path"] for item in changed_manifest["files"]],
+        ["ops/scripts/example.py", "tests/test_example.py"],
+    )
+    case.assertEqual(changed_manifest["summary"]["total_changed_files"], 2)
+    case.assertEqual(
+        {item["path"]: item["reason"] for item in changed_manifest["ignored_changes"]["files"]},
+        {
+            "ops/script-output-surfaces.json": "generated_report_surface",
+            "ops/reports/raw-registry-preflight-report.json": "generated_report_surface",
+            "tmp/artifact-freshness-report-check.json": "transient_workspace_surface",
+            "tmp/script-output-surfaces.candidate.json": "transient_workspace_surface",
+        },
+    )
+    case.assertEqual(changed_manifest["ignored_changes"]["summary"]["total_ignored_files"], 4)
 
 
 class RunMechanismExperimentTests(unittest.TestCase):
@@ -100,172 +464,12 @@ class RunMechanismExperimentTests(unittest.TestCase):
             )
 
             run_dir = vault / "runs" / "run-wrapper-promote"
-            promotion_report = json.loads((run_dir / "promotion-report.json").read_text(encoding="utf-8"))
-            run_artifact_fingerprint = json.loads((run_dir / "run-artifact-fingerprint.json").read_text(encoding="utf-8"))
-            promotion_decision_trends = json.loads(
-                (vault / "ops" / "reports" / "promotion-decision-trends.json").read_text(encoding="utf-8")
-            )
-            run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
-            planning_validation = json.loads((run_dir / "planning-validation.json").read_text(encoding="utf-8"))
-            changed_manifest = json.loads((run_dir / "changed-files-manifest.json").read_text(encoding="utf-8"))
-            shadow_apply_report = json.loads((run_dir / "shadow-apply-report.json").read_text(encoding="utf-8"))
-            rollback_rehearsal_report = json.loads(
-                (run_dir / "rollback-rehearsal-report.json").read_text(encoding="utf-8")
-            )
-            behavior_delta = json.loads((run_dir / "behavior-delta.json").read_text(encoding="utf-8"))
-            structural_budget = json.loads(
-                (run_dir / "structural-complexity-budget.json").read_text(encoding="utf-8")
-            )
-            run_telemetry = json.loads((run_dir / "run-telemetry.json").read_text(encoding="utf-8"))
-            baseline_eval = json.loads((run_dir / "baseline-eval.json").read_text(encoding="utf-8"))
-            candidate_lint = json.loads((run_dir / "candidate-lint.json").read_text(encoding="utf-8"))
-            candidate_mechanism = json.loads(
-                (run_dir / "candidate-mechanism-assessment.json").read_text(encoding="utf-8")
-            )
-            system_log = (vault / "system" / "system-log.md").read_text(encoding="utf-8")
-            example_text = (vault / "ops" / "scripts" / "example.py").read_text(encoding="utf-8")
-            test_text = (vault / "tests" / "test_example.py").read_text(encoding="utf-8")
+            artifacts = _full_promote_artifacts(vault, run_dir)
 
-            self.assertEqual(result["decision"], "PROMOTE")
-            self.assertEqual(result["decision_record"]["decision"], "PROMOTE")
-            self.assertTrue(result["finalized"])
-            self.assertEqual(result["planning_gate"]["phase"], "mechanism_finalized")
-            self.assertEqual(result["planning_gate"]["status"], "pass")
-            self.assertEqual(result["changed_files_manifest"], "runs/run-wrapper-promote/changed-files-manifest.json")
-            self.assertEqual(
-                result["structural_complexity_budget"],
-                "runs/run-wrapper-promote/structural-complexity-budget.json",
-            )
-            self.assertEqual(result["behavior_delta"], "runs/run-wrapper-promote/behavior-delta.json")
-            self.assertEqual(result["workspace_preparation"]["mode"], "full_copy")
-            self.assertEqual(
-                result["workspace_preparation"]["copied_file_count"],
-                result["workspace_preparation"]["baseline_file_count"],
-            )
-            self.assertGreaterEqual(result["workspace_preparation"]["phase_durations"]["digest"], 0.0)
-            self.assertGreaterEqual(result["workspace_preparation"]["phase_durations"]["copy"], 0.0)
-            self.assertGreaterEqual(result["workspace_preparation"]["phase_durations"]["total"], 0.0)
-            self.assertEqual(result["apply_mode"], "live")
-            self.assertEqual(result["apply_status"], "live_applied")
-            self.assertTrue(result["live_applied"])
-            self.assertNotIn("candidate_changed_files_snapshot", result)
-            self.assertEqual(result["shadow_apply_report"], "runs/run-wrapper-promote/shadow-apply-report.json")
-            self.assertEqual(
-                result["rollback_rehearsal_report"],
-                "runs/run-wrapper-promote/rollback-rehearsal-report.json",
-            )
-            self.assertEqual(result["improvement_observations"], "runs/run-wrapper-promote/improvement-observations.json")
-            self.assertEqual(result["run_artifact_fingerprint"], "runs/run-wrapper-promote/run-artifact-fingerprint.json")
-            self.assertEqual(result["promotion_decision_trends"], "ops/reports/promotion-decision-trends.json")
-            self.assertEqual(promotion_report["log"]["status"], "recorded")
-            self.assertEqual(promotion_report["decision_record"]["decision"], "PROMOTE")
-            self.assertEqual(run_telemetry["decision_record"]["decision"], "PROMOTE")
-            self.assertEqual(run_artifact_fingerprint["summary"]["artifact_count"], len(run_artifact_fingerprint["artifacts"]))
-            self.assertIn(
-                "runs/run-wrapper-promote/run-telemetry.json",
-                [item["path"] for item in run_artifact_fingerprint["artifacts"]],
-            )
-            behavior_fingerprint = next(
-                item for item in run_artifact_fingerprint["artifacts"]
-                if item["path"] == "runs/run-wrapper-promote/behavior-delta.json"
-            )
-            self.assertEqual(behavior_fingerprint["artifact_role"], "behavior_delta")
-            self.assertEqual(behavior_fingerprint["schema"], "ops/schemas/behavior-delta.schema.json")
-            shadow_fingerprint = next(
-                item for item in run_artifact_fingerprint["artifacts"]
-                if item["path"] == "runs/run-wrapper-promote/shadow-apply-report.json"
-            )
-            self.assertEqual(shadow_fingerprint["artifact_role"], "shadow_apply_report")
-            self.assertEqual(shadow_fingerprint["schema"], "ops/schemas/shadow-apply-report.schema.json")
-            rollback_fingerprint = next(
-                item for item in run_artifact_fingerprint["artifacts"]
-                if item["path"] == "runs/run-wrapper-promote/rollback-rehearsal-report.json"
-            )
-            self.assertEqual(rollback_fingerprint["artifact_role"], "rollback_rehearsal_report")
-            self.assertEqual(rollback_fingerprint["schema"], "ops/schemas/rollback-rehearsal-report.schema.json")
-            structural_fingerprint = next(
-                item for item in run_artifact_fingerprint["artifacts"]
-                if item["path"] == "runs/run-wrapper-promote/structural-complexity-budget.json"
-            )
-            self.assertEqual(structural_fingerprint["artifact_role"], "structural_complexity_budget")
-            self.assertEqual(
-                structural_fingerprint["schema"],
-                "ops/schemas/structural-complexity-budget-report.schema.json",
-            )
-            self.assertEqual(promotion_decision_trends["decision_counts"], {"PROMOTE": 1})
-            self.assertEqual(run_ledger["status"], "complete")
-            rehearsed_event = next(
-                event for event in run_ledger["events"] if event["type"] == "workspace_rollback_rehearsed"
-            )
-            self.assertIn("runs/run-wrapper-promote/rollback-rehearsal-report.json", rehearsed_event["artifacts"])
-            applied_event = next(event for event in run_ledger["events"] if event["type"] == "workspace_applied")
-            self.assertIn("runs/run-wrapper-promote/shadow-apply-report.json", applied_event["artifacts"])
-            self.assertIn("runs/run-wrapper-promote/rollback-rehearsal-report.json", applied_event["artifacts"])
-            finalized_event = next(event for event in run_ledger["events"] if event["type"] == "finalized")
-            self.assertEqual(finalized_event["decision_event"]["decision"], "PROMOTE")
-            self.assertEqual(planning_validation["status"], "PASS")
-            self.assertEqual(
-                promotion_report["inputs"]["behavior_delta"],
-                "runs/run-wrapper-promote/behavior-delta.json",
-            )
-            self.assertEqual(run_telemetry["behavior_delta"], "runs/run-wrapper-promote/behavior-delta.json")
-            self.assertEqual(
-                run_telemetry["structural_complexity_budget"],
-                "runs/run-wrapper-promote/structural-complexity-budget.json",
-            )
-            self.assertEqual(run_telemetry["apply_mode"], "live")
-            self.assertEqual(run_telemetry["apply_status"], "live_applied")
-            self.assertTrue(run_telemetry["live_applied"])
-            self.assertNotIn("candidate_changed_files_snapshot", run_telemetry)
-            self.assertEqual(
-                run_telemetry["shadow_apply_report"],
-                "runs/run-wrapper-promote/shadow-apply-report.json",
-            )
-            self.assertEqual(
-                run_telemetry["rollback_rehearsal_report"],
-                "runs/run-wrapper-promote/rollback-rehearsal-report.json",
-            )
-            self.assertEqual(run_telemetry["workspace_preparation"], result["workspace_preparation"])
-            self.assertEqual(baseline_eval["generated_at"], "2026-04-15T03:45:00Z")
-            self.assertEqual(candidate_lint["generated_at"], "2026-04-15T03:45:00Z")
-            self.assertEqual(candidate_mechanism["generated_at"], "2026-04-15T03:45:00Z")
-            self.assertEqual(changed_manifest["summary"]["total_changed_files"], 2)
-            self.assertEqual(
-                [item["path"] for item in changed_manifest["files"]],
-                ["ops/scripts/example.py", "tests/test_example.py"],
-            )
-            self.assertEqual(shadow_apply_report["generated_at"], "2026-04-15T03:45:00Z")
-            self.assertEqual(shadow_apply_report["status"], "ready_for_live_apply")
-            self.assertEqual(shadow_apply_report["summary"]["total_changed_files"], 2)
-            self.assertEqual(
-                [item["path"] for item in shadow_apply_report["files"]],
-                ["ops/scripts/example.py", "tests/test_example.py"],
-            )
-            self.assertEqual(rollback_rehearsal_report["generated_at"], "2026-04-15T03:45:00Z")
-            self.assertEqual(rollback_rehearsal_report["status"], "pass")
-            self.assertEqual(rollback_rehearsal_report["summary"]["total_changed_files"], 2)
-            self.assertEqual(rollback_rehearsal_report["summary"]["apply_verified"], 2)
-            self.assertEqual(rollback_rehearsal_report["summary"]["rollback_verified"], 2)
-            self.assertEqual(rollback_rehearsal_report["summary"]["failed"], 0)
-            self.assertEqual(
-                [item["path"] for item in rollback_rehearsal_report["files"]],
-                ["ops/scripts/example.py", "tests/test_example.py"],
-            )
-            self.assertTrue(behavior_delta["summary"]["behavior_changed"])
-            self.assertEqual(structural_budget["artifact_kind"], "structural_complexity_budget_report")
-            self.assertEqual(structural_budget["status"], "pass")
-            self.assertEqual(
-                [item["target"] for item in behavior_delta["deltas"]],
-                ["ops/scripts/example.py", "tests/test_example.py"],
-            )
-            self.assertIn("Finalize mechanism run run-wrapper-promote (PROMOTE)", system_log)
-            self.assertTrue((run_dir / "baseline-eval.json").exists())
-            self.assertTrue((run_dir / "candidate-eval.json").exists())
-            self.assertTrue((run_dir / "improvement-observations.json").exists())
-            self.assertIn("return 1 if value > 0 else -1", example_text)
-            self.assertIn("test_subject_zero", test_text)
-            self.assertTrue((run_dir / "mutation-command.stdout.txt").exists())
-            self.assertTrue((run_dir / "repo-health.stdout.txt").exists())
+            _assert_full_promote_result(self, result)
+            _assert_full_promote_artifact_fingerprints(self, artifacts["run_artifact_fingerprint"])
+            _assert_full_promote_ledger_and_telemetry(self, result, artifacts)
+            _assert_full_promote_output_artifacts(self, run_dir, artifacts)
 
     def test_wrapper_defaults_to_live_apply_and_finalize(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1185,121 +1389,11 @@ class RunMechanismExperimentTests(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             seed_wrapper_vault(vault)
-            (vault / ".obsidian").mkdir(exist_ok=True)
-            (vault / ".obsidian" / "workspace.json").write_text('{"workspace": "live"}\n', encoding="utf-8")
-            (vault / ".venv").mkdir(exist_ok=True)
-            (vault / ".venv" / "marker.txt").write_text("live env marker\n", encoding="utf-8")
-            (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
-            (vault / "ops" / "reports" / "raw-registry-preflight-report.json").write_text(
-                '{"status": "live"}\n',
-                encoding="utf-8",
-            )
-            (vault / "tmp").mkdir(exist_ok=True)
-            (vault / "tmp" / "artifact-freshness-report-check.json").write_text(
-                '{"status": "live"}\n',
-                encoding="utf-8",
-            )
-            (vault / "tmp" / "script-output-surfaces.candidate.json").write_text(
-                '{"candidate": true}\n',
-                encoding="utf-8",
-            )
+            _seed_ephemeral_noise_surfaces(vault)
 
-            def fake_capture_reports(
-                _vault: Path,
-                *,
-                run_id: str,
-                phase: str,
-                policy: dict,
-                policy_path_text: str,
-                primary_targets: list[str],
-                supporting_targets: list[str],
-                test_files: list[str],
-                artifact_vault: Path | None = None,
-                context: RuntimeContext | None = None,
-            ) -> dict:
-                self.assertEqual(run_id, "run-wrapper-ephemeral-noise")
-                self.assertEqual(policy_path_text, "ops/policies/wiki-maintainer-policy.yaml")
-                self.assertTrue(policy)
-                self.assertIn(artifact_vault, {None, vault.resolve()})
-                return write_stubbed_capture_artifacts(
-                    vault,
-                    run_id=run_id,
-                    phase=phase,
-                    primary_targets=primary_targets,
-                    supporting_targets=supporting_targets,
-                    test_files=test_files,
-                )
-
-            def fake_run_command(
-                command: str,
-                *,
-                cwd: Path,
-                timeout_seconds: int,
-                argv: list[str] | None = None,
-            ) -> dict:
-                self.assertNotEqual(cwd, vault.resolve())
-                self.assertEqual(cwd.name, "vault")
-                self.assertIsNotNone(argv)
-                if "repo health ok" in command:
-                    return successful_command_result(command, stdout="repo health ok\n")
-                (cwd / "ops" / "scripts" / "example.py").write_text(
-                    "def subject(value):\n"
-                    "    if value == 0:\n"
-                    "        return 0\n"
-                    "    return 1 if value > 0 else -1\n",
-                    encoding="utf-8",
-                )
-                test_path = cwd / "tests" / "test_example.py"
-                test_path.write_text(
-                    test_path.read_text(encoding="utf-8") + "\n\ndef test_subject_zero():\n    assert True\n",
-                    encoding="utf-8",
-                )
-                (cwd / ".obsidian").mkdir(parents=True, exist_ok=True)
-                (cwd / ".obsidian" / "workspace.json").write_text('{"workspace": "noise"}\n', encoding="utf-8")
-                (cwd / ".venv" / "lib64" / "python3.12" / "site-packages").mkdir(parents=True, exist_ok=True)
-                (cwd / ".venv" / "lib64" / "python3.12" / "site-packages" / "noise.py").write_text(
-                    "sentinel = 1\n",
-                    encoding="utf-8",
-                )
-                (cwd / "ops" / "reports" / "raw-registry-preflight-report.json").write_text(
-                    '{"status": "candidate"}\n',
-                    encoding="utf-8",
-                )
-                (cwd / "ops" / "script-output-surfaces.json").write_text(
-                    '{"status": "fresh"}\n',
-                    encoding="utf-8",
-                )
-                (cwd / "tmp" / "artifact-freshness-report-check.json").write_text(
-                    '{"status": "candidate"}\n',
-                    encoding="utf-8",
-                )
-                (cwd / "tmp" / "script-output-surfaces.candidate.json").unlink()
-                return successful_command_result(command, stdout="mutation applied\n")
-
-            fake_build_promotion_report = forced_promotion_report_builder(
-                PromotionReportCallExpectation(
-                    run_id="run-wrapper-ephemeral-noise",
-                    primary_targets=("ops/scripts/example.py",),
-                    supporting_targets=(),
-                    log_summary="Wrapper-driven mechanism experiment ignores ephemeral workspace noise",
-                    require_signoff=False,
-                    signoff_status="approved",
-                    signoff_by="human",
-                    signoff_ts="2026-04-15T00:00:00Z",
-                    changed_files_manifest_path="runs/run-wrapper-ephemeral-noise/changed-files-manifest.json",
-                    behavior_delta_path="runs/run-wrapper-ephemeral-noise/behavior-delta.json",
-                ),
-                ForcedPromotionReportPatch(
-                    decision="PROMOTE",
-                    checks=(
-                        {
-                            "id": "changed_files_manifest_scope",
-                            "status": "PASS",
-                            "detail": "thin wrapper smoke keeps the PASS decision visible to the caller",
-                        },
-                    ),
-                ),
-            )
+            fake_capture_reports = _ephemeral_noise_capture_reports(self, vault)
+            fake_run_command = _ephemeral_noise_run_command(self, vault)
+            fake_build_promotion_report = _ephemeral_noise_promotion_report_builder()
 
             with (
                 mock.patch.object(
@@ -1341,42 +1435,16 @@ class RunMechanismExperimentTests(unittest.TestCase):
                 )
 
             run_dir = vault / "runs" / "run-wrapper-ephemeral-noise"
-            promotion_report = json.loads((run_dir / "promotion-report.json").read_text(encoding="utf-8"))
-            changed_manifest = json.loads((run_dir / "changed-files-manifest.json").read_text(encoding="utf-8"))
-
-            self.assertEqual(capture_reports.call_count, 2)
-            self.assertEqual(run_command.call_count, 2)
-            build_promotion_report.assert_called_once()
-            validate_run_dir.assert_called_once()
-            self.assertEqual(result["decision"], "PROMOTE")
-            self.assertEqual(result["planning_gate"]["phase"], "mechanism_evaluated")
-            self.assertEqual(result["planning_gate"]["status"], "pass")
-            self.assertEqual(
-                result["improvement_observations"],
-                "runs/run-wrapper-ephemeral-noise/improvement-observations.json",
+            _assert_ephemeral_noise_manifest(
+                self,
+                result=result,
+                promotion_report=_read_json(run_dir / "promotion-report.json"),
+                changed_manifest=_read_json(run_dir / "changed-files-manifest.json"),
+                capture_reports=capture_reports,
+                run_command=run_command,
+                build_promotion_report=build_promotion_report,
+                validate_run_dir=validate_run_dir,
             )
-            scope_check = next(
-                check for check in promotion_report["checks"] if check["id"] == "changed_files_manifest_scope"
-            )
-            self.assertEqual(scope_check["status"], "PASS")
-            self.assertEqual(
-                [item["path"] for item in changed_manifest["files"]],
-                ["ops/scripts/example.py", "tests/test_example.py"],
-            )
-            self.assertEqual(changed_manifest["summary"]["total_changed_files"], 2)
-            self.assertEqual(
-                {
-                    item["path"]: item["reason"]
-                    for item in changed_manifest["ignored_changes"]["files"]
-                },
-                {
-                    "ops/script-output-surfaces.json": "generated_report_surface",
-                    "ops/reports/raw-registry-preflight-report.json": "generated_report_surface",
-                    "tmp/artifact-freshness-report-check.json": "transient_workspace_surface",
-                    "tmp/script-output-surfaces.candidate.json": "transient_workspace_surface",
-                },
-            )
-            self.assertEqual(changed_manifest["ignored_changes"]["summary"]["total_ignored_files"], 4)
 
     def test_selected_raw_registry_preflight_supporting_target_refreshes_before_candidate_capture(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
