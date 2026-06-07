@@ -25,6 +25,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         report_coverage_item,
         status_from_evidence,
     )
+    from ops.scripts.gate_effect_vocabulary import (
+        GATE_EFFECT_NONE,
+        GATE_EFFECTS,
+        strongest_gate_effect,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.release.external_report_action_catalog import (
@@ -43,6 +48,11 @@ else:
     from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
+    )
+    from ops.scripts.gate_effect_vocabulary import (
+        GATE_EFFECT_NONE,
+        GATE_EFFECTS,
+        strongest_gate_effect,
     )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
@@ -72,6 +82,31 @@ SCHEMA_PATH = "ops/schemas/external-report-action-matrix.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.external_report_action_matrix --vault ."
 
 
+def _reason_detail_summary(
+    details: list[dict[str, Any]],
+) -> dict[str, Any]:
+    scopes = sorted(
+        {
+            str(detail.get("blocking_scope", "")).strip()
+            for detail in details
+            if str(detail.get("blocking_scope", "")).strip()
+        }
+    )
+    effects = {
+        str(detail.get("gate_effect", "")).strip()
+        for detail in details
+        if str(detail.get("gate_effect", "")).strip()
+    }
+    ordered_effects = [effect for effect in GATE_EFFECTS if effect in effects]
+    return {
+        "blocking_scopes": scopes,
+        "gate_effects": ordered_effects,
+        "strongest_gate_effect": strongest_gate_effect(ordered_effects)
+        if ordered_effects
+        else GATE_EFFECT_NONE,
+    }
+
+
 def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str, Any]]:
     source_by_action: dict[str, list[str]] = {str(action["action_id"]): [] for action in ACTION_CATALOG}
     for item in coverage:
@@ -94,6 +129,7 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
             status_reason_ids,
             fallback_target=str(action["recommended_target"]),
         )
+        reason_detail_summary = _reason_detail_summary(status_reason_details)
         sprint_priority = SPRINT_PRIORITIES.get(action_id)
         item = {
             "action_id": action_id,
@@ -102,6 +138,7 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
             "current_status": status,
             "status_reason_ids": status_reason_ids,
             "status_reason_details": status_reason_details,
+            **reason_detail_summary,
             "source_report_paths": sorted(set(source_by_action[action_id])),
             "recommended_target": _recommended_target(
                 str(action["recommended_target"]),
@@ -155,10 +192,20 @@ def _summary(
     canonical_artifact_freshness_state_record: dict[str, Any],
 ) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
+    gate_effect_action_counts: dict[str, int] = dict.fromkeys(GATE_EFFECTS, 0)
+    blocking_scope_action_counts: dict[str, int] = {}
     sprint_backlog: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
     for action in actions:
         status = str(action["current_status"])
         status_counts[status] = status_counts.get(status, 0) + 1
+        strongest_effect = str(action.get("strongest_gate_effect", GATE_EFFECT_NONE)).strip()
+        if strongest_effect not in gate_effect_action_counts:
+            gate_effect_action_counts[strongest_effect] = 0
+        gate_effect_action_counts[strongest_effect] += 1
+        for scope in action.get("blocking_scopes", []):
+            if not isinstance(scope, str) or not scope:
+                continue
+            blocking_scope_action_counts[scope] = blocking_scope_action_counts.get(scope, 0) + 1
         sprint_priority = action.get("sprint_priority")
         if sprint_priority and sprint_priority in sprint_backlog:
             sprint_backlog[sprint_priority] += 1
@@ -174,6 +221,8 @@ def _summary(
         "partially_automated_count": status_counts.get("partially_automated", 0),
         "requires_release_run_verification_count": status_counts.get("requires_release_run_verification", 0),
         "planned_count": status_counts.get("planned", 0),
+        "gate_effect_action_counts": gate_effect_action_counts,
+        "blocking_scope_action_counts": blocking_scope_action_counts,
         "unmatched_active_report_count": sum(
             1 for item in coverage if int(item["matched_action_count"]) == 0
         ),

@@ -8,12 +8,17 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.external_report_action_matrix import build_report, write_report
+from ops.scripts.external_report_action_matrix import (
+    _reason_detail_summary,
+    build_report,
+    write_report,
+)
 from ops.scripts.external_report_lifecycle_runtime import (
     action_statuses,
     lifecycle_decision,
     report_lifecycle_profiles,
 )
+from ops.scripts.gate_effect_vocabulary import strongest_gate_effect
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.source_revision_runtime import resolve_source_revision
@@ -295,6 +300,93 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 "auto_promotion_status": "allowed",
                 "unattended_promotion_allowed": True,
             },
+        )
+
+    def test_gate_effect_strength_order_is_explicit_for_claim_blockers(self) -> None:
+        self.assertEqual(
+            strongest_gate_effect(["claim_blocker", "operator_review_required"]),
+            "operator_review_required",
+        )
+        self.assertEqual(
+            strongest_gate_effect(["operator_review_required", "claim_blocker"]),
+            "operator_review_required",
+        )
+        self.assertEqual(
+            strongest_gate_effect(["claim_blocker", "blocks_promotion"]),
+            "blocks_promotion",
+        )
+
+    def test_reason_detail_summary_orders_mixed_gate_effects_deterministically(self) -> None:
+        summary = _reason_detail_summary(
+            [
+                {
+                    "reason_id": "goal_runtime_certificate_not_verified",
+                    "owning_stage": "goal_runtime_certificate",
+                    "blocking_scope": "unattended_promotion",
+                    "gate_effect": "claim_blocker",
+                    "recommended_targets": ["goal-runtime-certificate"],
+                },
+                {
+                    "reason_id": "operator_signoff_required",
+                    "owning_stage": "operator_review",
+                    "blocking_scope": "operator_review",
+                    "gate_effect": "operator_review_required",
+                    "recommended_targets": ["operator-release-summary"],
+                },
+            ]
+        )
+
+        self.assertEqual(summary["blocking_scopes"], ["operator_review", "unattended_promotion"])
+        self.assertEqual(summary["gate_effects"], ["claim_blocker", "operator_review_required"])
+        self.assertEqual(summary["strongest_gate_effect"], "operator_review_required")
+
+    def test_schema_rejects_unknown_gate_effects_and_previous_action_shape(self) -> None:
+        report = build_report(self.vault, context=fixed_context())
+        schema = load_schema(SCHEMA_PATH)
+        self.assertEqual(validate_with_schema(report, schema), [])
+
+        invalid_effect = json.loads(json.dumps(report))
+        detailed_action = next(
+            item for item in invalid_effect["action_items"] if item["status_reason_details"]
+        )
+        detailed_action["gate_effects"] = ["mystery_gate"]
+        detailed_action["strongest_gate_effect"] = "mystery_gate"
+        detailed_action["status_reason_details"][0]["gate_effect"] = "mystery_gate"
+        errors = validate_with_schema(invalid_effect, schema)
+        self.assertTrue(
+            any(error.endswith("expected one of ['none', 'advisory', 'claim_blocker', 'operator_review_required', 'blocks_promotion', 'blocks_execution']") for error in errors),
+            errors,
+        )
+
+        previous_shape = json.loads(json.dumps(report))
+        previous_shape["action_items"][0].pop("blocking_scopes", None)
+        previous_shape["action_items"][0].pop("gate_effects", None)
+        previous_shape["action_items"][0].pop("strongest_gate_effect", None)
+        detailed_previous_action = next(
+            item for item in previous_shape["action_items"] if item["status_reason_details"]
+        )
+        detailed_previous_action["status_reason_details"][0].pop("blocking_scope", None)
+        detailed_previous_action["status_reason_details"][0].pop("gate_effect", None)
+        previous_errors = validate_with_schema(previous_shape, schema)
+        self.assertIn(
+            "$.action_items[0]: missing required property 'blocking_scopes'",
+            previous_errors,
+        )
+        self.assertIn(
+            "$.action_items[0]: missing required property 'gate_effects'",
+            previous_errors,
+        )
+        self.assertIn(
+            "$.action_items[0]: missing required property 'strongest_gate_effect'",
+            previous_errors,
+        )
+        self.assertTrue(
+            any(error.endswith("missing required property 'blocking_scope'") for error in previous_errors),
+            previous_errors,
+        )
+        self.assertTrue(
+            any(error.endswith("missing required property 'gate_effect'") for error in previous_errors),
+            previous_errors,
         )
 
     def test_generated_artifact_policy_status_is_not_self_blocked_by_archive_candidates(self) -> None:
@@ -1126,8 +1218,13 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         action = actions["artifact_freshness_performance_observability"]
         self.assertEqual(action["current_status"], "partially_automated")
         self.assertEqual(action["status_reason_ids"], ["artifact_freshness_stable_contract_debt"])
+        self.assertEqual(action["blocking_scopes"], ["artifact_freshness"])
+        self.assertEqual(action["gate_effects"], ["advisory"])
+        self.assertEqual(action["strongest_gate_effect"], "advisory")
         detail = action["status_reason_details"][0]
         self.assertEqual(detail["owning_stage"], "artifact_freshness")
+        self.assertEqual(detail["blocking_scope"], "artifact_freshness")
+        self.assertEqual(detail["gate_effect"], "advisory")
         self.assertIn(
             "artifact-freshness-stable-contract-debt-refresh",
             detail["recommended_targets"],
@@ -1260,6 +1357,9 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         actions = {item["action_id"]: item for item in report["action_items"]}
         action = actions["full_suite_evidence_currentness"]
         self.assertEqual(action["current_status"], "requires_release_run_verification")
+        self.assertEqual(action["blocking_scopes"], ["release_run"])
+        self.assertEqual(action["gate_effects"], ["blocks_promotion"])
+        self.assertEqual(action["strongest_gate_effect"], "blocks_promotion")
         self.assertIn(
             "release_run_manifest_source_revision_mismatch",
             action["status_reason_ids"],
@@ -1268,6 +1368,8 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             item["reason_id"]: item for item in action["status_reason_details"]
         }["release_run_manifest_source_revision_mismatch"]
         self.assertEqual(detail["owning_stage"], "release_run_ready")
+        self.assertEqual(detail["blocking_scope"], "release_run")
+        self.assertEqual(detail["gate_effect"], "blocks_promotion")
         self.assertIn("release-run-ready", detail["recommended_targets"])
         self.assertEqual(action["recommended_target"], "release-run-ready")
 
@@ -1290,6 +1392,9 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         actions = {item["action_id"]: item for item in report["action_items"]}
         action = actions["promotion_truth_ladder"]
         self.assertEqual(action["current_status"], "requires_release_run_verification")
+        self.assertEqual(action["blocking_scopes"], ["unattended_promotion"])
+        self.assertEqual(action["gate_effects"], ["blocks_promotion"])
+        self.assertEqual(action["strongest_gate_effect"], "blocks_promotion")
         self.assertIn(
             "release_auto_promotion_ready_manifest_source_revision_mismatch",
             action["status_reason_ids"],
@@ -1298,6 +1403,8 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             item["reason_id"]: item for item in action["status_reason_details"]
         }["release_auto_promotion_ready_manifest_source_revision_mismatch"]
         self.assertEqual(detail["owning_stage"], "release_auto_promotion_ready")
+        self.assertEqual(detail["blocking_scope"], "unattended_promotion")
+        self.assertEqual(detail["gate_effect"], "blocks_promotion")
         self.assertIn("release-auto-promotion-ready", detail["recommended_targets"])
         self.assertEqual(action["recommended_target"], "release-auto-promotion-ready")
 
@@ -1862,6 +1969,21 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertIn("release-auto-promotion-goal-run-id-guard", goal_detail_targets)
         self.assertIn("release-auto-promotion-ready-plan", goal_detail_targets)
         self.assertNotIn("auto-improve-goal-run", goal_detail_targets)
+        self.assertEqual(
+            actions["goal_execution_runtime_certificate"]["blocking_scopes"],
+            ["unattended_promotion"],
+        )
+        self.assertEqual(
+            actions["goal_execution_runtime_certificate"]["gate_effects"],
+            ["claim_blocker"],
+        )
+        self.assertEqual(
+            actions["goal_execution_runtime_certificate"]["strongest_gate_effect"],
+            "claim_blocker",
+        )
+        for detail in actions["goal_execution_runtime_certificate"]["status_reason_details"]:
+            self.assertEqual(detail["blocking_scope"], "unattended_promotion")
+            self.assertEqual(detail["gate_effect"], "claim_blocker")
         self.assertEqual(
             actions["goal_execution_runtime_certificate"]["recommended_target"],
             "goal-runtime-certificate",

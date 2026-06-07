@@ -305,6 +305,13 @@ class AutoImproveReadinessRuntimeTests(
 
         self.assertTrue(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
+        self.assertEqual(report["promotion_readiness"]["status"], "blocked")
+        self.assertIn(
+            "promotion_blocked_by_remediation_backlog_open",
+            report["promotion_readiness"]["blocker_ids"],
+        )
+        self.assertIn("remediation_backlog", report["promotion_readiness"]["blocking_scopes"])
+        self.assertIn("blocks_promotion", report["promotion_readiness"]["gate_effects"])
         blockers = {item["id"]: item for item in report["promotion_blockers"]}
         blocker = blockers["promotion_blocked_by_remediation_backlog_open"]
         self.assertEqual(blocker["scope"], "remediation_backlog")
@@ -986,6 +993,8 @@ class AutoImproveReadinessRuntimeTests(
             "promotion_blocked_by_release_authority_preflight_failure", blocker_ids
         )
         self.assertTrue(report["can_promote_result"])
+        self.assertEqual(report["promotion_readiness"]["status"], "pass")
+        self.assertEqual(report["promotion_readiness"]["blocker_count"], 0)
         preflight = report["diagnostics"]["release_authority_preflight_summary"]
         self.assertTrue(preflight["expected_blocked_preflight"])
         self.assertEqual(preflight["unexpected_failure_ids"], [])

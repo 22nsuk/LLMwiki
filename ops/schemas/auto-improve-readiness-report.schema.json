@@ -24,6 +24,7 @@
     "can_execute_trial",
     "can_promote_result",
     "execution_readiness",
+    "promotion_readiness",
     "learning_readiness",
     "execution_blockers",
     "learning_claim_blockers",
@@ -146,6 +147,9 @@
     },
     "execution_readiness": {
       "$ref": "#/$defs/execution_readiness"
+    },
+    "promotion_readiness": {
+      "$ref": "#/$defs/promotion_readiness"
     },
     "execution_status": {
       "type": "string",
@@ -1393,6 +1397,56 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "promotion_readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "can_promote_result",
+        "blocker_count",
+        "blocker_ids",
+        "blocking_scopes",
+        "gate_effects"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "blocked"
+          ]
+        },
+        "can_promote_result": {
+          "type": "boolean"
+        },
+        "blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocker_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocking_scopes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "gate_effects": {
+          "type": "array",
+          "items": {
+            "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
+          },
+          "uniqueItems": true
         }
       }
     }

@@ -17,6 +17,11 @@ from ops.scripts.core.release_authority_state_runtime import (
     release_authority_reports_verified,
     release_status_v2_view_with_readiness_fallback,
 )
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_ADVISORY,
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECT_CLAIM_BLOCKER,
+)
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.source_revision_runtime import resolve_source_revision
@@ -150,10 +155,14 @@ def _reason_detail(
     *,
     owning_stage: str,
     recommended_targets: list[str],
+    blocking_scope: str | None = None,
+    gate_effect: str = GATE_EFFECT_BLOCKS_PROMOTION,
 ) -> dict[str, Any]:
     return {
         "reason_id": reason_id,
         "owning_stage": owning_stage,
+        "blocking_scope": blocking_scope or owning_stage,
+        "gate_effect": gate_effect,
         "recommended_targets": recommended_targets,
     }
 
@@ -1793,6 +1802,7 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="release_run_ready",
+                    blocking_scope="release_run",
                     recommended_targets=[
                         "release-run-ready-plan-check",
                         "release-run-ready",
@@ -1804,6 +1814,7 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="release_sealed_run_ready",
+                    blocking_scope="sealed_release",
                     recommended_targets=[
                         "release-sealed-run-ready-plan",
                         "release-sealed-run-ready",
@@ -1818,6 +1829,7 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="release_auto_promotion_ready",
+                    blocking_scope="unattended_promotion",
                     recommended_targets=[
                         "release-auto-promotion-ready-plan",
                         "release-auto-promotion-ready",
@@ -1829,6 +1841,7 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="release_auto_promotion_preseal",
+                    blocking_scope="release_preseal",
                     recommended_targets=[
                         "release-auto-promotion-preseal",
                         "release-closeout-fixed-point",
@@ -1841,6 +1854,7 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="release_auto_promotion_preseal",
+                    blocking_scope="release_preseal",
                     recommended_targets=[
                         "release-auto-promotion-preseal",
                         "release-evidence-dashboard",
@@ -1852,6 +1866,7 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="release_source_package",
+                    blocking_scope="source_package",
                     recommended_targets=["release-source-package-check"],
                 )
             )
@@ -1860,6 +1875,7 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="release_run_ready",
+                    blocking_scope="release_run",
                     recommended_targets=["test-execution-summary-full-current-or-refresh"],
                 )
             )
@@ -1868,6 +1884,8 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="goal_runtime_certificate",
+                    blocking_scope="unattended_promotion",
+                    gate_effect=GATE_EFFECT_CLAIM_BLOCKER,
                     recommended_targets=[
                         "goal-runtime-certificate",
                         "release-auto-promotion-goal-run-id-guard",
@@ -1886,6 +1904,8 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="artifact_freshness",
+                    blocking_scope="artifact_freshness",
+                    gate_effect=GATE_EFFECT_ADVISORY,
                     recommended_targets=recommended_targets,
                 )
             )
@@ -1894,6 +1914,8 @@ def action_status_reason_details(
                 _reason_detail(
                     reason_id,
                     owning_stage="action_recommended_target",
+                    blocking_scope="action_matrix",
+                    gate_effect=GATE_EFFECT_ADVISORY,
                     recommended_targets=[fallback_target],
                 )
             )

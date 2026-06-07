@@ -8,9 +8,10 @@
       "enum": [
         "none",
         "advisory",
+        "claim_blocker",
+        "operator_review_required",
         "blocks_promotion",
-        "blocks_execution",
-        "operator_review_required"
+        "blocks_execution"
       ]
     }
   }

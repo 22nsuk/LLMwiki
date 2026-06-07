@@ -245,14 +245,16 @@ attestation and sealed rehearsal still provide the strict provenance proof.
 
 `status=attention` is a condition label, not a gate decision. Reports that can
 affect execution or promotion must also emit `gate_effect` from the shared
-vocabulary: `none`, `advisory`, `blocks_promotion`, `blocks_execution`, or
-`operator_review_required`. Use `advisory` for visible debt that does not block
-the next step, `blocks_promotion` for evidence that allows bounded repair but
-cannot be promoted, `blocks_execution` for evidence that prevents starting a
-run, and `operator_review_required` when a human signoff or explicit
-authorization is the gate. Legacy values such as `active`, `review_required`,
-`shadow`, and `accepted_risk` are compatibility inputs only and must not be
-emitted by new reports.
+vocabulary: `none`, `advisory`, `claim_blocker`, `operator_review_required`,
+`blocks_promotion`, or `blocks_execution`. Use `advisory` for visible
+debt that does not block the next step, `claim_blocker` for evidence that blocks
+a specific claim or readiness assertion without becoming the release authority
+itself, `operator_review_required` when a human signoff or explicit
+authorization is the gate, `blocks_promotion` for evidence that allows bounded
+repair but cannot be promoted, and `blocks_execution` for evidence that prevents
+starting a run. Legacy values such as `active`, `review_required`, `shadow`, and
+`accepted_risk` are compatibility inputs only and must not be emitted by new
+reports.
 
 Currentness is also objective. Reuse or operator-facing `current` should come
 from the live HEAD/source-fingerprint/domain checks owned by the relevant lane,

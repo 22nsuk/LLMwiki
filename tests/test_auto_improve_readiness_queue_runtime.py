@@ -142,6 +142,17 @@ class AutoImproveReadinessQueueRuntimeTests(
         self.assertEqual(persisted["promotion_status"], "pass")
         self.assertTrue(persisted["can_execute_trial"])
         self.assertTrue(persisted["can_promote_result"])
+        self.assertEqual(
+            persisted["promotion_readiness"],
+            {
+                "status": "pass",
+                "can_promote_result": True,
+                "blocker_count": 0,
+                "blocker_ids": [],
+                "blocking_scopes": [],
+                "gate_effects": [],
+            },
+        )
         self.assertTrue(readiness_can_run(persisted))
         self.assertEqual(readiness_exit_code(persisted), 0)
         self.assertTrue(persisted["queue"]["ready"])
@@ -282,6 +293,9 @@ class AutoImproveReadinessQueueRuntimeTests(
         self.assertEqual(report["execution_status"], "blocked")
         self.assertFalse(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
+        self.assertEqual(report["promotion_readiness"]["status"], "blocked")
+        self.assertEqual(report["promotion_readiness"]["blocking_scopes"], ["learning_readiness"])
+        self.assertEqual(report["promotion_readiness"]["gate_effects"], ["blocks_execution"])
         self.assertTrue(
             any(
                 item["scope"] == "execution_readiness"
