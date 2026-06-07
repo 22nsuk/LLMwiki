@@ -115,6 +115,29 @@ class GoalRuntimeRunnerLock:
     token: str
 
 
+@dataclass(frozen=True)
+class _GoalRunStatusSnapshot:
+    generated_at: dt.datetime
+    started_at: str
+    run_status: str
+    completed_at: str = ""
+    last_heartbeat_at: str = ""
+    last_checkpoint_at: str = ""
+    last_command_heartbeat_at: str = ""
+    quiet_seconds: int = 0
+    command_observation_mode: str = ""
+    command_heartbeat_count: int = 0
+    command_timeout_seconds: int = 0
+    last_stdout_at: str = ""
+    last_stderr_at: str = ""
+    last_artifact_touch_at: str = ""
+    last_command_returncode: int = -1
+    last_command_timed_out: bool = False
+    last_command_termination_reason: str = ""
+    last_backoff_until: str = ""
+    backoff_reason: str = ""
+
+
 class GoalRuntimeRunnerAlreadyRunning(RuntimeError):
     pass
 
@@ -186,60 +209,114 @@ def _context_at(base_context: RuntimeContext, value: dt.datetime) -> RuntimeCont
 def _status_report(
     request: GoalRuntimeRunnerRequest,
     *,
-    generated_at: dt.datetime,
-    started_at: str,
-    run_status: str,
-    completed_at: str = "",
-    last_heartbeat_at: str = "",
-    last_checkpoint_at: str = "",
-    last_command_heartbeat_at: str = "",
-    quiet_seconds: int = 0,
-    command_observation_mode: str = "",
-    command_heartbeat_count: int = 0,
-    command_timeout_seconds: int = 0,
-    last_stdout_at: str = "",
-    last_stderr_at: str = "",
-    last_artifact_touch_at: str = "",
-    last_command_returncode: int = -1,
-    last_command_timed_out: bool = False,
-    last_command_termination_reason: str = "",
-    last_backoff_until: str = "",
-    backoff_reason: str = "",
+    snapshot: _GoalRunStatusSnapshot,
     runtime_context: RuntimeContext,
 ) -> dict[str, Any]:
-    observed_at = _iso_z(generated_at)
+    observed_at = _iso_z(snapshot.generated_at)
     resume_command = request.resume_command or " ".join(request.command_argv)
     return build_goal_run_status_report(
         GoalRunStatusRequest(
             vault=request.vault,
             run_id=request.run_id,
             goal_contract_path=request.goal_contract_path,
-            status=run_status,
+            status=snapshot.run_status,
             runtime_mode=request.runtime_mode,
-            started_at=started_at,
-            completed_at=completed_at,
+            started_at=snapshot.started_at,
+            completed_at=snapshot.completed_at,
             heartbeat_interval_seconds=request.heartbeat_interval_seconds,
             checkpoint_interval_seconds=request.checkpoint_interval_seconds,
-            last_heartbeat_at=last_heartbeat_at or observed_at,
-            last_checkpoint_at=last_checkpoint_at or observed_at,
-            last_command_heartbeat_at=last_command_heartbeat_at or observed_at,
-            quiet_seconds=quiet_seconds,
-            command_observation_mode=command_observation_mode,
-            command_heartbeat_count=command_heartbeat_count,
-            command_timeout_seconds=command_timeout_seconds,
-            last_stdout_at=last_stdout_at,
-            last_stderr_at=last_stderr_at,
-            last_artifact_touch_at=last_artifact_touch_at,
-            last_command_returncode=last_command_returncode,
-            last_command_timed_out=last_command_timed_out,
-            last_command_termination_reason=last_command_termination_reason,
-            last_backoff_until=last_backoff_until,
-            backoff_reason=backoff_reason,
+            last_heartbeat_at=snapshot.last_heartbeat_at or observed_at,
+            last_checkpoint_at=snapshot.last_checkpoint_at or observed_at,
+            last_command_heartbeat_at=snapshot.last_command_heartbeat_at or observed_at,
+            quiet_seconds=snapshot.quiet_seconds,
+            command_observation_mode=snapshot.command_observation_mode,
+            command_heartbeat_count=snapshot.command_heartbeat_count,
+            command_timeout_seconds=snapshot.command_timeout_seconds,
+            last_stdout_at=snapshot.last_stdout_at,
+            last_stderr_at=snapshot.last_stderr_at,
+            last_artifact_touch_at=snapshot.last_artifact_touch_at,
+            last_command_returncode=snapshot.last_command_returncode,
+            last_command_timed_out=snapshot.last_command_timed_out,
+            last_command_termination_reason=snapshot.last_command_termination_reason,
+            last_backoff_until=snapshot.last_backoff_until,
+            backoff_reason=snapshot.backoff_reason,
             resume_from_checkpoint=request.resume_from_checkpoint,
             resume_command=resume_command,
             status_report_path=request.status_report_path,
-            context=_context_at(runtime_context, generated_at),
+            context=_context_at(runtime_context, snapshot.generated_at),
         )
+    )
+
+
+def _initial_status_snapshot(
+    *,
+    generated_at: dt.datetime,
+    started_at: str,
+    timeout_seconds: int,
+) -> _GoalRunStatusSnapshot:
+    return _GoalRunStatusSnapshot(
+        generated_at=generated_at,
+        started_at=started_at,
+        run_status="running",
+        command_observation_mode="process_heartbeat",
+        command_timeout_seconds=timeout_seconds,
+    )
+
+
+def _heartbeat_status_snapshot(
+    *,
+    generated_at: dt.datetime,
+    started_at: str,
+    observed_at_text: str,
+    event: CommandHeartbeat,
+) -> _GoalRunStatusSnapshot:
+    return _GoalRunStatusSnapshot(
+        generated_at=generated_at,
+        started_at=started_at,
+        run_status="running",
+        last_heartbeat_at=observed_at_text,
+        last_checkpoint_at=observed_at_text,
+        last_command_heartbeat_at=observed_at_text,
+        quiet_seconds=event.quiet_seconds,
+        command_observation_mode=event.observation_mode,
+        command_heartbeat_count=event.heartbeat_index,
+        command_timeout_seconds=event.timeout_seconds,
+        last_stdout_at=event.last_stdout_at,
+        last_stderr_at=event.last_stderr_at,
+        last_artifact_touch_at=event.last_artifact_touch_at,
+    )
+
+
+def _final_status_snapshot(
+    *,
+    generated_at: dt.datetime,
+    started_at: str,
+    final_status: str,
+    completed_at: str,
+    result: TimedProcessResult,
+    last_backoff_until: str,
+    backoff_reason: str,
+) -> _GoalRunStatusSnapshot:
+    return _GoalRunStatusSnapshot(
+        generated_at=generated_at,
+        started_at=started_at,
+        run_status=final_status,
+        completed_at=completed_at,
+        last_heartbeat_at=completed_at,
+        last_checkpoint_at=completed_at,
+        last_command_heartbeat_at=completed_at,
+        quiet_seconds=result.quiet_seconds,
+        command_observation_mode=result.observation_mode,
+        command_heartbeat_count=result.heartbeat_count,
+        command_timeout_seconds=result.timeout_seconds,
+        last_stdout_at=result.last_stdout_at,
+        last_stderr_at=result.last_stderr_at,
+        last_artifact_touch_at=result.last_artifact_touch_at,
+        last_command_returncode=result.returncode,
+        last_command_timed_out=result.timed_out,
+        last_command_termination_reason=result.termination_reason,
+        last_backoff_until=last_backoff_until,
+        backoff_reason=backoff_reason,
     )
 
 
@@ -249,6 +326,22 @@ def _write_status(
 ) -> None:
     write_goal_run_status_report(request.vault, report, request.status_report_path)
     write_run_artifacts(request.vault, report, writer=PRODUCER)
+
+
+def _write_status_snapshot(
+    request: GoalRuntimeRunnerRequest,
+    *,
+    snapshot: _GoalRunStatusSnapshot,
+    runtime_context: RuntimeContext,
+) -> None:
+    _write_status(
+        request,
+        _status_report(
+            request,
+            snapshot=snapshot,
+            runtime_context=runtime_context,
+        ),
+    )
 
 
 def _runner_lock_path(request: GoalRuntimeRunnerRequest) -> Path:
@@ -554,7 +647,7 @@ def _run_due_checkpoint_commands(
         )
 
 
-def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
+def _validate_runner_request(request: GoalRuntimeRunnerRequest) -> None:
     if not request.command_argv:
         raise ValueError("goal runtime runner requires a command after --")
     if request.timeout_seconds < 1:
@@ -565,6 +658,10 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
         raise ValueError("checkpoint_interval_seconds must be >= 1")
     if request.checkpoint_command_timeout_seconds < 1:
         raise ValueError("checkpoint_command_timeout_seconds must be >= 1")
+
+
+def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
+    _validate_runner_request(request)
 
     vault = request.vault.resolve()
     policy, _resolved_policy_path = load_policy(vault, request.policy_path)
@@ -592,18 +689,14 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
         return RUNNER_LOCK_EXIT_CODE
 
     try:
-        _write_status(
+        _write_status_snapshot(
             request,
-            _status_report(
-                request,
+            snapshot=_initial_status_snapshot(
                 generated_at=started_at_dt,
                 started_at=started_at,
-                run_status="running",
-                quiet_seconds=0,
-                command_observation_mode="process_heartbeat",
-                command_timeout_seconds=request.timeout_seconds,
-                runtime_context=runtime_context,
+                timeout_seconds=request.timeout_seconds,
             ),
+            runtime_context=runtime_context,
         )
 
         last_observed_at = started_at_dt
@@ -618,25 +711,15 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
                 generated_at=observed_at,
                 started_at=started_at,
             )
-            _write_status(
+            _write_status_snapshot(
                 request,
-                _status_report(
-                    request,
+                snapshot=_heartbeat_status_snapshot(
                     generated_at=observed_at,
                     started_at=started_at,
-                    run_status="running",
-                    last_heartbeat_at=observed_at_text,
-                    last_checkpoint_at=observed_at_text,
-                    last_command_heartbeat_at=observed_at_text,
-                    quiet_seconds=event.quiet_seconds,
-                    command_observation_mode=event.observation_mode,
-                    command_heartbeat_count=event.heartbeat_index,
-                    command_timeout_seconds=event.timeout_seconds,
-                    last_stdout_at=event.last_stdout_at,
-                    last_stderr_at=event.last_stderr_at,
-                    last_artifact_touch_at=event.last_artifact_touch_at,
-                    runtime_context=runtime_context,
+                    observed_at_text=observed_at_text,
+                    event=event,
                 ),
+                runtime_context=runtime_context,
             )
 
         result = run_with_timeout(
@@ -671,31 +754,18 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
             stdout=result.stdout,
             stderr=result.stderr,
         )
-        _write_status(
+        _write_status_snapshot(
             request,
-            _status_report(
-                request,
+            snapshot=_final_status_snapshot(
                 generated_at=completed_at_dt,
                 started_at=started_at,
-                run_status=final_status,
+                final_status=final_status,
                 completed_at=completed_at,
-                last_heartbeat_at=completed_at,
-                last_checkpoint_at=completed_at,
-                last_command_heartbeat_at=completed_at,
-                quiet_seconds=result.quiet_seconds,
-                command_observation_mode=result.observation_mode,
-                command_heartbeat_count=result.heartbeat_count,
-                command_timeout_seconds=result.timeout_seconds,
-                last_stdout_at=result.last_stdout_at,
-                last_stderr_at=result.last_stderr_at,
-                last_artifact_touch_at=result.last_artifact_touch_at,
-                last_command_returncode=result.returncode,
-                last_command_timed_out=result.timed_out,
-                last_command_termination_reason=result.termination_reason,
+                result=result,
                 last_backoff_until=last_backoff_until,
                 backoff_reason=backoff_reason,
-                runtime_context=runtime_context,
             ),
+            runtime_context=runtime_context,
         )
         print(display_path(vault, result_path))
         return _exit_code(result.returncode, timed_out=result.timed_out)
