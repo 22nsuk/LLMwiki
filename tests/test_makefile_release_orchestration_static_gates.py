@@ -19,6 +19,163 @@ def _phony_targets(text: str) -> list[str]:
     return _target_block(text, ".PHONY").replace(".PHONY:", "").split()
 
 
+_AUTO_PROMOTION_PHONY_TARGETS = (
+    "release-auto-promotion-goal-run-id-guard",
+    "release-auto-promotion-preflight",
+    "release-auto-promotion-preflight-check",
+    "release-auto-promotion-safe-cleanup",
+    "release-auto-promotion-preseal",
+    "release-auto-promotion-preseal-check",
+    "release-auto-promotion-ready-plan",
+    "release-auto-promotion-operator-summary",
+    "release-auto-promotion-ready-invalidate",
+    "release-auto-promotion-preflight-prerequisites",
+)
+
+_AUTO_PROMOTION_INVALIDATED_BY_TARGETS = (
+    "release-run-ready",
+    "release-sealed-run-ready",
+    "release-auto-promotion-preflight",
+    "release-auto-promotion-preseal",
+    "release-auto-promotion-operator-summary",
+)
+
+_AUTO_PROMOTION_REPORT_INPUT_TOKENS = (
+    '--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"',
+    '--learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)"',
+    '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
+    '--evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)"',
+)
+
+_AUTO_PROMOTION_PRESEAL_EXPENSIVE_WRITERS = (
+    "$(MAKE) test-execution-summary-full-refresh",
+    "$(MAKE) test-execution-summary-full-body",
+    "$(PYTHON) -m pytest",
+    "$(MAKE) generated-artifact-converge",
+)
+
+
+def _assert_auto_promotion_phony_targets(
+    test: unittest.TestCase,
+    phony_block: str,
+) -> None:
+    for target in _AUTO_PROMOTION_PHONY_TARGETS:
+        with test.subTest(target=target):
+            test.assertIn(target, phony_block)
+
+
+def _assert_ready_manifest_invalidation_targets(
+    test: unittest.TestCase,
+    text: str,
+) -> None:
+    invalidate_block = _target_block(text, "release-auto-promotion-ready-invalidate")
+    for token in (
+        'rm -f "$(RELEASE_AUTO_PROMOTION_READY_MANIFEST_OUT)"',
+        '"$(RELEASE_AUTO_PROMOTION_READY_PLAN_OUT)"',
+        '"$(RELEASE_SEALED_RUN_READY_PLAN_OUT)"',
+        '"$(RELEASE_RUN_READY_PLAN_OUT)"',
+    ):
+        test.assertIn(token, invalidate_block)
+    for target in _AUTO_PROMOTION_INVALIDATED_BY_TARGETS:
+        with test.subTest(target=target):
+            test.assertIn(
+                "$(MAKE) release-auto-promotion-ready-invalidate",
+                _target_block(text, target),
+            )
+
+
+def _assert_auto_promotion_report_input_tokens(
+    test: unittest.TestCase,
+    target_block: str,
+) -> None:
+    for token in _AUTO_PROMOTION_REPORT_INPUT_TOKENS:
+        with test.subTest(token=token):
+            test.assertIn(token, target_block)
+
+
+def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -> None:
+    test.assertEqual(
+        _recipe_lines(text, "release-auto-promotion-preflight-prerequisites"),
+        [
+            "$(MAKE) refresh-generated-core",
+            "$(MAKE) external-report-action-matrix",
+            "$(MAKE) generated-artifact-index",
+        ],
+    )
+    test.assertEqual(
+        _recipe_lines(text, "release-auto-promotion-preflight")[:8],
+        [
+            "$(MAKE) release-auto-promotion-ready-invalidate",
+            "$(MAKE) release-auto-promotion-goal-run-id-guard",
+            "$(MAKE) release-auto-promotion-preflight-prerequisites",
+            "$(MAKE) release-smoke-fast-refresh-check",
+            "$(MAKE) test-execution-summary-current-or-refresh",
+            "$(MAKE) artifact-freshness-refresh-check",
+            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
+            "$(MAKE) learning-readiness-signoff-revalidation",
+        ],
+    )
+
+
+def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> None:
+    preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
+    test.assertEqual(
+        preseal_recipe[:14],
+        [
+            "$(MAKE) release-auto-promotion-ready-invalidate",
+            "$(MAKE) release-auto-promotion-goal-run-id-guard",
+            "$(MAKE) release-run-ready-plan-check",
+            "$(MAKE) release-run-ready-check",
+            "$(MAKE) bootstrap-preflight",
+            "$(MAKE) registry-preflight",
+            "$(MAKE) release-smoke-full-current-check",
+            "$(MAKE) release-smoke-fast-refresh-check",
+            "$(MAKE) release-auto-promotion-safe-cleanup",
+            "$(MAKE) learning-readiness-signoff-revalidation",
+            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
+            "$(MAKE) remediation-backlog",
+            "$(MAKE) auto-improve-readiness-report-body",
+            '$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
+        ],
+    )
+    preseal_refresh_line = (
+        '$(MAKE) release-evidence-cohort-preseal-refresh '
+        'RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"'
+    )
+    strict_cohort_line = (
+        "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint "
+        'RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"'
+    )
+    test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
+    test.assertLess(preseal_recipe.index(preseal_refresh_line), preseal_recipe.index(strict_cohort_line))
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
+        preseal_recipe.index(strict_cohort_line),
+    )
+    preseal_freshness_index = preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check")
+    test.assertLess(
+        preseal_freshness_index,
+        preseal_recipe.index(
+            "$(MAKE) release-closeout-summary-report",
+            preseal_freshness_index,
+        ),
+    )
+    test.assertLess(
+        preseal_recipe.index(
+            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
+        ),
+        preseal_recipe.index("$(MAKE) remediation-backlog"),
+    )
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) remediation-backlog"),
+        preseal_recipe.index(strict_cohort_line),
+    )
+    test.assertGreater(
+        preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
+        preseal_recipe.index(strict_cohort_line),
+    )
+
+
 class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
     def test_release_converge_targets_preserve_preflight_post_and_all_surface_flow(
         self,
@@ -245,53 +402,8 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         phony_block = _target_block(text, ".PHONY")
 
-        for target in (
-            "release-auto-promotion-goal-run-id-guard",
-            "release-auto-promotion-preflight",
-            "release-auto-promotion-preflight-check",
-            "release-auto-promotion-safe-cleanup",
-            "release-auto-promotion-preseal",
-            "release-auto-promotion-preseal-check",
-            "release-auto-promotion-ready-plan",
-            "release-auto-promotion-operator-summary",
-            "release-auto-promotion-ready-invalidate",
-            "release-auto-promotion-preflight-prerequisites",
-        ):
-            with self.subTest(target=target):
-                self.assertIn(target, phony_block)
-
-        auto_promotion_ready_invalidate_block = _target_block(
-            text,
-            "release-auto-promotion-ready-invalidate",
-        )
-        self.assertIn(
-            'rm -f "$(RELEASE_AUTO_PROMOTION_READY_MANIFEST_OUT)"',
-            auto_promotion_ready_invalidate_block,
-        )
-        self.assertIn(
-            '"$(RELEASE_AUTO_PROMOTION_READY_PLAN_OUT)"',
-            auto_promotion_ready_invalidate_block,
-        )
-        self.assertIn(
-            '"$(RELEASE_SEALED_RUN_READY_PLAN_OUT)"',
-            auto_promotion_ready_invalidate_block,
-        )
-        self.assertIn(
-            '"$(RELEASE_RUN_READY_PLAN_OUT)"',
-            auto_promotion_ready_invalidate_block,
-        )
-        for target in (
-            "release-run-ready",
-            "release-sealed-run-ready",
-            "release-auto-promotion-preflight",
-            "release-auto-promotion-preseal",
-            "release-auto-promotion-operator-summary",
-        ):
-            with self.subTest(target=target):
-                self.assertIn(
-                    "$(MAKE) release-auto-promotion-ready-invalidate",
-                    _target_block(text, target),
-                )
+        _assert_auto_promotion_phony_targets(self, phony_block)
+        _assert_ready_manifest_invalidation_targets(self, text)
 
         auto_promotion_goal_identity_block = _target_block(
             text,
@@ -307,14 +419,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertIn('--goal-run-id-origin "$(origin GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preflight_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preseal_block)
-        self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preflight-prerequisites"),
-            [
-                "$(MAKE) refresh-generated-core",
-                "$(MAKE) external-report-action-matrix",
-                "$(MAKE) generated-artifact-index",
-            ],
-        )
+        _assert_auto_promotion_preflight_order(self, text)
 
         self.assertIn(
             "ops.scripts.release_auto_promotion_preflight",
@@ -330,47 +435,9 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
             auto_promotion_preflight_block,
         )
-        self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preflight")[:8],
-            [
-                "$(MAKE) release-auto-promotion-ready-invalidate",
-                "$(MAKE) release-auto-promotion-goal-run-id-guard",
-                "$(MAKE) release-auto-promotion-preflight-prerequisites",
-                "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) test-execution-summary-current-or-refresh",
-                "$(MAKE) artifact-freshness-refresh-check",
-                "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
-                "$(MAKE) learning-readiness-signoff-revalidation",
-            ],
-        )
-        for token in (
-            '--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"',
-            '--learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)"',
-            '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
-            '--evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)"',
-        ):
-            with self.subTest(token=token):
-                self.assertIn(token, auto_promotion_preflight_block)
+        _assert_auto_promotion_report_input_tokens(self, auto_promotion_preflight_block)
 
-        self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal")[:14],
-            [
-                "$(MAKE) release-auto-promotion-ready-invalidate",
-                "$(MAKE) release-auto-promotion-goal-run-id-guard",
-                "$(MAKE) release-run-ready-plan-check",
-                "$(MAKE) release-run-ready-check",
-                "$(MAKE) bootstrap-preflight",
-                "$(MAKE) registry-preflight",
-                "$(MAKE) release-smoke-full-current-check",
-                "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) release-auto-promotion-safe-cleanup",
-                "$(MAKE) learning-readiness-signoff-revalidation",
-                "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
-                "$(MAKE) remediation-backlog",
-                "$(MAKE) auto-improve-readiness-report-body",
-                '$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
-            ],
-        )
+        _assert_auto_promotion_preseal_order(self, text)
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -388,12 +455,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-closeout-summary-report",
             ),
         )
-        for expensive_writer in (
-            "$(MAKE) test-execution-summary-full-refresh",
-            "$(MAKE) test-execution-summary-full-body",
-            "$(PYTHON) -m pytest",
-            "$(MAKE) generated-artifact-converge",
-        ):
+        for expensive_writer in _AUTO_PROMOTION_PRESEAL_EXPENSIVE_WRITERS:
             self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
 
         self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_block)
@@ -409,56 +471,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
             auto_promotion_preseal_block,
         )
-        preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
-        self.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
-        preseal_refresh_line = (
-            '$(MAKE) release-evidence-cohort-preseal-refresh '
-            'RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"'
-        )
-        strict_cohort_line = (
-            "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint "
-            'RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"'
-        )
-        self.assertLess(
-            preseal_recipe.index(preseal_refresh_line),
-            preseal_recipe.index(strict_cohort_line),
-        )
-        self.assertLess(
-            preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
-            preseal_recipe.index(strict_cohort_line),
-        )
-        preseal_freshness_index = preseal_recipe.index(
-            "$(MAKE) artifact-freshness-refresh-check"
-        )
-        self.assertLess(
-            preseal_freshness_index,
-            preseal_recipe.index(
-                "$(MAKE) release-closeout-summary-report",
-                preseal_freshness_index,
-            ),
-        )
-        self.assertLess(
-            preseal_recipe.index(
-                "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
-            ),
-            preseal_recipe.index("$(MAKE) remediation-backlog"),
-        )
-        self.assertLess(
-            preseal_recipe.index("$(MAKE) remediation-backlog"),
-            preseal_recipe.index(strict_cohort_line),
-        )
-        self.assertGreater(
-            preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
-            preseal_recipe.index(strict_cohort_line),
-        )
-        for token in (
-            '--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"',
-            '--learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)"',
-            '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
-            '--evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)"',
-        ):
-            with self.subTest(token=token):
-                self.assertIn(token, auto_promotion_preseal_block)
+        _assert_auto_promotion_report_input_tokens(self, auto_promotion_preseal_block)
 
     def test_release_auto_promotion_ready_and_authority_settle_do_not_spawn_runtime_trials(
         self,
