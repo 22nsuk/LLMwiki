@@ -394,19 +394,30 @@ def sealed_sidecar_entry_record(
     }
 
 
-def validate_sealed_sidecar_cleanup(
+def _normalise_sealed_sidecar_cleanup_record(
     cleanup_record: dict[str, Any],
-    *,
-    active_sidecars: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    sidecar_path = _normalized_repo_path(_text(cleanup_record.get("sidecar_path")))
-    decision = _text(cleanup_record.get("decision"))
-    active_after_cleanup = bool(cleanup_record.get("active_after_cleanup"))
-    post_state_head_aligned = bool(cleanup_record.get("post_state_head_aligned"))
-    preserved_non_canonical = bool(cleanup_record.get("preserved_non_canonical"))
-    preservation_reason = _text(cleanup_record.get("preservation_reason"))
-    non_canonical_marker = _text(cleanup_record.get("non_canonical_marker"))
+    return {
+        "sidecar_path": _normalized_repo_path(_text(cleanup_record.get("sidecar_path"))),
+        "decision": _text(cleanup_record.get("decision")),
+        "active_after_cleanup": bool(cleanup_record.get("active_after_cleanup")),
+        "post_state_head_aligned": bool(cleanup_record.get("post_state_head_aligned")),
+        "preserved_non_canonical": bool(cleanup_record.get("preserved_non_canonical")),
+        "preservation_reason": _text(cleanup_record.get("preservation_reason")),
+        "non_canonical_marker": _text(cleanup_record.get("non_canonical_marker")),
+    }
 
+
+def _sealed_sidecar_cleanup_record_errors(
+    cleanup_record: dict[str, Any],
+) -> list[dict[str, str]]:
+    sidecar_path = str(cleanup_record["sidecar_path"])
+    decision = str(cleanup_record["decision"])
+    active_after_cleanup = bool(cleanup_record["active_after_cleanup"])
+    post_state_head_aligned = bool(cleanup_record["post_state_head_aligned"])
+    preserved_non_canonical = bool(cleanup_record["preserved_non_canonical"])
+    preservation_reason = str(cleanup_record["preservation_reason"])
+    non_canonical_marker = str(cleanup_record["non_canonical_marker"])
     errors: list[dict[str, str]] = []
     if decision not in SEALED_SIDECAR_DECISIONS:
         errors.append(
@@ -476,8 +487,18 @@ def validate_sealed_sidecar_cleanup(
                 )
             )
 
+    return errors
+
+
+def _active_sealed_sidecar_validation(
+    *,
+    sidecar_path: str,
+    decision: str,
+    active_sidecars: list[dict[str, Any]],
+) -> dict[str, Any]:
     authoritative_active: list[str] = []
     stale_active: list[str] = []
+    errors: list[dict[str, str]] = []
     for raw_entry in active_sidecars:
         entry_path = _normalized_repo_path(_text(raw_entry.get("sidecar_path")))
         bucket = _text(raw_entry.get("bucket")) or classify_report_bucket(entry_path)
@@ -511,6 +532,28 @@ def validate_sealed_sidecar_cleanup(
                 )
             )
 
+    return {
+        "active_authoritative_sidecar_paths": sorted(set(authoritative_active)),
+        "stale_active_sidecar_paths": sorted(set(stale_active)),
+        "errors": errors,
+    }
+
+
+def validate_sealed_sidecar_cleanup(
+    cleanup_record: dict[str, Any],
+    *,
+    active_sidecars: list[dict[str, Any]],
+) -> dict[str, Any]:
+    normalised_record = _normalise_sealed_sidecar_cleanup_record(cleanup_record)
+    sidecar_path = str(normalised_record["sidecar_path"])
+    decision = str(normalised_record["decision"])
+    record_errors = _sealed_sidecar_cleanup_record_errors(normalised_record)
+    active_sidecar_validation = _active_sealed_sidecar_validation(
+        sidecar_path=sidecar_path,
+        decision=decision,
+        active_sidecars=active_sidecars,
+    )
+    errors = [*record_errors, *active_sidecar_validation["errors"]]
     status = SEALED_SIDECAR_STATUS_PASS if not errors else SEALED_SIDECAR_STATUS_INCOMPLETE
     return {
         "status": status,
@@ -518,8 +561,10 @@ def validate_sealed_sidecar_cleanup(
         "retry_required": status != SEALED_SIDECAR_STATUS_PASS,
         "sidecar_path": sidecar_path,
         "decision": decision,
-        "active_authoritative_sidecar_paths": sorted(set(authoritative_active)),
-        "stale_active_sidecar_paths": sorted(set(stale_active)),
+        "active_authoritative_sidecar_paths": active_sidecar_validation[
+            "active_authoritative_sidecar_paths"
+        ],
+        "stale_active_sidecar_paths": active_sidecar_validation["stale_active_sidecar_paths"],
         "errors": errors,
     }
 

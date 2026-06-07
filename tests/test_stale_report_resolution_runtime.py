@@ -286,6 +286,46 @@ def test_sealed_sidecar_cleanup_is_incomplete_when_removed_target_is_still_activ
     assert "target_sidecar_still_active" in {error["code"] for error in summary["errors"]}
 
 
+def test_sealed_sidecar_cleanup_preserves_exact_error_order_and_output_shape() -> None:
+    cleanup = sealed_sidecar_cleanup_record(
+        decision=SEALED_SIDECAR_DECISION_REMOVE_FROM_ACTIVE_SET,
+    )
+    active_sidecars = [
+        sealed_sidecar_entry_record(
+            SEALED_SIDECAR_POST_SEAL_ATTESTATION_PATH,
+            head_aligned_current=False,
+        )
+    ]
+
+    summary = validate_sealed_sidecar_cleanup(cleanup, active_sidecars=active_sidecars)
+
+    assert summary == {
+        "status": SEALED_SIDECAR_STATUS_INCOMPLETE,
+        "complete": False,
+        "retry_required": True,
+        "sidecar_path": SEALED_SIDECAR_POST_SEAL_ATTESTATION_PATH,
+        "decision": SEALED_SIDECAR_DECISION_REMOVE_FROM_ACTIVE_SET,
+        "active_authoritative_sidecar_paths": [
+            SEALED_SIDECAR_POST_SEAL_ATTESTATION_PATH
+        ],
+        "stale_active_sidecar_paths": [
+            SEALED_SIDECAR_POST_SEAL_ATTESTATION_PATH
+        ],
+        "errors": [
+            {
+                "report_path": SEALED_SIDECAR_POST_SEAL_ATTESTATION_PATH,
+                "code": "active_sidecar_not_head_aligned",
+                "message": "active authoritative sealed sidecars must be HEAD_Aligned_Current",
+            },
+            {
+                "report_path": SEALED_SIDECAR_POST_SEAL_ATTESTATION_PATH,
+                "code": "target_sidecar_still_active",
+                "message": "removed or preserved target sidecar is still active",
+            },
+        ],
+    }
+
+
 def test_sealed_sidecar_retry_summary_runs_until_active_authority_is_head_aligned() -> None:
     first_cleanup = sealed_sidecar_cleanup_record(
         decision=SEALED_SIDECAR_DECISION_REGENERATE,
