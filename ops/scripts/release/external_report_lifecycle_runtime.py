@@ -1107,9 +1107,13 @@ def artifact_freshness_performance_observability_reason_ids(
         reasons.append("artifact_freshness_report_missing")
     elif report.get("status") != "pass":
         summary = as_dict(report.get("summary"))
-        if as_int(summary.get("stale_artifact_count")):
+        stale_artifact_count = as_int(summary.get("stale_artifact_count"))
+        operational_attention_count = as_int(
+            summary.get("operational_attention_artifact_count")
+        )
+        if max(0, stale_artifact_count - operational_attention_count):
             reasons.append("artifact_freshness_stale_canonical_reports")
-        if as_int(summary.get("operational_attention_artifact_count")):
+        if operational_attention_count:
             reasons.append("artifact_freshness_operational_attention")
         if as_int(summary.get("stable_contract_debt_artifact_count")):
             reasons.append("artifact_freshness_stable_contract_debt")

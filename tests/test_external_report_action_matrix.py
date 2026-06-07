@@ -1231,6 +1231,48 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
         self.assertIn("artifact-freshness-refresh-check", detail["recommended_targets"])
 
+    def test_artifact_freshness_operational_attention_does_not_claim_canonical_stale(self) -> None:
+        for rel_path, text in {
+            "ops/scripts/core/artifact_freshness_runtime.py": (
+                "class ArtifactFreshnessContext: pass\n"
+                "schema_cache = {}\n"
+                "phase_timings = []\n"
+                "def progress_jsonl(): return '--progress jsonl'\n"
+            ),
+            "tests/test_artifact_freshness_runtime.py": "def test_placeholder(): pass\n",
+            "mk/artifact.mk": (
+                "artifact-freshness-refresh-check:\n\tpython -m ops.scripts.artifact_freshness\n"
+                "artifact-freshness-stable-contract-debt-refresh:\n"
+                "\tpython -m ops.scripts.backfill_archived_run_artifacts\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "status": "attention",
+                "summary": {
+                    "stale_artifact_count": 2,
+                    "operational_attention_artifact_count": 2,
+                    "stable_contract_debt_artifact_count": 0,
+                },
+            },
+        )
+        (self.external / "artifact-freshness.md").write_text(
+            "# Artifact Freshness\n\nartifact freshness schema validator cache progress jsonl per-phase timing.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        action = {
+            item["action_id"]: item for item in report["action_items"]
+        }["artifact_freshness_performance_observability"]
+        self.assertEqual(action["status_reason_ids"], ["artifact_freshness_operational_attention"])
+        self.assertEqual(action["gate_effects"], ["advisory"])
+
     def test_release_verified_actions_become_implemented_after_closeout(self) -> None:
         self._write_release_verification_reports()
         (self.external / "release.md").write_text(
