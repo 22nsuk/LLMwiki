@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from ops.scripts.mechanism_assess import (
@@ -35,6 +36,32 @@ SUBAGENT_ROUTING_SCHEMA = SUBAGENT_ROUTING_SCHEMA_PATH
 PRODUCER = "ops.scripts.subagent_routing_runtime"
 SOURCE_COMMAND = "python -m ops.scripts.select_subagent_rung"
 ARTIFACT_KIND = "subagent_routing_report"
+
+
+@dataclass(frozen=True)
+class _SubagentRoutingReportPayload:
+    vault: Path
+    resolved_policy_path: Path
+    policy: dict
+    role: str
+    profile_path_text: str
+    generated_at: str
+    primary_target_paths: list[str]
+    supporting_target_paths: list[str]
+    test_file_paths: list[str]
+    validated_manual_risk_flags: list[str]
+    validated_requested_rung: int | None
+    structural_metrics: dict
+    total_structural_metrics: dict
+    diagnostics: dict
+    dimensions: dict
+    score: int
+    risk_flags: list[str]
+    detected_risk_flags: list[str]
+    detected_risk_flag_evidence: list[dict]
+    total_target_profiles: list[dict]
+    dimension_evidence: dict
+    routing_decision: dict
 
 
 def dedupe_preserve_order(values: list[str]) -> list[str]:
@@ -333,6 +360,72 @@ def build_manual_dispatch_contract(
     }
 
 
+def _build_subagent_routing_report_payload(payload: _SubagentRoutingReportPayload) -> dict:
+    envelope = build_canonical_report_envelope(
+        payload.vault,
+        generated_at=payload.generated_at,
+        artifact_kind=ARTIFACT_KIND,
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=payload.resolved_policy_path,
+        schema_path=SUBAGENT_ROUTING_SCHEMA,
+        source_paths=[
+            "ops/scripts/core/select_subagent_rung.py",
+            "ops/scripts/core/subagent_routing_runtime.py",
+            "ops/scripts/mechanism/mechanism_assess.py",
+        ],
+        text_inputs={
+            "role": payload.role,
+            "primary_targets": "\n".join(payload.primary_target_paths),
+            "supporting_targets": "\n".join(payload.supporting_target_paths),
+            "test_files": "\n".join(payload.test_file_paths),
+            "manual_risk_flags": "\n".join(payload.validated_manual_risk_flags),
+            "requested_rung": (
+                ""
+                if payload.validated_requested_rung is None
+                else str(payload.validated_requested_rung)
+            ),
+        },
+    )
+    return {
+        **envelope,
+        "$schema": SUBAGENT_ROUTING_SCHEMA,
+        "vault": report_path(payload.vault, payload.vault),
+        "generated_at": payload.generated_at,
+        "policy": {
+            "path": report_path(payload.vault, payload.resolved_policy_path),
+            "version": payload.policy.get("version"),
+        },
+        "role": payload.role,
+        "profile_path": payload.profile_path_text,
+        "inputs": {
+            "primary_targets": payload.primary_target_paths,
+            "supporting_targets": payload.supporting_target_paths,
+            "test_files": payload.test_file_paths,
+            "manual_risk_flags": payload.validated_manual_risk_flags,
+        },
+        "structural_metrics": payload.structural_metrics,
+        "total_structural_metrics": payload.total_structural_metrics,
+        "diagnostics": payload.diagnostics,
+        "complexity_profile": {
+            "dimensions": payload.dimensions,
+            "complexity_score": payload.score,
+            "risk_flags": payload.risk_flags,
+            "detected_risk_flags": payload.detected_risk_flags,
+            "manual_risk_flags": payload.validated_manual_risk_flags,
+            "risk_flag_evidence": payload.detected_risk_flag_evidence,
+            "target_profiles": payload.total_target_profiles,
+            "dimension_evidence": payload.dimension_evidence,
+        },
+        "routing_decision": payload.routing_decision,
+        "manual_dispatch": build_manual_dispatch_contract(
+            role=payload.role,
+            profile_path=payload.profile_path_text,
+            routing_decision=payload.routing_decision,
+        ),
+    }
+
+
 def build_report(
     vault: Path,
     policy: dict,
@@ -414,65 +507,32 @@ def build_report(
 
     profile_path_text = report_path(vault, profile_path)
     generated_at = runtime_context.isoformat_z()
-    envelope = build_canonical_report_envelope(
-        vault,
-        generated_at=generated_at,
-        artifact_kind=ARTIFACT_KIND,
-        producer=PRODUCER,
-        source_command=SOURCE_COMMAND,
-        resolved_policy_path=resolved_policy_path,
-        schema_path=SUBAGENT_ROUTING_SCHEMA,
-        source_paths=[
-            "ops/scripts/core/select_subagent_rung.py",
-            "ops/scripts/core/subagent_routing_runtime.py",
-            "ops/scripts/mechanism/mechanism_assess.py",
-        ],
-        text_inputs={
-            "role": role,
-            "primary_targets": "\n".join(primary_target_paths),
-            "supporting_targets": "\n".join(supporting_target_paths),
-            "test_files": "\n".join(test_file_paths),
-            "manual_risk_flags": "\n".join(validated_manual_risk_flags),
-            "requested_rung": "" if validated_requested_rung is None else str(validated_requested_rung),
-        },
-    )
-    return {
-        **envelope,
-        "$schema": SUBAGENT_ROUTING_SCHEMA,
-        "vault": report_path(vault, vault),
-        "generated_at": generated_at,
-        "policy": {
-            "path": report_path(vault, resolved_policy_path),
-            "version": policy.get("version"),
-        },
-        "role": role,
-        "profile_path": profile_path_text,
-        "inputs": {
-            "primary_targets": primary_target_paths,
-            "supporting_targets": supporting_target_paths,
-            "test_files": test_file_paths,
-            "manual_risk_flags": validated_manual_risk_flags,
-        },
-        "structural_metrics": structural_metrics,
-        "total_structural_metrics": total_structural_metrics,
-        "diagnostics": state.report(),
-        "complexity_profile": {
-            "dimensions": dimensions,
-            "complexity_score": score,
-            "risk_flags": risk_flags,
-            "detected_risk_flags": detected_risk_flags,
-            "manual_risk_flags": validated_manual_risk_flags,
-            "risk_flag_evidence": detected_risk_flag_evidence,
-            "target_profiles": total_target_profiles,
-            "dimension_evidence": dimension_evidence,
-        },
-        "routing_decision": routing_decision,
-        "manual_dispatch": build_manual_dispatch_contract(
+    return _build_subagent_routing_report_payload(
+        _SubagentRoutingReportPayload(
+            vault=vault,
+            resolved_policy_path=resolved_policy_path,
+            policy=policy,
             role=role,
-            profile_path=profile_path_text,
+            profile_path_text=profile_path_text,
+            generated_at=generated_at,
+            primary_target_paths=primary_target_paths,
+            supporting_target_paths=supporting_target_paths,
+            test_file_paths=test_file_paths,
+            validated_manual_risk_flags=validated_manual_risk_flags,
+            validated_requested_rung=validated_requested_rung,
+            structural_metrics=structural_metrics,
+            total_structural_metrics=total_structural_metrics,
+            diagnostics=state.report(),
+            dimensions=dimensions,
+            score=score,
+            risk_flags=risk_flags,
+            detected_risk_flags=detected_risk_flags,
+            detected_risk_flag_evidence=detected_risk_flag_evidence,
+            total_target_profiles=total_target_profiles,
+            dimension_evidence=dimension_evidence,
             routing_decision=routing_decision,
-        ),
-    }
+        )
+    )
 
 
 def write_report(vault: Path, report: dict, out_path: str | None) -> Path:
