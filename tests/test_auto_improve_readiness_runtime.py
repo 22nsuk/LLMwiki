@@ -9,6 +9,7 @@ import os
 import runpy
 import sys
 import unittest
+from pathlib import Path
 
 from ops.scripts.auto_improve_readiness_constants_runtime import READINESS_SOURCE_PATHS
 from ops.scripts.auto_improve_readiness_runtime import (
@@ -19,6 +20,7 @@ from ops.scripts.auto_improve_readiness_runtime import (
     write_readiness_report,
 )
 
+from ops.scripts.mechanism.auto_improve_readiness import main as readiness_cli_main
 from tests.auto_improve_readiness_test_runtime import (
     REPO_ROOT,
     AutoImproveReadinessRuntimeFixture,
@@ -78,6 +80,44 @@ class AutoImproveReadinessRuntimeTests(
             sys.modules.update(removed_modules)
 
         self.assertTrue(callable(namespace["main"]))
+
+    def test_cli_resolves_relative_out_under_vault_from_foreign_cwd(self) -> None:
+        self._write_ready_queue_reports()
+        previous_cwd = Path.cwd()
+        try:
+            os.chdir(self.temp_dir.name)
+            exit_code = readiness_cli_main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--out",
+                    "tmp/readiness-output.json",
+                ]
+            )
+        finally:
+            os.chdir(previous_cwd)
+
+        destination = self.vault / "tmp" / "readiness-output.json"
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(destination.is_file())
+        persisted = json.loads(destination.read_text(encoding="utf-8"))
+        self.assertTrue(readiness_can_run(persisted))
+
+    def test_cli_rejects_outside_vault_out_path_without_writing(self) -> None:
+        self._write_ready_queue_reports()
+        outside_path = Path(self.temp_dir.name) / "outside-readiness.json"
+
+        with self.assertRaisesRegex(ValueError, "repo output path must stay under vault"):
+            readiness_cli_main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--out",
+                    str(outside_path),
+                ]
+            )
+
+        self.assertFalse(outside_path.exists())
 
     def test_load_readiness_inputs_rejects_missing_artifact_envelope_on_disk_reports(
         self,
