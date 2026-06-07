@@ -379,40 +379,13 @@ def _run_page_lint_pass(
     _emit_orphan_issues(runtime_context, config, acc)
 
 
-def _run_registry_and_review_passes(
-    runtime_context: _LintRuntimeContext,
-    policy: dict,
+def _record_synthesis_review_candidates(
+    *,
+    vault: Path,
+    pages: dict[str, Path],
     config: _LintPolicyConfig,
     acc: _LintAccumulator,
-    *,
-    context: RuntimeContext,
-) -> dict:
-    vault = runtime_context.vault
-    pages = runtime_context.runtime_snapshot.pages
-    registry_result = lint_registry_contract(
-        vault,
-        pages,
-        acc.frontmatters,
-        config.frontmatter_contract,
-        config.lint_thresholds,
-        config.system_refactor_policy,
-        config.registry_contract,
-        config.corpus_routing,
-        config.source_page_slug_review,
-        context=context,
-    )
-    acc.errors.extend(registry_result["errors"])
-    acc.warnings.extend(registry_result["warnings"])
-    _record_review_items(acc, registry_result["review_candidates"])
-
-    eval_coverage_report = build_eval_coverage_report(
-        vault,
-        policy,
-        runtime_context.resolved_policy_path,
-        snapshot=runtime_context.runtime_snapshot,
-        context=context,
-    )
-    _record_review_items(acc, eval_coverage_report["review_candidates"])
+) -> None:
     _record_review_items(
         acc,
         synthesis_analysis_template_candidates(
@@ -429,6 +402,16 @@ def _run_registry_and_review_passes(
             config.refactor_triggers,
         ),
     )
+
+
+def _record_content_review_candidates(
+    *,
+    vault: Path,
+    pages: dict[str, Path],
+    registry_result: dict,
+    config: _LintPolicyConfig,
+    acc: _LintAccumulator,
+) -> None:
     _record_review_items(
         acc,
         content_promotion_candidates(
@@ -480,6 +463,15 @@ def _run_registry_and_review_passes(
             config.refactor_triggers,
         ),
     )
+
+
+def _record_taxonomy_review_candidates(
+    *,
+    vault: Path,
+    pages: dict[str, Path],
+    config: _LintPolicyConfig,
+    acc: _LintAccumulator,
+) -> None:
     _record_review_items(
         acc,
         concept_taxonomy_advisory_candidates(
@@ -516,6 +508,51 @@ def _run_registry_and_review_passes(
             config.frontmatter_contract,
         ),
     )
+
+
+def _run_registry_and_review_passes(
+    runtime_context: _LintRuntimeContext,
+    policy: dict,
+    config: _LintPolicyConfig,
+    acc: _LintAccumulator,
+    *,
+    context: RuntimeContext,
+) -> dict:
+    vault = runtime_context.vault
+    pages = runtime_context.runtime_snapshot.pages
+    registry_result = lint_registry_contract(
+        vault,
+        pages,
+        acc.frontmatters,
+        config.frontmatter_contract,
+        config.lint_thresholds,
+        config.system_refactor_policy,
+        config.registry_contract,
+        config.corpus_routing,
+        config.source_page_slug_review,
+        context=context,
+    )
+    acc.errors.extend(registry_result["errors"])
+    acc.warnings.extend(registry_result["warnings"])
+    _record_review_items(acc, registry_result["review_candidates"])
+
+    eval_coverage_report = build_eval_coverage_report(
+        vault,
+        policy,
+        runtime_context.resolved_policy_path,
+        snapshot=runtime_context.runtime_snapshot,
+        context=context,
+    )
+    _record_review_items(acc, eval_coverage_report["review_candidates"])
+    _record_synthesis_review_candidates(vault=vault, pages=pages, config=config, acc=acc)
+    _record_content_review_candidates(
+        vault=vault,
+        pages=pages,
+        registry_result=registry_result,
+        config=config,
+        acc=acc,
+    )
+    _record_taxonomy_review_candidates(vault=vault, pages=pages, config=config, acc=acc)
     return registry_result
 
 
