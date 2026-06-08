@@ -308,6 +308,22 @@ def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tupl
     return not failures, failures
 
 
+def verify_attestation_report(vault: Path, attestation_path: str = DEFAULT_OUT) -> dict[str, Any]:
+    ok, failures = verify_attestation(vault, attestation_path)
+    return {"status": "pass" if ok else "fail", "failures": failures}
+
+
+def write_verify_report(vault: Path, report: dict[str, Any], out_path: str) -> Path:
+    raw_path = Path(out_path)
+    destination = raw_path if raw_path.is_absolute() else vault / raw_path
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return destination
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build or verify release closeout finality attestation.")
     parser.add_argument("--vault", default=".")
@@ -315,6 +331,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--attestation", default=DEFAULT_OUT)
     parser.add_argument("--verify", action="store_true")
+    parser.add_argument("--verify-out")
+    parser.add_argument("--no-fail", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -322,12 +340,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     if args.verify:
-        ok, failures = verify_attestation(vault, args.attestation)
-        if not ok:
-            print(json.dumps({"status": "fail", "failures": failures}, sort_keys=True), file=sys.stderr)
-            return 1
-        print(json.dumps({"status": "pass"}))
-        return 0
+        report = verify_attestation_report(vault, args.attestation)
+        if args.verify_out:
+            write_verify_report(vault, report, args.verify_out)
+        stream = sys.stdout if report["status"] == "pass" else sys.stderr
+        print(json.dumps(report, sort_keys=True), file=stream)
+        return 0 if report["status"] == "pass" or args.no_fail else 1
     report = build_report(vault, policy_path=args.policy_path)
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))

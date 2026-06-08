@@ -29,8 +29,33 @@ class CiTierLaneBridgeTests(unittest.TestCase):
         self.assertEqual(report["summary"]["missing_in_workflow_count"], 0)
         self.assertEqual(report["summary"]["unknown_in_workflow_count"], 0)
         self.assertEqual(report["summary"]["missing_bridge_count"], 0)
+        self.assertEqual(report["summary"]["missing_workflow_run_text_count"], 0)
+        self.assertEqual(report["summary"]["missing_ci_entrypoint_count"], 0)
+        self.assertEqual(report["summary"]["missing_ci_step_count"], 0)
         self.assertIn("fast", report["workflow_tiers"])
         self.assertTrue(all(item["registry_backed"] for item in report["bridge"]))
+        by_tier = {item["ci_tier"]: item for item in report["bridge"]}
+        self.assertTrue(all(item["ci_entrypoint_declared"] for item in by_tier.values()))
+        self.assertTrue(all(not item["missing_ci_steps"] for item in by_tier.values()))
+        release_closeout_commands = {
+            line.strip()
+            for line in by_tier["release-closeout-regression"]["workflow_run_text"].splitlines()
+            if line.strip()
+        }
+        self.assertIn(
+            "make release-closeout-finality-verify-ci-artifact",
+            release_closeout_commands,
+        )
+        self.assertIn(
+            "make release-closeout-finality-verify",
+            release_closeout_commands,
+        )
+        self.assertIn(
+            "make release-authority-sealed-preflight",
+            release_closeout_commands,
+        )
+        self.assertIn("make test-report-contract-all", by_tier["report-contract"]["workflow_run_text"])
+        self.assertNotIn("make test-report-contract-core", by_tier["report-contract"]["workflow_run_text"])
         self.assertEqual(
             validate_with_schema(
                 report,

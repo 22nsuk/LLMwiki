@@ -534,9 +534,11 @@
       "ci_steps": [
         "make release-workflow-order-guard",
         "make release-closeout-regression-dry-run",
-        "make release-authority-sealed-preflight",
         "make release-closeout-post-check-finalizer-ci-artifact",
-        "make release-closeout-cost-evidence-ci-artifact"
+        "make release-closeout-cost-evidence-ci-artifact",
+        "make release-closeout-finality-verify-ci-artifact",
+        "make release-closeout-finality-verify",
+        "make release-authority-sealed-preflight"
       ],
       "documented_entrypoints": [
         "make release-closeout-regression-dry-run"

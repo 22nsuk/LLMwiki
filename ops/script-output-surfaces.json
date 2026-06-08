@@ -1143,7 +1143,8 @@
       "path": "ops/scripts/release/release_closeout_finality_attestation.py",
       "classification": "repo_artifact",
       "output_options": [
-        "--out"
+        "--out",
+        "--verify-out"
       ],
       "references_resolve_output_path": false,
       "references_resolve_repo_output_path": false,

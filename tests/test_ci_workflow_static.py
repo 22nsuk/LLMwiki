@@ -6,12 +6,8 @@ from pathlib import Path
 import pytest
 import yaml
 from ops.scripts.test_lane_registry_runtime import (
-    compatibility_map,
     compatibility_names,
-    lane_ci_steps,
     load_registry,
-    pack_by_id,
-    pack_ci_steps,
 )
 
 from tests.workflow_static_helpers import (
@@ -27,7 +23,6 @@ from tests.workflow_static_helpers import (
     workflow_jobs as _jobs,
     workflow_mapping,
     workflow_matrix_include,
-    workflow_matrix_tier_run_text,
     workflow_matrix_values,
     workflow_on,
     workflow_path_entries as _path_entries,
@@ -180,34 +175,6 @@ class CiWorkflowStaticTests(unittest.TestCase):
             with self.subTest(job_name=job_name):
                 _assert_locked_dependency_steps(self, _job(workflow, job_name))
 
-    def test_ci_tier_commands_match_registry_contract(self) -> None:
-        registry = load_registry(Path("."))
-        workflow = _workflow()
-        test_tier_job = _job(workflow, "test-tier")
-
-        for tier, mapped_id in compatibility_map(registry, "ci_tier").items():
-            with self.subTest(tier=tier, mapped_id=mapped_id):
-                steps = (
-                    pack_ci_steps(registry, mapped_id)
-                    if mapped_id in pack_by_id(registry)
-                    else lane_ci_steps(registry, mapped_id)
-                )
-                self.assertTrue(steps)
-                tier_run_text = workflow_matrix_tier_run_text(test_tier_job, tier)
-                self.assertTrue(
-                    tier_run_text,
-                    f"missing exact matrix.tier run step for {tier!r}",
-                )
-                for step in steps:
-                    self.assertIn(step, tier_run_text)
-
-        report_contract_run_text = workflow_matrix_tier_run_text(
-            test_tier_job,
-            "report-contract",
-        )
-        self.assertIn("make test-report-contract-all", report_contract_run_text)
-        self.assertNotIn("make test-report-contract-core", report_contract_run_text)
-
     def test_ci_workflow_has_windows_release_smoke_job(self) -> None:
         workflow = _workflow()
         job = _job(workflow, "windows-release-smoke")
@@ -245,25 +212,9 @@ class CiWorkflowStaticTests(unittest.TestCase):
             strict_preview_run,
         )
         schema_static_smoke_run = _run_text(
-            _step_by_name(job, "Run Windows schema and strict-preview smoke tests")
+            _step_by_name(job, "Run Windows schema static smoke tests")
         )
-        self.assertIn("python -m pytest -q", schema_static_smoke_run)
-        for test_path in (
-            "tests/test_ci_workflow_static.py",
-            "tests/test_makefile_static_gates.py",
-            "tests/test_makefile_release_orchestration_static_gates.py",
-            "tests/test_makefile_release_evidence_static_gates.py",
-            "tests/test_makefile_release_smoke_static_gates.py",
-            "tests/test_makefile_test_execution_summary_gates.py",
-            "tests/test_makefile_auto_improve_goal_static_gates.py",
-            "tests/test_makefile_public_registry_supply_chain_gates.py",
-            "tests/test_report_schema_sample_regeneration.py",
-            "tests/test_report_schemas.py",
-            "tests/test_ruff_strict_preview.py",
-            "tests/test_strict_preview_audit.py",
-        ):
-            with self.subTest(test_path=test_path):
-                self.assertIn(test_path, schema_static_smoke_run)
+        self.assertEqual(schema_static_smoke_run, "make test-schema-static-smoke PYTHON=python")
         upload = _step_by_name(job, "Upload Windows smoke artifact")
         self.assertEqual(upload.get("uses"), PINNED_UPLOAD_ARTIFACT_ACTION)
         upload_with = workflow_mapping(
@@ -298,17 +249,27 @@ class CiWorkflowStaticTests(unittest.TestCase):
         for command in (
             "make release-workflow-order-guard",
             "make release-closeout-regression-dry-run",
-            "make release-authority-sealed-preflight",
             "make release-closeout-post-check-finalizer-ci-artifact",
             "make release-closeout-cost-evidence-ci-artifact",
         ):
             with self.subTest(command=command):
                 self.assertIn(command, run_text)
 
+        authority_step = _step_by_name(job, "Run release authority diagnostics tier")
+        self.assertEqual(authority_step.get("id"), "release_authority_diagnostics")
+        self.assertEqual(
+            authority_step.get("if"),
+            "always() && matrix.tier == 'release-closeout-regression' && steps.release_closeout_regression.outcome != 'skipped'",
+        )
+        authority_run_text = _run_text(authority_step)
+        self.assertIn("make release-closeout-finality-verify-ci-artifact", authority_run_text)
+        self.assertIn("make release-closeout-finality-verify", authority_run_text)
+        self.assertIn("make release-authority-sealed-preflight", authority_run_text)
+
         diagnostics = _step_by_name(job, "Materialize release closeout upload diagnostics")
         self.assertEqual(
             diagnostics.get("if"),
-            "always() && matrix.tier == 'release-closeout-regression' && steps.release_closeout_regression.outcome != 'success'",
+            "always() && matrix.tier == 'release-closeout-regression' && (steps.release_closeout_regression.outcome != 'success' || steps.release_authority_diagnostics.outcome != 'success')",
         )
         diagnostics_run = _run_text(diagnostics)
         self.assertIn(
@@ -351,6 +312,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "build/release/release-closeout-sealed-dry-run/external-report-reference-manifest.json",
             "build/release/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
             "ops/reports/release-closeout-sealed-rehearsal-check.json",
+            "tmp/release-closeout-finality-verify-ci.json",
             "tmp/release-authority-blocked-preflight-upload-diagnostics-${{ matrix.python-version }}.txt",
         ):
             with self.subTest(path=path):

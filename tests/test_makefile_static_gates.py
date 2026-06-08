@@ -12,17 +12,12 @@ from pathlib import Path
 import pytest
 from ops.scripts.test_lane_registry_runtime import (
     authoritative_markers,
-    compatibility_map,
     compatibility_names,
     documentation_authority,
     documentation_out_of_scope,
-    lane_ci_entrypoint,
-    lane_ci_steps,
     load_registry,
     marker_semantics,
     pack_by_id,
-    pack_ci_entrypoint,
-    pack_ci_steps,
     pack_mark_expr,
     pack_selectors,
     pack_summary_suite,
@@ -38,12 +33,6 @@ from tests.makefile_static_helpers import (
     _target_block,
     _target_dependencies,
 )
-from tests.workflow_static_helpers import (
-    load_workflow,
-    workflow_job,
-    workflow_matrix_tier_run_text,
-    workflow_matrix_values,
-)
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -54,7 +43,6 @@ DOCS_DEVELOPMENT = Path("docs/development.md")
 DOCS_CBM = Path("docs/codebase-memory-mcp.md")
 CONFTEST = Path("tests/conftest.py")
 PYTEST_INI = Path("pytest.ini")
-CI_WORKFLOW = Path(".github/workflows/ci.yml")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -828,6 +816,35 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("tests/test_artifact_freshness_runtime.py \\", block)
         self.assertNotIn("tests/test_release_smoke.py \\", block)
 
+    def test_schema_static_smoke_is_named_windows_ci_target(self) -> None:
+        text = _makefile_text()
+        selectors = _makefile_assignment_items(text, "SCHEMA_STATIC_SMOKE_TESTS")
+        block = _target_block(text, "test-schema-static-smoke")
+
+        self.assertIn("test-schema-static-smoke", _target_block(text, ".PHONY"))
+        self.assertEqual(
+            selectors,
+            (
+                "tests/test_ci_tier_lane_bridge.py",
+                "tests/test_ci_workflow_static.py",
+                "tests/test_makefile_static_gates.py",
+                "tests/test_makefile_release_orchestration_static_gates.py",
+                "tests/test_makefile_release_evidence_static_gates.py",
+                "tests/test_makefile_release_smoke_static_gates.py",
+                "tests/test_makefile_test_execution_summary_gates.py",
+                "tests/test_makefile_auto_improve_goal_static_gates.py",
+                "tests/test_makefile_public_registry_supply_chain_gates.py",
+                "tests/test_report_schema_sample_regeneration.py",
+                "tests/test_report_schemas.py",
+                "tests/test_ruff_strict_preview.py",
+                "tests/test_strict_preview_audit.py",
+            ),
+        )
+        self.assertIn(
+            "$(PYTHON) -m pytest -q $(SCHEMA_STATIC_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            block,
+        )
+
     def test_fast_smoke_selectors_collect_via_supported_pytest_entrypoint(self) -> None:
         text = _makefile_text()
         selectors = _makefile_assignment_items(text, "FAST_SMOKE_TESTS")
@@ -968,6 +985,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
+            "RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT ?= tmp/release-closeout-finality-verify-ci.json",
+            text,
+        )
+        self.assertIn(
             "$(PYTHON) -m pytest $(RELEASE_CLOSEOUT_REGRESSION_TESTS) $(PYTEST_SERIAL_FLAGS)",
             _target_block(text, "test-release-closeout-regression-pack"),
         )
@@ -977,6 +998,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn(
             "release-closeout-cost-evidence-ci-artifact",
+            _target_block(text, ".PHONY"),
+        )
+        self.assertIn(
+            "release-closeout-finality-verify-ci-artifact",
             _target_block(text, ".PHONY"),
         )
         self.assertIn(
@@ -993,7 +1018,20 @@ class MakefileStaticGateTests(unittest.TestCase):
             regression_dry_run,
         )
         self.assertIn("--fail-on-fail", regression_dry_run)
-        self.assertIn("--verify", regression_dry_run)
+        self.assertNotIn("release_closeout_finality_attestation", regression_dry_run)
+        finality_verify_artifact = _target_block(
+            text, "release-closeout-finality-verify-ci-artifact"
+        )
+        self.assertIn(
+            "ops.scripts.release_closeout_finality_attestation",
+            finality_verify_artifact,
+        )
+        self.assertIn("--verify", finality_verify_artifact)
+        self.assertIn(
+            '--verify-out "$(RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT)"',
+            finality_verify_artifact,
+        )
+        self.assertIn("--no-fail", finality_verify_artifact)
         cost_artifact = _target_block(
             text, "release-closeout-cost-evidence-ci-artifact"
         )
@@ -1145,50 +1183,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(MAKE) release-source-package-clean-extract-current-or-refresh",
             _target_block(text, "release-source-package-check"),
         )
-
-    def test_ci_matrix_runs_named_lane_targets(self) -> None:
-        registry = _test_lane_registry()
-        workflow = load_workflow(CI_WORKFLOW)
-        test_tier_job = workflow_job(workflow, "test-tier")
-        ci_map = compatibility_map(registry, "ci_tier")
-
-        self.assertEqual(
-            workflow_matrix_values(test_tier_job, "tier"),
-            compatibility_names(registry, "ci_tier"),
-        )
-
-        for tier, mapped_id in ci_map.items():
-            with self.subTest(tier=tier, mapped_id=mapped_id):
-                if mapped_id in pack_by_id(registry):
-                    expected_steps = pack_ci_steps(registry, mapped_id)
-                    expected_entrypoint = pack_ci_entrypoint(registry, mapped_id)
-                else:
-                    expected_steps = lane_ci_steps(registry, mapped_id)
-                    expected_entrypoint = lane_ci_entrypoint(registry, mapped_id)
-                self.assertTrue(expected_steps)
-                self.assertTrue(expected_entrypoint)
-                tier_run_text = workflow_matrix_tier_run_text(test_tier_job, tier)
-                self.assertTrue(
-                    tier_run_text,
-                    f"missing exact matrix.tier run step for {tier!r}",
-                )
-                self.assertIn(f"make {expected_entrypoint}", tier_run_text)
-                for step in expected_steps:
-                    self.assertIn(step, tier_run_text)
-        self.assertIn(
-            "make release-authority-sealed-preflight",
-            workflow_matrix_tier_run_text(test_tier_job, "release-closeout-regression"),
-        )
-        self.assertIn(
-            "make test-fast",
-            workflow_matrix_tier_run_text(test_tier_job, "fast"),
-        )
-        report_contract_run_text = workflow_matrix_tier_run_text(
-            test_tier_job,
-            "report-contract",
-        )
-        self.assertIn("make test-report-contract-all", report_contract_run_text)
-        self.assertNotIn("make test-report-contract-core", report_contract_run_text)
 
     def test_readme_ci_tier_summary_matches_current_workflow_shape(self) -> None:
         registry = _test_lane_registry()

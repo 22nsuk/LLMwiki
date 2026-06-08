@@ -30,14 +30,20 @@
         "registry_tier_count",
         "missing_in_workflow_count",
         "unknown_in_workflow_count",
-        "missing_bridge_count"
+        "missing_bridge_count",
+        "missing_workflow_run_text_count",
+        "missing_ci_entrypoint_count",
+        "missing_ci_step_count"
       ],
       "properties": {
         "workflow_tier_count": { "type": "integer", "minimum": 0 },
         "registry_tier_count": { "type": "integer", "minimum": 0 },
         "missing_in_workflow_count": { "type": "integer", "minimum": 0 },
         "unknown_in_workflow_count": { "type": "integer", "minimum": 0 },
-        "missing_bridge_count": { "type": "integer", "minimum": 0 }
+        "missing_bridge_count": { "type": "integer", "minimum": 0 },
+        "missing_workflow_run_text_count": { "type": "integer", "minimum": 0 },
+        "missing_ci_entrypoint_count": { "type": "integer", "minimum": 0 },
+        "missing_ci_step_count": { "type": "integer", "minimum": 0 }
       }
     },
     "workflow_tiers": { "type": "array", "items": { "type": "string", "minLength": 1 } },
@@ -47,13 +53,30 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ci_tier", "registry_id", "registry_kind", "make_target", "ci_entrypoint", "registry_backed"],
+        "required": [
+          "ci_tier",
+          "registry_id",
+          "registry_kind",
+          "make_target",
+          "ci_entrypoint",
+          "ci_entrypoint_declared",
+          "ci_steps",
+          "workflow_run_text",
+          "workflow_run_text_present",
+          "missing_ci_steps",
+          "registry_backed"
+        ],
         "properties": {
           "ci_tier": { "type": "string", "minLength": 1 },
           "registry_id": { "type": "string" },
           "registry_kind": { "type": "string", "enum": ["", "persistent_lane", "derived_pack"] },
           "make_target": { "type": "string" },
           "ci_entrypoint": { "type": "string" },
+          "ci_entrypoint_declared": { "type": "boolean" },
+          "ci_steps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "workflow_run_text": { "type": "string" },
+          "workflow_run_text_present": { "type": "boolean" },
+          "missing_ci_steps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
           "registry_backed": { "type": "boolean" }
         }
       }

@@ -78,6 +78,13 @@ def _prepare_vault(vault: Path) -> None:
     write_preflight_report(vault, live_report, None)
 
 
+def _remove_raw_inputs(vault: Path) -> None:
+    raw_dir = vault / "raw"
+    for path in raw_dir.iterdir():
+        path.unlink()
+    raw_dir.rmdir()
+
+
 def _write_profile_matrix(vault: Path, profile: str) -> Path:
     report = build_matrix_report(vault, profile=profile, context=fixed_context())
     return write_matrix_report(
@@ -150,6 +157,89 @@ class RawRegistryCrossEnvironmentEvidenceBundleTest(unittest.TestCase):
 
             destination = write_evidence_bundle(vault, report, None)
             self.assertEqual(json.loads(destination.read_text(encoding="utf-8")), report)
+
+    def test_public_mirror_skipped_semantic_compare_warns_without_failed_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            launcher = Path(temp_dir) / "launcher"
+            vault.mkdir()
+            launcher.mkdir()
+            _prepare_vault(vault)
+            _remove_raw_inputs(vault)
+            for profile in DEFAULT_EXPECTED_PROFILES:
+                _write_profile_matrix(vault, profile)
+
+            report = build_evidence_bundle(vault, context=fixed_context())
+            schema = load_schema(REPO_ROOT / RAW_REGISTRY_CROSS_ENVIRONMENT_EVIDENCE_BUNDLE_SCHEMA_PATH)
+            evidence_by_profile = {item["profile"]: item for item in report["evidence"]}
+            warning_codes = {item["code"] for item in report["failure_causes"]}
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "warn")
+            self.assertEqual(report["summary"]["valid_report_count"], 3)
+            self.assertEqual(
+                {item["semantic_compare_status"] for item in evidence_by_profile.values()},
+                {"skipped"},
+            )
+            self.assertIn("semantic_compare_skipped", warning_codes)
+            self.assertIn("report_status_warn", warning_codes)
+
+            completed = invoke_cli_main(
+                evidence_bundle_main,
+                [
+                    "--vault",
+                    str(vault),
+                    "--reports-dir",
+                    "ops/reports",
+                    "--out",
+                    "tmp/raw-registry-cross-environment-evidence-bundle.candidate.json",
+                ],
+                cwd=launcher,
+            )
+
+            self.assertEqual(completed.exit_code, 0, msg=completed.stderr or completed.stdout)
+            stdout_lines = completed.stdout.splitlines()
+            self.assertEqual(stdout_lines[0], "tmp/raw-registry-cross-environment-evidence-bundle.candidate.json")
+            cli_summary = json.loads("\n".join(stdout_lines[1:]))
+            self.assertEqual(cli_summary["status"], "warn")
+            self.assertIn(
+                "semantic_compare_skipped",
+                {item["code"] for item in cli_summary["failure_causes"]},
+            )
+
+    def test_public_mirror_matrix_missing_semantic_check_remains_a_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _prepare_vault(vault)
+            _remove_raw_inputs(vault)
+            for profile in DEFAULT_EXPECTED_PROFILES:
+                _write_profile_matrix(vault, profile)
+            linux_path = (
+                vault
+                / "ops"
+                / "reports"
+                / "raw-registry-cross-environment-matrix-linux-c-utf8.json"
+            )
+            payload = json.loads(linux_path.read_text(encoding="utf-8"))
+            for row in payload["matrix"]:
+                if row.get("profile") == "linux-c-utf8":
+                    row["checks"] = [
+                        check
+                        for check in row.get("checks", [])
+                        if check.get("check") != "stored_live_semantic_match"
+                    ]
+            linux_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            report = build_evidence_bundle(vault, context=fixed_context())
+            evidence_by_profile = {item["profile"]: item for item in report["evidence"]}
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(evidence_by_profile["linux-c-utf8"]["semantic_compare_status"], "missing")
+            self.assertIn(
+                "semantic_compare_missing",
+                {item["code"] for item in report["failure_causes"]},
+            )
 
     def test_missing_and_invalid_reports_are_diagnosed_without_schema_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

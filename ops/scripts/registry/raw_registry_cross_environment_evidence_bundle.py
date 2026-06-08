@@ -103,7 +103,9 @@ def _semantic_compare_status(report: dict[str, Any], profile: str) -> str:
         if not isinstance(row, dict) or row.get("profile") != profile:
             continue
         for check in row.get("checks", []):
-            if isinstance(check, dict) and check.get("check") == "stored_live_semantic_match":
+            if not isinstance(check, dict):
+                continue
+            if check.get("check") == "stored_live_semantic_match":
                 return str(check.get("status", "unknown"))
         return "missing"
     return "missing"
@@ -175,7 +177,10 @@ def _status_diagnostics_for_evidence_item(item: dict[str, Any]) -> list[dict[str
             _diagnostic(
                 "semantic_compare_skipped",
                 path,
-                f"profile {profile} skipped stored/live raw-registry semantic comparison",
+                (
+                    f"profile {profile} skipped stored/live raw-registry semantic comparison; "
+                    "full-vault inputs are required to prove parity"
+                ),
                 severity="warning",
             )
         )
@@ -441,7 +446,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
-    if report["status"] == "fail":
+    if report["status"] != "pass":
         print(json.dumps(_cli_failure_summary(vault, report, destination), ensure_ascii=False, indent=2))
     return 1 if report["status"] == "fail" else 0
 

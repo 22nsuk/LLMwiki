@@ -62,6 +62,13 @@ raw-registry-cross-environment:
     )
 
 
+def _remove_raw_inputs(vault: Path) -> None:
+    raw_dir = vault / "raw"
+    for path in raw_dir.iterdir():
+        path.unlink()
+    raw_dir.rmdir()
+
+
 class RawRegistryCrossEnvironmentMatrixTest(unittest.TestCase):
     def test_cli_writes_relative_out_under_vault(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -124,6 +131,32 @@ class RawRegistryCrossEnvironmentMatrixTest(unittest.TestCase):
             self.assertEqual(rows["locale-utf8-fixture"]["status"], "pass")
             self.assertTrue(report["semantic_compare_fields"])
 
+    def test_matrix_report_warns_when_public_checkout_skips_live_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            _write_ci_workflow(vault)
+            live_report = preflight(vault, context=fixed_context())
+            write_preflight_report(vault, live_report, None)
+            _remove_raw_inputs(vault)
+
+            report = build_matrix_report(
+                vault,
+                profile="linux-c-utf8",
+                context=fixed_context(),
+            )
+            schema = load_schema(vault / RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH)
+            live_row = next(item for item in report["matrix"] if item["profile"] == "linux-c-utf8")
+            checks = {item["check"]: item for item in live_row["checks"]}
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "warn")
+            self.assertEqual(live_row["status"], "skipped")
+            self.assertEqual(checks["live_preflight_available"]["status"], "skipped")
+            self.assertEqual(checks["stored_live_semantic_match"]["status"], "skipped")
+            self.assertIn("full-vault inputs", checks["stored_live_semantic_match"]["detail"])
+
     def test_matrix_report_fails_when_live_full_vault_is_required_but_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -132,9 +165,7 @@ class RawRegistryCrossEnvironmentMatrixTest(unittest.TestCase):
             _write_ci_workflow(vault)
             live_report = preflight(vault, context=fixed_context())
             write_preflight_report(vault, live_report, None)
-            for path in (vault / "raw").iterdir():
-                path.unlink()
-            (vault / "raw").rmdir()
+            _remove_raw_inputs(vault)
 
             report = build_matrix_report(
                 vault,
@@ -145,8 +176,32 @@ class RawRegistryCrossEnvironmentMatrixTest(unittest.TestCase):
 
             self.assertEqual(report["status"], "fail")
             live_row = next(item for item in report["matrix"] if item["profile"] == "linux-c-utf8")
+            checks = {item["check"]: item for item in live_row["checks"]}
             self.assertEqual(live_row["status"], "fail")
-            self.assertEqual(live_row["checks"][-1]["check"], "live_preflight_available")
+            self.assertEqual(checks["live_preflight_available"]["status"], "fail")
+            self.assertEqual(checks["stored_live_semantic_match"]["status"], "fail")
+
+    def test_require_live_fails_when_stored_preflight_report_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            _write_ci_workflow(vault)
+
+            report = build_matrix_report(
+                vault,
+                profile="linux-c-utf8",
+                require_live=True,
+                context=fixed_context(),
+            )
+            schema = load_schema(vault / RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH)
+            live_row = next(item for item in report["matrix"] if item["profile"] == "linux-c-utf8")
+            checks = {item["check"]: item for item in live_row["checks"]}
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(checks["live_preflight_status"]["status"], "pass")
+            self.assertEqual(checks["stored_live_semantic_match"]["status"], "fail")
 
     def test_write_matrix_report_validates_schema(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -46,6 +46,20 @@ FAST_SMOKE_TESTS ?= \
 	tests/test_release_smoke.py::ReleaseSmokeTest::test_run_smoke_commands_captures_returncodes_and_tails \
 	tests/test_release_smoke.py::ReleaseSmokeTest::test_build_report_uses_runtime_context_and_sanitizes_ephemeral_paths \
 	tests/test_release_smoke.py::ReleaseSmokeTest::test_main_exits_with_report_status_and_prints_written_destination
+SCHEMA_STATIC_SMOKE_TESTS ?= \
+	tests/test_ci_tier_lane_bridge.py \
+	tests/test_ci_workflow_static.py \
+	tests/test_makefile_static_gates.py \
+	tests/test_makefile_release_orchestration_static_gates.py \
+	tests/test_makefile_release_evidence_static_gates.py \
+	tests/test_makefile_release_smoke_static_gates.py \
+	tests/test_makefile_test_execution_summary_gates.py \
+	tests/test_makefile_auto_improve_goal_static_gates.py \
+	tests/test_makefile_public_registry_supply_chain_gates.py \
+	tests/test_report_schema_sample_regeneration.py \
+	tests/test_report_schemas.py \
+	tests/test_ruff_strict_preview.py \
+	tests/test_strict_preview_audit.py
 REPORT_CONTRACT_CORE_TESTS ?= \
 	tests/test_test_execution_summary.py \
 	tests/test_makefile_static_gates.py \
@@ -178,11 +192,16 @@ REPORT_CONTRACT_SUMMARY_DESELECT_POLICY ?= ops/policies/report-contract-deselect
 RELEASE_CLOSEOUT_REGRESSION_TESTS ?= tests/test_release_closeout_finality_attestation.py::ReleaseCloseoutFinalityAttestationTests::test_finality_verify_fails_after_tracked_digest_drift tests/test_release_closeout_batch_manifest.py::ReleaseCloseoutBatchManifestTests::test_batch_manifest_finality_points_to_attestation_without_digest_ownership tests/test_source_package_clean_extract.py::SourcePackageCleanExtractTests::test_clean_extract_fails_when_zip_smoke_archive_budget_fails tests/test_release_closeout_summary.py::ReleaseCloseoutSummaryTests::test_release_smoke_archive_budget_failure_blocks_clean_release
 RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
+RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT ?= tmp/release-closeout-finality-verify-ci.json
 
 .PHONY: fast-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess report-schema-samples-check report-schema-samples-regenerate runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: test-schema-static-smoke release-closeout-finality-verify-ci-artifact
 
 fast-smoke:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
+
+test-schema-static-smoke:
+	$(PYTHON) -m pytest -q $(SCHEMA_STATIC_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
 
 test-release-closeout-regression-pack:
 	$(PYTHON) -m pytest $(RELEASE_CLOSEOUT_REGRESSION_TESTS) $(PYTEST_SERIAL_FLAGS)
@@ -190,7 +209,9 @@ test-release-closeout-regression-pack:
 release-closeout-regression-dry-run: tmp-json-clean
 	$(MAKE) test-release-closeout-regression-pack
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",) --fail-on-fail
-	$(PYTHON) -m ops.scripts.release_closeout_finality_attestation --vault "$(VAULT)" --attestation "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --verify
+
+release-closeout-finality-verify-ci-artifact:
+	$(PYTHON) -m ops.scripts.release_closeout_finality_attestation --vault "$(VAULT)" --attestation "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --verify --verify-out "$(RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT)" --no-fail
 
 release-closeout-cost-evidence-ci-artifact:
 	$(PYTHON) -m ops.scripts.release_closeout_fixed_point_cost_trend --vault "$(VAULT)" --previous "$(RELEASE_CLOSEOUT_FIXED_POINT_COST_TREND_OUT)" --out "$(RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT)" --no-fail

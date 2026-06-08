@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,7 @@ from ops.scripts.release_closeout_finality_attestation import (
     FIXED_POINT_REPORT_PATH,
     SELF_CHECK_PATH,
     build_report,
+    main,
     verify_attestation,
     write_report,
 )
@@ -206,6 +209,28 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("tracked_digest_map_current_mismatch", failures)
         self.assertIn("fixed_point_digest_map_current_mismatch", failures)
+
+    def test_verify_no_fail_writes_ci_diagnostic_for_missing_attestation(self) -> None:
+        verify_out = "tmp/release-closeout-finality-verify-ci.json"
+
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            exit_code = main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--verify",
+                    "--verify-out",
+                    verify_out,
+                    "--no-fail",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn('"status": "fail"', stderr.getvalue())
+        payload = json.loads((self.vault / verify_out).read_text(encoding="utf-8"))
+        self.assertEqual(payload["status"], "fail")
+        self.assertIn("attestation_load_status:missing", payload["failures"])
 
 
 if __name__ == "__main__":

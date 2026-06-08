@@ -182,14 +182,25 @@ def _live_checks(
     require_live: bool,
 ) -> list[dict[str, Any]]:
     if live_report is None:
+        status = "fail" if require_live else "skipped"
         return [
             _check(
                 "live_preflight_available",
-                "fail" if require_live else "skipped",
+                status,
                 expected="full local vault with system/wiki/raw",
                 observed="missing full-vault inputs",
                 detail="Live raw registry preflight is skipped outside full-vault checkouts.",
-            )
+            ),
+            _check(
+                "stored_live_semantic_match",
+                status,
+                expected="all semantic compare fields match",
+                observed="missing live preflight",
+                detail=(
+                    "Stored/live raw registry semantic parity requires full-vault "
+                    "inputs; public mirror checkouts record this as skipped."
+                ),
+            ),
         ]
     comparisons = [
         _comparison(field, stored_report, live_report)
@@ -198,6 +209,8 @@ def _live_checks(
     comparison_status = (
         "pass"
         if stored_status == "ok" and all(item["status"] == "match" for item in comparisons)
+        else "fail"
+        if require_live and stored_status != "ok"
         else "skipped"
         if stored_status != "ok"
         else "fail"
