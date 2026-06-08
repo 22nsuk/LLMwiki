@@ -3,7 +3,7 @@
   "title": "Subagent Profile Schema Report",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "profiles", "missing_profiles", "extra_profiles", "incomplete_profiles", "default_mismatch_profiles"],
+  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "profiles", "missing_profiles", "extra_profiles", "incomplete_profiles", "path_name_mismatch_profiles", "duplicate_profile_names", "default_mismatch_profiles", "sandbox_mismatch_profiles"],
   "properties": {
     "$schema": { "type": "string", "const": "ops/schemas/subagent-profile.schema.json" },
     "artifact_kind": { "type": "string", "const": "subagent_profile_schema" },
@@ -13,14 +13,17 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["profile_count", "policy_role_count", "missing_profile_count", "extra_profile_count", "incomplete_profile_count", "default_mismatch_count"],
+      "required": ["profile_count", "policy_role_count", "missing_profile_count", "extra_profile_count", "incomplete_profile_count", "path_name_mismatch_count", "duplicate_profile_name_count", "default_mismatch_count", "sandbox_mismatch_count"],
       "properties": {
         "profile_count": { "type": "integer", "minimum": 0 },
         "policy_role_count": { "type": "integer", "minimum": 0 },
         "missing_profile_count": { "type": "integer", "minimum": 0 },
         "extra_profile_count": { "type": "integer", "minimum": 0 },
         "incomplete_profile_count": { "type": "integer", "minimum": 0 },
-        "default_mismatch_count": { "type": "integer", "minimum": 0 }
+        "path_name_mismatch_count": { "type": "integer", "minimum": 0 },
+        "duplicate_profile_name_count": { "type": "integer", "minimum": 0 },
+        "default_mismatch_count": { "type": "integer", "minimum": 0 },
+        "sandbox_mismatch_count": { "type": "integer", "minimum": 0 }
       }
     },
     "profiles": {
@@ -28,10 +31,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "name", "description_present", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions_present", "policy_role_declared", "default_rung", "default_model", "default_model_reasoning_effort", "default_model_matches_policy", "default_reasoning_effort_matches_policy", "allowed_rungs"],
+        "required": ["path", "path_role", "name", "path_name_matches_role", "description_present", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions_present", "policy_role_declared", "default_rung", "default_model", "default_model_reasoning_effort", "policy_sandbox_mode", "default_model_matches_policy", "default_reasoning_effort_matches_policy", "sandbox_mode_matches_policy", "allowed_rungs"],
         "properties": {
           "path": { "type": "string", "minLength": 1 },
+          "path_role": { "type": "string", "minLength": 1 },
           "name": { "type": "string", "minLength": 1 },
+          "path_name_matches_role": { "type": "boolean" },
           "description_present": { "type": "boolean" },
           "model": { "type": "string" },
           "model_reasoning_effort": { "type": "string" },
@@ -41,8 +46,10 @@
           "default_rung": { "type": "integer", "minimum": 0 },
           "default_model": { "type": "string" },
           "default_model_reasoning_effort": { "type": "string" },
+          "policy_sandbox_mode": { "type": "string" },
           "default_model_matches_policy": { "type": "boolean" },
           "default_reasoning_effort_matches_policy": { "type": "boolean" },
+          "sandbox_mode_matches_policy": { "type": "boolean" },
           "allowed_rungs": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
         }
       }
@@ -50,6 +57,9 @@
     "missing_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "extra_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "incomplete_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-    "default_mismatch_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    "path_name_mismatch_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "duplicate_profile_names": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "default_mismatch_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "sandbox_mismatch_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
   }
 }

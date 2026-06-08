@@ -7,7 +7,7 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.subagent_routing_runtime import print_report, run_selector
+    from ops.scripts.core.subagent_routing_runtime import print_report, run_selector
 else:
     from .subagent_routing_runtime import print_report, run_selector
 

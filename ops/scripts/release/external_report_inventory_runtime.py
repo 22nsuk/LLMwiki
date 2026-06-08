@@ -172,6 +172,14 @@ def matched_actions(text: str) -> list[str]:
     return matches
 
 
+def unmatched_recommendation_count(text: str) -> int:
+    return sum(
+        1
+        for line in text.splitlines()
+        if re.search(r"\bP[0-2]\b", line) and not matched_actions(line)
+    )
+
+
 def coverage_markers(path: Path, text: str) -> list[str]:
     haystack = f"{path.name}\n{text}"
     return [

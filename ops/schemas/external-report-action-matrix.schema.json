@@ -238,9 +238,16 @@
       "required": [
         "path",
         "report_type",
+        "content_sha256",
+        "coverage_markers",
         "priority_mentions",
+        "unmatched_recommendation_count",
         "matched_action_ids",
-        "matched_action_count"
+        "matched_action_count",
+        "unresolved_action_ids",
+        "unresolved_action_count",
+        "operator_only_rationale",
+        "archive_decision_code"
       ],
       "properties": {
         "path": { "type": "string", "minLength": 1 },
@@ -248,12 +255,45 @@
           "type": "string",
           "enum": ["narrative_report", "reference_manifest", "binary_report"]
         },
+        "content_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "coverage_markers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
         "priority_mentions": { "$ref": "#/$defs/priority_counts" },
+        "unmatched_recommendation_count": { "type": "integer", "minimum": 0 },
         "matched_action_ids": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
-        "matched_action_count": { "type": "integer", "minimum": 0 }
+        "matched_action_count": { "type": "integer", "minimum": 0 },
+        "unresolved_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unresolved_action_count": { "type": "integer", "minimum": 0 },
+        "operator_only_rationale": {
+          "type": "string",
+          "enum": [
+            "",
+            "binary_report_requires_operator_review",
+            "reference_manifest_lifecycle_evidence",
+            "unreadable_narrative_report"
+          ]
+        },
+        "archive_decision_code": {
+          "type": "string",
+          "enum": [
+            "all_structured_actions_implemented",
+            "binary_report_requires_operator_review",
+            "reference_manifest_lifecycle_evidence",
+            "unmatched_recommendations_require_operator_review",
+            "unreadable_narrative_report",
+            "unresolved_actions_keep_report_active"
+          ]
+        }
       }
     },
     "action_item": {

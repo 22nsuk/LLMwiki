@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import tempfile
 import unittest
@@ -22,6 +23,10 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 4, 23, 12, 0, tzinfo=dt.UTC),
     )
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 class GeneratedArtifactIndexTests(unittest.TestCase):
@@ -176,12 +181,12 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 for item in missing_current_basis["canonical_reports"]
                 if item["path"] == "external-reports/dated_unique_old_report_20260420.md"
             )
-            current_external.pop("matched_action_ids")
+            current_external.pop("content_sha256")
             current_errors = validate_with_schema(missing_current_basis, schema)
             self.assertTrue(
                 any(
                     "canonical_reports" in error
-                    and "matched_action_ids" in error
+                    and "content_sha256" in error
                     for error in current_errors
                 ),
                 current_errors,
@@ -193,12 +198,12 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 for item in missing_archive_basis["archive_candidates"]
                 if item["path"] == "external-reports/undated_covered_old_report.md"
             )
-            archived_external.pop("unresolved_action_count")
+            archived_external.pop("archive_decision_code")
             archive_errors = validate_with_schema(missing_archive_basis, schema)
             self.assertTrue(
                 any(
                     "archive_candidates" in error
-                    and "unresolved_action_count" in error
+                    and "archive_decision_code" in error
                     for error in archive_errors
                 ),
                 archive_errors,
@@ -256,6 +261,18 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 for item in report["canonical_reports"]
                 if item["path"] == "external-reports/dated_unique_old_report_20260420.md"
             )
+            self.assertEqual(unique_external["report_type"], "narrative_report")
+            self.assertEqual(
+                unique_external["content_sha256"],
+                _sha256_file(vault / "external-reports" / "dated_unique_old_report_20260420.md"),
+            )
+            self.assertEqual(unique_external["matched_action_count"], 1)
+            self.assertEqual(unique_external["unmatched_recommendation_count"], 0)
+            self.assertEqual(unique_external["operator_only_rationale"], "")
+            self.assertEqual(
+                unique_external["archive_decision_code"],
+                "unresolved_actions_keep_report_active",
+            )
             self.assertEqual(unique_external["unresolved_action_ids"], ["function_budget_proposal_adapter"])
             self.assertEqual(unique_external["unresolved_action_count"], 1)
             self.assertIn(
@@ -266,6 +283,10 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 item
                 for item in report["archive_candidates"]
                 if item["path"] == "external-reports/undated_covered_old_report.md"
+            )
+            self.assertEqual(
+                archived_external["archive_decision_code"],
+                "unresolved_actions_covered_by_broader_report",
             )
             self.assertEqual(
                 archived_external["superseded_by"],

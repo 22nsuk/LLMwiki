@@ -79,8 +79,10 @@ repo-shared defaults는 아래 rung만 사용한다.
 5. platform named role 실행면처럼 role 이름이 model/reasoning을 고정하는
    surface에서는 selector가 그 값을 override한다고 가정하지 않는다. 선택된
    rung과 platform fixed effort가 다르면 ladder-compliant manual dispatch가
-   아니므로, controllable 실행면에 profile instruction을 전달하거나 fixed
-   effort가 선택 rung과 맞는 role/surface를 고른다.
+   아니므로, report의 `manual_dispatch.fixed_reasoning_surface`를 확인해
+   fixed 값이 `required_model`과 `required_model_reasoning_effort`에 맞는
+   role/surface를 고르거나 `mismatch_action`에 따라 controllable 실행면에
+   profile instruction을 전달한다.
 6. `.toml`은 role intent와 fallback instruction surface다. selector가 실행 가능한 상황에서 `.toml` 기본 effort만으로 수동 dispatch를 끝내지 않는다.
 
 ## Profiles

@@ -38,6 +38,7 @@ def _profile_entry(vault: Path, path: Path, policy: dict[str, Any]) -> dict[str,
     payload = _load_toml(path)
     policy_roles = policy["subagent_routing_policy"]["roles"]
     rel_path = path.relative_to(vault).as_posix()
+    path_role = path.stem
     name = str(payload.get("name", "")).strip()
     role_policy = policy_roles.get(name, {}) if name else {}
     default_rung = int(role_policy.get("default_rung", 0)) if role_policy else 0
@@ -47,21 +48,27 @@ def _profile_entry(vault: Path, path: Path, policy: dict[str, Any]) -> dict[str,
         default_model, default_reasoning_effort = "", ""
     profile_model = str(payload.get("model", "")).strip()
     profile_reasoning_effort = str(payload.get("model_reasoning_effort", "")).strip()
+    profile_sandbox_mode = str(payload.get("sandbox_mode", "")).strip()
+    policy_sandbox_mode = str(role_policy.get("sandbox_mode", "")) if role_policy else ""
     return {
         "path": rel_path,
+        "path_role": path_role,
         "name": name,
+        "path_name_matches_role": name == path_role,
         "description_present": bool(str(payload.get("description", "")).strip()),
         "model": profile_model,
         "model_reasoning_effort": profile_reasoning_effort,
-        "sandbox_mode": str(payload.get("sandbox_mode", "")).strip(),
+        "sandbox_mode": profile_sandbox_mode,
         "developer_instructions_present": bool(str(payload.get("developer_instructions", "")).strip()),
         "policy_role_declared": bool(role_policy),
         "default_rung": default_rung,
         "default_model": default_model,
         "default_model_reasoning_effort": default_reasoning_effort,
+        "policy_sandbox_mode": policy_sandbox_mode,
         "default_model_matches_policy": bool(role_policy) and profile_model == default_model,
         "default_reasoning_effort_matches_policy": bool(role_policy)
         and profile_reasoning_effort == default_reasoning_effort,
+        "sandbox_mode_matches_policy": bool(role_policy) and profile_sandbox_mode == policy_sandbox_mode,
         "allowed_rungs": list(role_policy.get("allowed_rungs", [])) if role_policy else [],
     }
 
@@ -89,6 +96,16 @@ def build_report(
         for entry in profiles
         if not entry["description_present"] or not entry["developer_instructions_present"]
     ]
+    path_name_mismatch_profiles = [
+        entry["path"] for entry in profiles if not entry["path_name_matches_role"]
+    ]
+    profile_name_counts = {
+        name: sum(1 for entry in profiles if entry["name"] == name)
+        for name in profile_roles
+    }
+    duplicate_profile_names = sorted(
+        name for name, count in profile_name_counts.items() if count > 1
+    )
     default_mismatch_profiles = [
         entry["path"]
         for entry in profiles
@@ -98,9 +115,20 @@ def build_report(
             or not entry["default_reasoning_effort_matches_policy"]
         )
     ]
+    sandbox_mismatch_profiles = [
+        entry["path"]
+        for entry in profiles
+        if entry["policy_role_declared"] and not entry["sandbox_mode_matches_policy"]
+    ]
     status = (
         "pass"
-        if not missing_profiles and not extra_profiles and not incomplete_profiles and not default_mismatch_profiles
+        if not missing_profiles
+        and not extra_profiles
+        and not incomplete_profiles
+        and not path_name_mismatch_profiles
+        and not duplicate_profile_names
+        and not default_mismatch_profiles
+        and not sandbox_mismatch_profiles
         else "fail"
     )
     return {
@@ -115,13 +143,19 @@ def build_report(
             "missing_profile_count": len(missing_profiles),
             "extra_profile_count": len(extra_profiles),
             "incomplete_profile_count": len(incomplete_profiles),
+            "path_name_mismatch_count": len(path_name_mismatch_profiles),
+            "duplicate_profile_name_count": len(duplicate_profile_names),
             "default_mismatch_count": len(default_mismatch_profiles),
+            "sandbox_mismatch_count": len(sandbox_mismatch_profiles),
         },
         "profiles": profiles,
         "missing_profiles": missing_profiles,
         "extra_profiles": extra_profiles,
         "incomplete_profiles": incomplete_profiles,
+        "path_name_mismatch_profiles": path_name_mismatch_profiles,
+        "duplicate_profile_names": duplicate_profile_names,
         "default_mismatch_profiles": default_mismatch_profiles,
+        "sandbox_mismatch_profiles": sandbox_mismatch_profiles,
     }
 
 

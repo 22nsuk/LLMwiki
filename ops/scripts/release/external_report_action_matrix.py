@@ -187,6 +187,42 @@ def _report_coverage(vault: Path, paths: list[Path]) -> list[dict[str, Any]]:
     return [report_coverage_item(vault, path) for path in paths]
 
 
+def _coverage_with_action_basis(
+    coverage: list[dict[str, Any]],
+    actions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    statuses = {
+        str(action["action_id"]): str(action["current_status"])
+        for action in actions
+    }
+    enriched: list[dict[str, Any]] = []
+    for item in coverage:
+        unresolved = sorted(
+            str(action_id)
+            for action_id in item["matched_action_ids"]
+            if statuses.get(str(action_id)) != "implemented"
+        )
+        operator_only_rationale = str(item.get("operator_only_rationale", "")).strip()
+        unmatched_count = int(item.get("unmatched_recommendation_count") or 0)
+        if operator_only_rationale:
+            archive_decision_code = operator_only_rationale
+        elif unmatched_count > 0:
+            archive_decision_code = "unmatched_recommendations_require_operator_review"
+        elif unresolved:
+            archive_decision_code = "unresolved_actions_keep_report_active"
+        else:
+            archive_decision_code = "all_structured_actions_implemented"
+        enriched.append(
+            {
+                **item,
+                "unresolved_action_ids": unresolved,
+                "unresolved_action_count": len(unresolved),
+                "archive_decision_code": archive_decision_code,
+            }
+        )
+    return enriched
+
+
 def _summary(
     *,
     coverage: list[dict[str, Any]],
@@ -262,6 +298,7 @@ def build_report(
     report_paths = active_report_paths(resolved_vault)
     coverage = _report_coverage(resolved_vault, report_paths)
     actions = _action_items(resolved_vault, coverage)
+    coverage = _coverage_with_action_basis(coverage, actions)
     manifest_alignment = reference_manifest_alignment(resolved_vault)
     canonical_artifact_freshness_state_record = canonical_artifact_freshness_state(resolved_vault)
     summary = _summary(

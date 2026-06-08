@@ -14,9 +14,11 @@ from ops.scripts.external_report_action_matrix import (
     write_report,
 )
 from ops.scripts.external_report_lifecycle_runtime import (
+    action_status_reason_details,
     action_statuses,
     archive_reconciliation_observation_inventory,
     lifecycle_decision,
+    report_coverage_item,
     report_lifecycle_profiles,
 )
 from ops.scripts.gate_effect_vocabulary import strongest_gate_effect
@@ -86,6 +88,31 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "ops/reports/task-improvement-observations/task-archive-audit/improvement-observations.json",
             {"observations": observations},
         )
+
+    def _write_static_github_security_surfaces(self) -> None:
+        pinned_sha = "a" * 40
+        for rel_path, text in {
+            ".github/dependabot.yml": "version: 2\nupdates: []\n",
+            ".github/workflows/ci.yml": (
+                "concurrency: ci\njobs:\n  test:\n    steps:\n"
+                f"      - uses: actions/checkout@{pinned_sha}\n"
+            ),
+            ".github/workflows/release.yml": (
+                "concurrency: release\njobs:\n  release:\n    steps:\n"
+                f"      - uses: actions/attest-build-provenance@{pinned_sha}\n"
+            ),
+            ".github/workflows/codeql.yml": (
+                "concurrency: codeql\njobs:\n  analyze:\n    steps:\n"
+                f"      - uses: github/codeql-action/init@{pinned_sha}\n"
+            ),
+            ".github/workflows/dependency-review.yml": (
+                "concurrency: dependency-review\njobs:\n  review:\n    steps:\n"
+                f"      - uses: actions/dependency-review-action@{pinned_sha}\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
 
     def _artifact_freshness_payload(
         self,
@@ -407,7 +434,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             previous_errors,
         )
 
-    def test_generated_artifact_policy_status_is_not_self_blocked_by_archive_candidates(self) -> None:
+    def test_generated_artifact_policy_status_requires_pass_report_status(self) -> None:
         for rel_path, text in {
             "ops/scripts/core/generated_artifact_index.py": (
                 "def tracking_policy():\n"
@@ -433,6 +460,31 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             },
         )
 
+        self.assertEqual(
+            action_statuses(self.vault)["generated_artifact_tracking_policy"],
+            "partially_automated",
+        )
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {
+                "artifact_kind": "generated_artifact_index_report",
+                "producer": "ops.scripts.generated_artifact_index",
+                "status": "fail",
+            },
+        )
+        self.assertEqual(
+            action_statuses(self.vault)["generated_artifact_tracking_policy"],
+            "partially_automated",
+        )
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {
+                "artifact_kind": "generated_artifact_index_report",
+                "producer": "ops.scripts.generated_artifact_index",
+                "status": "pass",
+                "summary": {"archive_candidate_count": 0},
+            },
+        )
         self.assertEqual(
             action_statuses(self.vault)["generated_artifact_tracking_policy"],
             "implemented",
@@ -489,6 +541,28 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertIn("external-reports/maintenance.md", paths)
         self.assertNotIn("external-reports/report-reference-manifest.json", paths)
         self.assertFalse(any("/archive/" in path for path in paths))
+        coverage = {item["path"]: item for item in report["active_report_coverage"]}
+        release_coverage = coverage["external-reports/release.md"]
+        self.assertEqual(
+            release_coverage["content_sha256"],
+            _sha256_file(self.external / "release.md"),
+        )
+        self.assertEqual(
+            release_coverage["unresolved_action_count"],
+            len(release_coverage["unresolved_action_ids"]),
+        )
+        self.assertIn(
+            "source_package_distribution_binding",
+            release_coverage["unresolved_action_ids"],
+        )
+        self.assertEqual(release_coverage["unmatched_recommendation_count"], 0)
+        self.assertEqual(
+            release_coverage["archive_decision_code"],
+            "unresolved_actions_keep_report_active",
+        )
+        raw_release_coverage = report_coverage_item(self.vault, self.external / "release.md")
+        self.assertNotIn("unresolved_action_ids", raw_release_coverage)
+        self.assertNotIn("unresolved_action_count", raw_release_coverage)
         actions = {item["action_id"]: item for item in report["action_items"]}
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(actions["outcome_provenance_gate_policy"]["current_status"], "implemented")
@@ -600,6 +674,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "archived_report_action_trace_gap",
             actions["active_report_manifest_freshness"]["status_reason_ids"],
         )
+        self.assertNotIn(
+            "archived_report_action_trace_gap",
+            actions["generated_artifact_tracking_policy"]["status_reason_ids"],
+        )
         self.assertEqual(
             actions["function_budget_proposal_adapter"]["current_status"],
             "partially_automated",
@@ -703,14 +781,29 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
 
     def test_broad_action_observations_need_resolution_evidence_to_close(self) -> None:
+        self._write_static_github_security_surfaces()
         for rel_path, text in {
             ".github/CODEOWNERS": "* @maintainers\n",
-            ".github/pull_request_template.md": "## Review\n",
-            "CONTRIBUTING.md": "# Contributing\n\nCommit taxonomy and collaboration governance.\n",
+            ".github/pull_request_template.md": (
+                "## Review\n- [ ] Reviewer confirms validation and boundary impact.\n"
+            ),
+            "CONTRIBUTING.md": (
+                "# Contributing\n\n"
+                "## Commit governance\n"
+                "Contributors must describe commit taxonomy and governance impact.\n"
+            ),
+            ".github/release-governance.yml": "required_checks:\n  - test\n",
         }.items():
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
+        self._write_json(
+            "ops/reports/github-governance-live-drift.json",
+            {
+                "artifact_kind": "github_governance_live_drift_verification",
+                "status": "attention",
+            },
+        )
         self._write_release_verification_reports()
         self._write_task_observations(
             [
@@ -732,13 +825,34 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         }
         for action_id, reason_id in {
             "source_package_distribution_binding": "review_bundle_full_vault_hygiene_gap",
-            "collaboration_governance_surface": "github_governance_live_drift_gap",
+            "github_governance_live_drift_verification": "github_governance_live_drift_gap",
         }.items():
             self.assertEqual(
                 missing_evidence_actions[action_id]["current_status"],
                 "partially_automated",
             )
             self.assertIn(reason_id, missing_evidence_actions[action_id]["status_reason_ids"])
+        for static_action_id in (
+            "collaboration_governance_surface",
+            "github_native_security_automation",
+        ):
+            self.assertEqual(
+                missing_evidence_actions[static_action_id]["current_status"],
+                "implemented",
+                static_action_id,
+            )
+            self.assertNotIn(
+                "github_governance_live_drift_gap",
+                missing_evidence_actions[static_action_id]["status_reason_ids"],
+            )
+        live_detail = {
+            item["reason_id"]: item
+            for item in missing_evidence_actions[
+                "github_governance_live_drift_verification"
+            ]["status_reason_details"]
+        }["github_governance_live_drift_gap"]
+        self.assertEqual(live_detail["owning_stage"], "github_live_governance_verification")
+        self.assertEqual(live_detail["blocking_scope"], "github_live_governance")
 
         self._write_task_observations(
             [
@@ -780,6 +894,22 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "github_governance_live_drift_gap",
             closed_actions["collaboration_governance_surface"]["status_reason_ids"],
         )
+        self.assertEqual(
+            closed_actions["github_native_security_automation"]["current_status"],
+            "implemented",
+        )
+        self.assertEqual(
+            closed_actions["github_governance_live_drift_verification"]["current_status"],
+            "partially_automated",
+        )
+        self.assertNotIn(
+            "github_governance_live_drift_gap",
+            closed_actions["github_governance_live_drift_verification"]["status_reason_ids"],
+        )
+        self.assertIn(
+            "github_live_governance_operator_evidence_not_pass",
+            closed_actions["github_governance_live_drift_verification"]["status_reason_ids"],
+        )
 
     def test_broad_actions_do_not_complete_from_surface_only_evidence(self) -> None:
         self._write_json(
@@ -810,6 +940,8 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             },
         )
         for rel_path, text in {
+            "tests/test_function_budget_refactor_proposals.py": "def test_placeholder(): pass\n",
+            "ops/scripts/eval/function_budget_refactor_proposals.py": "def main(): pass\n",
             "mk/supply_chain.mk": (
                 "supply-chain-check:\n\tpython -m ops.scripts.supply_chain\n"
                 "sigstore-bundle:\n\tpython -m ops.scripts.sigstore\n"
@@ -825,33 +957,275 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
+        self._write_task_observations(
+            [{"observation_id": "broad_action_completion_threshold_gap", "status": "open"}]
+        )
 
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
+        maintainability_action = actions["maintainability_hotspot_refactor_backlog"]
         self.assertEqual(
-            actions["maintainability_hotspot_refactor_backlog"]["current_status"],
+            maintainability_action["current_status"],
             "partially_automated",
         )
         self.assertIn(
             "maintainability_hotspot_owner_backlog_not_absorbed",
-            actions["maintainability_hotspot_refactor_backlog"]["status_reason_ids"],
+            maintainability_action["status_reason_ids"],
         )
+        self.assertNotIn(
+            "broad_action_completion_threshold_gap",
+            maintainability_action["status_reason_ids"],
+        )
+        maintainability_details = {
+            detail["reason_id"]: detail for detail in maintainability_action["status_reason_details"]
+        }
         self.assertEqual(
-            actions["supply_chain_external_verification"]["current_status"],
+            maintainability_details[
+                "maintainability_hotspot_owner_backlog_not_absorbed"
+            ]["blocking_scope"],
+            "maintainability_owner_backlog",
+        )
+        self.assertIn(
+            "maintainability_proposal_absorption",
+            maintainability_action["blocking_scopes"],
+        )
+        self.assertNotIn("action_matrix", maintainability_action["blocking_scopes"])
+        self.assertEqual(
+            maintainability_action["recommended_target"],
+            "function-budget-refactor-proposals",
+        )
+        supply_chain_action = actions["supply_chain_external_verification"]
+        self.assertEqual(
+            supply_chain_action["current_status"],
             "partially_automated",
         )
         self.assertIn(
             "supply_chain_sigstore_local_integrity_only",
-            actions["supply_chain_external_verification"]["status_reason_ids"],
+            supply_chain_action["status_reason_ids"],
         )
+        self.assertNotIn(
+            "broad_action_completion_threshold_gap",
+            supply_chain_action["status_reason_ids"],
+        )
+        supply_chain_details = {
+            detail["reason_id"]: detail for detail in supply_chain_action["status_reason_details"]
+        }
+        self.assertEqual(
+            supply_chain_details["supply_chain_sigstore_local_integrity_only"]["blocking_scope"],
+            "supply_chain_external_verification",
+        )
+        self.assertNotIn("action_matrix", supply_chain_action["blocking_scopes"])
+        self.assertEqual(supply_chain_action["recommended_target"], "supply-chain-check")
         self.assertEqual(
             actions["collaboration_governance_surface"]["current_status"],
             "partially_automated",
         )
+        self.assertNotIn(
+            "broad_action_completion_threshold_gap",
+            actions["collaboration_governance_surface"]["status_reason_ids"],
+        )
         self.assertIn(
             "collaboration_governance_codeowners_review_owner_missing",
             actions["collaboration_governance_surface"]["status_reason_ids"],
+        )
+
+    def test_maintainability_and_supply_chain_reason_details_require_exact_mapping(
+        self,
+    ) -> None:
+        maintainability_reasons = [
+            "maintainability_hotspot_report_missing",
+            "maintainability_hotspot_report_kind_mismatch",
+            "maintainability_hotspot_report_producer_mismatch",
+            "maintainability_hotspot_report_not_pass",
+            "maintainability_hotspot_candidates_remain",
+            "maintainability_hotspot_proposals_not_absorbed",
+            "maintainability_hotspot_owner_backlog_not_absorbed",
+            "maintainability_hotspot_large_main_remains",
+        ]
+        supply_chain_reasons = [
+            "supply_chain_gate_not_pass",
+            "supply_chain_sbom_readiness_not_pass",
+            "supply_chain_slsa_predicate_missing",
+            "supply_chain_sigstore_local_integrity_only",
+            "supply_chain_sigstore_external_bundle_not_verified",
+            "supply_chain_sigstore_checks_missing",
+            "supply_chain_external_bundle_rule_missing",
+            "supply_chain_release_attestation_missing",
+            "supply_chain_dependency_review_missing",
+            "supply_chain_sigstore_bundle_target_missing",
+        ]
+
+        details = action_status_reason_details(
+            [*maintainability_reasons, *supply_chain_reasons],
+            fallback_target="external-report-action-matrix",
+        )
+
+        detail_by_reason = {detail["reason_id"]: detail for detail in details}
+        for reason_id in maintainability_reasons:
+            self.assertIn(reason_id, detail_by_reason)
+            self.assertNotEqual(
+                detail_by_reason[reason_id]["blocking_scope"],
+                "maintainability_hotspot",
+            )
+            self.assertNotEqual(detail_by_reason[reason_id]["blocking_scope"], "action_matrix")
+            self.assertEqual(
+                detail_by_reason[reason_id]["recommended_targets"],
+                ["function-budget-refactor-proposals"],
+            )
+        for reason_id in supply_chain_reasons:
+            self.assertIn(reason_id, detail_by_reason)
+            self.assertEqual(
+                detail_by_reason[reason_id]["blocking_scope"],
+                "supply_chain_external_verification",
+            )
+            self.assertNotEqual(detail_by_reason[reason_id]["blocking_scope"], "supply_chain")
+            self.assertEqual(
+                detail_by_reason[reason_id]["recommended_targets"],
+                ["supply-chain-check"],
+            )
+
+        unmapped_details = action_status_reason_details(
+            [
+                "maintainability_hotspot_unmapped_future_reason",
+                "supply_chain_unmapped_future_reason",
+            ],
+            fallback_target="external-report-action-matrix",
+        )
+
+        self.assertEqual(
+            [detail["blocking_scope"] for detail in unmapped_details],
+            ["action_matrix", "action_matrix"],
+        )
+
+    def test_collaboration_governance_surface_requires_real_static_surfaces(self) -> None:
+        for rel_path, text in {
+            ".github/CODEOWNERS": "# * @maintainers\n",
+            ".github/pull_request_template.md": (
+                "<!-- ## Review\n- [ ] reviewer confirms validation -->\n"
+                "## Summary\n- placeholder\n"
+            ),
+            "CONTRIBUTING.md": (
+                "# Contributing\n\n"
+                "<!-- commit governance policy -->\n"
+                "TODO: commit governance policy.\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+        placeholder_report = build_report(self.vault, context=fixed_context())
+
+        placeholder_action = {
+            item["action_id"]: item for item in placeholder_report["action_items"]
+        }["collaboration_governance_surface"]
+        self.assertEqual(placeholder_action["current_status"], "partially_automated")
+        self.assertIn(
+            "collaboration_governance_codeowners_review_owner_missing",
+            placeholder_action["status_reason_ids"],
+        )
+        self.assertIn(
+            "collaboration_governance_pr_template_review_missing",
+            placeholder_action["status_reason_ids"],
+        )
+        self.assertIn(
+            "collaboration_governance_contributing_policy_missing",
+            placeholder_action["status_reason_ids"],
+        )
+
+        for rel_path, text in {
+            ".github/CODEOWNERS": "* @maintainers\n",
+            ".github/pull_request_template.md": (
+                "## Preview\n- [ ] Reviewer confirms validation and boundary impact.\n"
+            ),
+            "CONTRIBUTING.md": (
+                "# Contributing\n\n"
+                "## Commit governance\n"
+                "Contributors must describe commit taxonomy and governance impact.\n"
+            ),
+        }.items():
+            (self.vault / rel_path).write_text(text, encoding="utf-8")
+
+        preview_report = build_report(self.vault, context=fixed_context())
+
+        preview_action = {
+            item["action_id"]: item for item in preview_report["action_items"]
+        }["collaboration_governance_surface"]
+        self.assertEqual(preview_action["current_status"], "partially_automated")
+        self.assertEqual(
+            preview_action["status_reason_ids"],
+            ["collaboration_governance_pr_template_review_missing"],
+        )
+
+        for rel_path, text in {
+            ".github/CODEOWNERS": "* @maintainers\n",
+            ".github/pull_request_template.md": (
+                "## Review\n- [ ] Reviewer confirms validation and boundary impact.\n"
+            ),
+            "CONTRIBUTING.md": (
+                "# Contributing\n\n"
+                "## Commit governance\n"
+                "Contributors must describe commit taxonomy and governance impact.\n"
+            ),
+        }.items():
+            (self.vault / rel_path).write_text(text, encoding="utf-8")
+
+        real_report = build_report(self.vault, context=fixed_context())
+
+        real_action = {
+            item["action_id"]: item for item in real_report["action_items"]
+        }["collaboration_governance_surface"]
+        self.assertEqual(real_action["current_status"], "implemented")
+        self.assertEqual(real_action["status_reason_ids"], [])
+
+    def test_supply_chain_external_verification_requires_real_workflow_uses_entries(self) -> None:
+        self._write_json("ops/reports/supply-chain-gate-report.json", {"status": "pass"})
+        self._write_json("ops/reports/sbom-readiness-gate-report.json", {"status": "pass"})
+        self._write_json(
+            "ops/reports/in-toto-statement.json",
+            {"predicateType": "https://slsa.dev/provenance/v1"},
+        )
+        self._write_json(
+            "ops/reports/sigstore-bundle-verification.json",
+            {
+                "status": "verified-external-bundle",
+                "verification_checks": [{"rule": "external_bundle_observed"}],
+            },
+        )
+        for rel_path, text in {
+            "mk/supply_chain.mk": (
+                "supply-chain-check:\n\tpython -m ops.scripts.supply_chain\n"
+                "sigstore-bundle:\n\tpython -m ops.scripts.sigstore\n"
+            ),
+            ".github/workflows/release.yml": (
+                "# uses: actions/attest-build-provenance@v2\n"
+            ),
+            ".github/workflows/dependency-review.yml": (
+                "# uses: actions/dependency-review-action@v4\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+        report = build_report(self.vault, context=fixed_context())
+
+        action = {
+            item["action_id"]: item for item in report["action_items"]
+        }["supply_chain_external_verification"]
+        self.assertEqual(action["current_status"], "partially_automated")
+        self.assertIn(
+            "supply_chain_release_attestation_missing",
+            action["status_reason_ids"],
+        )
+        self.assertIn(
+            "supply_chain_dependency_review_missing",
+            action["status_reason_ids"],
+        )
+        self.assertNotIn(
+            "supply_chain_sigstore_external_bundle_not_verified",
+            action["status_reason_ids"],
         )
 
     def test_source_package_binding_requires_reference_manifest_distribution_binding(self) -> None:
@@ -1011,8 +1385,23 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         coverage = report["active_report_coverage"][0]
         self.assertEqual(coverage["report_type"], "binary_report")
         self.assertEqual(
+            coverage["content_sha256"],
+            _sha256_file(self.external / "review.pdf"),
+        )
+        self.assertEqual(
             coverage["matched_action_ids"],
             ["operator_only_external_report_binary"],
+        )
+        self.assertEqual(coverage["unmatched_recommendation_count"], 0)
+        self.assertEqual(coverage["unresolved_action_ids"], ["operator_only_external_report_binary"])
+        self.assertEqual(coverage["unresolved_action_count"], 1)
+        self.assertEqual(
+            coverage["operator_only_rationale"],
+            "binary_report_requires_operator_review",
+        )
+        self.assertEqual(
+            coverage["archive_decision_code"],
+            "binary_report_requires_operator_review",
         )
         actions = {item["action_id"]: item for item in report["action_items"]}
         binary_action = actions["operator_only_external_report_binary"]

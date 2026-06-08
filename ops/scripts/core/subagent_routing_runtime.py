@@ -34,7 +34,7 @@ from .schema_constants_runtime import SUBAGENT_ROUTING_SCHEMA_PATH
 
 SUBAGENT_ROUTING_SCHEMA = SUBAGENT_ROUTING_SCHEMA_PATH
 PRODUCER = "ops.scripts.subagent_routing_runtime"
-SOURCE_COMMAND = "python -m ops.scripts.select_subagent_rung"
+SOURCE_COMMAND = "python -m ops.scripts.core.select_subagent_rung"
 ARTIFACT_KIND = "subagent_routing_report"
 
 
@@ -328,6 +328,8 @@ def build_manual_dispatch_contract(
     profile_path: str,
     routing_decision: dict,
 ) -> dict:
+    selected_model = routing_decision["model"]
+    selected_reasoning_effort = routing_decision["reasoning_effort"]
     return {
         "contract": "manual_subagent_dispatch_v1",
         "source": "subagent_routing_selector",
@@ -335,9 +337,18 @@ def build_manual_dispatch_contract(
         "selected_rung": routing_decision["selected_rung"],
         "launch_parameters": {
             "profile_path": profile_path,
-            "model": routing_decision["model"],
-            "model_reasoning_effort": routing_decision["reasoning_effort"],
+            "model": selected_model,
+            "model_reasoning_effort": selected_reasoning_effort,
             "sandbox_mode": routing_decision["sandbox_mode"],
+        },
+        "fixed_reasoning_surface": {
+            "compatibility_rule": "exact_model_and_reasoning_effort_match_required",
+            "required_model": selected_model,
+            "required_model_reasoning_effort": selected_reasoning_effort,
+            "required_selected_rung": routing_decision["selected_rung"],
+            "allowed_when": "fixed_values_match_required_model_and_reasoning_effort",
+            "mismatch_action": "use_controllable_launch_parameters",
+            "controllable_launch_surface": "controllable_launch_parameters",
         },
         "dispatch_surfaces": {
             "ladder_compliant_surface": "controllable_launch_parameters",
