@@ -135,12 +135,6 @@ ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
         "external_report_lifecycle",
         "active_report_manifest_freshness",
     },
-    "broad_action_completion_threshold_gap": {
-        "function_budget_proposal_adapter",
-        "github_native_security_automation",
-        "release_authority_inventory",
-        "repository_surface_entrypoint_documentation",
-    },
     "status_surface_currentness_visibility_gap": {
         "artifact_freshness_performance_observability",
         "operator_entrypoint_index",
@@ -168,11 +162,6 @@ ARCHIVE_RECONCILIATION_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         "external_report_reconciliation",
         "external_report_lifecycle",
         ["external-report-lifecycle-refresh", "external-report-action-matrix"],
-    ),
-    "broad_action_completion_threshold_gap": (
-        "action_absorption_reconciliation",
-        "action_matrix",
-        ["external-report-action-matrix"],
     ),
     "status_surface_currentness_visibility_gap": (
         "operator_status_currentness",
@@ -2546,7 +2535,7 @@ def _unresolved_action_ids(profile: dict[str, Any], statuses: dict[str, str]) ->
     }
 
 
-def _decision_action_basis(profile: dict[str, Any], statuses: dict[str, str]) -> dict[str, Any]:
+def coverage_action_basis(profile: dict[str, Any], statuses: dict[str, str]) -> dict[str, Any]:
     unresolved = sorted(_unresolved_action_ids(profile, statuses))
     return {
         "report_type": str(profile.get("report_type", "")),
@@ -2558,8 +2547,40 @@ def _decision_action_basis(profile: dict[str, Any], statuses: dict[str, str]) ->
         "unmatched_recommendation_count": int(
             profile.get("unmatched_recommendation_count") or 0
         ),
-        "operator_only_rationale": str(profile.get("operator_only_rationale", "")),
+        "operator_only_rationale": str(profile.get("operator_only_rationale", "")).strip(),
     }
+
+
+def coverage_archive_decision_code(
+    action_basis: dict[str, Any],
+    *,
+    implemented_code: str = "all_structured_actions_implemented",
+) -> str:
+    if action_basis["operator_only_rationale"]:
+        return str(action_basis["operator_only_rationale"])
+    if int(action_basis["unmatched_recommendation_count"]) > 0:
+        return "unmatched_recommendations_require_operator_review"
+    if int(action_basis["unresolved_action_count"]) > 0:
+        return "unresolved_actions_keep_report_active"
+    return implemented_code
+
+
+def coverage_with_action_basis(
+    coverage: list[dict[str, Any]],
+    statuses: dict[str, str],
+) -> list[dict[str, Any]]:
+    enriched: list[dict[str, Any]] = []
+    for item in coverage:
+        action_basis = coverage_action_basis(item, statuses)
+        enriched.append(
+            {
+                **item,
+                "unresolved_action_ids": action_basis["unresolved_action_ids"],
+                "unresolved_action_count": action_basis["unresolved_action_count"],
+                "archive_decision_code": coverage_archive_decision_code(action_basis),
+            }
+        )
+    return enriched
 
 
 def _archive_decision_code(
@@ -2571,15 +2592,15 @@ def _archive_decision_code(
 ) -> str:
     if archive_recommended:
         return reason_code
-    if action_basis["operator_only_rationale"]:
-        return str(action_basis["operator_only_rationale"])
-    if int(action_basis["unmatched_recommendation_count"]) > 0:
-        return "unmatched_recommendations_require_operator_review"
-    if int(action_basis["unresolved_action_count"]) > 0:
-        return "unresolved_actions_keep_report_active"
+    action_decision_code = coverage_archive_decision_code(
+        action_basis,
+        implemented_code="implemented_action_basis_without_archive_marker",
+    )
+    if action_decision_code != "implemented_action_basis_without_archive_marker":
+        return action_decision_code
     if profile.get("report_type") != "narrative_report":
         return reason_code
-    return "implemented_action_basis_without_archive_marker"
+    return action_decision_code
 
 
 def _decision_record(
@@ -2591,7 +2612,7 @@ def _decision_record(
     reason_code: str,
     superseded_by: list[str],
 ) -> dict[str, Any]:
-    action_basis = _decision_action_basis(profile, statuses)
+    action_basis = coverage_action_basis(profile, statuses)
     return {
         **action_basis,
         "archive_decision_code": _archive_decision_code(

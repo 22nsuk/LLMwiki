@@ -59,6 +59,14 @@ Include:
 - the validation commands and current result;
 - any remaining risk or intentionally skipped gate.
 
+## Commit Governance
+
+Commits should stay scoped to one runtime, policy, or documentation purpose. If
+a change touches generated artifacts, the PR summary must name the Make target
+or script that refreshed them. Release authority, public-boundary, and
+subagent-routing changes should keep source, tests, docs, and generated evidence
+together unless the split is explicitly justified in the PR.
+
 ## Security
 
 Do not file public issues for sensitive security reports. Follow

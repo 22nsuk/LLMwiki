@@ -17,6 +17,9 @@ from ops.scripts.external_report_lifecycle_runtime import (
     action_status_reason_details,
     action_statuses,
     archive_reconciliation_observation_inventory,
+    collaboration_governance_surface_reason_ids,
+    coverage_action_basis,
+    coverage_with_action_basis,
     lifecycle_decision,
     report_coverage_item,
     report_lifecycle_profiles,
@@ -564,6 +567,23 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertNotIn("unresolved_action_ids", raw_release_coverage)
         self.assertNotIn("unresolved_action_count", raw_release_coverage)
         actions = {item["action_id"]: item for item in report["action_items"]}
+        status_by_action = {
+            action["action_id"]: action["current_status"]
+            for action in report["action_items"]
+        }
+        action_basis = coverage_action_basis(raw_release_coverage, status_by_action)
+        self.assertEqual(
+            action_basis["unresolved_action_ids"],
+            release_coverage["unresolved_action_ids"],
+        )
+        self.assertEqual(
+            action_basis["unresolved_action_count"],
+            release_coverage["unresolved_action_count"],
+        )
+        self.assertEqual(
+            coverage_with_action_basis([raw_release_coverage], status_by_action)[0],
+            release_coverage,
+        )
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(actions["outcome_provenance_gate_policy"]["current_status"], "implemented")
         self.assertEqual(actions["external_report_lifecycle"]["current_status"], "partially_automated")
@@ -621,6 +641,27 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_open_archive_reconciliation_observations_keep_absorption_actions_active(self) -> None:
+        self._write_static_github_security_surfaces()
+        for rel_path, text in {
+            "ops/schemas/release-authority-inventory.schema.json": "{}\n",
+            "ops/scripts/release/release_authority_inventory.py": "def main(): pass\n",
+            "tests/test_release_authority_inventory.py": "def test_inventory(): pass\n",
+            "docs/repository-surfaces.md": (
+                "# Repository Surfaces\n\n"
+                "Full local vault, Public mirror, and Release source ZIP.\n"
+                "ops/scripts/public/public_surface_policy.py, make public-export, "
+                "make release-run-ready, build/release/, AGENTS.local.md.\n"
+            ),
+            "docs/README.md": "See repository-surfaces.md.\n",
+            "README.md": "See docs/repository-surfaces.md.\n",
+            "ARCHITECTURE.md": "See docs/repository-surfaces.md.\n",
+            "docs/public-mirror.md": "See docs/repository-surfaces.md.\n",
+            "docs/release.md": "See docs/repository-surfaces.md.\n",
+            "tests/test_doc_graph_integrity.py": "def test_doc_graph_integrity(): pass\n",
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
         (self.external / "review.md").write_text(
             "# Review\n\nexternal report lifecycle active report set function-budget "
             "GitHub governance supply chain source package Windows path currentness.\n",
@@ -678,14 +719,23 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "archived_report_action_trace_gap",
             actions["generated_artifact_tracking_policy"]["status_reason_ids"],
         )
-        self.assertEqual(
-            actions["function_budget_proposal_adapter"]["current_status"],
-            "partially_automated",
-        )
-        self.assertIn(
-            "broad_action_completion_threshold_gap",
-            actions["function_budget_proposal_adapter"]["status_reason_ids"],
-        )
+        for action_id in (
+            "function_budget_proposal_adapter",
+            "release_authority_inventory",
+            "github_native_security_automation",
+            "repository_surface_entrypoint_documentation",
+        ):
+            self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
+            self.assertEqual(actions[action_id]["status_reason_ids"], [], action_id)
+            self.assertNotIn("action_matrix", actions[action_id]["blocking_scopes"], action_id)
+        for action in report["action_items"]:
+            self.assertNotIn(
+                "broad_action_completion_threshold_gap",
+                action["status_reason_ids"],
+                action["action_id"],
+            )
+            if action["current_status"] != "implemented":
+                self.assertTrue(action["status_reason_ids"], action["action_id"])
         self.assertIn(
             "status_surface_currentness_visibility_gap",
             actions["artifact_freshness_performance_observability"]["status_reason_ids"],
@@ -780,7 +830,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             closed_report["input_fingerprints"]["archive_reconciliation_observation_paths"],
         )
 
-    def test_broad_action_observations_need_resolution_evidence_to_close(self) -> None:
+    def test_operator_observations_need_resolution_evidence_to_close(self) -> None:
         self._write_static_github_security_surfaces()
         for rel_path, text in {
             ".github/CODEOWNERS": "* @maintainers\n",
@@ -964,6 +1014,12 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertFalse(
+            any(
+                "broad_action_completion_threshold_gap" in item["status_reason_ids"]
+                for item in report["action_items"]
+            )
+        )
         maintainability_action = actions["maintainability_hotspot_refactor_backlog"]
         self.assertEqual(
             maintainability_action["current_status"],
@@ -1178,6 +1234,11 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         }["collaboration_governance_surface"]
         self.assertEqual(real_action["current_status"], "implemented")
         self.assertEqual(real_action["status_reason_ids"], [])
+
+    def test_checked_in_collaboration_governance_surface_is_strictly_implemented(
+        self,
+    ) -> None:
+        self.assertEqual(collaboration_governance_surface_reason_ids(REPO_ROOT), [])
 
     def test_supply_chain_external_verification_requires_real_workflow_uses_entries(self) -> None:
         self._write_json("ops/reports/supply-chain-gate-report.json", {"status": "pass"})

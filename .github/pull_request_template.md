@@ -1,6 +1,10 @@
 ## Summary
 - 
 
+## Review
+- [ ] Reviewer confirms the changed source, tests, docs, schemas, and generated artifacts line up with the stated runtime contract.
+- [ ] Reviewer checks that any retained fallback, compatibility path, or operator-only lane has an explicit reason and revisit condition.
+
 ## Validation
 - Operator index: `make help`; lane-selection details: `docs/development.md`
 - [ ] `make static`

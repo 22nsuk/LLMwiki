@@ -31,15 +31,6 @@
     },
     {
       "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
-      "observation_id": "broad_action_completion_threshold_gap",
-      "status": "planned",
-      "retained_reason": "The action matrix intentionally keeps broad residual owner actions partial until captured backlog is separated from completed remediation.",
-      "next_action": "Split remaining broad predicates for function budget proposal adapter, GitHub-native automation, release authority inventory, and repository entrypoint documentation when each owner lane is touched.",
-      "exit_condition": "Close when remaining broad residual actions distinguish surface-present, backlog-captured, externally-verified, and fully-absorbed states.",
-      "owner_or_lane": "external-report-action-matrix"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
       "observation_id": "dev_install_index_portability_gap",
       "status": "planned",
       "retained_reason": "Dependency install index portability is a separate dev-install contract change, not required for archive-readiness basis.",
