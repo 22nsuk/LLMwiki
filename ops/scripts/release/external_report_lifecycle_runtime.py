@@ -73,6 +73,7 @@ from .external_report_inventory_runtime import (
     reference_manifest_alignment,
     report_text,
     report_type_for_path,
+    unmatched_recommendation_count,
 )
 from .release_closeout_finality_attestation import verify_attestation
 from .release_workflow_order_guard import (
@@ -122,6 +123,7 @@ _INVENTORY_COMPAT_EXPORTS = (
     reference_manifest_alignment,
     report_type_for_path,
     report_text,
+    unmatched_recommendation_count,
 )
 
 TASK_IMPROVEMENT_OBSERVATIONS_ROOT = "ops/reports/task-improvement-observations"
@@ -132,16 +134,12 @@ ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
     "archived_report_action_trace_gap": {
         "external_report_lifecycle",
         "active_report_manifest_freshness",
-        "generated_artifact_tracking_policy",
     },
     "broad_action_completion_threshold_gap": {
         "function_budget_proposal_adapter",
         "github_native_security_automation",
-        "maintainability_hotspot_refactor_backlog",
         "release_authority_inventory",
         "repository_surface_entrypoint_documentation",
-        "supply_chain_external_verification",
-        "collaboration_governance_surface",
     },
     "status_surface_currentness_visibility_gap": {
         "artifact_freshness_performance_observability",
@@ -153,8 +151,7 @@ ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
         "uv_lock_canonical_policy",
     },
     "github_governance_live_drift_gap": {
-        "collaboration_governance_surface",
-        "github_native_security_automation",
+        "github_governance_live_drift_verification",
     },
     "review_bundle_full_vault_hygiene_gap": {
         "repo_boundary_history_hygiene",
@@ -188,8 +185,8 @@ ARCHIVE_RECONCILIATION_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         ["dev-install", "uv-lock-check"],
     ),
     "github_governance_live_drift_gap": (
-        "governance_drift_verification",
-        "github_governance",
+        "github_live_governance_verification",
+        "github_live_governance",
         ["collaboration-governance"],
     ),
     "review_bundle_full_vault_hygiene_gap": (
@@ -201,6 +198,117 @@ ARCHIVE_RECONCILIATION_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         "archive_portability",
         "source_package",
         ["release-source-package-check", "release-smoke-fast"],
+    ),
+}
+MAINTAINABILITY_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
+    "maintainability_hotspot_report_missing": (
+        "function_budget_refactor_proposals",
+        "maintainability_report_evidence",
+        ["function-budget-refactor-proposals"],
+    ),
+    "maintainability_hotspot_report_kind_mismatch": (
+        "function_budget_refactor_proposals",
+        "maintainability_report_evidence",
+        ["function-budget-refactor-proposals"],
+    ),
+    "maintainability_hotspot_report_producer_mismatch": (
+        "function_budget_refactor_proposals",
+        "maintainability_report_evidence",
+        ["function-budget-refactor-proposals"],
+    ),
+    "maintainability_hotspot_report_not_pass": (
+        "function_budget_refactor_proposals",
+        "maintainability_report_evidence",
+        ["function-budget-refactor-proposals"],
+    ),
+    "maintainability_hotspot_candidates_remain": (
+        "function_budget_candidate_closeout",
+        "maintainability_candidate_backlog",
+        ["function-budget-refactor-proposals"],
+    ),
+    "maintainability_hotspot_proposals_not_absorbed": (
+        "function_budget_proposal_absorption",
+        "maintainability_proposal_absorption",
+        ["function-budget-refactor-proposals"],
+    ),
+    "maintainability_hotspot_owner_backlog_not_absorbed": (
+        "function_budget_owner_backlog_absorption",
+        "maintainability_owner_backlog",
+        ["function-budget-refactor-proposals"],
+    ),
+    "maintainability_hotspot_large_main_remains": (
+        "function_budget_large_main_closeout",
+        "maintainability_large_main",
+        ["function-budget-refactor-proposals"],
+    ),
+}
+SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
+    "supply_chain_gate_not_pass": (
+        "supply_chain_external_gate",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_sbom_readiness_not_pass": (
+        "supply_chain_external_gate",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_slsa_predicate_missing": (
+        "supply_chain_external_gate",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_sigstore_local_integrity_only": (
+        "supply_chain_external_bundle_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_sigstore_external_bundle_not_verified": (
+        "supply_chain_external_bundle_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_sigstore_checks_missing": (
+        "supply_chain_external_bundle_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_external_bundle_rule_missing": (
+        "supply_chain_external_bundle_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_release_attestation_missing": (
+        "supply_chain_external_workflow_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_dependency_review_missing": (
+        "supply_chain_external_workflow_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_sigstore_bundle_target_missing": (
+        "supply_chain_external_workflow_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+}
+GITHUB_LIVE_GOVERNANCE_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
+    "github_live_governance_checklist_missing": (
+        "github_live_governance_verification",
+        "github_live_governance",
+        ["collaboration-governance"],
+    ),
+    "github_live_governance_operator_evidence_missing": (
+        "github_live_governance_verification",
+        "github_live_governance",
+        ["collaboration-governance"],
+    ),
+    "github_live_governance_operator_evidence_not_pass": (
+        "github_live_governance_verification",
+        "github_live_governance",
+        ["collaboration-governance"],
     ),
 }
 
@@ -1618,6 +1726,7 @@ def generated_artifact_tracking_policy_status(
         existing_count == expected_count
         and report.get("artifact_kind") == "generated_artifact_index_report"
         and report.get("producer") == "ops.scripts.generated_artifact_index"
+        and report.get("status") == "pass"
         and explicit_policy
         and has_ephemeral_class
     ):
@@ -1661,25 +1770,44 @@ def supply_chain_external_verification_status(
     )
 
 
+def _workflow_uses_entries(vault: Path, rel_path: str) -> list[str]:
+    entries: list[str] = []
+    for line in _read_text_or_empty(vault / rel_path).splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        match = re.match(r"-?\s*uses:\s+([^#\s]+)", stripped)
+        if match:
+            entries.append(match.group(1))
+    return entries
+
+
+def _make_target_exists(vault: Path, rel_path: str, target: str) -> bool:
+    text = _read_text_or_empty(vault / rel_path)
+    return bool(re.search(rf"(?m)^{re.escape(target)}\s*:", text))
+
+
 def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
     gate = load_json_object(vault / "ops/reports/supply-chain-gate-report.json")
     sbom = load_json_object(vault / "ops/reports/sbom-readiness-gate-report.json")
     in_toto = load_json_object(vault / "ops/reports/in-toto-statement.json")
     sigstore = load_json_object(vault / "ops/reports/sigstore-bundle-verification.json")
-    surface_text = "\n".join(
-        _read_text_or_empty(vault / rel_path)
-        for rel_path in (
-            "mk/supply_chain.mk",
-            "ops/reports/supply-chain-gate-report.json",
-            ".github/workflows/release.yml",
-            ".github/workflows/dependency-review.yml",
-        )
-    )
     has_slsa_predicate = in_toto.get("predicateType") == "https://slsa.dev/provenance/v1"
     sigstore_checks = as_list(sigstore.get("verification_checks"))
-    has_release_attestation = "attest-build-provenance@" in surface_text
-    has_dependency_review = "dependency-review-action@" in surface_text
-    has_sigstore_bundle_target = "sigstore-bundle:" in surface_text
+    release_uses = _workflow_uses_entries(vault, ".github/workflows/release.yml")
+    dependency_review_uses = _workflow_uses_entries(
+        vault, ".github/workflows/dependency-review.yml"
+    )
+    has_release_attestation = any(
+        use.startswith("actions/attest-build-provenance@") for use in release_uses
+    )
+    has_dependency_review = any(
+        use.startswith("actions/dependency-review-action@")
+        for use in dependency_review_uses
+    )
+    has_sigstore_bundle_target = _make_target_exists(
+        vault, "mk/supply_chain.mk", "sigstore-bundle"
+    )
     external_bundle_rule_present = any(
         as_dict(check).get("rule") == "external_bundle_observed" for check in sigstore_checks
     )
@@ -1707,6 +1835,32 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
     return _dedupe_reason_ids(reasons)
 
 
+def github_governance_live_drift_verification_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    if existing_count < expected_count:
+        return "partially_automated"
+    return (
+        "implemented"
+        if not github_governance_live_drift_verification_reason_ids(vault)
+        else "partially_automated"
+    )
+
+
+def github_governance_live_drift_verification_reason_ids(vault: Path) -> list[str]:
+    reasons: list[str] = []
+    if not (vault / ".github/release-governance.yml").is_file():
+        reasons.append("github_live_governance_checklist_missing")
+    report = load_json_object(vault / "ops/reports/github-governance-live-drift.json")
+    if not report:
+        reasons.append("github_live_governance_operator_evidence_missing")
+    elif report.get("status") != "pass":
+        reasons.append("github_live_governance_operator_evidence_not_pass")
+    return _dedupe_reason_ids(reasons)
+
+
 def collaboration_governance_surface_status(
     vault: Path, existing_count: int, expected_count: int
 ) -> str:
@@ -1721,17 +1875,88 @@ def collaboration_governance_surface_status(
     )
 
 
+CODEOWNERS_OWNER_RE = re.compile(
+    r"^@[A-Za-z0-9][A-Za-z0-9_.-]*(?:/[A-Za-z0-9][A-Za-z0-9_.-]*)?$"
+)
+MARKDOWN_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+MARKDOWN_HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$")
+PLACEHOLDER_TEXT_RE = re.compile(r"\b(?:placeholder|todo|tbd|example only)\b", re.IGNORECASE)
+REVIEW_HEADING_RE = re.compile(r"\breviews?\b", re.IGNORECASE)
+POLICY_LANGUAGE_RE = re.compile(
+    r"\b(?:must|should|required|requires|policy|taxonomy|governance)\b",
+    re.IGNORECASE,
+)
+
+
+def _has_codeowners_review_owner(text: str) -> bool:
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or PLACEHOLDER_TEXT_RE.search(line):
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        if any(CODEOWNERS_OWNER_RE.fullmatch(owner) for owner in parts[1:]):
+            return True
+    return False
+
+
+def _markdown_without_comments(text: str) -> str:
+    return MARKDOWN_COMMENT_RE.sub("", text)
+
+
+def _meaningful_markdown_line(line: str) -> str:
+    stripped = line.strip()
+    if not stripped or PLACEHOLDER_TEXT_RE.search(stripped):
+        return ""
+    return stripped
+
+
+def _has_pr_review_section(text: str) -> bool:
+    in_review_section = False
+    for raw_line in _markdown_without_comments(text).splitlines():
+        line = _meaningful_markdown_line(raw_line)
+        if not line:
+            continue
+        heading = MARKDOWN_HEADING_RE.match(line)
+        if heading:
+            in_review_section = bool(REVIEW_HEADING_RE.search(heading.group(1)))
+            continue
+        if in_review_section:
+            return True
+    return False
+
+
+def _has_contributing_commit_governance_policy(text: str) -> bool:
+    in_commit_governance_section = False
+    for raw_line in _markdown_without_comments(text).splitlines():
+        line = _meaningful_markdown_line(raw_line)
+        if not line:
+            continue
+        heading = MARKDOWN_HEADING_RE.match(line)
+        if heading:
+            heading_text = heading.group(1).casefold()
+            in_commit_governance_section = "commit" in heading_text and (
+                "governance" in heading_text
+                or "policy" in heading_text
+                or "taxonomy" in heading_text
+            )
+            continue
+        if in_commit_governance_section and POLICY_LANGUAGE_RE.search(line):
+            return True
+    return False
+
+
 def collaboration_governance_surface_reason_ids(vault: Path) -> list[str]:
     codeowners = _read_text_or_empty(vault / ".github/CODEOWNERS")
     pr_template = _read_text_or_empty(vault / ".github/pull_request_template.md")
     contributing = _read_text_or_empty(vault / "CONTRIBUTING.md")
     reasons: list[str] = []
-    if "@" not in codeowners:
+    if not _has_codeowners_review_owner(codeowners):
         reasons.append("collaboration_governance_codeowners_review_owner_missing")
-    if "review" not in pr_template.lower():
+    if not _has_pr_review_section(pr_template):
         reasons.append("collaboration_governance_pr_template_review_missing")
-    contributing_lower = contributing.lower()
-    if "commit" not in contributing_lower or "governance" not in contributing_lower:
+    if not _has_contributing_commit_governance_policy(contributing):
         reasons.append("collaboration_governance_contributing_policy_missing")
     return reasons
 
@@ -1878,6 +2103,9 @@ COUNT_STATUS_RESOLVERS: dict[str, CountStatusResolver] = {
     "generated_artifact_tracking_policy": generated_artifact_tracking_policy_status,
     "public_export_negative_assertions": public_export_negative_assertions_status,
     "supply_chain_external_verification": supply_chain_external_verification_status,
+    "github_governance_live_drift_verification": (
+        github_governance_live_drift_verification_status
+    ),
     "collaboration_governance_surface": collaboration_governance_surface_status,
 }
 
@@ -2021,6 +2249,8 @@ def action_status_reason_ids(
         reasons.extend(maintainability_hotspot_refactor_backlog_reason_ids(vault))
     elif action_id == "supply_chain_external_verification":
         reasons.extend(supply_chain_external_verification_reason_ids(vault))
+    elif action_id == "github_governance_live_drift_verification":
+        reasons.extend(github_governance_live_drift_verification_reason_ids(vault))
     elif action_id == "collaboration_governance_surface":
         reasons.extend(collaboration_governance_surface_reason_ids(vault))
     elif action_id == "goal_execution_runtime_certificate":
@@ -2128,24 +2358,43 @@ def action_status_reason_details(
                     recommended_targets=["external-report-reference-manifest-settle"],
                 )
             )
-        elif reason_id.startswith("maintainability_hotspot_"):
+        elif reason_id in MAINTAINABILITY_REASON_TARGETS:
+            owning_stage, blocking_scope, recommended_targets = MAINTAINABILITY_REASON_TARGETS[
+                reason_id
+            ]
             details.append(
                 _reason_detail(
                     reason_id,
-                    owning_stage="function_budget_refactor_proposals",
-                    blocking_scope="maintainability_hotspot",
+                    owning_stage=owning_stage,
+                    blocking_scope=blocking_scope,
                     gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=["function-budget-refactor-proposals"],
+                    recommended_targets=recommended_targets,
                 )
             )
-        elif reason_id.startswith("supply_chain_"):
+        elif reason_id in SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS:
+            owning_stage, blocking_scope, recommended_targets = SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS[
+                reason_id
+            ]
             details.append(
                 _reason_detail(
                     reason_id,
-                    owning_stage="supply_chain_external_verification",
-                    blocking_scope="supply_chain",
+                    owning_stage=owning_stage,
+                    blocking_scope=blocking_scope,
                     gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=["supply-chain-check"],
+                    recommended_targets=recommended_targets,
+                )
+            )
+        elif reason_id in GITHUB_LIVE_GOVERNANCE_REASON_TARGETS:
+            owning_stage, blocking_scope, recommended_targets = (
+                GITHUB_LIVE_GOVERNANCE_REASON_TARGETS[reason_id]
+            )
+            details.append(
+                _reason_detail(
+                    reason_id,
+                    owning_stage=owning_stage,
+                    blocking_scope=blocking_scope,
+                    gate_effect=GATE_EFFECT_ADVISORY,
+                    recommended_targets=recommended_targets,
                 )
             )
         elif reason_id.startswith("collaboration_governance_"):
@@ -2234,18 +2483,30 @@ def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
     rel_path = report_path(vault, path)
     text = report_text(path)
     report_type = report_type_for_path(path)
+    operator_only_rationale = ""
     if report_type == "binary_report":
         action_ids = ["operator_only_external_report_binary"]
+        operator_only_rationale = "binary_report_requires_operator_review"
+    elif report_type == "reference_manifest":
+        action_ids = ["external_report_lifecycle"]
+        operator_only_rationale = "reference_manifest_lifecycle_evidence"
+    elif not text:
+        action_ids = ["external_report_lifecycle"]
+        operator_only_rationale = "unreadable_narrative_report"
     else:
-        action_ids = matched_actions(text) if text else ["external_report_lifecycle"]
+        action_ids = matched_actions(text)
     if path.name == Path(REFERENCE_MANIFEST).name:
         action_ids = sorted(set(action_ids) | {"active_report_manifest_freshness"})
     return {
         "path": rel_path,
         "report_type": report_type,
+        "content_sha256": content_sha256(path),
+        "coverage_markers": coverage_markers(path, text),
         "priority_mentions": priority_counts(text),
+        "unmatched_recommendation_count": unmatched_recommendation_count(text),
         "matched_action_ids": action_ids,
         "matched_action_count": len(action_ids),
+        "operator_only_rationale": operator_only_rationale,
     }
 
 
@@ -2288,9 +2549,60 @@ def _unresolved_action_ids(profile: dict[str, Any], statuses: dict[str, str]) ->
 def _decision_action_basis(profile: dict[str, Any], statuses: dict[str, str]) -> dict[str, Any]:
     unresolved = sorted(_unresolved_action_ids(profile, statuses))
     return {
+        "report_type": str(profile.get("report_type", "")),
+        "content_sha256": str(profile.get("content_sha256", "")),
         "matched_action_ids": sorted(str(action_id) for action_id in profile["matched_action_ids"]),
+        "matched_action_count": int(profile.get("matched_action_count") or 0),
         "unresolved_action_ids": unresolved,
         "unresolved_action_count": len(unresolved),
+        "unmatched_recommendation_count": int(
+            profile.get("unmatched_recommendation_count") or 0
+        ),
+        "operator_only_rationale": str(profile.get("operator_only_rationale", "")),
+    }
+
+
+def _archive_decision_code(
+    *,
+    profile: dict[str, Any],
+    action_basis: dict[str, Any],
+    archive_recommended: bool,
+    reason_code: str,
+) -> str:
+    if archive_recommended:
+        return reason_code
+    if action_basis["operator_only_rationale"]:
+        return str(action_basis["operator_only_rationale"])
+    if int(action_basis["unmatched_recommendation_count"]) > 0:
+        return "unmatched_recommendations_require_operator_review"
+    if int(action_basis["unresolved_action_count"]) > 0:
+        return "unresolved_actions_keep_report_active"
+    if profile.get("report_type") != "narrative_report":
+        return reason_code
+    return "implemented_action_basis_without_archive_marker"
+
+
+def _decision_record(
+    profile: dict[str, Any],
+    statuses: dict[str, str],
+    *,
+    archive_recommended: bool,
+    reason: str,
+    reason_code: str,
+    superseded_by: list[str],
+) -> dict[str, Any]:
+    action_basis = _decision_action_basis(profile, statuses)
+    return {
+        **action_basis,
+        "archive_decision_code": _archive_decision_code(
+            profile=profile,
+            action_basis=action_basis,
+            archive_recommended=archive_recommended,
+            reason_code=reason_code,
+        ),
+        "archive_recommended": archive_recommended,
+        "reason": reason,
+        "superseded_by": superseded_by,
     }
 
 
@@ -2312,52 +2624,66 @@ def lifecycle_decision(
     statuses: dict[str, str],
 ) -> dict[str, Any]:
     path = str(profile["path"])
-    action_basis = _decision_action_basis(profile, statuses)
     if profile["report_type"] != "narrative_report":
         if profile["report_type"] == "binary_report":
-            return {
-                **action_basis,
-                "archive_recommended": False,
-                "reason": "Binary active reports require operator-only review or an explicit extracted mapping before lifecycle automation can archive them.",
-                "superseded_by": [],
-            }
-        return {
-            **action_basis,
-            "archive_recommended": False,
-            "reason": "Reference manifest remains active lifecycle evidence.",
-            "superseded_by": [],
-        }
+            return _decision_record(
+                profile,
+                statuses,
+                archive_recommended=False,
+                reason=(
+                    "Binary active reports require operator-only review or an explicit "
+                    "extracted mapping before lifecycle automation can archive them."
+                ),
+                reason_code="binary_report_requires_operator_review",
+                superseded_by=[],
+            )
+        return _decision_record(
+            profile,
+            statuses,
+            archive_recommended=False,
+            reason="Reference manifest remains active lifecycle evidence.",
+            reason_code="reference_manifest_lifecycle_evidence",
+            superseded_by=[],
+        )
     action_ids = {str(action_id) for action_id in profile["matched_action_ids"]}
     if not action_ids:
         if profile.get("lifecycle_namespace") == "archive":
-            return {
-                **action_basis,
-                "archive_recommended": True,
-                "reason": "Archived external report has no structured action coverage; archive remains sticky.",
-                "superseded_by": [],
-            }
-        return {
-            **action_basis,
-            "archive_recommended": False,
-            "reason": "No structured action coverage was detected; keep active for operator review.",
-            "superseded_by": [],
-        }
+            return _decision_record(
+                profile,
+                statuses,
+                archive_recommended=True,
+                reason="Archived external report has no structured action coverage; archive remains sticky.",
+                reason_code="archive_sticky_without_structured_action_coverage",
+                superseded_by=[],
+            )
+        return _decision_record(
+            profile,
+            statuses,
+            archive_recommended=False,
+            reason="No structured action coverage was detected; keep active for operator review.",
+            reason_code="unmatched_recommendations_require_operator_review",
+            superseded_by=[],
+        )
     if bool(profile["explicit_archive_status"]):
-        return {
-            **action_basis,
-            "archive_recommended": True,
-            "reason": "External report carries an explicit closed/superseded archive lifecycle marker.",
-            "superseded_by": list(profile["explicit_successor_paths"]),
-        }
+        return _decision_record(
+            profile,
+            statuses,
+            archive_recommended=True,
+            reason="External report carries an explicit closed/superseded archive lifecycle marker.",
+            reason_code="explicit_archive_status",
+            superseded_by=list(profile["explicit_successor_paths"]),
+        )
 
     unresolved = sorted(_unresolved_action_ids(profile, statuses))
     if not unresolved:
-        return {
-            **action_basis,
-            "archive_recommended": True,
-            "reason": "All structured action themes from this external report are implemented in canonical evidence.",
-            "superseded_by": [],
-        }
+        return _decision_record(
+            profile,
+            statuses,
+            archive_recommended=True,
+            reason="All structured action themes from this external report are implemented in canonical evidence.",
+            reason_code="all_structured_actions_implemented",
+            superseded_by=[],
+        )
 
     unresolved_set = set(unresolved)
     covering_reports = []
@@ -2372,18 +2698,22 @@ def lifecycle_decision(
             covering_reports.append(other_path)
 
     if covering_reports:
-        return {
-            **action_basis,
-            "archive_recommended": True,
-            "reason": (
+        return _decision_record(
+            profile,
+            statuses,
+            archive_recommended=True,
+            reason=(
                 "External report has no unique unresolved action themes; remaining open themes are covered by "
                 "a broader active external report."
             ),
-            "superseded_by": sorted(covering_reports),
-        }
-    return {
-        **action_basis,
-        "archive_recommended": False,
-        "reason": "External report still carries unique unresolved action themes not covered by another active report.",
-        "superseded_by": [],
-    }
+            reason_code="unresolved_actions_covered_by_broader_report",
+            superseded_by=sorted(covering_reports),
+        )
+    return _decision_record(
+        profile,
+        statuses,
+        archive_recommended=False,
+        reason="External report still carries unique unresolved action themes not covered by another active report.",
+        reason_code="unresolved_actions_keep_report_active",
+        superseded_by=[],
+    )

@@ -10,13 +10,58 @@ from ops.scripts.artifact_freshness_payload_runtime import (
     has_artifact_envelope,
 )
 from ops.scripts.schema_runtime import load_schema, validate_or_raise
-from ops.scripts.select_subagent_rung import main as select_subagent_rung_main
 
+from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_main
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault, seed_subagent_profiles
 
+DEFAULT_SELECTOR_REPORT_PATH = Path("tmp/subagent-routing-report.json")
+
 
 class SubagentRoutingTest(unittest.TestCase):
+    def assert_manual_dispatch_matches_routing(self, report: dict) -> None:
+        routing_decision = report["routing_decision"]
+        manual_dispatch = report["manual_dispatch"]
+        launch_parameters = manual_dispatch["launch_parameters"]
+        fixed_reasoning_surface = manual_dispatch["fixed_reasoning_surface"]
+
+        self.assertEqual(report["source_command"], "python -m ops.scripts.core.select_subagent_rung")
+        self.assertEqual(manual_dispatch["source"], "subagent_routing_selector")
+        self.assertEqual(manual_dispatch["role"], report["role"])
+        self.assertEqual(manual_dispatch["selected_rung"], routing_decision["selected_rung"])
+        self.assertEqual(launch_parameters["profile_path"], report["profile_path"])
+        self.assertEqual(launch_parameters["model"], routing_decision["model"])
+        self.assertEqual(
+            launch_parameters["model_reasoning_effort"],
+            routing_decision["reasoning_effort"],
+        )
+        self.assertEqual(launch_parameters["sandbox_mode"], routing_decision["sandbox_mode"])
+        self.assertEqual(
+            fixed_reasoning_surface["compatibility_rule"],
+            "exact_model_and_reasoning_effort_match_required",
+        )
+        self.assertEqual(fixed_reasoning_surface["required_model"], routing_decision["model"])
+        self.assertEqual(
+            fixed_reasoning_surface["required_model_reasoning_effort"],
+            routing_decision["reasoning_effort"],
+        )
+        self.assertEqual(
+            fixed_reasoning_surface["required_selected_rung"],
+            routing_decision["selected_rung"],
+        )
+        self.assertEqual(
+            fixed_reasoning_surface["allowed_when"],
+            "fixed_values_match_required_model_and_reasoning_effort",
+        )
+        self.assertEqual(
+            fixed_reasoning_surface["mismatch_action"],
+            "use_controllable_launch_parameters",
+        )
+        self.assertEqual(
+            fixed_reasoning_surface["controllable_launch_surface"],
+            manual_dispatch["dispatch_surfaces"]["ladder_compliant_surface"],
+        )
+
     def run_selector(self, vault: Path, *args: str) -> dict:
         result = invoke_cli_main(
             select_subagent_rung_main,
@@ -24,11 +69,12 @@ class SubagentRoutingTest(unittest.TestCase):
             cwd=vault,
         )
         self.assertEqual(result.exit_code, 0, msg=result.stderr or result.stdout)
-        report_path = vault / "ops" / "reports" / "subagent-routing-report.json"
+        report_path = vault / DEFAULT_SELECTOR_REPORT_PATH
         self.assertTrue(report_path.exists())
         report = json.loads(report_path.read_text(encoding="utf-8"))
         schema = load_schema(vault / "ops" / "schemas" / "subagent-routing-report.schema.json")
         validate_or_raise(report, schema, context="subagent routing test schema validation failed")
+        self.assert_manual_dispatch_matches_routing(report)
         return report
 
     def test_explorer_defaults_to_lowest_rung_for_empty_scope(self) -> None:
@@ -44,7 +90,7 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertTrue(all(field in report for field in ENVELOPE_REQUIRED_FIELDS))
             self.assertEqual(report["artifact_kind"], "subagent_routing_report")
             self.assertEqual(report["artifact_status"], "current")
-            self.assertEqual(report["retention_policy"], "canonical_report")
+            self.assertEqual(report["retention_policy"], "ephemeral")
             self.assertEqual(report["currentness"]["status"], "current")
             self.assertEqual(report["inputs"]["primary_targets"], [])
             self.assertEqual(report["complexity_profile"]["complexity_score"], 0)
@@ -95,6 +141,18 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(
                 report["manual_dispatch"]["dispatch_surfaces"]["ladder_compliant_surface"],
                 "controllable_launch_parameters",
+            )
+            self.assertEqual(
+                report["manual_dispatch"]["fixed_reasoning_surface"],
+                {
+                    "compatibility_rule": "exact_model_and_reasoning_effort_match_required",
+                    "required_model": "gpt-5.5",
+                    "required_model_reasoning_effort": "medium",
+                    "required_selected_rung": 1,
+                    "allowed_when": "fixed_values_match_required_model_and_reasoning_effort",
+                    "mismatch_action": "use_controllable_launch_parameters",
+                    "controllable_launch_surface": "controllable_launch_parameters",
+                },
             )
             self.assertIn(
                 "codex_exec",
@@ -346,6 +404,61 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["routing_decision"]["selected_rung"], 2)
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
+
+    def test_explicit_top_level_subagent_report_remains_canonical(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["explorer"])
+
+            result = invoke_cli_main(
+                select_subagent_rung_main,
+                [
+                    "--vault",
+                    str(vault),
+                    "--role",
+                    "explorer",
+                    "--out",
+                    "ops/reports/subagent-routing-report.json",
+                ],
+                cwd=vault,
+            )
+
+            self.assertEqual(result.exit_code, 0, msg=result.stderr or result.stdout)
+            report_path = vault / "ops" / "reports" / "subagent-routing-report.json"
+            self.assertTrue(report_path.exists())
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["retention_policy"], "canonical_report")
+            self.assert_manual_dispatch_matches_routing(report)
+
+    def test_run_local_subagent_report_uses_archive_retention(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["worker"])
+
+            result = invoke_cli_main(
+                select_subagent_rung_main,
+                [
+                    "--vault",
+                    str(vault),
+                    "--role",
+                    "worker",
+                    "--out",
+                    "runs/run-selector/subagent-routing.worker.json",
+                ],
+                cwd=vault,
+            )
+
+            self.assertEqual(result.exit_code, 0, msg=result.stderr or result.stdout)
+            report_path = vault / "runs" / "run-selector" / "subagent-routing.worker.json"
+            self.assertTrue(report_path.exists())
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["artifact_status"], "current")
+            self.assertEqual(report["retention_policy"], "archive")
+            self.assert_manual_dispatch_matches_routing(report)
 
 
 if __name__ == "__main__":

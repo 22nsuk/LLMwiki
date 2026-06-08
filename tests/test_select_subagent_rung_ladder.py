@@ -11,7 +11,7 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
 
 class SelectSubagentRungLadderTests(unittest.TestCase):
-    def test_policy_ladder_matches_project_subagent_profile_defaults(self) -> None:
+    def test_policy_ladder_matches_project_approved_subagent_rungs(self) -> None:
         policy, _ = load_policy(REPO_ROOT, None)
         ladder = policy["subagent_routing_policy"]["ladder"]
 

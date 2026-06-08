@@ -27,7 +27,6 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.script_output_surfaces import (
     build_registry as build_script_output_surface_registry,
 )
-from ops.scripts.select_subagent_rung import main as select_subagent_rung_main
 from ops.scripts.starter_bundle_runtime import (
     DEFAULT_STARTER_BUNDLE,
     starter_bundle_path,
@@ -38,6 +37,7 @@ from ops.scripts.wiki_lint import main as wiki_lint_main
 from ops.scripts.wiki_manifest import main as wiki_manifest_main
 from ops.scripts.wiki_stage2_eval import main as wiki_stage2_eval_main
 
+from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_main
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import (
     seed_minimal_vault,

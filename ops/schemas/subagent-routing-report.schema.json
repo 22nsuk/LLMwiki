@@ -602,6 +602,7 @@
         "role",
         "selected_rung",
         "launch_parameters",
+        "fixed_reasoning_surface",
         "dispatch_surfaces",
         "toml_fallback_role",
         "operator_action"
@@ -641,6 +642,48 @@
             },
             "sandbox_mode": {
               "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "fixed_reasoning_surface": {
+          "type": "object",
+          "required": [
+            "compatibility_rule",
+            "required_model",
+            "required_model_reasoning_effort",
+            "required_selected_rung",
+            "allowed_when",
+            "mismatch_action",
+            "controllable_launch_surface"
+          ],
+          "properties": {
+            "compatibility_rule": {
+              "type": "string",
+              "const": "exact_model_and_reasoning_effort_match_required"
+            },
+            "required_model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required_model_reasoning_effort": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required_selected_rung": {
+              "type": "integer"
+            },
+            "allowed_when": {
+              "type": "string",
+              "const": "fixed_values_match_required_model_and_reasoning_effort"
+            },
+            "mismatch_action": {
+              "type": "string",
+              "const": "use_controllable_launch_parameters"
+            },
+            "controllable_launch_surface": {
+              "type": "string",
+              "const": "controllable_launch_parameters"
             }
           },
           "additionalProperties": false

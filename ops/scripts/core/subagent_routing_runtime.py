@@ -19,6 +19,7 @@ from ops.scripts.mechanism_assess import (
 from .artifact_envelope_runtime import build_canonical_report_envelope
 from .artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
+    resolve_schema_backed_report_output_path,
     write_schema_backed_report,
 )
 from .output_runtime import display_path, resolve_vault_path
@@ -34,8 +35,10 @@ from .schema_constants_runtime import SUBAGENT_ROUTING_SCHEMA_PATH
 
 SUBAGENT_ROUTING_SCHEMA = SUBAGENT_ROUTING_SCHEMA_PATH
 PRODUCER = "ops.scripts.subagent_routing_runtime"
-SOURCE_COMMAND = "python -m ops.scripts.select_subagent_rung"
+SOURCE_COMMAND = "python -m ops.scripts.core.select_subagent_rung"
 ARTIFACT_KIND = "subagent_routing_report"
+DEFAULT_SUBAGENT_ROUTING_REPORT_OUT = "tmp/subagent-routing-report.json"
+CANONICAL_SUBAGENT_ROUTING_REPORT_OUT = "ops/reports/subagent-routing-report.json"
 
 
 @dataclass(frozen=True)
@@ -328,6 +331,8 @@ def build_manual_dispatch_contract(
     profile_path: str,
     routing_decision: dict,
 ) -> dict:
+    selected_model = routing_decision["model"]
+    selected_reasoning_effort = routing_decision["reasoning_effort"]
     return {
         "contract": "manual_subagent_dispatch_v1",
         "source": "subagent_routing_selector",
@@ -335,9 +340,18 @@ def build_manual_dispatch_contract(
         "selected_rung": routing_decision["selected_rung"],
         "launch_parameters": {
             "profile_path": profile_path,
-            "model": routing_decision["model"],
-            "model_reasoning_effort": routing_decision["reasoning_effort"],
+            "model": selected_model,
+            "model_reasoning_effort": selected_reasoning_effort,
             "sandbox_mode": routing_decision["sandbox_mode"],
+        },
+        "fixed_reasoning_surface": {
+            "compatibility_rule": "exact_model_and_reasoning_effort_match_required",
+            "required_model": selected_model,
+            "required_model_reasoning_effort": selected_reasoning_effort,
+            "required_selected_rung": routing_decision["selected_rung"],
+            "allowed_when": "fixed_values_match_required_model_and_reasoning_effort",
+            "mismatch_action": "use_controllable_launch_parameters",
+            "controllable_launch_surface": "controllable_launch_parameters",
         },
         "dispatch_surfaces": {
             "ladder_compliant_surface": "controllable_launch_parameters",
@@ -535,14 +549,29 @@ def build_report(
     )
 
 
+def retention_policy_for_output(vault: Path, destination: Path) -> str:
+    rel_path = report_path(vault, destination)
+    if rel_path == CANONICAL_SUBAGENT_ROUTING_REPORT_OUT:
+        return "canonical_report"
+    if rel_path.startswith("runs/"):
+        return "archive"
+    return "ephemeral"
+
+
 def write_report(vault: Path, report: dict, out_path: str | None) -> Path:
+    destination = resolve_schema_backed_report_output_path(
+        vault,
+        out_path,
+        default_relative_path=DEFAULT_SUBAGENT_ROUTING_REPORT_OUT,
+    )
+    report["retention_policy"] = retention_policy_for_output(vault, destination)
     return write_schema_backed_report(
         SchemaBackedReportWriteRequest(
             vault=vault,
             payload=report,
             schema_path=SUBAGENT_ROUTING_SCHEMA,
-            out_path=out_path,
-            default_relative_path="ops/reports/subagent-routing-report.json",
+            out_path=destination,
+            default_relative_path=DEFAULT_SUBAGENT_ROUTING_REPORT_OUT,
             context="subagent routing schema validation failed",
             trailing_newline=False,
         )

@@ -1042,7 +1042,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                     },
                     {
                         "path": "ops/reports/public-check-summary.json",
-                        "issues": ["source_tree_fingerprint_mismatch"],
+                        "issues": ["source_revision_mismatch"],
                     },
                 ],
             },
@@ -1110,6 +1110,43 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             operator_release_allowed=True,
             requires_accepted_risk_review=True,
         )
+        gate = report["artifact_freshness_gate"]
+        self.assertEqual(gate["gate_effect"], "advisory")
+        self.assertEqual(gate["display_effect"], "advisory")
+        self.assertFalse(gate["blocking"])
+        self.assertTrue(gate["ready"])
+        accepted = {item["code"] for item in report["accepted_risks"]}
+        self.assertIn("artifact_freshness_attention", accepted)
+
+    def test_release_owned_artifact_freshness_revision_attention_is_gate_advisory(self) -> None:
+        self._write_happy_sources()
+        self._write_source_report(
+            "artifact_freshness",
+            {
+                "status": "attention",
+                "summary": {
+                    "schema_invalid_artifact_count": 0,
+                    "schema_unavailable_artifact_count": 0,
+                    "root_ephemeral_artifact_count": 0,
+                    "non_utf8_text_artifact_count": 0,
+                    "stale_artifact_count": 1,
+                    "mtime_sensitive_attention_artifact_count": 0,
+                    "mtime_sensitive_attention_issue_count": 0,
+                    "operational_attention_artifact_count": 1,
+                    "operational_attention_issue_count": 1,
+                    "stable_contract_debt_issue_count": 0,
+                },
+                "artifact_records": [
+                    {
+                        "path": "ops/reports/auto-improve-readiness.json",
+                        "issues": ["source_revision_mismatch"],
+                    }
+                ],
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
         gate = report["artifact_freshness_gate"]
         self.assertEqual(gate["gate_effect"], "advisory")
         self.assertEqual(gate["display_effect"], "advisory")

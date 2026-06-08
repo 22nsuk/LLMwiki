@@ -212,11 +212,19 @@ def _external_report_lifecycle_statuses(vault: Path) -> dict[str, str]:
 
 def _external_report_decision_fields(decision: dict[str, Any]) -> dict[str, Any]:
     return {
+        "report_type": str(decision.get("report_type", "")),
+        "content_sha256": str(decision.get("content_sha256", "")),
         "matched_action_ids": [str(action_id) for action_id in decision.get("matched_action_ids", [])],
+        "matched_action_count": int(decision.get("matched_action_count") or 0),
         "unresolved_action_ids": [
             str(action_id) for action_id in decision.get("unresolved_action_ids", [])
         ],
         "unresolved_action_count": int(decision.get("unresolved_action_count") or 0),
+        "unmatched_recommendation_count": int(
+            decision.get("unmatched_recommendation_count") or 0
+        ),
+        "operator_only_rationale": str(decision.get("operator_only_rationale", "")),
+        "archive_decision_code": str(decision.get("archive_decision_code", "")),
     }
 
 

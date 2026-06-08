@@ -235,7 +235,67 @@ class AutoImproveReadinessReleaseAuthorityRuntimeTests(unittest.TestCase):
 
         self.assertEqual(artifact_contract_blockers, [])
 
-    def test_artifact_contract_non_advisory_mtime_attention_blocks_promotion(self) -> None:
+    def test_artifact_contract_non_selected_mtime_attention_is_diagnostic_not_blocker(self) -> None:
+        reports = _pass_release_reports()
+        reports["artifact_freshness"] = {
+            "status": "attention",
+            "summary": {
+                "schema_invalid_artifact_count": 0,
+                "stable_contract_debt_issue_count": 0,
+                "root_ephemeral_artifact_count": 0,
+                "non_utf8_text_artifact_count": 0,
+                "mtime_sensitive_attention_issue_count": 1,
+            },
+            "artifact_records": [
+                {
+                    "path": "ops/reports/lint-uplift-plan.json",
+                    "issues": ["generated_at_older_than_file_mtime"],
+                    "mtime_sensitive_issues": ["generated_at_older_than_file_mtime"],
+                    "schema_validation_status": "pass",
+                    "contract_issue_class": "mtime_sensitive_attention",
+                }
+            ],
+        }
+
+        summaries = _release_gate_summaries(reports)
+        artifact_contract_blockers = _artifact_contract_promotion_blockers(
+            summaries["artifact_freshness"],
+            reports["artifact_freshness"],
+        )
+
+        self.assertEqual(artifact_contract_blockers, [])
+
+    def test_artifact_contract_non_selected_operational_attention_is_diagnostic_not_blocker(self) -> None:
+        reports = _pass_release_reports()
+        reports["artifact_freshness"] = {
+            "status": "attention",
+            "summary": {
+                "schema_invalid_artifact_count": 0,
+                "stable_contract_debt_issue_count": 0,
+                "root_ephemeral_artifact_count": 0,
+                "non_utf8_text_artifact_count": 0,
+                "mtime_sensitive_attention_issue_count": 0,
+                "operational_attention_issue_count": 1,
+            },
+            "artifact_records": [
+                {
+                    "path": "ops/reports/lint-uplift-plan.json",
+                    "issues": ["test_target_missing"],
+                    "schema_validation_status": "pass",
+                    "contract_issue_class": "operational_attention",
+                }
+            ],
+        }
+
+        summaries = _release_gate_summaries(reports)
+        artifact_contract_blockers = _artifact_contract_promotion_blockers(
+            summaries["artifact_freshness"],
+            reports["artifact_freshness"],
+        )
+
+        self.assertEqual(artifact_contract_blockers, [])
+
+    def test_artifact_contract_selected_mtime_attention_blocks_promotion(self) -> None:
         reports = _pass_release_reports()
         reports["artifact_freshness"] = {
             "status": "attention",

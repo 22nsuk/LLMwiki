@@ -8,6 +8,7 @@ from .gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECT_CLAIM_BLOCKER,
     GATE_EFFECT_NONE,
     strongest_gate_effect,
 )
@@ -63,6 +64,7 @@ EXECUTION_BLOCKING_ISSUES = (
 ADVISORY_ONLY_MTIME_DRIFT_PATHS = {
     "ops/reports/generated-artifact-index.json",
 }
+LEARNING_READINESS_SIGNOFF_REPORT = "ops/reports/learning-readiness-signoff.json"
 
 
 def owner_surface(rel_path: str) -> str:
@@ -94,9 +96,27 @@ def mtime_drift_is_advisory_only(rel_path: str) -> bool:
     return rel_path in ADVISORY_ONLY_MTIME_DRIFT_PATHS
 
 
+def is_learning_readiness_signoff_source_identity_issue(
+    issues: list[str],
+    *,
+    rel_path: str,
+) -> bool:
+    if rel_path != LEARNING_READINESS_SIGNOFF_REPORT:
+        return False
+    return bool(matching_issues(issues, SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES))
+
+
+def is_ops_report_source_identity_issue(issue: str, *, rel_path: str) -> bool:
+    return owner_surface(rel_path) == "ops_reports" and issue.startswith(
+        SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES
+    )
+
+
 def recommended_next_action(
     issues: list[str],
     schema_validation_status: str,
+    *,
+    rel_path: str = "",
 ) -> str:
     if any(issue.startswith(("read_failed", "utf8_decode_failed", "json_decode_failed")) for issue in issues):
         return "repair_or_remove_unreadable_artifact"
@@ -110,6 +130,8 @@ def recommended_next_action(
         return "add_schema_or_exclude_noncanonical_json"
     if matching_issues(issues, TEST_TARGET_FINGERPRINT_ISSUES):
         return "regenerate_test_execution_summary"
+    if is_learning_readiness_signoff_source_identity_issue(issues, rel_path=rel_path):
+        return "refresh_learning_readiness_signoff"
     if "source_tree_fingerprint_mismatch" in issues:
         return "regenerate_canonical_report"
     if "source_tree_fingerprint_unknown" in issues:
@@ -168,6 +190,8 @@ def issue_gate_effect(issue: str) -> str:
 def issue_gate_effect_for_record(issue: str, *, rel_path: str) -> str:
     if issue == "schema_validation_failed" and is_run_local_artifact(rel_path):
         return GATE_EFFECT_ADVISORY
+    if is_ops_report_source_identity_issue(issue, rel_path=rel_path):
+        return GATE_EFFECT_CLAIM_BLOCKER
     return issue_gate_effect(issue)
 
 
@@ -216,7 +240,7 @@ def _recommended_next_action_for_issue(issue: str, *, rel_path: str = "") -> str
     if issue == "schema_validation_failed" and is_run_local_artifact(rel_path):
         return "archive_or_classify_historical_run_artifact"
     schema_validation_status = "fail" if issue == "schema_validation_failed" else "pass"
-    return recommended_next_action([issue], schema_validation_status)
+    return recommended_next_action([issue], schema_validation_status, rel_path=rel_path)
 
 
 def _issue_priority(issue: str) -> int:

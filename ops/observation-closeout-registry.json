@@ -1,5 +1,96 @@
 {
   "$schema": "ops/schemas/observation-closeout-registry.schema.json",
   "artifact_kind": "observation_closeout_registry",
-  "retained_observations": []
+  "retained_observations": [
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260607-external-report-p2-final-plan/improvement-observations.json",
+      "observation_id": "release_finality_post_verify_tracked_report_write_ordering",
+      "status": "planned",
+      "retained_reason": "Finality-sensitive Make ordering needs a focused static guard; this task only adds archive-readiness basis and release authority readback planning.",
+      "next_action": "Add a Make static regression that flags tracked report refreshes after finality verification unless fixed-point and finality are rerun.",
+      "exit_condition": "Close when the static guard or release planner test rejects stale post-finality writer orderings.",
+      "owner_or_lane": "release-finality-static-gates"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260608-active-report-currentness-gap/improvement-observations.json",
+      "observation_id": "active_external_report_inputs_missing_from_reuse_currentness",
+      "status": "planned",
+      "retained_reason": "The gap depends on full-vault active external-report inputs and report-contract summary reuse; public source must not infer private report currentness.",
+      "next_action": "Add a focused currentness reuse regression after the external-report lifecycle refresh lane is next touched in full-vault context.",
+      "exit_condition": "Close when report-contract reuse includes active external-report manifest/action-matrix input drift or an equivalent preflight.",
+      "owner_or_lane": "external-report-lifecycle-refresh"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
+      "observation_id": "archived_report_action_trace_gap",
+      "status": "planned",
+      "retained_reason": "Active report and generated-index records now expose digest/count basis, but archived originals still require a dedicated private archive reconciliation lane.",
+      "next_action": "Extend archive reconciliation for archived reports with digest, matched/unresolved counts, unmatched count, and operator-only rationale without copying report prose.",
+      "exit_condition": "Close when archived report decisions have schema-backed per-report basis or operator-only rationale.",
+      "owner_or_lane": "external-report-archive-reconciliation"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
+      "observation_id": "broad_action_completion_threshold_gap",
+      "status": "planned",
+      "retained_reason": "The action matrix intentionally keeps broad residual owner actions partial until captured backlog is separated from completed remediation.",
+      "next_action": "Split remaining broad predicates for function budget proposal adapter, GitHub-native automation, release authority inventory, and repository entrypoint documentation when each owner lane is touched.",
+      "exit_condition": "Close when remaining broad residual actions distinguish surface-present, backlog-captured, externally-verified, and fully-absorbed states.",
+      "owner_or_lane": "external-report-action-matrix"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
+      "observation_id": "dev_install_index_portability_gap",
+      "status": "planned",
+      "retained_reason": "Dependency install index portability is a separate dev-install contract change, not required for archive-readiness basis.",
+      "next_action": "Split local dev-install index selection from canonical uv lock index policy and add a focused static test.",
+      "exit_condition": "Close when dev-install has an explicit local index policy with tests and docs.",
+      "owner_or_lane": "dev-install"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
+      "observation_id": "full_vault_archive_mtime_normalization_gap",
+      "status": "planned",
+      "retained_reason": "Full-vault review bundle mtime normalization requires operator/full-vault packaging evidence beyond public release smoke.",
+      "next_action": "Add or extend a review-bundle archive portability lane in full-vault context.",
+      "exit_condition": "Close when full-vault review bundle mtime normalization is checked or explicitly declared operator-only.",
+      "owner_or_lane": "review-bundle-portability"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
+      "observation_id": "github_governance_live_drift_gap",
+      "status": "planned",
+      "retained_reason": "Live branch protection and required-check drift cannot be proven from static public repository files.",
+      "next_action": "Add operator-safe governance drift evidence or mark the live setting check as operator-only.",
+      "exit_condition": "Close when live GitHub governance drift evidence exists or the action has an explicit operator-only rationale.",
+      "owner_or_lane": "collaboration-governance"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
+      "observation_id": "review_bundle_full_vault_hygiene_gap",
+      "status": "planned",
+      "retained_reason": "Review-bundle hygiene is distinct from release source-package hygiene and needs full-vault/operator context.",
+      "next_action": "Add a review-archive-clean or review-context lane that separates full-vault review packaging from release packaging.",
+      "exit_condition": "Close when review-bundle hygiene has its own check or explicit operator-only rationale.",
+      "owner_or_lane": "review-bundle-hygiene"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
+      "observation_id": "status_surface_currentness_visibility_gap",
+      "status": "planned",
+      "retained_reason": "Status currentness visibility is a focused status-surface change separate from archive-readiness basis.",
+      "next_action": "Add a release_status_surface regression that shows stale public-check or release-closeout evidence in make status.",
+      "exit_condition": "Close when make status exposes current/stale state for public summary and release closeout evidence.",
+      "owner_or_lane": "release-status-surface"
+    },
+    {
+      "path": "runs/auto-improve-trial-rerun17-run-01-auto-improve-readiness-runtime/improvement-observations.json",
+      "observation_id": "readiness_queue_state_ownership_consolidation",
+      "status": "open",
+      "retained_reason": "Readiness queue ownership consolidation is a next-touch runtime refactor and would widen this archive/observation closeout task.",
+      "next_action": "Consolidate scalar queue plumbing only when auto_improve_readiness_runtime.py or queue runtime ownership is next changed.",
+      "exit_condition": "Close when queue derivation is consolidated with no new function-budget candidates and a passing structural complexity report.",
+      "owner_or_lane": "auto-improve-readiness-runtime"
+    }
+  ]
 }

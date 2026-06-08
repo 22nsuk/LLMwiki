@@ -845,7 +845,11 @@ def _json_artifact_record(
         "schema_validation_status": schema_validation_status,
         "schema_validation_errors": schema_validation_errors,
         "safe_to_backfill": safe_to_backfill,
-        "recommended_next_action": recommended_next_action(issues, schema_validation_status),
+        "recommended_next_action": recommended_next_action(
+            issues,
+            schema_validation_status,
+            rel_path=rel_path,
+        ),
         "contract_issue_class": contract_issue_class(
             rel_path=rel_path,
             issues=issues,

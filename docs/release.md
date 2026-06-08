@@ -158,9 +158,13 @@ surface comparison; this document owns release evidence and staged authority.
   owning authority target.
   `make head-aligned-evidence-converge` is a compatibility alias for this target.
 - `make release-authority-settle`: explicit staged-authority writer lane for
-  unattended promotion. It runs report finality fixed point once, then
-  preflight, run-ready, preseal, sealed-run-ready, and auto-promotion-ready
-  manifests, and ends with artifact freshness plus check-only authority readback.
+  unattended promotion after release evidence is current. It runs report finality
+  fixed point once, then preflight, run-ready, preseal, sealed-run-ready, and
+  auto-promotion-ready manifests, refresh-checks artifact freshness, and ends
+  with check-only authority readback plus post-commit finalizer verification.
+  It does not regenerate long-tail report producers; run
+  `make release-evidence-converge` or the owning evidence refresh target first
+  when stale generated reports are the blocker.
 - `make changed-path-minimum-plan`: advisory changed-path cost planner. It reads
   `ops/test-lane-registry.json` and an optional
   `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST`, emits minimal suggested
@@ -259,6 +263,13 @@ reports.
 Currentness is also objective. Reuse or operator-facing `current` should come
 from the live HEAD/source-fingerprint/domain checks owned by the relevant lane,
 not from a report's self-declared `current` field alone.
+Artifact freshness gate effects describe the scanned artifact's own evidentiary
+surface, not release promotion by themselves. A source revision or source tree
+fingerprint mismatch on a canonical `ops/reports/` payload is a `claim_blocker`:
+that report cannot support current claims until its owner refreshes it. Release
+promotion authority is evaluated by the release closeout and staged authority
+surfaces, which separately distinguish release-owned freshness attention from
+non-release-owned operational drift.
 After a source-ready commit, use `make release-post-commit-finalize` before
 claiming release evidence is aligned for that HEAD. Use
 `make release-authority-settle` only when staged release authority should be
@@ -321,6 +332,19 @@ certificate gate, where it remains a live blocker until a completed goal-runtime
 run produces a verified `goal-runtime-certificate`.
 
 Recommended closeout sequence:
+
+If artifact freshness points at stale generated report payloads, refresh the
+owning evidence lane first: use `make release-evidence-converge` for broad
+release evidence convergence, or a narrower owner target when the stale report
+family is known. Use `make release-authority-settle` after that only when the
+staged authority sidecars themselves should be rewritten for unattended
+promotion.
+
+`ops/reports/learning-readiness-signoff.json` is the active operator acceptance
+source for the learning-readiness blocker. Keep it canonical while the
+acceptance is live, but fix source revision/tree drift with
+`make learning-readiness-signoff-refresh`; use `make learning-readiness-signoff`
+only when the operator is renewing or replacing the acceptance decision.
 
 1. Run `make release-auto-promotion-preflight GOAL_RUN_ID=<goal-run-id>` for
    cheap blockers when a run id is known, or omit `GOAL_RUN_ID` to let the

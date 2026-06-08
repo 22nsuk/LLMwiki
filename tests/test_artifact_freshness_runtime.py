@@ -783,8 +783,8 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(record["source_tree_fingerprint_status"], "stale")
             self.assertEqual(record["currentness_status"], "stale")
             self.assertIn("source_tree_fingerprint_mismatch", record["issues"])
-            self.assertEqual(record["gate_effect"], "blocks_promotion")
-            self.assertEqual(report["gate_effect"], "blocks_promotion")
+            self.assertEqual(record["gate_effect"], "claim_blocker")
+            self.assertEqual(report["gate_effect"], "claim_blocker")
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
 
@@ -845,10 +845,67 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(record["source_revision_status"], "stale")
             self.assertEqual(record["currentness_status"], "stale")
             self.assertIn("source_revision_mismatch", record["issues"])
-            self.assertEqual(record["gate_effect"], "blocks_promotion")
-            self.assertEqual(report["gate_effect"], "blocks_promotion")
+            self.assertEqual(record["gate_effect"], "claim_blocker")
+            self.assertEqual(report["gate_effect"], "claim_blocker")
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
+
+    def test_learning_readiness_signoff_source_identity_drift_points_to_refresh_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            current_source_tree = release_source_tree_fingerprint(vault)
+            self.assertNotEqual(current_source_tree, "stale-source-tree")
+            (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "reports" / "learning-readiness-signoff.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/learning-readiness-signoff.schema.json",
+                        "artifact_kind": "learning_readiness_signoff",
+                        "generated_at": "2999-01-01T00:00:00Z",
+                        "producer": "tests.learning_readiness_signoff",
+                        "source_command": "operator signoff fixture",
+                        "source_revision": "old-revision",
+                        "source_tree_fingerprint": "stale-source-tree",
+                        "input_fingerprints": {"operator_acceptance": "abc"},
+                        "schema_version": 1,
+                        "artifact_status": "current",
+                        "retention_policy": "canonical_report",
+                        "encoding": "utf-8",
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2999-01-01T00:00:00Z",
+                        },
+                        "vault": ".",
+                        "policy": {
+                            "path": "ops/policies/wiki-maintainer-policy.yaml",
+                            "version": 1,
+                        },
+                        "linked_blocker_id": "learning_blocked_by_review_required",
+                        "accepted_by": "operator@example.test",
+                        "accepted_at": "2999-01-01T00:00:00Z",
+                        "expires_at": "2999-01-08T00:00:00Z",
+                        "risk_owner": "runtime-maintainer",
+                        "revalidation_condition": "rerun release evidence closeout before release",
+                        "rollback_trigger": "learning telemetry regresses",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+            record = next(
+                item
+                for item in report["artifact_records"]
+                if item["path"] == "ops/reports/learning-readiness-signoff.json"
+            )
+
+            self.assertEqual(record["schema_validation_status"], "pass")
+            self.assertEqual(record["gate_effect"], "claim_blocker")
+            self.assertIn("source_tree_fingerprint_mismatch", record["issues"])
+            self.assertIn("source_revision_mismatch", record["issues"])
+            self.assertEqual(record["recommended_next_action"], "refresh_learning_readiness_signoff")
 
     def test_active_run_auxiliary_json_is_not_canonical_release_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

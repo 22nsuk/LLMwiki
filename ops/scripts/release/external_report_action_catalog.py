@@ -1021,8 +1021,28 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             "ops/reports/in-toto-statement.json",
             "ops/reports/sigstore-bundle-verification.json",
             "mk/supply_chain.mk",
+            ".github/workflows/release.yml",
+            ".github/workflows/dependency-review.yml",
         ],
         "recommended_target": "supply-chain-check",
+    },
+    {
+        "action_id": "github_governance_live_drift_verification",
+        "priority": "P2",
+        "theme": "live GitHub governance drift verification",
+        "patterns": [
+            r"branch protection",
+            r"ruleset",
+            r"required checks",
+            r"live GitHub governance",
+            r"governance drift",
+            r"live drift",
+        ],
+        "evidence_paths": [
+            ".github/release-governance.yml",
+            "ops/reports/github-governance-live-drift.json",
+        ],
+        "recommended_target": "collaboration-governance",
     },
     {
         "action_id": "collaboration_governance_surface",

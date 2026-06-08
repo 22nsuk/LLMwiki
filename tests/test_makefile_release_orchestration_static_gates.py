@@ -510,7 +510,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-sealed-run-ready",
                 "$(MAKE) release-auto-promotion-ready",
                 "$(MAKE) release-closeout-finality-verify",
-                "$(MAKE) artifact-freshness-check",
+                "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) release-auto-promotion-preflight-check",
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) release-auto-promotion-preseal-check",

@@ -1098,6 +1098,8 @@ def _release_owned_artifact_freshness_attention(vault: Path, payload: dict[str, 
         if any(
             issue
             in {
+                "source_revision_mismatch",
+                "source_revision_unknown",
                 "source_tree_fingerprint_mismatch",
                 "source_tree_fingerprint_unknown",
                 "test_target_missing",
