@@ -19,6 +19,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.external_report_lifecycle_runtime import (
         action_status_reason_details,
         action_status_reason_ids,
+        archive_reconciliation_observation_inventory,
+        archive_reconciliation_observation_paths,
         canonical_artifact_freshness_state,
         external_report_action_lifecycle_record,
         external_report_action_lifecycle_summary,
@@ -68,6 +70,8 @@ else:
     from .external_report_lifecycle_runtime import (
         action_status_reason_details,
         action_status_reason_ids,
+        archive_reconciliation_observation_inventory,
+        archive_reconciliation_observation_paths,
         canonical_artifact_freshness_state,
         external_report_action_lifecycle_record,
         external_report_action_lifecycle_summary,
@@ -297,8 +301,16 @@ def build_report(
             ],
             path_group_inputs={
                 "active_external_reports": [report_path(resolved_vault, path) for path in report_paths],
+                "archive_reconciliation_observation_paths": archive_reconciliation_observation_paths(
+                    resolved_vault
+                ),
             },
             text_inputs={
+                "archive_reconciliation_observations": json.dumps(
+                    archive_reconciliation_observation_inventory(resolved_vault),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ),
                 "action_catalog": json.dumps(ACTION_CATALOG, ensure_ascii=False, sort_keys=True),
             },
         ),

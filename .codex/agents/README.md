@@ -122,7 +122,9 @@ repo-shared defaults는 아래 rung만 사용한다.
 - `external-report-action-auditor`는 보고서 권고와 repo evidence의 대응관계를
   action status, lifecycle, evidence currentness로 나눠 분류한다. 실제 archive,
   matrix refresh, backlog mutation은 parent가 명시한 Make/script lane으로만
-  진행한다.
+  진행한다. Archive 가능성은 active/root 위치나 broad implemented count만으로
+  판단하지 않고, 보고서별 matched action, unmatched recommendation count, 또는
+  operator-only rationale가 확인된 뒤에만 제시한다.
 
 ## Routing guidance for this repo
 

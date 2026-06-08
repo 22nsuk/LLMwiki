@@ -21,6 +21,7 @@
     "policy",
     "status",
     "archive_rules",
+    "tracking_policy",
     "now",
     "next",
     "why_blocked",
@@ -271,6 +272,17 @@
         "role": { "type": "string", "minLength": 1 },
         "date": { "type": "string" },
         "reason": { "type": "string", "minLength": 1 },
+        "matched_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unresolved_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unresolved_action_count": { "type": "integer", "minimum": 0 },
         "supersedes": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
@@ -283,7 +295,24 @@
           "type": "string",
           "enum": ["operator_preflight", "operator_reference", "review_context", "run_history"]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "surface": { "const": "external_reports" }
+            },
+            "required": ["surface"]
+          },
+          "then": {
+            "required": [
+              "matched_action_ids",
+              "unresolved_action_ids",
+              "unresolved_action_count"
+            ]
+          }
+        }
+      ]
     },
     "archive_candidate": {
       "type": "object",
@@ -309,6 +338,17 @@
         "suggested_archive_path": { "type": "string", "minLength": 1 },
         "date": { "type": "string" },
         "reason": { "type": "string", "minLength": 1 },
+        "matched_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unresolved_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unresolved_action_count": { "type": "integer", "minimum": 0 },
         "supersedes": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
@@ -321,7 +361,24 @@
           "type": "string",
           "enum": ["operator_preflight", "operator_reference", "review_context", "run_history"]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "surface": { "const": "external_reports" }
+            },
+            "required": ["surface"]
+          },
+          "then": {
+            "required": [
+              "matched_action_ids",
+              "unresolved_action_ids",
+              "unresolved_action_count"
+            ]
+          }
+        }
+      ]
     }
   }
 }

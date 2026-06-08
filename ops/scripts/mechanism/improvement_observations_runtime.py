@@ -281,12 +281,18 @@ def _joined_surface(value: object) -> str:
     return text or "unspecified observation surface"
 
 
-def _normalized_observation(item: dict) -> dict:
+def _resolution_evidence(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return list(dict.fromkeys(str(item).strip() for item in value if str(item).strip()))
+
+
+def _normalized_observation(item: dict[str, Any]) -> dict[str, Any]:
     summary = str(item.get("summary") or "").strip()
     suggested_followup = str(item.get("suggested_followup") or "").strip()
     problem = str(item.get("problem") or summary).strip()
     automation_candidate = str(item.get("automation_candidate") or suggested_followup or problem).strip()
-    return {
+    observation: dict[str, Any] = {
         "observation_id": _observation_id(item.get("observation_id") or item.get("id")),
         "surface": _joined_surface(item.get("surface") or item.get("evidence")),
         "problem": problem or "Legacy improvement observation needs follow-up.",
@@ -299,6 +305,10 @@ def _normalized_observation(item: dict) -> dict:
         or "Review and resolve the legacy improvement observation.",
         "status": _normalized_status(item.get("status")),
     }
+    resolution_evidence = _resolution_evidence(item.get("resolution_evidence"))
+    if resolution_evidence:
+        observation["resolution_evidence"] = resolution_evidence
+    return observation
 
 
 def _read_existing_payload(vault: Path, rel_path: str) -> dict[str, Any]:

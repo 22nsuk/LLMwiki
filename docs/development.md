@@ -149,6 +149,10 @@ audit-strength property sweep.
 If a full-vault `external-reports/` directory exists, refresh the reference
 manifest and action matrix before broad report-contract sweeps so local-only
 review intake drift does not obscure the code or schema result being checked.
+Before archiving active reports, run or request an external-report action audit
+that records per-report action matches, unmatched recommendation counts, and any
+operator-only rationale; open archive-reconciliation observations intentionally
+keep the corresponding actions active in the matrix.
 `public-check-summary` records per-command heartbeat counts, quiet seconds,
 timeout termination reason, signal sent, and final observed process state; use
 those diagnostics before assuming a timed-out public pytest is still running.

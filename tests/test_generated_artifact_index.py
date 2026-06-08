@@ -13,6 +13,7 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+GENERATED_INDEX_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "generated-artifact-index.schema.json"
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
 
 
@@ -131,6 +132,99 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 ["external-reports/current_code_review_20260423.md"],
             )
 
+    def test_schema_requires_tracking_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            report = build_report(vault, context=fixed_context())
+            invalid_report = json.loads(json.dumps(report))
+            invalid_report.pop("tracking_policy")
+
+            errors = validate_with_schema(
+                invalid_report,
+                load_schema(GENERATED_INDEX_SCHEMA_PATH),
+            )
+
+            self.assertIn("$: missing required property 'tracking_policy'", errors)
+
+    def test_schema_requires_external_report_action_basis_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "external-reports" / "archive").mkdir(parents=True, exist_ok=True)
+            (vault / "external-reports" / "active_successor_without_date.md").write_text(
+                "# Successor\n\nsource package, promotion_blockers, evidence bundle\n",
+                encoding="utf-8",
+            )
+            (vault / "external-reports" / "undated_covered_old_report.md").write_text(
+                "# Old\n\nsource package\n",
+                encoding="utf-8",
+            )
+            (vault / "external-reports" / "dated_unique_old_report_20260420.md").write_text(
+                "# Still Unique\n\nfunction-budget\n",
+                encoding="utf-8",
+            )
+            schema = load_schema(GENERATED_INDEX_SCHEMA_PATH)
+            report = build_report(vault, context=fixed_context())
+            self.assertEqual(validate_with_schema(report, schema), [])
+
+            missing_current_basis = json.loads(json.dumps(report))
+            current_external = next(
+                item
+                for item in missing_current_basis["canonical_reports"]
+                if item["path"] == "external-reports/dated_unique_old_report_20260420.md"
+            )
+            current_external.pop("matched_action_ids")
+            current_errors = validate_with_schema(missing_current_basis, schema)
+            self.assertTrue(
+                any(
+                    "canonical_reports" in error
+                    and "matched_action_ids" in error
+                    for error in current_errors
+                ),
+                current_errors,
+            )
+
+            missing_archive_basis = json.loads(json.dumps(report))
+            archived_external = next(
+                item
+                for item in missing_archive_basis["archive_candidates"]
+                if item["path"] == "external-reports/undated_covered_old_report.md"
+            )
+            archived_external.pop("unresolved_action_count")
+            archive_errors = validate_with_schema(missing_archive_basis, schema)
+            self.assertTrue(
+                any(
+                    "archive_candidates" in error
+                    and "unresolved_action_count" in error
+                    for error in archive_errors
+                ),
+                archive_errors,
+            )
+
+    def test_schema_keeps_action_basis_optional_for_non_external_records(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "reports" / "auto-improve-readiness.json").write_text(
+                "{}",
+                encoding="utf-8",
+            )
+            schema = load_schema(GENERATED_INDEX_SCHEMA_PATH)
+            report = build_report(vault, context=fixed_context())
+            ops_report = next(
+                item
+                for item in report["canonical_reports"]
+                if item["path"] == "ops/reports/auto-improve-readiness.json"
+            )
+
+            self.assertEqual(ops_report["surface"], "ops_reports")
+            self.assertEqual(validate_with_schema(report, schema), [])
+
     def test_external_report_archive_lifecycle_uses_content_not_filename_dates(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -157,6 +251,17 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             self.assertIn("external-reports/undated_covered_old_report.md", candidate_paths)
             self.assertIn("external-reports/dated_unique_old_report_20260420.md", current_paths)
             self.assertIn("external-reports/active_successor_without_date.md", current_paths)
+            unique_external = next(
+                item
+                for item in report["canonical_reports"]
+                if item["path"] == "external-reports/dated_unique_old_report_20260420.md"
+            )
+            self.assertEqual(unique_external["unresolved_action_ids"], ["function_budget_proposal_adapter"])
+            self.assertEqual(unique_external["unresolved_action_count"], 1)
+            self.assertIn(
+                "function_budget_proposal_adapter",
+                unique_external["reason"],
+            )
             archived_external = next(
                 item
                 for item in report["archive_candidates"]
@@ -167,6 +272,7 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 ["external-reports/active_successor_without_date.md"],
             )
             self.assertIn("no unique unresolved action themes", archived_external["reason"])
+            self.assertEqual(archived_external["unresolved_action_ids"], ["source_package_distribution_binding"])
 
     def test_external_report_archive_lifecycle_closes_implemented_action_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

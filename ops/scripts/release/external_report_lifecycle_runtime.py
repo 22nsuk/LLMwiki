@@ -124,6 +124,175 @@ _INVENTORY_COMPAT_EXPORTS = (
     report_text,
 )
 
+TASK_IMPROVEMENT_OBSERVATIONS_ROOT = "ops/reports/task-improvement-observations"
+OPEN_IMPROVEMENT_OBSERVATION_STATUSES = {"open", "planned"}
+RESOLUTION_EVIDENCE_REQUIRED_STATUSES = {"automated"}
+RESOLUTION_EVIDENCE_PREFIXES = ("source:", "test:", "artifact:", "digest:", "make:")
+ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
+    "archived_report_action_trace_gap": {
+        "external_report_lifecycle",
+        "active_report_manifest_freshness",
+        "generated_artifact_tracking_policy",
+    },
+    "broad_action_completion_threshold_gap": {
+        "function_budget_proposal_adapter",
+        "github_native_security_automation",
+        "maintainability_hotspot_refactor_backlog",
+        "release_authority_inventory",
+        "repository_surface_entrypoint_documentation",
+        "supply_chain_external_verification",
+        "collaboration_governance_surface",
+    },
+    "status_surface_currentness_visibility_gap": {
+        "artifact_freshness_performance_observability",
+        "operator_entrypoint_index",
+        "selected_contract_currentness_gate",
+    },
+    "dev_install_index_portability_gap": {
+        "operator_entrypoint_index",
+        "uv_lock_canonical_policy",
+    },
+    "github_governance_live_drift_gap": {
+        "collaboration_governance_surface",
+        "github_native_security_automation",
+    },
+    "review_bundle_full_vault_hygiene_gap": {
+        "repo_boundary_history_hygiene",
+        "source_package_distribution_binding",
+        "windows_path_and_archive_alias_parity",
+    },
+    "full_vault_archive_mtime_normalization_gap": {
+        "source_package_distribution_binding",
+        "windows_path_and_archive_alias_parity",
+    },
+}
+ARCHIVE_RECONCILIATION_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
+    "archived_report_action_trace_gap": (
+        "external_report_reconciliation",
+        "external_report_lifecycle",
+        ["external-report-lifecycle-refresh", "external-report-action-matrix"],
+    ),
+    "broad_action_completion_threshold_gap": (
+        "action_absorption_reconciliation",
+        "action_matrix",
+        ["external-report-action-matrix"],
+    ),
+    "status_surface_currentness_visibility_gap": (
+        "operator_status_currentness",
+        "status_surface",
+        ["status", "artifact-freshness-refresh-check"],
+    ),
+    "dev_install_index_portability_gap": (
+        "dependency_install_policy",
+        "dependency_setup",
+        ["dev-install", "uv-lock-check"],
+    ),
+    "github_governance_live_drift_gap": (
+        "governance_drift_verification",
+        "github_governance",
+        ["collaboration-governance"],
+    ),
+    "review_bundle_full_vault_hygiene_gap": (
+        "review_bundle_hygiene",
+        "source_package",
+        ["release-source-package-check", "public-check"],
+    ),
+    "full_vault_archive_mtime_normalization_gap": (
+        "archive_portability",
+        "source_package",
+        ["release-source-package-check", "release-smoke-fast"],
+    ),
+}
+
+
+def _resolution_evidence_items(observation: dict[str, Any]) -> list[str]:
+    value = observation.get("resolution_evidence")
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _has_verified_resolution_evidence(observation: dict[str, Any]) -> bool:
+    return any(
+        item.startswith(RESOLUTION_EVIDENCE_PREFIXES)
+        for item in _resolution_evidence_items(observation)
+    )
+
+
+def _observation_keeps_archive_action_active(observation: dict[str, Any]) -> bool:
+    status = str(observation.get("status", "")).strip()
+    if status in OPEN_IMPROVEMENT_OBSERVATION_STATUSES:
+        return True
+    return status in RESOLUTION_EVIDENCE_REQUIRED_STATUSES and not _has_verified_resolution_evidence(
+        observation
+    )
+
+
+def _observation_runtime_status(observation: dict[str, Any]) -> str:
+    status = str(observation.get("status", "")).strip()
+    if status in RESOLUTION_EVIDENCE_REQUIRED_STATUSES and not _has_verified_resolution_evidence(
+        observation
+    ):
+        return f"{status}_missing_resolution_evidence"
+    return status
+
+
+def _archive_reconciliation_observation_records(vault: Path) -> list[dict[str, Any]]:
+    root = vault / TASK_IMPROVEMENT_OBSERVATIONS_ROOT
+    if not root.is_dir():
+        return []
+    records: list[dict[str, Any]] = []
+    for path in sorted(root.glob("*/improvement-observations.json")):
+        payload = load_json_object(path)
+        observations = as_list(payload.get("observations"))
+        for observation in observations:
+            if not isinstance(observation, dict):
+                continue
+            observation_id = str(observation.get("observation_id", "")).strip()
+            action_ids = ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS.get(observation_id)
+            if action_ids is None or not _observation_keeps_archive_action_active(observation):
+                continue
+            records.append(
+                {
+                    "observation_id": observation_id,
+                    "path": report_path(vault, path),
+                    "status": _observation_runtime_status(observation),
+                    "resolution_evidence_status": (
+                        "verified"
+                        if _has_verified_resolution_evidence(observation)
+                        else "missing"
+                    ),
+                    "action_ids": sorted(action_ids),
+                }
+            )
+    return records
+
+
+def archive_reconciliation_observation_inventory(vault: Path) -> list[dict[str, Any]]:
+    return _archive_reconciliation_observation_records(vault)
+
+
+def archive_reconciliation_observation_paths(vault: Path) -> list[str]:
+    return sorted({str(record["path"]) for record in _archive_reconciliation_observation_records(vault)})
+
+
+def archive_reconciliation_observation_reason_ids(vault: Path, action_id: str) -> list[str]:
+    return sorted(
+        {
+            str(record["observation_id"])
+            for record in _archive_reconciliation_observation_records(vault)
+            if action_id in set(record["action_ids"])
+        }
+    )
+
+
+def _status_with_archive_reconciliation_observations(vault: Path, action_id: str, status: str) -> str:
+    if status != "implemented":
+        return status
+    if archive_reconciliation_observation_reason_ids(vault, action_id):
+        return "partially_automated"
+    return status
+
 
 def _release_authority_reports_verified(vault: Path) -> bool:
     closeout = load_json_object(vault / "ops/reports/release-closeout-summary.json")
@@ -250,6 +419,21 @@ def _source_package_reason_ids(vault: Path) -> list[str]:
     return reasons
 
 
+def _reference_manifest_distribution_reason_ids(vault: Path) -> list[str]:
+    manifest = load_json_object(vault / REFERENCE_MANIFEST)
+    if not manifest:
+        return ["external_report_reference_manifest_missing"]
+    summary = as_dict(manifest.get("summary"))
+    reasons: list[str] = []
+    if summary.get("current_distribution_zip_known") is not True:
+        reasons.append("external_report_current_distribution_zip_missing")
+    if summary.get("basis_zip_matches_current_distribution") is not True:
+        reasons.append("external_report_basis_zip_not_bound")
+    if str(summary.get("zip_provenance_status", "")).strip() != "basis_current_match":
+        reasons.append("external_report_zip_provenance_not_bound")
+    return reasons
+
+
 def _full_suite_reason_ids(vault: Path) -> list[str]:
     full_summary = load_json_object(vault / "ops/reports/test-execution-summary-full.json")
     if not full_summary:
@@ -306,6 +490,7 @@ def release_verified_action_reason_ids(vault: Path, action_id: str) -> list[str]
                 "release_sealed_run_manifest",
             )
         )
+        reasons.extend(_reference_manifest_distribution_reason_ids(vault))
     if action_id == "release_evidence_bundle_and_attestation":
         reasons.extend(
             _current_release_manifest_reason_ids(
@@ -369,6 +554,7 @@ def source_package_distribution_binding_verified(vault: Path) -> bool:
             "build/release/release-sealed-run-manifest.json",
             "release_sealed_run_manifest",
         )
+        and not _reference_manifest_distribution_reason_ids(vault)
     )
 
 
@@ -1368,26 +1554,40 @@ def maintainability_hotspot_refactor_backlog_status(
 ) -> str:
     if existing_count == 0:
         return "planned"
+    if existing_count < expected_count:
+        return "partially_automated"
+    return (
+        "implemented"
+        if not maintainability_hotspot_refactor_backlog_reason_ids(vault)
+        else "partially_automated"
+    )
+
+
+def maintainability_hotspot_refactor_backlog_reason_ids(vault: Path) -> list[str]:
     report = load_json_object(vault / "ops/reports/function-budget-refactor-proposals.json")
+    if not report:
+        return ["maintainability_hotspot_report_missing"]
     summary = as_dict(report.get("summary"))
     proposal_count = as_int(summary.get("proposal_count"))
     candidate_count = as_int(summary.get("function_budget_candidate_count"))
     owner_backlog_count = as_int(summary.get("owner_backlog_count"))
     large_main_count = as_int(summary.get("large_main_without_tests_or_docs_count"))
-    if (
-        existing_count == expected_count
-        and report.get("artifact_kind") == "function_budget_refactor_proposals"
-        and report.get("producer") == "ops.scripts.function_budget_refactor_proposals"
-        and report.get("status") == "pass"
-        and candidate_count > 0
-        and proposal_count > 0
-        and owner_backlog_count > 0
-        and large_main_count == 0
-    ):
-        return "implemented"
-    if report or candidate_count or existing_count:
-        return "partially_automated"
-    return "planned"
+    reasons: list[str] = []
+    if report.get("artifact_kind") != "function_budget_refactor_proposals":
+        reasons.append("maintainability_hotspot_report_kind_mismatch")
+    if report.get("producer") != "ops.scripts.function_budget_refactor_proposals":
+        reasons.append("maintainability_hotspot_report_producer_mismatch")
+    if report.get("status") != "pass":
+        reasons.append("maintainability_hotspot_report_not_pass")
+    if candidate_count > 0:
+        reasons.append("maintainability_hotspot_candidates_remain")
+    if proposal_count > 0:
+        reasons.append("maintainability_hotspot_proposals_not_absorbed")
+    if owner_backlog_count > 0:
+        reasons.append("maintainability_hotspot_owner_backlog_not_absorbed")
+    if large_main_count > 0:
+        reasons.append("maintainability_hotspot_large_main_remains")
+    return _dedupe_reason_ids(reasons)
 
 
 def generated_artifact_tracking_policy_status(
@@ -1452,6 +1652,16 @@ def supply_chain_external_verification_status(
 ) -> str:
     if existing_count == 0:
         return "planned"
+    if existing_count < expected_count:
+        return "partially_automated"
+    return (
+        "implemented"
+        if not supply_chain_external_verification_reason_ids(vault)
+        else "partially_automated"
+    )
+
+
+def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
     gate = load_json_object(vault / "ops/reports/supply-chain-gate-report.json")
     sbom = load_json_object(vault / "ops/reports/sbom-readiness-gate-report.json")
     in_toto = load_json_object(vault / "ops/reports/in-toto-statement.json")
@@ -1473,20 +1683,28 @@ def supply_chain_external_verification_status(
     external_bundle_rule_present = any(
         as_dict(check).get("rule") == "external_bundle_observed" for check in sigstore_checks
     )
-    if (
-        existing_count == expected_count
-        and gate.get("status") == "pass"
-        and sbom.get("status") == "pass"
-        and has_slsa_predicate
-        and sigstore.get("status") in {"local-integrity-only", "verified-external-bundle"}
-        and sigstore_checks
-        and has_release_attestation
-        and has_dependency_review
-        and has_sigstore_bundle_target
-        and external_bundle_rule_present
-    ):
-        return "implemented"
-    return "partially_automated"
+    reasons: list[str] = []
+    if gate.get("status") != "pass":
+        reasons.append("supply_chain_gate_not_pass")
+    if sbom.get("status") != "pass":
+        reasons.append("supply_chain_sbom_readiness_not_pass")
+    if not has_slsa_predicate:
+        reasons.append("supply_chain_slsa_predicate_missing")
+    if sigstore.get("status") == "local-integrity-only":
+        reasons.append("supply_chain_sigstore_local_integrity_only")
+    elif sigstore.get("status") != "verified-external-bundle":
+        reasons.append("supply_chain_sigstore_external_bundle_not_verified")
+    if not sigstore_checks:
+        reasons.append("supply_chain_sigstore_checks_missing")
+    if not external_bundle_rule_present:
+        reasons.append("supply_chain_external_bundle_rule_missing")
+    if not has_release_attestation:
+        reasons.append("supply_chain_release_attestation_missing")
+    if not has_dependency_review:
+        reasons.append("supply_chain_dependency_review_missing")
+    if not has_sigstore_bundle_target:
+        reasons.append("supply_chain_sigstore_bundle_target_missing")
+    return _dedupe_reason_ids(reasons)
 
 
 def collaboration_governance_surface_status(
@@ -1494,9 +1712,28 @@ def collaboration_governance_surface_status(
 ) -> str:
     if existing_count == 0:
         return "planned"
-    if existing_count == expected_count:
-        return "implemented"
-    return "partially_automated"
+    if existing_count < expected_count:
+        return "partially_automated"
+    return (
+        "implemented"
+        if not collaboration_governance_surface_reason_ids(vault)
+        else "partially_automated"
+    )
+
+
+def collaboration_governance_surface_reason_ids(vault: Path) -> list[str]:
+    codeowners = _read_text_or_empty(vault / ".github/CODEOWNERS")
+    pr_template = _read_text_or_empty(vault / ".github/pull_request_template.md")
+    contributing = _read_text_or_empty(vault / "CONTRIBUTING.md")
+    reasons: list[str] = []
+    if "@" not in codeowners:
+        reasons.append("collaboration_governance_codeowners_review_owner_missing")
+    if "review" not in pr_template.lower():
+        reasons.append("collaboration_governance_pr_template_review_missing")
+    contributing_lower = contributing.lower()
+    if "commit" not in contributing_lower or "governance" not in contributing_lower:
+        reasons.append("collaboration_governance_contributing_policy_missing")
+    return reasons
 
 
 def single_source_status(vault: Path) -> str:
@@ -1724,6 +1961,7 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
         existing_count=existing_count,
         expected_count=expected_count,
     )
+    status = _status_with_archive_reconciliation_observations(vault, action_id, status)
     return status, evidence
 
 
@@ -1779,6 +2017,12 @@ def action_status_reason_ids(
     reasons = _evidence_reason_ids(evidence)
     if action_id in RELEASE_VERIFIED_ACTION_RESOLVERS:
         reasons.extend(release_verified_action_reason_ids(vault, action_id))
+    elif action_id == "maintainability_hotspot_refactor_backlog":
+        reasons.extend(maintainability_hotspot_refactor_backlog_reason_ids(vault))
+    elif action_id == "supply_chain_external_verification":
+        reasons.extend(supply_chain_external_verification_reason_ids(vault))
+    elif action_id == "collaboration_governance_surface":
+        reasons.extend(collaboration_governance_surface_reason_ids(vault))
     elif action_id == "goal_execution_runtime_certificate":
         reasons.extend(goal_execution_runtime_certificate_reason_ids(vault))
     elif action_id == "artifact_freshness_performance_observability":
@@ -1789,6 +2033,7 @@ def action_status_reason_ids(
                 expected_count if expected_count is not None else len(evidence),
             )
         )
+    reasons.extend(archive_reconciliation_observation_reason_ids(vault, action_id))
     if not reasons:
         reasons.append(status)
     return _dedupe_reason_ids(reasons)
@@ -1874,6 +2119,45 @@ def action_status_reason_details(
                     recommended_targets=["release-source-package-check"],
                 )
             )
+        elif reason_id.startswith("external_report_"):
+            details.append(
+                _reason_detail(
+                    reason_id,
+                    owning_stage="external_report_reference_manifest",
+                    blocking_scope="external_report_lifecycle",
+                    recommended_targets=["external-report-reference-manifest-settle"],
+                )
+            )
+        elif reason_id.startswith("maintainability_hotspot_"):
+            details.append(
+                _reason_detail(
+                    reason_id,
+                    owning_stage="function_budget_refactor_proposals",
+                    blocking_scope="maintainability_hotspot",
+                    gate_effect=GATE_EFFECT_ADVISORY,
+                    recommended_targets=["function-budget-refactor-proposals"],
+                )
+            )
+        elif reason_id.startswith("supply_chain_"):
+            details.append(
+                _reason_detail(
+                    reason_id,
+                    owning_stage="supply_chain_external_verification",
+                    blocking_scope="supply_chain",
+                    gate_effect=GATE_EFFECT_ADVISORY,
+                    recommended_targets=["supply-chain-check"],
+                )
+            )
+        elif reason_id.startswith("collaboration_governance_"):
+            details.append(
+                _reason_detail(
+                    reason_id,
+                    owning_stage="collaboration_governance",
+                    blocking_scope="github_governance",
+                    gate_effect=GATE_EFFECT_ADVISORY,
+                    recommended_targets=["collaboration-governance"],
+                )
+            )
         elif reason_id.startswith("full_suite_"):
             details.append(
                 _reason_detail(
@@ -1909,6 +2193,19 @@ def action_status_reason_details(
                     reason_id,
                     owning_stage="artifact_freshness",
                     blocking_scope="artifact_freshness",
+                    gate_effect=GATE_EFFECT_ADVISORY,
+                    recommended_targets=recommended_targets,
+                )
+            )
+        elif reason_id in ARCHIVE_RECONCILIATION_REASON_TARGETS:
+            owning_stage, blocking_scope, recommended_targets = ARCHIVE_RECONCILIATION_REASON_TARGETS[
+                reason_id
+            ]
+            details.append(
+                _reason_detail(
+                    reason_id,
+                    owning_stage=owning_stage,
+                    blocking_scope=blocking_scope,
                     gate_effect=GATE_EFFECT_ADVISORY,
                     recommended_targets=recommended_targets,
                 )
@@ -1988,6 +2285,15 @@ def _unresolved_action_ids(profile: dict[str, Any], statuses: dict[str, str]) ->
     }
 
 
+def _decision_action_basis(profile: dict[str, Any], statuses: dict[str, str]) -> dict[str, Any]:
+    unresolved = sorted(_unresolved_action_ids(profile, statuses))
+    return {
+        "matched_action_ids": sorted(str(action_id) for action_id in profile["matched_action_ids"]),
+        "unresolved_action_ids": unresolved,
+        "unresolved_action_count": len(unresolved),
+    }
+
+
 def _coverage_authority(profile: dict[str, Any], statuses: dict[str, str]) -> tuple[int, int, int, int]:
     unresolved = _unresolved_action_ids(profile, statuses)
     namespace_rank = 1 if profile.get("lifecycle_namespace") == "active_root" else 0
@@ -2006,14 +2312,17 @@ def lifecycle_decision(
     statuses: dict[str, str],
 ) -> dict[str, Any]:
     path = str(profile["path"])
+    action_basis = _decision_action_basis(profile, statuses)
     if profile["report_type"] != "narrative_report":
         if profile["report_type"] == "binary_report":
             return {
+                **action_basis,
                 "archive_recommended": False,
                 "reason": "Binary active reports require operator-only review or an explicit extracted mapping before lifecycle automation can archive them.",
                 "superseded_by": [],
             }
         return {
+            **action_basis,
             "archive_recommended": False,
             "reason": "Reference manifest remains active lifecycle evidence.",
             "superseded_by": [],
@@ -2022,17 +2331,20 @@ def lifecycle_decision(
     if not action_ids:
         if profile.get("lifecycle_namespace") == "archive":
             return {
+                **action_basis,
                 "archive_recommended": True,
                 "reason": "Archived external report has no structured action coverage; archive remains sticky.",
                 "superseded_by": [],
             }
         return {
+            **action_basis,
             "archive_recommended": False,
             "reason": "No structured action coverage was detected; keep active for operator review.",
             "superseded_by": [],
         }
     if bool(profile["explicit_archive_status"]):
         return {
+            **action_basis,
             "archive_recommended": True,
             "reason": "External report carries an explicit closed/superseded archive lifecycle marker.",
             "superseded_by": list(profile["explicit_successor_paths"]),
@@ -2041,6 +2353,7 @@ def lifecycle_decision(
     unresolved = sorted(_unresolved_action_ids(profile, statuses))
     if not unresolved:
         return {
+            **action_basis,
             "archive_recommended": True,
             "reason": "All structured action themes from this external report are implemented in canonical evidence.",
             "superseded_by": [],
@@ -2060,6 +2373,7 @@ def lifecycle_decision(
 
     if covering_reports:
         return {
+            **action_basis,
             "archive_recommended": True,
             "reason": (
                 "External report has no unique unresolved action themes; remaining open themes are covered by "
@@ -2068,6 +2382,7 @@ def lifecycle_decision(
             "superseded_by": sorted(covering_reports),
         }
     return {
+        **action_basis,
         "archive_recommended": False,
         "reason": "External report still carries unique unresolved action themes not covered by another active report.",
         "superseded_by": [],

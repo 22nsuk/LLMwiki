@@ -210,6 +210,38 @@ def _external_report_lifecycle_statuses(vault: Path) -> dict[str, str]:
     return statuses
 
 
+def _external_report_decision_fields(decision: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "matched_action_ids": [str(action_id) for action_id in decision.get("matched_action_ids", [])],
+        "unresolved_action_ids": [
+            str(action_id) for action_id in decision.get("unresolved_action_ids", [])
+        ],
+        "unresolved_action_count": int(decision.get("unresolved_action_count") or 0),
+    }
+
+
+def _external_report_decision_reason(decision: dict[str, Any]) -> str:
+    reason = str(decision["reason"])
+    unresolved_action_ids = [
+        str(action_id) for action_id in decision.get("unresolved_action_ids", []) if str(action_id)
+    ]
+    if (
+        unresolved_action_ids
+        and "unique unresolved action themes not covered by another active report" in reason
+    ):
+        return (
+            "External report remains active after structured action review: "
+            f"{len(unresolved_action_ids)} unresolved action_id(s): "
+            f"{', '.join(unresolved_action_ids)}."
+        )
+    if unresolved_action_ids and "no unique unresolved action themes" in reason:
+        return (
+            f"{reason} Remaining unresolved action_id(s): "
+            f"{', '.join(unresolved_action_ids)}."
+        )
+    return reason
+
+
 def _ops_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str, str]], dict[str, int]]:
     root_records = [
         record
@@ -285,8 +317,8 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
     root_paths = [vault / record["path"] for record in root_records]
     lifecycle_profiles = report_lifecycle_profiles(vault, root_paths)
     status_by_action = _external_report_lifecycle_statuses(vault)
-    current: list[dict[str, str]] = []
-    archive_candidates: list[dict[str, str]] = []
+    current: list[dict[str, Any]] = []
+    archive_candidates: list[dict[str, Any]] = []
     for profile in lifecycle_profiles:
         record = record_by_path[str(profile["path"])]
         name = Path(record["path"]).name
@@ -303,8 +335,9 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
                     "path": record["path"],
                     "suggested_archive_path": f"external-reports/archive/{name}",
                     "date": record["date"],
-                    "reason": str(decision["reason"]),
+                    "reason": _external_report_decision_reason(decision),
                     "superseded_by": decision["superseded_by"],
+                    **_external_report_decision_fields(decision),
                 }
             )
             continue
@@ -319,7 +352,8 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
                     else "current_review_report"
                 ),
                 "date": record["date"],
-                "reason": str(decision["reason"]),
+                "reason": _external_report_decision_reason(decision),
+                **_external_report_decision_fields(decision),
             }
         )
     archive_count = 0

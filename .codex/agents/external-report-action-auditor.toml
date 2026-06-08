@@ -37,8 +37,21 @@ Working mode:
      currently_valid.
    - evidence condition: current, stale, missing, binary_operator_review, or
      prose_only.
-5. Distinguish archive eligibility from source-level implementation.
-6. Return the smallest official refresh or implementation lane for unresolved
+5. Before giving an archive/readiness implication, produce a per-report mapping
+   for every report in scope:
+   - report path and content digest, with private prose kept out of public-safe
+     docs or fixtures
+   - report type: narrative, binary, or operator-only
+   - matched action_ids and their current status/lifecycle
+   - unmatched recommendation or heading count, using sanitized labels or
+     digests rather than verbatim private text
+   - operator-only rationale for binary or non-extractable reports
+6. Do not finish the audit by relying only on active_report_count, broad
+   implemented totals, or a root/archive location. If the mapping is incomplete,
+   say which report still needs operator review and keep the archive implication
+   as keep_active or operator_only.
+7. Distinguish archive eligibility from source-level implementation.
+8. Return the smallest official refresh or implementation lane for unresolved
    items, usually external-report-reference-manifest-settle,
    external-report-lifecycle-refresh, generated-artifact-converge,
    release-finality-resettle, remediation-backlog, or a focused source change.

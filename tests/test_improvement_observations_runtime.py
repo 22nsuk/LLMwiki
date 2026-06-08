@@ -94,6 +94,10 @@ class ImprovementObservationsRuntimeTests(unittest.TestCase):
                                 "why_it_matters": "automation backlog should be durable",
                                 "automation_candidate": "add a report writer",
                                 "suggested_followup": "backfill the artifact envelope",
+                                "resolution_evidence": [
+                                    "source:ops/scripts/mechanism/improvement_observations_runtime.py",
+                                    "test:tests/test_improvement_observations_runtime.py",
+                                ],
                                 "status": "planned",
                             }
                         ],
@@ -117,6 +121,13 @@ class ImprovementObservationsRuntimeTests(unittest.TestCase):
             self.assertEqual(payload["captured_at"], "2026-04-20T00:00:00Z")
             self.assertEqual(payload["generated_at"], "2026-04-27T12:00:00Z")
             self.assertEqual(payload["observations"][0]["observation_id"], "legacy_followup")
+            self.assertEqual(
+                payload["observations"][0]["resolution_evidence"],
+                [
+                    "source:ops/scripts/mechanism/improvement_observations_runtime.py",
+                    "test:tests/test_improvement_observations_runtime.py",
+                ],
+            )
 
     def test_backfill_improvement_observations_converts_legacy_root_list(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -473,6 +473,22 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   archived reports are retained outside Git/source-release authority.
   `ops/reports/external-report-action-matrix.json` separates action lifecycle
   as `resolved`, `historically_true`, `superseded`, or `currently_valid`.
+  Before a root report is moved to archive, require a per-report absorption
+  check: matched action IDs, evidence status, lifecycle, unmatched
+  recommendation count, and any operator-only rationale must be recorded in
+  private/local evidence. Open task observations for archive reconciliation keep
+  related broad actions `currently_valid`, so archive recommendations cannot rely
+  only on active-report count or implemented totals. Generated-artifact index
+  `reason` text is display-only for this decision; use structured
+  `matched_action_ids`, `unresolved_action_ids`, `unresolved_action_count`,
+  `superseded_by`, and matrix `status_reason_details` as the reconciliation
+  evidence. Archive-reconciliation observations with `status: automated` keep
+  their mapped actions partial until they include `resolution_evidence` entries
+  such as `source:...`, `test:...`, `artifact:...`, `digest:...`, or `make:...`.
+  Broad action themes such as hotspot refactor backlog, supply-chain external
+  verification, governance, and source-package binding use action-specific
+  completion predicates, so surface presence or backlog capture is not treated
+  as full absorption.
   Historical claims such as an older stale report count must not be rendered as
   current state; use the regenerated action matrix and artifact-freshness
   summary for live counts. If current, source-bound artifact-freshness evidence
