@@ -23,12 +23,17 @@ from tests.workflow_static_helpers import (
     PINNED_UPLOAD_ARTIFACT_ACTION,
     assert_workflow_uses_are_sha_pinned,
     load_workflow,
-    workflow_job,
-    workflow_jobs,
+    workflow_job as _job,
+    workflow_jobs as _jobs,
     workflow_mapping,
+    workflow_matrix_include,
     workflow_matrix_tier_run_text,
     workflow_matrix_values,
-    workflow_step,
+    workflow_on,
+    workflow_path_entries as _path_entries,
+    workflow_run_text as _run_text,
+    workflow_step as _step_by_name,
+    workflow_steps as _steps,
 )
 
 CI_WORKFLOW = Path(".github/workflows/ci.yml")
@@ -42,35 +47,6 @@ pytestmark = pytest.mark.report_contract
 
 def _workflow() -> dict[str, object]:
     return load_workflow(CI_WORKFLOW)
-
-
-def _jobs(workflow: dict[str, object]) -> dict[str, object]:
-    return workflow_mapping(workflow.get("jobs", {}), "workflow jobs must be a mapping")
-
-
-def _job(workflow: dict[str, object], name: str) -> dict[str, object]:
-    return workflow_mapping(
-        _jobs(workflow).get(name, {}),
-        f"workflow job must be a mapping: {name}",
-    )
-
-
-def _steps(job: dict[str, object]) -> list[dict[str, object]]:
-    steps = job.get("steps", [])
-    if not isinstance(steps, list):
-        raise AssertionError("workflow job steps must be a list")
-    return [workflow_mapping(step, "workflow step must be a mapping") for step in steps if isinstance(step, dict)]
-
-
-def _step_by_name(job: dict[str, object], name: str) -> dict[str, object]:
-    for step in _steps(job):
-        if step.get("name") == name:
-            return step
-    raise AssertionError(f"missing workflow step: {name}")
-
-
-def _run_text(step: dict[str, object]) -> str:
-    return str(step.get("run", ""))
 
 
 def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, object]) -> None:
@@ -130,7 +106,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
                 self.assertEqual(workflow.get("permissions"), {"contents": "read"})
                 self.assertIn("concurrency", workflow)
                 assert_workflow_uses_are_sha_pinned(self, workflow)
-                for job_name, job in workflow_jobs(workflow).items():
+                for job_name, job in _jobs(workflow).items():
                     with self.subTest(workflow=str(workflow_path), job=job_name):
                         self.assertIsInstance(job, dict)
                         timeout_minutes = job.get("timeout-minutes")
@@ -138,34 +114,45 @@ class CiWorkflowStaticTests(unittest.TestCase):
                         self.assertGreater(timeout_minutes, 0)
 
         codeql = load_workflow(CODEQL_WORKFLOW)
-        codeql_job = workflow_job(codeql, "analyze")
+        codeql_job = _job(codeql, "analyze")
         self.assertEqual(
             codeql_job.get("permissions"),
             {"actions": "read", "contents": "read", "security-events": "write"},
         )
-        self.assertEqual(workflow_step(codeql_job, "Checkout").get("uses"), PINNED_CHECKOUT_ACTION)
+        self.assertEqual(_step_by_name(codeql_job, "Checkout").get("uses"), PINNED_CHECKOUT_ACTION)
         self.assertRegex(
-            str(workflow_step(codeql_job, "Initialize CodeQL").get("uses")),
+            str(_step_by_name(codeql_job, "Initialize CodeQL").get("uses")),
             r"^github/codeql-action/init@[0-9a-f]{40}$",
         )
         self.assertRegex(
-            str(workflow_step(codeql_job, "Perform CodeQL Analysis").get("uses")),
+            str(_step_by_name(codeql_job, "Perform CodeQL Analysis").get("uses")),
             r"^github/codeql-action/analyze@[0-9a-f]{40}$",
         )
 
         dependency_review = load_workflow(DEPENDENCY_REVIEW_WORKFLOW)
-        review_job = workflow_job(dependency_review, "dependency-review")
+        review_job = _job(dependency_review, "dependency-review")
         self.assertEqual(
-            workflow_step(review_job, "Dependency Review").get("uses"),
+            _step_by_name(review_job, "Dependency Review").get("uses"),
             PINNED_DEPENDENCY_REVIEW_ACTION,
         )
         self.assertEqual(
             workflow_mapping(
-                workflow_step(review_job, "Dependency Review").get("with", {}),
+                _step_by_name(review_job, "Dependency Review").get("with", {}),
                 "dependency review with section must be a mapping",
             ).get("fail-on-severity"),
             "moderate",
         )
+
+    def test_ci_skips_dependabot_push_wave_and_keeps_pr_checks(self) -> None:
+        on_section = workflow_on(_workflow())
+        push = workflow_mapping(
+            on_section.get("push", {}),
+            "CI push trigger must be a mapping",
+        )
+
+        self.assertEqual(push.get("branches-ignore"), ["dependabot/**"])
+        self.assertIn("pull_request", on_section)
+        self.assertIn("workflow_dispatch", on_section)
 
     def test_ci_matrix_tiers_match_registry_compatibility_contract(self) -> None:
         registry = load_registry(Path("."))
@@ -299,48 +286,99 @@ class CiWorkflowStaticTests(unittest.TestCase):
         self.assertIn("            make check-finalized", text)
         self.assertIn("            make release-smoke-fast", text)
 
-    def test_release_closeout_regression_tier_uploads_cost_evidence(self) -> None:
-        text = CI_WORKFLOW.read_text(encoding="utf-8")
+    def test_release_closeout_regression_tier_uploads_diagnostics_without_masking_root_failure(
+        self,
+    ) -> None:
+        job = _job(_workflow(), "test-tier")
 
-        self.assertIn("- release-closeout-regression", text)
-        self.assertIn("make release-workflow-order-guard", text)
-        self.assertIn("make release-closeout-regression-dry-run", text)
-        self.assertIn("make release-authority-sealed-preflight", text)
-        self.assertIn("make release-closeout-post-check-finalizer-ci-artifact", text)
-        self.assertIn("make release-closeout-cost-evidence-ci-artifact", text)
+        run_step = _step_by_name(job, "Run release closeout regression tier")
+        self.assertEqual(run_step.get("id"), "release_closeout_regression")
+        self.assertEqual(run_step.get("if"), "matrix.tier == 'release-closeout-regression'")
+        run_text = _run_text(run_step)
+        for command in (
+            "make release-workflow-order-guard",
+            "make release-closeout-regression-dry-run",
+            "make release-authority-sealed-preflight",
+            "make release-closeout-post-check-finalizer-ci-artifact",
+            "make release-closeout-cost-evidence-ci-artifact",
+        ):
+            with self.subTest(command=command):
+                self.assertIn(command, run_text)
+
+        diagnostics = _step_by_name(job, "Materialize release closeout upload diagnostics")
+        self.assertEqual(
+            diagnostics.get("if"),
+            "always() && matrix.tier == 'release-closeout-regression' && steps.release_closeout_regression.outcome != 'success'",
+        )
+        diagnostics_run = _run_text(diagnostics)
         self.assertIn(
-            "name: release-closeout-cost-evidence-${{ matrix.python-version }}", text
+            "tmp/release-closeout-cost-evidence-upload-diagnostics-${CI_PYTHON_VERSION}.txt",
+            diagnostics_run,
         )
         self.assertIn(
-            "name: release-authority-blocked-preflight-${{ matrix.python-version }}",
-            text,
+            "tmp/release-authority-blocked-preflight-upload-diagnostics-${CI_PYTHON_VERSION}.txt",
+            diagnostics_run,
         )
-        self.assertIn("tmp/release-closeout-fixed-point-cost-trend-ci.json", text)
-        self.assertIn("ops/reports/release-closeout-fixed-point.json", text)
-        self.assertIn("ops/reports/release-closeout-fixed-point-cost-trend.json", text)
-        self.assertIn("ops/reports/release-evidence-dashboard.json", text)
-        self.assertIn("ops/reports/release-workflow-order-guard.json", text)
-        self.assertIn(
-            "build/release/release-closeout-sealed-dry-run/LLMwiki-source.zip", text
+
+        cost_upload = _step_by_name(job, "Upload release closeout cost evidence")
+        self.assertEqual(cost_upload.get("uses"), PINNED_UPLOAD_ARTIFACT_ACTION)
+        self.assertEqual(cost_upload.get("if"), "always() && matrix.tier == 'release-closeout-regression'")
+        cost_paths = _path_entries(cost_upload)
+        for path in (
+            "tmp/release-closeout-fixed-point-cost-trend-ci.json",
+            "ops/reports/release-closeout-fixed-point.json",
+            "ops/reports/release-closeout-fixed-point-cost-trend.json",
+            "ops/reports/release-evidence-dashboard.json",
+            "ops/reports/release-workflow-order-guard.json",
+            "tmp/release-closeout-post-check-finalizer.json",
+            "tmp/release-closeout-post-check-finalizer-recommended-targets.txt",
+            "tmp/release-closeout-post-check-finalizer-plan.json",
+            "tmp/release-closeout-cost-evidence-upload-diagnostics-${{ matrix.python-version }}.txt",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, cost_paths)
+
+        authority_upload = _step_by_name(job, "Upload release authority blocked preflight")
+        self.assertEqual(authority_upload.get("uses"), PINNED_UPLOAD_ARTIFACT_ACTION)
+        self.assertEqual(
+            authority_upload.get("if"),
+            "always() && matrix.tier == 'release-closeout-regression'",
         )
-        self.assertIn(
+        authority_paths = _path_entries(authority_upload)
+        for path in (
+            "build/release/release-closeout-sealed-dry-run/LLMwiki-source.zip",
             "build/release/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json",
-            text,
-        )
-        self.assertIn(
             "build/release/release-closeout-sealed-dry-run/external-report-reference-manifest.json",
-            text,
-        )
-        self.assertIn(
             "build/release/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
-            text,
+            "ops/reports/release-closeout-sealed-rehearsal-check.json",
+            "tmp/release-authority-blocked-preflight-upload-diagnostics-${{ matrix.python-version }}.txt",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, authority_paths)
+
+    def test_public_tier_uploads_candidate_summary_diagnostics(self) -> None:
+        job = _job(_workflow(), "test-tier")
+
+        public_run = _step_by_name(job, "Run public mirror tier")
+        self.assertEqual(public_run.get("if"), "matrix.tier == 'public'")
+        self.assertEqual(_run_text(public_run), "make public-check")
+
+        upload = _step_by_name(job, "Upload public check summary diagnostics")
+        self.assertEqual(upload.get("if"), "always() && matrix.tier == 'public'")
+        self.assertEqual(upload.get("uses"), PINNED_UPLOAD_ARTIFACT_ACTION)
+        upload_with = workflow_mapping(
+            upload.get("with", {}),
+            "public check summary upload with section must be a mapping",
         )
-        self.assertIn("ops/reports/release-closeout-sealed-rehearsal-check.json", text)
-        self.assertIn("tmp/release-closeout-post-check-finalizer.json", text)
-        self.assertIn(
-            "tmp/release-closeout-post-check-finalizer-recommended-targets.txt", text
+        self.assertEqual(upload_with.get("name"), "public-check-summary-${{ matrix.python-version }}")
+        self.assertEqual(upload_with.get("if-no-files-found"), "warn")
+        self.assertEqual(
+            _path_entries(upload),
+            (
+                "tmp/public-check-summary.candidate.json",
+                "tmp/public-check-summary-check.json",
+            ),
         )
-        self.assertIn("tmp/release-closeout-post-check-finalizer-plan.json", text)
 
     def test_ci_artifact_transfer_actions_are_pinned(self) -> None:
         workflow = _workflow()
@@ -376,48 +414,82 @@ class CiWorkflowStaticTests(unittest.TestCase):
     def test_raw_registry_cross_environment_matrix_job_covers_linux_windows_macos(
         self,
     ) -> None:
-        text = CI_WORKFLOW.read_text(encoding="utf-8")
+        job = _job(_workflow(), "raw-registry-cross-environment")
 
-        self.assertIn("raw-registry-cross-environment:", text)
-        self.assertIn("name: raw-registry-cross-env / ${{ matrix.profile }}", text)
-        self.assertIn("profile: linux-c-utf8", text)
-        self.assertIn("profile: windows-utf8", text)
-        self.assertIn("profile: macos-utf8", text)
-        self.assertIn("os: ubuntu-latest", text)
-        self.assertIn("os: windows-latest", text)
-        self.assertIn("os: macos-latest", text)
+        self.assertEqual(job.get("name"), "raw-registry-cross-env / ${{ matrix.profile }}")
+        self.assertEqual(
+            {
+                str(item.get("profile")): str(item.get("os"))
+                for item in workflow_matrix_include(job)
+            },
+            {
+                "linux-c-utf8": "ubuntu-latest",
+                "windows-utf8": "windows-latest",
+                "macos-utf8": "macos-latest",
+            },
+        )
+        generate_run = _run_text(_step_by_name(job, "Generate raw registry cross-environment matrix"))
         self.assertIn(
             "python -m ops.scripts.registry.raw_registry_cross_environment_matrix \\",
-            text,
+            generate_run,
         )
-        self.assertIn('--profile "${{ matrix.profile }}"', text)
+        self.assertIn('--profile "${{ matrix.profile }}"', generate_run)
         self.assertIn(
             "ops/reports/raw-registry-cross-environment-matrix-${{ matrix.profile }}.json",
-            text,
+            generate_run,
         )
-        self.assertIn(
-            "name: raw-registry-cross-environment-${{ matrix.profile }}", text
+        upload_with = workflow_mapping(
+            _step_by_name(job, "Upload raw registry cross-environment matrix").get("with", {}),
+            "raw registry upload with section must be a mapping",
         )
+        self.assertEqual(upload_with.get("name"), "raw-registry-cross-environment-${{ matrix.profile }}")
 
     def test_raw_registry_cross_environment_evidence_job_bundles_uploaded_matrices(
         self,
     ) -> None:
-        text = CI_WORKFLOW.read_text(encoding="utf-8")
+        job = _job(_workflow(), "raw-registry-cross-environment-evidence")
 
-        self.assertIn("raw-registry-cross-environment-evidence:", text)
-        self.assertIn("name: raw-registry-cross-env evidence bundle / py3.12", text)
-        self.assertIn("needs: raw-registry-cross-environment", text)
-        self.assertIn("pattern: raw-registry-cross-environment-*", text)
-        self.assertIn("merge-multiple: true", text)
+        self.assertEqual(job.get("name"), "raw-registry-cross-env evidence bundle / py3.12")
+        self.assertEqual(job.get("needs"), "raw-registry-cross-environment")
+        download_with = workflow_mapping(
+            _step_by_name(job, "Download raw registry cross-environment matrices").get("with", {}),
+            "raw registry download with section must be a mapping",
+        )
+        self.assertEqual(download_with.get("pattern"), "raw-registry-cross-environment-*")
+        self.assertTrue(download_with.get("merge-multiple"))
+        generate_step = _step_by_name(job, "Generate raw registry cross-environment evidence bundle")
+        self.assertEqual(generate_step.get("id"), "raw_registry_cross_environment_evidence_bundle")
+        generate_run = _run_text(generate_step)
         self.assertIn(
             "python -m ops.scripts.registry.raw_registry_cross_environment_evidence_bundle \\",
-            text,
+            generate_run,
         )
-        self.assertIn("--reports-dir ops/reports", text)
+        self.assertIn("--reports-dir ops/reports", generate_run)
         self.assertIn(
-            "ops/reports/raw-registry-cross-environment-evidence-bundle.json", text
+            "ops/reports/raw-registry-cross-environment-evidence-bundle.json",
+            generate_run,
         )
-        self.assertIn("name: raw-registry-cross-environment-evidence-bundle", text)
+        diagnostics = _step_by_name(job, "Materialize raw registry evidence upload diagnostics")
+        self.assertEqual(
+            diagnostics.get("if"),
+            "always() && steps.raw_registry_cross_environment_evidence_bundle.outcome != 'success'",
+        )
+        self.assertIn(
+            "tmp/raw-registry-cross-environment-evidence-bundle-upload-diagnostics.txt",
+            _run_text(diagnostics),
+        )
+        upload_with = workflow_mapping(
+            _step_by_name(job, "Upload raw registry cross-environment evidence bundle").get("with", {}),
+            "raw registry evidence upload with section must be a mapping",
+        )
+        self.assertEqual(upload_with.get("name"), "raw-registry-cross-environment-evidence-bundle")
+        self.assertEqual(
+            _path_entries(_step_by_name(job, "Upload raw registry cross-environment evidence bundle")),
+            (
+                "ops/reports/raw-registry-cross-environment-evidence-bundle.json",
+                "tmp/raw-registry-cross-environment-evidence-bundle-upload-diagnostics.txt",
+            ),
+        )
 
 
 if __name__ == "__main__":

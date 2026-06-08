@@ -174,6 +174,52 @@ class RawRegistryCrossEnvironmentEvidenceBundleTest(unittest.TestCase):
             self.assertEqual(evidence_by_profile["macos-utf8"]["load_status"], "missing")
             self.assertIn("report_decode_error", diagnostic_codes)
             self.assertIn("missing_report", diagnostic_codes)
+            self.assertEqual(
+                {item["code"] for item in report["failure_causes"]},
+                {"report_decode_error", "missing_report"},
+            )
+
+    def test_semantic_compare_missing_is_a_top_level_failure_cause(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _prepare_vault(vault)
+            for profile in DEFAULT_EXPECTED_PROFILES:
+                _write_profile_matrix(vault, profile)
+            linux_path = (
+                vault
+                / "ops"
+                / "reports"
+                / "raw-registry-cross-environment-matrix-linux-c-utf8.json"
+            )
+            payload = json.loads(linux_path.read_text(encoding="utf-8"))
+            for row in payload["matrix"]:
+                if row.get("profile") == "linux-c-utf8":
+                    row["checks"] = [
+                        check
+                        for check in row.get("checks", [])
+                        if check.get("check") != "stored_live_semantic_match"
+                    ]
+            linux_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            report = build_evidence_bundle(vault, context=fixed_context())
+            schema = load_schema(REPO_ROOT / RAW_REGISTRY_CROSS_ENVIRONMENT_EVIDENCE_BUNDLE_SCHEMA_PATH)
+            evidence_by_profile = {item["profile"]: item for item in report["evidence"]}
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(
+                evidence_by_profile["linux-c-utf8"]["semantic_compare_status"],
+                "missing",
+            )
+            self.assertIn(
+                "semantic_compare_missing",
+                {item["code"] for item in evidence_by_profile["linux-c-utf8"]["diagnostics"]},
+            )
+            self.assertEqual(
+                [item["code"] for item in report["failure_causes"]],
+                ["semantic_compare_missing"],
+            )
 
     def test_single_matrix_fallback_is_reported_separately_from_missing_profiles(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

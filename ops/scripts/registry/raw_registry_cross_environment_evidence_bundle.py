@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -143,6 +144,63 @@ def _single_matrix_fallback_diagnostic(vault: Path, reports_dir: str | Path) -> 
     )
 
 
+def _status_diagnostics_for_evidence_item(item: dict[str, Any]) -> list[dict[str, str]]:
+    if item.get("load_status") != "ok":
+        return []
+    path = str(item.get("report_path") or "")
+    profile = str(item.get("profile") or "unknown")
+    diagnostics: list[dict[str, str]] = []
+    semantic_status = str(item.get("semantic_compare_status") or "unknown")
+    if semantic_status == "missing":
+        diagnostics.append(
+            _diagnostic(
+                "semantic_compare_missing",
+                path,
+                (
+                    f"profile {profile} is missing the stored_live_semantic_match check; "
+                    "the evidence bundle cannot prove live/stored raw-registry semantic parity"
+                ),
+            )
+        )
+    elif semantic_status == "fail":
+        diagnostics.append(
+            _diagnostic(
+                "semantic_compare_failed",
+                path,
+                f"profile {profile} reported stored/live raw-registry semantic mismatch",
+            )
+        )
+    elif semantic_status == "skipped":
+        diagnostics.append(
+            _diagnostic(
+                "semantic_compare_skipped",
+                path,
+                f"profile {profile} skipped stored/live raw-registry semantic comparison",
+                severity="warning",
+            )
+        )
+
+    report_status = str(item.get("status") or "unknown")
+    if report_status == "fail":
+        diagnostics.append(
+            _diagnostic(
+                "report_status_fail",
+                path,
+                f"profile {profile} matrix report status is fail",
+            )
+        )
+    elif report_status == "warn":
+        diagnostics.append(
+            _diagnostic(
+                "report_status_warn",
+                path,
+                f"profile {profile} matrix report status is warn",
+                severity="warning",
+            )
+        )
+    return diagnostics
+
+
 def _load_evidence_item(
     *,
     vault: Path,
@@ -243,6 +301,10 @@ def _summary(evidence: list[dict[str, Any]], diagnostics: list[dict[str, str]]) 
     }
 
 
+def _failure_causes(diagnostics: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [item for item in diagnostics if item.get("severity") in {"error", "warning"}]
+
+
 def build_evidence_bundle(
     vault: Path,
     *,
@@ -276,6 +338,8 @@ def build_evidence_bundle(
             expected_profile=expected_profile,
             matrix_schema=matrix_schema,
         )
+        status_diagnostics = _status_diagnostics_for_evidence_item(item)
+        item_diagnostics.extend(status_diagnostics)
         if item["profile"] in seen_profiles:
             duplicate = _diagnostic(
                 "duplicate_profile",
@@ -325,6 +389,7 @@ def build_evidence_bundle(
         "summary": _summary(evidence, diagnostics),
         "evidence": evidence,
         "diagnostics": diagnostics,
+        "failure_causes": _failure_causes(diagnostics),
     }
 
 
@@ -339,6 +404,17 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
             context="raw registry cross-environment evidence bundle schema validation failed",
         )
     )
+
+
+def _cli_failure_summary(vault: Path, report: dict[str, Any], destination: Path) -> dict[str, Any]:
+    return {
+        "status": str(report.get("status") or "unknown"),
+        "report": display_path(vault, destination),
+        "summary": report.get("summary") if isinstance(report.get("summary"), dict) else {},
+        "failure_causes": report.get("failure_causes")
+        if isinstance(report.get("failure_causes"), list)
+        else [],
+    }
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -365,6 +441,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
+    if report["status"] == "fail":
+        print(json.dumps(_cli_failure_summary(vault, report, destination), ensure_ascii=False, indent=2))
     return 1 if report["status"] == "fail" else 0
 
 

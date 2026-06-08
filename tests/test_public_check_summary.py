@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from unittest.mock import patch
 
+import ops.scripts.public_check_summary as public_check_summary_module
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.public_check_summary import (
     PublicCheckRequest,
@@ -21,6 +22,7 @@ from ops.scripts.public_check_summary import (
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -307,6 +309,14 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 report["public_export_negative_assertions"]["local_path_absence"]["violations"],
                 ["README.md"],
             )
+            self.assertEqual(
+                [
+                    cause["id"]
+                    for cause in report["failure_causes"]
+                    if cause["kind"] == "negative_assertion_failure"
+                ],
+                ["negative_assertion:local_path_absence"],
+            )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_generated_report_files_are_excluded_without_private_export_violations(self) -> None:
@@ -368,7 +378,74 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["status"], "fail")
             self.assertEqual(report["summary"]["command_fail_count"], 1)
             self.assertEqual(report["summary"]["pytest_failed"], 1)
+            self.assertEqual(len(report["failure_causes"]), 1)
+            cause = report["failure_causes"][0]
+            self.assertEqual(cause["kind"], "command_failure")
+            self.assertEqual(cause["id"], "command:pytest_public")
+            self.assertEqual(cause["command_id"], "pytest_public")
+            self.assertEqual(cause["returncode"], 1)
+            self.assertEqual(cause["pytest_counts"]["failed"], 1)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_public_check_summary_cli_prints_compact_failure_summary(self) -> None:
+        fake_report = {
+            "status": "fail",
+            "summary": {
+                "public_check_status": "fail",
+                "command_fail_count": 1,
+                "negative_assertion_fail_count": 0,
+            },
+            "failure_causes": [
+                {
+                    "severity": "error",
+                    "kind": "command_failure",
+                    "id": "command:pytest_public",
+                    "message": "public check command pytest_public failed",
+                    "command_id": "pytest_public",
+                    "status": "fail",
+                    "returncode": 1,
+                    "timed_out": False,
+                    "termination_reason": "completed",
+                }
+            ],
+        }
+
+        def fake_write_report(vault: Path, report: dict[str, object], out_path: str) -> Path:
+            destination = vault / out_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(json.dumps(report), encoding="utf-8")
+            return destination
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            launcher = Path(temp_dir) / "launcher"
+            vault.mkdir()
+            launcher.mkdir()
+
+            with (
+                patch.object(public_check_summary_module, "build_report", return_value=fake_report),
+                patch.object(
+                    public_check_summary_module,
+                    "write_report",
+                    side_effect=fake_write_report,
+                ),
+            ):
+                completed = invoke_cli_main(
+                    public_check_summary_module.main,
+                    [
+                        "--vault",
+                        str(vault),
+                        "--out",
+                        "tmp/public-check-summary.candidate.json",
+                    ],
+                    cwd=launcher,
+                )
+
+        stdout_lines = completed.stdout.splitlines()
+        self.assertEqual(stdout_lines[0], "tmp/public-check-summary.candidate.json")
+        payload = json.loads("\n".join(stdout_lines[1:]))
+        self.assertEqual(payload["status"], "fail")
+        self.assertEqual(payload["failure_causes"][0]["id"], "command:pytest_public")
 
     def test_public_check_summary_exposes_public_pytest_timeout_cleanup_diagnostics(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -544,6 +544,58 @@ def _public_check_status(commands: list[dict[str, Any]], negative_assertions: di
     return command_status if command_status != "pass" else assertion_status
 
 
+def _public_check_failure_causes(
+    commands: list[dict[str, Any]],
+    negative_assertions: dict[str, Any],
+) -> list[dict[str, Any]]:
+    causes: list[dict[str, Any]] = []
+    for command in commands:
+        if command.get("status") == "pass":
+            continue
+        command_id = str(command.get("id") or "unknown")
+        cause: dict[str, Any] = {
+            "severity": "error",
+            "kind": "command_failure",
+            "id": f"command:{command_id}",
+            "message": f"public check command {command_id} failed",
+            "command_id": command_id,
+            "status": str(command.get("status") or "unknown"),
+            "returncode": int(command.get("returncode", 0) or 0),
+            "timed_out": bool(command.get("timed_out", False)),
+            "termination_reason": str(command.get("termination_reason") or "unknown"),
+        }
+        pytest_counts = command.get("pytest_counts")
+        if isinstance(pytest_counts, dict) and pytest_counts:
+            cause["pytest_counts"] = {
+                str(key): int(value or 0)
+                for key, value in pytest_counts.items()
+                if isinstance(value, int)
+            }
+        for tail_key in ("stdout_tail", "stderr_tail"):
+            tail = str(command.get(tail_key) or "").strip()
+            if tail:
+                cause[tail_key] = tail
+        causes.append(cause)
+
+    for assertion_id, assertion in sorted(negative_assertions.items()):
+        if not isinstance(assertion, dict) or assertion.get("status") == "pass":
+            continue
+        violations = [str(item) for item in assertion.get("violations", [])]
+        causes.append(
+            {
+                "severity": "error",
+                "kind": "negative_assertion_failure",
+                "id": f"negative_assertion:{assertion_id}",
+                "message": f"public export negative assertion {assertion_id} failed",
+                "assertion_id": str(assertion_id),
+                "status": str(assertion.get("status") or "unknown"),
+                "violation_count": int(assertion.get("violation_count", len(violations)) or 0),
+                "violations": violations,
+            }
+        )
+    return causes
+
+
 def _summary_payload(
     vault: Path,
     export: _PublicExportSnapshot,
@@ -644,6 +696,7 @@ def _render_public_check_report(
         "summary": _summary_payload(vault, export, commands, status),
         "public_export": _public_export_payload(vault, export),
         "public_export_negative_assertions": export.negative_assertions,
+        "failure_causes": _public_check_failure_causes(commands, export.negative_assertions),
         "commands": commands,
     }
 
@@ -730,6 +783,27 @@ def reusable_summary_diagnostics(vault: Path, path_value: str | Path) -> dict[st
     return diagnostics
 
 
+def _public_check_cli_failure_summary(
+    vault: Path,
+    report: dict[str, Any],
+    destination: Path,
+) -> dict[str, Any]:
+    summary = report.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    causes = report.get("failure_causes")
+    return {
+        "summary_mode": "executed",
+        "status": str(report.get("status") or "unknown"),
+        "report": display_path(vault, destination),
+        "public_check_status": str(summary.get("public_check_status") or "unknown"),
+        "command_fail_count": int(summary.get("command_fail_count", 0) or 0),
+        "negative_assertion_fail_count": int(
+            summary.get("negative_assertion_fail_count", 0) or 0
+        ),
+        "failure_causes": causes if isinstance(causes, list) else [],
+    }
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run public mirror checks and write a canonical summary.")
     parser.add_argument("--vault", default=".")
@@ -780,6 +854,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
+    if report["status"] != "pass":
+        print(
+            json.dumps(
+                _public_check_cli_failure_summary(vault, report, destination),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     return 0 if report["status"] == "pass" else 1
 
 

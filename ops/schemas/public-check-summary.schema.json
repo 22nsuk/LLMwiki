@@ -140,6 +140,10 @@
       "minItems": 3,
       "items": { "$ref": "#/$defs/command_result" }
     },
+    "failure_causes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/failure_cause" }
+    },
     "public_export_negative_assertions": {
       "type": "object",
       "additionalProperties": false,
@@ -167,6 +171,49 @@
       ],
       "properties": {
         "status": { "type": "string", "enum": ["pass", "fail"] },
+        "violation_count": { "type": "integer", "minimum": 0 },
+        "violations": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "failure_cause": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "kind",
+        "id",
+        "message"
+      ],
+      "properties": {
+        "severity": { "type": "string", "enum": ["error", "warning", "info"] },
+        "kind": {
+          "type": "string",
+          "enum": ["command_failure", "negative_assertion_failure"]
+        },
+        "id": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "command_id": { "type": "string", "enum": ["ruff", "mypy", "pytest_public"] },
+        "assertion_id": {
+          "type": "string",
+          "enum": [
+            "excluded_prefix_absence",
+            "local_path_absence",
+            "private_pattern_absence"
+          ]
+        },
+        "status": { "type": "string", "minLength": 1 },
+        "returncode": { "type": "integer" },
+        "timed_out": { "type": "boolean" },
+        "termination_reason": { "type": "string", "minLength": 1 },
+        "pytest_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "stdout_tail": { "type": "string" },
+        "stderr_tail": { "type": "string" },
         "violation_count": { "type": "integer", "minimum": 0 },
         "violations": {
           "type": "array",

@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches-ignore:
+      - "dependabot/**"
   pull_request:
   workflow_dispatch:
 
@@ -85,6 +87,7 @@ jobs:
           make external-report-reference-manifest-release-check
 
       - name: Run release closeout regression tier
+        id: release_closeout_regression
         if: matrix.tier == 'release-closeout-regression'
         run: |
           make release-workflow-order-guard
@@ -92,6 +95,22 @@ jobs:
           make release-authority-sealed-preflight
           make release-closeout-post-check-finalizer-ci-artifact
           make release-closeout-cost-evidence-ci-artifact
+
+      - name: Materialize release closeout upload diagnostics
+        if: always() && matrix.tier == 'release-closeout-regression' && steps.release_closeout_regression.outcome != 'success'
+        shell: bash
+        env:
+          CI_PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          mkdir -p tmp
+          {
+            echo "release-closeout-regression did not complete successfully for py${CI_PYTHON_VERSION}."
+            echo "The upload step is collecting this sentinel instead of failing on missing downstream files."
+          } > "tmp/release-closeout-cost-evidence-upload-diagnostics-${CI_PYTHON_VERSION}.txt"
+          {
+            echo "release-closeout-regression did not complete successfully for py${CI_PYTHON_VERSION}."
+            echo "The authority preflight upload is collecting this sentinel instead of failing on missing downstream files."
+          } > "tmp/release-authority-blocked-preflight-upload-diagnostics-${CI_PYTHON_VERSION}.txt"
 
       - name: Upload release closeout cost evidence
         if: always() && matrix.tier == 'release-closeout-regression'
@@ -107,6 +126,7 @@ jobs:
             tmp/release-closeout-post-check-finalizer.json
             tmp/release-closeout-post-check-finalizer-recommended-targets.txt
             tmp/release-closeout-post-check-finalizer-plan.json
+            tmp/release-closeout-cost-evidence-upload-diagnostics-${{ matrix.python-version }}.txt
           if-no-files-found: error
 
       - name: Upload release authority blocked preflight
@@ -120,6 +140,7 @@ jobs:
             build/release/release-closeout-sealed-dry-run/external-report-reference-manifest.json
             build/release/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json
             ops/reports/release-closeout-sealed-rehearsal-check.json
+            tmp/release-authority-blocked-preflight-upload-diagnostics-${{ matrix.python-version }}.txt
           if-no-files-found: error
 
       - name: Run release-sealing tier
@@ -153,6 +174,16 @@ jobs:
       - name: Run public mirror tier
         if: matrix.tier == 'public'
         run: make public-check
+
+      - name: Upload public check summary diagnostics
+        if: always() && matrix.tier == 'public'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: public-check-summary-${{ matrix.python-version }}
+          path: |
+            tmp/public-check-summary.candidate.json
+            tmp/public-check-summary-check.json
+          if-no-files-found: warn
 
   windows-release-smoke:
     name: windows-release-smoke / py3.12
@@ -310,18 +341,31 @@ jobs:
           merge-multiple: true
 
       - name: Generate raw registry cross-environment evidence bundle
+        id: raw_registry_cross_environment_evidence_bundle
         run: |
           python -m ops.scripts.registry.raw_registry_cross_environment_evidence_bundle \
             --vault . \
             --reports-dir ops/reports \
             --out ops/reports/raw-registry-cross-environment-evidence-bundle.json
 
+      - name: Materialize raw registry evidence upload diagnostics
+        if: always() && steps.raw_registry_cross_environment_evidence_bundle.outcome != 'success'
+        shell: bash
+        run: |
+          mkdir -p tmp
+          {
+            echo "raw-registry cross-environment evidence bundle generation did not complete successfully."
+            echo "The upload step is collecting this sentinel instead of failing on a missing bundle file."
+          } > tmp/raw-registry-cross-environment-evidence-bundle-upload-diagnostics.txt
+
       - name: Upload raw registry cross-environment evidence bundle
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: raw-registry-cross-environment-evidence-bundle
-          path: ops/reports/raw-registry-cross-environment-evidence-bundle.json
+          path: |
+            ops/reports/raw-registry-cross-environment-evidence-bundle.json
+            tmp/raw-registry-cross-environment-evidence-bundle-upload-diagnostics.txt
           if-no-files-found: error
 
   supply-chain-gate:

@@ -210,6 +210,12 @@
       "items": {
         "$ref": "#/$defs/diagnostic"
       }
+    },
+    "failure_causes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
     }
   },
   "$defs": {

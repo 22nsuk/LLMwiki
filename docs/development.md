@@ -156,6 +156,10 @@ keep the corresponding actions active in the matrix.
 `public-check-summary` records per-command heartbeat counts, quiet seconds,
 timeout termination reason, signal sent, and final observed process state; use
 those diagnostics before assuming a timed-out public pytest is still running.
+When CI public-check fails, inspect the printed `failure_causes` and uploaded
+`public-check-summary-*` candidate before rerunning the full lane. Keep release
+authority failures separate: missing finality attestation or sealed evidence is
+settled through the release evidence targets, not by softening CI upload steps.
 
 ## CI Tier Shape
 
@@ -163,6 +167,14 @@ CI splits registry-backed lanes into parallel jobs; see
 `.github/workflows/ci.yml` and `ops/test-lane-registry.json` for the executable
 shape. Docs should point to registry-backed Make targets rather than
 hand-maintained pytest marker expressions.
+
+Dependabot branches are checked through the `pull_request` event; the CI
+`push` trigger ignores `dependabot/**` so one dependency PR SHA does not spend
+two full CI waves. When a PR check run has empty job steps and its check-run
+annotation says the job was not started because an Actions budget prevented
+use, classify it as infrastructure/budget triage. Do not debug action pins,
+test failures, or release evidence until the budget is available and a rerun or
+rebase produces jobs that reach checkout.
 
 ## Change-Type Gates
 

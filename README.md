@@ -65,7 +65,7 @@ make check
 For a full developer regression, use `make test-all`. For release-grade
 full-suite evidence, use the current-or-refresh evidence lane described in
 [docs/development.md](./docs/development.md#supported-test-entrypoints). Bare
-`pytest` is not a supported entrypoint; use Make targets or focused
+`pytest` is not a supported entrypoint. Use Make targets or focused
 `.venv/bin/python -m pytest tests/...` selectors.
 
 ## Primary Operator Entrypoints
@@ -155,7 +155,7 @@ llm-wiki-run-mechanism-experiment
 
 ## Optional codebase-memory-mcp
 
-For code/ops structure exploration, a verified operator-local
+For code/ops structure exploration (`code/ops 구조 탐색`), a verified operator-local
 `codebase-memory-mcp` binary can index a public-safe export:
 
 ```bash
@@ -167,8 +167,8 @@ make cbm-search-public CBM_SEARCH_PATTERN=release_run_ready
 ```
 
 This is a graph-first/file-verified hinting workflow. It is not canonical
-evidence, not a release gate, and not a dependency. Existing `rg` and direct file
-read workflows remain supported.
+evidence, not a release gate, and not a dependency. 기존 `rg` / file read workflow
+remains supported alongside direct file reads.
 
 ## License
 
