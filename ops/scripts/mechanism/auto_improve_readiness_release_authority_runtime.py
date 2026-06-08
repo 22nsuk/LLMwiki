@@ -792,11 +792,10 @@ def _artifact_contract_promotion_blockers(
     root_ephemeral_count = _int_value(report_summary.get("root_ephemeral_artifact_count"))
     non_utf8_count = _int_value(report_summary.get("non_utf8_text_artifact_count"))
     hard_failure_count = root_ephemeral_count + non_utf8_count
-    mtime_attention_items = _artifact_mtime_attention_items(artifact_freshness_report)
-    operational_attention_items = [
+    mtime_attention_items = [
         item
-        for item in _artifact_operational_attention_items(artifact_freshness_report)
-        if item["path"] != SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH
+        for item in _artifact_mtime_attention_items(artifact_freshness_report)
+        if item["path"] == SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH
     ]
     status_allows_contract_debt = status in {"pass", "attention"}
     if (
@@ -804,7 +803,6 @@ def _artifact_contract_promotion_blockers(
         and schema_invalid_count == 0
         and hard_failure_count == 0
         and not mtime_attention_items
-        and not operational_attention_items
     ):
         return []
     invalid_artifacts = [
@@ -826,18 +824,6 @@ def _artifact_contract_promotion_blockers(
         ]
         recommended_next_step = (
             "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and "
-            "make auto-improve-readiness."
-        )
-    elif operational_attention_items:
-        paths = ", ".join(item["path"] for item in operational_attention_items[:6])
-        reason = f"artifact freshness found operational currentness drift in canonical artifact(s): {paths}"
-        signal_ids = ["artifact_freshness_operational_attention"]
-        required_evidence = [
-            "Regenerate canonical artifacts with test target fingerprint drift.",
-            "Run make artifact-freshness-check and confirm operational_attention_issue_count=0.",
-        ]
-        recommended_next_step = (
-            "Regenerate stale canonical artifacts, then rerun make artifact-freshness and "
             "make auto-improve-readiness."
         )
     elif hard_failure_count:

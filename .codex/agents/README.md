@@ -60,7 +60,7 @@ repo-shared defaults는 아래 rung만 사용한다.
 - 자동 `system_mechanism` 루프는 이 selector를 role별로 반복 호출해 `scope-freeze -> routing -> codex exec` 증적 체인을 남긴다.
 - `ops/reports/auto-improve-sessions/<session-id>.json`은 이 체인을 session-level rollup으로 다시 묶어, role/rung mix와 executor blocking outcome을 한 번에 읽게 한다.
 - `ops/reports/routing-provenance-aggregates/<session-id>.json`은 같은 체인을 audit entrypoint로 고정하고, artifact index와 routing/executor/telemetry `audit_rollup` snapshot을 함께 제공한다.
-- 이때 `.toml`은 여전히 fallback instruction surface이고, 실제 run-local 배정은 `runs/<run-id>/subagent-routing.<role>.json`과 `<role>-executor-report.json`이 canonical trace가 된다.
+- 이때 `.toml`은 여전히 fallback instruction surface이고, 실제 run-local 배정은 `runs/<run-id>/subagent-routing.<role>.json`과 `<role>-executor-report.json`이 execution trace가 된다. 이 run-local trace는 release evidence용 top-level canonical report가 아니다.
 - validator는 준비된 workspace의 `.venv/bin/python`을 우선 사용하고, pytest replay에는 `PYTHONDONTWRITEBYTECODE=1` 및 `-p no:cacheprovider`를 붙여 cache/bytecode 쓰기 때문에 blocked로 오판하지 않게 한다.
 - runtime executor는 non-worker role 뒤에 workspace integrity guard를 실행해, reviewer/validator/auditor가 source/control file을 바꾸면 blocking executor report로 전환한다.
 - mechanism workspace 준비는 live repo의 `.venv`를 temp workspace에 symlink로 연결해 network 없이도 동일 dependency set으로 worker/validator checks를 실행하게 한다. `.venv` 자체는 diff/apply universe에서 계속 제외된다.
@@ -69,21 +69,22 @@ repo-shared defaults는 아래 rung만 사용한다.
 
 수동으로 subagent를 고를 때도 `.toml`의 `model_reasoning_effort`를 그대로 최종 실행값으로 쓰지 않는다.
 
-1. 부모 agent는 먼저 `python -m ops.scripts.core.select_subagent_rung --role <role>`을 실행한다.
+1. 부모 agent는 먼저 `python -m ops.scripts.core.select_subagent_rung --role <role>`을 실행한다. `--out`을 생략하면 결과는 `tmp/subagent-routing-report.json`에 ephemeral diagnostic으로 쓰인다.
 2. 가능한 경우 `--primary-target`, `--supporting-target`, `--test-file`, `--manual-risk-flag`를 함께 넣어 실제 작업 표면을 반영한다.
 3. 의도적으로 더 높은 floor가 필요할 때만 `--requested-rung <1|2|3>`을 추가한다. selector는 role별 `allowed_rungs` 안으로 clamp한다.
-4. repo-native `codex_exec`나 model/reasoning override를 받는 controllable
+4. 실행 증적을 남기는 mechanism/run 작업에서는 `--out runs/<run-id>/subagent-routing.<role>.json`을 명시한다. `ops/reports/subagent-routing-report.json`은 고정 입력을 가진 owner target이 아니므로 일반 수동 dispatch 기본 출력으로 쓰지 않는다.
+5. repo-native `codex_exec`나 model/reasoning override를 받는 controllable
    default/custom subagent 실행면에서는 report의
    `manual_dispatch.launch_parameters` 값을 그대로 사용한다. 이 필드는
    `profile_path`, `model`, `model_reasoning_effort`, `sandbox_mode`를 포함한다.
-5. platform named role 실행면처럼 role 이름이 model/reasoning을 고정하는
+6. platform named role 실행면처럼 role 이름이 model/reasoning을 고정하는
    surface에서는 selector가 그 값을 override한다고 가정하지 않는다. 선택된
    rung과 platform fixed effort가 다르면 ladder-compliant manual dispatch가
    아니므로, report의 `manual_dispatch.fixed_reasoning_surface`를 확인해
    fixed 값이 `required_model`과 `required_model_reasoning_effort`에 맞는
    role/surface를 고르거나 `mismatch_action`에 따라 controllable 실행면에
    profile instruction을 전달한다.
-6. `.toml`은 role intent와 fallback instruction surface다. selector가 실행 가능한 상황에서 `.toml` 기본 effort만으로 수동 dispatch를 끝내지 않는다.
+7. `.toml`은 role intent와 fallback instruction surface다. selector가 실행 가능한 상황에서 `.toml` 기본 effort만으로 수동 dispatch를 끝내지 않는다.
 
 ## Profiles
 

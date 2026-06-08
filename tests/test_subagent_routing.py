@@ -15,6 +15,8 @@ from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_m
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault, seed_subagent_profiles
 
+DEFAULT_SELECTOR_REPORT_PATH = Path("tmp/subagent-routing-report.json")
+
 
 class SubagentRoutingTest(unittest.TestCase):
     def assert_manual_dispatch_matches_routing(self, report: dict) -> None:
@@ -67,7 +69,7 @@ class SubagentRoutingTest(unittest.TestCase):
             cwd=vault,
         )
         self.assertEqual(result.exit_code, 0, msg=result.stderr or result.stdout)
-        report_path = vault / "ops" / "reports" / "subagent-routing-report.json"
+        report_path = vault / DEFAULT_SELECTOR_REPORT_PATH
         self.assertTrue(report_path.exists())
         report = json.loads(report_path.read_text(encoding="utf-8"))
         schema = load_schema(vault / "ops" / "schemas" / "subagent-routing-report.schema.json")
@@ -88,7 +90,7 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertTrue(all(field in report for field in ENVELOPE_REQUIRED_FIELDS))
             self.assertEqual(report["artifact_kind"], "subagent_routing_report")
             self.assertEqual(report["artifact_status"], "current")
-            self.assertEqual(report["retention_policy"], "canonical_report")
+            self.assertEqual(report["retention_policy"], "ephemeral")
             self.assertEqual(report["currentness"]["status"], "current")
             self.assertEqual(report["inputs"]["primary_targets"], [])
             self.assertEqual(report["complexity_profile"]["complexity_score"], 0)
@@ -402,6 +404,61 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["routing_decision"]["selected_rung"], 2)
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
+
+    def test_explicit_top_level_subagent_report_remains_canonical(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["explorer"])
+
+            result = invoke_cli_main(
+                select_subagent_rung_main,
+                [
+                    "--vault",
+                    str(vault),
+                    "--role",
+                    "explorer",
+                    "--out",
+                    "ops/reports/subagent-routing-report.json",
+                ],
+                cwd=vault,
+            )
+
+            self.assertEqual(result.exit_code, 0, msg=result.stderr or result.stdout)
+            report_path = vault / "ops" / "reports" / "subagent-routing-report.json"
+            self.assertTrue(report_path.exists())
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["retention_policy"], "canonical_report")
+            self.assert_manual_dispatch_matches_routing(report)
+
+    def test_run_local_subagent_report_uses_archive_retention(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["worker"])
+
+            result = invoke_cli_main(
+                select_subagent_rung_main,
+                [
+                    "--vault",
+                    str(vault),
+                    "--role",
+                    "worker",
+                    "--out",
+                    "runs/run-selector/subagent-routing.worker.json",
+                ],
+                cwd=vault,
+            )
+
+            self.assertEqual(result.exit_code, 0, msg=result.stderr or result.stdout)
+            report_path = vault / "runs" / "run-selector" / "subagent-routing.worker.json"
+            self.assertTrue(report_path.exists())
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["artifact_status"], "current")
+            self.assertEqual(report["retention_policy"], "archive")
+            self.assert_manual_dispatch_matches_routing(report)
 
 
 if __name__ == "__main__":
