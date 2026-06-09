@@ -6,9 +6,13 @@ from pathlib import Path
 
 
 def _project_python_for_mutation_command(artifact_root: Path) -> str:
-    for rel_path in (".venv/bin/python", ".venv/Scripts/python.exe", ".venv/Scripts/python"):
-        if (artifact_root / rel_path).exists():
-            return rel_path
+    workspace_linked_python = artifact_root / ".venv" / "bin" / "python"
+    if workspace_linked_python.exists():
+        return ".venv/bin/python"
+    for rel_path in (".venv/Scripts/python.exe", ".venv/Scripts/python"):
+        candidate = artifact_root / rel_path
+        if candidate.exists():
+            return str(candidate)
     return sys.executable
 
 
