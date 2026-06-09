@@ -19,6 +19,7 @@ from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     canonical_gate_effect,
 )
+from ops.scripts.mechanism.auto_improve_queue_runtime import build_proposal_queue
 from ops.scripts.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel,
     resolve_auto_improve_session_report_rel,
@@ -547,11 +548,17 @@ def _selected_runnable_proposal_ids(mutation_proposals: dict[str, Any]) -> list[
 
 
 def _selected_runnable_proposals(mutation_proposals: dict[str, Any]) -> list[dict[str, Any]]:
-    proposals: list[dict[str, Any]] = []
-    for proposal in _list_field(mutation_proposals, "proposals"):
-        if isinstance(proposal, dict) and _proposal_is_runnable(proposal):
-            proposals.append(proposal)
-    return proposals
+    proposals = [
+        proposal
+        for proposal in _list_field(mutation_proposals, "proposals")
+        if isinstance(proposal, dict)
+    ]
+    queue = build_proposal_queue(
+        {"proposals": proposals},
+        attempted=set(),
+        quarantined=set(),
+    )
+    return [proposal for proposal in queue if _proposal_is_runnable(proposal)]
 
 
 def _readiness_runnable_proposal_ids(readiness: dict[str, Any]) -> list[str]:
@@ -990,7 +997,20 @@ def _maintenance_action_plan_check(
     ]
     matching_proposal = matching_proposals[0] if matching_proposals else {}
     selected_in_current_report = bool(matching_proposal)
-    selected_runnable = bool(matching_proposal) and _proposal_is_runnable(matching_proposal)
+    runnable_proposals = _selected_runnable_proposals(mutation_proposals)
+    matching_runnable_proposals = [
+        proposal
+        for proposal in runnable_proposals
+        if str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
+    ]
+    matching_runnable_proposal = matching_runnable_proposals[0] if matching_runnable_proposals else {}
+    selected_runnable = bool(matching_runnable_proposal)
+    selected_blockers = _list_strings(matching_proposal.get("blocked_by")) if matching_proposal else []
+    selected_effective_blockers = (
+        _list_strings(matching_runnable_proposal.get("blocked_by"))
+        if matching_runnable_proposal
+        else selected_blockers
+    )
 
     execution = _dict_field(readiness, "execution_readiness")
     readiness_can_run = _as_bool(execution.get("can_run"))
@@ -1039,6 +1059,8 @@ def _maintenance_action_plan_check(
             "selected_in_action_queue": selected_in_action_queue,
             "selected_in_current_report": selected_in_current_report,
             "selected_runnable": selected_runnable,
+            "selected_blockers": selected_blockers,
+            "selected_effective_blockers": selected_effective_blockers,
             "execution_readiness.can_run": readiness_can_run,
             "execution_readiness.runnable_proposal_count": readiness_runnable_count,
         },
@@ -1497,6 +1519,7 @@ def _admission_report_inputs(
 def _admission_source_paths() -> list[str]:
     return [
         "ops/scripts/mechanism/goal_runtime_run_admission.py",
+        "ops/scripts/mechanism/auto_improve_queue_runtime.py",
         "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
         "ops/schemas/goal-runtime-run-admission.schema.json",
         "mk/mechanism.mk",
