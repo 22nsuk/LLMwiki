@@ -6,18 +6,36 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 from ops.scripts.mechanism.mechanism_run_scaffold_resolution_runtime import (
     command_argv,
     default_check_command,
 )
+from ops.scripts.mechanism.structural_complexity_scope_runtime import (
+    structural_complexity_source_targets,
+)
+from ops.scripts.release.release_source_ready_commit import (
+    LOCAL_SOURCE_CONTRACT_FILES,
+    PUBLIC_SOURCE_FILES,
+    PUBLIC_SOURCE_PREFIXES,
+    classify_path,
+)
+from ops.scripts.structural_complexity_budget_runtime import (
+    DEFAULT_TARGET_PROFILES,
+    build_report as build_structural_complexity_budget_report,
+    touched_target_profiles,
+)
 
+from .artifact_io_runtime import write_vault_schema_validated_json
 from .codex_exec_executor import CodexExecError, execute_codex_exec_role
 from .executor_noop_runtime import executor_noop_mutation_failure_message
 from .experiment_telemetry_runtime import append_ledger_event
 from .policy_runtime import load_policy
+from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .runtime_context import RuntimeContext
+from .schema_constants_runtime import STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH
 
 ROLE_ORDER = ("worker", "reviewer", "validator")
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
@@ -25,6 +43,16 @@ SCRIPT_OUTPUT_SURFACES_MODULE = "ops/scripts/core/script_output_surfaces.py"
 OPS_SCRIPTS_PREFIX = "ops/scripts/"
 WORKER_REPO_HEALTH_PREFLIGHT_STDOUT = "worker-repo-health-preflight.stdout.txt"
 WORKER_REPO_HEALTH_PREFLIGHT_STDERR = "worker-repo-health-preflight.stderr.txt"
+WORKER_STRUCTURAL_COMPLEXITY_PREFLIGHT = "worker-structural-complexity-preflight.json"
+WORKER_SOURCE_SNAPSHOT_CATEGORIES = {"public_source", "local_source_contract"}
+WORKER_SOURCE_SNAPSHOT_IGNORE_DIRS = {
+    "__pycache__",
+    ".hypothesis",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+}
+WORKER_SOURCE_SNAPSHOT_IGNORE_SUFFIXES = {".pyc", ".pyo"}
 
 
 class ExecutorRuntimeError(Exception):
@@ -107,11 +135,56 @@ def _target_digest_snapshot(workspace_root: Path, targets: list[str]) -> dict[st
     return snapshot
 
 
+def _is_worker_source_snapshot_path(rel_path: str) -> bool:
+    return classify_path(rel_path) in WORKER_SOURCE_SNAPSHOT_CATEGORIES
+
+
+def _is_worker_source_snapshot_file(path: Path, rel_path: str) -> bool:
+    return (
+        path.is_file()
+        and path.suffix not in WORKER_SOURCE_SNAPSHOT_IGNORE_SUFFIXES
+        and _is_worker_source_snapshot_path(rel_path)
+    )
+
+
+def _worker_source_digest_snapshot(workspace_root: Path) -> dict[str, str]:
+    snapshot: dict[str, str] = {}
+    for rel_path in sorted([*PUBLIC_SOURCE_FILES, *LOCAL_SOURCE_CONTRACT_FILES]):
+        path = workspace_root / rel_path
+        if _is_worker_source_snapshot_file(path, rel_path):
+            snapshot[rel_path] = _file_digest(path)
+
+    for prefix in sorted(PUBLIC_SOURCE_PREFIXES):
+        root_rel = prefix.rstrip("/")
+        root = workspace_root / root_rel
+        if not root.is_dir():
+            continue
+        for current_root, dir_names, file_names in os.walk(root):
+            current = Path(current_root)
+            rel_current = current.relative_to(workspace_root).as_posix()
+            dir_names[:] = [
+                name
+                for name in dir_names
+                if name not in WORKER_SOURCE_SNAPSHOT_IGNORE_DIRS
+                and _is_worker_source_snapshot_path(f"{rel_current}/{name}")
+            ]
+            for file_name in sorted(file_names):
+                path = current / file_name
+                rel_path = path.relative_to(workspace_root).as_posix()
+                if _is_worker_source_snapshot_file(path, rel_path):
+                    snapshot[rel_path] = _file_digest(path)
+    return snapshot
+
+
 def _changed_targets(
-    before: dict[str, str | None],
-    after: dict[str, str | None],
+    before: Mapping[str, str | None],
+    after: Mapping[str, str | None],
 ) -> list[str]:
-    return [target for target in sorted(before) if before.get(target) != after.get(target)]
+    return [
+        target
+        for target in sorted(set(before) | set(after))
+        if before.get(target) != after.get(target)
+    ]
 
 
 def _should_refresh_script_output_surfaces(
@@ -192,6 +265,98 @@ def _worker_repo_health_preflight_detail(
     if not combined:
         return "no output"
     return combined[-1000:]
+
+
+def _write_worker_structural_complexity_preflight_report(
+    artifact_root: Path,
+    *,
+    workspace_root: Path,
+    run_id: str,
+    policy_path: str,
+    changed_targets: list[str],
+    context: RuntimeContext,
+) -> tuple[str, dict]:
+    source_targets = structural_complexity_source_targets(changed_targets)
+    report = build_structural_complexity_budget_report(
+        workspace_root,
+        policy_path=policy_path,
+        context=context,
+        target_profiles=touched_target_profiles(DEFAULT_TARGET_PROFILES, source_targets),
+    )
+    rel_path = f"runs/{run_id}/{WORKER_STRUCTURAL_COMPLEXITY_PREFLIGHT}"
+    payload = maybe_embed_run_artifact_envelope(
+        artifact_root,
+        rel_path,
+        report,
+        schema_path=STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
+    )
+    write_vault_schema_validated_json(
+        artifact_root,
+        rel_path,
+        payload,
+        STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
+        context=f"schema validation failed for {rel_path}",
+    )
+    return rel_path, payload
+
+
+def _worker_structural_complexity_detail(report: dict) -> str:
+    targets = [
+        target
+        for target in report.get("targets", [])
+        if isinstance(target, dict) and str(target.get("status", "")) != "pass"
+    ]
+    if not targets:
+        return "no structural attention details"
+    details: list[str] = []
+    for target in targets[:3]:
+        details.append(
+            "{path}: status={status}; over_budget={over_budget}; "
+            "function_budget_candidate_count={candidate_count}".format(
+                path=target.get("path", ""),
+                status=target.get("status", ""),
+                over_budget=",".join(str(item) for item in target.get("over_budget_metrics", [])),
+                candidate_count=target.get("function_budget_candidate_count", 0),
+            )
+        )
+    return " | ".join(details)
+
+
+def _run_worker_structural_complexity_preflight(
+    artifact_root: Path,
+    *,
+    workspace_root: Path,
+    run_id: str,
+    policy_path: str,
+    changed_targets: list[str],
+    context: RuntimeContext,
+) -> None:
+    report_rel, report = _write_worker_structural_complexity_preflight_report(
+        artifact_root,
+        workspace_root=workspace_root,
+        run_id=run_id,
+        policy_path=policy_path,
+        changed_targets=changed_targets,
+        context=context,
+    )
+    status = str(report.get("status", "")).strip()
+    if status != "pass":
+        append_ledger_event(
+            artifact_root,
+            run_id,
+            event_type="validation_blocked",
+            summary="Checked worker structural complexity before non-worker executor roles.",
+            artifacts=[report_rel],
+            decision=f"worker_structural_complexity_preflight_{status or 'unknown'}",
+            context=context,
+            status="blocked",
+        )
+        raise ExecutorRuntimeExecutionError(
+            "worker structural complexity preflight blocked before "
+            "reviewer/validator/auditor execution; "
+            f"report={report_rel}; status={status or 'unknown'}; "
+            f"detail={_worker_structural_complexity_detail(report)}"
+        )
 
 
 def _run_worker_repo_health_preflight(
@@ -318,6 +483,11 @@ def run_executor_pipeline(
     supporting_targets = _supporting_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
     primary_before_worker = _target_digest_snapshot(workspace_root, primary_targets)
     has_post_worker_roles = any(role != "worker" for role in ordered_roles)
+    source_before_worker = (
+        _worker_source_digest_snapshot(workspace_root)
+        if has_post_worker_roles
+        else {}
+    )
     for role in ordered_roles:
         routing_report_rel = routing_map.get(role)
         if routing_report_rel is None:
@@ -349,6 +519,17 @@ def run_executor_pipeline(
             ):
                 _refresh_script_output_surfaces(workspace_root)
             if has_post_worker_roles:
+                _run_worker_structural_complexity_preflight(
+                    artifact_root,
+                    workspace_root=workspace_root,
+                    run_id=run_id,
+                    policy_path=policy_path,
+                    changed_targets=_changed_targets(
+                        source_before_worker,
+                        _worker_source_digest_snapshot(workspace_root),
+                    ),
+                    context=context,
+                )
                 _run_worker_repo_health_preflight(
                     artifact_root,
                     workspace_root=workspace_root,
