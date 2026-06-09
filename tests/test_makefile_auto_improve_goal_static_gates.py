@@ -418,7 +418,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         )
         _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
-        _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-status")
         _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
 
     def test_auto_improve_goal_admission_lock_and_contract_recipes(self) -> None:
@@ -1012,6 +1012,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--out \"$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)\"",
                 "$(if $(GOAL_RUNTIME_CERTIFICATE_MODE),--runtime-mode \"$(GOAL_RUNTIME_CERTIFICATE_MODE)\",)",
                 "$(if $(GOAL_RUNTIME_CERTIFICATE_APPLY),--apply,)",
+                "--candidate \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_RUN_STATUS_OUT)\"",
+                "ops/schemas/goal-run-status.schema.json",
+                "--expected-artifact-kind goal_run_status",
                 "ops/schemas/goal-runtime-certificate.schema.json",
                 "--expected-artifact-kind goal_runtime_certificate",
             ),
