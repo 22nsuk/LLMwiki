@@ -2186,6 +2186,11 @@ class MutationProposalTest(unittest.TestCase):
                 "def test_example_runtime():\n    assert True\n",
                 encoding="utf-8",
             )
+            source_run_id = "auto-session-a-run-01-example-runtime"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(run_dir / "run-telemetry.json", {"status": "blocked"})
+            write_json(run_dir / "reviewer-executor-report.json", {"status": "fail"})
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
             write_json(
                 vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
@@ -2196,7 +2201,7 @@ class MutationProposalTest(unittest.TestCase):
                             "observed_at": "2026-04-14T02:00:00Z",
                             "session_id": "auto-session-a",
                             "iteration": 1,
-                            "source_run_id": "auto-session-a-run-01-example-runtime",
+                            "source_run_id": source_run_id,
                             "proposal_id": "original-proposal",
                             "source_candidate_id": "original-candidate",
                             "target_proposal_id": (
@@ -2217,9 +2222,9 @@ class MutationProposalTest(unittest.TestCase):
                             "supporting_targets": ["ops/script-output-surfaces.json"],
                             "must_change_tests": ["tests/test_example_runtime.py"],
                             "evidence_paths": [
-                                "runs/auto-session-a-run-01-example-runtime/run-telemetry.json",
+                                f"runs/{source_run_id}/run-telemetry.json",
                                 (
-                                    "runs/auto-session-a-run-01-example-runtime/"
+                                    f"runs/{source_run_id}/"
                                     "reviewer-executor-report.json"
                                 ),
                             ],
@@ -2248,7 +2253,7 @@ class MutationProposalTest(unittest.TestCase):
                 repair["source_candidate_type"],
                 "auto_improve_next_run_decision_candidate",
             )
-            self.assertEqual(repair["run_ids"], ["auto-session-a-run-01-example-runtime"])
+            self.assertEqual(repair["run_ids"], [source_run_id])
             self.assertIn(
                 "ops/reports/auto-improve-sessions/session-a.json",
                 repair["supporting_targets"],
@@ -2297,6 +2302,140 @@ class MutationProposalTest(unittest.TestCase):
                 },
             )
 
+    def test_next_run_decision_why_now_omits_missing_leaf_evidence_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            target = "ops/scripts/mechanism/example_runtime.py"
+            test_target = "tests/test_example_runtime.py"
+            (vault / target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / target).write_text("VALUE = 1\n", encoding="utf-8")
+            (vault / test_target).write_text(
+                "def test_example_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            source_run_id = "partial-run"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(run_dir / "run-telemetry.json", {"status": "blocked"})
+            present_evidence = f"runs/{source_run_id}/run-telemetry.json"
+            missing_evidence = f"runs/{source_run_id}/reviewer-executor-report.json"
+            session_report = "ops/reports/auto-improve-sessions/session-a.json"
+            write_json(
+                vault / session_report,
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:missing-run:review",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__review-blocked"
+                            ),
+                            "proposal_family": "contract_regression_signals",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "review failure should become next-run repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [target],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": [test_target],
+                            "evidence_paths": [present_evidence, missing_evidence],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair = next(
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            )
+
+            self.assertIn(present_evidence, repair["why_now"])
+            self.assertIn(session_report, repair["why_now"])
+            self.assertIn("1 missing leaf evidence path omitted", repair["why_now"])
+            self.assertNotIn(missing_evidence, repair["why_now"])
+
+    def test_next_run_decision_with_all_missing_leaf_evidence_does_not_emit_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            target = "ops/scripts/mechanism/example_runtime.py"
+            test_target = "tests/test_example_runtime.py"
+            (vault / target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / target).write_text("VALUE = 1\n", encoding="utf-8")
+            (vault / test_target).write_text(
+                "def test_example_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:missing-run:review",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "missing-run",
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__review-blocked"
+                            ),
+                            "proposal_family": "contract_regression_signals",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "review failure should become next-run repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [target],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": [test_target],
+                            "evidence_paths": [
+                                "runs/missing-run/run-telemetry.json",
+                                "runs/missing-run/reviewer-executor-report.json",
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "open_carry_forward_decisions"
+                ],
+                0,
+            )
+            self.assertFalse(
+                any(
+                    proposal["failure_mode"] == "next_run_failure_repair"
+                    for proposal in proposal_report["proposals"]
+                )
+            )
+
     def test_next_run_decision_adds_schema_sample_regeneration_scope(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
@@ -2320,6 +2459,11 @@ class MutationProposalTest(unittest.TestCase):
                 "{}\n",
                 encoding="utf-8",
             )
+            source_run_id = "auto-session-a-run-03-example-runtime"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(run_dir / "run-telemetry.json", {"status": "blocked"})
+            write_json(run_dir / "validator-executor-report.json", {"status": "fail"})
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
             write_json(
                 vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
@@ -2330,7 +2474,7 @@ class MutationProposalTest(unittest.TestCase):
                             "observed_at": "2026-04-14T02:00:00Z",
                             "session_id": "auto-session-a",
                             "iteration": 3,
-                            "source_run_id": "auto-session-a-run-03-example-runtime",
+                            "source_run_id": source_run_id,
                             "proposal_id": "original-proposal",
                             "source_candidate_id": "original-candidate",
                             "target_proposal_id": (
@@ -2349,9 +2493,9 @@ class MutationProposalTest(unittest.TestCase):
                             "supporting_targets": [schema_target],
                             "must_change_tests": ["tests/test_example_runtime.py"],
                             "evidence_paths": [
-                                "runs/auto-session-a-run-03-example-runtime/run-telemetry.json",
+                                f"runs/{source_run_id}/run-telemetry.json",
                                 (
-                                    "runs/auto-session-a-run-03-example-runtime/"
+                                    f"runs/{source_run_id}/"
                                     "validator-executor-report.json"
                                 ),
                             ],
@@ -2411,6 +2555,8 @@ class MutationProposalTest(unittest.TestCase):
             source_run_id = "auto-session-a-run-01-example-runtime"
             run_dir = vault / "runs" / source_run_id
             run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(run_dir / "run-telemetry.json", {"status": "blocked"})
+            write_json(run_dir / "promotion-report.json", {"decision": "HOLD"})
             write_json(
                 run_dir / "changed-files-manifest.json",
                 {
@@ -2967,6 +3113,10 @@ class MutationProposalTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
             decision_id = "next-run-decision:run-a:review"
+            source_run_id = "auto-session-a-run-01-example-runtime"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(run_dir / "run-telemetry.json", {"status": "blocked"})
             write_json_exact(
                 vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
                 {
@@ -2977,7 +3127,7 @@ class MutationProposalTest(unittest.TestCase):
                             "observed_at": "2026-04-14T02:00:00Z",
                             "session_id": "auto-session-a",
                             "iteration": 1,
-                            "source_run_id": "auto-session-a-run-01-example-runtime",
+                            "source_run_id": source_run_id,
                             "proposal_id": "original-proposal",
                             "source_candidate_id": "original-candidate",
                             "target_proposal_id": (
@@ -2998,7 +3148,7 @@ class MutationProposalTest(unittest.TestCase):
                             "supporting_targets": ["ops/script-output-surfaces.json"],
                             "must_change_tests": ["tests/test_example_runtime.py"],
                             "evidence_paths": [
-                                "runs/auto-session-a-run-01-example-runtime/run-telemetry.json"
+                                f"runs/{source_run_id}/run-telemetry.json"
                             ],
                         }
                     ],

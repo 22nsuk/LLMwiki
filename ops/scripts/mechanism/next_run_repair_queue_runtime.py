@@ -321,6 +321,20 @@ def decision_evidence_mentions_raw_registry_repair(vault: Path, decision: dict) 
     )
 
 
+def _decision_evidence_paths_are_all_missing(vault: Path, decision: dict) -> bool:
+    evidence_paths = _string_list(decision.get("evidence_paths"))
+    if not evidence_paths:
+        return False
+    normalized_paths = [
+        rel_path
+        for rel_path in (safe_repo_relative_path(path) for path in evidence_paths)
+        if rel_path is not None
+    ]
+    if not normalized_paths:
+        return False
+    return not _existing_evidence_paths(vault, normalized_paths)
+
+
 def _is_local_only_inventory_repair_target(path: str) -> bool:
     normalized = normalize_repo_path_text(path)
     return normalized in LOCAL_ONLY_INVENTORY_REPAIR_TARGETS
@@ -441,6 +455,8 @@ def open_carry_forward_decisions(
         ):
             continue
         if vault is not None and _repair_decision_ended_as_clean_raw_registry(vault, decision):
+            continue
+        if vault is not None and _decision_evidence_paths_are_all_missing(vault, decision):
             continue
         if _queue_unblock_decision_superseded_by_current_rotation(
             decision,
@@ -606,6 +622,58 @@ def _source_session_report_targets(vault: Path, decision: dict) -> list[str]:
     return current_repo_target_paths(vault, [source_report])
 
 
+def _existing_evidence_paths(vault: Path, evidence_paths: list[str]) -> list[str]:
+    existing: list[str] = []
+    for evidence_path in evidence_paths:
+        rel_path = safe_repo_relative_path(evidence_path)
+        if rel_path is None:
+            continue
+        if (vault / rel_path).is_file():
+            existing.append(rel_path)
+    return dedupe_preserve_order(existing)
+
+
+def _source_session_report_path(vault: Path, decision: dict) -> str:
+    source_report = safe_repo_relative_path(
+        decision.get(SOURCE_SESSION_REPORT_DECISION_KEY)
+    )
+    if source_report and (vault / source_report).is_file():
+        return source_report
+    return ""
+
+
+def _next_run_repair_evidence_fragment(
+    vault: Path,
+    decision: dict,
+    *,
+    evidence_paths: list[str],
+) -> str:
+    existing_paths = _existing_evidence_paths(vault, evidence_paths)
+    source_session_report = _source_session_report_path(vault, decision)
+    display_paths = dedupe_preserve_order(
+        [*existing_paths, *([source_session_report] if source_session_report else [])]
+    )
+    missing_count = len(
+        [
+            path
+            for path in evidence_paths
+            if safe_repo_relative_path(path) is not None and path not in existing_paths
+        ]
+    )
+
+    if display_paths:
+        fragment = ", ".join(f"`{path}`" for path in display_paths[:3])
+        if len(display_paths) > 3:
+            fragment += f", +{len(display_paths) - 3} more"
+    else:
+        fragment = "the normalized next-run decision record"
+    if missing_count:
+        fragment += f" ({missing_count} missing leaf evidence path"
+        fragment += "s" if missing_count != 1 else ""
+        fragment += " omitted)"
+    return fragment
+
+
 def next_run_repair_proposal(
     vault: Path,
     policy: dict,
@@ -716,11 +784,11 @@ def next_run_repair_proposal(
     role_fragment = f" from {blocking_role}" if blocking_role else ""
     source_proposal_id = str(decision.get("proposal_id", "")).strip()
     scoped_targets = ", ".join(f"`{target}`" for target in primary_targets)
-    evidence_fragment = ", ".join(f"`{path}`" for path in evidence_paths[:3])
-    if len(evidence_paths) > 3:
-        evidence_fragment += f", +{len(evidence_paths) - 3} more"
-    if not evidence_fragment:
-        evidence_fragment = f"`runs/{source_run_id}/run-telemetry.json`"
+    evidence_fragment = _next_run_repair_evidence_fragment(
+        vault,
+        decision,
+        evidence_paths=evidence_paths,
+    )
 
     pseudo_candidate = {
         "candidate_id": proposal_id,

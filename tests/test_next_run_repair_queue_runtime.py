@@ -81,6 +81,53 @@ def test_open_carry_forward_decisions_suppresses_consumed_ids_only() -> None:
     ]
 
 
+def test_open_carry_forward_decisions_suppresses_all_missing_leaf_evidence() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    evidence_paths=[
+                        "runs/missing-run/run-telemetry.json",
+                        "runs/missing-run/reviewer-executor-report.json",
+                    ]
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_keeps_partially_present_leaf_evidence() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        evidence_path = vault / "runs" / "run-a" / "run-telemetry.json"
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text("{}", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    evidence_paths=[
+                        "runs/run-a/run-telemetry.json",
+                        "runs/run-a/reviewer-executor-report.json",
+                    ]
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert [decision["decision_id"] for decision in open_decisions] == [
+            "next-run-decision:run-1"
+        ]
+
+
 def test_open_carry_forward_decisions_suppresses_superseded_queue_rotation() -> None:
     open_decisions = open_carry_forward_decisions(
         [
