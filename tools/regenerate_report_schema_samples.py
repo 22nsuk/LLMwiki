@@ -502,6 +502,7 @@ def build_auto_improve_readiness_schema_sample() -> dict:
         vault = Path(temp_dir) / "vault"
         vault.mkdir()
         seed_minimal_vault(vault)
+        _normalize_sample_vault_text_newlines(vault)
         _seed_readiness_release_contract_reports(vault)
         _seed_readiness_queue_reports(vault)
         _write_goal_worktree_guard_sample_report(vault)
