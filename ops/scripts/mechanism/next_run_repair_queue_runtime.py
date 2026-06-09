@@ -376,8 +376,6 @@ def _queue_unblock_decision_superseded_by_current_rotation(
     recent_log_overlap_unblock_failure_mode: str,
     recent_log_overlap_unblock_family: str,
 ) -> bool:
-    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
-        return False
     if str(decision.get("proposal_family", "")).strip() != recent_log_overlap_unblock_family:
         return False
     source_proposal_id = str(decision.get("proposal_id", "")).strip()

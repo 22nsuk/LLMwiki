@@ -91,6 +91,11 @@ RECENT_LOG_OVERLAP_UNBLOCK_PREFERRED_TARGETS = [
     "ops/scripts/mechanism/mutation_proposal_runtime.py",
     "ops/scripts/mechanism/mechanism_run_validation_runtime.py",
 ]
+RECENT_LOG_OVERLAP_UNBLOCK_RETIRED_TARGETS = frozenset(
+    {
+        "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
+    }
+)
 RECENT_LOG_OVERLAP_UNBLOCK_TEST_FALLBACKS = {
     "ops/scripts/mechanism/mutation_proposal_runtime.py": [
         "tests/test_mutation_proposal.py",
@@ -1458,9 +1463,10 @@ def _recent_log_overlap_unblock_primary_target_options(vault: Path) -> list[str]
                 item.relative_to(vault).as_posix()
             ),
         ):
-            if path.name == "__init__.py":
+            relative = path.relative_to(vault).as_posix()
+            if path.name == "__init__.py" or relative in RECENT_LOG_OVERLAP_UNBLOCK_RETIRED_TARGETS:
                 continue
-            ordered.append(path.relative_to(vault).as_posix())
+            ordered.append(relative)
     return dedupe_preserve_order(ordered)
 
 

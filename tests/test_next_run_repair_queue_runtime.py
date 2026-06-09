@@ -98,6 +98,23 @@ def test_open_carry_forward_decisions_suppresses_superseded_queue_rotation() -> 
     assert open_decisions == []
 
 
+def test_open_carry_forward_decisions_suppresses_superseded_queue_validation() -> None:
+    open_decisions = open_carry_forward_decisions(
+        [
+            _carry_forward_decision(
+                failure_taxonomy="validation_blocked",
+                proposal_family="queue_unblock",
+                proposal_id="recent_log_overlap_queue_blocked__retired",
+            )
+        ],
+        current_proposal_ids={"recent_log_overlap_queue_blocked__current"},
+        recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+        recent_log_overlap_unblock_family="queue_unblock",
+    )
+
+    assert open_decisions == []
+
+
 def test_open_carry_forward_decisions_suppresses_noop_mutation_repair() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         vault = Path(temp_dir)
