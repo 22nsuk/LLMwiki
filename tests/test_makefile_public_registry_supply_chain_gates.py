@@ -25,6 +25,7 @@ def _assert_supply_chain_make_variables(case: unittest.TestCase, text: str) -> N
         "OPENVEX_DRAFT_OUT ?= ops/reports/openvex-draft.json",
         "IN_TOTO_STATEMENT_OUT ?= ops/reports/in-toto-statement.json",
         "SIGSTORE_BUNDLE_OUT ?= ops/reports/sigstore-bundle-verification.json",
+        "SIGSTORE_BUNDLE_REF ?=",
         "SUPPLY_CHAIN_BENCHMARK_OUT ?= ops/reports/supply-chain-benchmark.json",
         "UV ?= uv",
         "STRUCTURAL_COMPLEXITY_BUDGET_OUT ?= ops/reports/structural-complexity-budget.json",
@@ -141,7 +142,7 @@ def _assert_sbom_supply_chain_recipes(case: unittest.TestCase, text: str) -> Non
         ),
         (
             "supply-chain-artifacts-cached",
-            '$(PYTHON) -m ops.scripts.supply_chain_artifacts --vault "$(VAULT)" --provenance-out "$(SUPPLY_CHAIN_PROVENANCE_OUT)" --gate-out "$(SUPPLY_CHAIN_GATE_OUT)" --security-advisories-out "$(SECURITY_ADVISORIES_OUT)" --mapping-out "$(SBOM_EXPORT_MAPPING_OUT)" --readiness-out "$(SBOM_READINESS_GATE_OUT)" --model-out "$(SUPPLY_CHAIN_ARTIFACT_MODEL_OUT)" --cyclonedx-out "$(CYCLONEDX_SBOM_OUT)" --spdx-out "$(SPDX_SBOM_OUT)" --openvex-out "$(OPENVEX_DRAFT_OUT)" --in-toto-out "$(IN_TOTO_STATEMENT_OUT)" --sigstore-out "$(SIGSTORE_BUNDLE_OUT)"',
+            '$(PYTHON) -m ops.scripts.supply_chain_artifacts --vault "$(VAULT)" --provenance-out "$(SUPPLY_CHAIN_PROVENANCE_OUT)" --gate-out "$(SUPPLY_CHAIN_GATE_OUT)" --security-advisories-out "$(SECURITY_ADVISORIES_OUT)" --mapping-out "$(SBOM_EXPORT_MAPPING_OUT)" --readiness-out "$(SBOM_READINESS_GATE_OUT)" --model-out "$(SUPPLY_CHAIN_ARTIFACT_MODEL_OUT)" --cyclonedx-out "$(CYCLONEDX_SBOM_OUT)" --spdx-out "$(SPDX_SBOM_OUT)" --openvex-out "$(OPENVEX_DRAFT_OUT)" --in-toto-out "$(IN_TOTO_STATEMENT_OUT)" --sigstore-out "$(SIGSTORE_BUNDLE_OUT)" $(if $(SIGSTORE_BUNDLE_REF),--sigstore-bundle-ref "$(SIGSTORE_BUNDLE_REF)",)',
         ),
         (
             "security-advisories",
@@ -161,7 +162,7 @@ def _assert_sbom_supply_chain_recipes(case: unittest.TestCase, text: str) -> Non
         ),
         (
             "sigstore-bundle",
-            '$(PYTHON) -m ops.scripts.sigstore_bundle --vault "$(VAULT)" --out "$(SIGSTORE_BUNDLE_OUT)"',
+            '$(PYTHON) -m ops.scripts.sigstore_bundle --vault "$(VAULT)" --out "$(SIGSTORE_BUNDLE_OUT)" $(if $(SIGSTORE_BUNDLE_REF),--bundle-ref "$(SIGSTORE_BUNDLE_REF)",)',
         ),
         (
             "supply-chain-benchmark",

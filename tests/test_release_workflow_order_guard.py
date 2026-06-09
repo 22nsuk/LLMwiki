@@ -214,6 +214,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-finality-resettle:\n"
             "\t$(MAKE) workflow-dependency-planner\n"
             "\t$(MAKE) generated-artifact-finality-suffix\n"
+            "\t$(MAKE) release-closeout-summary-report\n"
             "\t$(MAKE) release-closeout-fixed-point\n"
             "\t$(MAKE) tmp-json-clean\n"
             "\t$(MAKE) release-closeout-finality-verify\n"

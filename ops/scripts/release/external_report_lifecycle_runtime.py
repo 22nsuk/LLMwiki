@@ -262,7 +262,22 @@ SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         "supply_chain_external_verification",
         ["supply-chain-check"],
     ),
+    "supply_chain_sigstore_check_failed": (
+        "supply_chain_external_bundle_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_sigstore_bundle_ref_missing": (
+        "supply_chain_external_bundle_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
     "supply_chain_external_bundle_rule_missing": (
+        "supply_chain_external_bundle_verification",
+        "supply_chain_external_verification",
+        ["supply-chain-check"],
+    ),
+    "supply_chain_external_bundle_not_observed": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
         ["supply-chain-check"],
@@ -1782,7 +1797,10 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
     in_toto = load_json_object(vault / "ops/reports/in-toto-statement.json")
     sigstore = load_json_object(vault / "ops/reports/sigstore-bundle-verification.json")
     has_slsa_predicate = in_toto.get("predicateType") == "https://slsa.dev/provenance/v1"
-    sigstore_checks = as_list(sigstore.get("verification_checks"))
+    sigstore_checks = [
+        as_dict(check) for check in as_list(sigstore.get("verification_checks"))
+    ]
+    sigstore_bundle_ref = str(sigstore.get("bundle_ref") or "").strip()
     release_uses = _workflow_uses_entries(vault, ".github/workflows/release.yml")
     dependency_review_uses = _workflow_uses_entries(
         vault, ".github/workflows/dependency-review.yml"
@@ -1797,9 +1815,16 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
     has_sigstore_bundle_target = _make_target_exists(
         vault, "mk/supply_chain.mk", "sigstore-bundle"
     )
-    external_bundle_rule_present = any(
-        as_dict(check).get("rule") == "external_bundle_observed" for check in sigstore_checks
+    external_bundle_checks = [
+        check
+        for check in sigstore_checks
+        if check.get("rule") == "external_bundle_observed"
+    ]
+    external_bundle_rule_present = bool(external_bundle_checks)
+    external_bundle_observed = any(
+        check.get("pass") is True for check in external_bundle_checks
     )
+    sigstore_check_failed = any(check.get("pass") is not True for check in sigstore_checks)
     reasons: list[str] = []
     if gate.get("status") != "pass":
         reasons.append("supply_chain_gate_not_pass")
@@ -1813,8 +1838,14 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
         reasons.append("supply_chain_sigstore_external_bundle_not_verified")
     if not sigstore_checks:
         reasons.append("supply_chain_sigstore_checks_missing")
+    elif sigstore_check_failed:
+        reasons.append("supply_chain_sigstore_check_failed")
+    if not sigstore_bundle_ref:
+        reasons.append("supply_chain_sigstore_bundle_ref_missing")
     if not external_bundle_rule_present:
         reasons.append("supply_chain_external_bundle_rule_missing")
+    elif not external_bundle_observed:
+        reasons.append("supply_chain_external_bundle_not_observed")
     if not has_release_attestation:
         reasons.append("supply_chain_release_attestation_missing")
     if not has_dependency_review:

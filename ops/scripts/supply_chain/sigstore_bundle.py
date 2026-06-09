@@ -117,11 +117,16 @@ def build_bundle_verification(
         },
         {
             "rule": "external_bundle_observed",
-            "pass": True,
+            "pass": bundle_present,
             "details": "External Sigstore bundle supplied." if bundle_present else "No external Sigstore bundle supplied; local integrity checks only.",
         },
     ]
-    status = "verified-external-bundle" if bundle_present and all(check["pass"] for check in checks) else "local-integrity-only"
+    if not bundle_present:
+        status = "local-integrity-only"
+    elif all(check["pass"] for check in checks):
+        status = "verified-external-bundle"
+    else:
+        status = "external-bundle-verification-failed"
     report = {
         "$schema": SIGSTORE_BUNDLE_VERIFICATION_SCHEMA_PATH,
         "vault": report_path(vault, vault),

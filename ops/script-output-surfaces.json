@@ -1041,6 +1041,17 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
+      "path": "ops/scripts/release/github_governance_live_drift.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/release/operator_release_summary.py",
       "classification": "repo_artifact",
       "output_options": [

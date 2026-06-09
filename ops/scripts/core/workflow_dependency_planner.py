@@ -94,6 +94,7 @@ EXTERNAL_REPORT_TARGETS = [
 FINALITY_RESETTLE_TARGETS = [
     "workflow-dependency-planner",
     "generated-artifact-finality-suffix",
+    "release-closeout-summary-report",
     "release-closeout-fixed-point",
     "tmp-json-clean",
     "release-closeout-finality-verify",

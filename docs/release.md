@@ -159,7 +159,7 @@ surface comparison; this document owns release evidence and staged authority.
   `make head-aligned-evidence-converge` is a compatibility alias for this target.
 - `make release-authority-settle`: explicit staged-authority writer lane for
   unattended promotion after release evidence is current. It runs report finality
-  fixed point once, then preflight, run-ready, preseal, sealed-run-ready, and
+  resettle once, then preflight, run-ready, preseal, sealed-run-ready, and
   auto-promotion-ready manifests, refresh-checks artifact freshness, and ends
   with check-only authority readback plus post-commit finalizer verification.
   It does not regenerate long-tail report producers; run
@@ -287,6 +287,20 @@ deletions are disabled, and the required CI matrix mirrors the `CI` workflow
 tiers for Python 3.12, 3.13, and 3.14. Singleton checks include Windows release
 smoke, raw-registry cross-environment evidence, supply-chain, CodeQL, and
 dependency review.
+
+Live GitHub drift evidence is an operator/full-vault lane, not a public CI or
+release-promotion prerequisite. Create a sanitized JSON input with normalized
+protected branch names, required check contexts, and branch-protection booleans,
+then run:
+
+```bash
+make collaboration-governance GITHUB_GOVERNANCE_LIVE_INPUT=tmp/github-live.json
+```
+
+The resulting `ops/reports/github-governance-live-drift.json` stores only
+normalized counts, missing or mismatched required checks, input digest, status,
+and redaction metadata. Do not retain raw ruleset dumps, tokens, actor payloads,
+or private repository settings in that report.
 
 Working branches are pushed with `git push -u origin HEAD:<working-branch>`.
 After push, attach the GitHub Actions workflow run and combined status check to
@@ -488,7 +502,12 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `public-check-summary-current-check` itself.
 - `ops/reports/release-closeout-finality-attestation.json` is diagnostic only;
   release authority is the staged `release-run`, `release-sealed-run`, and
-  `release-auto-promotion-ready` manifests under `build/release/`.
+  `release-auto-promotion-ready` manifests under `build/release/`. Treat
+  finality verification as terminal for tracked report writers: after refreshing
+  `artifact-freshness`, `external-report-action-matrix`,
+  `generated-artifact-index`, `release-closeout-summary-report`, or another
+  fixed-point tracked report, rerun `make release-finality-resettle` so the
+  attestation is written after the last writer.
 - `ops/reports/` and `ops/operator/` are preserved locally and ignored by Git.
   If older branches still track entries under those paths, remove them from the
   index with `git rm --cached` while leaving the local files on disk.
@@ -540,6 +559,19 @@ make openvex-draft-cached
 CycloneDX, SPDX, OpenVEX, in-toto/SLSA, and Sigstore outputs share the
 repo-native artifact model so dependency and public-export coverage can be
 audited consistently.
+
+`sigstore-bundle` defaults to local integrity evidence. That is useful for
+readiness diagnostics, but it is not external bundle verification. To close the
+external Sigstore evidence lane, provide an observed bundle reference:
+
+```bash
+make sigstore-bundle SIGSTORE_BUNDLE_REF=tmp/sigstore.bundle
+```
+
+`verified-external-bundle` requires a non-empty bundle reference, passing local
+subject checks, and a passing `external_bundle_observed` check. If a bundle is
+present but another check fails, the report remains non-pass as
+`external-bundle-verification-failed`.
 
 Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed with
 the canonical-index `make uv-lock-check` gate and frozen `uv export`

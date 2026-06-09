@@ -59,7 +59,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "test-execution-summary generated-artifact-converge generated-artifact-script-output "
             "generated-artifact-finality-suffix script-output-surfaces "
             "external-report-action-matrix generated-artifact-index artifact-freshness "
-            "release-closeout-fixed-point tmp-json-clean release-closeout-finality-verify "
+            "release-closeout-summary-report release-closeout-fixed-point "
+            "tmp-json-clean release-closeout-finality-verify "
             "operator-release-summary report-contract-closeout workflow-dependency-planner\n"
             "static: ruff typecheck\n"
             "\t@echo static\n"
@@ -95,6 +96,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "\t@echo freshness\n"
             "operator-release-summary:\n"
             "\t@echo operator\n"
+            "release-closeout-summary-report:\n"
+            "\t@echo closeout summary\n"
             "release-closeout-fixed-point:\n"
             "\t@echo fixed point\n"
             "tmp-json-clean:\n"
@@ -287,6 +290,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [
                 "workflow-dependency-planner",
                 "generated-artifact-finality-suffix",
+                "release-closeout-summary-report",
                 "release-closeout-fixed-point",
                 "tmp-json-clean",
                 "release-closeout-finality-verify",

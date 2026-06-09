@@ -138,6 +138,10 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "sigstore-bundle-verification.schema.json",
+    "github-governance-live-drift.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "github-governance-live-drift.schema.json",
     "cyclonedx-1.6.schema.json": REPO_ROOT / "ops" / "schemas" / "cyclonedx-1.6.schema.json",
     "openvex-draft.schema.json": REPO_ROOT / "ops" / "schemas" / "openvex-draft.schema.json",
     "generated-artifact-index.schema.json": REPO_ROOT / "ops" / "schemas" / "generated-artifact-index.schema.json",

@@ -147,6 +147,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--openvex-out", default=OPENVEX_DEFAULT_OUT)
     parser.add_argument("--in-toto-out", default=IN_TOTO_DEFAULT_OUT)
     parser.add_argument("--sigstore-out", default=SIGSTORE_BUNDLE_DEFAULT_OUT)
+    parser.add_argument("--sigstore-bundle-ref", default=None)
     return parser.parse_args(argv)
 
 
@@ -247,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
         vault,
         policy_path=args.policy_path,
         artifact_model=model_report,
+        bundle_ref=args.sigstore_bundle_ref,
     )
     sigstore_destination = write_bundle_verification(vault, sigstore_report, args.sigstore_out)
 

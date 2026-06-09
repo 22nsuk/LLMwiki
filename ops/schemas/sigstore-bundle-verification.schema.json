@@ -10,6 +10,7 @@
     "policy",
     "artifact_context",
     "status",
+    "bundle_ref",
     "subjects",
     "verification_checks"
   ],
@@ -40,7 +41,8 @@
       "type": "string",
       "enum": [
         "local-integrity-only",
-        "verified-external-bundle"
+        "verified-external-bundle",
+        "external-bundle-verification-failed"
       ]
     },
     "bundle_ref": {
@@ -61,6 +63,127 @@
       "minItems": 1
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "verified-external-bundle"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bundle_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "verification_checks": {
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/check"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "pass"
+                  ],
+                  "properties": {
+                    "pass": {
+                      "const": true
+                    }
+                  }
+                }
+              ]
+            },
+            "contains": {
+              "type": "object",
+              "required": [
+                "rule",
+                "pass"
+              ],
+              "properties": {
+                "rule": {
+                  "const": "external_bundle_observed"
+                },
+                "pass": {
+                  "const": true
+                }
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "external-bundle-verification-failed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bundle_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "verification_checks": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "rule",
+                "pass"
+              ],
+              "properties": {
+                "rule": {
+                  "const": "external_bundle_observed"
+                },
+                "pass": {
+                  "const": true
+                }
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "local-integrity-only"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "verification_checks": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "rule",
+                "pass"
+              ],
+              "properties": {
+                "rule": {
+                  "const": "external_bundle_observed"
+                },
+                "pass": {
+                  "const": false
+                }
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "policy": {
       "type": "object",
@@ -162,7 +285,12 @@
       ],
       "properties": {
         "rule": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "subject_files_exist",
+            "in_toto_subject_digests_match",
+            "external_bundle_observed"
+          ]
         },
         "pass": {
           "type": "boolean"

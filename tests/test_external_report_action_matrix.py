@@ -1106,7 +1106,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "supply_chain_sigstore_local_integrity_only",
             "supply_chain_sigstore_external_bundle_not_verified",
             "supply_chain_sigstore_checks_missing",
+            "supply_chain_sigstore_check_failed",
+            "supply_chain_sigstore_bundle_ref_missing",
             "supply_chain_external_bundle_rule_missing",
+            "supply_chain_external_bundle_not_observed",
             "supply_chain_release_attestation_missing",
             "supply_chain_dependency_review_missing",
             "supply_chain_sigstore_bundle_target_missing",
@@ -1286,6 +1289,18 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
         self.assertNotIn(
             "supply_chain_sigstore_external_bundle_not_verified",
+            action["status_reason_ids"],
+        )
+        self.assertIn(
+            "supply_chain_sigstore_bundle_ref_missing",
+            action["status_reason_ids"],
+        )
+        self.assertIn(
+            "supply_chain_sigstore_check_failed",
+            action["status_reason_ids"],
+        )
+        self.assertIn(
+            "supply_chain_external_bundle_not_observed",
             action["status_reason_ids"],
         )
 

@@ -96,6 +96,9 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
         "external-report-reference-manifest-release-check",
         "external-report-reference-manifest-settle",
         "external-report-action-matrix",
+        "github-governance-live-drift",
+        "github-governance-live-drift-check",
+        "collaboration-governance",
         "external-report-lifecycle-refresh",
     ):
         case.assertIn(target, phony)
@@ -110,6 +113,9 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
         "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT =",
         "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH =",
         "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
+        "GITHUB_GOVERNANCE_LIVE_INPUT ?= tmp/github-governance-live-input.json",
+        "GITHUB_GOVERNANCE_LIVE_DRIFT_OUT ?= ops/reports/github-governance-live-drift.json",
+        "GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT ?= tmp/github-governance-live-drift-check.json",
     ):
         case.assertIn(assignment, text)
     case.assertNotIn(
@@ -147,6 +153,15 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
         '$(PYTHON) -m ops.scripts.external_report_action_matrix --vault "$(VAULT)" --out "$(EXTERNAL_REPORT_ACTION_MATRIX_OUT)"',
         _target_block(text, "external-report-action-matrix"),
     )
+    case.assertIn(
+        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.release.github_governance_live_drift --vault "$(VAULT)" --live-input "$(GITHUB_GOVERNANCE_LIVE_INPUT)" --out "$(GITHUB_GOVERNANCE_LIVE_DRIFT_OUT)"',
+        _target_block(text, "github-governance-live-drift"),
+    )
+    case.assertIn(
+        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.release.github_governance_live_drift --vault "$(VAULT)" --live-input "$(GITHUB_GOVERNANCE_LIVE_INPUT)" --out "$(GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT)"',
+        _target_block(text, "github-governance-live-drift-check"),
+    )
+    case.assertIn("collaboration-governance: github-governance-live-drift", text)
     case.assertEqual(
         _recipe_lines(text, "external-report-lifecycle-refresh"),
         [
@@ -704,6 +719,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             [
                 "$(MAKE) workflow-dependency-planner",
                 "$(MAKE) generated-artifact-finality-suffix",
+                "$(MAKE) release-closeout-summary-report",
                 "$(MAKE) release-closeout-fixed-point",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",

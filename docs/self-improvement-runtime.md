@@ -193,12 +193,15 @@ surfaces or direct-script fallback entrypoints, and no longer carries
 generated-at, source-revision, source-tree-fingerprint, or currentness envelope
 fields in the tracked fixture.
 
-`release-finality-resettle` uses only the finality suffix
+`release-finality-resettle` uses the generated-artifact finality suffix
 (`artifact-freshness -> external-report-action-matrix ->
-generated-artifact-index`) before `release-closeout-fixed-point` and finality verify.
-The workflow planner now records that fan-out explicitly in each selected step's
-`fanout_targets` field so the repair suffix is inspectable rather than implicit
-in Make recipes alone.
+generated-artifact-index`), refreshes `release-closeout-summary-report`, then
+runs `release-closeout-fixed-point` and finality verify. Treat the finality
+verify as terminal: if any tracked report writer runs afterward, rerun
+`make release-finality-resettle` instead of hand-patching the attestation.
+The workflow planner now records the generated-artifact fan-out explicitly in
+each selected step's `fanout_targets` field so the repair suffix is inspectable
+rather than implicit in Make recipes alone.
 
 ## Promotion Principles
 

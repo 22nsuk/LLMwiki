@@ -984,6 +984,16 @@
       "replacement": "make external-report-reference-manifest"
     },
     {
+      "canonical_module": "ops.scripts.release.github_governance_live_drift",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/release/github_governance_live_drift.py",
+      "rationale": "Schema-backed operator/live governance evidence command retained behind Make/canonical module invocation rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make collaboration-governance"
+    },
+    {
       "canonical_module": "ops.scripts.release.operator_release_summary",
       "console_scripts": [],
       "install_state": "not_installed",

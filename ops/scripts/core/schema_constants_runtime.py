@@ -49,6 +49,9 @@ RELEASE_EVIDENCE_CLOSEOUT_SELF_CHECK_SCHEMA_PATH = "ops/schemas/release-evidence
 OPERATOR_RELEASE_SUMMARY_SCHEMA_PATH = "ops/schemas/operator-release-summary.schema.json"
 RELEASE_POST_SEAL_ATTESTATION_SCHEMA_PATH = "ops/schemas/release-post-seal-attestation.schema.json"
 PUBLIC_CHECK_SUMMARY_SCHEMA_PATH = "ops/schemas/public-check-summary.schema.json"
+GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH = (
+    "ops/schemas/github-governance-live-drift.schema.json"
+)
 LEARNING_READINESS_SIGNOFF_SCHEMA_PATH = "ops/schemas/learning-readiness-signoff.schema.json"
 LEARNING_READINESS_SIGNOFF_REVALIDATION_SCHEMA_PATH = (
     "ops/schemas/learning-readiness-signoff-revalidation.schema.json"

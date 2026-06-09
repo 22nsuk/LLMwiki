@@ -466,6 +466,7 @@ def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[
     expected = [
         "workflow-dependency-planner",
         "generated-artifact-finality-suffix",
+        "release-closeout-summary-report",
         "release-closeout-fixed-point",
         "tmp-json-clean",
         "release-closeout-finality-verify",
@@ -476,6 +477,7 @@ def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[
         expected,
         details=(
             "release-finality-resettle must keep narrow generated-report repairs cheap, "
+            "refresh the summary tracked by fixed-point, "
             "then make release-closeout-fixed-point the terminal writer before finality verify."
         ),
     )
