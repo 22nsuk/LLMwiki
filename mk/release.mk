@@ -356,6 +356,7 @@ release-auto-promotion-preseal:
 	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
 	$(MAKE) release-clean-blocker-ledger
+	$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
 	$(MAKE) tmp-json-clean
 	$(PYTHON) -m ops.scripts.release_auto_promotion_preflight --vault "$(VAULT)" --phase preseal --out "$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)" --auto-improve-readiness "$(AUTO_IMPROVE_READINESS_OUT)" --remediation-backlog "$(REMEDIATION_BACKLOG_OUT)" --learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)" --goal-run-identity "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)"
 

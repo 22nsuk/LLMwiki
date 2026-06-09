@@ -146,7 +146,13 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint "
         'RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"'
     )
+    preseal_fixed_point_line = (
+        "$(MAKE) release-closeout-fixed-point "
+        'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
+        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+    )
     test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
+    test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
     test.assertLess(preseal_recipe.index(preseal_refresh_line), preseal_recipe.index(strict_cohort_line))
     test.assertLess(
         preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
@@ -173,6 +179,14 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
     test.assertGreater(
         preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
         preseal_recipe.index(strict_cohort_line),
+    )
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
+        preseal_recipe.index(preseal_fixed_point_line),
+    )
+    test.assertLess(
+        preseal_recipe.index(preseal_fixed_point_line),
+        preseal_recipe.index("$(MAKE) tmp-json-clean"),
     )
 
 

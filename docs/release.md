@@ -121,7 +121,9 @@ surface comparison; this document owns release evidence and staged authority.
   cohort checks do not read stale release-gate blockers. It only checks
   run-ready's full release-smoke and full-suite
   evidence for currentness instead of rerunning them. It removes any older final
-  ready manifest before writing new preseal evidence.
+  ready manifest before writing new preseal evidence, and writes a final
+  fixed-point after its tracked report refreshes so finality remains terminal
+  before sealing.
 - `make release-auto-promotion-operator-summary`: manual fallback to refresh the
   cheap build-local operator diagnostics used by the promotion verdict when
   sealed sidecars are already current. It invalidates the final ready manifest
