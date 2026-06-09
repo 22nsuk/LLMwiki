@@ -12,6 +12,7 @@ from ops.scripts.release_closeout_fixed_point_cost_trend import (
     DEFAULT_OUT,
     FIXED_POINT_REPORT_PATH,
     build_report,
+    main,
     write_report,
 )
 from ops.scripts.runtime_context import RuntimeContext
@@ -107,6 +108,7 @@ class ReleaseCloseoutFixedPointCostTrendTests(unittest.TestCase):
         report = build_report(self.vault, context=context_at(10))
 
         self.assertEqual(report["status"], "pass")
+        self.assertTrue(report["fixed_point_report"]["sample_available"])
         self.assertEqual(report["sample_count"], 1)
         self.assertEqual(report["latest_sample"]["total_duration_ms"], 1000)
         self.assertRegex(
@@ -138,6 +140,32 @@ class ReleaseCloseoutFixedPointCostTrendTests(unittest.TestCase):
             ["release-evidence-dashboard-report"],
         )
         self.assertEqual(validate_with_schema(second, load_schema(SCHEMA_PATH)), [])
+
+    def test_main_no_fail_writes_attention_diagnostic_when_fixed_point_missing(self) -> None:
+        exit_code = main(
+            [
+                "--vault",
+                self.vault.as_posix(),
+                "--out",
+                "tmp/release-closeout-fixed-point-cost-trend-ci.json",
+                "--no-fail",
+            ]
+        )
+
+        self.assertEqual(exit_code, 0)
+        report = json.loads(
+            (
+                self.vault / "tmp" / "release-closeout-fixed-point-cost-trend-ci.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "attention")
+        self.assertFalse(report["fixed_point_report"]["sample_available"])
+        self.assertNotEqual(report["fixed_point_report"]["load_status"], "ok")
+        self.assertEqual(report["fixed_point_report"]["digest"], "")
+        self.assertEqual(report["sample_count"], 0)
+        self.assertIsNone(report["latest_sample"])
+        self.assertEqual(report["samples"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
 
 if __name__ == "__main__":

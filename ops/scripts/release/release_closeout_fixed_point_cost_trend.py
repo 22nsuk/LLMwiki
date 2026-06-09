@@ -23,6 +23,7 @@ POLICY_PATH = "ops/policies/release-closeout-fixed-point.json"
 PRODUCER = "ops.scripts.release_closeout_fixed_point_cost_trend"
 SCHEMA_PATH = "ops/schemas/release-closeout-fixed-point-cost-trend.schema.json"
 SOURCE_COMMAND = "make release-closeout-fixed-point-cost-trend"
+SOURCE_PATH = "ops/scripts/release/release_closeout_fixed_point_cost_trend.py"
 DEFAULT_RETAINED_RUN_COUNT = 10
 
 
@@ -297,7 +298,7 @@ def build_report(
         source_command=SOURCE_COMMAND,
         resolved_policy_path=vault / POLICY_PATH,
         schema_path=SCHEMA_PATH,
-        source_paths=["ops/scripts/release_closeout_fixed_point_cost_trend.py"],
+        source_paths=[SOURCE_PATH],
         file_inputs={"release_closeout_fixed_point": FIXED_POINT_REPORT_PATH},
         text_inputs={
             "retained_run_count": str(retained_run_count),
@@ -313,6 +314,12 @@ def build_report(
             "version": int(policy.get("version", 1) or 1),
         },
         "status": status,
+        "fixed_point_report": {
+            "path": FIXED_POINT_REPORT_PATH,
+            "load_status": str(fixed_point_diagnostics.get("status", "unknown")),
+            "digest": fixed_point_digest,
+            "sample_available": True,
+        },
         "retained_run_count": retained_run_count,
         "sample_count": len(samples),
         "previous_trend": {
@@ -332,6 +339,79 @@ def build_report(
                 f"{len(breached)} fixed-point writer cost threshold breach(es)"
                 if breached
                 else "fixed-point writer costs are within configured thresholds"
+            ),
+        },
+    }
+
+
+def build_missing_fixed_point_report(
+    vault: Path,
+    *,
+    previous_path: str = DEFAULT_OUT,
+    fixed_point_diagnostics: dict[str, Any] | None = None,
+    context: RuntimeContext | None = None,
+) -> dict[str, Any]:
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
+    generated_at = runtime_context.isoformat_z()
+    policy = _load_json(vault / POLICY_PATH)
+    cost_policy = _cost_policy(policy)
+    previous_trend, previous_diagnostics = load_optional_json_object_with_diagnostics(
+        vault / previous_path
+    )
+    previous_digest = (
+        _sha256_file(vault / previous_path) if (vault / previous_path).is_file() else ""
+    )
+    retained_run_count = int(cost_policy["retained_run_count"])
+    diagnostics = fixed_point_diagnostics or {"status": "missing"}
+    load_status = str(diagnostics.get("status", "unknown"))
+    envelope = build_canonical_report_envelope(
+        vault,
+        generated_at=generated_at,
+        artifact_kind="release_closeout_fixed_point_cost_trend",
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=vault / POLICY_PATH,
+        schema_path=SCHEMA_PATH,
+        source_paths=[SOURCE_PATH],
+        text_inputs={
+            "fixed_point_report_path": FIXED_POINT_REPORT_PATH,
+            "fixed_point_report_load_status": load_status,
+            "retained_run_count": str(retained_run_count),
+            "threshold_policy": json.dumps(cost_policy, sort_keys=True),
+        },
+        source_tree_excluded_files=(DEFAULT_OUT,),
+    )
+    return {
+        **envelope,
+        "vault": display_path(vault, vault),
+        "policy": {
+            "path": POLICY_PATH,
+            "version": int(policy.get("version", 1) or 1),
+        },
+        "status": "attention",
+        "fixed_point_report": {
+            "path": FIXED_POINT_REPORT_PATH,
+            "load_status": load_status,
+            "digest": "",
+            "sample_available": False,
+        },
+        "retained_run_count": retained_run_count,
+        "sample_count": 0,
+        "previous_trend": {
+            "path": previous_path,
+            "load_status": str(previous_diagnostics.get("status", "unknown")),
+            "digest": previous_digest,
+        },
+        "latest_sample": None,
+        "samples": [],
+        "writer_trends": [],
+        "threshold_policy": cost_policy,
+        "threshold_summary": {
+            "status": "attention",
+            "breached_writer_count": 0,
+            "breached_writers": [],
+            "summary": (
+                "fixed-point report is unavailable; cost trend sample was not recorded"
             ),
         },
     }
@@ -366,7 +446,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_report(vault, previous_path=args.previous)
+    try:
+        report = build_report(vault, previous_path=args.previous)
+    except FileNotFoundError:
+        if not args.no_fail:
+            raise
+        _, fixed_point_diagnostics = load_optional_json_object_with_diagnostics(
+            vault / FIXED_POINT_REPORT_PATH
+        )
+        report = build_missing_fixed_point_report(
+            vault,
+            previous_path=args.previous,
+            fixed_point_diagnostics=fixed_point_diagnostics,
+        )
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))
     if args.no_fail:
