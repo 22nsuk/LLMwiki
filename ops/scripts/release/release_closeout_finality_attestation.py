@@ -15,6 +15,7 @@ from ops.scripts.artifact_io_runtime import (
     resolve_schema_backed_report_output_path,
     write_schema_backed_report,
 )
+from ops.scripts.core.generated_artifact_semantic_digest import semantic_digest_maps
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release.release_status_v2 import release_status_v2_view
@@ -39,6 +40,12 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _normalized_digest_map(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(path): str(digest) for path, digest in value.items()}
 
 
 def _load_optional(vault: Path, rel_path: str) -> tuple[dict[str, Any], str]:
@@ -85,6 +92,23 @@ def _digest_mismatches(
             }
         )
     return mismatches
+
+
+def _recorded_digest_mismatches(
+    *,
+    recorded: dict[str, str],
+    current: dict[str, str],
+) -> list[dict[str, str]]:
+    paths = sorted(set(recorded) | set(current))
+    return [
+        {
+            "path": path,
+            "recorded_digest": recorded.get(path, SHA256_MISSING),
+            "current_digest": current.get(path, SHA256_MISSING),
+        }
+        for path in paths
+        if recorded.get(path, SHA256_MISSING) != current.get(path, SHA256_MISSING)
+    ]
 
 
 def _fixed_point_summary(vault: Path) -> tuple[dict[str, Any], dict[str, Any], str]:
@@ -203,6 +227,9 @@ def build_report(
 
     tracked_paths = _tracked_paths_from_fixed_point(fixed_payload)
     tracked_digest_map = _digest_map(vault, tracked_paths)
+    tracked_semantic_digest_map, tracked_semantic_digest_modes = semantic_digest_maps(
+        vault, tracked_paths
+    )
     fixed_point_digest_map = fixed_point_report["final_digest_map"]
     digest_mismatches = _digest_mismatches(fixed_point_digest_map, tracked_digest_map)
     matches_fixed_point_digest_map = not digest_mismatches and bool(tracked_paths)
@@ -224,7 +251,10 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=["ops/scripts/release_closeout_finality_attestation.py"],
+            source_paths=[
+                "ops/scripts/release_closeout_finality_attestation.py",
+                "ops/scripts/core/generated_artifact_semantic_digest.py",
+            ],
             file_inputs={
                 "fixed_point_report": FIXED_POINT_REPORT_PATH,
                 "batch_manifest": BATCH_MANIFEST_PATH,
@@ -248,6 +278,8 @@ def build_report(
         "self_check": self_check,
         "external_report_manifest": external_report_manifest,
         "tracked_digest_map": tracked_digest_map,
+        "tracked_semantic_digest_map": tracked_semantic_digest_map,
+        "tracked_semantic_digest_modes": tracked_semantic_digest_modes,
         "matches_fixed_point_digest_map": matches_fixed_point_digest_map,
         "digest_mismatches": digest_mismatches,
         "finality_status": finality_status,
@@ -268,7 +300,10 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
     )
 
 
-def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tuple[bool, list[str]]:
+def _verify_attestation_diagnostics(
+    vault: Path,
+    attestation_path: str = DEFAULT_OUT,
+) -> dict[str, Any]:
     resolved = resolve_schema_backed_report_output_path(
         vault,
         attestation_path,
@@ -277,7 +312,15 @@ def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tupl
     payload, diagnostics = load_optional_json_object_with_diagnostics(resolved)
     load_status = str(diagnostics.get("status", "unknown")).strip() or "unknown"
     if load_status != "ok":
-        return False, [f"attestation_load_status:{load_status}"]
+        load_failures = [f"attestation_load_status:{load_status}"]
+        return {
+            "status": "fail",
+            "failures": load_failures,
+            "semantic_fallback_used": False,
+            "raw_digest_mismatches": [],
+            "raw_digest_mismatches_covered_by_semantic_digest": [],
+            "fixed_point_digest_mismatches": [],
+        }
 
     failures: list[str] = []
     for field in ("fixed_point_report", "batch_manifest", "self_check", "external_report_manifest"):
@@ -294,23 +337,48 @@ def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tupl
     fixed_payload, _fixed_summary, _fixed_digest = _fixed_point_summary(vault)
     tracked_paths = _tracked_paths_from_fixed_point(fixed_payload)
     current_tracked_digest_map = _digest_map(vault, tracked_paths)
-    recorded_map = payload.get("tracked_digest_map")
-    if not isinstance(recorded_map, dict) or current_tracked_digest_map != {
-        str(path): str(digest) for path, digest in recorded_map.items()
-    }:
+    recorded_map = _normalized_digest_map(payload.get("tracked_digest_map"))
+    current_semantic_digest_map, _current_semantic_modes = semantic_digest_maps(
+        vault, tracked_paths
+    )
+    recorded_semantic_map = _normalized_digest_map(payload.get("tracked_semantic_digest_map"))
+    semantic_map_matches = bool(recorded_semantic_map) and (
+        current_semantic_digest_map == recorded_semantic_map
+    )
+    raw_digest_mismatches = _recorded_digest_mismatches(
+        recorded=recorded_map,
+        current=current_tracked_digest_map,
+    )
+    raw_mismatch_covered_by_semantic_digest = bool(raw_digest_mismatches) and semantic_map_matches
+    if raw_digest_mismatches and not semantic_map_matches:
         failures.append("tracked_digest_map_current_mismatch")
     raw_fixed_map = fixed_payload.get("final_digest_map")
     fixed_map: dict[str, Any] = raw_fixed_map if isinstance(raw_fixed_map, dict) else {}
-    if _digest_mismatches(fixed_map, current_tracked_digest_map):
+    fixed_point_digest_mismatches = _digest_mismatches(fixed_map, current_tracked_digest_map)
+    if fixed_point_digest_mismatches and not semantic_map_matches:
         failures.append("fixed_point_digest_map_current_mismatch")
     if str(payload.get("finality_status", "")).strip() != "pass":
         failures.append("attestation_finality_status_not_pass")
-    return not failures, failures
+    return {
+        "status": "pass" if not failures else "fail",
+        "failures": failures,
+        "semantic_fallback_used": raw_mismatch_covered_by_semantic_digest,
+        "raw_digest_mismatches": raw_digest_mismatches,
+        "raw_digest_mismatches_covered_by_semantic_digest": raw_digest_mismatches
+        if raw_mismatch_covered_by_semantic_digest
+        else [],
+        "fixed_point_digest_mismatches": fixed_point_digest_mismatches,
+    }
+
+
+def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tuple[bool, list[str]]:
+    report = _verify_attestation_diagnostics(vault, attestation_path)
+    failures = [str(item) for item in report.get("failures", [])]
+    return report["status"] == "pass", failures
 
 
 def verify_attestation_report(vault: Path, attestation_path: str = DEFAULT_OUT) -> dict[str, Any]:
-    ok, failures = verify_attestation(vault, attestation_path)
-    return {"status": "pass" if ok else "fail", "failures": failures}
+    return _verify_attestation_diagnostics(vault, attestation_path)
 
 
 def write_verify_report(vault: Path, report: dict[str, Any], out_path: str) -> Path:

@@ -18,6 +18,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.external_report_lifecycle_runtime import (
         action_statuses,
+        archived_report_action_basis_records,
         content_lifecycle_inventory,
         lifecycle_decision,
         report_lifecycle_profiles,
@@ -34,6 +35,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
 else:
     from ops.scripts.external_report_lifecycle_runtime import (
         action_statuses,
+        archived_report_action_basis_records,
         content_lifecycle_inventory,
         lifecycle_decision,
         report_lifecycle_profiles,
@@ -167,14 +169,21 @@ def _operator_report_inventory(vault: Path) -> list[dict[str, str]]:
     return _file_records(vault, "ops/operator")
 
 
-def _external_report_inventory(vault: Path) -> dict[str, Any]:
-    root = vault / "external-reports"
-    archive_root = root / "archive"
-    archive_file_count = sum(1 for path in archive_root.iterdir() if path.is_file()) if archive_root.exists() else 0
+def _external_report_inventory(
+    vault: Path,
+    *,
+    status_by_action: dict[str, str] | None = None,
+    archived_report_basis: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    statuses = status_by_action or _external_report_lifecycle_statuses(vault)
+    archived_basis = archived_report_basis
+    if archived_basis is None:
+        archived_basis = archived_report_action_basis_records(vault, statuses)
     return {
         "root_records": _file_records(vault, "external-reports"),
         "content_lifecycle_profiles": content_lifecycle_inventory(vault),
-        "archive_file_count": archive_file_count,
+        "archived_report_action_basis": archived_basis,
+        "archive_file_count": len(archived_basis),
     }
 
 
@@ -318,13 +327,20 @@ def _operator_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str,
     }
 
 
-def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
-    root = vault / "external-reports"
+def _external_reports(
+    vault: Path,
+    *,
+    status_by_action: dict[str, str] | None = None,
+    archived_report_basis: list[dict[str, Any]] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
     root_records = _file_records(vault, "external-reports")
     record_by_path = {record["path"]: record for record in root_records}
     root_paths = [vault / record["path"] for record in root_records]
     lifecycle_profiles = report_lifecycle_profiles(vault, root_paths)
-    status_by_action = _external_report_lifecycle_statuses(vault)
+    statuses = status_by_action or _external_report_lifecycle_statuses(vault)
+    archived_basis = archived_report_basis
+    if archived_basis is None:
+        archived_basis = archived_report_action_basis_records(vault, statuses)
     current: list[dict[str, Any]] = []
     archive_candidates: list[dict[str, Any]] = []
     for profile in lifecycle_profiles:
@@ -333,7 +349,7 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
         decision = lifecycle_decision(
             profile,
             profiles=lifecycle_profiles,
-            statuses=status_by_action,
+            statuses=statuses,
         )
         if decision["archive_recommended"]:
             archive_candidates.append(
@@ -364,13 +380,9 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
                 **_external_report_decision_fields(decision),
             }
         )
-    archive_count = 0
-    archive_root = root / "archive"
-    if archive_root.exists():
-        archive_count = sum(1 for path in archive_root.iterdir() if path.is_file())
     return current, archive_candidates, {
         "external_reports_root_file_count": len(root_records),
-        "external_reports_archive_file_count": archive_count,
+        "external_reports_archive_file_count": len(archived_basis),
     }
 
 
@@ -599,7 +611,16 @@ def build_report(
     runtime_context = context or RuntimeContext.from_policy(policy)
     ops_current, ops_archive, ops_summary = _ops_reports(vault)
     operator_current, operator_archive, operator_summary = _operator_reports(vault)
-    external_current, external_archive, external_summary = _external_reports(vault)
+    external_statuses = _external_report_lifecycle_statuses(vault)
+    archived_external_report_basis = archived_report_action_basis_records(
+        vault,
+        external_statuses,
+    )
+    external_current, external_archive, external_summary = _external_reports(
+        vault,
+        status_by_action=external_statuses,
+        archived_report_basis=archived_external_report_basis,
+    )
     runs_current, runs_archive, runs_summary = _runs(vault)
     archive_candidates = [*ops_archive, *operator_archive, *external_archive, *runs_archive]
     canonical_reports = [*ops_current, *operator_current, *external_current, *runs_current]
@@ -624,6 +645,7 @@ def build_report(
             schema_path=GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
             source_paths=[
                 "ops/scripts/generated_artifact_index.py",
+                "ops/scripts/external_report_inventory_runtime.py",
                 "ops/scripts/external_report_lifecycle_runtime.py",
             ],
             path_group_inputs={
@@ -635,7 +657,13 @@ def build_report(
             text_inputs={
                 "ops_report_inventory": _canonical_inventory_text(_ops_report_inventory(vault)),
                 "operator_report_inventory": _canonical_inventory_text(_operator_report_inventory(vault)),
-                "external_report_inventory": _canonical_inventory_text(_external_report_inventory(vault)),
+                "external_report_inventory": _canonical_inventory_text(
+                    _external_report_inventory(
+                        vault,
+                        status_by_action=external_statuses,
+                        archived_report_basis=archived_external_report_basis,
+                    )
+                ),
                 "external_report_action_matrix_statuses": _canonical_inventory_text(
                     _action_matrix_statuses(vault)
                 ),
@@ -663,6 +691,7 @@ def build_report(
         },
         "canonical_reports": canonical_reports,
         "archive_candidates": archive_candidates,
+        "archived_external_report_basis": archived_external_report_basis,
     }
 
 

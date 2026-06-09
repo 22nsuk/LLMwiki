@@ -22,57 +22,12 @@
     },
     {
       "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
-      "observation_id": "archived_report_action_trace_gap",
-      "status": "planned",
-      "retained_reason": "Active report and generated-index records now expose digest/count basis, but archived originals still require a dedicated private archive reconciliation lane.",
-      "next_action": "Extend archive reconciliation for archived reports with digest, matched/unresolved counts, unmatched count, and operator-only rationale without copying report prose.",
-      "exit_condition": "Close when archived report decisions have schema-backed per-report basis or operator-only rationale.",
-      "owner_or_lane": "external-report-archive-reconciliation"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
-      "observation_id": "dev_install_index_portability_gap",
-      "status": "planned",
-      "retained_reason": "Dependency install index portability is a separate dev-install contract change, not required for archive-readiness basis.",
-      "next_action": "Split local dev-install index selection from canonical uv lock index policy and add a focused static test.",
-      "exit_condition": "Close when dev-install has an explicit local index policy with tests and docs.",
-      "owner_or_lane": "dev-install"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
       "observation_id": "full_vault_archive_mtime_normalization_gap",
       "status": "planned",
       "retained_reason": "Full-vault review bundle mtime normalization requires operator/full-vault packaging evidence beyond public release smoke.",
       "next_action": "Add or extend a review-bundle archive portability lane in full-vault context.",
       "exit_condition": "Close when full-vault review bundle mtime normalization is checked or explicitly declared operator-only.",
       "owner_or_lane": "review-bundle-portability"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
-      "observation_id": "github_governance_live_drift_gap",
-      "status": "planned",
-      "retained_reason": "Live branch protection and required-check drift cannot be proven from static public repository files.",
-      "next_action": "Add operator-safe governance drift evidence or mark the live setting check as operator-only.",
-      "exit_condition": "Close when live GitHub governance drift evidence exists or the action has an explicit operator-only rationale.",
-      "owner_or_lane": "collaboration-governance"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
-      "observation_id": "review_bundle_full_vault_hygiene_gap",
-      "status": "planned",
-      "retained_reason": "Review-bundle hygiene is distinct from release source-package hygiene and needs full-vault/operator context.",
-      "next_action": "Add a review-archive-clean or review-context lane that separates full-vault review packaging from release packaging.",
-      "exit_condition": "Close when review-bundle hygiene has its own check or explicit operator-only rationale.",
-      "owner_or_lane": "review-bundle-hygiene"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
-      "observation_id": "status_surface_currentness_visibility_gap",
-      "status": "planned",
-      "retained_reason": "Status currentness visibility is a focused status-surface change separate from archive-readiness basis.",
-      "next_action": "Add a release_status_surface regression that shows stale public-check or release-closeout evidence in make status.",
-      "exit_condition": "Close when make status exposes current/stale state for public summary and release closeout evidence.",
-      "owner_or_lane": "release-status-surface"
     },
     {
       "path": "runs/auto-improve-trial-rerun17-run-01-auto-improve-readiness-runtime/improvement-observations.json",

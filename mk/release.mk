@@ -385,8 +385,10 @@ release-auto-promotion-ready-check:
 
 release-authority-post-ready-finality:
 	$(MAKE) artifact-freshness-refresh-check
+	$(MAKE) release-closeout-batch-manifest-promote RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
 	$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
 	$(MAKE) tmp-json-clean
+	$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
 	$(MAKE) release-closeout-finality-verify
 
 release-authority-settle:
@@ -667,7 +669,7 @@ remediation-backlog: self-improvement-negative-lessons session-synopsis
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(REMEDIATION_BACKLOG_CANDIDATE_OUT)" --out "$(REMEDIATION_BACKLOG_OUT)" --schema ops/schemas/remediation-backlog.schema.json --expected-artifact-kind remediation_backlog --expected-producer ops.scripts.remediation_backlog
 
 review-archive:
-	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.release.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"
 
 external-report-reference-manifest:
 	$(PYTHON) -m ops.scripts.external_report_reference_manifest --vault "$(VAULT)" --out "$(EXTERNAL_REPORT_REFERENCE_MANIFEST_OUT)" --mode "$(EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE)" $(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_NAME),--basis-zip-name "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_NAME)",) $(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_SHA256),--basis-zip-sha256 "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_SHA256)",) $(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT),--basis-zip-entry-count "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT)",) $(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH),--basis-zip-path "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH)",) $(if $(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH),--current-distribution-zip-path "$(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH)",) $(if $(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_NAME),--current-distribution-zip-name "$(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_NAME)",) $(if $(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_SHA256),--current-distribution-zip-sha256 "$(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_SHA256)",) $(if $(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_ENTRY_COUNT),--current-distribution-zip-entry-count "$(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_ENTRY_COUNT)",)

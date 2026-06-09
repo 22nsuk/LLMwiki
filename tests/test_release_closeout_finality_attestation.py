@@ -20,6 +20,7 @@ from ops.scripts.release_closeout_finality_attestation import (
     build_report,
     main,
     verify_attestation,
+    verify_attestation_report,
     write_report,
 )
 from ops.scripts.runtime_context import RuntimeContext
@@ -131,6 +132,8 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         self.assertEqual(report["batch_manifest"]["digest"], _sha256(self.vault / BATCH_MANIFEST_PATH))
         self.assertEqual(report["self_check"]["digest"], _sha256(self.vault / SELF_CHECK_PATH))
         self.assertEqual(report["tracked_digest_map"], digest_map)
+        self.assertEqual(sorted(report["tracked_semantic_digest_map"]), sorted(digest_map))
+        self.assertEqual(sorted(report["tracked_semantic_digest_modes"]), sorted(digest_map))
         self.assertTrue(report["matches_fixed_point_digest_map"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
@@ -138,6 +141,74 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         ok, failures = verify_attestation(self.vault)
         self.assertTrue(ok, failures)
         self.assertEqual(failures, [])
+
+    def test_finality_verify_allows_envelope_only_tracked_digest_drift(self) -> None:
+        self._seed_finality_inputs()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {
+                "artifact_kind": "generated_artifact_index",
+                "generated_at": "2026-05-09T12:01:00Z",
+                "input_fingerprints": {"clock": "changed"},
+                "status": "pass",
+            },
+        )
+
+        ok, failures = verify_attestation(self.vault)
+
+        self.assertTrue(ok, failures)
+        self.assertEqual(failures, [])
+        diagnostics = verify_attestation_report(self.vault)
+        self.assertEqual(diagnostics["status"], "pass")
+        self.assertTrue(diagnostics["semantic_fallback_used"])
+        self.assertEqual(
+            [
+                item["path"]
+                for item in diagnostics["raw_digest_mismatches_covered_by_semantic_digest"]
+            ],
+            ["ops/reports/generated-artifact-index.json"],
+        )
+
+    def test_finality_verify_fails_after_nested_provenance_drift(self) -> None:
+        self._seed_finality_inputs()
+        generated_path = "ops/reports/generated-artifact-index.json"
+        self._write_json(
+            generated_path,
+            {
+                "artifact_kind": "generated_artifact_index",
+                "details": {"input_fingerprints": {"clock": "before"}},
+                "status": "pass",
+            },
+        )
+        fixed_point = json.loads((self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8"))
+        fixed_point["final_digest_map"][generated_path] = _sha256(self.vault / generated_path)
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        self._write_json(
+            generated_path,
+            {
+                "artifact_kind": "generated_artifact_index",
+                "details": {"input_fingerprints": {"clock": "after"}},
+                "status": "pass",
+            },
+        )
+
+        ok, failures = verify_attestation(self.vault)
+
+        self.assertFalse(ok)
+        self.assertIn("tracked_digest_map_current_mismatch", failures)
+        self.assertIn("fixed_point_digest_map_current_mismatch", failures)
+        diagnostics = verify_attestation_report(self.vault)
+        self.assertFalse(diagnostics["semantic_fallback_used"])
+        self.assertEqual(
+            [item["path"] for item in diagnostics["raw_digest_mismatches"]],
+            [generated_path],
+        )
 
     def test_finality_attestation_prefers_batch_status_v2_axes(self) -> None:
         self._seed_finality_inputs()

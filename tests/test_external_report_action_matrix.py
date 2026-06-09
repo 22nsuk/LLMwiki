@@ -6,6 +6,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import pytest
 from ops.scripts.external_report_action_matrix import (
@@ -25,6 +26,10 @@ from ops.scripts.external_report_lifecycle_runtime import (
     report_lifecycle_profiles,
 )
 from ops.scripts.gate_effect_vocabulary import strongest_gate_effect
+from ops.scripts.generated_artifact_index import (
+    build_report as build_generated_artifact_index_report,
+    write_report as write_generated_artifact_index_report,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.source_revision_runtime import resolve_source_revision
@@ -38,6 +43,7 @@ from ops.scripts.release.release_closeout_finality_attestation import (
     build_report as build_finality_attestation_report,
     write_report as write_finality_attestation,
 )
+from ops.scripts.release.review_archive import CLEAN_SOURCE_COMMAND
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -90,6 +96,121 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self._write_json(
             "ops/reports/task-improvement-observations/task-archive-audit/improvement-observations.json",
             {"observations": observations},
+        )
+
+    def _actions_by_id(self, report: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        return {item["action_id"]: item for item in report["action_items"]}
+
+    def _write_clean_review_archive_report(self) -> None:
+        timestamp = "2026-05-10T08:30:00Z"
+        manifest_digest = "a" * 64
+        file_digest = "b" * 64
+        manifest = {
+            "files": [
+                {
+                    "path": "README.md",
+                    "sha256": file_digest,
+                    "size_bytes": 1,
+                }
+            ]
+        }
+        self._write_json(
+            "ops/reports/review-archive-report.json",
+            {
+                "$schema": "ops/schemas/review-archive-report.schema.json",
+                "vault": ".",
+                "generated_at": timestamp,
+                "artifact_kind": "review_archive_report",
+                "producer": "ops.scripts.review_archive",
+                "source_command": CLEAN_SOURCE_COMMAND,
+                "source_revision": "source_package_without_git",
+                "source_tree_fingerprint": "c" * 64,
+                "input_fingerprints": {
+                    "artifact_envelope_schema": "d" * 64,
+                    "policy": "e" * 64,
+                    "schema": "f" * 64,
+                    "source_paths": "0" * 64,
+                },
+                "schema_version": 1,
+                "artifact_status": "current",
+                "retention_policy": "canonical_report",
+                "encoding": "utf-8",
+                "currentness": {"status": "current", "checked_at": timestamp},
+                "policy": {
+                    "path": "ops/policies/wiki-maintainer-policy.yaml",
+                    "version": 1,
+                },
+                "profile": "clean",
+                "status": "pass",
+                "archive_path": "build/review/llm-wiki-vnext-review.zip",
+                "archive_file": {
+                    "path": "build/review/llm-wiki-vnext-review.zip",
+                    "exists": True,
+                    "size_bytes": 1,
+                    "sha256": "1" * 64,
+                },
+                "packed_file_count": 1,
+                "manifest": manifest,
+                "manifest_digest": manifest_digest,
+                "archive_manifest": manifest,
+                "archive_manifest_digest": manifest_digest,
+                "current_snapshot_representativeness": {
+                    "status": "representative",
+                    "representative_of_current_tree": True,
+                    "representative_of_current_zip": True,
+                    "checked_at": timestamp,
+                    "current_manifest_digest": manifest_digest,
+                    "archive_manifest_digest": manifest_digest,
+                    "next_action": "none",
+                },
+                "snapshot_hygiene": {
+                    "profile": "clean",
+                    "status": "pass",
+                    "enforced": True,
+                    "forbidden_count": 0,
+                    "forbidden_paths": [],
+                    "rules": [
+                        "tmp/**/*.candidate.json",
+                        "public-surface __pycache__ directories",
+                        "public-surface *.pyc files",
+                    ],
+                    "summary": "clean profile enforced; forbidden_count=0",
+                },
+                "exclusion_policy": "public_surface_policy",
+                "excluded_prefixes": ["raw/", "runs/", "wiki/"],
+                "excluded_files": ["AGENTS.local.md"],
+            },
+        )
+
+    def _write_schema_invalid_clean_review_archive_report(self) -> None:
+        self._write_json(
+            "ops/reports/review-archive-report.json",
+            {
+                "artifact_kind": "review_archive_report",
+                "producer": "ops.scripts.review_archive",
+                "source_command": CLEAN_SOURCE_COMMAND,
+                "artifact_status": "current",
+                "currentness": {"status": "current"},
+                "profile": "clean",
+                "status": "pass",
+                "archive_file": {"exists": True, "sha256": "b" * 64},
+                "exclusion_policy": "public_surface_policy",
+                "manifest_digest": "a" * 64,
+                "archive_manifest_digest": "a" * 64,
+                "snapshot_hygiene": {
+                    "profile": "clean",
+                    "status": "pass",
+                    "enforced": True,
+                    "forbidden_count": 0,
+                    "forbidden_paths": [],
+                },
+                "current_snapshot_representativeness": {
+                    "status": "representative",
+                    "representative_of_current_tree": True,
+                    "representative_of_current_zip": True,
+                    "next_action": "none",
+                },
+            },
         )
 
     def _write_static_github_security_surfaces(self) -> None:
@@ -544,6 +665,26 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertIn("external-reports/maintenance.md", paths)
         self.assertNotIn("external-reports/report-reference-manifest.json", paths)
         self.assertFalse(any("/archive/" in path for path in paths))
+        archived_basis = {
+            item["path"]: item for item in report["archived_report_action_basis"]
+        }
+        self.assertEqual(set(archived_basis), {"external-reports/archive/old.md"})
+        old_basis = archived_basis["external-reports/archive/old.md"]
+        self.assertEqual(
+            old_basis["content_sha256"],
+            _sha256_file(self.external / "archive" / "old.md"),
+        )
+        self.assertIn(
+            "script_output_surfaces_currentness",
+            old_basis["matched_action_ids"],
+        )
+        self.assertEqual(
+            old_basis["matched_action_count"],
+            len(old_basis["matched_action_ids"]),
+        )
+        self.assertEqual(old_basis["unmatched_recommendation_count"], 0)
+        self.assertNotIn("reason", old_basis)
+        self.assertNotIn("coverage_markers", old_basis)
         coverage = {item["path"]: item for item in report["active_report_coverage"]}
         release_coverage = coverage["external-reports/release.md"]
         self.assertEqual(
@@ -761,6 +902,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 "summary": {"active_reference_set_status": "current"},
             },
         )
+        (self.external / "archive" / "legacy-review.md").write_text(
+            "# Legacy Review\n\nexternal report lifecycle active report set.\n",
+            encoding="utf-8",
+        )
         self._write_task_observations(
             [{"observation_id": "archived_report_action_trace_gap", "status": "planned"}]
         )
@@ -814,6 +959,38 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 }
             ]
         )
+        prefixed_evidence_without_archived_basis = build_report(
+            self.vault,
+            context=fixed_context(),
+        )
+
+        unverified_action = {
+            item["action_id"]: item
+            for item in prefixed_evidence_without_archived_basis["action_items"]
+        }["external_report_lifecycle"]
+        self.assertEqual(unverified_action["current_status"], "partially_automated")
+        self.assertIn(
+            "archived_report_action_trace_gap",
+            unverified_action["status_reason_ids"],
+        )
+        unverified_records = archive_reconciliation_observation_inventory(self.vault)
+        self.assertEqual(
+            unverified_records[0]["status"],
+            "automated_missing_resolution_evidence",
+        )
+
+        generated_index = build_generated_artifact_index_report(
+            self.vault,
+            context=fixed_context(),
+        )
+        self.assertEqual(
+            {
+                item["path"]
+                for item in generated_index["archived_external_report_basis"]
+            },
+            {"external-reports/archive/legacy-review.md"},
+        )
+        write_generated_artifact_index_report(self.vault, generated_index)
         closed_report = build_report(self.vault, context=fixed_context())
 
         closed_action = {
@@ -829,6 +1006,97 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             missing_evidence_report["input_fingerprints"]["archive_reconciliation_observation_paths"],
             closed_report["input_fingerprints"]["archive_reconciliation_observation_paths"],
         )
+        closed_basis = {
+            item["path"]: item for item in closed_report["archived_report_action_basis"]
+        }
+        self.assertEqual(set(closed_basis), {"external-reports/archive/legacy-review.md"})
+        self.assertEqual(
+            closed_basis["external-reports/archive/legacy-review.md"][
+                "matched_action_count"
+            ],
+            len(
+                closed_basis["external-reports/archive/legacy-review.md"][
+                    "matched_action_ids"
+                ]
+            ),
+        )
+
+    def test_status_and_dev_install_observations_close_with_resolution_evidence(self) -> None:
+        (self.external / "status-dev.md").write_text(
+            "# Status and dependency setup\n\n"
+            "uv lock --check canonical dependency policy, make help operator entrypoint index, "
+            "artifact freshness validator cache progress jsonl per-phase timing, "
+            "selected contract currentness.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/status-dev.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            self._artifact_freshness_payload(
+                artifact_count=12,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+            ),
+        )
+        self._write_json(
+            "ops/reports/test-execution-summary.json",
+            {"artifact_kind": "test_execution_summary", "status": "pass"},
+        )
+        self._write_json(
+            "ops/reports/auto-improve-readiness.json",
+            {
+                "artifact_kind": "auto_improve_readiness_report",
+                "diagnostics": {
+                    "selected_contract_summary": {
+                        "path": "ops/reports/test-execution-summary.json",
+                        "status": "pass",
+                    },
+                    "artifact_freshness_summary": {"status": "pass"},
+                },
+                "promotion_blockers": [],
+            },
+        )
+        self._write_task_observations(
+            [
+                {
+                    "observation_id": "status_surface_currentness_visibility_gap",
+                    "status": "automated",
+                    "resolution_evidence": [
+                        "source:ops/scripts/release/release_status_surface.py",
+                        "test:tests/test_release_status_surface.py",
+                    ],
+                },
+                {
+                    "observation_id": "dev_install_index_portability_gap",
+                    "status": "automated",
+                    "resolution_evidence": [
+                        "source:mk/core.mk",
+                        "test:tests/test_makefile_static_gates.py",
+                    ],
+                },
+            ]
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        reason_expectations = {
+            "uv_lock_canonical_policy": "dev_install_index_portability_gap",
+            "operator_entrypoint_index": "dev_install_index_portability_gap",
+            "selected_contract_currentness_gate": "status_surface_currentness_visibility_gap",
+            "artifact_freshness_performance_observability": (
+                "status_surface_currentness_visibility_gap"
+            ),
+        }
+        for action_id, reason_id in reason_expectations.items():
+            with self.subTest(action_id=action_id):
+                self.assertNotIn(reason_id, actions[action_id]["status_reason_ids"])
 
     def test_operator_observations_need_resolution_evidence_to_close(self) -> None:
         self._write_static_github_security_surfaces()
@@ -870,9 +1138,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
 
         missing_evidence_report = build_report(self.vault, context=fixed_context())
 
-        missing_evidence_actions = {
-            item["action_id"]: item for item in missing_evidence_report["action_items"]
-        }
+        missing_evidence_actions = self._actions_by_id(missing_evidence_report)
         for action_id, reason_id in {
             "source_package_distribution_binding": "review_bundle_full_vault_hygiene_gap",
             "github_governance_live_drift_verification": "github_governance_live_drift_gap",
@@ -903,6 +1169,18 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         }["github_governance_live_drift_gap"]
         self.assertEqual(live_detail["owning_stage"], "github_live_governance_verification")
         self.assertEqual(live_detail["blocking_scope"], "github_live_governance")
+        review_detail = {
+            item["reason_id"]: item
+            for item in missing_evidence_actions[
+                "source_package_distribution_binding"
+            ]["status_reason_details"]
+        }["review_bundle_full_vault_hygiene_gap"]
+        self.assertEqual(review_detail["owning_stage"], "review_bundle_hygiene")
+        self.assertEqual(review_detail["blocking_scope"], "review_archive")
+        self.assertEqual(
+            review_detail["recommended_targets"],
+            ["review-archive", "external-report-action-matrix"],
+        )
 
         self._write_task_observations(
             [
@@ -925,9 +1203,45 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             ]
         )
 
+        prefixed_evidence_without_clean_review_report = build_report(
+            self.vault, context=fixed_context()
+        )
+
+        unverified_actions = self._actions_by_id(
+            prefixed_evidence_without_clean_review_report
+        )
+        self.assertEqual(
+            unverified_actions["source_package_distribution_binding"]["current_status"],
+            "partially_automated",
+        )
+        self.assertIn(
+            "review_bundle_full_vault_hygiene_gap",
+            unverified_actions["source_package_distribution_binding"]["status_reason_ids"],
+        )
+
+        self._write_schema_invalid_clean_review_archive_report()
+
+        invalid_schema_report = build_report(self.vault, context=fixed_context())
+
+        invalid_schema_actions = self._actions_by_id(invalid_schema_report)
+        self.assertEqual(
+            invalid_schema_actions["source_package_distribution_binding"][
+                "current_status"
+            ],
+            "partially_automated",
+        )
+        self.assertIn(
+            "review_bundle_full_vault_hygiene_gap",
+            invalid_schema_actions["source_package_distribution_binding"][
+                "status_reason_ids"
+            ],
+        )
+
+        self._write_clean_review_archive_report()
+
         closed_report = build_report(self.vault, context=fixed_context())
 
-        closed_actions = {item["action_id"]: item for item in closed_report["action_items"]}
+        closed_actions = self._actions_by_id(closed_report)
         self.assertEqual(
             closed_actions["source_package_distribution_binding"]["current_status"],
             "implemented",
@@ -960,6 +1274,92 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "github_live_governance_operator_evidence_not_pass",
             closed_actions["github_governance_live_drift_verification"]["status_reason_ids"],
         )
+
+    def test_review_bundle_closeout_does_not_close_mtime_normalization_gap(self) -> None:
+        self._write_clean_review_archive_report()
+        (self.external / "review-bundle.md").write_text(
+            "# Review Bundle\n\n"
+            "source package distribution binding, Windows path and archive alias parity, "
+            "repo boundary private surface history hygiene.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "ops/reports/public-check-summary.json",
+            {
+                "status": "pass",
+                "summary": {
+                    "physical_repo_split_status": "pass",
+                    "private_surface_history_absence_status": "pass",
+                    "negative_assertion_fail_count": 0,
+                },
+            },
+        )
+        for rel_path in (
+            "tests/test_writer_output_paths.py",
+            "tests/test_planning_gate_validate_runtime.py",
+            "tests/test_release_smoke.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_release_verification_reports()
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/review-bundle.md"}],
+                "summary": {
+                    "active_reference_set_status": "current",
+                    "current_distribution_zip_known": True,
+                    "basis_zip_matches_current_distribution": True,
+                    "zip_provenance_status": "basis_current_match",
+                },
+            },
+        )
+        self._write_task_observations(
+            [
+                {
+                    "observation_id": "review_bundle_full_vault_hygiene_gap",
+                    "status": "automated",
+                    "resolution_evidence": [
+                        "artifact:ops/reports/review-archive-report.json",
+                        "make:review-archive",
+                    ],
+                },
+                {
+                    "observation_id": "full_vault_archive_mtime_normalization_gap",
+                    "status": "planned",
+                },
+            ]
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["repo_boundary_history_hygiene"]["current_status"],
+            "implemented",
+        )
+        self.assertNotIn(
+            "review_bundle_full_vault_hygiene_gap",
+            actions["repo_boundary_history_hygiene"]["status_reason_ids"],
+        )
+        for action_id in (
+            "source_package_distribution_binding",
+            "windows_path_and_archive_alias_parity",
+        ):
+            self.assertEqual(
+                actions[action_id]["current_status"],
+                "partially_automated",
+                action_id,
+            )
+            self.assertNotIn(
+                "review_bundle_full_vault_hygiene_gap",
+                actions[action_id]["status_reason_ids"],
+            )
+            self.assertIn(
+                "full_vault_archive_mtime_normalization_gap",
+                actions[action_id]["status_reason_ids"],
+            )
 
     def test_broad_actions_do_not_complete_from_surface_only_evidence(self) -> None:
         self._write_json(

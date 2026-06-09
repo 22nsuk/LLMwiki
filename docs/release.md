@@ -163,11 +163,12 @@ surface comparison; this document owns release evidence and staged authority.
   unattended promotion after release evidence is current. It runs report finality
   resettle once, then preflight, run-ready, preseal, sealed-run-ready, and
   auto-promotion-ready manifests. After the ready attempt, it refresh-checks
-  artifact freshness and rewrites release closeout fixed-point/finality so no
-  tracked report writer runs after finality. If ready is blocked, this finality
-  tail still runs and the original ready failure is returned. On a clean ready
-  pass, the target ends with check-only authority readback plus post-commit
-  finalizer verification.
+  artifact freshness, promotes the ZIP-bound release closeout batch manifest,
+  rewrites release closeout fixed-point/finality, replay-verifies the same ZIP
+  metadata, and then verifies finality so no tracked report writer runs after
+  finality. If ready is blocked, this finality tail still runs and the original
+  ready failure is returned. On a clean ready pass, the target ends with
+  check-only authority readback plus post-commit finalizer verification.
   It does not regenerate long-tail report producers; run
   `make release-evidence-converge` or the owning evidence refresh target first
   when stale generated reports are the blocker.
@@ -300,7 +301,7 @@ protected branch names, required check contexts, and branch-protection booleans,
 then run:
 
 ```bash
-make collaboration-governance GITHUB_GOVERNANCE_LIVE_INPUT=tmp/github-live.json
+make collaboration-governance GITHUB_GOVERNANCE_LIVE_INPUT=tmp/github-governance-live-input.json
 ```
 
 The resulting `ops/reports/github-governance-live-drift.json` stores only
@@ -390,6 +391,9 @@ only when the operator is renewing or replacing the acceptance decision.
    If its planner reports operator accepted-risk or gate-attention counts, rerun
    `make release-auto-promotion-preseal` and then `make release-sealed-run-ready`
    so the sealed operator summary is regenerated from current source evidence.
+   The `release-authority-settle` tail then performs ZIP-bound batch-manifest
+   promotion, fixed-point rewrite, batch replay verification, and finality
+   verification as one terminal report-writer suffix.
 
 Completion is proven only by
 `build/release/release-auto-promotion-ready-manifest.json` with:
@@ -514,6 +518,9 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `generated-artifact-index`, `release-closeout-summary-report`, or another
   fixed-point tracked report, rerun `make release-finality-resettle` so the
   attestation is written after the last writer.
+  For staged authority settle, prefer `make release-authority-settle`; its
+  terminal tail binds the effective distribution ZIP into the batch manifest,
+  fixed point, replay verification, and finality verification together.
 - `ops/reports/` and `ops/operator/` are preserved locally and ignored by Git.
   If older branches still track entries under those paths, remove them from the
   index with `git rm --cached` while leaving the local files on disk.
@@ -581,7 +588,10 @@ present but another check fails, the report remains non-pass as
 
 Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed with
 the canonical-index `make uv-lock-check` gate and frozen `uv export`
-locked-requirements installs in CI and `make dev-install`. Root
+locked-requirements installs in CI and `make dev-install`. `make dev-install`
+uses `DEV_INSTALL_INDEX_URL` for local install replay; it defaults to the
+canonical index but can be overridden without changing the `uv-lock-check`
+authority. Root
 `requirements.txt` and `requirements-dev.txt` are retired from the
 source and public-export surfaces; if an older report or fixture still mentions
 them, treat them only as optional compatibility/provenance inputs.

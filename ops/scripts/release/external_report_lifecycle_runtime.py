@@ -17,6 +17,14 @@ from ops.scripts.core.release_authority_state_runtime import (
     release_authority_reports_verified,
     release_status_v2_view_with_readiness_fallback,
 )
+from ops.scripts.core.schema_constants_runtime import (
+    GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
+    REVIEW_ARCHIVE_REPORT_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
 from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_PROMOTION,
@@ -61,6 +69,7 @@ from .external_report_inventory_runtime import (
     active_reference_report_paths,
     active_report_paths,
     archived_report_count,
+    archived_report_paths,
     as_dict,
     as_int,
     as_list,
@@ -78,6 +87,10 @@ from .external_report_inventory_runtime import (
 from .release_closeout_finality_attestation import verify_attestation
 from .release_workflow_order_guard import (
     build_report as build_release_workflow_order_guard_report,
+)
+from .review_archive import (
+    CLEAN_SOURCE_COMMAND as REVIEW_ARCHIVE_CLEAN_SOURCE_COMMAND,
+    PRODUCER as REVIEW_ARCHIVE_PRODUCER,
 )
 
 _ACTION_LIFECYCLE_COMPAT_EXPORTS = (
@@ -111,6 +124,7 @@ _INVENTORY_COMPAT_EXPORTS = (
     active_reference_report_paths,
     active_report_paths,
     archived_report_count,
+    archived_report_paths,
     as_dict,
     as_int,
     as_list,
@@ -127,11 +141,28 @@ _INVENTORY_COMPAT_EXPORTS = (
 )
 
 TASK_IMPROVEMENT_OBSERVATIONS_ROOT = "ops/reports/task-improvement-observations"
+REVIEW_ARCHIVE_REPORT_PATH = "ops/reports/review-archive-report.json"
+GENERATED_ARTIFACT_INDEX_PATH = "ops/reports/generated-artifact-index.json"
+ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID = "archived_report_action_trace_gap"
+REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID = "review_bundle_full_vault_hygiene_gap"
+SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
+ARCHIVED_REPORT_ACTION_BASIS_REQUIRED_FIELDS = (
+    "path",
+    "report_type",
+    "content_sha256",
+    "matched_action_ids",
+    "matched_action_count",
+    "unresolved_action_ids",
+    "unresolved_action_count",
+    "unmatched_recommendation_count",
+    "operator_only_rationale",
+    "archive_decision_code",
+)
 OPEN_IMPROVEMENT_OBSERVATION_STATUSES = {"open", "planned"}
 RESOLUTION_EVIDENCE_REQUIRED_STATUSES = {"automated"}
 RESOLUTION_EVIDENCE_PREFIXES = ("source:", "test:", "artifact:", "digest:", "make:")
 ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
-    "archived_report_action_trace_gap": {
+    ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID: {
         "external_report_lifecycle",
         "active_report_manifest_freshness",
     },
@@ -147,7 +178,7 @@ ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
     "github_governance_live_drift_gap": {
         "github_governance_live_drift_verification",
     },
-    "review_bundle_full_vault_hygiene_gap": {
+    REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID: {
         "repo_boundary_history_hygiene",
         "source_package_distribution_binding",
         "windows_path_and_archive_alias_parity",
@@ -158,7 +189,7 @@ ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
     },
 }
 ARCHIVE_RECONCILIATION_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
-    "archived_report_action_trace_gap": (
+    ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID: (
         "external_report_reconciliation",
         "external_report_lifecycle",
         ["external-report-lifecycle-refresh", "external-report-action-matrix"],
@@ -178,10 +209,10 @@ ARCHIVE_RECONCILIATION_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         "github_live_governance",
         ["collaboration-governance"],
     ),
-    "review_bundle_full_vault_hygiene_gap": (
+    REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID: (
         "review_bundle_hygiene",
-        "source_package",
-        ["release-source-package-check", "public-check"],
+        "review_archive",
+        ["review-archive", "external-report-action-matrix"],
     ),
     "full_vault_archive_mtime_normalization_gap": (
         "archive_portability",
@@ -331,19 +362,116 @@ def _has_verified_resolution_evidence(observation: dict[str, Any]) -> bool:
     )
 
 
-def _observation_keeps_archive_action_active(observation: dict[str, Any]) -> bool:
-    status = str(observation.get("status", "")).strip()
-    if status in OPEN_IMPROVEMENT_OBSERVATION_STATUSES:
-        return True
-    return status in RESOLUTION_EVIDENCE_REQUIRED_STATUSES and not _has_verified_resolution_evidence(
-        observation
+def _review_archive_clean_report_verified(vault: Path) -> bool:
+    report = load_json_object(vault / REVIEW_ARCHIVE_REPORT_PATH)
+    schema_errors = validate_with_schema(
+        report,
+        load_schema_with_vault_override(vault, REVIEW_ARCHIVE_REPORT_SCHEMA_PATH),
+    )
+    if schema_errors:
+        return False
+    hygiene = as_dict(report.get("snapshot_hygiene"))
+    representativeness = as_dict(report.get("current_snapshot_representativeness"))
+    archive_file = as_dict(report.get("archive_file"))
+    manifest_digest = str(report.get("manifest_digest", "")).strip()
+    archive_manifest_digest = str(report.get("archive_manifest_digest", "")).strip()
+    return (
+        report.get("artifact_kind") == "review_archive_report"
+        and report.get("producer") == REVIEW_ARCHIVE_PRODUCER
+        and report.get("source_command") == REVIEW_ARCHIVE_CLEAN_SOURCE_COMMAND
+        and report.get("artifact_status") == "current"
+        and as_dict(report.get("currentness")).get("status") == "current"
+        and report.get("status") == "pass"
+        and report.get("profile") == "clean"
+        and report.get("exclusion_policy") == "public_surface_policy"
+        and archive_file.get("exists") is True
+        and bool(str(archive_file.get("sha256", "")).strip())
+        and hygiene.get("profile") == "clean"
+        and hygiene.get("status") == "pass"
+        and hygiene.get("enforced") is True
+        and as_int(hygiene.get("forbidden_count")) == 0
+        and as_list(hygiene.get("forbidden_paths")) == []
+        and representativeness.get("status") == "representative"
+        and representativeness.get("representative_of_current_tree") is True
+        and representativeness.get("representative_of_current_zip") is True
+        and representativeness.get("next_action") == "none"
+        and bool(manifest_digest)
+        and manifest_digest == archive_manifest_digest
     )
 
 
-def _observation_runtime_status(observation: dict[str, Any]) -> str:
+def _archived_report_basis_record_verified(record: Any) -> bool:
+    if not isinstance(record, dict):
+        return False
+    if any(field not in record for field in ARCHIVED_REPORT_ACTION_BASIS_REQUIRED_FIELDS):
+        return False
+    matched_action_ids = as_list(record.get("matched_action_ids"))
+    unresolved_action_ids = as_list(record.get("unresolved_action_ids"))
+    return (
+        bool(str(record.get("path", "")).strip())
+        and str(record.get("report_type", "")).strip()
+        in {"narrative_report", "reference_manifest", "binary_report"}
+        and bool(SHA256_HEX_RE.match(str(record.get("content_sha256", "")).strip()))
+        and all(isinstance(action_id, str) and action_id for action_id in matched_action_ids)
+        and as_int(record.get("matched_action_count")) == len(matched_action_ids)
+        and all(
+            isinstance(action_id, str) and action_id for action_id in unresolved_action_ids
+        )
+        and as_int(record.get("unresolved_action_count")) == len(unresolved_action_ids)
+        and as_int(record.get("unmatched_recommendation_count")) >= 0
+        and isinstance(record.get("operator_only_rationale", ""), str)
+        and bool(str(record.get("archive_decision_code", "")).strip())
+    )
+
+
+def _generated_index_archived_report_basis_verified(vault: Path) -> bool:
+    report = load_json_object(vault / GENERATED_ARTIFACT_INDEX_PATH)
+    schema_errors = validate_with_schema(
+        report,
+        load_schema_with_vault_override(vault, GENERATED_ARTIFACT_INDEX_SCHEMA_PATH),
+    )
+    if schema_errors:
+        return False
+    records = as_list(report.get("archived_external_report_basis"))
+    expected_paths = sorted(report_path(vault, path) for path in archived_report_paths(vault))
+    record_paths = sorted(
+        str(record.get("path", "")).strip()
+        for record in records
+        if isinstance(record, dict)
+    )
+    return (
+        report.get("artifact_kind") == "generated_artifact_index_report"
+        and report.get("artifact_status") == "current"
+        and as_dict(report.get("currentness")).get("status") == "current"
+        and record_paths == expected_paths
+        and all(_archived_report_basis_record_verified(record) for record in records)
+    )
+
+
+def _has_verified_observation_resolution(vault: Path, observation: dict[str, Any]) -> bool:
+    if not _has_verified_resolution_evidence(observation):
+        return False
+    observation_id = str(observation.get("observation_id", "")).strip()
+    if observation_id == ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID:
+        return _generated_index_archived_report_basis_verified(vault)
+    if observation_id == REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID:
+        return _review_archive_clean_report_verified(vault)
+    return True
+
+
+def _observation_keeps_archive_action_active(vault: Path, observation: dict[str, Any]) -> bool:
     status = str(observation.get("status", "")).strip()
-    if status in RESOLUTION_EVIDENCE_REQUIRED_STATUSES and not _has_verified_resolution_evidence(
-        observation
+    if status in OPEN_IMPROVEMENT_OBSERVATION_STATUSES:
+        return True
+    return status in RESOLUTION_EVIDENCE_REQUIRED_STATUSES and not (
+        _has_verified_observation_resolution(vault, observation)
+    )
+
+
+def _observation_runtime_status(vault: Path, observation: dict[str, Any]) -> str:
+    status = str(observation.get("status", "")).strip()
+    if status in RESOLUTION_EVIDENCE_REQUIRED_STATUSES and not (
+        _has_verified_observation_resolution(vault, observation)
     ):
         return f"{status}_missing_resolution_evidence"
     return status
@@ -362,16 +490,18 @@ def _archive_reconciliation_observation_records(vault: Path) -> list[dict[str, A
                 continue
             observation_id = str(observation.get("observation_id", "")).strip()
             action_ids = ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS.get(observation_id)
-            if action_ids is None or not _observation_keeps_archive_action_active(observation):
+            if action_ids is None or not _observation_keeps_archive_action_active(
+                vault, observation
+            ):
                 continue
             records.append(
                 {
                     "observation_id": observation_id,
                     "path": report_path(vault, path),
-                    "status": _observation_runtime_status(observation),
+                    "status": _observation_runtime_status(vault, observation),
                     "resolution_evidence_status": (
                         "verified"
-                        if _has_verified_resolution_evidence(observation)
+                        if _has_verified_observation_resolution(vault, observation)
                         else "missing"
                     ),
                     "action_ids": sorted(action_ids),
@@ -2769,3 +2899,23 @@ def lifecycle_decision(
         reason_code="unresolved_actions_keep_report_active",
         superseded_by=[],
     )
+
+
+def archived_report_action_basis_records(
+    vault: Path,
+    statuses: dict[str, str],
+) -> list[dict[str, Any]]:
+    active_profiles = report_lifecycle_profiles(vault, active_report_paths(vault))
+    archived_profiles = report_lifecycle_profiles(vault, archived_report_paths(vault))
+    profiles = [*active_profiles, *archived_profiles]
+    records: list[dict[str, Any]] = []
+    for profile in archived_profiles:
+        decision = lifecycle_decision(profile, profiles=profiles, statuses=statuses)
+        records.append(
+            {
+                "path": str(profile["path"]),
+                **coverage_action_basis(profile, statuses),
+                "archive_decision_code": str(decision["archive_decision_code"]),
+            }
+        )
+    return sorted(records, key=lambda item: str(item["path"]))

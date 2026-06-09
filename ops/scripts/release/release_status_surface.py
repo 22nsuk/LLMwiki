@@ -14,6 +14,11 @@ from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagn
 from ops.scripts.core.release_authority_state_runtime import (
     release_status_v2_view_with_readiness_fallback,
 )
+from ops.scripts.core.release_currentness_state_runtime import currentness_field
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.learning.learning_readiness_signoff_state import (
     learning_readiness_signoff_summary,
 )
@@ -35,6 +40,8 @@ STATUS_VALUE_SYNCED = "synced"
 STATUS_VALUE_NOT_SYNCED = "not_synced"
 STATUS_VALUE_PASS = "pass"
 STATUS_VALUE_FAIL = "fail"
+STATUS_VALUE_CURRENT = "current"
+STATUS_VALUE_STALE = "stale"
 STATUS_VALUE_UNKNOWN = "unknown"
 STATUS_VALUE_REQUIRES_FULL_VAULT = "requires_full_vault"
 TOOLCHAIN_ALIGNMENT_ALIGNED = "aligned"
@@ -142,6 +149,59 @@ def _status_from_payload(payload: dict[str, Any], *keys: str) -> str:
     return ""
 
 
+def _comparison_status(observed: str, expected: str) -> str:
+    if not observed or not expected:
+        return STATUS_VALUE_UNKNOWN
+    return STATUS_VALUE_CURRENT if observed == expected else STATUS_VALUE_STALE
+
+
+def _evidence_currentness_detail(
+    payload: dict[str, Any],
+    load_status: str,
+    *,
+    current_source_revision: str,
+    current_source_tree_fingerprint: str,
+) -> str:
+    if load_status != "ok":
+        return (
+            "evidence_currentness=unknown; "
+            "self_declared_currentness=unknown; "
+            "artifact_status=unknown; "
+            "source_revision=unknown; "
+            "source_tree_fingerprint=unknown; "
+            f"currentness_reason=load_status:{load_status or STATUS_VALUE_UNKNOWN}"
+        )
+    self_declared_currentness = currentness_field(payload, "status") or STATUS_VALUE_UNKNOWN
+    artifact_status = str(payload.get("artifact_status", "")).strip() or STATUS_VALUE_UNKNOWN
+    source_revision_status = _comparison_status(
+        str(payload.get("source_revision", "")).strip(),
+        current_source_revision,
+    )
+    source_tree_fingerprint_status = _comparison_status(
+        str(payload.get("source_tree_fingerprint", "")).strip(),
+        current_source_tree_fingerprint,
+    )
+    reasons: list[str] = []
+    if self_declared_currentness != STATUS_VALUE_CURRENT:
+        reasons.append(f"self_declared_currentness:{self_declared_currentness}")
+    if artifact_status != STATUS_VALUE_CURRENT:
+        reasons.append(f"artifact_status:{artifact_status}")
+    if source_revision_status != STATUS_VALUE_CURRENT:
+        reasons.append(f"source_revision:{source_revision_status}")
+    if source_tree_fingerprint_status != STATUS_VALUE_CURRENT:
+        reasons.append(f"source_tree_fingerprint:{source_tree_fingerprint_status}")
+    evidence_currentness = STATUS_VALUE_CURRENT if not reasons else STATUS_VALUE_STALE
+    reason = ",".join(reasons) if reasons else STATUS_VALUE_CURRENT
+    return (
+        f"evidence_currentness={evidence_currentness}; "
+        f"self_declared_currentness={self_declared_currentness}; "
+        f"artifact_status={artifact_status}; "
+        f"source_revision={source_revision_status}; "
+        f"source_tree_fingerprint={source_tree_fingerprint_status}; "
+        f"currentness_reason={reason}"
+    )
+
+
 def _artifact_freshness_display(closeout: dict[str, Any]) -> str:
     gate = closeout.get("artifact_freshness_gate")
     gate = gate if isinstance(gate, dict) else {}
@@ -245,6 +305,8 @@ def status_surface_from_signals(
     learning_signoff_evidence_path: str = DEFAULT_LEARNING_SIGNOFF,
     goal_runtime_certificate_evidence_path: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
     remote_sync_evidence_path: str = DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE,
+    source_closeout_currentness_detail: str = "evidence_currentness=unknown",
+    public_summary_currentness_detail: str = "evidence_currentness=unknown",
 ) -> dict[str, Any]:
     freshness = (
         artifact_freshness_display
@@ -274,7 +336,7 @@ def status_surface_from_signals(
             key="source_closeout",
             status=source_closeout_status or STATUS_VALUE_UNKNOWN,
             axis=STATUS_AXIS_SOURCE_CLOSEOUT,
-            detail=f"freshness={freshness}",
+            detail=f"freshness={freshness}; {source_closeout_currentness_detail}",
             evidence_path=source_closeout_evidence_path,
         ),
         _status_line(
@@ -288,7 +350,7 @@ def status_surface_from_signals(
             key="public_summary",
             status=public_summary_status or STATUS_VALUE_UNKNOWN,
             axis=None,
-            detail="public mirror contract evidence",
+            detail=f"public mirror contract evidence; {public_summary_currentness_detail}",
             evidence_path=public_summary_evidence_path,
         ),
         _status_line(
@@ -462,6 +524,8 @@ def build_status_surface(
     learning_signoff, learning_load_status = _load_optional(vault, DEFAULT_LEARNING_SIGNOFF)
     goal_certificate, goal_load_status = _load_optional(vault, DEFAULT_GOAL_RUNTIME_CERTIFICATE)
     run_manifest, run_manifest_load_status = _load_optional(vault, DEFAULT_RELEASE_RUN_MANIFEST)
+    current_source_revision = resolve_source_revision(vault).revision
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
 
     source_status, freshness = _source_closeout_status(closeout, closeout_load_status)
     sealed_status, sealed_evidence_path = _sealed_run_status(
@@ -514,6 +578,18 @@ def build_status_surface(
         remote_sync_signal=remote_signal,
         artifact_freshness_display=freshness,
         sealed_run_evidence_path=sealed_evidence_path,
+        source_closeout_currentness_detail=_evidence_currentness_detail(
+            closeout,
+            closeout_load_status,
+            current_source_revision=current_source_revision,
+            current_source_tree_fingerprint=current_source_tree_fingerprint,
+        ),
+        public_summary_currentness_detail=_evidence_currentness_detail(
+            public_summary,
+            public_load_status,
+            current_source_revision=current_source_revision,
+            current_source_tree_fingerprint=current_source_tree_fingerprint,
+        ),
     )
 
 

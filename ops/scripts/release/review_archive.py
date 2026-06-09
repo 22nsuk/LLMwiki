@@ -11,37 +11,51 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         describe_output_file,
         write_schema_backed_report,
     )
-    from ops.scripts.export_public_repo import iter_public_files
-    from ops.scripts.output_runtime import display_path, resolve_output_path
-    from ops.scripts.policy_runtime import load_policy, zip_normalization_from_policy
-    from ops.scripts.public_surface_policy import (
+    from ops.scripts.core.output_runtime import display_path, resolve_output_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        zip_normalization_from_policy,
+    )
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        REVIEW_ARCHIVE_REPORT_SCHEMA_PATH,
+    )
+    from ops.scripts.public.export_public_repo import iter_public_files
+    from ops.scripts.public.public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import REVIEW_ARCHIVE_REPORT_SCHEMA_PATH
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         describe_output_file,
         write_schema_backed_report,
     )
-    from ops.scripts.export_public_repo import iter_public_files
-    from ops.scripts.output_runtime import display_path, resolve_output_path
-    from ops.scripts.policy_runtime import load_policy, zip_normalization_from_policy
-    from ops.scripts.public_surface_policy import (
+    from ops.scripts.core.output_runtime import display_path, resolve_output_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        zip_normalization_from_policy,
+    )
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        REVIEW_ARCHIVE_REPORT_SCHEMA_PATH,
+    )
+    from ops.scripts.public.export_public_repo import iter_public_files
+    from ops.scripts.public.public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import REVIEW_ARCHIVE_REPORT_SCHEMA_PATH
 
 
 DEFAULT_REVIEW_ARCHIVE_OUT = "build/review/llm-wiki-vnext-review.zip"
@@ -247,9 +261,9 @@ def build_review_archive(
             resolved_policy_path=resolved_policy_path,
             schema_path=REVIEW_ARCHIVE_REPORT_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/review_archive.py",
-                "ops/scripts/export_public_repo.py",
-                "ops/scripts/public_surface_policy.py",
+                "ops/scripts/release/review_archive.py",
+                "ops/scripts/public/export_public_repo.py",
+                "ops/scripts/public/public_surface_policy.py",
             ],
         ),
         "vault": display_path(vault, vault),

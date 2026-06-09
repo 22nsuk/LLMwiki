@@ -140,9 +140,9 @@ Use this ledger when a function-budget proposal is real but the only safe fix
 would require an intentional public façade migration rather than a private
 helper extraction.
 
-| Item | Status | Reason | Revisit condition |
-| --- | --- | --- | --- |
-| `ops/scripts/release/release_evidence_planner.py::build_plan()` | Explicitly defer | The remaining budget trigger is `parameter_count` only: the public keyword façade carries explicit release evidence path overrides exposed through `parse_args()`/`main()` and is imported directly by tests. Moving the body behind a private request object would not remove the AST-level parameter count, while collapsing the signature into a public request object would violate the current façade-preservation rule. | Revisit only as an intentional release planner API migration with compatibility tests, docs, and Make/CLI review. |
+No current P2 function-budget deferral is intentionally retained. New entries
+must name the public façade contract, the verification that prevents immediate
+removal, and the condition that makes the migration safe.
 
 ## Entry Documents
 

@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
+import importlib.abc
+import importlib.machinery
 import io
 import json
 import os
+import runpy
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -13,13 +17,9 @@ from types import SimpleNamespace
 from unittest import mock
 
 import pytest
-from ops.scripts.review_archive import (
-    build_review_archive,
-    write_report as write_review_archive_report,
-)
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.wiki_manifest import build_manifest
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.eval.wiki_manifest import build_manifest
 from ops.scripts.release.release_smoke import (
     ARCHIVE_SELF_DESCRIPTION_PATH,
     EPHEMERAL_REPORT_PREFIX,
@@ -46,9 +46,34 @@ from ops.scripts.release.release_smoke import (
     run_smoke_commands,
     write_report,
 )
+from ops.scripts.release.review_archive import (
+    build_review_archive,
+    write_report as write_review_archive_report,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.integration, pytest.mark.report_contract]
+
+
+class _BlockFlatReviewArchiveAlias(importlib.abc.MetaPathFinder):
+    def find_spec(
+        self,
+        fullname: str,
+        path: object = None,
+        target: object = None,
+    ) -> importlib.machinery.ModuleSpec | None:
+        if fullname in {
+            "ops.scripts.artifact_freshness_runtime",
+            "ops.scripts.artifact_io_runtime",
+            "ops.scripts.export_public_repo",
+            "ops.scripts.output_runtime",
+            "ops.scripts.policy_runtime",
+            "ops.scripts.public_surface_policy",
+            "ops.scripts.runtime_context",
+            "ops.scripts.schema_constants_runtime",
+        }:
+            raise ModuleNotFoundError(f"blocked flat compatibility import: {fullname}")
+        return None
 
 
 def sample_archive_class() -> dict:
@@ -125,6 +150,37 @@ def sample_archive_reproducibility(*, status: str = "pass") -> dict:
 
 
 class ReleaseSmokeTest(unittest.TestCase):
+    def test_review_archive_direct_script_fallback_uses_canonical_imports(self) -> None:
+        blocker = _BlockFlatReviewArchiveAlias()
+        blocked_aliases = {
+            "ops.scripts.artifact_freshness_runtime",
+            "ops.scripts.artifact_io_runtime",
+            "ops.scripts.export_public_repo",
+            "ops.scripts.output_runtime",
+            "ops.scripts.policy_runtime",
+            "ops.scripts.public_surface_policy",
+            "ops.scripts.runtime_context",
+            "ops.scripts.schema_constants_runtime",
+        }
+        removed_modules = {
+            name: sys.modules.pop(name)
+            for name in blocked_aliases
+            if name in sys.modules
+        }
+        sys.meta_path.insert(0, blocker)
+        try:
+            namespace = runpy.run_path(
+                (
+                    Path(__file__).resolve().parents[1]
+                    / "ops/scripts/release/review_archive.py"
+                ).as_posix()
+            )
+        finally:
+            sys.meta_path.remove(blocker)
+            sys.modules.update(removed_modules)
+
+        self.assertTrue(callable(namespace["main"]))
+
     def test_review_archive_reuses_manifest_exclusions_without_running_smoke_gates(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

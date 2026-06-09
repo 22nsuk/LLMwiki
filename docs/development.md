@@ -17,6 +17,9 @@ report-contract, public mirror, mechanism, and release entrypoints.
 export omits the project itself, then installs the local project separately as
 editable with `--no-deps`, so local setup and CI both replay the same frozen
 third-party dependency authority without losing editable source behavior.
+Local install replay uses `DEV_INSTALL_INDEX_URL`, which defaults to
+`UV_CANONICAL_INDEX_URL` but can be overridden for a local package mirror
+without changing the canonical lock-check policy.
 Root `requirements.txt` and `requirements-dev.txt` are retired from the public
 source surface. Historical or sample reports may still classify those paths as
 optional compatibility evidence, but their absence must not be treated as a

@@ -7,6 +7,7 @@ import pytest
 from ops.scripts.external_report_lifecycle_runtime import (
     active_reference_report_paths,
     active_report_paths,
+    archived_report_paths,
 )
 from ops.scripts.policy_runtime import report_path
 
@@ -30,6 +31,9 @@ def test_checked_in_external_report_manifest_and_matrix_cover_active_root_report
     expected_matrix_paths = sorted(
         report_path(REPO_ROOT, path) for path in active_report_paths(REPO_ROOT)
     )
+    expected_archive_basis_paths = sorted(
+        report_path(REPO_ROOT, path) for path in archived_report_paths(REPO_ROOT)
+    )
 
     manifest = _load_json(external_root / "report-reference-manifest.json")
     manifest_paths = sorted(
@@ -42,9 +46,26 @@ def test_checked_in_external_report_manifest_and_matrix_cover_active_root_report
 
     matrix = _load_json(REPO_ROOT / "ops" / "reports" / "external-report-action-matrix.json")
     coverage_paths = sorted(str(item["path"]) for item in matrix["active_report_coverage"])
+    matrix_archive_basis_paths = sorted(
+        str(item["path"]) for item in matrix["archived_report_action_basis"]
+    )
+    generated_index = _load_json(
+        REPO_ROOT / "ops" / "reports" / "generated-artifact-index.json"
+    )
+    generated_index_archive_basis_paths = sorted(
+        str(item["path"])
+        for item in generated_index["archived_external_report_basis"]
+    )
 
     assert coverage_paths == expected_matrix_paths
+    assert matrix_archive_basis_paths == expected_archive_basis_paths
+    assert generated_index_archive_basis_paths == expected_archive_basis_paths
     assert matrix["summary"]["active_report_count"] == len(expected_matrix_paths)
+    assert matrix["summary"]["archived_report_count"] == len(expected_archive_basis_paths)
+    assert (
+        generated_index["summary"]["external_reports_archive_file_count"]
+        == len(expected_archive_basis_paths)
+    )
     assert matrix["summary"]["unmatched_active_report_count"] == 0
     assert matrix["summary"]["reference_manifest_alignment_status"] == "current"
     assert matrix["summary"]["reference_manifest_missing_active_report_count"] == 0

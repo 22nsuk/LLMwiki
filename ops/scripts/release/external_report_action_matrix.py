@@ -21,6 +21,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         action_status_reason_ids,
         archive_reconciliation_observation_inventory,
         archive_reconciliation_observation_paths,
+        archived_report_action_basis_records,
         canonical_artifact_freshness_state,
         coverage_with_action_basis,
         external_report_action_lifecycle_record,
@@ -43,6 +44,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
+        archived_report_paths,
         reference_manifest_alignment,
     )
     from ops.scripts.runtime_context import RuntimeContext
@@ -66,6 +68,7 @@ else:
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
+        archived_report_paths,
         reference_manifest_alignment,
     )
     from .external_report_lifecycle_runtime import (
@@ -73,6 +76,7 @@ else:
         action_status_reason_ids,
         archive_reconciliation_observation_inventory,
         archive_reconciliation_observation_paths,
+        archived_report_action_basis_records,
         canonical_artifact_freshness_state,
         coverage_with_action_basis,
         external_report_action_lifecycle_record,
@@ -262,6 +266,7 @@ def build_report(
     policy, resolved_policy_path = load_policy(resolved_vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
     report_paths = active_report_paths(resolved_vault)
+    archive_paths = archived_report_paths(resolved_vault)
     coverage = _report_coverage(resolved_vault, report_paths)
     actions = _action_items(resolved_vault, coverage)
     statuses = {
@@ -269,6 +274,10 @@ def build_report(
         for action in actions
     }
     coverage = coverage_with_action_basis(coverage, statuses)
+    archived_report_action_basis = archived_report_action_basis_records(
+        resolved_vault,
+        statuses,
+    )
     manifest_alignment = reference_manifest_alignment(resolved_vault)
     canonical_artifact_freshness_state_record = canonical_artifact_freshness_state(resolved_vault)
     summary = _summary(
@@ -308,6 +317,9 @@ def build_report(
             ],
             path_group_inputs={
                 "active_external_reports": [report_path(resolved_vault, path) for path in report_paths],
+                "archived_external_reports": [
+                    report_path(resolved_vault, path) for path in archive_paths
+                ],
                 "archive_reconciliation_observation_paths": archive_reconciliation_observation_paths(
                     resolved_vault
                 ),
@@ -330,6 +342,7 @@ def build_report(
         "summary": summary,
         "reference_manifest_alignment": manifest_alignment,
         "active_report_coverage": coverage,
+        "archived_report_action_basis": archived_report_action_basis,
         "action_items": actions,
         "archive_policy": {
             "active_root": "external-reports",

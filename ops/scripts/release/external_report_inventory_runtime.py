@@ -60,7 +60,7 @@ def _external_report_paths(vault: Path, *, extensions: set[str]) -> list[Path]:
     manifest_path = (vault / REFERENCE_MANIFEST).resolve()
     paths: list[Path] = []
     for path in sorted(root.iterdir()):
-        if not path.is_file() or path.suffix.lower() not in REPORT_EXTENSIONS:
+        if not path.is_file() or path.suffix.lower() not in extensions:
             continue
         if path.resolve() == manifest_path:
             continue
@@ -127,15 +127,19 @@ def reference_manifest_alignment(vault: Path) -> dict[str, Any]:
     }
 
 
-def archived_report_count(vault: Path) -> int:
+def archived_report_paths(vault: Path) -> list[Path]:
     archive = vault / "external-reports" / "archive"
     if not archive.is_dir():
-        return 0
-    return sum(
-        1
+        return []
+    return sorted(
+        path
         for path in archive.iterdir()
         if path.is_file() and path.suffix.lower() in REPORT_EXTENSIONS
     )
+
+
+def archived_report_count(vault: Path) -> int:
+    return len(archived_report_paths(vault))
 
 
 def report_text(path: Path) -> str:

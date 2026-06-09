@@ -686,6 +686,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("make help", development_text)
         self.assertIn("make uv-lock-check", development_text)
         self.assertIn("UV_CANONICAL_INDEX_URL", development_text)
+        self.assertIn("DEV_INSTALL_INDEX_URL", development_text)
         self.assertIn("uv.lock", development_text)
         self.assertIn(
             "For a full developer regression, use `make test-all`.",
@@ -1586,22 +1587,24 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         block = _target_block(text, "dev-install")
         self.assertIn("DEV_LOCKED_REQUIREMENTS ?= tmp/locked-requirements.dev.txt", text)
+        self.assertIn("DEV_INSTALL_INDEX_URL ?= $(UV_CANONICAL_INDEX_URL)", text)
         self.assertIn(
             "UV_EXPORT_DEV_REQUIREMENTS_FLAGS ?= --frozen --extra dev --format requirements-txt --no-hashes --no-emit-project",
             text,
         )
         self.assertIn(
-            'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)"',
+            'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)"',
             block,
         )
         self.assertIn(
-            'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"',
+            'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"',
             block,
         )
         self.assertIn(
-            'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .',
+            'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .',
             block,
         )
+        self.assertNotIn('UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)"', block)
         self.assertIn('"$(VENV_PYTHON)" -m pip install -e ".[dev]"', block)
 
     def test_legacy_root_requirements_files_are_retired(self) -> None:

@@ -118,13 +118,6 @@ def schema_contract(
             "reason": "bootstrap ops report predates the generated artifact schema contract",
             "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
         }
-    if rel_path == "ops/reports/review-archive-report.json":
-        return {
-            "status": "missing",
-            "classification": "review_archive_report_pending_schema_decision",
-            "reason": "review archive report is generated but has no declared schema contract yet",
-            "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
-        }
     if rel_path.startswith(RAW_INTAKE_RUN_ARTIFACT_PREFIX):
         return {
             "status": "missing",
