@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from .auto_improve_queue_runtime import select_next_proposal
+from .auto_improve_queue_runtime import (
+    is_recent_log_overlap_queue_unblock,
+    select_next_proposal,
+)
 
 MAINTENANCE_ACTION_RESUME_TARGET = "auto-improve-goal-maintenance-action"
 MAINTENANCE_ACTION_RUNNER_ACTION = "resume_session_with_additional_proposal_budget"
@@ -49,19 +52,12 @@ def _proposal_repairs_repeat_backlog(proposal: Mapping[str, Any] | None) -> bool
 
 
 def _proposal_refreshes_stale_maintenance_queue(proposal: Mapping[str, Any] | None) -> bool:
-    if _proposal_repairs_repeat_backlog(proposal):
-        return True
     if not isinstance(proposal, Mapping):
         return False
     if _list_text(proposal.get("blocked_by")):
         return False
-    proposal_id = str(proposal.get("proposal_id", "")).strip()
-    family = str(proposal.get("family", "")).strip()
-    failure_mode = str(proposal.get("failure_mode", "")).strip()
-    return (
-        family == "queue_unblock"
-        and failure_mode == "recent_log_overlap_queue_blocked"
-        and proposal_id.startswith("recent_log_overlap_queue_blocked__")
+    return _proposal_repairs_repeat_backlog(proposal) or is_recent_log_overlap_queue_unblock(
+        dict(proposal)
     )
 
 

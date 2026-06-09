@@ -137,6 +137,49 @@ def test_maintenance_action_resume_plan_blocks_invalid_runner_before_loading_pro
     _assert_valid_plan(plan)
 
 
+def test_maintenance_action_resume_plan_refreshes_stale_recent_overlap_queue_action() -> None:
+    current_proposal_id = "recent_log_overlap_queue_blocked__maintenance-decision-runtime"
+    plan = build_maintenance_action_resume_plan(
+        {
+            "budget": {"max_proposals": 1},
+            "iterations": [{"proposal_id": "recent_log_overlap_queue_blocked__old-runtime"}],
+            "attempted_proposal_ids": ["recent_log_overlap_queue_blocked__old-runtime"],
+            "maintenance": {
+                "queue_action": {
+                    "status": "action_required",
+                    "reason": "recent_log_overlap_queue_blocked",
+                    "runner_action": MAINTENANCE_ACTION_RUNNER_ACTION,
+                    "proposal_budget_increment": 1,
+                    "proposal_ids": ["recent_log_overlap_queue_blocked__old-runtime"],
+                }
+            },
+        },
+        session_id="auto-session-stale-recent-log-overlap",
+        mutation_proposals_report_loader=lambda: {
+            "proposals": [
+                {
+                    "proposal_id": current_proposal_id,
+                    "family": "queue_unblock",
+                    "failure_mode": "recent_log_overlap_queue_blocked",
+                    "blocked_by": ["recent_log_overlap"],
+                    "priority": 91,
+                }
+            ]
+        },
+    )
+
+    assert plan["status"] == "pass"
+    assert plan["selected_proposal"]["proposal_id"] == current_proposal_id
+    assert plan["queue_action"]["reason"] == "recent_log_overlap_queue_blocked"
+    assert plan["queue_action"]["proposal_ids"] == [current_proposal_id]
+    assert plan["actionable_queue_snapshot"] == [current_proposal_id]
+    assert plan["decisions"] == {
+        "can_resume": True,
+        "requires_budget_increment": True,
+    }
+    _assert_valid_plan(plan)
+
+
 def test_maintenance_action_resume_plan_blocks_missing_mutation_proposal_report() -> None:
     plan = build_maintenance_action_resume_plan(
         {
