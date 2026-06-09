@@ -162,8 +162,12 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-authority-settle`: explicit staged-authority writer lane for
   unattended promotion after release evidence is current. It runs report finality
   resettle once, then preflight, run-ready, preseal, sealed-run-ready, and
-  auto-promotion-ready manifests, refresh-checks artifact freshness, and ends
-  with check-only authority readback plus post-commit finalizer verification.
+  auto-promotion-ready manifests. After the ready attempt, it refresh-checks
+  artifact freshness and rewrites release closeout fixed-point/finality so no
+  tracked report writer runs after finality. If ready is blocked, this finality
+  tail still runs and the original ready failure is returned. On a clean ready
+  pass, the target ends with check-only authority readback plus post-commit
+  finalizer verification.
   It does not regenerate long-tail report producers; run
   `make release-evidence-converge` or the owning evidence refresh target first
   when stale generated reports are the blocker.

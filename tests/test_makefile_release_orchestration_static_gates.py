@@ -492,6 +492,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
     ) -> None:
         text = _makefile_text()
 
+        phony_block = _target_block(text, ".PHONY")
         auto_promotion_block = _target_block(text, "release-auto-promotion-ready")
         self.assertIn("ops.scripts.release_auto_promotion_ready", auto_promotion_block)
         self.assertIn("$(MAKE) release-auto-promotion-ready-plan", auto_promotion_block)
@@ -514,6 +515,16 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) release-auto-promotion-preflight", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-auto-promotion-preseal", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-sealed-run-ready-check", auto_promotion_block)
+        self.assertIn("release-authority-post-ready-finality", phony_block)
+        self.assertEqual(
+            _recipe_lines(text, "release-authority-post-ready-finality"),
+            [
+                "$(MAKE) artifact-freshness-refresh-check",
+                '$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) release-closeout-finality-verify",
+            ],
+        )
         self.assertEqual(
             _recipe_lines(text, "release-authority-settle"),
             [
@@ -522,9 +533,10 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-run-ready",
                 "$(MAKE) release-auto-promotion-preseal",
                 "$(MAKE) release-sealed-run-ready",
-                "$(MAKE) release-auto-promotion-ready",
-                "$(MAKE) release-closeout-finality-verify",
-                "$(MAKE) artifact-freshness-refresh-check",
+                "@status=0; \\",
+                "$(MAKE) release-auto-promotion-ready || status=$$?; \\",
+                "$(MAKE) release-authority-post-ready-finality || exit $$?; \\",
+                "if [ $$status -ne 0 ]; then exit $$status; fi",
                 "$(MAKE) release-auto-promotion-preflight-check",
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) release-auto-promotion-preseal-check",
