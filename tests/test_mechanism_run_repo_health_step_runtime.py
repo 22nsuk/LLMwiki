@@ -16,12 +16,15 @@ from ops.scripts.mechanism_run_repo_health_step_runtime import (
     RepoHealthStepDependencies,
     StructuralComplexityBudgetStepResult,
     repo_health_step,
+    write_structural_complexity_budget_artifact,
 )
 from ops.scripts.runtime_context import RuntimeContext
 
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
 )
+from tests.minimal_vault_runtime import SCHEMA_PATHS
+from tests.test_mechanism_assess import seed_policy
 
 
 def _context() -> RuntimeContext:
@@ -80,6 +83,66 @@ def _run_command_with_diagnostic(
 
 
 class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
+    def test_structural_budget_artifact_ignores_generated_canonical_manifest_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            workspace = Path(temp_dir) / "workspace"
+            vault.mkdir()
+            workspace.mkdir()
+            seed_policy(vault)
+            seed_policy(workspace)
+            for root in (vault, workspace):
+                (root / "ops" / "schemas" / "artifact-envelope.schema.json").write_text(
+                    SCHEMA_PATHS["artifact-envelope.schema.json"].read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                )
+            source_target = workspace / "ops" / "scripts" / "mechanism" / "small_runtime.py"
+            source_target.parent.mkdir(parents=True, exist_ok=True)
+            source_target.write_text("def run() -> None:\n    return None\n", encoding="utf-8")
+            test_target = workspace / "tests" / "test_small_runtime.py"
+            test_target.parent.mkdir(parents=True, exist_ok=True)
+            test_target.write_text("def test_run() -> None:\n    assert True\n", encoding="utf-8")
+            generated_target = workspace / "ops" / "script-output-surfaces.json"
+            generated_target.parent.mkdir(parents=True, exist_ok=True)
+            generated_target.write_text(
+                "\n".join(f'"generated_{index}": true' for index in range(1000)) + "\n",
+                encoding="utf-8",
+            )
+            manifest = vault / "runs" / "run-steps" / "changed-files-manifest.json"
+            manifest.parent.mkdir(parents=True, exist_ok=True)
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "files": [
+                            {"path": "ops/scripts/mechanism/small_runtime.py"},
+                            {"path": "ops/script-output-surfaces.json"},
+                            {"path": "tests/test_small_runtime.py"},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = write_structural_complexity_budget_artifact(
+                vault,
+                workspace,
+                run_id="run-steps",
+                resolution=_resolution(),
+                changed_files_manifest="runs/run-steps/changed-files-manifest.json",
+            )
+
+            report = json.loads((vault / result.report_path).read_text(encoding="utf-8"))
+
+        self.assertEqual(result.status, "pass")
+        target_paths = [target["path"] for target in report["targets"]]
+        self.assertEqual(
+            target_paths,
+            [
+                "ops/scripts/mechanism/small_runtime.py",
+                "tests/test_small_runtime.py",
+            ],
+        )
+
     def test_repo_health_step_requires_prepared_command(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir, self.assertRaisesRegex(
             RunMechanismExperimentUsageError,

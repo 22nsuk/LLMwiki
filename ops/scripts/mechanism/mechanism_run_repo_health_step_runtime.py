@@ -29,6 +29,7 @@ from .mechanism_run_common_runtime import (
     write_command_timeout_failure,
     write_json,
 )
+from .structural_complexity_scope_runtime import structural_complexity_source_targets
 
 REPO_HEALTH_DIAGNOSTIC_ARTIFACTS = {
     "tmp/artifact-freshness-report-check.json": "repo-health-artifact-freshness-report-check.json",
@@ -242,7 +243,9 @@ def write_structural_complexity_budget_artifact(
     resolution: ExperimentResolution,
     changed_files_manifest: str,
 ) -> StructuralComplexityBudgetStepResult:
-    target_paths = target_paths_from_changed_files_manifest(vault, changed_files_manifest)
+    target_paths = structural_complexity_source_targets(
+        target_paths_from_changed_files_manifest(vault, changed_files_manifest)
+    )
     report = build_structural_complexity_budget_report(
         workspace_vault,
         policy_path=resolution.policy_path_text,
