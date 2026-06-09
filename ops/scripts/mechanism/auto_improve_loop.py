@@ -16,7 +16,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         run_auto_improve_session,
         write_maintenance_action_resume_plan,
     )
+    from ops.scripts.core.output_runtime import resolve_repo_output_path
 else:
+    from ops.scripts.core.output_runtime import resolve_repo_output_path
+
     from .auto_improve_runtime import (
         AutoImproveError,
         AutoImproveUsageError,
@@ -64,10 +67,14 @@ def main(argv: list[str] | None = None) -> None:
                 session_id=session_id,
             )
             if args.maintenance_action_plan_out:
+                maintenance_plan_out = resolve_repo_output_path(
+                    Path(args.vault),
+                    args.maintenance_action_plan_out,
+                ).relative_to(Path(args.vault).resolve())
                 write_maintenance_action_resume_plan(
                     Path(args.vault),
                     plan,
-                    out_path=args.maintenance_action_plan_out,
+                    out_path=maintenance_plan_out.as_posix(),
                 )
             if not plan["decisions"]["can_resume"]:
                 raise AutoImproveUsageError(str(plan["recommended_next_action"]))

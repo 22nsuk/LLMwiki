@@ -748,7 +748,8 @@ Repository-required local skills:
 - If the required local skill body is absent or unreadable, report the exact missing skill path surface as a blocker.
 
 Executor phase boundary:
-- Executor roles run before repo-health capture, candidate artifacts, changed-files manifest, behavior delta, final promotion report, and workspace apply.
+- Worker mutations are checked by a post-worker repo-health preflight before reviewer, validator, or auditor execution.
+- Executor roles still run before final repo-health capture, candidate artifacts, changed-files manifest, behavior delta, final promotion report, and workspace apply.
 - Validator/reviewer/auditor roles should not fail only because post-executor artifacts such as `candidate-mechanism-assessment.json`, `candidate-eval.json`, `candidate-lint.json`, `changed-files-manifest.json`, or finalized `promotion-report.json` are not available yet.
 - Treat those post-executor artifacts as highest-value next checks unless the current prompt explicitly asks you to validate a completed run directory.
 

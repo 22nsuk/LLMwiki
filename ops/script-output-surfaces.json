@@ -565,9 +565,9 @@
         "--maintenance-action-plan-out"
       ],
       "references_resolve_output_path": false,
-      "references_resolve_repo_output_path": false,
+      "references_resolve_repo_output_path": true,
       "direct_fallback_eligible": true,
-      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+      "reason": "uses repo artifact resolver"
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness.py",

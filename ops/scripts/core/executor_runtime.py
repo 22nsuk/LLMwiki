@@ -3,12 +3,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
+from ops.scripts.mechanism.mechanism_run_scaffold_resolution_runtime import (
+    command_argv,
+    default_check_command,
+)
+
 from .codex_exec_executor import CodexExecError, execute_codex_exec_role
 from .executor_noop_runtime import executor_noop_mutation_failure_message
+from .experiment_telemetry_runtime import append_ledger_event
 from .policy_runtime import load_policy
 from .runtime_context import RuntimeContext
 
@@ -16,6 +23,8 @@ ROLE_ORDER = ("worker", "reviewer", "validator")
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 SCRIPT_OUTPUT_SURFACES_MODULE = "ops/scripts/core/script_output_surfaces.py"
 OPS_SCRIPTS_PREFIX = "ops/scripts/"
+WORKER_REPO_HEALTH_PREFLIGHT_STDOUT = "worker-repo-health-preflight.stdout.txt"
+WORKER_REPO_HEALTH_PREFLIGHT_STDERR = "worker-repo-health-preflight.stderr.txt"
 
 
 class ExecutorRuntimeError(Exception):
@@ -147,6 +156,141 @@ def _refresh_script_output_surfaces(workspace_root: Path) -> None:
         )
 
 
+def _stream_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+def _write_worker_repo_health_preflight_logs(
+    artifact_root: Path,
+    *,
+    run_id: str,
+    stdout: str | bytes | None,
+    stderr: str | bytes | None,
+) -> tuple[str, str]:
+    run_dir = artifact_root / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    stdout_rel = f"runs/{run_id}/{WORKER_REPO_HEALTH_PREFLIGHT_STDOUT}"
+    stderr_rel = f"runs/{run_id}/{WORKER_REPO_HEALTH_PREFLIGHT_STDERR}"
+    (artifact_root / stdout_rel).write_text(_stream_text(stdout), encoding="utf-8")
+    (artifact_root / stderr_rel).write_text(_stream_text(stderr), encoding="utf-8")
+    return stdout_rel, stderr_rel
+
+
+def _worker_repo_health_preflight_detail(
+    stdout: str | bytes | None,
+    stderr: str | bytes | None,
+) -> str:
+    combined = "\n".join(
+        text
+        for text in (_stream_text(stderr).strip(), _stream_text(stdout).strip())
+        if text
+    )
+    if not combined:
+        return "no output"
+    return combined[-1000:]
+
+
+def _run_worker_repo_health_preflight(
+    artifact_root: Path,
+    *,
+    workspace_root: Path,
+    run_id: str,
+    timeout_seconds: int,
+    context: RuntimeContext,
+) -> None:
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    command = command_argv(default_check_command(), cwd=workspace_root)
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=workspace_root,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout_rel, stderr_rel = _write_worker_repo_health_preflight_logs(
+            artifact_root,
+            run_id=run_id,
+            stdout=exc.stdout,
+            stderr=exc.stderr,
+        )
+        append_ledger_event(
+            artifact_root,
+            run_id,
+            event_type="worker_repo_health_preflight_checked",
+            summary="Checked worker repo-health preflight before non-worker executor roles.",
+            artifacts=[stdout_rel, stderr_rel],
+            decision="worker_repo_health_preflight_timeout",
+            context=context,
+            status="blocked",
+        )
+        raise ExecutorRuntimeExecutionError(
+            "worker repo-health preflight timed out before reviewer/validator/auditor "
+            f"execution; command={' '.join(command)}; stdout={stdout_rel}; stderr={stderr_rel}"
+        ) from exc
+    except OSError as exc:
+        stdout_rel, stderr_rel = _write_worker_repo_health_preflight_logs(
+            artifact_root,
+            run_id=run_id,
+            stdout="",
+            stderr=str(exc),
+        )
+        append_ledger_event(
+            artifact_root,
+            run_id,
+            event_type="worker_repo_health_preflight_checked",
+            summary="Checked worker repo-health preflight before non-worker executor roles.",
+            artifacts=[stdout_rel, stderr_rel],
+            decision="worker_repo_health_preflight_failed_to_start",
+            context=context,
+            status="blocked",
+        )
+        raise ExecutorRuntimeExecutionError(
+            "worker repo-health preflight could not start before reviewer/validator/auditor "
+            f"execution; command={' '.join(command)}; stdout={stdout_rel}; stderr={stderr_rel}"
+        ) from exc
+    stdout_rel, stderr_rel = _write_worker_repo_health_preflight_logs(
+        artifact_root,
+        run_id=run_id,
+        stdout=completed.stdout,
+        stderr=completed.stderr,
+    )
+    if completed.returncode != 0:
+        append_ledger_event(
+            artifact_root,
+            run_id,
+            event_type="worker_repo_health_preflight_checked",
+            summary="Checked worker repo-health preflight before non-worker executor roles.",
+            artifacts=[stdout_rel, stderr_rel],
+            decision="worker_repo_health_preflight_fail",
+            context=context,
+            status="blocked",
+        )
+        detail = _worker_repo_health_preflight_detail(completed.stdout, completed.stderr)
+        raise ExecutorRuntimeExecutionError(
+            "worker repo-health preflight failed before reviewer/validator/auditor "
+            f"execution; command={' '.join(command)}; stdout={stdout_rel}; "
+            f"stderr={stderr_rel}; detail={detail}"
+        )
+    append_ledger_event(
+        artifact_root,
+        run_id,
+        event_type="worker_repo_health_preflight_checked",
+        summary="Checked worker repo-health preflight before non-worker executor roles.",
+        artifacts=[stdout_rel, stderr_rel],
+        decision="worker_repo_health_preflight_pass",
+        context=context,
+    )
+
+
 def run_executor_pipeline(
     artifact_root: Path,
     *,
@@ -173,6 +317,7 @@ def run_executor_pipeline(
     primary_targets = _primary_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
     supporting_targets = _supporting_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
     primary_before_worker = _target_digest_snapshot(workspace_root, primary_targets)
+    has_post_worker_roles = any(role != "worker" for role in ordered_roles)
     for role in ordered_roles:
         routing_report_rel = routing_map.get(role)
         if routing_report_rel is None:
@@ -203,6 +348,14 @@ def run_executor_pipeline(
                 supporting_targets=supporting_targets,
             ):
                 _refresh_script_output_surfaces(workspace_root)
+            if has_post_worker_roles:
+                _run_worker_repo_health_preflight(
+                    artifact_root,
+                    workspace_root=workspace_root,
+                    run_id=run_id,
+                    timeout_seconds=timeout_seconds,
+                    context=context,
+                )
 
     return {
         "run_id": run_id,
