@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from tools.regenerate_report_schema_samples import (
+    _normalize_sample_vault_text_newlines,
     build_auto_improve_readiness_schema_sample,
     build_openvex_schema_sample,
     build_release_run_ready_plan_schema_sample,
@@ -145,6 +146,17 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_sample_vault_newline_normalizer_makes_text_fixtures_platform_stable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            path = vault / "ops" / "scripts" / "example.py"
+            path.parent.mkdir(parents=True)
+            path.write_bytes(b"print('one')\r\nprint('two')\r\n")
+
+            _normalize_sample_vault_text_newlines(vault)
+
+            self.assertEqual(path.read_bytes(), b"print('one')\nprint('two')\n")
 
 
 if __name__ == "__main__":

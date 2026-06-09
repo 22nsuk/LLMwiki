@@ -102,6 +102,27 @@ def fixed_context() -> RuntimeContext:
     )
 
 
+def _normalize_sample_vault_text_newlines(vault: Path) -> None:
+    for path in sorted(vault.rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            raw = path.read_bytes()
+        except OSError:
+            continue
+        if b"\r" not in raw:
+            continue
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+        if normalized == text:
+            continue
+        with path.open("w", encoding="utf-8", newline="\n") as handle:
+            handle.write(normalized)
+
+
 def seed_openvex_sample_vault(vault: Path) -> None:
     seed_minimal_vault(vault)
     seed_dependency_inputs(vault)
@@ -140,6 +161,7 @@ def build_supply_chain_schema_samples() -> dict[str, dict]:
         vault = Path(temp_dir) / "vault"
         vault.mkdir()
         seed_supply_chain_sample_vault(vault)
+        _normalize_sample_vault_text_newlines(vault)
         provenance = build_supply_chain_provenance_report(vault, context=fixed_context())
         mapping = build_sbom_export_mapping_report(
             vault,
@@ -171,6 +193,7 @@ def build_openvex_schema_sample(cyclonedx_sample: dict | None = None) -> dict:
             json.dumps(samples["cyclonedx_bom"], ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
+        _normalize_sample_vault_text_newlines(vault)
         return build_openvex_draft(
             vault,
             context=fixed_context(),
@@ -246,6 +269,7 @@ def build_artifact_freshness_schema_sample() -> dict:
         vault = Path(temp_dir) / "vault"
         vault.mkdir()
         seed_minimal_vault(vault)
+        _normalize_sample_vault_text_newlines(vault)
         return build_artifact_freshness_schema_sample_for_vault(vault)
 
 
@@ -481,6 +505,7 @@ def build_auto_improve_readiness_schema_sample() -> dict:
         _seed_readiness_release_contract_reports(vault)
         _seed_readiness_queue_reports(vault)
         _write_goal_worktree_guard_sample_report(vault)
+        _normalize_sample_vault_text_newlines(vault)
 
         report = build_readiness_report(vault, context=fixed_context())
         _align_readiness_sample_blocker_next_steps(report)
@@ -493,6 +518,7 @@ def build_release_run_ready_plan_schema_sample() -> dict:
         vault.mkdir()
         _copy_plan_schema(vault)
         _write_current_run_ready_evidence(vault)
+        _normalize_sample_vault_text_newlines(vault)
         with _patch_plan_repo():
             return build_run_ready_plan(vault, context=fixed_run_ready_context())
 
