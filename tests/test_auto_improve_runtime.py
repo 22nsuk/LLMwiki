@@ -10,6 +10,7 @@ from unittest import mock
 from ops.scripts.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluateRequest,
+    run_full_experiment,
 )
 from ops.scripts.auto_improve_runtime import (
     AutoImproveLearningReviewRequiredError,
@@ -418,6 +419,53 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(result.outcome.outcome, "scope_blocked")
             self.assertEqual(result.outcome.next_consecutive_failures, 3)
             self.assertEqual(set(result.phase_durations), {"experiment"})
+
+            run_experiment = mock.Mock(return_value={"decision": "HOLD"})
+            mutation_command = mock.Mock(return_value="mutation command")
+            runnable_request = ExecuteEvaluateRequest(
+                vault=vault,
+                resolved_policy_path=Path("ops/policies/wiki-maintainer-policy.yaml"),
+                run_id="auto-session-run-01-example",
+                proposal=proposal,
+                scope_freeze={
+                    "status": "runnable",
+                    "inputs": {
+                        "primary_targets": ["ops/scripts/frozen.py"],
+                        "supporting_targets": ["tests/test_frozen.py"],
+                    },
+                    "resolution": {"test_files": ["tests/test_frozen.py"]},
+                },
+                scope_freeze_rel="runs/auto-session-run-01-example/scope-freeze.json",
+                roles=["worker"],
+                routing_report_rels=[
+                    "runs/auto-session-run-01-example/subagent-routing.worker.json"
+                ],
+                consecutive_failures=0,
+                pre_promotion_failure_outcomes=set(),
+                proposal_report_path="ops/reports/mutation-proposals.json",
+                context=context,
+                dependencies=ExecuteEvaluateDependencies(
+                    mutation_command=mutation_command,
+                    run_mechanism_experiment=run_experiment,
+                    role_report_path=auto_improve_runtime._role_report_path,
+                    evaluate_scope_blocked=auto_improve_runtime.evaluate_scope_blocked,
+                    evaluate_experiment_result=auto_improve_runtime.evaluate_experiment_result,
+                    evaluate_mutation_error=auto_improve_runtime.evaluate_mutation_error,
+                    evaluate_experiment_error=auto_improve_runtime.evaluate_experiment_error,
+                ),
+            )
+
+            run_full_experiment(runnable_request)
+
+            run_experiment.assert_called_once()
+            self.assertEqual(
+                run_experiment.call_args.kwargs["primary_targets"],
+                ["ops/scripts/frozen.py"],
+            )
+            self.assertEqual(
+                run_experiment.call_args.kwargs["supporting_targets"],
+                ["tests/test_frozen.py"],
+            )
 
     def test_run_auto_improve_session_writes_successful_session_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

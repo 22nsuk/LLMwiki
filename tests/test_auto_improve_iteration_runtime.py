@@ -1718,12 +1718,21 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             captured["request"] = request
             return expected
 
+        scope_freeze = {
+            "status": "ready",
+            "resolution": {"test_files": ["tests/test_example.py"]},
+            "inputs": {
+                "primary_targets": ["ops/scripts/example.py"],
+                "supporting_targets": ["tests/test_example.py"],
+            },
+        }
+
         result = execute_evaluate_iteration_phase(
             Path("/tmp/vault"),
             Path("ops/policies/wiki-maintainer-policy.yaml"),
             run_id="auto-session-run-01",
             proposal={"proposal_id": "proposal-1"},
-            scope_freeze={"status": "ready", "resolution": {"test_files": ["tests/test_example.py"]}},
+            scope_freeze=scope_freeze,
             scope_freeze_rel="runs/auto-session-run-01/scope-freeze.json",
             roles=["worker", "validator"],
             routing_report_rels=[
@@ -1742,6 +1751,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
         request = captured["request"]
         self.assertEqual(request.run_id, "auto-session-run-01")
         self.assertEqual(request.proposal["proposal_id"], "proposal-1")
+        self.assertEqual(request.scope_freeze, scope_freeze)
         self.assertEqual(request.proposal_report_path, "ops/reports/mutation-proposals.json")
         self.assertEqual(request.roles, ["worker", "validator"])
         self.assertEqual(
