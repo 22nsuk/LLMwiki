@@ -215,7 +215,7 @@ class ExportPublicRepoTests(unittest.TestCase):
             )
 
             for public_out in (vault, vault / "docs", root):
-                with self.subTest(public_out=public_out), self.assertRaisesRegex(
+                with self.subTest(public_out=str(public_out)), self.assertRaisesRegex(
                     CbmPublicExportError,
                     "CBM_PUBLIC_OUT|overlaps vault",
                 ):
