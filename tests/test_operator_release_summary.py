@@ -389,7 +389,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertEqual(report["accepted_risk"]["operator_accepted_risk_family_count"], 3)
         self.assertEqual(report["accepted_risk"]["clean_lane_blocking_accepted_risk_family_count"], 2)
         self.assertEqual(report["accepted_risk"]["accepted_risk_count"], 0)
-        self.assertEqual(report["accepted_risk"]["release_accepted_risk_count"], 0)
+        self.assertEqual(report["accepted_risk"]["release_accepted_risk_count"], 2)
         self.assertEqual(report["accepted_risk"]["accepted_learning_risk_count"], 0)
         self.assertEqual(report["accepted_risk"]["gate_attention_count"], 0)
         self.assertEqual(report["accepted_risk"]["learning_claim_blocking_family_count"], 0)
@@ -502,7 +502,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertIn("gate_attention=1", report["operator_summary"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_operator_summary_separates_release_and_learning_accepted_risk_counts(self) -> None:
+    def test_operator_summary_keeps_total_accepted_risks_out_of_release_blockers(self) -> None:
         learning_path = self.vault / "ops" / "reports" / "learning-readiness-signoff-revalidation.json"
         learning = json.loads(learning_path.read_text(encoding="utf-8"))
         learning["closeout"]["accepted_learning_risk"] = True
@@ -515,11 +515,28 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         self.assertEqual(report["accepted_risk"]["accepted_risk_count"], 2)
-        self.assertEqual(report["accepted_risk"]["release_accepted_risk_count"], 2)
+        self.assertEqual(report["accepted_risk"]["release_accepted_risk_count"], 0)
         self.assertEqual(report["accepted_risk"]["accepted_learning_risk_count"], 1)
         self.assertTrue(report["learning_readiness"]["accepted_learning_risk"])
-        self.assertIn("release_risk_acceptances=2", report["operator_summary"])
+        self.assertIn("release_risk_acceptances=0", report["operator_summary"])
         self.assertIn("learning_risk_acceptances=1", report["operator_summary"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_operator_summary_uses_release_blocking_count_for_release_acceptances(self) -> None:
+        self._write_json(
+            "ops/reports/release-closeout-summary.json",
+            {
+                "artifact_kind": "release_closeout_summary",
+                "release_blocking_family_count": 1,
+                "clean_lane_blocking_risk_family_count": 2,
+                "summary": {"accepted_risk_family_count": 3},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(report["accepted_risk"]["release_accepted_risk_count"], 2)
+        self.assertIn("release_risk_acceptances=2", report["operator_summary"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_main_writes_report_without_failing_attention_by_default(self) -> None:

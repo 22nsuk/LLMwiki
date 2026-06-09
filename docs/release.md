@@ -388,9 +388,10 @@ only when the operator is renewing or replacing the acceptance decision.
 5. Run `make release-auto-promotion-ready` as the final readback authority. It
    should reuse the current lower-stage evidence rather than rerunning tests,
    rebuilding the package, resealing, or creating runtime-trial evidence.
-   If its planner reports operator accepted-risk or gate-attention counts, rerun
-   `make release-auto-promotion-preseal` and then `make release-sealed-run-ready`
-   so the sealed operator summary is regenerated from current source evidence.
+   If its planner reports release/clean-lane blocking accepted-risk counts or
+   residual non-advisory gate attention, rerun `make release-auto-promotion-preseal`
+   and then `make release-sealed-run-ready` so the sealed operator summary is
+   regenerated from current source evidence.
    The `release-authority-settle` tail then performs ZIP-bound batch-manifest
    promotion, fixed-point rewrite, batch replay verification, and finality
    verification as one terminal report-writer suffix.

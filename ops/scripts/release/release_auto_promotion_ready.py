@@ -54,10 +54,14 @@ DEFAULT_AUTO_PROMOTION_PREFLIGHT = "build/release/release-auto-promotion-preflig
 DEFAULT_AUTO_PROMOTION_PRESEAL = "build/release/release-auto-promotion-preseal.json"
 DEFAULT_GOAL_RUN_STATUS = "ops/reports/goal-run-status.json"
 DEFAULT_GOAL_RUNTIME_CERTIFICATE = "ops/reports/goal-runtime-certificate.json"
-STRICT_ZERO_ACCEPTED_RISK_FIELDS = (
+ACCEPTED_RISK_DIAGNOSTIC_FIELDS = (
     "accepted_risk_count",
     "release_accepted_risk_count",
     "accepted_learning_risk_count",
+    "clean_lane_blocking_accepted_risk_family_count",
+)
+STRICT_ZERO_ACCEPTED_RISK_FIELDS = (
+    "release_accepted_risk_count",
     "clean_lane_blocking_accepted_risk_family_count",
 )
 STRICT_ZERO_GATE_ATTENTION_FIELDS = (
@@ -150,6 +154,13 @@ def _operator_count_group(operator_summary: dict[str, Any], fields: tuple[str, .
     return {field: _int_value(accepted_risk.get(field, 0)) for field in fields}
 
 
+def _blocking_gate_attention(operator_summary: dict[str, Any]) -> dict[str, int]:
+    accepted_risk = _dict(operator_summary.get("accepted_risk"))
+    raw_attention = _int_value(accepted_risk.get("gate_attention_count", 0))
+    advisory_attention = _int_value(accepted_risk.get("advisory_lifecycle_family_count", 0))
+    return {"gate_attention_count": max(0, raw_attention - advisory_attention)}
+
+
 def _release_gate_diagnostic_blockers(blockers: list[Any]) -> list[dict[str, Any]]:
     return [
         blocker
@@ -177,8 +188,8 @@ def _operator_diagnostics(operator_summary: dict[str, Any]) -> dict[str, Any]:
         "batch_verify_status": str(_dict(operator_summary.get("batch_verify")).get("status", "")).strip(),
         "full_suite_status": str(test_evidence.get("full_suite_status", "")).strip(),
         "learning_revalidation_status": str(learning_readiness.get("revalidation_status", "")).strip(),
-        "accepted_risk": _operator_count_group(operator_summary, STRICT_ZERO_ACCEPTED_RISK_FIELDS),
-        "gate_attention": _operator_count_group(operator_summary, STRICT_ZERO_GATE_ATTENTION_FIELDS),
+        "accepted_risk": _operator_count_group(operator_summary, ACCEPTED_RISK_DIAGNOSTIC_FIELDS),
+        "gate_attention": _blocking_gate_attention(operator_summary),
         "learning_claim": _operator_count_group(operator_summary, STRICT_ZERO_LEARNING_CLAIM_FIELDS),
     }
 
@@ -568,7 +579,13 @@ def _operator_zero_count_requirements(operator: dict[str, Any]) -> list[Requirem
             if group == "gate_attention"
             else GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
         )
-        for field, count in operator[group].items():
+        fields = (
+            STRICT_ZERO_ACCEPTED_RISK_FIELDS
+            if group == "accepted_risk"
+            else tuple(operator[group].keys())
+        )
+        for field in fields:
+            count = int(operator[group].get(field, 0))
             requirements.append(
                 RequirementSpec(
                     count == 0,
@@ -794,7 +811,10 @@ def _ready_checks(
         "full_suite_pass": operator["full_suite_status"] == "pass",
         "learning_revalidation_current": str(operator["learning_revalidation_status"])
         in ALLOWED_LEARNING_REVALIDATION_STATUSES,
-        "accepted_risk_clean": all(count == 0 for count in operator["accepted_risk"].values()),
+        "accepted_risk_clean": all(
+            operator["accepted_risk"].get(field, 0) == 0
+            for field in STRICT_ZERO_ACCEPTED_RISK_FIELDS
+        ),
         "gate_attention_clean": all(count == 0 for count in operator["gate_attention"].values()),
         "learning_claim_clean": all(count == 0 for count in operator["learning_claim"].values()),
         "auto_improve_readiness_load_ok": inputs["auto_improve_readiness"]["load_status"] == "ok",

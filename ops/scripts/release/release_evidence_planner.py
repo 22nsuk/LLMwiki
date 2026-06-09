@@ -201,12 +201,17 @@ def _operator_attention_counts(vault: Path, path: str) -> dict[str, int]:
     accepted_risk = payload.get("accepted_risk")
     if not isinstance(accepted_risk, dict):
         return {}
-    fields = (
-        "accepted_risk_count",
-        "release_accepted_risk_count",
-        "gate_attention_count",
-    )
-    return {field: _int_value(accepted_risk.get(field)) for field in fields}
+    raw_gate_attention = _int_value(accepted_risk.get("gate_attention_count"))
+    advisory_attention = _int_value(accepted_risk.get("advisory_lifecycle_family_count"))
+    return {
+        "release_accepted_risk_count": _int_value(
+            accepted_risk.get("release_accepted_risk_count")
+        ),
+        "clean_lane_blocking_accepted_risk_family_count": _int_value(
+            accepted_risk.get("clean_lane_blocking_accepted_risk_family_count")
+        ),
+        "gate_attention_count": max(0, raw_gate_attention - advisory_attention),
+    }
 
 
 def _operator_attention_blocker(
@@ -220,7 +225,8 @@ def _operator_attention_blocker(
         "node": str(node["name"]),
         "observed": observed,
         "expected": (
-            "accepted_risk_count=0; release_accepted_risk_count=0; gate_attention_count=0"
+            "release_accepted_risk_count=0; "
+            "clean_lane_blocking_accepted_risk_family_count=0; gate_attention_count=0"
         ),
         "summary": (
             "Sealed operator diagnostics still report accepted risk or gate attention, so "

@@ -410,7 +410,56 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertIn("operator_summary_release_attention_not_clean", plan["failures"])
         self.assertIn("release-auto-promotion-preseal", plan["blockers"][0]["recommended_next_step"])
         self.assertIn("release-sealed-run-ready", plan["blockers"][0]["recommended_next_step"])
-        self.assertIn("accepted_risk_count=2", plan["blockers"][0]["observed"])
+        self.assertIn("release_accepted_risk_count=2", plan["blockers"][0]["observed"])
+
+    def test_auto_promotion_plan_allows_advisory_only_attention_counts(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "accepted_risk_count": 1,
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 0,
+            "gate_attention_count": 1,
+            "advisory_lifecycle_family_count": 1,
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        self.assertEqual(plan["plan_status"], "ready")
+        self.assertNotIn("operator_summary_release_attention_not_clean", plan["failures"])
+
+    def test_auto_promotion_plan_blocks_clean_lane_accepted_risk_count(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "accepted_risk_count": 1,
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 1,
+            "gate_attention_count": 0,
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("operator_summary_release_attention_not_clean", plan["failures"])
+        self.assertIn(
+            "clean_lane_blocking_accepted_risk_family_count=1",
+            plan["blockers"][0]["observed"],
+        )
 
     def test_auto_promotion_plan_reports_pre_seal_diagnostic_refresh_without_cascade(self) -> None:
         self._write_authorities()

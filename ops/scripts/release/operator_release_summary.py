@@ -885,11 +885,13 @@ def _accepted_risk_summary(
         )
         or 0
     )
+    release_blocking_count = int(_scope_count(closeout, "release_blocking_family_count") or 0)
+    release_accepted_risk_count = max(clean_lane_blocking_count, release_blocking_count)
     return {
         "operator_accepted_risk_family_count": operator_count,
         "clean_lane_blocking_accepted_risk_family_count": clean_lane_blocking_count,
         "accepted_risk_count": accepted_risk_count,
-        "release_accepted_risk_count": accepted_risk_count,
+        "release_accepted_risk_count": release_accepted_risk_count,
         "accepted_learning_risk_count": 1 if learning_readiness["accepted_learning_risk"] else 0,
         "gate_attention_count": int(release_decision_snapshot.get("gate_attention_count", 0) or 0),
         "learning_claim_blocking_family_count": int(
