@@ -224,10 +224,15 @@ class ArtifactFreshnessContext:
         total: int = 0,
         current_path: str = "",
     ) -> None:
+        elapsed_seconds = (
+            round(max(0.0, time.perf_counter() - started_at), 6)
+            if self.progress_format == "jsonl"
+            else 0.0
+        )
         self.phase_timings.append(
             {
                 "phase": phase,
-                "elapsed_seconds": 0.0,
+                "elapsed_seconds": elapsed_seconds,
                 "done": done,
                 "total": total,
             }

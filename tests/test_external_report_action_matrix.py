@@ -1295,9 +1295,11 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             },
         )
         for rel_path in (
-            "tests/test_writer_output_paths.py",
-            "tests/test_planning_gate_validate_runtime.py",
+            "tests/test_raw_registry_preflight.py",
+            "tests/test_raw_registry_cross_environment_matrix.py",
+            "tests/test_raw_registry_cross_environment_evidence_bundle.py",
             "tests/test_release_smoke.py",
+            "tests/test_ci_workflow_static.py",
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -3450,6 +3452,101 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(
             actions["goal_run_status_audit_resume"]["current_status"],
             "implemented",
+        )
+
+    def test_goal_status_audit_resume_uses_run_local_contract_digest(self) -> None:
+        for rel_path in (
+            "ops/schemas/goal-run-status.schema.json",
+            "ops/scripts/mechanism/auto_improve_loop.py",
+            "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_runner.py",
+            "tests/test_goal_auto_improve_runtime.py",
+            "tests/test_goal_run_status.py",
+            "tests/test_goal_runtime_runner.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        global_contract = {
+            "$schema": "ops/schemas/codex-goal-contract.schema.json",
+            "contract_id": "auto-improve-goal",
+            "runtime": {"mode": "self_improvement_loop"},
+            "budgets": {"max_wall_clock_seconds": 60},
+            "required_evidence": [],
+        }
+        run_contract = {
+            "$schema": "ops/schemas/codex-goal-contract.schema.json",
+            "contract_id": "auto-improve-goal",
+            "runtime": {"mode": "self_improvement_loop"},
+            "budgets": {"max_wall_clock_seconds": 21600},
+            "required_evidence": [
+                {
+                    "evidence_id": "goal_run_status",
+                    "path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+                    "required_for_promotion": True,
+                }
+            ],
+        }
+        run_contract_path = "runs/goal-auto-improve-trial/state/codex-goal-contract.json"
+        run_contract_digest = _canonical_json_digest(run_contract)
+        self._write_json("ops/reports/codex-goal-contract.json", global_contract)
+        self._write_json(run_contract_path, run_contract)
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "producer": "ops.scripts.goal_run_status",
+                "status": "attention",
+                "goal": {
+                    "contract_path": run_contract_path,
+                    "contract_sha256": run_contract_digest,
+                    "backend": {"process_persistent": True},
+                },
+                "artifacts": {
+                    "status_report_path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+                    "status_markdown_path": "runs/goal-auto-improve-trial/status.md",
+                    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
+                    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+                    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl",
+                },
+                "health": {
+                    "heartbeat_status": "current",
+                    "checkpoint_status": "current",
+                    "command_heartbeat_status": "not_recorded",
+                    "backoff_status": "inactive",
+                    "resume_status": "not_requested",
+                    "promotion_status": "blocked",
+                    "can_promote_result": False,
+                },
+                "runtime_certificate": {
+                    "status": "pending",
+                    "mode": "self_improvement_loop",
+                },
+            },
+        )
+        (self.external / "goal-status.md").write_text(
+            "# Goal Status Review\n\ngoal-run-status, audit-log, checkpoint, resume.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["goal_run_status_audit_resume"]["current_status"],
+            "implemented",
+        )
+
+        (self.vault / run_contract_path).unlink()
+        self._write_json("ops/reports/codex-goal-contract.json", run_contract)
+        missing_run_contract_report = build_report(self.vault, context=fixed_context())
+        missing_contract_actions = {
+            item["action_id"]: item
+            for item in missing_run_contract_report["action_items"]
+        }
+        self.assertEqual(
+            missing_contract_actions["goal_run_status_audit_resume"]["current_status"],
+            "requires_release_run_verification",
         )
 
     def test_goal_status_audit_resume_action_accepts_verified_completed_runtime_status(self) -> None:

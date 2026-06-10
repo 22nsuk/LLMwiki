@@ -65,9 +65,11 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "theme": "path portability and archive alias normalization",
         "patterns": [r"Windows", r"path alias", r"path portability", r"Info-ZIP", r"C locale", r"escaped path"],
         "evidence_paths": [
-            "tests/test_writer_output_paths.py",
-            "tests/test_planning_gate_validate_runtime.py",
+            "tests/test_raw_registry_preflight.py",
+            "tests/test_raw_registry_cross_environment_matrix.py",
+            "tests/test_raw_registry_cross_environment_evidence_bundle.py",
             "tests/test_release_smoke.py",
+            "tests/test_ci_workflow_static.py",
         ],
         "recommended_target": "test-public",
     },

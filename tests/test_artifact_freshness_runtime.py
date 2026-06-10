@@ -174,9 +174,10 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertTrue(any(event["phase"] == "json_schema_validation" for event in progress_events))
             self.assertTrue(report["phase_timings"])
             self.assertTrue(any(item["phase"] == "json_schema_validation" for item in report["phase_timings"]))
+            self.assertTrue(any(item["elapsed_seconds"] > 0 for item in report["phase_timings"]))
             self.assertEqual(validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)), [])
 
-    def test_phase_timings_do_not_make_canonical_report_nondeterministic(self) -> None:
+    def test_default_phase_timings_do_not_make_canonical_report_nondeterministic(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()

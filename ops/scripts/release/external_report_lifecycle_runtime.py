@@ -907,6 +907,17 @@ def _current_contract_digest(vault: Path) -> str:
     return _canonical_json_digest(contract) if contract else ""
 
 
+def _goal_status_contract_digest(vault: Path, goal: dict[str, Any]) -> str:
+    contract_path = str(goal.get("contract_path", "")).strip()
+    if contract_path == "ops/reports/codex-goal-contract.json" or (
+        contract_path.startswith("runs/goal-")
+        and contract_path.endswith("/state/codex-goal-contract.json")
+    ):
+        contract = load_json_object(vault / contract_path)
+        return _canonical_json_digest(contract) if contract else ""
+    return _current_contract_digest(vault)
+
+
 def _all_evidence_status(existing_count: int, expected_count: int) -> str | None:
     if existing_count == 0:
         return "planned"
@@ -1256,7 +1267,7 @@ def goal_run_status_audit_resume_status(
     artifacts = as_dict(report.get("artifacts"))
     health = as_dict(report.get("health"))
     runtime_certificate = as_dict(report.get("runtime_certificate"))
-    contract_digest = _current_contract_digest(vault)
+    contract_digest = _goal_status_contract_digest(vault, goal)
     status_report_path = str(artifacts.get("status_report_path", "")).strip()
     status_report_path_valid = status_report_path == "ops/reports/goal-run-status.json" or (
         status_report_path.startswith("runs/goal-")

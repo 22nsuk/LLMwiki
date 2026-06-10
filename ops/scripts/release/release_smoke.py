@@ -1220,6 +1220,21 @@ def _expected_envelope(
     )
 
 
+def _archive_path_from_report(vault: Path, payload: dict[str, Any]) -> tuple[Path | None, bool]:
+    archive_file = payload.get("archive_file")
+    archive_path = ""
+    if isinstance(archive_file, dict):
+        archive_path = str(archive_file.get("path") or "").strip()
+    report_archive_path = str(payload.get("archive_path") or "").strip()
+    paths_match = bool(archive_path and archive_path == report_archive_path)
+    if not archive_path and report_archive_path:
+        archive_path = report_archive_path
+        paths_match = True
+    if not archive_path or archive_path.startswith(EPHEMERAL_REPORT_PREFIX):
+        return None, paths_match
+    return resolve_output_path(vault, archive_path), paths_match
+
+
 def release_smoke_reuse_diagnostics(
     vault: Path,
     report_path: Path,
@@ -1254,14 +1269,27 @@ def release_smoke_reuse_diagnostics(
         resolved_policy_path=resolved_policy_path,
         context=context,
     )
+    archive_file = payload.get("archive_file")
+    archive_path, archive_paths_match = _archive_path_from_report(vault, payload)
+    archive_expected_sha256 = (
+        str(archive_file.get("sha256", "")).strip()
+        if isinstance(archive_file, dict)
+        else ""
+    )
+    archive_actual_sha256 = sha256_file(archive_path) if archive_path and archive_path.is_file() else ""
     checks = {
         "artifact_kind": payload.get("artifact_kind") == "release_smoke_report",
         "producer": payload.get("producer") == PRODUCER,
         "source_command": payload.get("source_command") == _source_command(profile),
         "profile": payload.get("profile") == profile,
         "status": payload.get("status") == "pass",
-        "archive_file": isinstance(payload.get("archive_file"), dict)
-        and payload["archive_file"].get("exists") is True,
+        "archive_file": isinstance(archive_file, dict)
+        and archive_file.get("exists") is True,
+        "archive_path_match": archive_paths_match,
+        "archive_file_path": archive_path is not None,
+        "archive_file_exists": bool(archive_path and archive_path.is_file()),
+        "archive_file_sha256": bool(archive_expected_sha256)
+        and archive_actual_sha256 == archive_expected_sha256,
         "currentness": isinstance(payload.get("currentness"), dict)
         and payload["currentness"].get("status") == "current",
         "source_revision": payload.get("source_revision") == expected.get("source_revision"),
@@ -1280,6 +1308,7 @@ def release_smoke_reuse_diagnostics(
             "reason": "current_passing_release_smoke_report",
             "generated_at": str(payload.get("generated_at", "")),
             "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
+            "archive_sha256": archive_actual_sha256,
             "command_count": len(payload.get("commands", [])) if isinstance(payload.get("commands"), list) else 0,
         }
     )

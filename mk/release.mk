@@ -25,6 +25,8 @@ GITHUB_GOVERNANCE_LIVE_DRIFT_OUT ?= ops/reports/github-governance-live-drift.jso
 GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT ?= tmp/github-governance-live-drift-check.json
 RELEASE_SMOKE_OUT ?= ops/reports/release-smoke-report.json
 RELEASE_SMOKE_FAST_OUT ?= ops/reports/release-smoke-report-fast.json
+RELEASE_SMOKE_ARCHIVE_OUT ?= build/release/release-smoke.zip
+RELEASE_SMOKE_FAST_ARCHIVE_OUT ?= build/release/release-smoke-fast.zip
 RELEASE_SMOKE_REUSE_FROM ?= $(RELEASE_SMOKE_OUT)
 RELEASE_SMOKE_CURRENT_CHECK_OUT ?= tmp/release-smoke-report-current-check.json
 RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT ?= tmp/release-smoke-report-fast-current-check.json
@@ -539,21 +541,21 @@ release-smoke-lane-guard:
 	$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-smoke
 
 release-smoke: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --archive-out "$(RELEASE_SMOKE_ARCHIVE_OUT)" --out "$(RELEASE_SMOKE_OUT)"
 
 release-smoke-full: release-smoke
 
 release-smoke-full-reuse: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)" --reuse-if-current --reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --archive-out "$(RELEASE_SMOKE_ARCHIVE_OUT)" --out "$(RELEASE_SMOKE_OUT)" --reuse-if-current --reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"
 
 release-smoke-full-current-check: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --archive-out "$(RELEASE_SMOKE_ARCHIVE_OUT)" --out "$(RELEASE_SMOKE_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"
 
 release-smoke-fast: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_SMOKE_FAST_ARCHIVE_OUT)" --out "$(RELEASE_SMOKE_FAST_OUT)"
 
 release-smoke-fast-current-check: release-smoke-lane-guard
-	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_FAST_OUT)"
+	$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_SMOKE_FAST_ARCHIVE_OUT)" --out "$(RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_FAST_OUT)"
 
 release-smoke-fast-refresh-check:
 	@if $(MAKE) release-smoke-fast-current-check; then \
