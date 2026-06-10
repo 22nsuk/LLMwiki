@@ -38,32 +38,32 @@ jobs:
           - integration
           - integration-heavy
           - public
+        exclude:
+          - tier: report-contract
+            python-version: "3.13"
+          - tier: report-contract
+            python-version: "3.14"
+          - tier: release-closeout-regression
+            python-version: "3.13"
+          - tier: release-closeout-regression
+            python-version: "3.14"
+          - tier: release-sealing
+            python-version: "3.13"
+          - tier: release-sealing
+            python-version: "3.14"
+          - tier: integration-heavy
+            python-version: "3.13"
+          - tier: integration-heavy
+            python-version: "3.14"
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Setup Python and uv
+        uses: ./.github/actions/setup-python-uv
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          cache-dependency-path: |
-            pyproject.toml
-            uv.lock
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          version: "0.10.9"
-
-      - name: Install dependencies from lock
-        run: |
-          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
-          make uv-lock-check
-          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
-          python -m pip install --upgrade pip
-          python -m pip install -r tmp/locked-requirements.ci.txt
 
       - name: Validate package build
         if: matrix.tier == 'fast'
@@ -203,27 +203,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Setup Python and uv
+        uses: ./.github/actions/setup-python-uv
         with:
           python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: |
-            pyproject.toml
-            uv.lock
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          version: "0.10.9"
-
-      - name: Install dependencies from lock
-        run: |
-          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
-          make uv-lock-check
-          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
-          python -m pip install --upgrade pip
-          python -m pip install -r tmp/locked-requirements.ci.txt
 
       - name: Run Windows release smoke
         run: python -m ops.scripts.release.release_smoke --vault . --profile full --out ops/reports/release-smoke-report-windows.json
@@ -267,28 +250,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Setup Python and uv
+        uses: ./.github/actions/setup-python-uv
         with:
           python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: |
-            pyproject.toml
-            uv.lock
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          version: "0.10.9"
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
-          make uv-lock-check
-          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
-          python -m pip install --upgrade pip
-          python -m pip install -r tmp/locked-requirements.ci.txt
 
       - name: Generate raw registry cross-environment matrix
         shell: bash
@@ -318,27 +283,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Setup Python and uv
+        uses: ./.github/actions/setup-python-uv
         with:
           python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: |
-            pyproject.toml
-            uv.lock
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          version: "0.10.9"
-
-      - name: Install dependencies from lock
-        run: |
-          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
-          make uv-lock-check
-          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
-          python -m pip install --upgrade pip
-          python -m pip install -r tmp/locked-requirements.ci.txt
 
       - name: Download raw registry cross-environment matrices
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -383,27 +331,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Setup Python and uv
+        uses: ./.github/actions/setup-python-uv
         with:
           python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: |
-            pyproject.toml
-            uv.lock
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          version: "0.10.9"
-
-      - name: Install dependencies from lock
-        run: |
-          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
-          make uv-lock-check
-          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
-          python -m pip install --upgrade pip
-          python -m pip install -r tmp/locked-requirements.ci.txt
 
       - name: Run supply-chain gate
         run: make supply-chain-check

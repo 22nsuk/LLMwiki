@@ -37,12 +37,16 @@ def seed_vault(vault: Path) -> None:
             source.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
+    mutation_proposal_test_stub = (
+        "from ops.scripts.mechanism import mutation_proposal_runtime\n\n"
+        "def test_placeholder():\n"
+        "    assert mutation_proposal_runtime is not None\n"
+    )
     for rel_path in (
         "tests/test_promotion_gate.py",
         "tests/test_wiki_lint.py",
         "tests/test_mechanism_assess.py",
         "tests/test_example.py",
-        "tests/test_mutation_proposal.py",
         "tests/test_report_generation_smoke.py",
         "tests/test_mechanism_run_validation_runtime.py",
     ):
@@ -50,6 +54,11 @@ def seed_vault(vault: Path) -> None:
             "def test_placeholder():\n    assert True\n",
             encoding="utf-8",
         )
+    for rel_path in (
+        "tests/test_mutation_proposal_build_report.py",
+        "tests/test_mutation_proposal_promotion.py",
+    ):
+        (vault / rel_path).write_text(mutation_proposal_test_stub, encoding="utf-8")
     for rel_path in (
         "ops/scripts/mechanism/mutation_proposal_runtime.py",
         "ops/scripts/mechanism/mechanism_run_validation_runtime.py",

@@ -4,10 +4,9 @@ import datetime as dt
 import unittest
 from pathlib import Path
 
-from ops.scripts.manual_mutate_defect_registry import build_report
-from ops.scripts.python_function_budget_runtime import python_function_budget_candidates
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.manual_mutate_defect_registry import build_report
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -57,31 +56,15 @@ class ManualMutateDefectRegistryTests(unittest.TestCase):
             "covered",
         )
 
-    def test_manual_mutate_main_functions_stay_below_small_refactor_budget(self) -> None:
-        candidates = python_function_budget_candidates(
-            REPO_ROOT,
-            {
-                "profiles": {
-                    "manual_mutate_tools": {
-                        "include_prefixes": [
-                            "tools/manual_mutate_auto_improve_decision_record_fallback.py",
-                            "tools/manual_mutate_auto_improve_timeout_telemetry.py",
-                        ],
-                        "lines": 120,
-                        "params": 10,
-                        "branches": 18,
-                    }
-                }
-            },
-        )
-
-        self.assertEqual(
-            [
-                (item["page"], item["symbol"], item["triggered_budgets"])
-                for item in candidates
-            ],
-            [],
-        )
+    def test_manual_mutate_scripts_are_archived_after_canonical_fixes(self) -> None:
+        archived_scripts = [
+            "tools/manual_mutate_auto_improve_decision_record_fallback.py",
+            "tools/manual_mutate_auto_improve_timeout_telemetry.py",
+            "tools/manual_mutate_auto_improve_existing_telemetry_inline.py",
+        ]
+        for rel_path in archived_scripts:
+            with self.subTest(rel_path=rel_path):
+                self.assertFalse((REPO_ROOT / rel_path).exists())
 
 
 if __name__ == "__main__":

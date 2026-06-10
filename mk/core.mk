@@ -20,6 +20,8 @@ help:
 		"  make bootstrap-preflight          write the environment preflight report" \
 		"" \
 		"Source checks:" \
+		"  make check                        default maintainer gate (static, lint, eval, unit tests)" \
+		"  make test                         run the default pytest lane" \
 		"  make static                       run Ruff and mypy base gates" \
 		"  make local-cache-clean            remove safe local Python caches" \
 		"  make local-tool-state-clean       remove ignored local tool state" \
@@ -27,6 +29,10 @@ help:
 		"  make ruff-strict-preview          run strict Ruff --preview candidate rules across ops/scripts tests tools" \
 		"  make mypy-strict-preview          run strict mypy preview across ops/scripts tests tools" \
 		"  make strict-preview-audit         audit strict Ruff --preview and mypy debt across ops/scripts tests tools" \
+		"" \
+		"Inventory and selectors:" \
+		"  make make-target-inventory        inventory Make targets and script surfaces" \
+		"  make test-selectors-sync          regenerate mk/test-selectors.generated.mk from the lane registry" \
 		"" \
 		"Report contracts:" \
 		"  make test-report-contract-core   run core report contract tests" \
@@ -45,6 +51,7 @@ help:
 		"" \
 		"Release:" \
 		"  make changed-path-minimum-plan    write advisory changed-path test plan" \
+		"  make release-evidence-converge    converge release evidence through closeout phases" \
 		"  make release-run-ready            converge and verify run-ready evidence" \
 		"  make release-post-commit-finalize check post-commit evidence readback" \
 		"  make release-sealed-run-ready     verify sealed release readiness" \

@@ -1538,12 +1538,18 @@ system_refactor_policy:
     warn_targets:
       - ops/scripts/mechanism/auto_improve_runtime.py
       - ops/scripts/mechanism/mutation_proposal_runtime.py
+      - ops/scripts/mechanism/goal_runtime_run_admission.py
       - ops/scripts/core/codex_exec_executor.py
+      - ops/scripts/core/artifact_freshness_runtime.py
       - ops/scripts/eval/wiki_lint_review_runtime.py
       - ops/scripts/core/policy_validation_runtime.py
       - ops/scripts/release/release_closeout_batch_manifest.py
       - ops/scripts/release/release_evidence_dashboard.py
       - ops/scripts/release/release_closeout_summary.py
+      - ops/scripts/release/external_report_lifecycle_runtime.py
+      - ops/scripts/release/release_smoke.py
+      - ops/scripts/release/release_closeout_fixed_point.py
+      - ops/scripts/release/release_post_seal_attestation.py
       - ops/scripts/learning/learning_claim_evidence_bundle.py
       - ops/scripts/learning/learning_claim_unlock_review.py
     resolved_targets: []

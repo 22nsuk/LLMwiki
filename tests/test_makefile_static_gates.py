@@ -10,7 +10,8 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.test_lane_registry_runtime import (
+
+from ops.scripts.test.test_lane_registry_runtime import (
     authoritative_markers,
     compatibility_names,
     documentation_authority,
@@ -23,7 +24,6 @@ from ops.scripts.test_lane_registry_runtime import (
     pack_summary_suite,
     selection_by_make_target,
 )
-
 from tests.makefile_static_helpers import (
     _assert_assignment_exists,
     _assert_recipe_contains_tokens,
@@ -109,6 +109,28 @@ def _assert_make_selector_variable_matches_pack(
     case.assertEqual(selection.get("mode"), "explicit_selectors")
     items = _makefile_assignment_items(text, variable)
     case.assertEqual(items, pack_selectors(registry, pack_id))
+    return items
+
+
+def _assert_hybrid_make_selector_variable_matches_pack(
+    case: unittest.TestCase,
+    registry: dict[str, object],
+    text: str,
+    *,
+    variable: str,
+    pack_id: str,
+    mark_expr_variable: str,
+) -> tuple[str, ...]:
+    pack = pack_by_id(registry)[pack_id]
+    selection = pack.get("selection", {})
+    case.assertIsInstance(selection, dict)
+    assert isinstance(selection, dict)
+    case.assertEqual(selection.get("mode"), "explicit_selectors")
+    case.assertEqual(pack_mark_expr(registry, pack_id), _makefile_assignment_value(text, mark_expr_variable))
+    items = _makefile_assignment_items(text, variable)
+    case.assertGreaterEqual(len(items), 2)
+    case.assertEqual(items[:2], ("-m", f'"$({mark_expr_variable})"'))
+    case.assertEqual(items[2:], pack_selectors(registry, pack_id))
     return items
 
 
@@ -402,6 +424,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         for heading in (
             "Setup:",
             "Source checks:",
+            "Inventory and selectors:",
             "Report contracts:",
             "Public mirror:",
             "Mechanism:",
@@ -410,15 +433,20 @@ class MakefileStaticGateTests(unittest.TestCase):
             self.assertIn(heading, block)
         for target in (
             "make dev-install",
+            "make check",
+            "make test",
             "make static",
             "make local-cache-clean",
             "make local-tool-state-clean",
             "make uv-cache-prune",
             "make strict-preview-audit",
+            "make make-target-inventory",
+            "make test-selectors-sync",
             "make test-report-contract-core",
             "make external-report-lifecycle-refresh",
             "make sync-public-policy",
             "make goal-runtime-run-admission",
+            "make release-evidence-converge",
             "make release-auto-promotion-ready",
         ):
             self.assertIn(target, block)
@@ -642,7 +670,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         variable_by_pack = {
             "fast_smoke": "FAST_SMOKE_TESTS",
+            "schema_static_smoke": "SCHEMA_STATIC_SMOKE_TESTS",
             "report_contract_core": "REPORT_CONTRACT_CORE_TESTS",
+            "report_contract_all": "REPORT_CONTRACT_ALL_TESTS",
             "release_sealing_core": "RELEASE_SEALING_CORE_TESTS",
             "subprocess_checks": "SUBPROCESS_TESTS",
             "release_closeout_regression": "RELEASE_CLOSEOUT_REGRESSION_TESTS",
@@ -650,6 +680,16 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         for pack_id, variable in variable_by_pack.items():
             with self.subTest(pack_id=pack_id, variable=variable):
+                if pack_id == "report_contract_all":
+                    _assert_hybrid_make_selector_variable_matches_pack(
+                        self,
+                        registry,
+                        text,
+                        variable=variable,
+                        pack_id=pack_id,
+                        mark_expr_variable="PYTEST_REPORT_CONTRACT_MARK_EXPR",
+                    )
+                    continue
                 _assert_make_selector_variable_matches_pack(
                     self,
                     registry,

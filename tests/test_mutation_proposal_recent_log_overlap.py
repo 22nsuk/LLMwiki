@@ -88,12 +88,12 @@ class MutationProposalRecentLogOverlapTest(unittest.TestCase):
             self.assertEqual(
                 rotation["must_change_tests"],
                 [
-                    "tests/test_mutation_proposal.py",
-                    "tests/test_report_generation_smoke.py",
+                    "tests/test_mutation_proposal_build_report.py",
+                    "tests/test_mutation_proposal_promotion.py",
                 ],
             )
             self.assertIn(
-                "`tests/test_report_generation_smoke.py`",
+                "`tests/test_mutation_proposal_build_report.py`",
                 rotation["single_mechanism_scope"],
             )
             self.assertEqual(rotation["blocked_by"], [])

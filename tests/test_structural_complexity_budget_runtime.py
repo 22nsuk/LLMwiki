@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-import datetime as dt
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.structural_complexity_budget_runtime import (
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,
     build_report,
     target_paths_from_changed_files_manifest,
     touched_target_profiles,
 )
-
+from tests.runtime_test_context import frozen_context
 from tests.test_mechanism_assess import seed_policy
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -22,13 +20,6 @@ SCHEMA_PATH = (
     REPO_ROOT / "ops" / "schemas" / "structural-complexity-budget-report.schema.json"
 )
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
-
-
-def fixed_context() -> RuntimeContext:
-    return RuntimeContext(
-        display_timezone=dt.UTC,
-        clock=lambda: dt.datetime(2026, 4, 21, 1, 30, tzinfo=dt.UTC),
-    )
 
 
 class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
@@ -44,7 +35,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
 
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles={
                     "runtime_preview": {
                         "targets": ["ops/scripts/sample_runtime.py"],
@@ -100,7 +91,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
             ):
                 build_report(
                     vault,
-                    context=fixed_context(),
+                    context=frozen_context(),
                     target_profiles={
                         "runtime_preview": {
                             "targets": ["ops/scripts/sample_runtime.py"],
@@ -146,7 +137,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
             with self.assertRaises(json.JSONDecodeError):
                 build_report(
                     vault,
-                    context=fixed_context(),
+                    context=frozen_context(),
                     target_profiles={
                         "runtime_preview": {
                             "targets": ["ops/scripts/sample_runtime.py"],
@@ -194,7 +185,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
 
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles={
                     "runtime_preview": {
                         "targets": ["ops/scripts/sample_runtime.py"],
@@ -274,6 +265,9 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
                 "ops/scripts/release/release_closeout_batch_manifest.py",
                 "ops/scripts/release/release_evidence_dashboard.py",
                 "ops/scripts/release/release_closeout_summary.py",
+                "ops/scripts/release/external_report_lifecycle_runtime.py",
+                "ops/scripts/release/release_closeout_fixed_point.py",
+                "ops/scripts/release/release_post_seal_attestation.py",
                 "ops/scripts/test/test_execution_summary.py",
             ],
         )
@@ -332,7 +326,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
 
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles={
                     "runtime_preview": {
                         "targets": ["ops/scripts/monitored_runtime.py"],
@@ -401,7 +395,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
 
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles={
                     "runtime_preview": {
                         "targets": ["ops/scripts/missing_runtime.py"],
@@ -489,7 +483,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
             paths = target_paths_from_changed_files_manifest(vault, "changed-files-manifest.json")
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles=touched_target_profiles(DEFAULT_TARGET_PROFILES, paths),
                 function_budget_config={
                     "profiles": {

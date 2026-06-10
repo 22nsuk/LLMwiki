@@ -2,12 +2,19 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 import pytest
 from hypothesis import HealthCheck, settings
 
 from ops.scripts.test.test_execution_command_runtime import PYTEST_OPTION_VALUE_FLAGS
+from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.runtime_test_context import frozen_context as build_frozen_context
 
 BARE_PYTEST_GUIDANCE = (
     "plain `pytest` is not a supported entrypoint for this repository. "
@@ -65,6 +72,29 @@ def _argv_has_focused_pytest_scope(argv: list[str]) -> bool:
     return False
 
 
+@pytest.fixture
+def frozen_context():
+    return build_frozen_context()
+
+
+@pytest.fixture
+def seeded_vault(tmp_path: Path) -> Path:
+    seed_minimal_vault(tmp_path)
+    return tmp_path
+
+
+@pytest.fixture
+def vault(seeded_vault: Path) -> Path:
+    return seeded_vault
+
+
+@pytest.fixture
+def fresh_vault(tmp_path: Path) -> Iterator[Path]:
+    """Yield an isolated seeded vault directory for one test function."""
+    seed_minimal_vault(tmp_path)
+    yield tmp_path
+
+
 def pytest_configure(config: pytest.Config) -> None:
     del config
     if _is_bare_pytest_invocation(sys.argv[0]):
@@ -91,7 +121,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     del config
-    from ops.scripts.test_lane_registry_runtime import (
+    from ops.scripts.test.test_lane_registry_runtime import (
         allowed_marker_combinations,
         authoritative_markers,
         forbidden_marker_combinations,

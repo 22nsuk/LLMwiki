@@ -9,23 +9,23 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
+from ops.scripts.core.path_classification_runtime import (
+    LOCAL_SOURCE_CONTRACT_FILES,
+    PUBLIC_SOURCE_FILES,
+    PUBLIC_SOURCE_PREFIXES,
+    classify_path,
+)
+from ops.scripts.eval.structural_complexity_budget_runtime import (
+    DEFAULT_TARGET_PROFILES,
+    build_report as build_structural_complexity_budget_report,
+    touched_target_profiles,
+)
 from ops.scripts.mechanism.mechanism_run_scaffold_resolution_runtime import (
     command_argv,
     default_check_command,
 )
 from ops.scripts.mechanism.structural_complexity_scope_runtime import (
     structural_complexity_source_targets,
-)
-from ops.scripts.release.release_source_ready_commit import (
-    LOCAL_SOURCE_CONTRACT_FILES,
-    PUBLIC_SOURCE_FILES,
-    PUBLIC_SOURCE_PREFIXES,
-    classify_path,
-)
-from ops.scripts.structural_complexity_budget_runtime import (
-    DEFAULT_TARGET_PROFILES,
-    build_report as build_structural_complexity_budget_report,
-    touched_target_profiles,
 )
 
 from .artifact_io_runtime import write_vault_schema_validated_json

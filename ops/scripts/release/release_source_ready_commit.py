@@ -8,6 +8,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.path_classification_runtime import (
+    LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY,
+    LOCAL_ONLY_PRIVATE_INVENTORY_PATHS,
+    SOURCE_CONTRACT_CATEGORIES,
+    classify_path,
+    matches_prefix_or_root,
+    normalize_repo_path,
+)
 from ops.scripts.release.release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
@@ -19,56 +27,8 @@ GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH = "tmp/goal-runtime-local-evidence-refresh.j
 RELEASE_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
 ARTIFACT_FRESHNESS_REPORT = "ops/reports/artifact-freshness-report.json"
 
-GENERATED_FILES = {
-    ".gitignore",
-    "ops/script-output-surfaces.json",
-}
-GENERATED_PREFIXES: tuple[str, ...] = ()
-PUBLIC_SOURCE_FILES = {
-    ".editorconfig",
-    ".gitattributes",
-    ".pre-commit-config.yaml",
-    "AGENTS.md",
-    "ARCHITECTURE.md",
-    "CONTRIBUTING.md",
-    "LICENSE",
-    "Makefile",
-    "README.md",
-    "SECURITY.md",
-    "THIRD_PARTY_NOTICES.md",
-    "mypy.ini",
-    "pyproject.toml",
-    "pytest.ini",
-    "uv.lock",
-}
-LOCAL_SOURCE_CONTRACT_FILES = {
-    "AGENTS.local.md",
-}
-PUBLIC_SOURCE_PREFIXES = (
-    ".codex/agents/",
-    ".github/",
-    "docs/",
-    "mk/",
-    "ops/",
-    "tests/",
-    "tools/",
-)
-SOURCE_CONTRACT_CATEGORIES = {"public_source", "local_source_contract"}
-PRIVATE_OR_TRANSIENT_PREFIXES = (
-    ".git/",
-    ".venv/",
-    "build/",
-    "dist/",
-    "external-reports/",
-    "ops/operator/",
-    "ops/reports/",
-    "raw/",
-    "review/",
-    "runs/",
-    "system/",
-    "tmp/",
-    "wiki/",
-)
+_normalize_repo_path = normalize_repo_path
+_matches_prefix_or_root = matches_prefix_or_root
 DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES = (
     "AGENTS.local.md",
     "external-reports/",
@@ -111,11 +71,6 @@ LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES = (
     "wiki/",
 )
 LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY = "local_only_private_deindex"
-LOCAL_ONLY_PRIVATE_INVENTORY_PATHS = (
-    "ops/manifest.json",
-    "ops/raw-registry.json",
-)
-LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY = "local_only_private_inventory"
 
 
 @dataclass(frozen=True)
@@ -268,41 +223,6 @@ def tracked_ignored_local_only_inventory_paths(vault: Path) -> list[str]:
         for path in paths
         if path in LOCAL_ONLY_PRIVATE_INVENTORY_PATHS
     )
-
-
-def _normalize_repo_path(path: str) -> str:
-    normalized = Path(path).as_posix()
-    if normalized in ("", "."):
-        return ""
-    if normalized.startswith("/"):
-        return "<outside-repo>"
-    while normalized.startswith("./"):
-        normalized = normalized[2:]
-    parts = normalized.split("/")
-    if ".." in parts:
-        return "<outside-repo>"
-    return normalized
-
-
-def _matches_prefix_or_root(path: str, prefixes: tuple[str, ...]) -> bool:
-    return any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in prefixes)
-
-
-def classify_path(path: str) -> str:
-    normalized = _normalize_repo_path(path)
-    if not normalized or normalized == "<outside-repo>":
-        return "unexpected"
-    if normalized in GENERATED_FILES or _matches_prefix_or_root(normalized, GENERATED_PREFIXES):
-        return "generated_canonical"
-    if normalized in LOCAL_SOURCE_CONTRACT_FILES:
-        return "local_source_contract"
-    if normalized in LOCAL_ONLY_PRIVATE_INVENTORY_PATHS:
-        return LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY
-    if _matches_prefix_or_root(normalized, PRIVATE_OR_TRANSIENT_PREFIXES):
-        return "unexpected"
-    if normalized in PUBLIC_SOURCE_FILES or _matches_prefix_or_root(normalized, PUBLIC_SOURCE_PREFIXES):
-        return "public_source"
-    return "unexpected"
 
 
 def _is_local_only_private_deindex(vault: Path, entry: StatusEntry, path: str) -> bool:

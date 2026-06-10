@@ -1476,6 +1476,16 @@
       "replacement": "python -m ops.scripts.test.ci_tier_lane_bridge"
     },
     {
+      "canonical_module": "ops.scripts.test.generate_test_mk_selectors",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "test_only",
+      "path": "ops/scripts/test/generate_test_mk_selectors.py",
+      "rationale": "Registry-backed selector generator retained behind Make sync rather than installed CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make test-selectors-sync"
+    },
+    {
       "canonical_module": "ops.scripts.test.test_execution_summary",
       "console_scripts": [],
       "install_state": "not_installed",

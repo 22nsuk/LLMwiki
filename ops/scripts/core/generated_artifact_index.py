@@ -10,38 +10,40 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.external_report_lifecycle_runtime import (
-        action_statuses,
-        archived_report_action_basis_records,
-        content_lifecycle_inventory,
-        lifecycle_decision,
-        report_lifecycle_profiles,
-    )
-    from ops.scripts.improvement_observations_runtime import (
-        improvement_observation_paths,
-    )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
     )
-else:
-    from ops.scripts.external_report_lifecycle_runtime import (
+    from ops.scripts.mechanism.improvement_observations_runtime import (
+        improvement_observation_paths,
+    )
+    from ops.scripts.release.external_report_lifecycle_runtime import (
         action_statuses,
         archived_report_action_basis_records,
         content_lifecycle_inventory,
         lifecycle_decision,
         report_lifecycle_profiles,
     )
-    from ops.scripts.improvement_observations_runtime import (
+else:
+    from ops.scripts.mechanism.improvement_observations_runtime import (
         improvement_observation_paths,
+    )
+    from ops.scripts.release.external_report_lifecycle_runtime import (
+        action_statuses,
+        archived_report_action_basis_records,
+        content_lifecycle_inventory,
+        lifecycle_decision,
+        report_lifecycle_profiles,
     )
 
     from .artifact_freshness_runtime import build_canonical_report_envelope

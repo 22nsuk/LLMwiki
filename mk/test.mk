@@ -21,151 +21,10 @@ PYTEST_PUBLIC_MARK_EXPR ?= public
 PYTEST_REPORT_CONTRACT_MARK_EXPR ?= report_contract
 PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing
 PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess
-FAST_SMOKE_TESTS ?= \
-	tests/test_import_fallback_contract.py \
-	tests/test_script_module_surface_contract.py \
-	tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_eval_report_validates_and_requires_policy_identity \
-	tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_lint_report_validates_and_requires_policy_identity \
-	tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_warning_budget_report_validates_and_requires_policy_identity \
-	tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_structural_complexity_budget_report_validates_and_requires_policy_identity \
-	tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_eval_coverage_report_validates_and_requires_policy_identity \
-	tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_stage2_eval_report_validates_and_requires_policy_identity \
-	tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_auto_improve_readiness_report_validates_and_requires_queue_block \
-	tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_proposal_scope_report_validates_and_requires_apply_guardrails \
-	tests/test_artifact_io_runtime.py \
-	tests/test_mechanism_review.py \
-	tests/test_mechanism_review_candidate_runtime.py \
-	tests/test_mechanism_review_history_runtime.py \
-	tests/test_mutation_proposal.py::MutationProposalTest::test_missing_artifact_envelope_fails_fast_for_primary_evidence \
-	tests/test_mutation_proposal.py::MutationProposalTest::test_unknown_currentness_fails_fast_for_primary_evidence \
-	tests/test_auto_improve_readiness_runtime.py \
-	tests/test_auto_improve_readiness_queue_runtime.py \
-	tests/test_artifact_freshness_runtime.py::test_no_root_ephemeral_test_artifacts \
-	tests/test_artifact_freshness_runtime.py::ArtifactFreshnessRuntimeTests::test_report_accepts_enveloped_current_json_artifact \
-	tests/test_release_smoke.py::ReleaseSmokeTest::test_build_smoke_commands_match_release_gate_profiles \
-	tests/test_release_smoke.py::ReleaseSmokeTest::test_run_smoke_commands_captures_returncodes_and_tails \
-	tests/test_release_smoke.py::ReleaseSmokeTest::test_build_report_uses_runtime_context_and_sanitizes_ephemeral_paths \
-	tests/test_release_smoke.py::ReleaseSmokeTest::test_main_exits_with_report_status_and_prints_written_destination
-SCHEMA_STATIC_SMOKE_TESTS ?= \
-	tests/test_ci_tier_lane_bridge.py \
-	tests/test_ci_workflow_static.py \
-	tests/test_makefile_static_gates.py \
-	tests/test_makefile_release_orchestration_static_gates.py \
-	tests/test_makefile_release_evidence_static_gates.py \
-	tests/test_makefile_release_smoke_static_gates.py \
-	tests/test_makefile_test_execution_summary_gates.py \
-	tests/test_makefile_auto_improve_goal_static_gates.py \
-	tests/test_makefile_public_registry_supply_chain_gates.py \
-	tests/test_report_schema_sample_regeneration.py \
-	tests/test_report_schemas.py \
-	tests/test_ruff_strict_preview.py \
-	tests/test_strict_preview_audit.py
-REPORT_CONTRACT_CORE_TESTS ?= \
-	tests/test_test_execution_summary.py \
-	tests/test_makefile_static_gates.py \
-	tests/test_makefile_release_orchestration_static_gates.py \
-	tests/test_makefile_release_evidence_static_gates.py \
-	tests/test_makefile_release_smoke_static_gates.py \
-	tests/test_makefile_test_execution_summary_gates.py \
-	tests/test_makefile_auto_improve_goal_static_gates.py \
-	tests/test_makefile_public_registry_supply_chain_gates.py \
-	tests/test_ci_workflow_static.py \
-	tests/test_mechanism_navigation_index.py \
-	tests/test_cli_surface_inventory.py \
-	tests/test_tools_migration_plan.py \
-	tests/test_release_authority_inventory.py \
-	tests/test_observation_closeout_lint.py \
-	tests/test_subagent_profile_schema.py \
-	tests/test_select_subagent_rung_ladder.py \
-	tests/test_ci_tier_lane_bridge.py \
-	tests/test_compatibility_alias_deprecation.py \
-	tests/test_public_surface_snapshot.py \
-	tests/test_doc_graph_integrity.py \
-	tests/test_pytest_entrypoint_guidance.py \
-	tests/test_report_schemas.py \
-	tests/test_report_schema_sample_regeneration.py \
-	tests/test_workflow_dependency_planner.py \
-	tests/test_clean_fixture_regeneration_guard.py \
-	tests/test_external_report_lifecycle_static.py \
-	tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface \
-	tests/test_goal_runtime_clean_transient.py \
-	tests/test_goal_runtime_fixed_point_check.py \
-	tests/test_run_templates.py
-REPORT_CONTRACT_TESTS ?= $(REPORT_CONTRACT_CORE_TESTS)
-REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
-	tests/test_archive_execution_manifest.py \
-	tests/test_artifact_freshness_runtime.py \
-	tests/test_artifact_relocation_audit.py \
-	tests/test_auto_improve_iteration_runtime.py \
-	tests/test_backfill_archived_run_artifacts.py \
-	tests/test_backfill_historical_bootstrap_reports.py \
-	tests/test_bootstrap_preflight.py \
-	tests/test_ci_tier_lane_bridge.py \
-	tests/test_ci_workflow_static.py \
-	tests/test_clean_fixture_regeneration_guard.py \
-	tests/test_cli_surface_inventory.py \
-	tests/test_command_log_summary_backfill.py \
-	tests/test_compatibility_alias_deprecation.py \
-	tests/test_doc_graph_integrity.py \
-	tests/test_external_report_lifecycle_static.py \
-	tests/test_generated_artifact_retention_clean.py \
-	tests/test_goal_runtime_clean_transient.py \
-	tests/test_goal_runtime_closeout.py \
-	tests/test_goal_runtime_fixed_point_check.py \
-	tests/test_goal_runtime_quarantine_preflight.py \
-	tests/test_goal_runtime_run_admission.py \
-	tests/test_goal_runtime_stale_closeout.py \
-	tests/test_improvement_observations_runtime.py \
-	tests/test_learning_readiness_signoff.py \
-	tests/test_lint_uplift_plan.py \
-	tests/test_runtime_codehealth_hardening_guards.py \
-	tests/test_make_target_inventory.py \
-	tests/test_makefile_static_gates.py \
-	tests/test_makefile_release_orchestration_static_gates.py \
-	tests/test_makefile_release_evidence_static_gates.py \
-	tests/test_makefile_release_smoke_static_gates.py \
-	tests/test_makefile_test_execution_summary_gates.py \
-	tests/test_makefile_auto_improve_goal_static_gates.py \
-	tests/test_makefile_public_registry_supply_chain_gates.py \
-	tests/test_manifest_export_symlink_safety.py \
-	tests/test_mechanism_navigation_index.py \
-	tests/test_observability_artifacts_runtime.py \
-	tests/test_observation_closeout_lint.py \
-	tests/test_public_surface_snapshot.py \
-	tests/test_pytest_entrypoint_guidance.py \
-	tests/test_raw_registry_cross_environment_evidence_bundle.py \
-	tests/test_raw_registry_cross_environment_matrix.py \
-	tests/test_release_authority_inventory.py \
-	tests/test_release_closeout_summary.py \
-	tests/test_release_evidence_cohort.py \
-	tests/test_release_evidence_dashboard.py \
-	tests/test_release_smoke.py \
-	tests/test_report_generation_smoke.py \
-	tests/test_report_schema_sample_regeneration.py \
-	tests/test_report_schemas.py \
-	tests/test_run_templates.py \
-	tests/test_select_subagent_rung_ladder.py \
-	tests/test_subagent_profile_schema.py \
-	tests/test_test_execution_summary.py \
-	tests/test_tools_migration_plan.py \
-	tests/test_type_uplift_plan.py \
-	tests/test_workflow_dependency_planner.py
+# Explicit pytest selector lists are generated from ops/test-lane-registry.json
+# into mk/test-selectors.generated.mk (see: make test-selectors-sync).
 REPORT_CONTRACT_SUMMARY_MARK_EXPR ?= $(PYTEST_REPORT_CONTRACT_MARK_EXPR)
 REPORT_CONTRACT_SUMMARY_TESTS ?= -m "$(REPORT_CONTRACT_SUMMARY_MARK_EXPR)" $(REPORT_CONTRACT_TESTS)
-RELEASE_SEALING_CORE_TESTS ?= \
-	tests/test_release_closeout_batch_manifest.py \
-	tests/test_release_evidence_closeout_self_check.py \
-	tests/test_release_run_manifest.py \
-	tests/test_release_sealed_post_seal_attestation.py \
-	tests/test_release_sealed_run_manifest.py \
-	tests/test_release_auto_promotion_preflight.py \
-	tests/test_release_auto_promotion_ready.py \
-	tests/test_release_evidence_planner.py \
-	tests/test_source_package_smoke.py \
-	tests/test_release_sealing_lane.py
-RELEASE_SEALING_TESTS ?= $(RELEASE_SEALING_CORE_TESTS)
-SUBPROCESS_TESTS ?= \
-	tests/test_command_runtime_subprocess.py
 TEST_EXECUTION_SUMMARY_OUT ?= ops/reports/test-execution-summary.json
 TEST_EXECUTION_SUMMARY_CANDIDATE_OUT ?= tmp/test-execution-summary.candidate.json
 TEST_EXECUTION_SUMMARY_CHECK_OUT ?= tmp/test-execution-summary-check.json
@@ -189,13 +48,15 @@ TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM ?= $(TEST_EXECUTION_SUMMARY_FULL_OUT)
 TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS ?= $(PYTEST_FLAGS)
 TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR ?= ops/reports/test-execution-summary-full-shards
 REPORT_CONTRACT_SUMMARY_DESELECT_POLICY ?= ops/policies/report-contract-deselections.json
-RELEASE_CLOSEOUT_REGRESSION_TESTS ?= tests/test_release_closeout_finality_attestation.py::ReleaseCloseoutFinalityAttestationTests::test_finality_verify_fails_after_tracked_digest_drift tests/test_release_closeout_batch_manifest.py::ReleaseCloseoutBatchManifestTests::test_batch_manifest_finality_points_to_attestation_without_digest_ownership tests/test_source_package_clean_extract.py::SourcePackageCleanExtractTests::test_clean_extract_fails_when_zip_smoke_archive_budget_fails tests/test_release_closeout_summary.py::ReleaseCloseoutSummaryTests::test_release_smoke_archive_budget_failure_blocks_clean_release
 RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT ?= tmp/release-closeout-finality-verify-ci.json
 
-.PHONY: fast-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess report-schema-samples-check report-schema-samples-regenerate runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess test-selectors-sync report-schema-samples-check report-schema-samples-regenerate runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 .PHONY: test-schema-static-smoke release-closeout-finality-verify-ci-artifact
+
+test-selectors-sync:
+	$(PYTHON) -m ops.scripts.test.generate_test_mk_selectors --vault "$(VAULT)"
 
 fast-smoke:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)

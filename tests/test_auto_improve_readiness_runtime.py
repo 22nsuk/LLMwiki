@@ -295,7 +295,7 @@ class AutoImproveReadinessRuntimeTests(
         self.assertEqual(runnable_proposal_ids, ["proposal-ready"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "f1abb759eace8c1c2230668eda1ec300d9254707c2662ebe4c39db71a9fa7078",
+            "ddc4a8d15dfd2904c30f085724f79a434e6a877ad436c7d1d3514d2f184e492b",
         )
 
     def test_open_remediation_backlog_blocks_promotion_not_trial(self) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.release.release_source_ready_commit import classify_path
+from ops.scripts.core.path_classification_runtime import classify_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,

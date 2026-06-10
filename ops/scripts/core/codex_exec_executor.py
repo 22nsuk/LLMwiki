@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -13,6 +12,16 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 from .artifact_io_runtime import write_schema_validated_json
+from .codex_exec_integrity_runtime import (
+    _apply_non_worker_integrity_guard,
+    _workspace_integrity_digests,
+)
+from .codex_exec_sanitize_runtime import (
+    _display_command_argv,
+    _sanitize_argv,
+    _sanitize_json_strings,
+    _sanitize_path_text,
+)
 from .command_log_summary_runtime import (
     command_log_summary_rel,
     command_log_trace_rel,
@@ -33,21 +42,6 @@ from .schema_runtime import load_schema
 
 EXECUTOR_REPORT_SCHEMA = EXECUTOR_REPORT_SCHEMA_PATH
 DEFAULT_CODEX_EXEC_TIMEOUT_SECONDS = 1800
-NON_WORKER_INTEGRITY_IGNORE_NAMES = {
-    "__pycache__",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".ruff_cache",
-    ".hypothesis",
-    ".coverage",
-    ".DS_Store",
-    ".git",
-    ".obsidian",
-    ".venv",
-    ".idea",
-    ".vscode",
-}
-NON_WORKER_INTEGRITY_IGNORE_SUFFIXES = {".pyc", ".pyo"}
 NON_WORKER_PROJECT_CHECK_MODULES = (
     ("pytest", "pytest"),
     ("jsonschema", "jsonschema"),
@@ -373,148 +367,6 @@ def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ExecutorContractError(f"{label} root must be an object")
     return payload
-
-
-def _sanitize_root_strings(*roots: Path) -> list[str]:
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for root in roots:
-        variants: list[str] = []
-        for candidate in (root, root.absolute()):
-            candidate_text = candidate.as_posix().rstrip("/")
-            if candidate_text:
-                variants.append(candidate_text)
-        try:
-            resolved_text = root.resolve().as_posix().rstrip("/")
-        except OSError:
-            resolved_text = ""
-        if resolved_text:
-            variants.append(resolved_text)
-        for root_text in variants:
-            key = root_text.lower()
-            if not root_text or key in seen:
-                continue
-            seen.add(key)
-            normalized.append(root_text)
-    normalized.sort(key=len, reverse=True)
-    return normalized
-
-
-def _sanitize_path_text(text: str, *, roots: list[Path]) -> str:
-    sanitized = text.replace("\\", "/")
-    for root_text in _sanitize_root_strings(*roots):
-        sanitized = re.sub(re.escape(f"{root_text}/"), "", sanitized, flags=re.IGNORECASE)
-        sanitized = re.sub(re.escape(root_text), ".", sanitized, flags=re.IGNORECASE)
-    return sanitized
-
-
-def _sanitize_argv(argv: list[str], *, roots: list[Path]) -> list[str]:
-    return [_sanitize_path_text(item, roots=roots) for item in argv]
-
-
-def _sanitize_json_strings(value: Any, *, roots: list[Path]) -> Any:
-    if isinstance(value, str):
-        return _sanitize_path_text(value, roots=roots)
-    if isinstance(value, list):
-        return [_sanitize_json_strings(item, roots=roots) for item in value]
-    if isinstance(value, dict):
-        return {
-            _sanitize_path_text(key, roots=roots) if isinstance(key, str) else key: _sanitize_json_strings(
-                item,
-                roots=roots,
-            )
-            for key, item in value.items()
-        }
-    return value
-
-
-def _display_command_argv(argv: list[str]) -> list[str]:
-    if not argv:
-        return []
-    executable_name = Path(argv[0]).name.lower()
-    if executable_name in {"codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.js"}:
-        return ["codex", *argv[1:]]
-    return list(argv)
-
-
-def _is_non_worker_integrity_ignored(rel_path: str, *, run_id: str) -> bool:
-    normalized = rel_path.replace("\\", "/")
-    if normalized == f"runs/{run_id}" or normalized.startswith(f"runs/{run_id}/"):
-        return True
-    if normalized == "tmp" or normalized.startswith("tmp/"):
-        return True
-    parts = [part for part in Path(normalized).parts if part not in {".", ""}]
-    return any(part in NON_WORKER_INTEGRITY_IGNORE_NAMES for part in parts)
-
-
-def _file_digest(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _workspace_integrity_digests(workspace_root: Path, *, run_id: str) -> dict[str, str]:
-    digests: dict[str, str] = {}
-    for path in workspace_root.rglob("*"):
-        if not path.is_file():
-            continue
-        rel_path = path.relative_to(workspace_root).as_posix()
-        if _is_non_worker_integrity_ignored(rel_path, run_id=run_id):
-            continue
-        if path.suffix in NON_WORKER_INTEGRITY_IGNORE_SUFFIXES:
-            continue
-        digests[rel_path] = _file_digest(path)
-    return digests
-
-
-def _non_worker_integrity_issues(before: dict[str, str], after: dict[str, str]) -> list[str]:
-    before_paths = set(before)
-    after_paths = set(after)
-    issues: list[str] = []
-    for label, paths in (
-        ("added", sorted(after_paths - before_paths)),
-        ("removed", sorted(before_paths - after_paths)),
-        (
-            "modified",
-            sorted(path for path in before_paths & after_paths if before[path] != after[path]),
-        ),
-    ):
-        if not paths:
-            continue
-        preview = ", ".join(paths[:10])
-        suffix = "" if len(paths) <= 10 else f", ... (+{len(paths) - 10} more)"
-        issues.append(f"{label}: {preview}{suffix}")
-    return issues
-
-
-def _apply_non_worker_integrity_guard(
-    summary: _ExecutionSummary,
-    *,
-    role: str,
-    before: dict[str, str] | None,
-    after: dict[str, str] | None,
-) -> _ExecutionSummary:
-    if role == "worker" or before is None or after is None:
-        return summary
-    issues = _non_worker_integrity_issues(before, after)
-    if not issues:
-        return summary
-    return _ExecutionSummary(
-        status="fail",
-        decision="blocked",
-        notes=[
-            *summary.notes,
-            (
-                f"non-worker workspace mutation guard blocked {role}: "
-                + "; ".join(issues)
-            ),
-        ],
-        timed_out=summary.timed_out,
-        timeout_seconds=summary.timeout_seconds,
-        termination_reason=summary.termination_reason,
-    )
 
 
 def _dependency_module_payloads(
