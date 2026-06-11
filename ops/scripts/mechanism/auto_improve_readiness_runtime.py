@@ -69,6 +69,7 @@ from .auto_improve_readiness_learning_runtime import (
     _learning_readiness_assessment,
 )
 from .auto_improve_readiness_queue_runtime import (
+    ReadinessQueueState,
     _checks,
     _fallback_status,
     _readiness_next_action,
@@ -124,24 +125,8 @@ class ReadinessInputs:
     goal_worktree_guard_summary: dict[str, Any]
     remediation_backlog_summary: dict[str, Any]
     learning_signoff_summary: dict[str, Any]
-    loop_health_summary: dict[str, Any]
-    same_eval_telemetry_summary: dict[str, Any]
+    queue_state: ReadinessQueueState
     reports_present: bool
-    outcome_summary: dict[str, Any]
-    review_summary: dict[str, Any]
-    proposal_summary: dict[str, Any]
-    proposal_diagnostics: dict[str, Any]
-    queue_evidence_gaps: list[str]
-    proposals_emitted: int
-    runnable_proposal_ids: list[str]
-    blocked_proposal_count: int
-    blocked_reason_counts: dict[str, int]
-    blocked_proposal_ids: dict[str, list[str]]
-    blocked_reasons: list[str]
-    queue_ready: bool
-    seed_runs: list[str]
-    history_requirement: int
-    additional_runs_needed: int
 
 
 @dataclass(frozen=True)
@@ -426,75 +411,61 @@ def load_readiness_inputs(
             reports["learning_signoff"],
             generated_at=runtime_context.isoformat_z(),
         ),
-        loop_health_summary=queue_state.loop_health_summary,
-        same_eval_telemetry_summary=queue_state.same_eval_telemetry_summary,
+        queue_state=queue_state,
         reports_present=reports_present,
-        outcome_summary=queue_state.outcome_summary,
-        review_summary=queue_state.review_summary,
-        proposal_summary=queue_state.proposal_summary,
-        proposal_diagnostics=queue_state.proposal_diagnostics,
-        queue_evidence_gaps=queue_state.queue_evidence_gaps,
-        proposals_emitted=queue_state.proposals_emitted,
-        runnable_proposal_ids=queue_state.runnable_proposal_ids,
-        blocked_proposal_count=queue_state.blocked_proposal_count,
-        blocked_reason_counts=queue_state.blocked_reason_counts,
-        blocked_proposal_ids=queue_state.blocked_proposal_ids,
-        blocked_reasons=queue_state.blocked_reasons,
-        queue_ready=queue_state.queue_ready,
-        seed_runs=queue_state.seed_runs,
-        history_requirement=queue_state.history_requirement,
-        additional_runs_needed=queue_state.additional_runs_needed,
     )
 
 
 def assess_execution_readiness(inputs: ReadinessInputs) -> ExecutionReadinessAssessment:
+    queue_state = inputs.queue_state
     reasons = [
         "runnable proposal queue is non-empty"
-        if inputs.queue_ready
+        if queue_state.queue_ready
         else "no runnable proposal is available"
     ]
     reasons.extend(
         gap
-        for gap in inputs.queue_evidence_gaps
+        for gap in queue_state.queue_evidence_gaps
         if gap.startswith(("mechanism_review.status=attention", "mutation_proposal.status=attention"))
     )
-    if inputs.proposals_emitted > 0 and not inputs.queue_ready:
-        if inputs.blocked_reasons:
+    if queue_state.proposals_emitted > 0 and not queue_state.queue_ready:
+        if queue_state.blocked_reasons:
             reasons.append(
-                f"proposal blockers active: {', '.join(inputs.blocked_reasons)}"
+                f"proposal blockers active: {', '.join(queue_state.blocked_reasons)}"
             )
         else:
             reasons.append(
                 "generated proposals exist, but every emitted proposal is currently blocked"
             )
-    elif inputs.proposals_emitted == 0 and not inputs.queue_ready:
+    elif queue_state.proposals_emitted == 0 and not queue_state.queue_ready:
         reasons.append("mutation proposal generation emitted zero runnable proposals")
     return ExecutionReadinessAssessment(
-        status="pass" if inputs.queue_ready else "warn",
-        gate_effect=GATE_EFFECT_NONE if inputs.queue_ready else GATE_EFFECT_BLOCKS_EXECUTION,
-        can_run=inputs.queue_ready,
+        status="pass" if queue_state.queue_ready else "warn",
+        gate_effect=GATE_EFFECT_NONE if queue_state.queue_ready else GATE_EFFECT_BLOCKS_EXECUTION,
+        can_run=queue_state.queue_ready,
         reasons=reasons,
-        runnable_proposal_count=len(inputs.runnable_proposal_ids),
-        blocked_proposal_count=inputs.blocked_proposal_count,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_proposal_count=queue_state.blocked_proposal_count,
         recommended_next_step=_readiness_next_action(
-            queue_ready=inputs.queue_ready,
-            proposals_emitted=inputs.proposals_emitted,
-            blocked_reasons=inputs.blocked_reasons,
-            runnable_proposal_ids=inputs.runnable_proposal_ids,
-            seed_runs=inputs.seed_runs,
+            queue_ready=queue_state.queue_ready,
+            proposals_emitted=queue_state.proposals_emitted,
+            blocked_reasons=queue_state.blocked_reasons,
+            runnable_proposal_ids=queue_state.runnable_proposal_ids,
+            seed_runs=queue_state.seed_runs,
         ),
     )
 
 
 def assess_learning_readiness(inputs: ReadinessInputs) -> LearningReadinessAssessment:
+    queue_state = inputs.queue_state
     return _learning_readiness_assessment(
-        queue_ready=inputs.queue_ready,
+        queue_ready=queue_state.queue_ready,
         reports_present=inputs.reports_present,
-        outcome_summary=inputs.outcome_summary,
+        outcome_summary=queue_state.outcome_summary,
         active_outcome_metrics=inputs.active_outcome_metrics,
         active_mechanism_review=inputs.active_mechanism_review,
-        loop_health_summary=inputs.loop_health_summary,
-        same_eval_telemetry_summary=inputs.same_eval_telemetry_summary,
+        loop_health_summary=queue_state.loop_health_summary,
+        same_eval_telemetry_summary=queue_state.same_eval_telemetry_summary,
         policy=inputs.policy,
     )
 
@@ -693,9 +664,10 @@ def _readiness_inputs_payload(*, remediation_backlog_path: str) -> dict[str, str
 
 
 def _readiness_diagnostics_payload(inputs: ReadinessInputs) -> dict[str, Any]:
+    queue_state = inputs.queue_state
     return {
-        "loop_health_summary": inputs.loop_health_summary,
-        "same_eval_telemetry_summary": inputs.same_eval_telemetry_summary,
+        "loop_health_summary": queue_state.loop_health_summary,
+        "same_eval_telemetry_summary": queue_state.same_eval_telemetry_summary,
         "artifact_freshness_summary": inputs.artifact_freshness_summary,
         "selected_contract_summary": inputs.selected_contract_summary,
         "source_package_clean_extract_summary": inputs.source_package_clean_extract_summary,
@@ -714,15 +686,16 @@ def _readiness_diagnostics_payload(inputs: ReadinessInputs) -> dict[str, Any]:
 def _readiness_fallback_payload(
     inputs: ReadinessInputs, fallback_status: str
 ) -> dict[str, Any]:
+    queue_state = inputs.queue_state
     return {
         "status": fallback_status,
         "primary_targets": FALLBACK_PRIMARY_TARGETS,
         "supporting_targets": FALLBACK_SUPPORTING_TARGETS,
         "test_files": FALLBACK_TEST_FILES,
-        "seed_run_count": len(inputs.seed_runs),
-        "seed_runs": inputs.seed_runs,
-        "history_requirement": inputs.history_requirement,
-        "additional_runs_needed": inputs.additional_runs_needed,
+        "seed_run_count": len(queue_state.seed_runs),
+        "seed_runs": queue_state.seed_runs,
+        "history_requirement": queue_state.history_requirement,
+        "additional_runs_needed": queue_state.additional_runs_needed,
         "queue_recheck_target": READINESS_TARGET,
         "auto_improve_command": AUTO_IMPROVE_GOAL_RUN_COMMAND,
     }
@@ -736,44 +709,45 @@ def render_readiness_report(
     learning: LearningReadinessAssessment,
 ) -> dict[str, Any]:
     generated_at = inputs.runtime_context.isoformat_z()
+    queue_state = inputs.queue_state
     checks = _checks(
         reports_present=inputs.reports_present,
-        proposals_emitted=inputs.proposals_emitted,
-        runnable_proposal_count=len(inputs.runnable_proposal_ids),
-        blocked_proposal_count=inputs.blocked_proposal_count,
-        blocked_reason_counts=inputs.blocked_reason_counts,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_proposal_count=queue_state.blocked_proposal_count,
+        blocked_reason_counts=queue_state.blocked_reason_counts,
         session_reports_considered=int(
-            inputs.outcome_summary.get("session_reports_considered", 0) or 0
+            queue_state.outcome_summary.get("session_reports_considered", 0) or 0
         ),
-        seed_runs=inputs.seed_runs,
-        history_requirement=inputs.history_requirement,
+        seed_runs=queue_state.seed_runs,
+        history_requirement=queue_state.history_requirement,
     )
     remediations = _readiness_remediations(
         reports_present=inputs.reports_present,
-        proposals_emitted=inputs.proposals_emitted,
-        runnable_proposal_count=len(inputs.runnable_proposal_ids),
-        blocked_reason_counts=inputs.blocked_reason_counts,
-        blocked_proposal_ids=inputs.blocked_proposal_ids,
-        seed_runs=inputs.seed_runs,
-        history_requirement=inputs.history_requirement,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_reason_counts=queue_state.blocked_reason_counts,
+        blocked_proposal_ids=queue_state.blocked_proposal_ids,
+        seed_runs=queue_state.seed_runs,
+        history_requirement=queue_state.history_requirement,
     )
     queue = _readiness_queue(
-        queue_ready=inputs.queue_ready,
-        proposals_emitted=inputs.proposals_emitted,
-        runnable_proposal_ids=inputs.runnable_proposal_ids,
-        blocked_proposal_count=inputs.blocked_proposal_count,
-        blocked_reason_counts=inputs.blocked_reason_counts,
-        proposal_summary=inputs.proposal_summary,
-        review_summary=inputs.review_summary,
-        outcome_summary=inputs.outcome_summary,
+        queue_ready=queue_state.queue_ready,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_ids=queue_state.runnable_proposal_ids,
+        blocked_proposal_count=queue_state.blocked_proposal_count,
+        blocked_reason_counts=queue_state.blocked_reason_counts,
+        proposal_summary=queue_state.proposal_summary,
+        review_summary=queue_state.review_summary,
+        outcome_summary=queue_state.outcome_summary,
         mechanism_review_report=inputs.active_mechanism_review,
-        evidence_gaps=inputs.queue_evidence_gaps,
+        evidence_gaps=queue_state.queue_evidence_gaps,
     )
     fallback_status = _fallback_status(
-        inputs.queue_ready,
-        inputs.proposals_emitted,
-        inputs.blocked_proposal_count,
-        inputs.seed_runs,
+        queue_state.queue_ready,
+        queue_state.proposals_emitted,
+        queue_state.blocked_proposal_count,
+        queue_state.seed_runs,
     )
     execution_blockers = _execution_blockers(execution)
     learning_claim_blockers, promotion_blockers = _readiness_promotion_blockers(

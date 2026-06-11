@@ -28,15 +28,6 @@
       "next_action": "Add or extend a review-bundle archive portability lane in full-vault context.",
       "exit_condition": "Close when full-vault review bundle mtime normalization is checked or explicitly declared operator-only.",
       "owner_or_lane": "review-bundle-portability"
-    },
-    {
-      "path": "runs/auto-improve-trial-rerun17-run-01-auto-improve-readiness-runtime/improvement-observations.json",
-      "observation_id": "readiness_queue_state_ownership_consolidation",
-      "status": "open",
-      "retained_reason": "Readiness queue ownership consolidation is a next-touch runtime refactor and would widen this archive/observation closeout task.",
-      "next_action": "Consolidate scalar queue plumbing only when auto_improve_readiness_runtime.py or queue runtime ownership is next changed.",
-      "exit_condition": "Close when queue derivation is consolidated with no new function-budget candidates and a passing structural complexity report.",
-      "owner_or_lane": "auto-improve-readiness-runtime"
     }
   ]
 }

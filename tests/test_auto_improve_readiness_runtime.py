@@ -256,7 +256,7 @@ class AutoImproveReadinessRuntimeTests(
         report = build_readiness_report(self.vault, context=fixed_context())
 
         self.assertTrue(inputs.reports_present)
-        self.assertEqual(inputs.outcome_summary["attempts_considered"], 7)
+        self.assertEqual(inputs.queue_state.outcome_summary["attempts_considered"], 7)
         self.assertEqual(report["queue"]["attempts_considered"], 7)
         self.assertEqual(
             report["learning_readiness"]["metrics"]["attempts_considered"], 7
@@ -276,10 +276,12 @@ class AutoImproveReadinessRuntimeTests(
         assert isinstance(first_payload, dict)
         assert isinstance(second_payload, dict)
         runtime_context = first_payload["runtime_context"]
-        outcome_summary = first_payload["outcome_summary"]
-        proposal_summary = first_payload["proposal_summary"]
-        runnable_proposal_ids = first_payload["runnable_proposal_ids"]
+        queue_state = first_payload["queue_state"]
         assert isinstance(runtime_context, dict)
+        assert isinstance(queue_state, dict)
+        outcome_summary = queue_state["outcome_summary"]
+        proposal_summary = queue_state["proposal_summary"]
+        runnable_proposal_ids = queue_state["runnable_proposal_ids"]
         assert isinstance(outcome_summary, dict)
         assert isinstance(proposal_summary, dict)
         assert isinstance(runnable_proposal_ids, list)
@@ -295,7 +297,7 @@ class AutoImproveReadinessRuntimeTests(
         self.assertEqual(runnable_proposal_ids, ["proposal-ready"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "ddc4a8d15dfd2904c30f085724f79a434e6a877ad436c7d1d3514d2f184e492b",
+            "0b151c770103a0b3b5b0b423cdc7b0361fadeaa145389d0b737be835c7785354",
         )
 
     def test_open_remediation_backlog_blocks_promotion_not_trial(self) -> None:
