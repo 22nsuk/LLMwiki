@@ -72,6 +72,7 @@ jobs:
       - name: Run fast contract tier
         if: matrix.tier == 'fast'
         run: |
+          make test-selectors-sync-check
           if [ -f system/system-index.md ] && [ -f wiki/index.md ] && [ -d raw ]; then
             make check-finalized
             make release-smoke-fast

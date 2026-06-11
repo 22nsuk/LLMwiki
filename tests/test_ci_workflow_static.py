@@ -225,6 +225,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "if [ -f system/system-index.md ] && [ -f wiki/index.md ] && [ -d raw ]; then",
             text,
         )
+        self.assertIn("          make test-selectors-sync-check", text)
         self.assertIn("            make check-finalized", text)
         self.assertIn("            make release-smoke-fast", text)
 

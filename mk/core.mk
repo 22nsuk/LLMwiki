@@ -33,6 +33,7 @@ help:
 		"Inventory and selectors:" \
 		"  make make-target-inventory        inventory Make targets and script surfaces" \
 		"  make test-selectors-sync          regenerate mk/test-selectors.generated.mk from the lane registry" \
+		"  make test-selectors-sync-check    fail if generated test selector Make variables are stale" \
 		"" \
 		"Report contracts:" \
 		"  make test-report-contract-core   run core report contract tests" \

@@ -442,6 +442,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "make strict-preview-audit",
             "make make-target-inventory",
             "make test-selectors-sync",
+            "make test-selectors-sync-check",
             "make test-report-contract-core",
             "make external-report-lifecycle-refresh",
             "make sync-public-policy",
@@ -702,6 +703,16 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         test_mk_text = Path("mk/test.mk").read_text(encoding="utf-8")
         self.assertIn("include mk/test-selectors.generated.mk", test_mk_text)
+        self.assertIn("test-selectors-sync-check", _target_block(test_mk_text, ".PHONY"))
+        self.assertEqual(
+            _recipe_lines(test_mk_text, "test-selectors-sync-check"),
+            [
+                (
+                    '$(PYTHON) -m ops.scripts.test.generate_test_mk_selectors '
+                    '--vault "$(VAULT)" --check'
+                )
+            ],
+        )
 
         target_by_pack = {
             "fast_smoke": "fast-smoke",
