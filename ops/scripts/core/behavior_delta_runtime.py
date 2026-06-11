@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_io_runtime import write_vault_schema_validated_json
+from .request_coercion_runtime import coerce_request_or_kwargs
 from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .schema_constants_runtime import BEHAVIOR_DELTA_SCHEMA_PATH
 
@@ -448,22 +449,15 @@ def _report_summary(
     }
 
 
-def _coerce_behavior_delta_request(
-    request: BehaviorDeltaRequest | None,
-    kwargs: dict[str, Any],
-) -> BehaviorDeltaRequest:
-    if request is not None:
-        if kwargs:
-            raise TypeError("legacy keyword arguments cannot be combined with BehaviorDeltaRequest")
-        return request
-    return BehaviorDeltaRequest(**kwargs)
-
-
 def build_behavior_delta_report(
     request: BehaviorDeltaRequest | None = None,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    request = _coerce_behavior_delta_request(request, kwargs)
+    request = coerce_request_or_kwargs(
+        request=request,
+        legacy_kwargs=kwargs,
+        request_type=BehaviorDeltaRequest,
+    )
     files = _manifest_files(request.changed_files_manifest)
     skipped_files: list[dict[str, str]] = []
     deltas = [

@@ -16,6 +16,7 @@ from ops.scripts.core.release_authority_state_runtime import (
     release_status_v2_view_with_readiness_fallback,
 )
 from ops.scripts.core.release_currentness_state_runtime import currentness_field
+from ops.scripts.core.request_coercion_runtime import coerce_request_or_kwargs
 from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
@@ -314,12 +315,12 @@ def _coerce_status_surface_signals(
     signals: StatusSurfaceSignals | None,
     legacy_kwargs: dict[str, Any],
 ) -> StatusSurfaceSignals:
-    if signals is not None:
-        if legacy_kwargs:
-            names = ", ".join(sorted(legacy_kwargs))
-            raise TypeError(f"signals cannot be combined with legacy keyword arguments: {names}")
-        return signals
-    return StatusSurfaceSignals(**legacy_kwargs)
+    return coerce_request_or_kwargs(
+        request=signals,
+        legacy_kwargs=legacy_kwargs,
+        request_type=StatusSurfaceSignals,
+        mixed_error_prefix="signals cannot be combined with legacy keyword arguments",
+    )
 
 
 def _normalized_freshness_display(signals: StatusSurfaceSignals) -> str:

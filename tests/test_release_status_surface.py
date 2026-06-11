@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 import hypothesis.strategies as st
+import pytest
 from hypothesis import given
 from ops.scripts.runtime_context import RuntimeContext
 
@@ -45,6 +46,27 @@ def fixed_context() -> RuntimeContext:
     return RuntimeContext(
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 5, 31, 12, 0, tzinfo=dt.UTC),
+    )
+
+
+def _request_object_signals() -> StatusSurfaceSignals:
+    return StatusSurfaceSignals(
+        generated_at="2026-05-31T12:00:00Z",
+        vault_completeness=VAULT_COMPLETENESS_PUBLIC,
+        source_closeout_status="clean_pass",
+        sealed_run_status="sealed_clean_pass",
+        public_summary_status="pass",
+        lock_check_status="enforced",
+        uv_lock_check_passed=True,
+        learning_signoff_status="",
+        goal_runtime_certificate_status="",
+        remote_sync_signal={
+            "status": "pass",
+            "upstream": "origin/feature",
+            "ahead": 0,
+            "behind": 0,
+        },
+        artifact_freshness_display="advisory",
     )
 
 
@@ -206,30 +228,19 @@ def test_property_12_source_closeout_and_sealed_run_axes_are_independent(
 
 
 def test_status_surface_accepts_signal_request_object() -> None:
-    surface = status_surface_from_signals(
-        StatusSurfaceSignals(
-            generated_at="2026-05-31T12:00:00Z",
-            vault_completeness=VAULT_COMPLETENESS_PUBLIC,
-            source_closeout_status="clean_pass",
-            sealed_run_status="sealed_clean_pass",
-            public_summary_status="pass",
-            lock_check_status="enforced",
-            uv_lock_check_passed=True,
-            learning_signoff_status="",
-            goal_runtime_certificate_status="",
-            remote_sync_signal={
-                "status": "pass",
-                "upstream": "origin/feature",
-                "ahead": 0,
-                "behind": 0,
-            },
-            artifact_freshness_display="advisory",
-        )
-    )
+    surface = status_surface_from_signals(_request_object_signals())
 
     assert _line_by_key(surface, "source_closeout")["status"] == "clean_pass"
     assert "freshness=advisory" in str(_line_by_key(surface, "source_closeout")["detail"])
     assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_SYNCED
+
+
+def test_status_surface_rejects_mixed_signal_request_object_and_legacy_kwargs() -> None:
+    with pytest.raises(
+        TypeError,
+        match="signals cannot be combined with legacy keyword arguments: generated_at",
+    ):
+        status_surface_from_signals(_request_object_signals(), generated_at="override")
 
 
 def test_status_surface_reads_existing_file_signals_without_writing_authority() -> None:
