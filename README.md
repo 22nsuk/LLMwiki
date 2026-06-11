@@ -55,10 +55,17 @@ make static
 make test-public
 ```
 
-For broader local validation:
+For public-mirror development, use corpus-free gates:
 
 ```bash
 make test
+make test-public
+```
+
+For a full local vault with private corpus and generated evidence available, add
+the full-vault maintainer gate:
+
+```bash
 make check
 ```
 
