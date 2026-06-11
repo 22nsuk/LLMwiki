@@ -16,9 +16,7 @@ from ops.scripts.artifact_io_runtime import (
 )
 from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.gate_effect_vocabulary import (
-    GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
-    GATE_EFFECT_NONE,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     GATE_EFFECTS,
 )
@@ -66,7 +64,7 @@ from .auto_improve_readiness_learning_runtime import (
 )
 from .auto_improve_readiness_queue_runtime import (
     ReadinessQueueState,
-    _readiness_next_action,
+    readiness_execution_fields,
     readiness_queue_payloads,
     readiness_queue_state,
 )
@@ -409,42 +407,15 @@ def load_readiness_inputs(
 
 
 def assess_execution_readiness(inputs: ReadinessInputs) -> ExecutionReadinessAssessment:
-    queue_state = inputs.queue_state
-    reasons = [
-        "runnable proposal queue is non-empty"
-        if queue_state.queue_ready
-        else "no runnable proposal is available"
-    ]
-    reasons.extend(
-        gap
-        for gap in queue_state.queue_evidence_gaps
-        if gap.startswith(("mechanism_review.status=attention", "mutation_proposal.status=attention"))
-    )
-    if queue_state.proposals_emitted > 0 and not queue_state.queue_ready:
-        if queue_state.blocked_reasons:
-            reasons.append(
-                f"proposal blockers active: {', '.join(queue_state.blocked_reasons)}"
-            )
-        else:
-            reasons.append(
-                "generated proposals exist, but every emitted proposal is currently blocked"
-            )
-    elif queue_state.proposals_emitted == 0 and not queue_state.queue_ready:
-        reasons.append("mutation proposal generation emitted zero runnable proposals")
+    fields = readiness_execution_fields(inputs.queue_state)
     return ExecutionReadinessAssessment(
-        status="pass" if queue_state.queue_ready else "warn",
-        gate_effect=GATE_EFFECT_NONE if queue_state.queue_ready else GATE_EFFECT_BLOCKS_EXECUTION,
-        can_run=queue_state.queue_ready,
-        reasons=reasons,
-        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
-        blocked_proposal_count=queue_state.blocked_proposal_count,
-        recommended_next_step=_readiness_next_action(
-            queue_ready=queue_state.queue_ready,
-            proposals_emitted=queue_state.proposals_emitted,
-            blocked_reasons=queue_state.blocked_reasons,
-            runnable_proposal_ids=queue_state.runnable_proposal_ids,
-            seed_runs=queue_state.seed_runs,
-        ),
+        status=fields.status,
+        gate_effect=fields.gate_effect,
+        can_run=fields.can_run,
+        reasons=fields.reasons,
+        runnable_proposal_count=fields.runnable_proposal_count,
+        blocked_proposal_count=fields.blocked_proposal_count,
+        recommended_next_step=fields.recommended_next_step,
     )
 
 

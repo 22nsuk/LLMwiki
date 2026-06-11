@@ -4,6 +4,7 @@ import json
 import unittest
 
 from ops.scripts.auto_improve_readiness_queue_runtime import (
+    readiness_execution_fields,
     readiness_queue_payloads,
     readiness_queue_state,
 )
@@ -93,6 +94,21 @@ class AutoImproveReadinessQueueRuntimeTests(
             state.queue_evidence_gaps,
         )
 
+        execution = readiness_execution_fields(state)
+
+        self.assertEqual(execution.status, "warn")
+        self.assertEqual(execution.gate_effect, "blocks_execution")
+        self.assertFalse(execution.can_run)
+        self.assertEqual(execution.runnable_proposal_count, 0)
+        self.assertEqual(execution.blocked_proposal_count, 1)
+        self.assertEqual(execution.reasons[0], "no runnable proposal is available")
+        self.assertIn(
+            "proposal blockers active: recent_log_overlap",
+            execution.reasons,
+        )
+        self.assertIn("none are runnable yet", execution.recommended_next_step)
+        self.assertEqual(execution.to_wire()["reasons"], execution.reasons)
+
         payloads = readiness_queue_payloads(
             queue_state=state,
             reports_present=True,
@@ -155,6 +171,7 @@ class AutoImproveReadinessQueueRuntimeTests(
 
         report = build_readiness_report(self.vault, context=fixed_context())
         inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        execution = readiness_execution_fields(inputs.queue_state)
         payloads = readiness_queue_payloads(
             queue_state=inputs.queue_state,
             reports_present=inputs.reports_present,
@@ -165,6 +182,7 @@ class AutoImproveReadinessQueueRuntimeTests(
         envelope_schema = load_schema(ENVELOPE_SCHEMA_PATH)
 
         self.assertEqual(validate_with_schema(persisted, envelope_schema), [])
+        self.assertEqual(report["execution_readiness"], execution.to_wire())
         self.assertEqual(persisted["execution_readiness"]["status"], "pass")
         self.assertTrue(persisted["execution_readiness"]["can_run"])
         self.assertEqual(persisted["execution_status"], "pass")

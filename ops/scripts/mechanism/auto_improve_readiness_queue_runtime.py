@@ -6,6 +6,10 @@ from typing import Any
 
 from ops.scripts.artifact_io_runtime import load_optional_json_object
 from ops.scripts.core.payload_field_runtime import dict_field
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_NONE,
+)
 from ops.scripts.policy_runtime import report_path
 
 from .auto_improve_queue_runtime import build_proposal_queue
@@ -100,6 +104,28 @@ class ReadinessQueueState:
     seed_runs: list[str]
     history_requirement: int
     additional_runs_needed: int
+
+
+@dataclass(frozen=True)
+class ReadinessExecutionFields:
+    status: str
+    gate_effect: str
+    can_run: bool
+    reasons: list[str]
+    runnable_proposal_count: int
+    blocked_proposal_count: int
+    recommended_next_step: str
+
+    def to_wire(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "gate_effect": self.gate_effect,
+            "can_run": self.can_run,
+            "reasons": self.reasons,
+            "runnable_proposal_count": self.runnable_proposal_count,
+            "blocked_proposal_count": self.blocked_proposal_count,
+            "recommended_next_step": self.recommended_next_step,
+        }
 
 
 @dataclass(frozen=True)
@@ -942,6 +968,57 @@ def _readiness_next_action(
         "add another comparable narrow run for `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py` "
         "or review mechanism_review history thresholds, then rerun "
         f"`{READINESS_TARGET}`."
+    )
+
+
+def readiness_execution_fields(
+    queue_state: ReadinessQueueState,
+) -> ReadinessExecutionFields:
+    reasons = [
+        "runnable proposal queue is non-empty"
+        if queue_state.queue_ready
+        else "no runnable proposal is available"
+    ]
+    reasons.extend(
+        gap
+        for gap in queue_state.queue_evidence_gaps
+        if gap.startswith(
+            (
+                "mechanism_review.status=attention",
+                "mutation_proposal.status=attention",
+            )
+        )
+    )
+    if queue_state.proposals_emitted > 0 and not queue_state.queue_ready:
+        if queue_state.blocked_reasons:
+            reasons.append(
+                f"proposal blockers active: {', '.join(queue_state.blocked_reasons)}"
+            )
+        else:
+            reasons.append(
+                "generated proposals exist, but every emitted proposal is currently blocked"
+            )
+    elif queue_state.proposals_emitted == 0 and not queue_state.queue_ready:
+        reasons.append("mutation proposal generation emitted zero runnable proposals")
+
+    return ReadinessExecutionFields(
+        status="pass" if queue_state.queue_ready else "warn",
+        gate_effect=(
+            GATE_EFFECT_NONE
+            if queue_state.queue_ready
+            else GATE_EFFECT_BLOCKS_EXECUTION
+        ),
+        can_run=queue_state.queue_ready,
+        reasons=reasons,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_proposal_count=queue_state.blocked_proposal_count,
+        recommended_next_step=_readiness_next_action(
+            queue_ready=queue_state.queue_ready,
+            proposals_emitted=queue_state.proposals_emitted,
+            blocked_reasons=queue_state.blocked_reasons,
+            runnable_proposal_ids=queue_state.runnable_proposal_ids,
+            seed_runs=queue_state.seed_runs,
+        ),
     )
 
 
