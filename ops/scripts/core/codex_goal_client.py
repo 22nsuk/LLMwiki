@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import os
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -24,6 +23,7 @@ from .observability_artifacts_shared_runtime import (
 )
 from .output_runtime import display_path, resolve_repo_output_path
 from .policy_runtime import load_policy
+from .runtime_context import RuntimeContext
 from .schema_runtime import load_schema_with_vault_override, validate_with_schema
 
 DEFAULT_CONTRACT_PATH = "ops/reports/codex-goal-contract.json"
@@ -104,22 +104,7 @@ def _merge_json_objects(base: Mapping[str, Any], patch: Mapping[str, Any]) -> di
 
 
 def _utc_now() -> str:
-    injected = os.environ.get("LLMWIKI_RUNTIME_UTC_NOW", "").strip()
-    if injected:
-        try:
-            parsed = dt.datetime.fromisoformat(injected.replace("Z", "+00:00"))
-        except ValueError:
-            parsed = None
-        if parsed is not None:
-            if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=dt.UTC)
-            return (
-                parsed.astimezone(dt.UTC)
-                .replace(microsecond=0)
-                .isoformat()
-                .replace("+00:00", "Z")
-            )
-    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return RuntimeContext(display_timezone=dt.UTC).isoformat_z()
 
 
 def _existing_created_at(vault: Path, contract_path: str | Path, contract_id: str) -> str:
@@ -823,11 +808,12 @@ def main(argv: list[str] | None = None) -> int:
             worktree_guard_report_path=args.worktree_guard_report,
             goal_status_path=args.goal_status_path,
         )
+    generated_at = _utc_now()
     contract = build_auto_improve_goal_contract(
         contract_id=args.contract_id,
         created_at=args.created_at
         or _existing_created_at(vault, args.out, args.contract_id)
-        or None,
+        or generated_at,
         created_by=args.created_by,
         storage_path=args.out,
         backend_type=args.backend_type,
@@ -845,7 +831,7 @@ def main(argv: list[str] | None = None) -> int:
         vault,
         contract,
         out_path=args.out,
-        generated_at=_utc_now(),
+        generated_at=generated_at,
         readiness_report_path=args.readiness_report,
         worktree_guard_report_path=args.worktree_guard_report,
         goal_status_path=args.goal_status_path,

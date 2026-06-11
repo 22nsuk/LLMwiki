@@ -232,6 +232,40 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertEqual(raw["created_at"], "2026-05-21T16:00:00Z")
         self.assertEqual(envelope["generated_at"], "2026-05-21T16:00:00Z")
 
+    def test_cli_reuses_initial_timestamp_for_created_at_and_envelope(self) -> None:
+        seed_minimal_vault(self.vault)
+
+        with patch(
+            "ops.scripts.codex_goal_client._utc_now",
+            side_effect=["2026-05-21T16:00:00Z", "2026-05-21T16:00:01Z"],
+        ):
+            exit_code = main(
+                [
+                    "--vault",
+                    self.vault.as_posix(),
+                    "--out",
+                    "ops/reports/default-clock-goal-contract.json",
+                    "--contract-id",
+                    "default-clock-goal",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        raw = json.loads(
+            (self.vault / "ops" / "reports" / "default-clock-goal-contract.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        envelope = json.loads(
+            next(
+                item["value"]
+                for item in raw["metadata"]["properties"]
+                if item["name"] == "urn:openai:artifact-envelope"
+            )
+        )
+        self.assertEqual(raw["created_at"], "2026-05-21T16:00:00Z")
+        self.assertEqual(envelope["generated_at"], "2026-05-21T16:00:00Z")
+
     def test_cli_preserves_existing_created_at_for_same_contract_refresh(self) -> None:
         contract_path = "ops/reports/stable-goal-contract.json"
         first = main(

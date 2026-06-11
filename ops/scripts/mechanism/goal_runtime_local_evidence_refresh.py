@@ -13,6 +13,7 @@ from typing import TypedDict
 
 from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
 from ops.scripts.output_runtime import display_path, sanitize_report_text
+from ops.scripts.runtime_context import RuntimeContext
 
 DEFAULT_OUT = "tmp/goal-runtime-local-evidence-refresh.json"
 PRODUCER = "ops.scripts.goal_runtime_local_evidence_refresh"
@@ -118,14 +119,6 @@ class GoalRuntimeLocalEvidenceRefreshRequest:
     runtime_utc_now: str | None = None
 
 
-def _isoformat_z(value: dt.datetime) -> str:
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=dt.UTC)
-    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace(
-        "+00:00", "Z"
-    )
-
-
 def _runtime_utc_now(requested: str | None, env: Mapping[str, str]) -> str:
     explicit = (requested or "").strip()
     if explicit:
@@ -133,7 +126,7 @@ def _runtime_utc_now(requested: str | None, env: Mapping[str, str]) -> str:
     injected = env.get("LLMWIKI_RUNTIME_UTC_NOW", "").strip()
     if injected:
         return injected
-    return _isoformat_z(dt.datetime.now(dt.UTC))
+    return RuntimeContext(display_timezone=dt.UTC).isoformat_z()
 
 
 def _sha256_file(path: Path) -> str:

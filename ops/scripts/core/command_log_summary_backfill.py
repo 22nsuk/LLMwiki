@@ -106,12 +106,8 @@ class _BackfillState:
     reference_needles_by_run: dict[str, set[str]] = field(default_factory=dict)
 
 
-def _utc_now() -> dt.datetime:
-    return dt.datetime.now(dt.UTC).replace(microsecond=0)
-
-
 def _context(clock: dt.datetime | None = None) -> RuntimeContext:
-    instant = clock or _utc_now()
+    instant = clock or RuntimeContext(display_timezone=dt.UTC).utcnow().replace(microsecond=0)
     return RuntimeContext(display_timezone=dt.UTC, clock=lambda: instant)
 
 
