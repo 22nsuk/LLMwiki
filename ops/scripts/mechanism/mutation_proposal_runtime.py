@@ -23,7 +23,7 @@ from ops.scripts.schema_runtime import (
 )
 
 from .auto_improve_next_run_decision_runtime import NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
-from .auto_improve_readiness_runtime import (
+from .auto_improve_readiness_constants_runtime import (
     FALLBACK_PRIMARY_TARGETS,
     FALLBACK_SUPPORTING_TARGETS,
     FALLBACK_TEST_FILES,

@@ -38,10 +38,6 @@ from ops.scripts.schema_constants_runtime import (
 
 from .auto_improve_readiness_constants_runtime import (
     ARTIFACT_FRESHNESS_REPORT_REL_PATH,
-    AUTO_IMPROVE_GOAL_RUN_COMMAND,
-    FALLBACK_PRIMARY_TARGETS,
-    FALLBACK_SUPPORTING_TARGETS,
-    FALLBACK_TEST_FILES,
     GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
     LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH,
     MECHANISM_REVIEW_REPORT_REL_PATH,
@@ -51,7 +47,6 @@ from .auto_improve_readiness_constants_runtime import (
     READINESS_REPORT_REL_PATH,
     READINESS_REPORT_SOURCE_COMMAND,
     READINESS_SOURCE_PATHS,
-    READINESS_TARGET,
     REFRESH_GENERATED_TARGET,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS,
@@ -71,11 +66,8 @@ from .auto_improve_readiness_learning_runtime import (
 )
 from .auto_improve_readiness_queue_runtime import (
     ReadinessQueueState,
-    _checks,
-    _fallback_status,
     _readiness_next_action,
-    _readiness_queue,
-    _readiness_remediations,
+    readiness_queue_payloads,
     readiness_queue_state,
 )
 from .auto_improve_readiness_release_authority_runtime import (
@@ -683,24 +675,6 @@ def _readiness_diagnostics_payload(inputs: ReadinessInputs) -> dict[str, Any]:
     }
 
 
-def _readiness_fallback_payload(
-    inputs: ReadinessInputs, fallback_status: str
-) -> dict[str, Any]:
-    queue_state = inputs.queue_state
-    return {
-        "status": fallback_status,
-        "primary_targets": FALLBACK_PRIMARY_TARGETS,
-        "supporting_targets": FALLBACK_SUPPORTING_TARGETS,
-        "test_files": FALLBACK_TEST_FILES,
-        "seed_run_count": len(queue_state.seed_runs),
-        "seed_runs": queue_state.seed_runs,
-        "history_requirement": queue_state.history_requirement,
-        "additional_runs_needed": queue_state.additional_runs_needed,
-        "queue_recheck_target": READINESS_TARGET,
-        "auto_improve_command": AUTO_IMPROVE_GOAL_RUN_COMMAND,
-    }
-
-
 def render_readiness_report(
     vault: Path,
     inputs: ReadinessInputs,
@@ -709,45 +683,10 @@ def render_readiness_report(
     learning: LearningReadinessAssessment,
 ) -> dict[str, Any]:
     generated_at = inputs.runtime_context.isoformat_z()
-    queue_state = inputs.queue_state
-    checks = _checks(
+    queue_payloads = readiness_queue_payloads(
+        queue_state=inputs.queue_state,
         reports_present=inputs.reports_present,
-        proposals_emitted=queue_state.proposals_emitted,
-        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
-        blocked_proposal_count=queue_state.blocked_proposal_count,
-        blocked_reason_counts=queue_state.blocked_reason_counts,
-        session_reports_considered=int(
-            queue_state.outcome_summary.get("session_reports_considered", 0) or 0
-        ),
-        seed_runs=queue_state.seed_runs,
-        history_requirement=queue_state.history_requirement,
-    )
-    remediations = _readiness_remediations(
-        reports_present=inputs.reports_present,
-        proposals_emitted=queue_state.proposals_emitted,
-        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
-        blocked_reason_counts=queue_state.blocked_reason_counts,
-        blocked_proposal_ids=queue_state.blocked_proposal_ids,
-        seed_runs=queue_state.seed_runs,
-        history_requirement=queue_state.history_requirement,
-    )
-    queue = _readiness_queue(
-        queue_ready=queue_state.queue_ready,
-        proposals_emitted=queue_state.proposals_emitted,
-        runnable_proposal_ids=queue_state.runnable_proposal_ids,
-        blocked_proposal_count=queue_state.blocked_proposal_count,
-        blocked_reason_counts=queue_state.blocked_reason_counts,
-        proposal_summary=queue_state.proposal_summary,
-        review_summary=queue_state.review_summary,
-        outcome_summary=queue_state.outcome_summary,
         mechanism_review_report=inputs.active_mechanism_review,
-        evidence_gaps=queue_state.queue_evidence_gaps,
-    )
-    fallback_status = _fallback_status(
-        queue_state.queue_ready,
-        queue_state.proposals_emitted,
-        queue_state.blocked_proposal_count,
-        queue_state.seed_runs,
     )
     execution_blockers = _execution_blockers(execution)
     learning_claim_blockers, promotion_blockers = _readiness_promotion_blockers(
@@ -812,10 +751,10 @@ def render_readiness_report(
             remediation_backlog_path=inputs.remediation_backlog_path
         ),
         "diagnostics": _readiness_diagnostics_payload(inputs),
-        "queue": queue.to_wire(),
-        "fallback": _readiness_fallback_payload(inputs, fallback_status),
-        "checks": checks,
-        "remediations": remediations,
+        "queue": queue_payloads.queue.to_wire(),
+        "fallback": queue_payloads.fallback,
+        "checks": queue_payloads.checks,
+        "remediations": queue_payloads.remediations,
         "next_action": _top_level_next_action(execution, learning, promotion_blockers),
     }
 

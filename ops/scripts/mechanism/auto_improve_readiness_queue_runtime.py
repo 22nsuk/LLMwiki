@@ -12,6 +12,8 @@ from .auto_improve_queue_runtime import build_proposal_queue
 from .auto_improve_readiness_constants_runtime import (
     AUTO_IMPROVE_GOAL_RUN_COMMAND,
     FALLBACK_PRIMARY_TARGETS,
+    FALLBACK_SUPPORTING_TARGETS,
+    FALLBACK_TEST_FILES,
     LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH,
     READINESS_TARGET,
     RECENT_LOG_OVERLAP_REMEDIATION,
@@ -98,6 +100,14 @@ class ReadinessQueueState:
     seed_runs: list[str]
     history_requirement: int
     additional_runs_needed: int
+
+
+@dataclass(frozen=True)
+class ReadinessQueuePayloads:
+    queue: ReadinessQueue
+    fallback: dict[str, Any]
+    checks: list[dict[str, Any]]
+    remediations: list[dict[str, Any]]
 
 
 def _string_list(value: object) -> list[str]:
@@ -451,6 +461,77 @@ def _readiness_remediations(
                 )
             )
     return remediations
+
+
+def _readiness_fallback_payload(
+    queue_state: ReadinessQueueState,
+    fallback_status: str,
+) -> dict[str, Any]:
+    return {
+        "status": fallback_status,
+        "primary_targets": FALLBACK_PRIMARY_TARGETS,
+        "supporting_targets": FALLBACK_SUPPORTING_TARGETS,
+        "test_files": FALLBACK_TEST_FILES,
+        "seed_run_count": len(queue_state.seed_runs),
+        "seed_runs": queue_state.seed_runs,
+        "history_requirement": queue_state.history_requirement,
+        "additional_runs_needed": queue_state.additional_runs_needed,
+        "queue_recheck_target": READINESS_TARGET,
+        "auto_improve_command": AUTO_IMPROVE_GOAL_RUN_COMMAND,
+    }
+
+
+def readiness_queue_payloads(
+    *,
+    queue_state: ReadinessQueueState,
+    reports_present: bool,
+    mechanism_review_report: dict[str, Any],
+) -> ReadinessQueuePayloads:
+    checks = _checks(
+        reports_present=reports_present,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_proposal_count=queue_state.blocked_proposal_count,
+        blocked_reason_counts=queue_state.blocked_reason_counts,
+        session_reports_considered=int(
+            queue_state.outcome_summary.get("session_reports_considered", 0) or 0
+        ),
+        seed_runs=queue_state.seed_runs,
+        history_requirement=queue_state.history_requirement,
+    )
+    remediations = _readiness_remediations(
+        reports_present=reports_present,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_reason_counts=queue_state.blocked_reason_counts,
+        blocked_proposal_ids=queue_state.blocked_proposal_ids,
+        seed_runs=queue_state.seed_runs,
+        history_requirement=queue_state.history_requirement,
+    )
+    queue = _readiness_queue(
+        queue_ready=queue_state.queue_ready,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_ids=queue_state.runnable_proposal_ids,
+        blocked_proposal_count=queue_state.blocked_proposal_count,
+        blocked_reason_counts=queue_state.blocked_reason_counts,
+        proposal_summary=queue_state.proposal_summary,
+        review_summary=queue_state.review_summary,
+        outcome_summary=queue_state.outcome_summary,
+        mechanism_review_report=mechanism_review_report,
+        evidence_gaps=queue_state.queue_evidence_gaps,
+    )
+    fallback_status = _fallback_status(
+        queue_state.queue_ready,
+        queue_state.proposals_emitted,
+        queue_state.blocked_proposal_count,
+        queue_state.seed_runs,
+    )
+    return ReadinessQueuePayloads(
+        queue=queue,
+        fallback=_readiness_fallback_payload(queue_state, fallback_status),
+        checks=checks,
+        remediations=remediations,
+    )
 
 
 def _matching_fallback_seed_runs(vault: Path) -> list[str]:

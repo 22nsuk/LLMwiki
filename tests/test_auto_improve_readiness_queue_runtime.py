@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 import unittest
 
-from ops.scripts.auto_improve_readiness_queue_runtime import readiness_queue_state
+from ops.scripts.auto_improve_readiness_queue_runtime import (
+    readiness_queue_payloads,
+    readiness_queue_state,
+)
 from ops.scripts.auto_improve_readiness_runtime import (
     build_readiness_report,
+    load_readiness_inputs,
     readiness_can_run,
     readiness_exit_code,
     write_readiness_report,
@@ -89,6 +93,25 @@ class AutoImproveReadinessQueueRuntimeTests(
             state.queue_evidence_gaps,
         )
 
+        payloads = readiness_queue_payloads(
+            queue_state=state,
+            reports_present=True,
+            mechanism_review_report=reports["mechanism_review"],
+        )
+
+        self.assertFalse(payloads.queue.ready)
+        self.assertEqual(payloads.queue.runnable_proposal_count, 0)
+        self.assertEqual(payloads.queue.blocked_proposal_count, 1)
+        self.assertEqual(
+            payloads.queue.blocked_reason_counts,
+            [{"reason": "recent_log_overlap", "count": 1}],
+        )
+        self.assertEqual(payloads.fallback["status"], "blocked_queue")
+        checks = {check["id"]: check for check in payloads.checks}
+        self.assertFalse(checks["proposal_queue_nonempty"]["pass"])
+        self.assertEqual(len(payloads.remediations), 1)
+        self.assertEqual(payloads.remediations[0]["blocker"], "recent_log_overlap")
+
     def test_build_readiness_report_passes_when_queue_is_nonempty(self) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
@@ -131,6 +154,12 @@ class AutoImproveReadinessQueueRuntimeTests(
         )
 
         report = build_readiness_report(self.vault, context=fixed_context())
+        inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        payloads = readiness_queue_payloads(
+            queue_state=inputs.queue_state,
+            reports_present=inputs.reports_present,
+            mechanism_review_report=inputs.active_mechanism_review,
+        )
         destination = write_readiness_report(self.vault, report)
         persisted = json.loads(destination.read_text(encoding="utf-8"))
         envelope_schema = load_schema(ENVELOPE_SCHEMA_PATH)
@@ -160,6 +189,10 @@ class AutoImproveReadinessQueueRuntimeTests(
         self.assertEqual(persisted["queue"]["blocked_proposal_count"], 0)
         self.assertEqual(persisted["fallback"]["status"], "not_needed")
         self.assertEqual(persisted["fallback"]["seed_run_count"], 0)
+        self.assertEqual(report["queue"], payloads.queue.to_wire())
+        self.assertEqual(report["fallback"], payloads.fallback)
+        self.assertEqual(report["checks"], payloads.checks)
+        self.assertEqual(report["remediations"], payloads.remediations)
         self.assertEqual(
             persisted["diagnostics"]["loop_health_summary"]["status"], "missing"
         )
