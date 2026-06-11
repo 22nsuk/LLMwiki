@@ -509,8 +509,19 @@ def source_revision_unknown_canonical_reports_status(
     return "partially_automated"
 
 
+RELEASE_LANE_MUTABILITY_SPLIT_SURFACES = (
+    "mk/release.mk",
+    "mk/release-authority.mk",
+    "mk/release-evidence.mk",
+    "mk/release-learning.mk",
+)
+
+
 def release_lane_mutability_split_status(vault: Path) -> str:
-    makefile_text = _read_text_or_empty(vault / "mk/release.mk")
+    makefile_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in RELEASE_LANE_MUTABILITY_SPLIT_SURFACES
+    )
     required_targets = (
         "release-evidence-converge:",
         "release-verify-current:",

@@ -414,6 +414,9 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "evidence_paths": [
             "mk/release.mk",
+            "mk/release-authority.mk",
+            "mk/release-evidence.mk",
+            "mk/release-learning.mk",
             "ops/scripts/release/release_workflow_order_guard.py",
             "tests/test_makefile_static_gates.py",
         ],

@@ -5,6 +5,9 @@ import unittest
 
 import pytest
 
+from ops.scripts.release.external_report_lifecycle_runtime import (
+    release_lane_mutability_split_status,
+)
 from tests.external_report_action_matrix_test_runtime import (
     SCHEMA_PATH,
     ExternalReportActionMatrixTestBase,
@@ -28,6 +31,22 @@ pytestmark = pytest.mark.public
 
 
 class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBase):
+    def test_release_lane_mutability_split_reads_split_make_surfaces(self) -> None:
+        self.assertEqual(release_lane_mutability_split_status(self.vault), "planned")
+
+        release_evidence_mk = self.vault / "mk" / "release-evidence.mk"
+        release_evidence_mk.parent.mkdir(parents=True, exist_ok=True)
+        release_evidence_mk.write_text(
+            "release-evidence-converge: release-evidence-converge-phase-3\n"
+            "release-verify-current:\n"
+            "\t$(MAKE) release-evidence-dashboard\n"
+            "release-sealed-verify:\n"
+            "\t$(MAKE) release-sealed-run-ready\n",
+            encoding="utf-8",
+        )
+
+        self.assertEqual(release_lane_mutability_split_status(self.vault), "implemented")
+
     def test_gate_effect_strength_order_is_explicit_for_claim_blockers(self) -> None:
         self.assertEqual(
             strongest_gate_effect(["claim_blocker", "operator_review_required"]),
@@ -237,6 +256,12 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
             "selector_marker_scope_parity",
         ):
             self.assertIn("external-reports/release.md", actions[action_id]["source_report_paths"])
+        release_lane_evidence_paths = {
+            item["path"] for item in actions["release_lane_mutability_split"]["evidence"]
+        }
+        self.assertIn("mk/release-evidence.mk", release_lane_evidence_paths)
+        self.assertIn("mk/release-authority.mk", release_lane_evidence_paths)
+        self.assertIn("mk/release-learning.mk", release_lane_evidence_paths)
         self.assertIn(
             "external-reports/release.md",
             actions["script_output_surfaces_currentness"]["source_report_paths"],
