@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.policy_runtime import report_path
 
 from .auto_improve_queue_runtime import build_proposal_queue
@@ -18,7 +19,6 @@ from .auto_improve_readiness_constants_runtime import (
     SAME_EVAL_PROPOSAL_FAILURE_MODES,
 )
 from .auto_improve_readiness_learning_runtime import _build_loop_health_summary
-from .auto_improve_readiness_release_authority_runtime import _dict_field
 
 
 @dataclass(frozen=True)
@@ -667,10 +667,10 @@ def readiness_queue_state(
     vault: Path,
     reports: dict[str, dict[str, Any]],
 ) -> ReadinessQueueState:
-    outcome_summary = _dict_field(reports["outcome_metrics"], "summary")
-    review_summary = _dict_field(reports["mechanism_review"], "summary")
-    proposal_summary = _dict_field(reports["mutation_proposal"], "summary")
-    proposal_diagnostics = _dict_field(reports["mutation_proposal"], "diagnostics")
+    outcome_summary = dict_field(reports["outcome_metrics"], "summary")
+    review_summary = dict_field(reports["mechanism_review"], "summary")
+    proposal_summary = dict_field(reports["mutation_proposal"], "summary")
+    proposal_diagnostics = dict_field(reports["mutation_proposal"], "diagnostics")
     loop_health_summary = _build_loop_health_summary(vault)
     same_eval_telemetry_summary = _same_eval_telemetry_summary(
         vault, reports["mutation_proposal"]

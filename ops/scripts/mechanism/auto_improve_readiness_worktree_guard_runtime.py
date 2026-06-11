@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
 
 from .auto_improve_readiness_constants_runtime import (
@@ -13,11 +14,6 @@ def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
-
-
-def _dict_field(payload: dict[str, Any], key: str) -> dict[str, Any]:
-    value = payload.get(key, {})
-    return value if isinstance(value, dict) else {}
 
 
 def _goal_worktree_guard_summary(payload: dict[str, Any]) -> dict[str, Any]:
@@ -57,8 +53,8 @@ def _goal_worktree_guard_summary(payload: dict[str, Any]) -> dict[str, Any]:
             ),
         }
 
-    decisions = _dict_field(payload, "decisions")
-    git = _dict_field(payload, "git")
+    decisions = dict_field(payload, "decisions")
+    git = dict_field(payload, "git")
     status = str(payload.get("status", "")).strip() or "unknown"
     requested_mode = str(payload.get("requested_mode", "")).strip() or "unknown"
     detected_mode = str(payload.get("detected_mode", "")).strip() or "unknown"

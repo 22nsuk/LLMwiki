@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.core.release_authority_state_runtime import (
     clean_required_preflight_passes,
     machine_release_allowed_from_status_view,
@@ -56,11 +57,6 @@ def _int_value(value: object, default: int = 0) -> int:
         except (TypeError, ValueError):
             return default
     return default
-
-
-def _dict_field(payload: dict[str, Any], key: str) -> dict[str, Any]:
-    value = payload.get(key, {})
-    return value if isinstance(value, dict) else {}
 
 
 def _release_gate_summaries(reports: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -370,8 +366,8 @@ def _release_evidence_cohort_summary(payload: dict[str, Any]) -> dict[str, Any]:
     if summary["status"] == "not_run" or summary["source_status"] == "kind_mismatch":
         return summary
     source_status = str(payload.get("status", "")).strip() or "unknown"
-    cohort = _dict_field(payload, "cohort")
-    release_summary = _dict_field(payload, "summary")
+    cohort = dict_field(payload, "cohort")
+    release_summary = dict_field(payload, "summary")
     strict_same_fingerprint = bool(cohort.get("strict_same_fingerprint", False))
     component_fingerprint_count = _int_value(cohort.get("component_fingerprint_count"))
     clean_lane_contract_status = (

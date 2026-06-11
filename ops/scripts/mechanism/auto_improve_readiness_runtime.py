@@ -14,6 +14,7 @@ from ops.scripts.artifact_io_runtime import (
     read_json_object,
     write_schema_backed_report,
 )
+from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
@@ -79,7 +80,6 @@ from .auto_improve_readiness_queue_runtime import (
 )
 from .auto_improve_readiness_release_authority_runtime import (
     _artifact_contract_promotion_blockers,
-    _dict_field,
     _release_authority_preflight_promotion_blockers,
     _release_gate_promotion_blockers,
     _release_gate_summaries,
@@ -325,7 +325,7 @@ def _remediation_backlog_summary(
         "blocking_item_count": len(blocking_signal_ids),
         "signal_ids": signal_ids,
         "currentness_status": str(
-            _dict_field(payload, "currentness").get("status", "")
+            dict_field(payload, "currentness").get("status", "")
         ).strip(),
         "summary": (
             "remediation backlog "
