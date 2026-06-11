@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import hashlib
 import json
 import locale
@@ -21,6 +20,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
     from ops.scripts.path_portability_runtime import (
         INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT,
         component_portability_metrics,
@@ -54,6 +54,7 @@ else:
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
     from ops.scripts.path_portability_runtime import (
         INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT,
         component_portability_metrics,
@@ -431,10 +432,10 @@ def preflight(
 
 def _timestamp_output_from_report(destination: Path, report: dict) -> Path:
     generated_at = str(report.get("generated_at", ""))
-    try:
-        timestamp = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00")).timestamp()
-    except ValueError:
+    generated_dt = parse_generated_at(generated_at)
+    if generated_dt is None:
         return destination
+    timestamp = generated_dt.timestamp()
     os.utime(destination, (timestamp, timestamp))
     return destination
 

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import json
 import os
 import platform
@@ -19,6 +18,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.raw_registry_preflight import (
@@ -42,6 +42,7 @@ else:
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
@@ -519,10 +520,10 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
         )
     )
     generated_at = str(report.get("generated_at", ""))
-    try:
-        timestamp = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00")).timestamp()
-    except ValueError:
+    generated_dt = parse_generated_at(generated_at)
+    if generated_dt is None:
         return destination
+    timestamp = generated_dt.timestamp()
     os.utime(destination, (timestamp, timestamp))
     return destination
 

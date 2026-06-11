@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
 from ops.scripts.core.release_currentness_state_runtime import (
     components_match_current_source_tree,
     currentness_field,
@@ -155,16 +156,11 @@ def _file_mtime_iso_z(path: Path) -> str:
 def _modified_after_generated_at(report_mtime: str, generated_at: str) -> bool:
     if not report_mtime or not generated_at:
         return False
-    try:
-        modified_at = dt.datetime.fromisoformat(report_mtime.replace("Z", "+00:00"))
-        generated = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
-    except ValueError:
+    modified_at = parse_generated_at(report_mtime)
+    generated = parse_generated_at(generated_at)
+    if modified_at is None or generated is None:
         return False
-    if modified_at.tzinfo is None:
-        modified_at = modified_at.replace(tzinfo=dt.UTC)
-    if generated.tzinfo is None:
-        generated = generated.replace(tzinfo=dt.UTC)
-    return modified_at.astimezone(dt.UTC) > generated.astimezone(dt.UTC)
+    return modified_at > generated
 
 
 def _status(payload: dict[str, Any]) -> str:
