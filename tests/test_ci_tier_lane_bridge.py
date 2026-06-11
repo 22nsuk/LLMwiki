@@ -54,8 +54,13 @@ class CiTierLaneBridgeTests(unittest.TestCase):
             "make release-authority-sealed-preflight",
             release_closeout_commands,
         )
-        self.assertIn("make test-report-contract-all", by_tier["report-contract"]["workflow_run_text"])
-        self.assertNotIn("make test-report-contract-core", by_tier["report-contract"]["workflow_run_text"])
+        report_contract_run = by_tier["report-contract"]["workflow_run_text"]
+        self.assertIn("make test-report-contract-core", report_contract_run)
+        self.assertIn("make test-report-contract-all", report_contract_run)
+        self.assertIn(
+            "make external-report-reference-manifest-release-check",
+            report_contract_run,
+        )
         self.assertEqual(
             validate_with_schema(
                 report,

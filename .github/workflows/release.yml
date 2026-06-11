@@ -36,6 +36,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Run report-contract full sweep
+        run: make test-report-contract-all
+
       - name: Materialize verified source zip
         run: make release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT=build/release/live-source.zip
 

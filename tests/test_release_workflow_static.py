@@ -63,6 +63,11 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         _assert_workflow_uses_are_sha_pinned(self, workflow)
         _assert_run_contains(
             self,
+            _step(verify, "Run report-contract full sweep"),
+            ("make test-report-contract-all",),
+        )
+        _assert_run_contains(
+            self,
             _step(publish, "Generate supply-chain artifacts"),
             ("make openvex-draft-cached", "make supply-chain-benchmark"),
         )

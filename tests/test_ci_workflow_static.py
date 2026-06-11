@@ -253,6 +253,22 @@ class CiWorkflowStaticTests(unittest.TestCase):
         self.assertIn("            make check-finalized", text)
         self.assertIn("            make release-smoke-fast", text)
 
+    def test_report_contract_tier_uses_core_on_pull_requests(self) -> None:
+        job = _job(_workflow(), "test-tier")
+        step = _step_by_name(job, "Run report-contract tier")
+
+        self.assertEqual(step.get("if"), "matrix.tier == 'report-contract'")
+        run_text = _run_text(step)
+        self.assertIn('if [ "${{ github.event_name }}" = "pull_request" ]; then', run_text)
+        self.assertLess(
+            run_text.index("make test-report-contract-core"),
+            run_text.index("make test-report-contract-all"),
+        )
+        self.assertLess(
+            run_text.index("make test-report-contract-all"),
+            run_text.index("make external-report-reference-manifest-release-check"),
+        )
+
     def test_release_closeout_regression_tier_uploads_diagnostics_without_masking_root_failure(
         self,
     ) -> None:

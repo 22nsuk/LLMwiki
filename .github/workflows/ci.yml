@@ -100,7 +100,11 @@ jobs:
       - name: Run report-contract tier
         if: matrix.tier == 'report-contract'
         run: |
-          make test-report-contract-all
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            make test-report-contract-core
+          else
+            make test-report-contract-all
+          fi
           make external-report-reference-manifest-release-check
 
       - name: Run release closeout regression tier

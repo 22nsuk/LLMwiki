@@ -86,9 +86,9 @@ checks for ordinary Python changes. `make test-all` is the non-release full
 regression lane and should be treated as checkpoint-grade work.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.
-`make test-report-contract-all` intentionally sweeps
-every `report_contract` marker and is a checkpoint/CI or final contract proof,
-not the default for every vertical slice. Report-contract, release-sealing, and
+`make test-report-contract-all` intentionally sweeps every `report_contract`
+marker and is a checkpoint, release-style, or final contract proof, not the
+default for every vertical slice. Report-contract, release-sealing, and
 full-suite Make lanes use their own pytest flag variables so isolation fixes can
 be applied without changing every recipe. Override those variables to
 `$(PYTEST_SERIAL_FLAGS)` only when investigating a parallel-isolation failure.
@@ -170,6 +170,10 @@ CI splits registry-backed lanes into parallel jobs; see
 `.github/workflows/ci.yml` and `ops/test-lane-registry.json` for the executable
 shape. Docs should point to registry-backed Make targets rather than
 hand-maintained pytest marker expressions.
+The `report-contract` CI tier uses `make test-report-contract-core` on pull
+requests to keep review latency bounded; the full `make test-report-contract-all`
+sweep remains a checkpoint-grade lane and is run by the release workflow before
+release artifacts are built.
 
 Dependabot branches are checked through the `pull_request` event; the CI
 `push` trigger ignores `dependabot/**` so one dependency PR SHA does not spend
