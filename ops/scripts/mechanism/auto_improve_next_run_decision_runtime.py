@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from ops.scripts.core.request_coercion_runtime import coerce_request_or_kwargs
 from ops.scripts.experiment_telemetry_runtime import run_rel
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     blocking_role_for_failure_taxonomy,
@@ -151,12 +152,11 @@ def _coerce_next_run_decision_request(
     request: NextRunDecisionRequest | None,
     legacy_kwargs: dict[str, Any],
 ) -> NextRunDecisionRequest:
-    if request is not None:
-        if legacy_kwargs:
-            names = ", ".join(sorted(legacy_kwargs))
-            raise TypeError(f"request cannot be combined with legacy keyword arguments: {names}")
-        return request
-    return NextRunDecisionRequest(**legacy_kwargs)
+    return coerce_request_or_kwargs(
+        request=request,
+        legacy_kwargs=legacy_kwargs,
+        request_type=NextRunDecisionRequest,
+    )
 
 
 def _executor_report_paths(request: NextRunDecisionRequest) -> list[str]:

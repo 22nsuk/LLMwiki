@@ -16,6 +16,7 @@ from ops.scripts.core.path_classification_runtime import (
     matches_prefix_or_root,
     normalize_repo_path,
 )
+from ops.scripts.core.request_coercion_runtime import coerce_request_or_kwargs
 from ops.scripts.release.release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
@@ -543,12 +544,11 @@ def _coerce_run_commit_request(
     request: RunCommitRequest | None,
     legacy_kwargs: dict[str, Any],
 ) -> RunCommitRequest:
-    if request is not None:
-        if legacy_kwargs:
-            names = ", ".join(sorted(legacy_kwargs))
-            raise TypeError(f"request cannot be combined with legacy keyword arguments: {names}")
-        return request
-    return RunCommitRequest(**legacy_kwargs)
+    return coerce_request_or_kwargs(
+        request=request,
+        legacy_kwargs=legacy_kwargs,
+        request_type=RunCommitRequest,
+    )
 
 
 def _blocked_report(

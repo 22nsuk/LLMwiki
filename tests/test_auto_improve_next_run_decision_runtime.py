@@ -11,6 +11,7 @@ from ops.scripts.auto_improve_next_run_decision_runtime import (
     REPAIR_FAILURE_ACTION,
     SELECT_ALTERNATIVE_ACTION,
     WAIT_FOR_CAPACITY_ACTION,
+    NextRunDecisionRequest,
     build_next_run_decision,
 )
 from ops.scripts.auto_improve_outcome_runtime import ExecutionOutcome
@@ -155,6 +156,26 @@ class AutoImproveNextRunDecisionRuntimeTests(unittest.TestCase):
             decision["target_proposal_id"],
             "next_run_failure_repair__example-runtime__changed-files-manifest-scope",
         )
+
+    def test_request_object_cannot_be_combined_with_legacy_kwargs(self) -> None:
+        request = NextRunDecisionRequest(
+            session_id="auto-improve-session",
+            iteration=1,
+            run_id="auto-improve-session-run-01-example-runtime",
+            proposal=_proposal(),
+            outcome=ExecutionOutcome(outcome="review_blocked", next_consecutive_failures=1),
+            roles=["worker"],
+            scope_freeze_rel="runs/run-01/scope-freeze.json",
+            routing_report_rels=["runs/run-01/subagent-routing.worker.json"],
+            telemetry_rel="runs/run-01/run-telemetry.json",
+            context=_context(),
+        )
+
+        with self.assertRaisesRegex(
+            TypeError,
+            "request cannot be combined with legacy keyword arguments: session_id",
+        ):
+            build_next_run_decision(request=request, session_id="legacy-session")
 
 
 if __name__ == "__main__":

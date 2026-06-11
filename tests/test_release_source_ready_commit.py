@@ -163,6 +163,25 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["status"], "dry_run")
         self.assertEqual(report["paths_to_commit"], ["README.md"])
 
+    def test_run_commit_rejects_request_object_with_legacy_kwargs(self) -> None:
+        request = RunCommitRequest(
+            vault=self.vault,
+            out_path=self.vault / "tmp" / "release-source-ready-commit.json",
+            message="release: ready",
+            pre_status_path=None,
+            amend=False,
+            amend_of_path=None,
+            dry_run=True,
+            allow_staged=False,
+            only_generated_canonical=False,
+        )
+
+        with self.assertRaisesRegex(
+            TypeError,
+            "request cannot be combined with legacy keyword arguments: message",
+        ):
+            run_commit(request, message="legacy message")
+
     def test_only_generated_canonical_refuses_source_changes(self) -> None:
         (self.vault / "README.md").write_text("# Test\n\nSource drift.\n", encoding="utf-8")
         (self.vault / "ops" / "script-output-surfaces.json").write_text(
