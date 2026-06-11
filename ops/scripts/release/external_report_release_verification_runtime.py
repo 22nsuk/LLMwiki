@@ -433,93 +433,125 @@ def _full_suite_reason_ids(vault: Path) -> list[str]:
     return reasons
 
 
-def release_verified_action_reason_ids(vault: Path, action_id: str) -> list[str]:
-    reasons: list[str] = []
-    if action_id in {
+RELEASE_AUTHORITY_REASON_ACTIONS = frozenset(
+    {
         "source_package_distribution_binding",
         "release_evidence_bundle_and_attestation",
         "full_suite_evidence_currentness",
         "promotion_truth_ladder",
-    }:
+    }
+)
+SOURCE_PACKAGE_REASON_ACTIONS = frozenset(
+    {
+        "source_package_distribution_binding",
+        "release_evidence_bundle_and_attestation",
+    }
+)
+FULL_SUITE_REASON_ACTIONS = frozenset(
+    {
+        "release_evidence_bundle_and_attestation",
+        "full_suite_evidence_currentness",
+    }
+)
+RELEASE_RUN_MANIFEST_REASON_ACTIONS = frozenset(
+    {
+        "source_package_distribution_binding",
+        "release_evidence_bundle_and_attestation",
+        "full_suite_evidence_currentness",
+    }
+)
+SEALED_RUN_MANIFEST_REASON_ACTIONS = frozenset(
+    {
+        "source_package_distribution_binding",
+        "release_evidence_bundle_and_attestation",
+    }
+)
+
+
+def _release_run_manifest_reason_ids(vault: Path) -> list[str]:
+    return _current_release_manifest_reason_ids(
+        vault,
+        "build/release/release-run-manifest.json",
+        "release_run_manifest",
+        "release_run_manifest",
+    )
+
+
+def _sealed_run_manifest_reason_ids(vault: Path) -> list[str]:
+    return _current_release_manifest_reason_ids(
+        vault,
+        "build/release/release-sealed-run-manifest.json",
+        "release_sealed_run_manifest",
+        "release_sealed_run_manifest",
+    )
+
+
+def _release_evidence_finality_reason_ids(vault: Path) -> list[str]:
+    reasons: list[str] = []
+    fixed_point = load_json_object(vault / "ops/reports/release-closeout-fixed-point.json")
+    finality = load_json_object(vault / "ops/reports/release-closeout-finality-attestation.json")
+    finality_fixed_point = as_dict(finality.get("fixed_point_report"))
+    finality_verified, _finality_failures = verify_attestation(vault)
+    if fixed_point.get("status") != "pass":
+        reasons.append("release_closeout_fixed_point_not_pass")
+    if not bool(fixed_point.get("converged")):
+        reasons.append("release_closeout_fixed_point_not_converged")
+    if finality_fixed_point.get("status") != "pass":
+        reasons.append("release_finality_fixed_point_report_not_pass")
+    if not finality_verified:
+        reasons.append("release_finality_attestation_verification_failed")
+    return reasons
+
+
+def _promotion_truth_ladder_reason_ids(vault: Path) -> list[str]:
+    ready = load_json_object(vault / "build/release/release-auto-promotion-ready-manifest.json")
+    if not ready:
+        return ["release_auto_promotion_ready_manifest_missing"]
+    reasons: list[str] = []
+    if ready.get("status") != "pass":
+        reasons.append("release_auto_promotion_ready_manifest_not_pass")
+    if ready.get("artifact_kind") != "release_auto_promotion_ready_manifest":
+        reasons.append("release_auto_promotion_ready_manifest_kind_mismatch")
+    if ready.get("auto_promotion_status") != "allowed":
+        reasons.append("release_auto_promotion_not_allowed")
+    if ready.get("unattended_promotion_allowed") is not True:
+        reasons.append("release_unattended_promotion_not_allowed")
+    if str(ready.get("source_tree_fingerprint", "")).strip() != release_source_tree_fingerprint(
+        vault
+    ):
+        reasons.append("release_auto_promotion_ready_manifest_source_tree_fingerprint_mismatch")
+    artifact_revision = release_artifact_revision(ready)
+    if not artifact_revision:
+        reasons.append("release_auto_promotion_ready_manifest_source_revision_missing")
+    elif not _release_artifact_revision_current(vault, ready):
+        reasons.append("release_auto_promotion_ready_manifest_source_revision_mismatch")
+    return reasons
+
+
+def _common_release_verified_reason_ids(vault: Path, action_id: str) -> list[str]:
+    reasons: list[str] = []
+    if action_id in RELEASE_AUTHORITY_REASON_ACTIONS:
         reasons.extend(_release_authority_report_reason_ids(vault))
-    if action_id in {
-        "source_package_distribution_binding",
-        "release_evidence_bundle_and_attestation",
-    }:
+    if action_id in SOURCE_PACKAGE_REASON_ACTIONS:
         reasons.extend(_source_package_reason_ids(vault))
-    if action_id in {
-        "release_evidence_bundle_and_attestation",
-        "full_suite_evidence_currentness",
-    }:
+    if action_id in FULL_SUITE_REASON_ACTIONS:
         reasons.extend(_full_suite_reason_ids(vault))
-    if action_id in {
-        "source_package_distribution_binding",
-        "release_evidence_bundle_and_attestation",
-        "full_suite_evidence_currentness",
-    }:
-        reasons.extend(
-            _current_release_manifest_reason_ids(
-                vault,
-                "build/release/release-run-manifest.json",
-                "release_run_manifest",
-                "release_run_manifest",
-            )
-        )
+    if action_id in RELEASE_RUN_MANIFEST_REASON_ACTIONS:
+        reasons.extend(_release_run_manifest_reason_ids(vault))
+    if action_id in SEALED_RUN_MANIFEST_REASON_ACTIONS:
+        reasons.extend(_sealed_run_manifest_reason_ids(vault))
+    return reasons
+
+
+def release_verified_action_reason_ids(vault: Path, action_id: str) -> list[str]:
+    reasons: list[str] = []
+    reasons.extend(_common_release_verified_reason_ids(vault, action_id))
     if action_id == "source_package_distribution_binding":
-        reasons.extend(
-            _current_release_manifest_reason_ids(
-                vault,
-                "build/release/release-sealed-run-manifest.json",
-                "release_sealed_run_manifest",
-                "release_sealed_run_manifest",
-            )
-        )
         reasons.extend(_reference_manifest_distribution_reason_ids(vault))
     if action_id == "release_evidence_bundle_and_attestation":
-        reasons.extend(
-            _current_release_manifest_reason_ids(
-                vault,
-                "build/release/release-sealed-run-manifest.json",
-                "release_sealed_run_manifest",
-                "release_sealed_run_manifest",
-            )
-        )
-    if action_id == "release_evidence_bundle_and_attestation":
-        fixed_point = load_json_object(vault / "ops/reports/release-closeout-fixed-point.json")
-        finality = load_json_object(vault / "ops/reports/release-closeout-finality-attestation.json")
-        finality_fixed_point = as_dict(finality.get("fixed_point_report"))
-        finality_verified, _finality_failures = verify_attestation(vault)
-        if fixed_point.get("status") != "pass":
-            reasons.append("release_closeout_fixed_point_not_pass")
-        if not bool(fixed_point.get("converged")):
-            reasons.append("release_closeout_fixed_point_not_converged")
-        if finality_fixed_point.get("status") != "pass":
-            reasons.append("release_finality_fixed_point_report_not_pass")
-        if not finality_verified:
-            reasons.append("release_finality_attestation_verification_failed")
+        reasons.extend(_release_evidence_finality_reason_ids(vault))
     if action_id == "promotion_truth_ladder":
-        ready = load_json_object(vault / "build/release/release-auto-promotion-ready-manifest.json")
-        if not ready:
-            reasons.append("release_auto_promotion_ready_manifest_missing")
-        else:
-            if ready.get("status") != "pass":
-                reasons.append("release_auto_promotion_ready_manifest_not_pass")
-            if ready.get("artifact_kind") != "release_auto_promotion_ready_manifest":
-                reasons.append("release_auto_promotion_ready_manifest_kind_mismatch")
-            if ready.get("auto_promotion_status") != "allowed":
-                reasons.append("release_auto_promotion_not_allowed")
-            if ready.get("unattended_promotion_allowed") is not True:
-                reasons.append("release_unattended_promotion_not_allowed")
-            if (
-                str(ready.get("source_tree_fingerprint", "")).strip()
-                != release_source_tree_fingerprint(vault)
-            ):
-                reasons.append("release_auto_promotion_ready_manifest_source_tree_fingerprint_mismatch")
-            artifact_revision = release_artifact_revision(ready)
-            if not artifact_revision:
-                reasons.append("release_auto_promotion_ready_manifest_source_revision_missing")
-            elif not _release_artifact_revision_current(vault, ready):
-                reasons.append("release_auto_promotion_ready_manifest_source_revision_mismatch")
+        reasons.extend(_promotion_truth_ladder_reason_ids(vault))
     return _dedupe_reason_ids(reasons)
 
 
@@ -624,4 +656,3 @@ def _release_verified_count_status(action_id: str) -> CountStatusResolver:
         )
 
     return resolver
-

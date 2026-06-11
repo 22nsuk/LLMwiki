@@ -30,7 +30,15 @@ from tests.run_mechanism_experiment_test_utils import (
     PENDING_SIGNOFF_DECISION_CONTRACT,
     ForcedPromotionReportPatch,
     PromotionReportCallExpectation,
+    assert_raw_registry_preflight_convergence,
+    assert_raw_registry_preflight_ignored_changes,
     forced_promotion_report_builder,
+    raw_registry_preflight_artifacts,
+    raw_registry_preflight_capture_reports,
+    raw_registry_preflight_promotion_report_builder,
+    raw_registry_preflight_run_command,
+    run_raw_registry_preflight_convergence,
+    seed_stale_raw_registry_preflight,
     seed_wrapper_vault,
     successful_command_result,
     write_stubbed_capture_artifacts,
@@ -1451,226 +1459,27 @@ class RunMechanismExperimentTests(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             seed_wrapper_vault(vault)
-            preflight_path = vault / "ops" / "reports" / "raw-registry-preflight-report.json"
-            preflight_repro_path = (
-                vault / "ops" / "reports" / "raw-registry-preflight-reproducibility.json"
+            preflight_path, preflight_repro_path = seed_stale_raw_registry_preflight(vault)
+            result, capture_reports = run_raw_registry_preflight_convergence(
+                vault,
+                capture_reports=raw_registry_preflight_capture_reports(self, vault),
+                run_command=raw_registry_preflight_run_command(self, vault),
+                build_promotion_report=raw_registry_preflight_promotion_report_builder(),
+                context=fixed_context(),
             )
-            preflight_path.parent.mkdir(parents=True, exist_ok=True)
-            preflight_path.write_text('{"status": "stale"}\n', encoding="utf-8")
+            artifacts = raw_registry_preflight_artifacts(vault)
 
-            def fake_capture_reports(
-                source_vault: Path,
-                *,
-                run_id: str,
-                phase: str,
-                policy: dict,
-                policy_path_text: str,
-                primary_targets: list[str],
-                supporting_targets: list[str],
-                test_files: list[str],
-                artifact_vault: Path | None = None,
-                context: RuntimeContext | None = None,
-            ) -> dict:
-                self.assertEqual(run_id, "run-wrapper-preflight-converge")
-                self.assertTrue(policy)
-                if phase == "candidate":
-                    candidate_preflight = json.loads(
-                        (source_vault / "ops" / "reports" / "raw-registry-preflight-report.json").read_text(
-                            encoding="utf-8"
-                        )
-                    )
-                    candidate_reproducibility = json.loads(
-                        (
-                            source_vault
-                            / "ops"
-                            / "reports"
-                            / "raw-registry-preflight-reproducibility.json"
-                        ).read_text(encoding="utf-8")
-                    )
-                    self.assertEqual(
-                        candidate_preflight["artifact_kind"],
-                        "raw_registry_preflight_report",
-                    )
-                    self.assertEqual(candidate_preflight["generated_at"], "2026-04-15T03:45:00Z")
-                    self.assertEqual(
-                        candidate_reproducibility["artifact_kind"],
-                        "raw_registry_preflight_reproducibility",
-                    )
-                    self.assertEqual(candidate_reproducibility["diff_status"], "match")
-                    self.assertEqual(candidate_reproducibility["status"], "pass")
-                return write_stubbed_capture_artifacts(
-                    vault,
-                    run_id=run_id,
-                    phase=phase,
-                    primary_targets=primary_targets,
-                    supporting_targets=supporting_targets,
-                    test_files=test_files,
-                )
-
-            def fake_run_command(
-                command: str,
-                *,
-                cwd: Path,
-                timeout_seconds: int,
-                argv: list[str] | None = None,
-            ) -> dict:
-                self.assertNotEqual(cwd, vault.resolve())
-                if "repo health ok" in command:
-                    return successful_command_result(command, stdout="repo health ok\n")
-                (cwd / "ops" / "scripts" / "example.py").write_text(
-                    "def subject(value):\n"
-                    "    if value == 0:\n"
-                    "        return 0\n"
-                    "    return 1 if value > 0 else -1\n",
-                    encoding="utf-8",
-                )
-                test_path = cwd / "tests" / "test_example.py"
-                test_path.write_text(
-                    test_path.read_text(encoding="utf-8")
-                    + "\n\ndef test_subject_zero():\n    assert True\n",
-                    encoding="utf-8",
-                )
-                return successful_command_result(command, stdout="mutation applied\n")
-
-            fake_build_promotion_report = forced_promotion_report_builder(
-                PromotionReportCallExpectation(
-                    run_id="run-wrapper-preflight-converge",
-                    primary_targets=("ops/scripts/example.py",),
-                    supporting_targets=("ops/reports/raw-registry-preflight-report.json",),
-                    log_summary="Wrapper-driven raw registry preflight convergence",
-                    require_signoff=False,
-                    signoff_status="approved",
-                    signoff_by="human",
-                    signoff_ts="2026-04-15T00:00:00Z",
-                    changed_files_manifest_path=(
-                        "runs/run-wrapper-preflight-converge/changed-files-manifest.json"
-                    ),
-                    behavior_delta_path="runs/run-wrapper-preflight-converge/behavior-delta.json",
-                ),
-                ForcedPromotionReportPatch(
-                    decision="PROMOTE",
-                    checks=(
-                        {
-                            "id": "changed_files_manifest_scope",
-                            "status": "PASS",
-                            "detail": "fixture keeps the PASS decision visible to the caller",
-                        },
-                    ),
-                ),
+            assert_raw_registry_preflight_convergence(
+                self,
+                result=result,
+                artifacts=artifacts,
+                capture_reports=capture_reports,
+                preflight_path=preflight_path,
+                preflight_repro_path=preflight_repro_path,
             )
-
-            with (
-                mock.patch.object(
-                    mechanism_run_capture_runtime,
-                    "_capture_reports",
-                    side_effect=fake_capture_reports,
-                ) as capture_reports,
-                mock.patch.object(
-                    mechanism_run_workspace_runtime,
-                    "_run_command",
-                    side_effect=fake_run_command,
-                ),
-                mock.patch.object(
-                    mechanism_run_promotion_runtime,
-                    "_build_promotion_report",
-                    side_effect=fake_build_promotion_report,
-                ),
-                mock.patch.object(
-                    mechanism_run_promotion_runtime,
-                    "validate_run_dir",
-                    return_value={"phase": "mechanism_evaluated", "status": "pass"},
-                ),
-            ):
-                result = run_mechanism_experiment(
-                    vault,
-                    run_id="run-wrapper-preflight-converge",
-                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
-                    primary_targets=["ops/scripts/example.py"],
-                    supporting_targets=["ops/reports/raw-registry-preflight-report.json"],
-                    test_files=["tests/test_example.py"],
-                    log_summary="Wrapper-driven raw registry preflight convergence",
-                    mutation_command=f"{sys.executable} tools/mutate_success.py",
-                    check_command=f"{sys.executable} -c \"print('repo health ok')\"",
-                    require_signoff=False,
-                    signoff_status="approved",
-                    signoff_by="human",
-                    signoff_ts="2026-04-15T00:00:00Z",
-                    finalize=False,
-                    context=fixed_context(),
-                )
-
-            run_dir = vault / "runs" / "run-wrapper-preflight-converge"
-            changed_manifest = json.loads(
-                (run_dir / "changed-files-manifest.json").read_text(encoding="utf-8")
-            )
-            convergence = json.loads(
-                (run_dir / "generated-artifact-convergence.json").read_text(encoding="utf-8")
-            )
-            run_telemetry = json.loads(
-                (run_dir / "run-telemetry.json").read_text(encoding="utf-8")
-            )
-            run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
-            run_fingerprint = json.loads(
-                (run_dir / "run-artifact-fingerprint.json").read_text(encoding="utf-8")
-            )
-
-            self.assertEqual(result["decision"], "PROMOTE")
-            self.assertEqual(
-                result["post_mutation_generated_artifact_convergence"]["artifact"],
-                "runs/run-wrapper-preflight-converge/generated-artifact-convergence.json",
-            )
-            self.assertEqual(
-                result["post_mutation_generated_artifact_convergence"],
-                run_telemetry["post_mutation_generated_artifact_convergence"],
-            )
-            self.assertEqual(convergence["status"], "refreshed")
-            self.assertEqual(
-                convergence["refreshed_targets"],
-                [
-                    "ops/script-output-surfaces.json",
-                    "ops/reports/raw-registry-preflight-report.json",
-                ],
-            )
-            self.assertEqual(
-                convergence["artifacts"],
-                [
-                    "ops/script-output-surfaces.json",
-                    "ops/reports/raw-registry-preflight-report.json",
-                    "ops/reports/raw-registry-preflight-reproducibility.json",
-                ],
-            )
-            convergence_event = next(
-                event
-                for event in run_ledger["events"]
-                if event["type"] == "generated_artifact_convergence_checked"
-            )
-            self.assertEqual(convergence_event["decision"], "refreshed")
-            fingerprint_record = next(
-                item
-                for item in run_fingerprint["artifacts"]
-                if item["path"]
-                == "runs/run-wrapper-preflight-converge/generated-artifact-convergence.json"
-            )
-            self.assertEqual(
-                fingerprint_record["schema"],
-                "ops/schemas/generated-artifact-convergence.schema.json",
-            )
-            self.assertEqual(capture_reports.call_count, 2)
-            self.assertEqual(json.loads(preflight_path.read_text(encoding="utf-8")), {"status": "stale"})
-            self.assertFalse(preflight_repro_path.exists())
-            ignored_paths = {
-                item["path"]: item["reason"]
-                for item in changed_manifest["ignored_changes"]["files"]
-            }
-            self.assertEqual(
-                ignored_paths,
-                {
-                    "ops/script-output-surfaces.json": "generated_report_surface",
-                    "ops/reports/raw-registry-preflight-report.json": "generated_report_surface",
-                    "ops/reports/raw-registry-preflight-reproducibility.json": (
-                        "generated_report_surface"
-                    ),
-                },
+            assert_raw_registry_preflight_ignored_changes(
+                self,
+                artifacts["changed_manifest"],
             )
 
     def test_post_mutation_convergence_refreshes_script_output_surfaces_for_ops_script_target(

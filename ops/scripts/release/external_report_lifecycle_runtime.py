@@ -314,6 +314,100 @@ SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         ["supply-chain-check"],
     ),
 }
+REASON_PREFIX_TARGETS: tuple[tuple[tuple[str, ...], str, str, str, tuple[str, ...]], ...] = (
+    (
+        ("release_run_manifest_",),
+        "release_run_ready",
+        "release_run",
+        "",
+        ("release-run-ready-plan-check", "release-run-ready"),
+    ),
+    (
+        ("release_sealed_run_manifest_",),
+        "release_sealed_run_ready",
+        "sealed_release",
+        "",
+        ("release-sealed-run-ready-plan", "release-sealed-run-ready"),
+    ),
+    (
+        ("release_auto_promotion_ready_manifest_",),
+        "release_auto_promotion_ready",
+        "unattended_promotion",
+        "",
+        ("release-auto-promotion-ready-plan", "release-auto-promotion-ready"),
+    ),
+    (
+        ("release_finality_", "release_closeout_fixed_point_"),
+        "release_auto_promotion_preseal",
+        "release_preseal",
+        "",
+        (
+            "release-auto-promotion-preseal",
+            "release-closeout-fixed-point",
+            "release-closeout-finality-verify",
+        ),
+    ),
+    (
+        ("release_dashboard_", "release_authority_", "release_closeout_"),
+        "release_auto_promotion_preseal",
+        "release_preseal",
+        "",
+        ("release-auto-promotion-preseal", "release-evidence-dashboard"),
+    ),
+    (
+        ("source_package_",),
+        "release_source_package",
+        "source_package",
+        "",
+        ("release-source-package-check",),
+    ),
+    (
+        ("external_report_",),
+        "external_report_reference_manifest",
+        "external_report_lifecycle",
+        "",
+        ("external-report-reference-manifest-settle",),
+    ),
+    (
+        ("collaboration_governance_",),
+        "collaboration_governance",
+        "github_governance",
+        GATE_EFFECT_ADVISORY,
+        ("collaboration-governance",),
+    ),
+    (
+        ("full_suite_",),
+        "release_run_ready",
+        "release_run",
+        "",
+        ("test-execution-summary-full-current-or-refresh",),
+    ),
+    (
+        ("goal_runtime_",),
+        "goal_runtime_certificate",
+        "unattended_promotion",
+        GATE_EFFECT_CLAIM_BLOCKER,
+        (
+            "goal-runtime-certificate",
+            "release-auto-promotion-goal-run-id-guard",
+            "release-auto-promotion-ready-plan",
+        ),
+    ),
+)
+REASON_EXACT_TARGETS: dict[str, tuple[str, str, str, tuple[str, ...]]] = {
+    "release_auto_promotion_not_allowed": (
+        "release_auto_promotion_ready",
+        "unattended_promotion",
+        "",
+        ("release-auto-promotion-ready-plan", "release-auto-promotion-ready"),
+    ),
+    "release_unattended_promotion_not_allowed": (
+        "release_auto_promotion_ready",
+        "unattended_promotion",
+        "",
+        ("release-auto-promotion-ready-plan", "release-auto-promotion-ready"),
+    ),
+}
 GITHUB_LIVE_GOVERNANCE_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
     "github_live_governance_checklist_missing": (
         "github_live_governance_verification",
@@ -1882,207 +1976,115 @@ def action_status_reason_ids(
     return _dedupe_reason_ids(reasons)
 
 
+def _target_reason_detail(
+    reason_id: str,
+    *,
+    owning_stage: str,
+    blocking_scope: str,
+    recommended_targets: tuple[str, ...] | list[str],
+    gate_effect: str = "",
+) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
+        "owning_stage": owning_stage,
+        "blocking_scope": blocking_scope,
+        "recommended_targets": list(recommended_targets),
+    }
+    if gate_effect:
+        kwargs["gate_effect"] = gate_effect
+    return _reason_detail(reason_id, **kwargs)
+
+
+def _prefix_reason_detail(reason_id: str) -> dict[str, Any] | None:
+    if reason_id in REASON_EXACT_TARGETS:
+        owning_stage, blocking_scope, gate_effect, recommended_targets = REASON_EXACT_TARGETS[
+            reason_id
+        ]
+        return _target_reason_detail(
+            reason_id,
+            owning_stage=owning_stage,
+            blocking_scope=blocking_scope,
+            gate_effect=gate_effect,
+            recommended_targets=recommended_targets,
+        )
+    for prefixes, owning_stage, blocking_scope, gate_effect, recommended_targets in (
+        REASON_PREFIX_TARGETS
+    ):
+        if reason_id.startswith(prefixes):
+            return _target_reason_detail(
+                reason_id,
+                owning_stage=owning_stage,
+                blocking_scope=blocking_scope,
+                gate_effect=gate_effect,
+                recommended_targets=recommended_targets,
+            )
+    if reason_id.startswith("artifact_freshness_"):
+        recommended_targets = ("artifact-freshness-refresh-check",)
+        if reason_id == "artifact_freshness_stable_contract_debt":
+            recommended_targets = (
+                "artifact-freshness-stable-contract-debt-refresh",
+                "artifact-freshness-refresh-check",
+            )
+        return _target_reason_detail(
+            reason_id,
+            owning_stage="artifact_freshness",
+            blocking_scope="artifact_freshness",
+            gate_effect=GATE_EFFECT_ADVISORY,
+            recommended_targets=recommended_targets,
+        )
+    return None
+
+
+def _mapped_reason_detail(
+    reason_id: str,
+    mapping: dict[str, tuple[str, str, list[str]]],
+    *,
+    gate_effect: str = GATE_EFFECT_ADVISORY,
+) -> dict[str, Any] | None:
+    if reason_id not in mapping:
+        return None
+    owning_stage, blocking_scope, recommended_targets = mapping[reason_id]
+    return _target_reason_detail(
+        reason_id,
+        owning_stage=owning_stage,
+        blocking_scope=blocking_scope,
+        gate_effect=gate_effect,
+        recommended_targets=recommended_targets,
+    )
+
+
+def _action_status_reason_detail(reason_id: str, *, fallback_target: str) -> dict[str, Any]:
+    prefix_detail = _prefix_reason_detail(reason_id)
+    if prefix_detail is not None:
+        return prefix_detail
+    for mapping in (
+        MAINTAINABILITY_REASON_TARGETS,
+        SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS,
+        GITHUB_LIVE_GOVERNANCE_REASON_TARGETS,
+    ):
+        mapped_detail = _mapped_reason_detail(reason_id, mapping)
+        if mapped_detail is not None:
+            return mapped_detail
+    archive_detail = _mapped_reason_detail(reason_id, ARCHIVE_RECONCILIATION_REASON_TARGETS)
+    if archive_detail is not None:
+        return archive_detail
+    return _target_reason_detail(
+        reason_id,
+        owning_stage="action_recommended_target",
+        blocking_scope="action_matrix",
+        gate_effect=GATE_EFFECT_ADVISORY,
+        recommended_targets=(fallback_target,),
+    )
+
+
 def action_status_reason_details(
     reason_ids: list[str],
     *,
     fallback_target: str,
 ) -> list[dict[str, Any]]:
-    details: list[dict[str, Any]] = []
-    for reason_id in reason_ids:
-        if reason_id.startswith("release_run_manifest_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_run_ready",
-                    blocking_scope="release_run",
-                    recommended_targets=[
-                        "release-run-ready-plan-check",
-                        "release-run-ready",
-                    ],
-                )
-            )
-        elif reason_id.startswith("release_sealed_run_manifest_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_sealed_run_ready",
-                    blocking_scope="sealed_release",
-                    recommended_targets=[
-                        "release-sealed-run-ready-plan",
-                        "release-sealed-run-ready",
-                    ],
-                )
-            )
-        elif reason_id.startswith("release_auto_promotion_ready_manifest_") or reason_id in {
-            "release_auto_promotion_not_allowed",
-            "release_unattended_promotion_not_allowed",
-        }:
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_auto_promotion_ready",
-                    blocking_scope="unattended_promotion",
-                    recommended_targets=[
-                        "release-auto-promotion-ready-plan",
-                        "release-auto-promotion-ready",
-                    ],
-                )
-            )
-        elif reason_id.startswith(("release_finality_", "release_closeout_fixed_point_")):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_auto_promotion_preseal",
-                    blocking_scope="release_preseal",
-                    recommended_targets=[
-                        "release-auto-promotion-preseal",
-                        "release-closeout-fixed-point",
-                        "release-closeout-finality-verify",
-                    ],
-                )
-            )
-        elif reason_id.startswith(("release_dashboard_", "release_authority_", "release_closeout_")):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_auto_promotion_preseal",
-                    blocking_scope="release_preseal",
-                    recommended_targets=[
-                        "release-auto-promotion-preseal",
-                        "release-evidence-dashboard",
-                    ],
-                )
-            )
-        elif reason_id.startswith("source_package_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_source_package",
-                    blocking_scope="source_package",
-                    recommended_targets=["release-source-package-check"],
-                )
-            )
-        elif reason_id.startswith("external_report_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="external_report_reference_manifest",
-                    blocking_scope="external_report_lifecycle",
-                    recommended_targets=["external-report-reference-manifest-settle"],
-                )
-            )
-        elif reason_id in MAINTAINABILITY_REASON_TARGETS:
-            owning_stage, blocking_scope, recommended_targets = MAINTAINABILITY_REASON_TARGETS[
-                reason_id
-            ]
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage=owning_stage,
-                    blocking_scope=blocking_scope,
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        elif reason_id in SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS:
-            owning_stage, blocking_scope, recommended_targets = SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS[
-                reason_id
-            ]
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage=owning_stage,
-                    blocking_scope=blocking_scope,
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        elif reason_id in GITHUB_LIVE_GOVERNANCE_REASON_TARGETS:
-            owning_stage, blocking_scope, recommended_targets = (
-                GITHUB_LIVE_GOVERNANCE_REASON_TARGETS[reason_id]
-            )
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage=owning_stage,
-                    blocking_scope=blocking_scope,
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        elif reason_id.startswith("collaboration_governance_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="collaboration_governance",
-                    blocking_scope="github_governance",
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=["collaboration-governance"],
-                )
-            )
-        elif reason_id.startswith("full_suite_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_run_ready",
-                    blocking_scope="release_run",
-                    recommended_targets=["test-execution-summary-full-current-or-refresh"],
-                )
-            )
-        elif reason_id.startswith("goal_runtime_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="goal_runtime_certificate",
-                    blocking_scope="unattended_promotion",
-                    gate_effect=GATE_EFFECT_CLAIM_BLOCKER,
-                    recommended_targets=[
-                        "goal-runtime-certificate",
-                        "release-auto-promotion-goal-run-id-guard",
-                        "release-auto-promotion-ready-plan",
-                    ],
-                )
-            )
-        elif reason_id.startswith("artifact_freshness_"):
-            recommended_targets = ["artifact-freshness-refresh-check"]
-            if reason_id == "artifact_freshness_stable_contract_debt":
-                recommended_targets = [
-                    "artifact-freshness-stable-contract-debt-refresh",
-                    "artifact-freshness-refresh-check",
-                ]
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="artifact_freshness",
-                    blocking_scope="artifact_freshness",
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        elif reason_id in ARCHIVE_RECONCILIATION_REASON_TARGETS:
-            owning_stage, blocking_scope, recommended_targets = ARCHIVE_RECONCILIATION_REASON_TARGETS[
-                reason_id
-            ]
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage=owning_stage,
-                    blocking_scope=blocking_scope,
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        else:
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="action_recommended_target",
-                    blocking_scope="action_matrix",
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=[fallback_target],
-                )
-            )
-    return details
+    return [
+        _action_status_reason_detail(reason_id, fallback_target=fallback_target)
+        for reason_id in reason_ids
+    ]
 
 
 def action_statuses(vault: Path) -> dict[str, str]:
@@ -2090,5 +2092,3 @@ def action_statuses(vault: Path) -> dict[str, str]:
         str(action["action_id"]): status_from_evidence(vault, action)[0]
         for action in ACTION_CATALOG
     }
-
-

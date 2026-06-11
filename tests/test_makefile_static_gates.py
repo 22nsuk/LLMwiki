@@ -698,6 +698,41 @@ class MakefileStaticGateTests(unittest.TestCase):
                     pack_id=pack_id,
                 )
 
+    def test_make_dry_run_sees_generated_selector_fragment(self) -> None:
+        registry = _test_lane_registry()
+        test_mk_text = Path("mk/test.mk").read_text(encoding="utf-8")
+        self.assertIn("include mk/test-selectors.generated.mk", test_mk_text)
+
+        target_by_pack = {
+            "fast_smoke": "fast-smoke",
+            "report_contract_core": "test-report-contract-core",
+            "release_sealing_core": "test-release-sealing-core",
+            "subprocess_checks": "test-subprocess",
+        }
+        for pack_id, target in target_by_pack.items():
+            with self.subTest(pack_id=pack_id, target=target):
+                selector = pack_selectors(registry, pack_id)[0]
+                completed = subprocess.run(
+                    ["make", "-n", target],
+                    cwd=REPO_ROOT,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    check=False,
+                )
+
+                self.assertEqual(
+                    completed.returncode,
+                    0,
+                    msg=(
+                        f"make -n {target} failed.\n"
+                        f"stdout:\n{completed.stdout}\n"
+                        f"stderr:\n{completed.stderr}"
+                    ),
+                )
+                self.assertIn(selector, completed.stdout)
+
     def test_registry_make_target_compatibility_entries_exist_in_makefile(self) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()

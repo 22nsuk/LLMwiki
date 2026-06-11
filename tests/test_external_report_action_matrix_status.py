@@ -27,6 +27,95 @@ from tests.external_report_action_matrix_test_runtime import (
 pytestmark = pytest.mark.public
 
 
+_GOAL_NATIVE_PLACEHOLDER_PATHS = (
+    "ops/schemas/codex-goal-contract.schema.json",
+    "ops/scripts/core/codex_goal_client.py",
+    "ops/scripts/mechanism/codex_goal_prompt.py",
+    "ops/schemas/codex-goal-prompt.schema.json",
+    "ops/scripts/mechanism/auto_improve_loop.py",
+    "ops/scripts/mechanism/auto_improve_runtime.py",
+    "ops/schemas/goal-run-status.schema.json",
+    "ops/scripts/mechanism/goal_run_status.py",
+    "ops/scripts/mechanism/goal_runtime_backoff.py",
+    "ops/scripts/mechanism/goal_runtime_runner.py",
+    "ops/scripts/mechanism/goal_runtime_certificate_report.py",
+    "ops/scripts/mechanism/goal_runtime_certificate.py",
+    "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+    "ops/scripts/mechanism/goal_worktree_guard.py",
+    "ops/schemas/goal-worktree-guard.schema.json",
+    "ops/scripts/mechanism/goal_runtime_clean_transient.py",
+    "ops/schemas/goal-runtime-clean-transient.schema.json",
+    "ops/scripts/mechanism/goal_runtime_run_admission.py",
+    "ops/schemas/goal-runtime-run-admission.schema.json",
+    "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
+    "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
+    "ops/scripts/mechanism/goal_runtime_stale_closeout.py",
+    "ops/schemas/goal-runtime-stale-closeout.schema.json",
+    "tests/test_codex_goal_contract.py",
+    "tests/test_codex_goal_client.py",
+    "tests/test_codex_goal_prompt.py",
+    "tests/test_auto_improve_runtime.py",
+    "tests/test_goal_auto_improve_runtime.py",
+    "tests/test_goal_run_status.py",
+    "tests/test_goal_runtime_runner.py",
+    "tests/test_goal_runtime_certificate.py",
+    "tests/test_auto_improve_readiness_release_authority_runtime.py",
+    "tests/test_goal_worktree_guard.py",
+    "tests/test_goal_runtime_clean_transient.py",
+    "tests/test_goal_runtime_run_admission.py",
+    "tests/test_goal_runtime_quarantine_preflight.py",
+    "tests/test_goal_runtime_stale_closeout.py",
+)
+
+_GOAL_NATIVE_MAKEFILE = (
+    "goal-runtime-clean-transient:\n"
+    "\tpython -m ops.scripts.goal_runtime_clean_transient\n"
+    "goal-runtime-quarantine-preflight:\n"
+    "\tpython -m ops.scripts.goal_runtime_quarantine_preflight --strict\n"
+    "goal-runtime-stale-closeout:\n"
+    "\tpython -m ops.scripts.goal_runtime_stale_closeout\n"
+    "goal-runtime-run-admission-converge: "
+    "goal-runtime-clean-transient auto-improve-goal-preflight\n"
+    "\t$(MAKE) goal-runtime-clean-transient\n"
+    "\t$(MAKE) goal-runtime-quarantine-preflight\n"
+    "\t$(MAKE) goal-runtime-stale-closeout\n"
+    "goal-runtime-run-admission-local-refresh: "
+    "goal-runtime-lock-check goal-runtime-python-preflight\n"
+    "\t$(MAKE) goal-runtime-clean-transient\n"
+    "\t$(MAKE) goal-runtime-quarantine-preflight\n"
+    "\t$(MAKE) goal-runtime-stale-closeout\n"
+    "\t$(MAKE) goal-runtime-local-evidence-converge\n"
+    "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh\n"
+    "\tpython -m ops.scripts.goal_runtime_run_admission "
+    '--readiness-report "$(GOAL_LOCAL_READINESS_OUT)" '
+    '--remediation-backlog-report "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" --strict\n'
+    "long-run-preflight-clean: goal-runtime-run-admission-converge\n"
+    "auto-improve-goal-preflight: goal-runtime-lock-check goal-runtime-python-preflight\n"
+    "\tpython -m ops.scripts.goal_worktree_guard "
+    '--requested-mode "$(GOAL_WORKTREE_MODE)" --out "$(GOAL_WORKTREE_GUARD_OUT)"\n'
+    "goal-worktree-guard: auto-improve-goal-preflight\n"
+)
+
+_GOAL_NATIVE_IMPLEMENTED_ACTION_IDS = (
+    "goal_contract_schema",
+    "codex_goal_adapter",
+    "codex_goal_prompt_generator",
+    "auto_improve_goal_contract_input",
+    "goal_run_status_audit_resume",
+    "goal_execution_runtime_certificate",
+    "goal_executor_backoff_observability",
+    "selected_contract_currentness_gate",
+    "git_worktree_goal_guard",
+    "goal_runtime_transient_cleanup_gate",
+)
+
+_GOAL_NATIVE_COMPLETED_CONTRACT_ACTION_IDS = (
+    "goal_contract_schema",
+    "codex_goal_adapter",
+    "auto_improve_goal_contract_input",
+)
+
+
 class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
     def test_generated_artifact_policy_status_requires_pass_report_status(self) -> None:
         for rel_path, text in {
@@ -1366,76 +1455,21 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["sealed_preflight_canonicalization"]["current_status"],
             "implemented",
         )
-    def test_goal_native_actions_require_current_canonical_runtime_reports(self) -> None:
-        for rel_path in (
-            "ops/schemas/codex-goal-contract.schema.json",
-            "ops/scripts/core/codex_goal_client.py",
-            "ops/scripts/mechanism/codex_goal_prompt.py",
-            "ops/schemas/codex-goal-prompt.schema.json",
-            "ops/scripts/mechanism/auto_improve_loop.py",
-            "ops/scripts/mechanism/auto_improve_runtime.py",
-            "ops/schemas/goal-run-status.schema.json",
-            "ops/scripts/mechanism/goal_run_status.py",
-            "ops/scripts/mechanism/goal_runtime_backoff.py",
-            "ops/scripts/mechanism/goal_runtime_runner.py",
-            "ops/scripts/mechanism/goal_runtime_certificate_report.py",
-            "ops/scripts/mechanism/goal_runtime_certificate.py",
-            "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
-            "ops/scripts/mechanism/goal_worktree_guard.py",
-            "ops/schemas/goal-worktree-guard.schema.json",
-            "ops/scripts/mechanism/goal_runtime_clean_transient.py",
-            "ops/schemas/goal-runtime-clean-transient.schema.json",
-            "ops/scripts/mechanism/goal_runtime_run_admission.py",
-            "ops/schemas/goal-runtime-run-admission.schema.json",
-            "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
-            "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
-            "ops/scripts/mechanism/goal_runtime_stale_closeout.py",
-            "ops/schemas/goal-runtime-stale-closeout.schema.json",
-            "tests/test_codex_goal_contract.py",
-            "tests/test_codex_goal_client.py",
-            "tests/test_codex_goal_prompt.py",
-            "tests/test_auto_improve_runtime.py",
-            "tests/test_goal_auto_improve_runtime.py",
-            "tests/test_goal_run_status.py",
-            "tests/test_goal_runtime_runner.py",
-            "tests/test_goal_runtime_certificate.py",
-            "tests/test_auto_improve_readiness_release_authority_runtime.py",
-            "tests/test_goal_worktree_guard.py",
-            "tests/test_goal_runtime_clean_transient.py",
-            "tests/test_goal_runtime_run_admission.py",
-            "tests/test_goal_runtime_quarantine_preflight.py",
-            "tests/test_goal_runtime_stale_closeout.py",
-        ):
+    def _write_public_placeholder_files(self, rel_paths: tuple[str, ...]) -> None:
+        for rel_path in rel_paths:
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
+    def _write_goal_native_support_surfaces(self) -> None:
+        self._write_public_placeholder_files(_GOAL_NATIVE_PLACEHOLDER_PATHS)
         mechanism_makefile = self.vault / "mk/mechanism.mk"
         mechanism_makefile.parent.mkdir(parents=True, exist_ok=True)
-        mechanism_makefile.write_text(
-            "goal-runtime-clean-transient:\n"
-            "\tpython -m ops.scripts.goal_runtime_clean_transient\n"
-            "goal-runtime-quarantine-preflight:\n"
-            "\tpython -m ops.scripts.goal_runtime_quarantine_preflight --strict\n"
-            "goal-runtime-stale-closeout:\n"
-            "\tpython -m ops.scripts.goal_runtime_stale_closeout\n"
-            "goal-runtime-run-admission-converge: goal-runtime-clean-transient auto-improve-goal-preflight\n"
-            "\t$(MAKE) goal-runtime-clean-transient\n"
-            "\t$(MAKE) goal-runtime-quarantine-preflight\n"
-            "\t$(MAKE) goal-runtime-stale-closeout\n"
-            "goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight\n"
-            "\t$(MAKE) goal-runtime-clean-transient\n"
-            "\t$(MAKE) goal-runtime-quarantine-preflight\n"
-            "\t$(MAKE) goal-runtime-stale-closeout\n"
-            "\t$(MAKE) goal-runtime-local-evidence-converge\n"
-            "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh\n"
-            "\tpython -m ops.scripts.goal_runtime_run_admission --readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\" --remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\" --strict\n"
-            "long-run-preflight-clean: goal-runtime-run-admission-converge\n"
-            "auto-improve-goal-preflight: goal-runtime-lock-check goal-runtime-python-preflight\n"
-            "\tpython -m ops.scripts.goal_worktree_guard --requested-mode \"$(GOAL_WORKTREE_MODE)\" --out \"$(GOAL_WORKTREE_GUARD_OUT)\"\n"
-            "goal-worktree-guard: auto-improve-goal-preflight\n",
-            encoding="utf-8",
-        )
-        contract = {
+        mechanism_makefile.write_text(_GOAL_NATIVE_MAKEFILE, encoding="utf-8")
+    def _goal_contract_payload(self, status: str = "active") -> dict:
+        return {
             "$schema": "ops/schemas/codex-goal-contract.schema.json",
             "schema_version": 1,
             "contract_id": "auto-improve-goal",
@@ -1451,7 +1485,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             },
             "created_at": "2026-05-17T00:00:00Z",
             "created_by": "codex",
-            "status": "active",
+            "status": status,
             "runtime": {
                 "mode": "self_improvement_loop",
                 "duration_seconds": 21600,
@@ -1466,8 +1500,16 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             },
             "stop_conditions": [{"condition_id": "promotion_guard_blocked"}],
             "required_evidence": [
-                {"evidence_id": "auto_improve_readiness", "path": "ops/reports/auto-improve-readiness.json", "required_for_promotion": True},
-                {"evidence_id": "goal_run_status", "path": "ops/reports/goal-run-status.json", "required_for_promotion": True},
+                {
+                    "evidence_id": "auto_improve_readiness",
+                    "path": "ops/reports/auto-improve-readiness.json",
+                    "required_for_promotion": True,
+                },
+                {
+                    "evidence_id": "goal_run_status",
+                    "path": "ops/reports/goal-run-status.json",
+                    "required_for_promotion": True,
+                },
             ],
             "promotion_guard": {
                 "can_promote_result": True,
@@ -1478,6 +1520,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "no_sustained_claim_before_certificate_verified": True,
             },
         }
+    def _write_goal_contract_bundle(self, contract: dict) -> str:
         contract_digest = _canonical_json_digest(contract)
         self._write_json("ops/reports/codex-goal-contract.json", contract)
         self._write_json(
@@ -1498,6 +1541,8 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 },
             },
         )
+        return contract_digest
+    def _write_goal_run_status_report(self, contract_digest: str) -> None:
         self._write_json(
             "ops/reports/goal-run-status.json",
             {
@@ -1513,7 +1558,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                     "status_markdown_path": "runs/goal-auto-improve-trial/status.md",
                     "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
                     "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
-                    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl",
+                    "checkpoint_command_log_path": (
+                        "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+                    ),
                 },
                 "health": {
                     "heartbeat_status": "current",
@@ -1535,6 +1582,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 },
             },
         )
+    def _write_goal_runtime_certificate_report(self) -> None:
         self._write_json(
             "ops/reports/goal-runtime-certificate.json",
             {
@@ -1557,6 +1605,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "blockers": [],
             },
         )
+    def _write_goal_currentness_reports(self) -> None:
         self._write_json(
             "ops/reports/test-execution-summary.json",
             {"artifact_kind": "test_execution_summary", "status": "pass"},
@@ -1575,6 +1624,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "promotion_blockers": [],
             },
         )
+    def _write_goal_worktree_guard_report(self) -> None:
         self._write_json(
             "ops/reports/goal-worktree-guard.json",
             {
@@ -1590,6 +1640,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "blockers": [{"blocker_id": "git_worktree_dirty"}],
             },
         )
+    def _write_goal_runtime_transient_reports(self) -> None:
         self._write_json(
             "tmp/goal-runtime-clean-transient.json",
             {
@@ -1635,28 +1686,34 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 },
             },
         )
+    def _write_goal_review_trigger_report(self) -> None:
         (self.external / "goal.md").write_text(
             "# Goal Review\n\ngoal contract, set_goal, codex_goal_prompt, --goal-contract, "
-            "goal-run-status, runtime certificate, retry-after executor backoff, selected contract, Git worktree, transient artifact cleanup, "
-            "goal-runtime-clean-transient, goal-runtime-quarantine-preflight, goal-runtime-stale-closeout, goal-runtime-run-admission, long-run-preflight-clean.\n",
+            "goal-run-status, runtime certificate, retry-after executor backoff, "
+            "selected contract, Git worktree, transient artifact cleanup, "
+            "goal-runtime-clean-transient, goal-runtime-quarantine-preflight, "
+            "goal-runtime-stale-closeout, goal-runtime-run-admission, "
+            "long-run-preflight-clean.\n",
             encoding="utf-8",
         )
+    def _write_goal_native_active_reports(self) -> dict:
+        self._write_goal_native_support_surfaces()
+        contract = self._goal_contract_payload()
+        contract_digest = self._write_goal_contract_bundle(contract)
+        self._write_goal_run_status_report(contract_digest)
+        self._write_goal_runtime_certificate_report()
+        self._write_goal_currentness_reports()
+        self._write_goal_worktree_guard_report()
+        self._write_goal_runtime_transient_reports()
+        self._write_goal_review_trigger_report()
+        return contract
+    def test_goal_native_actions_require_current_canonical_runtime_reports(self) -> None:
+        self._write_goal_native_active_reports()
 
         report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
-        for action_id in (
-            "goal_contract_schema",
-            "codex_goal_adapter",
-            "codex_goal_prompt_generator",
-            "auto_improve_goal_contract_input",
-            "goal_run_status_audit_resume",
-            "goal_execution_runtime_certificate",
-            "goal_executor_backoff_observability",
-            "selected_contract_currentness_gate",
-            "git_worktree_goal_guard",
-            "goal_runtime_transient_cleanup_gate",
-        ):
+        for action_id in _GOAL_NATIVE_IMPLEMENTED_ACTION_IDS:
             self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
         cleanup_gate_evidence = actions["goal_runtime_transient_cleanup_gate"]["evidence"]
         self.assertFalse(
@@ -1668,22 +1725,14 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             any(item["path"] == "ops/reports/goal-worktree-guard.json" for item in worktree_guard_evidence),
             "active report completion should depend on durable worktree guard surfaces, not transient tmp reports",
         )
+    def test_goal_contract_actions_accept_completed_contract(self) -> None:
+        contract = self._write_goal_native_active_reports()
         contract["status"] = "completed"
-        contract_digest = _canonical_json_digest(contract)
-        self._write_json("ops/reports/codex-goal-contract.json", contract)
-        prompt_report = json.loads(
-            (self.vault / "ops/reports/codex-goal-prompt.json").read_text(encoding="utf-8")
-        )
-        prompt_report["goal_contract"]["contract_sha256"] = contract_digest
-        self._write_json("ops/reports/codex-goal-prompt.json", prompt_report)
+        self._write_goal_contract_bundle(contract)
 
         completed_report = build_report(self.vault, context=fixed_context())
         completed_actions = {item["action_id"]: item for item in completed_report["action_items"]}
-        for action_id in (
-            "goal_contract_schema",
-            "codex_goal_adapter",
-            "auto_improve_goal_contract_input",
-        ):
+        for action_id in _GOAL_NATIVE_COMPLETED_CONTRACT_ACTION_IDS:
             self.assertEqual(completed_actions[action_id]["current_status"], "implemented", action_id)
     def test_selected_contract_gate_accepts_attention_freshness_with_current_contract(self) -> None:
         for rel_path in (

@@ -421,7 +421,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-status")
         _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
 
-    def test_auto_improve_goal_admission_lock_and_contract_recipes(self) -> None:
+    def test_auto_improve_goal_admission_ordering_recipes(self) -> None:
         text = _makefile_text()
 
         admission_block = _target_block(text, "goal-runtime-run-admission")
@@ -517,6 +517,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
                 admission_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
             )
+
+    def test_auto_improve_goal_admission_contract_and_status_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -591,6 +595,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--out \"$(CODEX_GOAL_PROMPT_OUT)\"",
             ),
         )
+
+    def test_auto_improve_goal_lock_preflight_and_cleanup_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -700,7 +708,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             ),
         )
 
-    def test_auto_improve_goal_local_evidence_and_closeout_recipes(self) -> None:
+    def test_auto_improve_goal_local_evidence_report_recipes(self) -> None:
         text = _makefile_text()
 
         _assert_recipe_contains_tokens(
@@ -761,6 +769,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--remediation-backlog \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
             ),
         )
+
+    def test_goal_runtime_reconcile_and_closeout_candidate_recipes(self) -> None:
+        text = _makefile_text()
+
         reconcile_block = _target_block(text, "goal-runtime-reconcile")
         self.assertNotIn("$(MAKE) goal-runtime-publish-snapshot", reconcile_block)
         self.assertNotIn("$(MAKE) session-synopsis", reconcile_block)
@@ -833,6 +845,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) script-output-surfaces", candidate_block)
         self.assertNotIn("$(MAKE) generated-artifact-index", candidate_block)
         self.assertNotIn("$(MAKE) artifact-freshness", candidate_block)
+
+    def test_goal_runtime_closeout_publish_and_dispatch_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -900,6 +916,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             "test-execution-summary-full-refresh",
             _target_block(text, "goal-runtime-closeout"),
         )
+
+    def test_goal_runtime_local_evidence_refresh_and_publish_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,

@@ -108,6 +108,16 @@ class NextRunRepairProposalDependencies:
     priority_breakdown_factory: Callable[[], Any]
 
 
+@dataclass(frozen=True)
+class _NextRunRepairScope:
+    primary_targets: list[str]
+    supporting_targets: list[str]
+    must_change_tests: list[str]
+    source_run_id: str
+    failure_taxonomy: str
+    evidence_paths: list[str]
+
+
 def _read_json(path: Path) -> dict:
     payload = json.loads(path.read_text(encoding="utf-8"))
     return payload if isinstance(payload, dict) else {}
@@ -674,17 +684,13 @@ def _next_run_repair_evidence_fragment(
     return fragment
 
 
-def next_run_repair_proposal(
+def _next_run_repair_scope(
     vault: Path,
     policy: dict,
     decision: dict,
     *,
     dependencies: NextRunRepairProposalDependencies,
-) -> Any | None:
-    allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
-    if NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE not in allowed_failure_modes:
-        return None
-
+) -> _NextRunRepairScope | None:
     raw_registry_repair = decision_evidence_mentions_raw_registry_repair(vault, decision)
     primary_targets = _non_inventory_current_repo_target_paths(
         vault,
@@ -774,26 +780,55 @@ def next_run_repair_proposal(
             primary_targets=primary_targets,
             supporting_targets=supporting_targets,
         )
+    return _NextRunRepairScope(
+        primary_targets=primary_targets,
+        supporting_targets=supporting_targets,
+        must_change_tests=must_change_tests,
+        source_run_id=source_run_id,
+        failure_taxonomy=failure_taxonomy,
+        evidence_paths=evidence_paths,
+    )
+
+
+def next_run_repair_proposal(
+    vault: Path,
+    policy: dict,
+    decision: dict,
+    *,
+    dependencies: NextRunRepairProposalDependencies,
+) -> Any | None:
+    allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
+    if NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE not in allowed_failure_modes:
+        return None
+
+    scope = _next_run_repair_scope(
+        vault,
+        policy,
+        decision,
+        dependencies=dependencies,
+    )
+    if scope is None:
+        return None
 
     target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
     proposal_id = target_proposal_id or next_run_failure_repair_proposal_id(
-        primary_targets,
-        failure_taxonomy,
+        scope.primary_targets,
+        scope.failure_taxonomy,
     )
     blocking_role = str(decision.get("blocking_role", "")).strip()
     role_fragment = f" from {blocking_role}" if blocking_role else ""
     source_proposal_id = str(decision.get("proposal_id", "")).strip()
-    scoped_targets = ", ".join(f"`{target}`" for target in primary_targets)
+    scoped_targets = ", ".join(f"`{target}`" for target in scope.primary_targets)
     evidence_fragment = _next_run_repair_evidence_fragment(
         vault,
         decision,
-        evidence_paths=evidence_paths,
+        evidence_paths=scope.evidence_paths,
     )
 
     pseudo_candidate = {
         "candidate_id": proposal_id,
-        "primary_targets": primary_targets,
-        "supporting_targets": supporting_targets,
+        "primary_targets": scope.primary_targets,
+        "supporting_targets": scope.supporting_targets,
         "tier": str(decision.get("proposal_tier", "supporting")).strip() or "supporting",
     }
     priority_breakdown = dependencies.priority_breakdown_factory()
@@ -804,43 +839,43 @@ def next_run_repair_proposal(
         family=NEXT_RUN_FAILURE_REPAIR_FAMILY,
         tier="supporting",
         priority=priority_breakdown.final_priority,
-        primary_targets=primary_targets,
-        supporting_targets=supporting_targets,
-        metrics_triggered=[NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE, failure_taxonomy],
-        run_ids=[source_run_id or "next-run-decision"],
+        primary_targets=scope.primary_targets,
+        supporting_targets=scope.supporting_targets,
+        metrics_triggered=[NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE, scope.failure_taxonomy],
+        run_ids=[scope.source_run_id or "next-run-decision"],
         failure_mode=NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE,
         single_mechanism_scope=(
-            f"repair the `{failure_taxonomy}` failure{role_fragment} on {scoped_targets}; "
+            f"repair the `{scope.failure_taxonomy}` failure{role_fragment} on {scoped_targets}; "
             "keep the next mutation bounded to the failed run evidence and do not resume unrelated queue work first"
         ),
         change_hypothesis=(
-            f"If the next run addresses `{failure_taxonomy}` from `{source_run_id}` before broad discovery, "
+            f"If the next run addresses `{scope.failure_taxonomy}` from `{scope.source_run_id}` before broad discovery, "
             "the same target set can reach a finalized outcome or expose a narrower follow-up reason."
         ),
         expected_binary_signal=(
             f"the next auto-improve attempt for `{source_proposal_id or proposal_id}` no longer records "
-            f"`{failure_taxonomy}` as its failure_taxonomy"
+            f"`{scope.failure_taxonomy}` as its failure_taxonomy"
         ),
         blast_radius_score=dependencies.proposal_blast_radius_score(
             pseudo_candidate,
-            must_change_tests=must_change_tests,
+            must_change_tests=scope.must_change_tests,
         ),
-        must_change_tests=must_change_tests,
+        must_change_tests=scope.must_change_tests,
         must_change_budget_signal={
-            "signal": f"auto_improve_session.next_run_decisions.{failure_taxonomy}",
+            "signal": f"auto_improve_session.next_run_decisions.{scope.failure_taxonomy}",
             "expected_change": "resolved_or_superseded",
         },
         must_not_expand_apply_roots=dependencies.must_not_expand_apply_roots(
             vault,
             policy,
-            proposal_targets=[*primary_targets, *supporting_targets],
-            must_change_tests=must_change_tests,
+            proposal_targets=[*scope.primary_targets, *scope.supporting_targets],
+            must_change_tests=scope.must_change_tests,
         ),
         must_not_increase_untyped_surface=True,
         required_artifacts=dependencies.required_artifacts(),
         blocked_by=[],
         why_now=(
-            f"`{source_run_id}` failed with `{failure_taxonomy}` and the session decision marked it "
+            f"`{scope.source_run_id}` failed with `{scope.failure_taxonomy}` and the session decision marked it "
             f"carry_forward. Evidence: {evidence_fragment}."
         ),
         priority_breakdown=priority_breakdown,

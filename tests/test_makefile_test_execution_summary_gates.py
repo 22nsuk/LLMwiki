@@ -24,130 +24,101 @@ def _test_lane_registry() -> dict[str, object]:
     return load_registry(REPO_ROOT)
 
 
+TEST_EXECUTION_SUMMARY_PHONY_TARGETS = (
+    "test-execution-summary",
+    "test-execution-summary-fast",
+    "test-execution-summary-public",
+    "test-execution-summary-report-contract",
+    "test-execution-summary-report-contract-refresh",
+    "test-execution-summary-report-contract-refresh-no-smoke",
+    "test-execution-summary-current-check",
+    "test-execution-summary-current-or-refresh",
+    "test-execution-summary-full-body",
+    "test-execution-summary-full",
+    "test-execution-summary-full-refresh",
+    "test-execution-summary-full-refresh-no-converge",
+    "test-execution-summary-full-aggregate-reuse",
+    "test-execution-summary-full-current-check",
+    "test-execution-summary-full-current-or-refresh",
+    "test-execution-summary-reuse",
+)
+
+TEST_EXECUTION_SUMMARY_ASSIGNMENTS = (
+    ("TEST_EXECUTION_SUMMARY_OUT", "ops/reports/test-execution-summary.json"),
+    ("TEST_EXECUTION_SUMMARY_CANDIDATE_OUT", "tmp/test-execution-summary.candidate.json"),
+    ("TEST_EXECUTION_SUMMARY_CHECK_OUT", "tmp/test-execution-summary-check.json"),
+    ("TEST_EXECUTION_SUMMARY_FAST_OUT", "ops/reports/test-execution-summary-fast.json"),
+    (
+        "TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT",
+        "tmp/test-execution-summary-fast.candidate.json",
+    ),
+    ("TEST_EXECUTION_SUMMARY_PUBLIC_OUT", "ops/reports/test-execution-summary-public.json"),
+    (
+        "TEST_EXECUTION_SUMMARY_PUBLIC_CANDIDATE_OUT",
+        "tmp/test-execution-summary-public.candidate.json",
+    ),
+    ("TEST_EXECUTION_SUMMARY_FULL_OUT", "ops/reports/test-execution-summary-full.json"),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT",
+        "tmp/test-execution-summary-full.candidate.json",
+    ),
+    ("TEST_EXECUTION_SUMMARY_FULL_CHECK_OUT", "tmp/test-execution-summary-full-check.json"),
+    ("RELEASE_AUDIT_PAYLOAD_STAGING_DIR", "build/release-payloads"),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT",
+        "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.junit.xml",
+    ),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_LOG_OUT",
+        "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.log",
+    ),
+    ("TEST_EXECUTION_SUMMARY_REUSE_FROM", "$(TEST_EXECUTION_SUMMARY_OUT)"),
+    ("TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM", "$(TEST_EXECUTION_SUMMARY_FULL_OUT)"),
+    ("TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS", "$(PYTEST_FLAGS)"),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR",
+        "ops/reports/test-execution-summary-full-shards",
+    ),
+)
+
+TEST_EXECUTION_SUMMARY_ABSENT_ASSIGNMENTS = (
+    "TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT",
+    "TEST_EXECUTION_SUMMARY_SHARD_DIR",
+)
+
+
+def _assert_phony_targets(testcase: unittest.TestCase, text: str, targets: tuple[str, ...]) -> None:
+    phony = _target_block(text, ".PHONY")
+    for target in targets:
+        testcase.assertIn(target, phony)
+
+
+def _assert_assignments(
+    testcase: unittest.TestCase,
+    text: str,
+    assignments: tuple[tuple[str, str], ...],
+) -> None:
+    for name, value in assignments:
+        _assert_assignment_exists(testcase, text, name, value)
+
+
+def _assert_absent_assignments(
+    testcase: unittest.TestCase,
+    text: str,
+    assignment_names: tuple[str, ...],
+) -> None:
+    for name in assignment_names:
+        _assert_assignment_not_exists(testcase, text, name)
+
+
 class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
-    def test_test_execution_summary_target_wraps_report_contracts(self) -> None:
+    def test_test_execution_summary_declares_targets_and_outputs(self) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
 
-        for target in (
-            "test-execution-summary",
-            "test-execution-summary-fast",
-            "test-execution-summary-public",
-            "test-execution-summary-report-contract",
-            "test-execution-summary-report-contract-refresh",
-            "test-execution-summary-report-contract-refresh-no-smoke",
-            "test-execution-summary-current-check",
-            "test-execution-summary-current-or-refresh",
-            "test-execution-summary-full-body",
-            "test-execution-summary-full",
-            "test-execution-summary-full-refresh",
-            "test-execution-summary-full-refresh-no-converge",
-            "test-execution-summary-full-aggregate-reuse",
-            "test-execution-summary-full-current-check",
-            "test-execution-summary-full-current-or-refresh",
-            "test-execution-summary-reuse",
-        ):
-            self.assertIn(target, _target_block(text, ".PHONY"))
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_OUT",
-            "ops/reports/test-execution-summary.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_CANDIDATE_OUT",
-            "tmp/test-execution-summary.candidate.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_CHECK_OUT",
-            "tmp/test-execution-summary-check.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FAST_OUT",
-            "ops/reports/test-execution-summary-fast.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT",
-            "tmp/test-execution-summary-fast.candidate.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_PUBLIC_OUT",
-            "ops/reports/test-execution-summary-public.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_PUBLIC_CANDIDATE_OUT",
-            "tmp/test-execution-summary-public.candidate.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_OUT",
-            "ops/reports/test-execution-summary-full.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT",
-            "tmp/test-execution-summary-full.candidate.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_CHECK_OUT",
-            "tmp/test-execution-summary-full-check.json",
-        )
-        _assert_assignment_not_exists(
-            self, text, "TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT"
-        )
-        _assert_assignment_exists(
-            self, text, "RELEASE_AUDIT_PAYLOAD_STAGING_DIR", "build/release-payloads"
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT",
-            "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.junit.xml",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_LOG_OUT",
-            "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.log",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_REUSE_FROM",
-            "$(TEST_EXECUTION_SUMMARY_OUT)",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM",
-            "$(TEST_EXECUTION_SUMMARY_FULL_OUT)",
-        )
-        _assert_assignment_exists(
-            self, text, "TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS", "$(PYTEST_FLAGS)"
-        )
-        _assert_assignment_not_exists(self, text, "TEST_EXECUTION_SUMMARY_SHARD_DIR")
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR",
-            "ops/reports/test-execution-summary-full-shards",
-        )
+        _assert_phony_targets(self, text, TEST_EXECUTION_SUMMARY_PHONY_TARGETS)
+        _assert_assignments(self, text, TEST_EXECUTION_SUMMARY_ASSIGNMENTS)
+        _assert_absent_assignments(self, text, TEST_EXECUTION_SUMMARY_ABSENT_ASSIGNMENTS)
         _assert_assignment_exists(
             self,
             text,
@@ -169,6 +140,10 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
         _assert_assignment_exists(
             self, text, "TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE", "full-shard-1"
         )
+
+    def test_fast_public_and_report_contract_summary_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -252,6 +227,10 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
         self.assertIn(
             "test-execution-summary: test-execution-summary-report-contract", text
         )
+
+    def test_test_execution_summary_currentness_and_preflight_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -337,6 +316,10 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
         self.assertNotIn(
             "$(MAKE) test-execution-summary-report-contract-refresh", full_body_block
         )
+
+    def test_full_summary_refresh_and_reuse_recipes(self) -> None:
+        text = _makefile_text()
+
         full_block = _target_block(text, "test-execution-summary-full")
         _assert_target_depends_on(
             self, text, "test-execution-summary-full", "test-execution-summary-full-body"

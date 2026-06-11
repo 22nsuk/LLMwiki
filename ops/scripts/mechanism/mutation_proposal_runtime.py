@@ -34,15 +34,11 @@ from .mechanism_candidate_registry_runtime import (
     proposal_fields_for_candidate,
 )
 from .mutation_proposal_loader_runtime import (
+    MutationReportInputs as _MutationReportInputs,
     RecentLogSection,
-    _auto_improve_session_report_paths,
-    _load_consumed_next_run_decision_ids,
-    _load_mechanism_review_report,
-    _load_next_run_decisions,
     _log_heading_summary,
     _read_json,
-    _read_log_sections,
-    _read_optional_report,
+    load_mutation_report_inputs as _load_mutation_report_inputs,
 )
 from .mutation_proposal_promotion_runtime import (
     empty_queue_blockers as _empty_queue_blockers,
@@ -64,10 +60,6 @@ from .structural_complexity_scope_runtime import (
 )
 
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
-DEFAULT_MECHANISM_REVIEW_REPORT = "ops/reports/mechanism-review-candidates.json"
-DEFAULT_OUTCOME_METRICS_REPORT = "ops/reports/outcome-metrics.json"
-DEFAULT_REMEDIATION_BACKLOG_REPORT = "ops/reports/remediation-backlog.json"
-DEFAULT_SYSTEM_LOG = "system/system-log.md"
 QUEUE_PRESSURE_SUMMARY_TOP_N = 3
 PRODUCER = "ops.scripts.mutation_proposal_runtime"
 SOURCE_COMMAND = (
@@ -249,25 +241,6 @@ class QueueSelectionDiagnostics:
             "selected_blocked_count": self.selected_blocked_count,
             "blocked_reason_counts": self.blocked_reason_counts,
         }
-
-
-@dataclass(frozen=True)
-class _MutationReportInputs:
-    runtime_context: RuntimeContext
-    effective_policy: dict
-    mutation_policy: dict
-    mechanism_review_path: Path
-    mechanism_review_report: dict
-    outcome_metrics_path: Path
-    outcome_metrics_report: dict
-    remediation_backlog_path: Path
-    remediation_backlog_report: dict
-    auto_improve_session_report_paths: list[str]
-    consumed_next_run_decision_ids: list[str]
-    next_run_decisions: list[dict]
-    system_log: Path
-    recent_log_sections: list[RecentLogSection]
-    recent_log_section_ordering: str
 
 
 @dataclass(frozen=True)
@@ -1802,50 +1775,6 @@ def _candidate_blocker_count(mechanism_review_report: dict) -> int:
     return sum(1 for blocker in blockers if isinstance(blocker, dict))
 
 
-def _effective_mutation_policy(
-    policy: dict,
-    *,
-    max_proposals: int | None,
-    dedupe_window: int | None,
-) -> tuple[dict, dict]:
-    mutation_policy = dict(policy["mutation_proposal"])
-    if max_proposals is not None:
-        mutation_policy["max_proposals"] = max_proposals
-    if dedupe_window is not None:
-        mutation_policy["dedupe_window"] = dedupe_window
-    effective_policy = dict(policy)
-    effective_policy["mutation_proposal"] = mutation_policy
-    return effective_policy, mutation_policy
-
-
-def _load_current_mechanism_review_report(
-    vault: Path,
-    policy: dict,
-    policy_path: Path,
-    mechanism_review_report_path: str | None,
-) -> tuple[Path, dict]:
-    mechanism_review_path = (
-        vault / (mechanism_review_report_path or DEFAULT_MECHANISM_REVIEW_REPORT)
-    ).resolve()
-    if not mechanism_review_path.exists():
-        raise FileNotFoundError(
-            f"missing mechanism review report: {report_path(vault, mechanism_review_path)}"
-        )
-    mechanism_review_report = _load_mechanism_review_report(vault, mechanism_review_path)
-    review_policy = mechanism_review_report.get("policy", {})
-    if review_policy.get("path") != report_path(vault, policy_path):
-        raise ValueError(
-            "mechanism review report policy.path does not match current policy: "
-            f"{review_policy.get('path')}"
-        )
-    if review_policy.get("version") != policy["version"]:
-        raise ValueError(
-            "mechanism review report policy.version does not match current policy: "
-            f"{review_policy.get('version')}"
-        )
-    return mechanism_review_path, mechanism_review_report
-
-
 def _proposal_models_from_candidates(
     vault: Path,
     effective_policy: dict,
@@ -1928,69 +1857,6 @@ def _proposal_models_from_candidates(
         )
     )
     return available_proposal_models, skipped_candidates
-
-
-def _load_mutation_report_inputs(
-    vault: Path,
-    policy: dict,
-    policy_path: Path,
-    *,
-    mechanism_review_report_path: str | None,
-    system_log_path: str | None,
-    max_proposals: int | None,
-    dedupe_window: int | None,
-    context: RuntimeContext | None,
-) -> _MutationReportInputs:
-    runtime_context = context or RuntimeContext.from_policy(policy)
-    effective_policy, mutation_policy = _effective_mutation_policy(
-        policy,
-        max_proposals=max_proposals,
-        dedupe_window=dedupe_window,
-    )
-    mechanism_review_path, mechanism_review_report = _load_current_mechanism_review_report(
-        vault,
-        policy,
-        policy_path,
-        mechanism_review_report_path,
-    )
-    outcome_metrics_path = (vault / DEFAULT_OUTCOME_METRICS_REPORT).resolve()
-    outcome_metrics_report = _read_optional_report(outcome_metrics_path)
-    remediation_backlog_path = (vault / DEFAULT_REMEDIATION_BACKLOG_REPORT).resolve()
-    remediation_backlog_report = _read_optional_report(remediation_backlog_path)
-    auto_improve_session_report_paths = _auto_improve_session_report_paths(vault)
-    next_run_decisions = _load_next_run_decisions(
-        vault,
-        auto_improve_session_report_paths,
-    )
-    consumed_next_run_decision_ids = _load_consumed_next_run_decision_ids(
-        vault,
-        auto_improve_session_report_paths,
-        next_run_decisions,
-    )
-    system_log = (vault / (system_log_path or DEFAULT_SYSTEM_LOG)).resolve()
-    recent_log_sections, recent_log_section_ordering = _read_log_sections(
-        system_log,
-        max_entries=mutation_policy["dedupe_window"],
-        max_age_days=int(mutation_policy["recent_log_overlap_max_age_days"]),
-        runtime_context=runtime_context,
-    )
-    return _MutationReportInputs(
-        runtime_context=runtime_context,
-        effective_policy=effective_policy,
-        mutation_policy=mutation_policy,
-        mechanism_review_path=mechanism_review_path,
-        mechanism_review_report=mechanism_review_report,
-        outcome_metrics_path=outcome_metrics_path,
-        outcome_metrics_report=outcome_metrics_report,
-        remediation_backlog_path=remediation_backlog_path,
-        remediation_backlog_report=remediation_backlog_report,
-        auto_improve_session_report_paths=auto_improve_session_report_paths,
-        consumed_next_run_decision_ids=consumed_next_run_decision_ids,
-        next_run_decisions=next_run_decisions,
-        system_log=system_log,
-        recent_log_sections=recent_log_sections,
-        recent_log_section_ordering=recent_log_section_ordering,
-    )
 
 
 def _assemble_mutation_proposals(

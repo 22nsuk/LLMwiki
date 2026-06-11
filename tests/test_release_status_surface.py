@@ -29,6 +29,7 @@ from ops.scripts.release.release_status_surface import (
     TOOLCHAIN_ALIGNMENT_POLICY_EVIDENCE_NOT_ENFORCED,
     VAULT_COMPLETENESS_FULL,
     VAULT_COMPLETENESS_PUBLIC,
+    StatusSurfaceSignals,
     build_status_surface,
     lockfile_freshness_display_status,
     remote_sync_display_status,
@@ -202,6 +203,33 @@ def test_property_12_source_closeout_and_sealed_run_axes_are_independent(
     assert _line_by_key(surface, "sealed_run")["status"] == sealed_status
     assert _line_by_key(surface, "source_closeout")["axis"] == "source_closeout"
     assert _line_by_key(surface, "sealed_run")["axis"] == "sealed_run"
+
+
+def test_status_surface_accepts_signal_request_object() -> None:
+    surface = status_surface_from_signals(
+        StatusSurfaceSignals(
+            generated_at="2026-05-31T12:00:00Z",
+            vault_completeness=VAULT_COMPLETENESS_PUBLIC,
+            source_closeout_status="clean_pass",
+            sealed_run_status="sealed_clean_pass",
+            public_summary_status="pass",
+            lock_check_status="enforced",
+            uv_lock_check_passed=True,
+            learning_signoff_status="",
+            goal_runtime_certificate_status="",
+            remote_sync_signal={
+                "status": "pass",
+                "upstream": "origin/feature",
+                "ahead": 0,
+                "behind": 0,
+            },
+            artifact_freshness_display="advisory",
+        )
+    )
+
+    assert _line_by_key(surface, "source_closeout")["status"] == "clean_pass"
+    assert "freshness=advisory" in str(_line_by_key(surface, "source_closeout")["detail"])
+    assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_SYNCED
 
 
 def test_status_surface_reads_existing_file_signals_without_writing_authority() -> None:

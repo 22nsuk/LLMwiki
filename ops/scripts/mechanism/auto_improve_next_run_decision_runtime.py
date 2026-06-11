@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from ops.scripts.experiment_telemetry_runtime import run_rel
@@ -28,6 +29,23 @@ WAIT_FOR_CAPACITY_ACTION = "wait_for_executor_capacity"
 
 OPEN_DECISION_STATUS = "open"
 CLOSED_DECISION_STATUS = "closed"
+
+
+@dataclass(frozen=True)
+class NextRunDecisionRequest:
+    session_id: str
+    iteration: int
+    run_id: str
+    proposal: dict[str, Any]
+    outcome: object
+    roles: list[str]
+    scope_freeze_rel: str
+    routing_report_rels: list[str]
+    telemetry_rel: str
+    context: RuntimeContext
+    executor_report_rels: list[str] | None = None
+    blocking_role: str | None = None
+    failure_taxonomy_override: str | None = None
 
 
 def _list_strings(value: object) -> list[str]:
@@ -129,26 +147,54 @@ def _decision_shape(
     )
 
 
-def build_next_run_decision(
-    *,
-    session_id: str,
-    iteration: int,
-    run_id: str,
-    proposal: dict[str, Any],
-    outcome: object,
-    roles: list[str],
-    scope_freeze_rel: str,
-    routing_report_rels: list[str],
-    telemetry_rel: str,
-    context: RuntimeContext,
-    executor_report_rels: list[str] | None = None,
-    blocking_role: str | None = None,
-    failure_taxonomy_override: str | None = None,
+def _coerce_next_run_decision_request(
+    request: NextRunDecisionRequest | None,
+    legacy_kwargs: dict[str, Any],
+) -> NextRunDecisionRequest:
+    if request is not None:
+        if legacy_kwargs:
+            names = ", ".join(sorted(legacy_kwargs))
+            raise TypeError(f"request cannot be combined with legacy keyword arguments: {names}")
+        return request
+    return NextRunDecisionRequest(**legacy_kwargs)
+
+
+def _executor_report_paths(request: NextRunDecisionRequest) -> list[str]:
+    if request.executor_report_rels is not None:
+        return _list_strings(request.executor_report_rels)
+    return [
+        run_rel(request.run_id, f"{role}-executor-report.json")
+        for role in request.roles
+        if role
+    ]
+
+
+def _next_run_decision_evidence_paths(
+    request: NextRunDecisionRequest,
+    executor_reports: list[str],
+) -> list[str]:
+    evidence_paths = [
+        request.telemetry_rel,
+        request.scope_freeze_rel,
+        *request.routing_report_rels,
+        *executor_reports,
+    ]
+    if getattr(request.outcome, "result", None):
+        evidence_paths.append(run_rel(request.run_id, "promotion-report.json"))
+    return list(dict.fromkeys(path for path in evidence_paths if path))
+
+
+def _build_next_run_decision_from_request(
+    request: NextRunDecisionRequest,
 ) -> dict[str, Any] | None:
-    failure_taxonomy = failure_taxonomy_from_outcome(outcome, failure_taxonomy_override)
-    if not failure_taxonomy or bool(getattr(outcome, "is_terminal_success", False)):
+    failure_taxonomy = failure_taxonomy_from_outcome(
+        request.outcome,
+        request.failure_taxonomy_override,
+    )
+    if not failure_taxonomy or bool(getattr(request.outcome, "is_terminal_success", False)):
         return None
 
+    proposal = request.proposal
     primary_targets = _list_strings(proposal.get("primary_targets"))
     supporting_targets = _list_strings(proposal.get("supporting_targets"))
     must_change_tests = _list_strings(proposal.get("must_change_tests"))
@@ -162,49 +208,48 @@ def build_next_run_decision(
         if decision == CARRY_FORWARD_DECISION
         else ""
     )
-    executor_reports = (
-        _list_strings(executor_report_rels)
-        if executor_report_rels is not None
-        else [run_rel(run_id, f"{role}-executor-report.json") for role in roles if role]
-    )
-    evidence_paths = [
-        telemetry_rel,
-        scope_freeze_rel,
-        *routing_report_rels,
-        *executor_reports,
-    ]
-    if getattr(outcome, "result", None):
-        evidence_paths.append(run_rel(run_id, "promotion-report.json"))
+    executor_reports = _executor_report_paths(request)
 
     return {
         "decision_id": _decision_id(
-            session_id=session_id,
-            run_id=run_id,
+            session_id=request.session_id,
+            run_id=request.run_id,
             proposal_id=proposal_id,
             failure_taxonomy=failure_taxonomy,
         ),
-        "observed_at": context.isoformat_z(),
-        "session_id": session_id,
-        "iteration": max(1, int(iteration)),
-        "source_run_id": run_id,
+        "observed_at": request.context.isoformat_z(),
+        "session_id": request.session_id,
+        "iteration": max(1, int(request.iteration)),
+        "source_run_id": request.run_id,
         "proposal_id": proposal_id,
         "source_candidate_id": str(proposal.get("source_candidate_id", "")).strip(),
         "target_proposal_id": target_proposal_id,
         "proposal_family": str(proposal.get("family", "")).strip(),
         "proposal_tier": _proposal_tier(proposal.get("tier")),
         "failure_taxonomy": failure_taxonomy,
-        "blocking_role": str(blocking_role or "").strip()
-        or blocking_role_for_failure_taxonomy(failure_taxonomy, roles),
+        "blocking_role": str(request.blocking_role or "").strip()
+        or blocking_role_for_failure_taxonomy(failure_taxonomy, request.roles),
         "decision": decision,
         "next_run_action": next_run_action,
         "status": status,
         "reason": reason,
-        "quarantined_source_proposal": bool(getattr(outcome, "quarantine_proposal", False)),
+        "quarantined_source_proposal": bool(
+            getattr(request.outcome, "quarantine_proposal", False)
+        ),
         "primary_targets": primary_targets,
         "supporting_targets": supporting_targets,
         "must_change_tests": must_change_tests,
-        "evidence_paths": list(dict.fromkeys(path for path in evidence_paths if path)),
+        "evidence_paths": _next_run_decision_evidence_paths(request, executor_reports),
     }
+
+
+def build_next_run_decision(
+    request: NextRunDecisionRequest | None = None,
+    **legacy_kwargs: Any,
+) -> dict[str, Any] | None:
+    return _build_next_run_decision_from_request(
+        _coerce_next_run_decision_request(request, legacy_kwargs)
+    )
 
 
 def normalize_next_run_decisions(value: object) -> list[dict[str, Any]]:

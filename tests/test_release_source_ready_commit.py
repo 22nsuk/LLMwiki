@@ -6,7 +6,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.release.release_source_ready_commit import classify_path, main
+from ops.scripts.release.release_source_ready_commit import (
+    RunCommitRequest,
+    classify_path,
+    main,
+    run_commit,
+)
 
 LOCAL_GITIGNORE_TEXT = "\n".join(
     [
@@ -133,6 +138,30 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["status"], "committed")
         categories = {entry["path"]: entry["category"] for entry in report["entries"]}
         self.assertEqual(categories["ops/script-output-surfaces.json"], "generated_canonical")
+
+    def test_run_commit_accepts_request_object(self) -> None:
+        (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
+
+        rc = run_commit(
+            RunCommitRequest(
+                vault=self.vault,
+                out_path=self.vault / "tmp" / "release-source-ready-commit.json",
+                message="release: ready",
+                pre_status_path=None,
+                amend=False,
+                amend_of_path=None,
+                dry_run=True,
+                allow_staged=False,
+                only_generated_canonical=False,
+            )
+        )
+
+        self.assertEqual(rc, 0)
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "dry_run")
+        self.assertEqual(report["paths_to_commit"], ["README.md"])
 
     def test_only_generated_canonical_refuses_source_changes(self) -> None:
         (self.vault / "README.md").write_text("# Test\n\nSource drift.\n", encoding="utf-8")

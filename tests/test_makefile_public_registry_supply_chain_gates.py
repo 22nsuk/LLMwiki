@@ -84,6 +84,7 @@ def _assert_supply_chain_target_names(case: unittest.TestCase, text: str) -> Non
         "raw-registry-cross-environment-evidence-bundle:",
         "raw-registry-cross-environment-evidence-bundle-check:",
         "review-archive:",
+        "review-archive-clean:",
         "closure-registry-envelope:",
         "supply-chain-artifact-model:",
         "spdx-sbom:",
@@ -242,6 +243,21 @@ def _assert_archive_and_complexity_recipes(case: unittest.TestCase, text: str) -
     case.assertIn(
         'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.release.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"',
         _target_block(text, "review-archive"),
+    )
+    review_archive_clean_block = _target_block(text, "review-archive-clean")
+    case.assertIn("$(MAKE) local-cache-clean", review_archive_clean_block)
+    case.assertIn("$(MAKE) tmp-json-clean", review_archive_clean_block)
+    case.assertIn(
+        "$(MAKE) review-archive REVIEW_ARCHIVE_PROFILE=clean",
+        review_archive_clean_block,
+    )
+    case.assertLess(
+        review_archive_clean_block.index("$(MAKE) local-cache-clean"),
+        review_archive_clean_block.index("$(MAKE) tmp-json-clean"),
+    )
+    case.assertLess(
+        review_archive_clean_block.index("$(MAKE) tmp-json-clean"),
+        review_archive_clean_block.index("$(MAKE) review-archive REVIEW_ARCHIVE_PROFILE=clean"),
     )
     archive_modes = (
         (

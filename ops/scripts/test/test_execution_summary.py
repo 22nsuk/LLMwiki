@@ -65,6 +65,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         REUSE_MISMATCH_MISSING_SUMMARY,
         REUSE_MISMATCH_SOURCE_REVISION,
         REUSE_MISMATCH_SOURCE_TREE,
+        ReuseCurrentnessRequest,
         reuse_currentness_diagnostics_from_state,
     )
     from ops.scripts.test.test_execution_selection_runtime import (
@@ -135,6 +136,7 @@ else:
         REUSE_MISMATCH_MISSING_SUMMARY,
         REUSE_MISMATCH_SOURCE_REVISION,
         REUSE_MISMATCH_SOURCE_TREE,
+        ReuseCurrentnessRequest,
         reuse_currentness_diagnostics_from_state,
     )
     from ops.scripts.test.test_execution_selection_runtime import (
@@ -712,18 +714,20 @@ def reuse_currentness_diagnostics(
     )
     current_execution_environment = build_execution_environment(vault, command)
     return reuse_currentness_diagnostics_from_state(
-        existing,
-        suite=suite,
-        current_source_revision=resolve_source_revision(vault).revision,
-        current_source_tree_fingerprint=release_source_tree_fingerprint(vault),
-        current_semantic_command=_semantic_command_text(vault, command),
-        current_toolchain_fingerprint=_toolchain_fingerprint(current_execution_environment),
-        current_display_command=_display_command(vault, command),
-        current_target_fingerprints=current_target_fingerprints,
-        current_deselected_tests=current_deselected_tests,
-        current_deselection_lifecycle=current_lifecycle,
-        collect_nodeids=collect_nodeids,
-        collect_nodeid_digest=collect_nodeid_digest,
+        ReuseCurrentnessRequest(
+            existing=existing,
+            suite=suite,
+            current_source_revision=resolve_source_revision(vault).revision,
+            current_source_tree_fingerprint=release_source_tree_fingerprint(vault),
+            current_semantic_command=_semantic_command_text(vault, command),
+            current_toolchain_fingerprint=_toolchain_fingerprint(current_execution_environment),
+            current_display_command=_display_command(vault, command),
+            current_target_fingerprints=current_target_fingerprints,
+            current_deselected_tests=current_deselected_tests,
+            current_deselection_lifecycle=current_lifecycle,
+            collect_nodeids=collect_nodeids,
+            collect_nodeid_digest=collect_nodeid_digest,
+        )
     )
 
 

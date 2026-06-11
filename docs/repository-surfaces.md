@@ -56,6 +56,11 @@ CBM indexing uses a separate public-safe export built by `make cbm-index-public`
 or the lower-level CBM targets. That export is a navigation aid, not release
 authority.
 
+For source review handoff, use `make review-archive-clean`. It clears local
+Python caches and scratch candidate JSON before running the clean
+`review-archive` profile, producing the review archive and schema-backed report
+without turning local diagnostic evidence into release authority.
+
 ## Release Source ZIP
 
 The release source ZIP is not the full local vault and not merely a public

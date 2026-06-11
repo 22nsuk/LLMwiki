@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +67,31 @@ SOURCE_COMMAND = "python -m ops.scripts.release.release_status_surface --vault .
 
 LockCheckRunner = Callable[[Path], dict[str, Any]]
 RemoteSyncReader = Callable[[Path], dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class StatusSurfaceSignals:
+    generated_at: str
+    vault_completeness: str
+    source_closeout_status: str
+    sealed_run_status: str
+    public_summary_status: str
+    lock_check_status: str
+    uv_lock_check_passed: bool
+    learning_signoff_status: str
+    goal_runtime_certificate_status: str
+    remote_sync_signal: dict[str, Any]
+    artifact_freshness_display: str
+    canonical_uv_lock_check_passed: bool | None = None
+    source_closeout_evidence_path: str = DEFAULT_CLOSEOUT
+    sealed_run_evidence_path: str = DEFAULT_SEALED_RUN
+    public_summary_evidence_path: str = DEFAULT_PUBLIC_SUMMARY
+    lockfile_evidence_path: str = DEFAULT_SUPPLY_CHAIN_PROVENANCE
+    learning_signoff_evidence_path: str = DEFAULT_LEARNING_SIGNOFF
+    goal_runtime_certificate_evidence_path: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE
+    remote_sync_evidence_path: str = DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE
+    source_closeout_currentness_detail: str = "evidence_currentness=unknown"
+    public_summary_currentness_detail: str = "evidence_currentness=unknown"
 
 
 def remote_sync_display_status(remote_signal: dict[str, Any]) -> str:
@@ -284,127 +310,172 @@ def _status_line(
     }
 
 
-def status_surface_from_signals(
-    *,
-    generated_at: str,
-    vault_completeness: str,
-    source_closeout_status: str,
-    sealed_run_status: str,
-    public_summary_status: str,
-    lock_check_status: str,
-    uv_lock_check_passed: bool,
-    learning_signoff_status: str,
-    goal_runtime_certificate_status: str,
-    remote_sync_signal: dict[str, Any],
-    artifact_freshness_display: str,
-    canonical_uv_lock_check_passed: bool | None = None,
-    source_closeout_evidence_path: str = DEFAULT_CLOSEOUT,
-    sealed_run_evidence_path: str = DEFAULT_SEALED_RUN,
-    public_summary_evidence_path: str = DEFAULT_PUBLIC_SUMMARY,
-    lockfile_evidence_path: str = DEFAULT_SUPPLY_CHAIN_PROVENANCE,
-    learning_signoff_evidence_path: str = DEFAULT_LEARNING_SIGNOFF,
-    goal_runtime_certificate_evidence_path: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
-    remote_sync_evidence_path: str = DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE,
-    source_closeout_currentness_detail: str = "evidence_currentness=unknown",
-    public_summary_currentness_detail: str = "evidence_currentness=unknown",
-) -> dict[str, Any]:
-    freshness = (
-        artifact_freshness_display
-        if artifact_freshness_display in FRESHNESS_DISPLAY_VALUES
-        else "none"
+def _coerce_status_surface_signals(
+    signals: StatusSurfaceSignals | None,
+    legacy_kwargs: dict[str, Any],
+) -> StatusSurfaceSignals:
+    if signals is not None:
+        if legacy_kwargs:
+            names = ", ".join(sorted(legacy_kwargs))
+            raise TypeError(f"signals cannot be combined with legacy keyword arguments: {names}")
+        return signals
+    return StatusSurfaceSignals(**legacy_kwargs)
+
+
+def _normalized_freshness_display(signals: StatusSurfaceSignals) -> str:
+    if signals.artifact_freshness_display in FRESHNESS_DISPLAY_VALUES:
+        return signals.artifact_freshness_display
+    return "none"
+
+
+def _canonical_uv_lock_passed(signals: StatusSurfaceSignals) -> bool:
+    if signals.canonical_uv_lock_check_passed is None:
+        return signals.uv_lock_check_passed
+    return signals.canonical_uv_lock_check_passed
+
+
+def _source_closeout_line(signals: StatusSurfaceSignals, freshness: str) -> dict[str, Any]:
+    return _status_line(
+        key="source_closeout",
+        status=signals.source_closeout_status or STATUS_VALUE_UNKNOWN,
+        axis=STATUS_AXIS_SOURCE_CLOSEOUT,
+        detail=f"freshness={freshness}; {signals.source_closeout_currentness_detail}",
+        evidence_path=signals.source_closeout_evidence_path,
     )
-    lock_status = lockfile_freshness_display_status(
-        lock_check_status=lock_check_status,
-        uv_lock_check_passed=(
-            uv_lock_check_passed
-            if canonical_uv_lock_check_passed is None
-            else canonical_uv_lock_check_passed
+
+
+def _sealed_run_line(signals: StatusSurfaceSignals) -> dict[str, Any]:
+    return _status_line(
+        key="sealed_run",
+        status=signals.sealed_run_status or STATUS_VALUE_UNKNOWN,
+        axis=STATUS_AXIS_SEALED_RUN,
+        detail="axis=sealed_run_authority",
+        evidence_path=signals.sealed_run_evidence_path,
+    )
+
+
+def _public_summary_line(signals: StatusSurfaceSignals) -> dict[str, Any]:
+    return _status_line(
+        key="public_summary",
+        status=signals.public_summary_status or STATUS_VALUE_UNKNOWN,
+        axis=None,
+        detail=f"public mirror contract evidence; {signals.public_summary_currentness_detail}",
+        evidence_path=signals.public_summary_evidence_path,
+    )
+
+
+def _lockfile_freshness_line(
+    signals: StatusSurfaceSignals,
+    *,
+    lock_status: str,
+    dependency_normalization: dict[str, str],
+) -> dict[str, Any]:
+    return _status_line(
+        key="lockfile_freshness",
+        status=lock_status,
+        axis=None,
+        detail=(
+            f"lock_check_status={signals.lock_check_status or STATUS_VALUE_UNKNOWN}; "
+            f"baseline_environment_lock_check={dependency_normalization['baseline_environment_lock_check_status']}; "
+            f"canonical_lock_check={dependency_normalization['canonical_lock_check_status']}; "
+            f"toolchain_alignment={dependency_normalization['toolchain_alignment_status']}; "
+            f"recommended_normalization_step={dependency_normalization['recommended_normalization_step']}"
         ),
+        evidence_path=signals.lockfile_evidence_path,
+    )
+
+
+def _learning_signoff_line(signals: StatusSurfaceSignals) -> dict[str, Any]:
+    return _status_line(
+        key="learning_signoff",
+        status=_unverified_status(
+            signals.learning_signoff_status,
+            vault_completeness=signals.vault_completeness,
+        ),
+        axis=None,
+        detail="learning readiness signoff evidence",
+        evidence_path=signals.learning_signoff_evidence_path,
+    )
+
+
+def _goal_runtime_certificate_line(signals: StatusSurfaceSignals) -> dict[str, Any]:
+    return _status_line(
+        key="goal_runtime_certificate",
+        status=_unverified_status(
+            signals.goal_runtime_certificate_status,
+            vault_completeness=signals.vault_completeness,
+        ),
+        axis=None,
+        detail="goal runtime certificate evidence",
+        evidence_path=signals.goal_runtime_certificate_evidence_path,
+    )
+
+
+def _remote_sync_line(signals: StatusSurfaceSignals, remote_status: str) -> dict[str, Any]:
+    return _status_line(
+        key="remote_sync",
+        status=remote_status,
+        axis=None,
+        detail=(
+            "source=live_git_remote_state; "
+            f"upstream={str(signals.remote_sync_signal.get('upstream', '')).strip() or 'none'}; "
+            f"ahead={signals.remote_sync_signal.get('ahead', 0)}; "
+            f"behind={signals.remote_sync_signal.get('behind', 0)}"
+        ),
+        evidence_path=signals.remote_sync_evidence_path,
+    )
+
+
+def _status_surface_lines(
+    signals: StatusSurfaceSignals,
+    *,
+    freshness: str,
+    lock_status: str,
+    dependency_normalization: dict[str, str],
+    remote_status: str,
+) -> list[dict[str, Any]]:
+    return [
+        _source_closeout_line(signals, freshness),
+        _sealed_run_line(signals),
+        _public_summary_line(signals),
+        _lockfile_freshness_line(
+            signals,
+            lock_status=lock_status,
+            dependency_normalization=dependency_normalization,
+        ),
+        _learning_signoff_line(signals),
+        _goal_runtime_certificate_line(signals),
+        _remote_sync_line(signals, remote_status),
+    ]
+
+
+def status_surface_from_signals(
+    signals: StatusSurfaceSignals | None = None,
+    **legacy_kwargs: Any,
+) -> dict[str, Any]:
+    signals = _coerce_status_surface_signals(signals, legacy_kwargs)
+    canonical_uv_lock_check_passed = _canonical_uv_lock_passed(signals)
+    lock_status = lockfile_freshness_display_status(
+        lock_check_status=signals.lock_check_status,
+        uv_lock_check_passed=canonical_uv_lock_check_passed,
     )
     dependency_normalization = _dependency_normalization_status(
-        lock_check_status=lock_check_status,
-        baseline_uv_lock_check_passed=uv_lock_check_passed,
-        canonical_uv_lock_check_passed=(
-            uv_lock_check_passed
-            if canonical_uv_lock_check_passed is None
-            else canonical_uv_lock_check_passed
-        ),
+        lock_check_status=signals.lock_check_status,
+        baseline_uv_lock_check_passed=signals.uv_lock_check_passed,
+        canonical_uv_lock_check_passed=canonical_uv_lock_check_passed,
     )
-    remote_status = remote_sync_display_status(remote_sync_signal)
-    lines = [
-        _status_line(
-            key="source_closeout",
-            status=source_closeout_status or STATUS_VALUE_UNKNOWN,
-            axis=STATUS_AXIS_SOURCE_CLOSEOUT,
-            detail=f"freshness={freshness}; {source_closeout_currentness_detail}",
-            evidence_path=source_closeout_evidence_path,
-        ),
-        _status_line(
-            key="sealed_run",
-            status=sealed_run_status or STATUS_VALUE_UNKNOWN,
-            axis=STATUS_AXIS_SEALED_RUN,
-            detail="axis=sealed_run_authority",
-            evidence_path=sealed_run_evidence_path,
-        ),
-        _status_line(
-            key="public_summary",
-            status=public_summary_status or STATUS_VALUE_UNKNOWN,
-            axis=None,
-            detail=f"public mirror contract evidence; {public_summary_currentness_detail}",
-            evidence_path=public_summary_evidence_path,
-        ),
-        _status_line(
-            key="lockfile_freshness",
-            status=lock_status,
-            axis=None,
-            detail=(
-                f"lock_check_status={lock_check_status or STATUS_VALUE_UNKNOWN}; "
-                f"baseline_environment_lock_check={dependency_normalization['baseline_environment_lock_check_status']}; "
-                f"canonical_lock_check={dependency_normalization['canonical_lock_check_status']}; "
-                f"toolchain_alignment={dependency_normalization['toolchain_alignment_status']}; "
-                f"recommended_normalization_step={dependency_normalization['recommended_normalization_step']}"
-            ),
-            evidence_path=lockfile_evidence_path,
-        ),
-        _status_line(
-            key="learning_signoff",
-            status=_unverified_status(
-                learning_signoff_status,
-                vault_completeness=vault_completeness,
-            ),
-            axis=None,
-            detail="learning readiness signoff evidence",
-            evidence_path=learning_signoff_evidence_path,
-        ),
-        _status_line(
-            key="goal_runtime_certificate",
-            status=_unverified_status(
-                goal_runtime_certificate_status,
-                vault_completeness=vault_completeness,
-            ),
-            axis=None,
-            detail="goal runtime certificate evidence",
-            evidence_path=goal_runtime_certificate_evidence_path,
-        ),
-        _status_line(
-            key="remote_sync",
-            status=remote_status,
-            axis=None,
-            detail=(
-                "source=live_git_remote_state; "
-                f"upstream={str(remote_sync_signal.get('upstream', '')).strip() or 'none'}; "
-                f"ahead={remote_sync_signal.get('ahead', 0)}; "
-                f"behind={remote_sync_signal.get('behind', 0)}"
-            ),
-            evidence_path=remote_sync_evidence_path,
-        ),
-    ]
     return {
-        "generated_at": generated_at,
+        "generated_at": signals.generated_at,
         "producer": "ops.scripts.release_status_surface",
         "source_command": SOURCE_COMMAND,
-        "vault_completeness": vault_completeness,
-        "lines": lines,
+        "vault_completeness": signals.vault_completeness,
+        "lines": _status_surface_lines(
+            signals,
+            freshness=_normalized_freshness_display(signals),
+            lock_status=lock_status,
+            dependency_normalization=dependency_normalization,
+            remote_status=remote_sync_display_status(signals.remote_sync_signal),
+        ),
         "axes": {
             "source_closeout_axis": STATUS_AXIS_SOURCE_CLOSEOUT,
             "sealed_run_axis": STATUS_AXIS_SEALED_RUN,

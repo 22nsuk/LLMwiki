@@ -356,6 +356,187 @@ def promotion_guard_from_readiness(
     }
 
 
+def _default_goal_promotion_guard(
+    promotion_guard: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    guard: dict[str, Any] = {
+        "can_promote_result": False,
+        "promotion_blockers": [
+            "self-improvement loop certificate incomplete",
+            "sealed authority clean pass not verified",
+        ],
+        "sealed_authority_clean": False,
+        "runtime_certificate_verified": False,
+        "sustained_runtime_claimed": False,
+        "no_sustained_claim_before_certificate_verified": True,
+    }
+    if promotion_guard is not None:
+        guard.update(dict(promotion_guard))
+    return guard
+
+
+def _goal_contract_non_goals() -> list[str]:
+    return [
+        "Do not treat wall-clock duration as proof without the self-improvement loop certificate.",
+        "Do not treat native Codex goal state as durable proof without file-backed goal, status, checkpoint, and certificate evidence.",
+        "Do not promote release, learning, or improvement claims while promotion blockers remain.",
+        "Do not mutate private corpus surfaces from a public/runtime maintenance goal.",
+    ]
+
+
+def _goal_contract_allowed_roots() -> list[dict[str, str]]:
+    return [
+        {"path": "ops/", "purpose": "runtime, schemas, policies, reports, and scripts"},
+        {"path": "tests/", "purpose": "deterministic regression coverage"},
+        {"path": "mk/", "purpose": "Make target orchestration"},
+        {"path": "docs/", "purpose": "public-safe workflow and runtime documentation"},
+        {"path": ".github/", "purpose": "CI workflow contract"},
+        {"path": ".codex/agents/", "purpose": "shared subagent profile surface"},
+        {"path": "README.md", "purpose": "operator-facing runtime contract"},
+        {"path": "ops/README.md", "purpose": "ops-layer runtime contract"},
+    ]
+
+
+def _goal_contract_budgets(
+    *,
+    max_unattended_seconds: int,
+    max_proposals: int,
+    max_consecutive_failures: int,
+    heartbeat_interval_seconds: int,
+    checkpoint_interval_seconds: int,
+) -> dict[str, int]:
+    return {
+        "max_wall_clock_seconds": max_unattended_seconds,
+        "max_proposals": max_proposals,
+        "max_consecutive_failures": max_consecutive_failures,
+        "heartbeat_interval_seconds": heartbeat_interval_seconds,
+        "checkpoint_interval_seconds": checkpoint_interval_seconds,
+    }
+
+
+def _goal_contract_execution_policy() -> dict[str, dict[str, Any]]:
+    return {
+        "learning_uncertain": {
+            "allow_bounded_trial": True,
+            "requires_explicit_authorization": True,
+            "authorization_source": "codex_goal_contract",
+            "command_flag": "--allow-learning-uncertain",
+        },
+        "post_promote_maintenance": {
+            "minimum_meaningful_cycles": 1,
+            "allow_zero_cycles_for_certificate": False,
+            "completion_condition": "post_promote_observation",
+            "command_flag": "--post-promote-maintenance-cycles",
+        },
+    }
+
+
+def _goal_contract_runtime(runtime_mode: str, max_unattended_seconds: int) -> dict[str, Any]:
+    return {
+        "mode": runtime_mode,
+        "duration_seconds": max_unattended_seconds,
+        "max_unattended_seconds": max_unattended_seconds,
+        "certificate_status": "unverified",
+        "verified_at": "",
+    }
+
+
+def _goal_backend_contract(backend_type: str, storage_path: str) -> dict[str, Any]:
+    return {
+        "backend_type": backend_type,
+        "process_persistent": True,
+        "storage_path": storage_path,
+    }
+
+
+def _goal_contract_stop_conditions() -> list[dict[str, str]]:
+    return [
+        {
+            "condition_id": "promotion_guard_blocked",
+            "description": "Stop before any promotion or learning claim while blockers remain.",
+            "severity": "stop",
+        },
+        {
+            "condition_id": "runtime_budget_exhausted",
+            "description": "Pause when the runtime wall-clock or proposal budget is exhausted.",
+            "severity": "pause",
+        },
+        {
+            "condition_id": "sealed_authority_not_clean",
+            "description": "Require review when sealed authority or can_promote_result is not clean.",
+            "severity": "require_review",
+        },
+    ]
+
+
+def _goal_contract_required_evidence(goal_status_path: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "evidence_id": "auto_improve_readiness",
+            "path": "ops/reports/auto-improve-readiness.json",
+            "description": "Readiness separates trial execution from result promotion.",
+            "freshness": "current_source_tree",
+            "required_for_promotion": True,
+        },
+        {
+            "evidence_id": "goal_run_status",
+            "path": goal_status_path,
+            "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
+            "freshness": "current_run",
+            "required_for_promotion": True,
+        },
+        {
+            "evidence_id": "session_synopsis",
+            "path": "ops/reports/session-synopsis.json",
+            "description": "Session synopsis confirms the loop state, blockers, and next action.",
+            "freshness": "current_source_tree",
+            "required_for_promotion": True,
+        },
+        {
+            "evidence_id": "remediation_backlog",
+            "path": "ops/reports/remediation-backlog.json",
+            "description": "Remediation backlog must agree with readiness and session state.",
+            "freshness": "current_source_tree",
+            "required_for_promotion": True,
+        },
+        {
+            "evidence_id": "source_package_clean_extract",
+            "path": "ops/reports/source-package-clean-extract.json",
+            "description": "Source package replay proves packaged-copy parity for the loop output.",
+            "freshness": "current_source_tree",
+            "required_for_promotion": True,
+        },
+        {
+            "evidence_id": "public_check_summary",
+            "path": "ops/reports/public-check-summary.json",
+            "description": "Public mirror checks must pass for the loop output.",
+            "freshness": "current_source_tree",
+            "required_for_promotion": True,
+        },
+        {
+            "evidence_id": "release_authority",
+            "path": "ops/reports/release-closeout-summary.json",
+            "description": "Release authority blocks promotion until machine release is allowed.",
+            "freshness": "current_source_tree",
+            "required_for_promotion": True,
+        },
+        {
+            "evidence_id": "goal_worktree_guard",
+            "path": DEFAULT_WORKTREE_GUARD_REPORT_PATH,
+            "description": "Git/ZIP preflight blocks promotion from dirty, non-Git, or replay-only trees.",
+            "freshness": "current_source_tree",
+            "required_for_promotion": True,
+        },
+    ]
+
+
+def _goal_contract_metadata() -> dict[str, str]:
+    return {
+        "contract_family": "bounded_auto_improve",
+        "claim_policy": "loop_certificate_and_release_authority_required_for_claims",
+    }
+
+
 def build_auto_improve_goal_contract(
     *,
     contract_id: str = DEFAULT_CONTRACT_ID,
@@ -376,19 +557,6 @@ def build_auto_improve_goal_contract(
         raise GoalBackendError(f"unsupported goal runtime mode: {runtime_mode}")
     if backend_type not in GOAL_BACKEND_TYPES:
         raise GoalBackendError(f"unsupported goal backend type: {backend_type}")
-    default_promotion_guard = {
-        "can_promote_result": False,
-        "promotion_blockers": [
-            "self-improvement loop certificate incomplete",
-            "sealed authority clean pass not verified",
-        ],
-        "sealed_authority_clean": False,
-        "runtime_certificate_verified": False,
-        "sustained_runtime_claimed": False,
-        "no_sustained_claim_before_certificate_verified": True,
-    }
-    if promotion_guard is not None:
-        default_promotion_guard.update(dict(promotion_guard))
     return {
         "$schema": SCHEMA_PATH,
         "schema_version": 1,
@@ -397,138 +565,25 @@ def build_auto_improve_goal_contract(
             "Run a bounded self-improvement loop whose result is certified by current "
             "readiness, release, source-package, public-check, status, and session evidence."
         ),
-        "non_goals": [
-            "Do not treat wall-clock duration as proof without the self-improvement loop certificate.",
-            "Do not treat native Codex goal state as durable proof without file-backed goal, status, checkpoint, and certificate evidence.",
-            "Do not promote release, learning, or improvement claims while promotion blockers remain.",
-            "Do not mutate private corpus surfaces from a public/runtime maintenance goal.",
-        ],
-        "allowed_roots": [
-            {"path": "ops/", "purpose": "runtime, schemas, policies, reports, and scripts"},
-            {"path": "tests/", "purpose": "deterministic regression coverage"},
-            {"path": "mk/", "purpose": "Make target orchestration"},
-            {"path": "docs/", "purpose": "public-safe workflow and runtime documentation"},
-            {"path": ".github/", "purpose": "CI workflow contract"},
-            {"path": ".codex/agents/", "purpose": "shared subagent profile surface"},
-            {"path": "README.md", "purpose": "operator-facing runtime contract"},
-            {"path": "ops/README.md", "purpose": "ops-layer runtime contract"},
-        ],
-        "budgets": {
-            "max_wall_clock_seconds": max_unattended_seconds,
-            "max_proposals": max_proposals,
-            "max_consecutive_failures": max_consecutive_failures,
-            "heartbeat_interval_seconds": heartbeat_interval_seconds,
-            "checkpoint_interval_seconds": checkpoint_interval_seconds,
-        },
-        "execution_policy": {
-            "learning_uncertain": {
-                "allow_bounded_trial": True,
-                "requires_explicit_authorization": True,
-                "authorization_source": "codex_goal_contract",
-                "command_flag": "--allow-learning-uncertain",
-            },
-            "post_promote_maintenance": {
-                "minimum_meaningful_cycles": 1,
-                "allow_zero_cycles_for_certificate": False,
-                "completion_condition": "post_promote_observation",
-                "command_flag": "--post-promote-maintenance-cycles",
-            },
-        },
+        "non_goals": _goal_contract_non_goals(),
+        "allowed_roots": _goal_contract_allowed_roots(),
+        "budgets": _goal_contract_budgets(
+            max_unattended_seconds=max_unattended_seconds,
+            max_proposals=max_proposals,
+            max_consecutive_failures=max_consecutive_failures,
+            heartbeat_interval_seconds=heartbeat_interval_seconds,
+            checkpoint_interval_seconds=checkpoint_interval_seconds,
+        ),
+        "execution_policy": _goal_contract_execution_policy(),
         "created_at": created_at or _utc_now(),
         "created_by": created_by,
         "status": "active",
-        "runtime": {
-            "mode": runtime_mode,
-            "duration_seconds": max_unattended_seconds,
-            "max_unattended_seconds": max_unattended_seconds,
-            "certificate_status": "unverified",
-            "verified_at": "",
-        },
-        "goal_backend": {
-            "backend_type": backend_type,
-            "process_persistent": True,
-            "storage_path": storage_path,
-        },
-        "stop_conditions": [
-            {
-                "condition_id": "promotion_guard_blocked",
-                "description": "Stop before any promotion or learning claim while blockers remain.",
-                "severity": "stop",
-            },
-            {
-                "condition_id": "runtime_budget_exhausted",
-                "description": "Pause when the runtime wall-clock or proposal budget is exhausted.",
-                "severity": "pause",
-            },
-            {
-                "condition_id": "sealed_authority_not_clean",
-                "description": "Require review when sealed authority or can_promote_result is not clean.",
-                "severity": "require_review",
-            },
-        ],
-        "required_evidence": [
-            {
-                "evidence_id": "auto_improve_readiness",
-                "path": "ops/reports/auto-improve-readiness.json",
-                "description": "Readiness separates trial execution from result promotion.",
-                "freshness": "current_source_tree",
-                "required_for_promotion": True,
-            },
-            {
-                "evidence_id": "goal_run_status",
-                "path": goal_status_path,
-                "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
-                "freshness": "current_run",
-                "required_for_promotion": True,
-            },
-            {
-                "evidence_id": "session_synopsis",
-                "path": "ops/reports/session-synopsis.json",
-                "description": "Session synopsis confirms the loop state, blockers, and next action.",
-                "freshness": "current_source_tree",
-                "required_for_promotion": True,
-            },
-            {
-                "evidence_id": "remediation_backlog",
-                "path": "ops/reports/remediation-backlog.json",
-                "description": "Remediation backlog must agree with readiness and session state.",
-                "freshness": "current_source_tree",
-                "required_for_promotion": True,
-            },
-            {
-                "evidence_id": "source_package_clean_extract",
-                "path": "ops/reports/source-package-clean-extract.json",
-                "description": "Source package replay proves packaged-copy parity for the loop output.",
-                "freshness": "current_source_tree",
-                "required_for_promotion": True,
-            },
-            {
-                "evidence_id": "public_check_summary",
-                "path": "ops/reports/public-check-summary.json",
-                "description": "Public mirror checks must pass for the loop output.",
-                "freshness": "current_source_tree",
-                "required_for_promotion": True,
-            },
-            {
-                "evidence_id": "release_authority",
-                "path": "ops/reports/release-closeout-summary.json",
-                "description": "Release authority blocks promotion until machine release is allowed.",
-                "freshness": "current_source_tree",
-                "required_for_promotion": True,
-            },
-            {
-                "evidence_id": "goal_worktree_guard",
-                "path": DEFAULT_WORKTREE_GUARD_REPORT_PATH,
-                "description": "Git/ZIP preflight blocks promotion from dirty, non-Git, or replay-only trees.",
-                "freshness": "current_source_tree",
-                "required_for_promotion": True,
-            },
-        ],
-        "promotion_guard": default_promotion_guard,
-        "metadata": {
-            "contract_family": "bounded_auto_improve",
-            "claim_policy": "loop_certificate_and_release_authority_required_for_claims",
-        },
+        "runtime": _goal_contract_runtime(runtime_mode, max_unattended_seconds),
+        "goal_backend": _goal_backend_contract(backend_type, storage_path),
+        "stop_conditions": _goal_contract_stop_conditions(),
+        "required_evidence": _goal_contract_required_evidence(goal_status_path),
+        "promotion_guard": _default_goal_promotion_guard(promotion_guard),
+        "metadata": _goal_contract_metadata(),
     }
 
 

@@ -80,6 +80,7 @@ Use `make help` for the compact, current command index. The main families are:
 | Public mirror | `make sync-public-policy`, `make public-check`, `make public-check-all` |
 | Mechanism/goal runtime | `make auto-improve-readiness`, `make goal-runtime-run-admission`, `make release-auto-promotion-ready` |
 | Release | `make changed-path-minimum-plan`, `make release-run-ready`, `make release-post-commit-finalize`, `make release-sealed-run-ready` |
+| Review handoff | `make review-archive-clean`, `make review-archive` |
 | Supply chain | `make supply-chain-check`, `make cyclonedx-sbom`, `make spdx-sbom`, `make openvex-draft`, `make in-toto-statement`, `make sigstore-bundle` |
 
 ## Common Workflows
@@ -91,6 +92,7 @@ Use `make help` for the compact, current command index. The main families are:
 | Schema, policy, or report-contract change | `make static` | `make test-report-contract-core` |
 | Public export boundary change | `make sync-public-policy` | `make public-check` or `make public-check-all` |
 | Release evidence or package behavior change | `make release-run-ready-check` | `make release-run-ready`; add `make release-sealed-run-ready` when sealing is required |
+| Source review handoff | `make static` | `make review-archive-clean` |
 | Supply-chain artifact change | `make supply-chain-check` | The owning SBOM/provenance target plus relevant release checks |
 
 Full-vault work that reads or mutates `raw/`, `wiki/`, `system/`, `runs/`, or

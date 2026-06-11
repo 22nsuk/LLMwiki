@@ -23,6 +23,8 @@ PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing
 PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess
 # Explicit pytest selector lists are generated from ops/test-lane-registry.json
 # into mk/test-selectors.generated.mk (see: make test-selectors-sync).
+include mk/test-selectors.generated.mk
+
 REPORT_CONTRACT_SUMMARY_MARK_EXPR ?= $(PYTEST_REPORT_CONTRACT_MARK_EXPR)
 REPORT_CONTRACT_SUMMARY_TESTS ?= -m "$(REPORT_CONTRACT_SUMMARY_MARK_EXPR)" $(REPORT_CONTRACT_TESTS)
 TEST_EXECUTION_SUMMARY_OUT ?= ops/reports/test-execution-summary.json

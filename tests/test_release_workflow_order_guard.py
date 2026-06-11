@@ -18,6 +18,265 @@ pytestmark = pytest.mark.public
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-workflow-order-guard.schema.json"
 
 
+def _make_recipe(*targets: str) -> str:
+    return "".join(f"\t$(MAKE) {target}\n" for target in targets)
+
+
+CHECK_FINALIZED_LINES = _make_recipe(
+    "auto-improve-readiness-report-body",
+    "generated-artifact-converge",
+    "release-closeout-post-check-finalizer-dry-run",
+    "release-closeout-fixed-point",
+    "tmp-json-clean",
+    "release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+    "release-closeout-finality-verify",
+)
+CHECK_FINALIZED_MISORDER_LINES = _make_recipe(
+    "release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+    "release-closeout-fixed-point",
+    "tmp-json-clean",
+    "release-closeout-finality-verify",
+)
+RELEASE_SOURCE_READY_LINES = _make_recipe(
+    "release-source-ready-prepare",
+    "release-source-ready-commit",
+    "release-post-commit-finalize",
+    "release-source-ready-post-verify",
+)
+RELEASE_SOURCE_READY_MISORDER_LINES = _make_recipe(
+    "release-source-ready-prepare",
+    "release-post-commit-finalize",
+    "release-source-ready-post-verify",
+    "release-source-ready-commit",
+)
+RELEASE_SOURCE_READY_PREPARE_LINES = _make_recipe(
+    "release-source-ready-snapshot",
+    "release-converge-all-surfaces",
+)
+RELEASE_SOURCE_READY_POST_VERIFY_LINES = _make_recipe(
+    "release-check-all-surfaces",
+    "release-source-ready-status",
+)
+RELEASE_SOURCE_READY_POST_VERIFY_MISORDER_LINES = _make_recipe(
+    "release-check-all-surfaces",
+    "goal-runtime-local-evidence-refresh",
+    "generated-artifact-converge",
+    "remediation-backlog",
+    "release-closeout-fixed-point",
+    "release-source-ready-status",
+)
+RELEASE_CONVERGE_PREFLIGHT_LINES = _make_recipe(
+    "generated-artifact-script-output",
+    "report-schema-samples-regenerate",
+    "goal-runtime-local-evidence-refresh",
+    "test-execution-summary-report-contract-refresh-no-smoke",
+)
+RELEASE_CONVERGE_PREFLIGHT_MISORDER_LINES = _make_recipe(
+    "report-schema-samples-regenerate",
+    "generated-artifact-script-output",
+    "goal-runtime-local-evidence-refresh",
+    "test-execution-summary-report-contract-refresh-no-smoke",
+)
+RELEASE_CONVERGE_ALL_LINES = _make_recipe(
+    "release-converge",
+    "sync-public-policy",
+    "public-check-all",
+    "release-converge-post",
+)
+RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
+    "check",
+    "check-finalized",
+    "release-evidence-converge",
+    "release-evidence-closeout",
+    "release-finality-resettle",
+    "release-converge-preflight",
+    "release-source-ready",
+    "release-source-ready-snapshot",
+    "release-source-ready-prepare",
+    "release-source-ready-commit",
+    "release-post-commit-finalize",
+    "release-source-ready-post-verify",
+    "release-source-ready-status",
+    "release-converge-all-surfaces",
+    "release-converge",
+    "release-converge-post",
+    "script-output-surfaces-check",
+    "release-smoke-fast-current-check",
+    "test-execution-summary-current-check",
+    "test-execution-summary-full-current-check",
+    "sync-public-policy-check",
+    "public-check-summary-current-check",
+    "artifact-freshness-check",
+    "release-check-all-surfaces",
+    "sync-public-policy",
+    "public-check-summary",
+    "public-check-all",
+    "goal-runtime-local-evidence-refresh",
+    "auto-improve-readiness-worktree-guard",
+    "remediation-backlog",
+    "generated-artifact-converge",
+    "generated-artifact-script-output",
+    "generated-artifact-finality-suffix",
+    "generated-artifact-index",
+    "artifact-freshness",
+    "release-closeout-summary",
+    "release-evidence-dashboard-report",
+    "release-lane-summary",
+    "release-clean-blocker-ledger",
+    "auto-improve-readiness-report-body",
+    "release-closeout-summary-report",
+    "script-output-surfaces",
+    "external-report-action-matrix",
+    "release-closeout-post-check-finalizer-dry-run",
+    "release-closeout-fixed-point",
+    "tmp-json-clean",
+    "release-closeout-finality-verify",
+)
+RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
+    ".PHONY: {phony}\n"
+    "check:\n"
+    "\t@true\n"
+    "check-finalized: check\n"
+    "{check_finalized_lines}"
+    "release-evidence-converge:\n"
+    "\t$(MAKE) auto-improve-readiness-report-body\n"
+    "\t$(MAKE) generated-artifact-converge\n"
+    "\t$(MAKE) release-closeout-summary-report\n"
+    "\t$(MAKE) release-evidence-dashboard-report\n"
+    "\t$(MAKE) release-lane-summary\n"
+    "\t$(MAKE) release-clean-blocker-ledger\n"
+    "\t$(MAKE) generated-artifact-converge\n"
+    "\t$(MAKE) release-closeout-post-check-finalizer-dry-run\n"
+    "\t$(MAKE) release-closeout-fixed-point\n"
+    "\t$(MAKE) tmp-json-clean\n"
+    "\t$(MAKE) release-closeout-finality-verify\n"
+    "release-evidence-closeout: release-evidence-converge\n"
+    "\t@echo compatibility alias\n"
+    "release-finality-resettle:\n"
+    "\t$(MAKE) workflow-dependency-planner\n"
+    "\t$(MAKE) generated-artifact-finality-suffix\n"
+    "\t$(MAKE) release-closeout-summary-report\n"
+    "\t$(MAKE) release-closeout-fixed-point\n"
+    "\t$(MAKE) tmp-json-clean\n"
+    "\t$(MAKE) release-closeout-finality-verify\n"
+    "release-source-ready:\n"
+    "{release_source_ready_lines}"
+    "release-source-ready-prepare:\n"
+    "{release_source_ready_prepare_lines}"
+    "release-source-ready-post-verify:\n"
+    "{release_source_ready_post_verify_lines}"
+    "release-converge-all-surfaces:\n"
+    "{release_converge_all_lines}"
+    "release-converge:\n"
+    "\t$(MAKE) release-converge-preflight\n"
+    "\t$(MAKE) release-converge-post\n"
+    "release-converge-preflight:\n"
+    "{release_converge_preflight_lines}"
+    "release-converge-post:\n"
+    "\t$(MAKE) generated-artifact-converge\n"
+    "\t$(MAKE) remediation-backlog\n"
+    "\t$(MAKE) release-closeout-fixed-point\n"
+    "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
+    "release-source-ready-snapshot:\n"
+    "\t@true\n"
+    "release-source-ready-commit:\n"
+    "\t@true\n"
+    "release-post-commit-finalize:\n"
+    "\t$(MAKE) script-output-surfaces-check\n"
+    "\t$(MAKE) release-smoke-fast-current-check\n"
+    "\t$(MAKE) test-execution-summary-current-check\n"
+    "\t$(MAKE) test-execution-summary-full-current-check\n"
+    "\t$(MAKE) sync-public-policy-check\n"
+    "\t$(MAKE) public-check-summary-current-check\n"
+    "\t$(MAKE) artifact-freshness-check\n"
+    "\t$(MAKE) release-closeout-finality-verify\n"
+    "release-source-ready-status:\n"
+    "\t@true\n"
+    "release-check-all-surfaces:\n"
+    "\t@true\n"
+    "sync-public-policy:\n"
+    "\t@true\n"
+    "public-check-summary:\n"
+    "\t@true\n"
+    "public-check-all:\n"
+    "\t@true\n"
+    "script-output-surfaces-check:\n"
+    "\t@true\n"
+    "release-smoke-fast-current-check:\n"
+    "\t@true\n"
+    "test-execution-summary-current-check:\n"
+    "\t@true\n"
+    "test-execution-summary-full-current-check:\n"
+    "\t@true\n"
+    "sync-public-policy-check:\n"
+    "\t@true\n"
+    "public-check-summary-current-check:\n"
+    "\t@true\n"
+    "artifact-freshness-check:\n"
+    "\t@true\n"
+    "goal-runtime-local-evidence-refresh:\n"
+    "\t@true\n"
+    "auto-improve-readiness-worktree-guard:\n"
+    "\t@true\n"
+    "remediation-backlog:\n"
+    "\t@true\n"
+    "generated-artifact-converge:\n"
+    "\t$(MAKE) generated-artifact-finality-suffix\n"
+    "generated-artifact-script-output:\n"
+    "\t$(MAKE) script-output-surfaces\n"
+    "generated-artifact-finality-suffix:\n"
+    "\t$(MAKE) artifact-freshness\n"
+    "\t$(MAKE) external-report-action-matrix\n"
+    "\t$(MAKE) generated-artifact-index\n"
+    "script-output-surfaces:\n"
+    "\t@true\n"
+    "external-report-action-matrix:\n"
+    "\t@true\n"
+    "generated-artifact-index:\n"
+    "\t@true\n"
+    "artifact-freshness:\n"
+    "\t@true\n"
+    "report-schema-samples-regenerate:\n"
+    "\t@true\n"
+    "test-execution-summary-report-contract-refresh-no-smoke:\n"
+    "\t@true\n"
+)
+
+
+def _workflow_order_guard_makefile_text(
+    *,
+    misorder_check_finalized: bool = False,
+    misorder_release_source_ready: bool = False,
+    misorder_release_source_ready_post_verify: bool = False,
+    misorder_release_converge_preflight: bool = False,
+) -> str:
+    return RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE.format(
+        phony=" ".join(RELEASE_WORKFLOW_ORDER_PHONY_TARGETS),
+        check_finalized_lines=(
+            CHECK_FINALIZED_MISORDER_LINES
+            if misorder_check_finalized
+            else CHECK_FINALIZED_LINES
+        ),
+        release_source_ready_lines=(
+            RELEASE_SOURCE_READY_MISORDER_LINES
+            if misorder_release_source_ready
+            else RELEASE_SOURCE_READY_LINES
+        ),
+        release_source_ready_prepare_lines=RELEASE_SOURCE_READY_PREPARE_LINES,
+        release_source_ready_post_verify_lines=(
+            RELEASE_SOURCE_READY_POST_VERIFY_MISORDER_LINES
+            if misorder_release_source_ready_post_verify
+            else RELEASE_SOURCE_READY_POST_VERIFY_LINES
+        ),
+        release_converge_all_lines=RELEASE_CONVERGE_ALL_LINES,
+        release_converge_preflight_lines=(
+            RELEASE_CONVERGE_PREFLIGHT_MISORDER_LINES
+            if misorder_release_converge_preflight
+            else RELEASE_CONVERGE_PREFLIGHT_LINES
+        ),
+    )
+
+
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
         display_timezone=dt.UTC,
@@ -75,230 +334,13 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         misorder_release_source_ready_post_verify: bool = False,
         misorder_release_converge_preflight: bool = False,
     ) -> None:
-        check_finalized_lines = (
-            "\t$(MAKE) auto-improve-readiness-report-body\n"
-            "\t$(MAKE) generated-artifact-converge\n"
-            "\t$(MAKE) release-closeout-post-check-finalizer-dry-run\n"
-            "\t$(MAKE) release-closeout-fixed-point\n"
-            "\t$(MAKE) tmp-json-clean\n"
-            "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
-            "\t$(MAKE) release-closeout-finality-verify\n"
-        )
-        if misorder_check_finalized:
-            check_finalized_lines = (
-                "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
-                "\t$(MAKE) release-closeout-fixed-point\n"
-                "\t$(MAKE) tmp-json-clean\n"
-                "\t$(MAKE) release-closeout-finality-verify\n"
-            )
-        release_source_ready_lines = (
-            "\t$(MAKE) release-source-ready-prepare\n"
-            "\t$(MAKE) release-source-ready-commit\n"
-            "\t$(MAKE) release-post-commit-finalize\n"
-            "\t$(MAKE) release-source-ready-post-verify\n"
-        )
-        if misorder_release_source_ready:
-            release_source_ready_lines = (
-                "\t$(MAKE) release-source-ready-prepare\n"
-                "\t$(MAKE) release-post-commit-finalize\n"
-                "\t$(MAKE) release-source-ready-post-verify\n"
-                "\t$(MAKE) release-source-ready-commit\n"
-            )
-        release_source_ready_prepare_lines = (
-            "\t$(MAKE) release-source-ready-snapshot\n"
-            "\t$(MAKE) release-converge-all-surfaces\n"
-        )
-        release_source_ready_post_verify_lines = (
-            "\t$(MAKE) release-check-all-surfaces\n"
-            "\t$(MAKE) release-source-ready-status\n"
-        )
-        if misorder_release_source_ready_post_verify:
-            release_source_ready_post_verify_lines = (
-                "\t$(MAKE) release-check-all-surfaces\n"
-                "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
-                "\t$(MAKE) generated-artifact-converge\n"
-                "\t$(MAKE) remediation-backlog\n"
-                "\t$(MAKE) release-closeout-fixed-point\n"
-                "\t$(MAKE) release-source-ready-status\n"
-            )
-        release_converge_preflight_lines = (
-            "\t$(MAKE) generated-artifact-script-output\n"
-            "\t$(MAKE) report-schema-samples-regenerate\n"
-            "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
-            "\t$(MAKE) test-execution-summary-report-contract-refresh-no-smoke\n"
-        )
-        if misorder_release_converge_preflight:
-            release_converge_preflight_lines = (
-                "\t$(MAKE) report-schema-samples-regenerate\n"
-                "\t$(MAKE) generated-artifact-script-output\n"
-                "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
-                "\t$(MAKE) test-execution-summary-report-contract-refresh-no-smoke\n"
-            )
-        release_converge_all_lines = (
-            "\t$(MAKE) release-converge\n"
-            "\t$(MAKE) sync-public-policy\n"
-            "\t$(MAKE) public-check-all\n"
-            "\t$(MAKE) release-converge-post\n"
-        )
-        phony = " ".join(
-            [
-                "check",
-                "check-finalized",
-                "release-evidence-converge",
-                "release-evidence-closeout",
-                "release-finality-resettle",
-                "release-converge-preflight",
-                "release-source-ready",
-                "release-source-ready-snapshot",
-                "release-source-ready-prepare",
-                "release-source-ready-commit",
-                "release-post-commit-finalize",
-                "release-source-ready-post-verify",
-                "release-source-ready-status",
-                "release-converge-all-surfaces",
-                "release-converge",
-                "release-converge-post",
-                "script-output-surfaces-check",
-                "release-smoke-fast-current-check",
-                "test-execution-summary-current-check",
-                "test-execution-summary-full-current-check",
-                "sync-public-policy-check",
-                "public-check-summary-current-check",
-                "artifact-freshness-check",
-                "release-check-all-surfaces",
-                "sync-public-policy",
-                "public-check-summary",
-                "public-check-all",
-                "goal-runtime-local-evidence-refresh",
-                "auto-improve-readiness-worktree-guard",
-                "remediation-backlog",
-                "generated-artifact-converge",
-                "generated-artifact-script-output",
-                "generated-artifact-finality-suffix",
-                "generated-artifact-index",
-                "artifact-freshness",
-                "release-closeout-summary",
-                "release-evidence-dashboard-report",
-                "release-lane-summary",
-                "release-clean-blocker-ledger",
-                "auto-improve-readiness-report-body",
-                "release-closeout-summary-report",
-                "script-output-surfaces",
-                "external-report-action-matrix",
-                "release-closeout-post-check-finalizer-dry-run",
-                "release-closeout-fixed-point",
-                "tmp-json-clean",
-                "release-closeout-finality-verify",
-            ]
-        )
         self.vault.joinpath("Makefile").write_text(
-            f".PHONY: {phony}\n"
-            "check:\n"
-            "\t@true\n"
-            "check-finalized: check\n"
-            f"{check_finalized_lines}"
-            "release-evidence-converge:\n"
-            "\t$(MAKE) auto-improve-readiness-report-body\n"
-            "\t$(MAKE) generated-artifact-converge\n"
-            "\t$(MAKE) release-closeout-summary-report\n"
-            "\t$(MAKE) release-evidence-dashboard-report\n"
-            "\t$(MAKE) release-lane-summary\n"
-            "\t$(MAKE) release-clean-blocker-ledger\n"
-            "\t$(MAKE) generated-artifact-converge\n"
-            "\t$(MAKE) release-closeout-post-check-finalizer-dry-run\n"
-            "\t$(MAKE) release-closeout-fixed-point\n"
-            "\t$(MAKE) tmp-json-clean\n"
-            "\t$(MAKE) release-closeout-finality-verify\n"
-            "release-evidence-closeout: release-evidence-converge\n"
-            "\t@echo compatibility alias\n"
-            "release-finality-resettle:\n"
-            "\t$(MAKE) workflow-dependency-planner\n"
-            "\t$(MAKE) generated-artifact-finality-suffix\n"
-            "\t$(MAKE) release-closeout-summary-report\n"
-            "\t$(MAKE) release-closeout-fixed-point\n"
-            "\t$(MAKE) tmp-json-clean\n"
-            "\t$(MAKE) release-closeout-finality-verify\n"
-            "release-source-ready:\n"
-            f"{release_source_ready_lines}"
-            "release-source-ready-prepare:\n"
-            f"{release_source_ready_prepare_lines}"
-            "release-source-ready-post-verify:\n"
-            f"{release_source_ready_post_verify_lines}"
-            "release-converge-all-surfaces:\n"
-            f"{release_converge_all_lines}"
-            "release-converge:\n"
-            "\t$(MAKE) release-converge-preflight\n"
-            "\t$(MAKE) release-converge-post\n"
-            "release-converge-preflight:\n"
-            f"{release_converge_preflight_lines}"
-            "release-converge-post:\n"
-            "\t$(MAKE) generated-artifact-converge\n"
-            "\t$(MAKE) remediation-backlog\n"
-            "\t$(MAKE) release-closeout-fixed-point\n"
-            "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
-            "release-source-ready-snapshot:\n"
-            "\t@true\n"
-            "release-source-ready-commit:\n"
-            "\t@true\n"
-            "release-post-commit-finalize:\n"
-            "\t$(MAKE) script-output-surfaces-check\n"
-            "\t$(MAKE) release-smoke-fast-current-check\n"
-            "\t$(MAKE) test-execution-summary-current-check\n"
-            "\t$(MAKE) test-execution-summary-full-current-check\n"
-            "\t$(MAKE) sync-public-policy-check\n"
-            "\t$(MAKE) public-check-summary-current-check\n"
-            "\t$(MAKE) artifact-freshness-check\n"
-            "\t$(MAKE) release-closeout-finality-verify\n"
-            "release-source-ready-status:\n"
-            "\t@true\n"
-            "release-check-all-surfaces:\n"
-            "\t@true\n"
-            "sync-public-policy:\n"
-            "\t@true\n"
-            "public-check-summary:\n"
-            "\t@true\n"
-            "public-check-all:\n"
-            "\t@true\n"
-            "script-output-surfaces-check:\n"
-            "\t@true\n"
-            "release-smoke-fast-current-check:\n"
-            "\t@true\n"
-            "test-execution-summary-current-check:\n"
-            "\t@true\n"
-            "test-execution-summary-full-current-check:\n"
-            "\t@true\n"
-            "sync-public-policy-check:\n"
-            "\t@true\n"
-            "public-check-summary-current-check:\n"
-            "\t@true\n"
-            "artifact-freshness-check:\n"
-            "\t@true\n"
-            "goal-runtime-local-evidence-refresh:\n"
-            "\t@true\n"
-            "auto-improve-readiness-worktree-guard:\n"
-            "\t@true\n"
-            "remediation-backlog:\n"
-            "\t@true\n"
-            "generated-artifact-converge:\n"
-            "\t$(MAKE) generated-artifact-finality-suffix\n"
-            "generated-artifact-script-output:\n"
-            "\t$(MAKE) script-output-surfaces\n"
-            "generated-artifact-finality-suffix:\n"
-            "\t$(MAKE) artifact-freshness\n"
-            "\t$(MAKE) external-report-action-matrix\n"
-            "\t$(MAKE) generated-artifact-index\n"
-            "script-output-surfaces:\n"
-            "\t@true\n"
-            "external-report-action-matrix:\n"
-            "\t@true\n"
-            "generated-artifact-index:\n"
-            "\t@true\n"
-            "artifact-freshness:\n"
-            "\t@true\n"
-            "report-schema-samples-regenerate:\n"
-            "\t@true\n"
-            "test-execution-summary-report-contract-refresh-no-smoke:\n"
-            "\t@true\n",
+            _workflow_order_guard_makefile_text(
+                misorder_check_finalized=misorder_check_finalized,
+                misorder_release_source_ready=misorder_release_source_ready,
+                misorder_release_source_ready_post_verify=misorder_release_source_ready_post_verify,
+                misorder_release_converge_preflight=misorder_release_converge_preflight,
+            ),
             encoding="utf-8",
         )
 
