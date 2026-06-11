@@ -12,7 +12,11 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.auto_improve_readiness_constants_runtime import READINESS_SOURCE_PATHS
+from ops.scripts.auto_improve_readiness_learning_runtime import (
+    learning_claim_blocker_payloads,
+)
 from ops.scripts.auto_improve_readiness_runtime import (
+    assess_learning_readiness,
     build_readiness_report,
     load_readiness_inputs,
     readiness_can_run,
@@ -1434,6 +1438,14 @@ class AutoImproveReadinessRuntimeTests(
         )
 
         report = build_readiness_report(self.vault, context=fixed_context())
+        inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        learning = assess_learning_readiness(inputs)
+        learning_claim_blockers, learning_promotion_blockers = (
+            learning_claim_blocker_payloads(
+                learning,
+                signoff_active=bool(inputs.learning_signoff_summary.get("active")),
+            )
+        )
 
         self.assertEqual(report["execution_readiness"]["status"], "pass")
         self.assertTrue(report["queue"]["ready"])
@@ -1499,6 +1511,8 @@ class AutoImproveReadinessRuntimeTests(
             attempt_history_signal["required_evidence"][0],
         )
         self.assertEqual(len(report["learning_claim_blockers"]), 1)
+        self.assertEqual(report["learning_claim_blockers"], learning_claim_blockers)
+        self.assertEqual(report["promotion_blockers"], learning_promotion_blockers)
         self.assertEqual(
             report["promotion_blockers"], report["learning_claim_blockers"]
         )
@@ -1593,6 +1607,14 @@ class AutoImproveReadinessRuntimeTests(
         )
 
         report = build_readiness_report(self.vault, context=fixed_context())
+        inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        learning = assess_learning_readiness(inputs)
+        learning_claim_blockers, learning_promotion_blockers = (
+            learning_claim_blocker_payloads(
+                learning,
+                signoff_active=bool(inputs.learning_signoff_summary.get("active")),
+            )
+        )
 
         self.assertTrue(report["can_execute_trial"])
         self.assertTrue(report["can_promote_result"])
@@ -1604,6 +1626,8 @@ class AutoImproveReadinessRuntimeTests(
             [item["id"] for item in report["learning_claim_blockers"]],
             ["learning_blocked_by_review_required"],
         )
+        self.assertEqual(report["learning_claim_blockers"], learning_claim_blockers)
+        self.assertEqual(learning_promotion_blockers, [])
         self.assertEqual(report["promotion_blockers"], [])
         self.assertEqual(
             report["diagnostics"]["learning_signoff_summary"]["signoff_status"],

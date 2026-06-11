@@ -21,7 +21,6 @@ from ops.scripts.gate_effect_vocabulary import (
 )
 from ops.scripts.learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,
-    SUPPORTED_BLOCKER_ID as SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID,
     learning_readiness_signoff_summary,
 )
 from ops.scripts.learning_readiness_vocabulary import (
@@ -58,8 +57,8 @@ from .auto_improve_readiness_constants_runtime import (
 )
 from .auto_improve_readiness_learning_runtime import (
     LearningReadinessAssessment,
-    _learning_claim_blockers,
     _learning_readiness_assessment,
+    learning_claim_blocker_payloads,
 )
 from .auto_improve_readiness_queue_runtime import (
     ReadinessQueueState,
@@ -528,17 +527,12 @@ def _readiness_promotion_blockers(
     inputs: ReadinessInputs,
     learning: LearningReadinessAssessment,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    learning_claim_blockers = [
-        blocker.to_wire() for blocker in _learning_claim_blockers(learning)
-    ]
-    learning_promotion_blockers = learning_claim_blockers
-    if bool(inputs.learning_signoff_summary.get("active")):
-        learning_promotion_blockers = [
-            blocker
-            for blocker in learning_claim_blockers
-            if str(blocker.get("id", "")).strip()
-            != SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID
-        ]
+    learning_claim_blockers, learning_promotion_blockers = (
+        learning_claim_blocker_payloads(
+            learning,
+            signoff_active=bool(inputs.learning_signoff_summary.get("active")),
+        )
+    )
     promotion_blockers = [
         *learning_promotion_blockers,
         *_release_gate_promotion_blockers(

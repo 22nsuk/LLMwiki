@@ -3,12 +3,16 @@ from __future__ import annotations
 import json
 import unittest
 
+from ops.scripts.auto_improve_readiness_learning_runtime import (
+    learning_claim_blocker_payloads,
+)
 from ops.scripts.auto_improve_readiness_queue_runtime import (
     readiness_execution_fields,
     readiness_queue_payloads,
     readiness_queue_state,
 )
 from ops.scripts.auto_improve_readiness_runtime import (
+    assess_learning_readiness,
     build_readiness_report,
     load_readiness_inputs,
     readiness_can_run,
@@ -457,8 +461,15 @@ class AutoImproveReadinessQueueRuntimeTests(
         )
 
         report = build_readiness_report(self.vault, context=fixed_context())
+        inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        learning = assess_learning_readiness(inputs)
+        learning_claim_blockers, signoff_filtered_blockers = (
+            learning_claim_blocker_payloads(learning, signoff_active=True)
+        )
 
         self.assertEqual(report["learning_readiness"]["status"], "not_runnable")
+        self.assertEqual(report["learning_claim_blockers"], learning_claim_blockers)
+        self.assertEqual(signoff_filtered_blockers, learning_claim_blockers)
         self.assertEqual(report["execution_status"], "blocked")
         self.assertFalse(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
