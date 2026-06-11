@@ -20,6 +20,7 @@ from tests.workflow_static_helpers import (
     workflow_job as _job,
     workflow_jobs as _jobs,
     workflow_mapping,
+    workflow_matrix,
     workflow_matrix_include,
     workflow_matrix_values,
     workflow_on,
@@ -160,6 +161,29 @@ class CiWorkflowStaticTests(unittest.TestCase):
             workflow_matrix_values(test_tier_job, "python-version"),
             ("3.12", "3.13", "3.14"),
         )
+
+    def test_ci_matrix_keeps_multi_python_coverage_only_on_fast_tier(self) -> None:
+        test_tier_job = _job(_workflow(), "test-tier")
+        matrix = workflow_matrix(test_tier_job)
+        tiers = workflow_matrix_values(test_tier_job, "tier")
+        versions = workflow_matrix_values(test_tier_job, "python-version")
+        exclude = matrix.get("exclude", [])
+        self.assertIsInstance(exclude, list)
+        excluded_pairs = {
+            (str(item.get("tier")), str(item.get("python-version")))
+            for item in exclude
+            if isinstance(item, dict)
+        }
+        expected_excluded_pairs = {
+            (tier, version)
+            for tier in tiers
+            if tier != "fast"
+            for version in versions
+            if version != "3.12"
+        }
+
+        self.assertEqual(excluded_pairs, expected_excluded_pairs)
+        self.assertEqual(len(tiers) * len(versions) - len(excluded_pairs), 11)
 
     def test_ci_dependency_cache_tracks_canonical_lockfile(self) -> None:
         workflow = _workflow()

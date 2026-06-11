@@ -23,6 +23,39 @@ required_status_checks:
       - integration
       - integration-heavy
       - public
+    exclude:
+      - tier: report-contract
+        python-version: "3.13"
+      - tier: report-contract
+        python-version: "3.14"
+      - tier: release-closeout-regression
+        python-version: "3.13"
+      - tier: release-closeout-regression
+        python-version: "3.14"
+      - tier: release-sealing
+        python-version: "3.13"
+      - tier: release-sealing
+        python-version: "3.14"
+      - tier: subprocess
+        python-version: "3.13"
+      - tier: subprocess
+        python-version: "3.14"
+      - tier: slow
+        python-version: "3.13"
+      - tier: slow
+        python-version: "3.14"
+      - tier: integration
+        python-version: "3.13"
+      - tier: integration
+        python-version: "3.14"
+      - tier: integration-heavy
+        python-version: "3.13"
+      - tier: integration-heavy
+        python-version: "3.14"
+      - tier: public
+        python-version: "3.13"
+      - tier: public
+        python-version: "3.14"
   singleton_checks:
     - "windows-release-smoke / py3.12"
     - "raw-registry-cross-env / linux-c-utf8"

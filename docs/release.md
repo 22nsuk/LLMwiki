@@ -291,9 +291,11 @@ Remote-visible release governance is recorded in
 branch protection/ruleset configuration: direct pushes to `main` are forbidden,
 pull requests and required status checks are required, force-pushes and branch
 deletions are disabled, and the required CI matrix mirrors the `CI` workflow
-tiers for Python 3.12, 3.13, and 3.14. Singleton checks include Windows release
-smoke, raw-registry cross-environment evidence, supply-chain, CodeQL, and
-dependency review.
+after its matrix `exclude` entries. The fast tier keeps Python 3.12, 3.13, and
+3.14 coverage; heavier CI tiers are required on Python 3.12 unless the workflow
+and governance matrix are deliberately expanded together. Singleton checks
+include Windows release smoke, raw-registry cross-environment evidence,
+supply-chain, CodeQL, and dependency review.
 
 Live GitHub drift evidence is an operator/full-vault lane, not a public CI or
 release-promotion prerequisite. Create a sanitized JSON input with normalized

@@ -111,6 +111,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         )
         self.assertEqual(ci_matrix.get("python_versions"), workflow_matrix["python-version"])
         self.assertEqual(ci_matrix.get("tiers"), workflow_matrix["tier"])
+        self.assertEqual(ci_matrix.get("exclude"), workflow_matrix["exclude"])
 
         singleton_checks_value = required.get("singleton_checks", [])
         self.assertIsInstance(singleton_checks_value, list)

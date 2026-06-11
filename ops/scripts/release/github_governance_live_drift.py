@@ -104,17 +104,36 @@ def _string_items(value: Any) -> list[str]:
     return []
 
 
+def _ci_matrix_check_name(tier: str, version: str) -> str:
+    return f"{tier} / py{version.removeprefix('py')}"
+
+
+def _ci_matrix_excluded_checks(matrix: Mapping[str, Any]) -> set[str]:
+    excluded: set[str] = set()
+    for item in _as_list(matrix.get("exclude")):
+        item_mapping = _as_mapping(item)
+        tier = _normalized_string(item_mapping.get("tier"))
+        version = _normalized_string(
+            item_mapping.get("python-version", item_mapping.get("python_version"))
+        )
+        if tier and version:
+            excluded.add(_ci_matrix_check_name(tier, version))
+    return excluded
+
+
 def _expected_required_checks(governance: Mapping[str, Any]) -> list[str]:
     required = _as_mapping(governance.get("required_status_checks"))
     singleton_checks = _string_items(required.get("singleton_checks"))
     matrix = _as_mapping(required.get("ci_matrix"))
     versions = _string_items(matrix.get("python_versions"))
     tiers = _string_items(matrix.get("tiers"))
-    matrix_checks = [
-        f"{tier} / py{version.removeprefix('py')}"
-        for version in versions
-        for tier in tiers
-    ]
+    excluded_checks = _ci_matrix_excluded_checks(matrix)
+    matrix_checks: list[str] = []
+    for version in versions:
+        for tier in tiers:
+            check_name = _ci_matrix_check_name(tier, version)
+            if check_name not in excluded_checks:
+                matrix_checks.append(check_name)
     return _normalized_strings([*singleton_checks, *matrix_checks])
 
 

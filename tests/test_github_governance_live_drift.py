@@ -102,6 +102,77 @@ class GitHubGovernanceLiveDriftTests(unittest.TestCase):
             self.assertFalse(persisted["redaction"]["raw_live_payload_retained"])
             self.assertNotIn("SECRET_TOKEN_SHOULD_NOT_LEAK", persisted_text)
 
+    def test_build_report_honors_ci_matrix_excludes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            path = vault / ".github" / "release-governance.yml"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "publication_target:",
+                        "  protected_branches:",
+                        "    - main",
+                        "required_status_checks:",
+                        "  ci_matrix:",
+                        "    python_versions:",
+                        '      - "3.12"',
+                        '      - "3.13"',
+                        "    tiers:",
+                        "      - fast",
+                        "      - slow",
+                        "    exclude:",
+                        "      - tier: slow",
+                        '        python-version: "3.13"',
+                        "  singleton_checks:",
+                        '    - "dependency review"',
+                        "branch_protection:",
+                        "  require_pull_request: true",
+                        "  require_review_before_merge: true",
+                        "  require_required_status_checks: true",
+                        "  require_branches_up_to_date: true",
+                        "  require_linear_history: true",
+                        "  allow_force_pushes: false",
+                        "  allow_deletions: false",
+                        "  main_direct_push: forbidden",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            live_input = self._seed_live_input(
+                vault,
+                {
+                    "protected_branches": ["main"],
+                    "required_status_checks": [
+                        "dependency review",
+                        "fast / py3.12",
+                        "fast / py3.13",
+                        "slow / py3.12",
+                    ],
+                    "branch_protection": {
+                        "main": {
+                            "require_pull_request": True,
+                            "require_review_before_merge": True,
+                            "require_required_status_checks": True,
+                            "require_branches_up_to_date": True,
+                            "require_linear_history": True,
+                            "allow_force_pushes": False,
+                            "allow_deletions": False,
+                            "main_direct_push": "forbidden",
+                        }
+                    },
+                },
+            )
+
+            report = build_report(vault, live_input=live_input, context=fixed_context())
+
+            self.assertEqual(report["status"], "pass")
+            self.assertNotIn("slow / py3.13", report["required_status_checks"]["expected"])
+
     def test_build_report_fails_on_missing_check_and_branch_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
