@@ -73,9 +73,9 @@ inside the run should use the repository virtualenv. Document and diagnose
 Codex CLI shadowing or missing `python`/`pytest`/`jsonschema` as local
 environment setup issues before treating a mechanism proposal as failed.
 
-`make fast-smoke`는 Subagent/developer precheck 전용 curated pytest slice다.
-It is intentionally smaller than lint/eval, integration-heavy generator smoke,
-and full release smoke.
+`make fast-smoke` is the curated Subagent/developer precheck pytest slice. It is
+intentionally smaller than lint/eval, integration-heavy generator smoke, and
+full release smoke.
 
 ## Cost-Aware Test Use
 

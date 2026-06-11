@@ -82,10 +82,10 @@ class MakefileReleaseSmokeStaticGateTests(unittest.TestCase):
         )
         release_doc_text = DOCS_RELEASE.read_text(encoding="utf-8")
         self.assertIn(
-            "developer/package precheck이며 canonical release evidence로 쓰지 않는다",
+            "developer/package precheck, not canonical release",
             release_doc_text,
         )
         self.assertIn(
-            "canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다",
+            "canonical release evidence for the full smoke report at",
             release_doc_text,
         )

@@ -884,7 +884,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("FAST_SMOKE_TESTS ?=", text)
         self.assertIn(
-            "`make fast-smoke`는 Subagent/developer precheck 전용 curated pytest slice다.",
+            "`make fast-smoke` is the curated Subagent/developer precheck pytest slice.",
             development_text,
         )
         for test_path in expected_tests:

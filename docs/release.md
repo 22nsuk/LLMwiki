@@ -182,11 +182,12 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-evidence-closeout-sealed`: check-only sealed packaging lane for an
   already source-ready tree. It must not run mutating source/evidence convergence;
   zip-bound sealed evidence is written as sidecars under `build/release/`.
-- `make release-smoke-fast`: developer/package precheck이며 canonical release evidence로 쓰지 않는다.
-  Preflight, preseal, and goal-run admission may refresh it to keep archive
-  schema/currentness diagnostics cheap before expensive release evidence is
-  attempted.
-- `make release-smoke`: canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다.
+- `make release-smoke-fast`: developer/package precheck, not canonical release
+  evidence. Preflight, preseal, and goal-run admission may refresh it to keep
+  archive schema/currentness diagnostics cheap before expensive release
+  evidence is attempted.
+- `make release-smoke`: canonical release evidence for the full smoke report at
+  `ops/reports/release-smoke-report.json`.
   Source-package smoke runs registry and wiki lint checks in release-archive
   profile because public source ZIPs intentionally omit `raw/`, `wiki/`, and
   `system/`; missing private corpus surfaces must not become release-smoke

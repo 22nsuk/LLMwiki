@@ -12,7 +12,10 @@ Make orchestration, and helper scripts.
 - `mk/artifact.mk`: generated artifact refresh and convergence helpers.
 - `mk/registry.mk`: raw registry and manifest surfaces.
 - `mk/mechanism.mk`: self-improvement, goal runtime, and mechanism workflows.
-- `mk/release.mk`: release evidence, sealing, and closeout workflows.
+- `mk/release.mk`: shared release variables and compatibility entrypoints.
+- `mk/release-authority.mk`: run-ready, sealed-run, and auto-promotion authority.
+- `mk/release-evidence.mk`: release evidence, closeout, archive, and smoke lanes.
+- `mk/release-learning.mk`: learning readiness, remediation, and session evidence.
 - `mk/public.mk`: public export and codebase-memory-mcp sidecar targets.
 - `mk/supply_chain.mk`: provenance, SBOM, OpenVEX, in-toto, and Sigstore surfaces.
 
