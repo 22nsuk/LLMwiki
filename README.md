@@ -131,6 +131,8 @@ Canonical imports use the domain package paths, for example
   templates, and report surfaces.
 - [docs/release.md](./docs/release.md): release evidence, source packages,
   sealing, and SBOM/provenance lanes.
+- [docs/tools.md](./docs/tools.md): public helper scripts under `tools/` and
+  their supported Make entrypoints.
 - [docs/self-improvement-runtime.md](./docs/self-improvement-runtime.md):
   mechanism review, mutation proposal, goal runtime, and promotion.
 - [docs/codebase-memory-mcp.md](./docs/codebase-memory-mcp.md): optional
