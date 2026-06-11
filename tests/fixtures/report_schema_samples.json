@@ -2893,7 +2893,7 @@
       "policy": "2a3e67fb2f6cefcabcad9bd8ed34f61cd9b103c9a0709b85a138ec1f3ccb7c75",
       "schema": "f774ef94a80971547c32e2f968d69b6460ae6e5164117b8dc13fda731a45f08a",
       "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-      "source_paths": "5cf460e1447fb23fb808ec3c067a1412dbf1e07425ab897628639e26fe5fcbba",
+      "source_paths": "9e5fcee91eb152afd9d648a347460a121eec7cb5d27b55cd0ad28238357f1f7b",
       "artifact_freshness_report": "6752c7dab37bddfe030694a3d142580b9997ce736d4dd03c128fdac67533ccd8",
       "goal_worktree_guard_report": "d76474b9b24ef50c6ce1b89c98091015c4d61fd23e329b757f8d0d3249bf6e52",
       "learning_confirmed_legacy_reconstruction_report": "missing",

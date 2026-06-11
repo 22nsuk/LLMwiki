@@ -2,15 +2,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from ops.scripts.auto_improve_maintenance_decision_runtime import (
     MAINTENANCE_ACTION_RESUME_TARGET,
     MAINTENANCE_ACTION_RUNNER_ACTION,
     _expected_maintenance_cycle_count,
+    _initial_maintenance_payload,
+    _maintenance_completion_stop_reason,
     _maintenance_cycle_queue_metadata,
     _maintenance_queue_action,
+    _maintenance_run_eligibility,
+    _maintenance_terminal_completion_condition,
+    _resolve_maintenance_interval,
+    _resolve_post_promote_maintenance_cycles,
     build_maintenance_action_resume_plan,
 )
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
+from ops.scripts import auto_improve_runtime
+from ops.scripts.mechanism import auto_improve_maintenance_decision_runtime
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAINTENANCE_ACTION_SCHEMA = REPO_ROOT / "ops/schemas/goal-runtime-maintenance-action-plan.schema.json"
@@ -22,6 +32,80 @@ def _assert_valid_plan(plan: dict) -> None:
 
 def _loader_must_not_run() -> dict:
     raise AssertionError("mutation proposal report loader should not run")
+
+
+def test_auto_improve_runtime_maintenance_exports_point_to_helper() -> None:
+    assert (
+        auto_improve_runtime.MAINTENANCE_ACTION_RUNNER_ACTION
+        is auto_improve_maintenance_decision_runtime.MAINTENANCE_ACTION_RUNNER_ACTION
+    )
+    assert (
+        auto_improve_runtime.MAINTENANCE_ACTION_RESUME_TARGET
+        is auto_improve_maintenance_decision_runtime.MAINTENANCE_ACTION_RESUME_TARGET
+    )
+    assert (
+        auto_improve_runtime.build_maintenance_action_resume_plan
+        is auto_improve_maintenance_decision_runtime.build_maintenance_action_resume_plan
+    )
+
+
+def test_maintenance_runtime_option_coercion_rejects_invalid_values() -> None:
+    assert _resolve_maintenance_interval(None) == 300
+    assert _resolve_maintenance_interval(1) == 1
+    assert _resolve_post_promote_maintenance_cycles(None) == 1
+    assert _resolve_post_promote_maintenance_cycles(0) == 0
+
+    for invalid_interval in (0, -1, True):
+        with pytest.raises(auto_improve_runtime.AutoImproveUsageError):
+            _resolve_maintenance_interval(invalid_interval)  # type: ignore[arg-type]
+
+    for invalid_cycles in (-1, False):
+        with pytest.raises(auto_improve_runtime.AutoImproveUsageError):
+            _resolve_post_promote_maintenance_cycles(invalid_cycles)  # type: ignore[arg-type]
+
+
+def test_maintenance_run_eligibility_preserves_skip_order_and_run_shape() -> None:
+    skipped = _maintenance_run_eligibility(
+        maintain_until_budget=False,
+        post_promote_maintenance_cycles=None,
+        maintenance_interval_seconds=0,
+        new_iteration_count=0,
+        stop_reason="proposal_budget_exhausted",
+        last_iteration_outcome="promoted",
+        elapsed_seconds=10,
+        target_elapsed_seconds=60,
+    )
+    assert skipped.should_run is False
+    assert skipped.reason == "default_post_promote_without_new_iteration"
+    assert skipped.stop_reason is None
+
+    exhausted = _maintenance_run_eligibility(
+        maintain_until_budget=True,
+        post_promote_maintenance_cycles=None,
+        maintenance_interval_seconds=5,
+        new_iteration_count=1,
+        stop_reason="proposal_budget_exhausted",
+        last_iteration_outcome="promoted",
+        elapsed_seconds=60,
+        target_elapsed_seconds=60,
+    )
+    assert exhausted.should_run is False
+    assert exhausted.reason == "time_budget_already_exhausted"
+    assert exhausted.stop_reason == "time_budget_exhausted"
+
+    eligible = _maintenance_run_eligibility(
+        maintain_until_budget=False,
+        post_promote_maintenance_cycles=None,
+        maintenance_interval_seconds=5,
+        new_iteration_count=1,
+        stop_reason="proposal_budget_exhausted",
+        last_iteration_outcome="promoted",
+        elapsed_seconds=10,
+        target_elapsed_seconds=60,
+    )
+    assert eligible.should_run is True
+    assert eligible.interval_seconds == 5
+    assert eligible.max_cycles == 1
 
 
 def test_maintenance_queue_action_classifies_empty_recent_overlap_and_stable_queue() -> None:
@@ -90,6 +174,43 @@ def test_expected_maintenance_cycle_count_includes_initial_observation_cycle() -
         )
         == 0
     )
+
+
+def test_initial_maintenance_payload_and_terminal_conditions_are_pure_decisions() -> None:
+    payload = _initial_maintenance_payload(
+        started_at="2026-04-15T00:00:00Z",
+        target_elapsed_seconds=600,
+        start_elapsed_seconds=0,
+        interval_seconds=300,
+        max_cycles=None,
+    )
+    assert payload["completion_condition"] == "time_budget"
+    assert payload["expected_min_cycle_count"] == 3
+    assert payload["queue_action"]["status"] == "none"
+
+    stable_session = {
+        "maintenance": {
+            "stable_queue_snapshot": ["proposal-a"],
+            "stable_queue_snapshot_count": 2,
+            "cycle_count": 1,
+        }
+    }
+    assert (
+        _maintenance_terminal_completion_condition(
+            stable_session,
+            default_completion_condition="time_budget",
+            max_cycles=None,
+            elapsed_seconds=300,
+            target_elapsed_seconds=600,
+        )
+        == "stable_queue_snapshot"
+    )
+    assert _maintenance_completion_stop_reason("stable_queue_snapshot") == "stable_queue_snapshot"
+    assert (
+        _maintenance_completion_stop_reason("post_promote_cycle_limit")
+        == "post_promote_cycle_limit_reached"
+    )
+    assert _maintenance_completion_stop_reason("time_budget") == "time_budget_reached"
 
 
 def test_maintenance_action_resume_plan_returns_pass_without_required_action() -> None:

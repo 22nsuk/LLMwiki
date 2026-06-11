@@ -30,6 +30,7 @@ FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_release_workflow_static.py",
 )
+RUNTIME_HOTSPOT_SMOKE_COMMAND = "make runtime-hotspot-smoke"
 
 
 def fixed_context() -> RuntimeContext:
@@ -583,6 +584,50 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             ["make release-run-ready"],
         )
         self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_plan_routes_runtime_hotspot_to_hotspot_smoke(
+        self,
+    ) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[
+                "ops/scripts/mechanism/auto_improve_runtime.py",
+                "ops/scripts/mechanism/auto_improve_maintenance_decision_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_payload_runtime.py",
+                "ops/scripts/release/release_evidence_dashboard_closeout_runtime.py",
+                "ops/scripts/release/release_evidence_dashboard_learning_delta_runtime.py",
+            ],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "runtime_hotspot")
+        self.assertEqual(plan["unknown_paths"], [])
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                RUNTIME_HOTSPOT_SMOKE_COMMAND,
+            ],
+        )
+        self.assertEqual(
+            plan["command_duration_seconds"],
+            {
+                "make static": 60,
+                RUNTIME_HOTSPOT_SMOKE_COMMAND: 240,
+            },
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 300)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(
+            {item["matched_rule_id"] for item in plan["path_recommendations"]},
+            {"runtime_hotspot_source"},
+        )
+        self.assertNotIn("make test-fast", plan["selected_commands"])
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_path_minimum_plan_routes_release_workflow_to_focused_static_test(

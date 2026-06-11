@@ -75,15 +75,17 @@ environment setup issues before treating a mechanism proposal as failed.
 
 `make fast-smoke` is the curated Subagent/developer precheck pytest slice. It is
 intentionally smaller than lint/eval, integration-heavy generator smoke, and
-full release smoke.
+full release smoke. `make runtime-hotspot-smoke` is the focused runtime
+decomposition check for hotspot façade refactors before a broader batch gate.
 
 ## Cost-Aware Test Use
 
 Use the smallest authoritative lane that proves the change under review.
-`make fast-smoke` and focused `.venv/bin/python -m pytest ...` commands are
-the default tight-loop checks. `make test` / `make test-fast` are broader batch
-checks for ordinary Python changes. `make test-all` is the non-release full
-regression lane and should be treated as checkpoint-grade work.
+`make fast-smoke`, `make runtime-hotspot-smoke`, and focused
+`.venv/bin/python -m pytest ...` commands are the default tight-loop checks.
+`make test` / `make test-fast` are broader batch checks for ordinary Python
+changes. `make test-all` is the non-release full regression lane and should be
+treated as checkpoint-grade work.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.
 `make test-report-contract-all` intentionally sweeps every `report_contract`

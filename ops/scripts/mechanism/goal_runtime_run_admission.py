@@ -19,6 +19,9 @@ from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     canonical_gate_effect,
 )
+from ops.scripts.mechanism.auto_improve_learning_preflight_runtime import (
+    goal_contract_authorizes_learning_uncertain,
+)
 from ops.scripts.mechanism.auto_improve_queue_runtime import build_proposal_queue
 from ops.scripts.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel,
@@ -871,14 +874,7 @@ def _readiness_execution_check(
 
 
 def _contract_authorizes_learning_uncertain(contract: dict[str, Any]) -> bool:
-    execution_policy = _dict_field(contract, "execution_policy")
-    learning = _dict_field(execution_policy, "learning_uncertain")
-    return (
-        _as_bool(learning.get("allow_bounded_trial"))
-        and _as_bool(learning.get("requires_explicit_authorization"))
-        and str(learning.get("authorization_source", "")).strip()
-        == "codex_goal_contract"
-    )
+    return goal_contract_authorizes_learning_uncertain(contract)
 
 
 def _readiness_learning_uncertain_check(

@@ -671,6 +671,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         variable_by_pack = {
             "fast_smoke": "FAST_SMOKE_TESTS",
+            "runtime_hotspot_smoke": "RUNTIME_HOTSPOT_SMOKE_TESTS",
             "schema_static_smoke": "SCHEMA_STATIC_SMOKE_TESTS",
             "report_contract_core": "REPORT_CONTRACT_CORE_TESTS",
             "report_contract_all": "REPORT_CONTRACT_ALL_TESTS",
@@ -716,6 +717,7 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         target_by_pack = {
             "fast_smoke": "fast-smoke",
+            "runtime_hotspot_smoke": "runtime-hotspot-smoke",
             "report_contract_core": "test-report-contract-core",
             "release_sealing_core": "test-release-sealing-core",
             "subprocess_checks": "test-subprocess",
@@ -902,6 +904,27 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("tests/test_mutation_proposal.py \\", block)
         self.assertNotIn("tests/test_artifact_freshness_runtime.py \\", block)
         self.assertNotIn("tests/test_release_smoke.py \\", block)
+
+    def test_runtime_hotspot_smoke_is_curated_decomposition_feedback_loop(self) -> None:
+        registry = _test_lane_registry()
+        text = _makefile_text()
+        development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
+        block = _target_block(text, "runtime-hotspot-smoke")
+        expected_tests = pack_selectors(registry, "runtime_hotspot_smoke")
+
+        self.assertIn("runtime-hotspot-smoke", _target_block(text, ".PHONY"))
+        self.assertIn("RUNTIME_HOTSPOT_SMOKE_TESTS ?=", text)
+        self.assertIn("`make runtime-hotspot-smoke`", development_text)
+        for test_path in expected_tests:
+            with self.subTest(test_path=test_path):
+                self.assertIn(test_path, text)
+        self.assertIn(
+            "$(PYTHON) -m pytest -q $(RUNTIME_HOTSPOT_SMOKE_TESTS) "
+            "$(PYTEST_CACHE_ISOLATION_FLAGS) $(PYTEST_SERIAL_FLAGS)",
+            block,
+        )
+        self.assertNotIn("test-report-contract", block)
+        self.assertNotIn("test-fast", block)
 
     def test_schema_static_smoke_is_named_windows_ci_target(self) -> None:
         text = _makefile_text()

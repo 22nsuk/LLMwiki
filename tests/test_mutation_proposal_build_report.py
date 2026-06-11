@@ -1266,26 +1266,62 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 [{"reason": "bootstrap_history_insufficient", "count": 1}],
             )
             self.assertEqual(proposal_report["diagnostics"]["empty_queue_blockers"], [])
+            proposal = proposal_report["proposals"][0]
             self.assertEqual(
-                proposal_report["proposals"][0]["source_candidate_type"],
-                "mechanism_bootstrap_history_candidate",
+                proposal["proposal_id"],
+                "bootstrap_history_insufficient__auto-improve-iteration-persistence-runtime",
             )
             self.assertEqual(
-                proposal_report["proposals"][0]["blocked_by"],
+                proposal["source_candidate_id"],
+                "bootstrap_queue_unblock__auto_improve_iteration_persistence_runtime",
+            )
+            self.assertEqual(
+                proposal["source_candidate_type"],
+                "mechanism_bootstrap_history_candidate",
+            )
+            self.assertEqual(proposal["family"], "bootstrap_queue_unblock")
+            self.assertEqual(proposal["failure_mode"], "bootstrap_history_insufficient")
+            self.assertEqual(proposal["metrics_triggered"], ["bootstrap_history_insufficient"])
+            self.assertEqual(proposal["priority"], 88)
+            self.assertEqual(
+                proposal["priority_breakdown"],
+                {
+                    "base_priority": 88,
+                    "historical_calibration_delta": 0,
+                    "session_calibration_delta": 0,
+                    "review_candidate_priority": 88,
+                    "recent_log_overlap_penalty": 0,
+                    "final_priority": 88,
+                },
+            )
+            self.assertEqual(
+                proposal["must_change_budget_signal"],
+                {
+                    "signal": "mechanism_review.summary.candidates_emitted",
+                    "expected_change": "increase",
+                },
+            )
+            self.assertEqual(
+                proposal["blocked_by"],
                 ["bootstrap_history_insufficient"],
             )
             self.assertEqual(
-                proposal_report["proposals"][0]["primary_targets"],
+                proposal["primary_targets"],
                 ["ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"],
             )
             self.assertEqual(
-                proposal_report["proposals"][0]["must_change_tests"],
+                proposal["must_change_tests"],
                 ["tests/test_auto_improve_iteration_runtime.py"],
             )
             self.assertEqual(
-                proposal_report["proposals"][0]["run_ids"],
+                proposal["run_ids"],
                 ["run-1"],
             )
+            self.assertIn(
+                "one additional comparable run",
+                proposal["single_mechanism_scope"],
+            )
+            self.assertIn("one more finalized comparable run", proposal["change_hypothesis"])
     def test_build_report_emits_blocked_seed_proposal_for_no_history(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
@@ -1343,22 +1379,63 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 [{"reason": "no_history", "count": 1}],
             )
             self.assertEqual(proposal_report["diagnostics"]["empty_queue_blockers"], [])
+            proposal = proposal_report["proposals"][0]
             self.assertEqual(
-                proposal_report["proposals"][0]["supporting_targets"],
+                proposal["proposal_id"],
+                "bootstrap_history_insufficient__auto-improve-iteration-persistence-runtime",
+            )
+            self.assertEqual(
+                proposal["source_candidate_id"],
+                "bootstrap_queue_unblock__fallback-seed",
+            )
+            self.assertEqual(
+                proposal["source_candidate_type"],
+                "mechanism_bootstrap_history_candidate",
+            )
+            self.assertEqual(proposal["family"], "bootstrap_queue_unblock")
+            self.assertEqual(proposal["failure_mode"], "bootstrap_history_insufficient")
+            self.assertEqual(proposal["metrics_triggered"], ["bootstrap_history_insufficient"])
+            self.assertEqual(proposal["priority"], 92)
+            self.assertEqual(
+                proposal["priority_breakdown"],
+                {
+                    "base_priority": 92,
+                    "historical_calibration_delta": 0,
+                    "session_calibration_delta": 0,
+                    "review_candidate_priority": 92,
+                    "recent_log_overlap_penalty": 0,
+                    "final_priority": 92,
+                },
+            )
+            self.assertEqual(
+                proposal["must_change_budget_signal"],
+                {
+                    "signal": "mechanism_review.summary.runs_considered",
+                    "expected_change": "increase",
+                },
+            )
+            self.assertEqual(
+                proposal["primary_targets"],
+                ["ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"],
+            )
+            self.assertEqual(
+                proposal["supporting_targets"],
                 ["ops/schemas/run-telemetry.schema.json"],
             )
             self.assertEqual(
-                proposal_report["proposals"][0]["must_change_tests"],
+                proposal["must_change_tests"],
                 ["tests/test_auto_improve_iteration_runtime.py"],
             )
             self.assertEqual(
-                proposal_report["proposals"][0]["blocked_by"],
+                proposal["blocked_by"],
                 ["no_history"],
             )
             self.assertEqual(
-                proposal_report["proposals"][0]["run_ids"],
+                proposal["run_ids"],
                 ["bootstrap-no-history"],
             )
+            self.assertIn("fallback-family system_mechanism run", proposal["single_mechanism_scope"])
+            self.assertIn("first finalized comparable", proposal["change_hypothesis"])
     def test_build_report_does_not_fallback_from_invalid_output_schema_override(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

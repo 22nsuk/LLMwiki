@@ -57,10 +57,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json"
 
 GOLDEN_DIGESTS = {
-    "mutation_proposal": "01ab93fa21a222d12dd23b8e25f24548acd36d6cd3d094a0c60ba7671be1a290",
-    "release_evidence_dashboard": "b1e48a478c170e597fd522bc75573105ddf52698188c6165a0c7ac4d24786189",
+    "mutation_proposal": "dcb98cd75a4ecdf3900005f9608906d1c968aa08ae903dd1977502c038a405fe",
+    "release_evidence_dashboard": "abb6e075836737799bfd4b5208d076f909de6997fd92fde80d205b2c0b802dd4",
     "release_closeout_summary": "46b2c5b281d04307443daf4b9b8561326ade241e400a5d8bb00102aa6fd7bbd2",
-    "auto_improve_session_bundle": "be43535582eead3af33e8fe06f97f82ac60bf110fd5b2aff72a45f32c1112caf",
+    "auto_improve_session_bundle": "bd7bb38f73a80393f75b6ca39b60864b773e03d27ea027a33084c00629384ca5",
 }
 GOLDEN_CHECK_COMMAND = "make runtime-hotspot-goldens-check"
 

@@ -223,6 +223,9 @@ def _render_dashboard_report(inputs: DashboardRenderInputs) -> dict[str, Any]:
             schema_path=RELEASE_EVIDENCE_DASHBOARD_SCHEMA_PATH,
             source_paths=[
                 "ops/scripts/release/release_evidence_dashboard.py",
+                "ops/scripts/release/release_evidence_dashboard_closeout_runtime.py",
+                "ops/scripts/release/release_evidence_dashboard_finalizer_runtime.py",
+                "ops/scripts/release/release_evidence_dashboard_learning_delta_runtime.py",
                 "ops/scripts/release/release_evidence_dashboard_render_runtime.py",
                 "ops/scripts/release/advisory_lifecycle_runtime.py",
                 "ops/scripts/release/release_closeout_fixed_point.py",

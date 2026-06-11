@@ -16,6 +16,7 @@
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
       "make test-report-contract-core": 180,
       "make workflow-dependency-planner-check": 60,
+      "make runtime-hotspot-smoke": 240,
       "make script-output-surfaces-check": 30,
       "make report-schema-samples-check": 30,
       "make public-check": 120
@@ -32,6 +33,25 @@
       "duration_seconds": 300
     },
     "rules": [
+      {
+        "rule_id": "runtime_hotspot_source",
+        "path_patterns": [
+          "ops/scripts/mechanism/auto_improve*_runtime.py",
+          "ops/scripts/mechanism/mutation_proposal*_runtime.py",
+          "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
+          "ops/scripts/mechanism/goal_runtime_run_admission.py",
+          "ops/scripts/release/release_evidence_dashboard.py",
+          "ops/scripts/release/release_evidence_dashboard*_runtime.py"
+        ],
+        "commands": [
+          "make static",
+          "make runtime-hotspot-smoke"
+        ],
+        "reason": "Runtime hotspot façade and helper changes need the focused hotspot smoke lane, including slow golden coverage that the generic fast lane excludes.",
+        "coverage_class": "runtime_hotspot",
+        "static_required": true,
+        "duration_seconds": 300
+      },
       {
         "rule_id": "python_runtime_source",
         "path_patterns": [
@@ -402,6 +422,38 @@
       ],
       "documented_entrypoints": [
         "make fast-smoke"
+      ]
+    },
+    {
+      "pack_id": "runtime_hotspot_smoke",
+      "authority": "advisory",
+      "status": "derived_from_registry",
+      "semantics": "Focused runtime hotspot façade decomposition check for batch feedback before broader fast-lane replay.",
+      "backing_targets": [
+        "runtime-hotspot-smoke"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "selectors": [
+          "tests/test_auto_improve_readiness_runtime.py",
+          "tests/test_auto_improve_readiness_queue_runtime.py",
+          "tests/test_mutation_proposal_build_report.py",
+          "tests/test_mutation_proposal_recent_log_overlap.py",
+          "tests/test_mutation_proposal_promotion.py",
+          "tests/test_next_run_repair_queue_runtime.py",
+          "tests/test_goal_runtime_run_admission.py",
+          "tests/test_release_evidence_dashboard_closeout_runtime.py",
+          "tests/test_release_evidence_dashboard_finalizer_runtime.py",
+          "tests/test_release_evidence_dashboard_learning_delta_runtime.py",
+          "tests/test_runtime_hotspot_facade_golden_outputs.py"
+        ]
+      },
+      "ci_entrypoint": "runtime-hotspot-smoke",
+      "ci_steps": [
+        "make runtime-hotspot-smoke"
+      ],
+      "documented_entrypoints": [
+        "make runtime-hotspot-smoke"
       ]
     },
     {
@@ -858,6 +910,11 @@
     },
     {
       "kind": "make_target",
+      "name": "runtime-hotspot-smoke",
+      "maps_to": "runtime_hotspot_smoke"
+    },
+    {
+      "kind": "make_target",
       "name": "unit-tests-all",
       "maps_to": "developer_full"
     },
@@ -1030,6 +1087,11 @@
       "kind": "documented_entrypoint",
       "name": "make fast-smoke",
       "maps_to": "fast_smoke"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make runtime-hotspot-smoke",
+      "maps_to": "runtime_hotspot_smoke"
     },
     {
       "kind": "documented_entrypoint",

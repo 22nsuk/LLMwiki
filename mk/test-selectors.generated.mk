@@ -27,6 +27,19 @@ FAST_SMOKE_TESTS ?= \
 	tests/test_release_smoke.py::ReleaseSmokeTest::test_build_report_uses_runtime_context_and_sanitizes_ephemeral_paths \
 	tests/test_release_smoke.py::ReleaseSmokeTest::test_main_exits_with_report_status_and_prints_written_destination
 
+RUNTIME_HOTSPOT_SMOKE_TESTS ?= \
+	tests/test_auto_improve_readiness_runtime.py \
+	tests/test_auto_improve_readiness_queue_runtime.py \
+	tests/test_mutation_proposal_build_report.py \
+	tests/test_mutation_proposal_recent_log_overlap.py \
+	tests/test_mutation_proposal_promotion.py \
+	tests/test_next_run_repair_queue_runtime.py \
+	tests/test_goal_runtime_run_admission.py \
+	tests/test_release_evidence_dashboard_closeout_runtime.py \
+	tests/test_release_evidence_dashboard_finalizer_runtime.py \
+	tests/test_release_evidence_dashboard_learning_delta_runtime.py \
+	tests/test_runtime_hotspot_facade_golden_outputs.py
+
 SCHEMA_STATIC_SMOKE_TESTS ?= \
 	tests/test_ci_tier_lane_bridge.py \
 	tests/test_ci_workflow_static.py \

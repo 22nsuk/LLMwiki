@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import pytest
 from ops.scripts.release_evidence_dashboard import build_report, main, write_report
@@ -14,6 +15,11 @@ from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
+from ops.scripts import release_evidence_dashboard as flat_release_evidence_dashboard
+from ops.scripts.release import (
+    release_evidence_dashboard as canonical_release_evidence_dashboard,
+    release_evidence_dashboard_render_runtime,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -301,11 +307,36 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
         self._write_signoff_revalidation_input()
         self._write_learning_delta_scoreboard_input()
 
+    def test_flat_dashboard_import_resolves_to_canonical_release_module(self) -> None:
+        self.assertIs(
+            flat_release_evidence_dashboard.build_report,
+            canonical_release_evidence_dashboard.build_report,
+        )
+
     def test_dashboard_validates_and_labels_checked_in_claims(self) -> None:
         self._write_inputs()
 
-        report = build_report(self.vault, context=fixed_context())
+        with mock.patch(
+            "ops.scripts.release.release_evidence_dashboard_render_runtime."
+            "build_canonical_report_envelope",
+            wraps=release_evidence_dashboard_render_runtime.build_canonical_report_envelope,
+        ) as build_envelope:
+            report = build_report(self.vault, context=fixed_context())
 
+        self.assertEqual(report["producer"], "ops.scripts.release_evidence_dashboard")
+        source_paths = build_envelope.call_args.kwargs["source_paths"]
+        self.assertIn(
+            "ops/scripts/release/release_evidence_dashboard_closeout_runtime.py",
+            source_paths,
+        )
+        self.assertIn(
+            "ops/scripts/release/release_evidence_dashboard_finalizer_runtime.py",
+            source_paths,
+        )
+        self.assertIn(
+            "ops/scripts/release/release_evidence_dashboard_learning_delta_runtime.py",
+            source_paths,
+        )
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["summary"]["required_input_fail_count"], 0)
         self.assertEqual(report["summary"]["gate_count"], 6)

@@ -35,7 +35,6 @@ from ops.scripts.schema_constants_runtime import (
 from .auto_improve_readiness_constants_runtime import (
     ARTIFACT_FRESHNESS_REPORT_REL_PATH,
     GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
-    LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH,
     MECHANISM_REVIEW_REPORT_REL_PATH,
     MUTATION_PROPOSAL_REPORT_REL_PATH,
     OUTCOME_METRICS_REPORT_REL_PATH,
@@ -43,8 +42,6 @@ from .auto_improve_readiness_constants_runtime import (
     READINESS_REPORT_REL_PATH,
     READINESS_REPORT_SOURCE_COMMAND,
     READINESS_SOURCE_PATHS,
-    REFRESH_GENERATED_TARGET,
-    RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS,
     RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
     RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH,
@@ -59,6 +56,11 @@ from .auto_improve_readiness_learning_runtime import (
     LearningReadinessAssessment,
     _learning_readiness_assessment,
     learning_claim_blocker_payloads,
+)
+from .auto_improve_readiness_payload_runtime import (
+    readiness_diagnostics_payload,
+    readiness_file_inputs,
+    readiness_inputs_payload,
 )
 from .auto_improve_readiness_queue_runtime import (
     ReadinessQueueState,
@@ -565,47 +567,6 @@ def _execution_status(execution: ExecutionReadinessAssessment) -> str:
     return "pass" if execution.can_run else "blocked"
 
 
-def _readiness_inputs_payload(*, remediation_backlog_path: str) -> dict[str, str]:
-    return {
-        "refresh_generated_target": REFRESH_GENERATED_TARGET,
-        "outcome_metrics_report": OUTCOME_METRICS_REPORT_REL_PATH,
-        "mechanism_review_report": MECHANISM_REVIEW_REPORT_REL_PATH,
-        "mutation_proposal_report": MUTATION_PROPOSAL_REPORT_REL_PATH,
-        "artifact_freshness_report": ARTIFACT_FRESHNESS_REPORT_REL_PATH,
-        "selected_contract_summary_report": SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
-        "source_package_clean_extract_report": SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH,
-        "release_closeout_summary_report": RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH,
-        "release_closeout_batch_manifest_report": RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
-        "release_closeout_finality_attestation_report": RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH,
-        "release_evidence_cohort_report": RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
-        "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
-        "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
-        "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
-        "remediation_backlog_report": remediation_backlog_path,
-        "learning_readiness_signoff_report": SIGNOFF_REPORT_REL_PATH,
-    }
-
-
-def _readiness_diagnostics_payload(inputs: ReadinessInputs) -> dict[str, Any]:
-    queue_state = inputs.queue_state
-    return {
-        "loop_health_summary": queue_state.loop_health_summary,
-        "same_eval_telemetry_summary": queue_state.same_eval_telemetry_summary,
-        "artifact_freshness_summary": inputs.artifact_freshness_summary,
-        "selected_contract_summary": inputs.selected_contract_summary,
-        "source_package_clean_extract_summary": inputs.source_package_clean_extract_summary,
-        "release_closeout_summary": inputs.release_closeout_summary,
-        "release_closeout_batch_manifest_summary": inputs.release_closeout_batch_manifest_summary,
-        "release_closeout_finality_summary": inputs.release_closeout_finality_summary,
-        "release_evidence_cohort_summary": inputs.release_evidence_cohort_summary,
-        "artifact_finalization_summary": inputs.artifact_finalization_summary,
-        "release_authority_preflight_summary": inputs.release_authority_preflight_summary,
-        "goal_worktree_guard_summary": inputs.goal_worktree_guard_summary,
-        "remediation_backlog_summary": inputs.remediation_backlog_summary,
-        "learning_signoff_summary": inputs.learning_signoff_summary,
-    }
-
-
 def render_readiness_report(
     vault: Path,
     inputs: ReadinessInputs,
@@ -636,26 +597,9 @@ def render_readiness_report(
             resolved_policy_path=inputs.resolved_policy_path,
             schema_path=READINESS_REPORT_SCHEMA_PATH,
             source_paths=READINESS_SOURCE_PATHS,
-            file_inputs={
-                "outcome_metrics_report": OUTCOME_METRICS_REPORT_REL_PATH,
-                "mechanism_review_report": MECHANISM_REVIEW_REPORT_REL_PATH,
-                "mutation_proposal_report": MUTATION_PROPOSAL_REPORT_REL_PATH,
-                "artifact_freshness_report": ARTIFACT_FRESHNESS_REPORT_REL_PATH,
-                "selected_contract_summary_report": SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
-                "source_package_clean_extract_report": SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH,
-                "release_closeout_summary_report": RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH,
-                "release_closeout_batch_manifest_report": RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
-                "release_closeout_finality_attestation_report": RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH,
-                "release_evidence_cohort_report": RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
-                "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
-                "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
-                "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
-                "remediation_backlog_report": inputs.remediation_backlog_path,
-                "learning_confirmed_legacy_reconstruction_report": (
-                    LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH
-                ),
-                "learning_readiness_signoff_report": SIGNOFF_REPORT_REL_PATH,
-            },
+            file_inputs=readiness_file_inputs(
+                remediation_backlog_path=inputs.remediation_backlog_path
+            ),
             path_group_inputs={
                 "release_authority_preflight_report_candidates": list(
                     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS
@@ -678,10 +622,10 @@ def render_readiness_report(
         "learning_claim_blockers": learning_claim_blockers,
         "promotion_blockers": promotion_blockers,
         "clean_release_blockers": [],
-        "inputs": _readiness_inputs_payload(
+        "inputs": readiness_inputs_payload(
             remediation_backlog_path=inputs.remediation_backlog_path
         ),
-        "diagnostics": _readiness_diagnostics_payload(inputs),
+        "diagnostics": readiness_diagnostics_payload(inputs),
         "queue": queue_payloads.queue.to_wire(),
         "fallback": queue_payloads.fallback,
         "checks": queue_payloads.checks,

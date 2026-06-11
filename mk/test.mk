@@ -54,7 +54,7 @@ RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regressi
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT ?= tmp/release-closeout-finality-verify-ci.json
 
-.PHONY: fast-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess test-selectors-sync test-selectors-sync-check report-schema-samples-check report-schema-samples-regenerate runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke runtime-hotspot-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess test-selectors-sync test-selectors-sync-check report-schema-samples-check report-schema-samples-regenerate runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 .PHONY: test-schema-static-smoke release-closeout-finality-verify-ci-artifact
 
 test-selectors-sync:
@@ -65,6 +65,9 @@ test-selectors-sync-check:
 
 fast-smoke:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
+
+runtime-hotspot-smoke:
+	$(PYTHON) -m pytest -q $(RUNTIME_HOTSPOT_SMOKE_TESTS) $(PYTEST_CACHE_ISOLATION_FLAGS) $(PYTEST_SERIAL_FLAGS)
 
 test-schema-static-smoke:
 	$(PYTHON) -m pytest -q $(SCHEMA_STATIC_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
