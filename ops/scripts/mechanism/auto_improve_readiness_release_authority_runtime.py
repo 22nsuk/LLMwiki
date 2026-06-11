@@ -9,7 +9,10 @@ from ops.scripts.core.release_authority_state_runtime import (
     release_status_v2_view,
     release_status_v2_view_with_readiness_fallback,
 )
-from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECTS,
+)
 from ops.scripts.release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
     REASON_RELEASE_AUTHORITY_NOT_CLEAN_PASS,
@@ -775,6 +778,41 @@ def _release_authority_preflight_promotion_blockers(
             ),
         }
     ]
+
+
+def promotion_status(promotion_blockers: list[dict[str, Any]]) -> str:
+    return "blocked" if promotion_blockers else "pass"
+
+
+def promotion_readiness_payload(
+    promotion_blockers: list[dict[str, Any]],
+) -> dict[str, Any]:
+    gate_effects = {
+        str(blocker.get("gate_effect", "")).strip()
+        for blocker in promotion_blockers
+        if str(blocker.get("gate_effect", "")).strip()
+    }
+    ordered_effects = [effect for effect in GATE_EFFECTS if effect in gate_effects]
+    scopes = sorted(
+        {
+            str(blocker.get("scope", "")).strip()
+            for blocker in promotion_blockers
+            if str(blocker.get("scope", "")).strip()
+        }
+    )
+    blocker_ids = [
+        str(blocker.get("id", "")).strip()
+        for blocker in promotion_blockers
+        if str(blocker.get("id", "")).strip()
+    ]
+    return {
+        "status": promotion_status(promotion_blockers),
+        "can_promote_result": not promotion_blockers,
+        "blocker_count": len(promotion_blockers),
+        "blocker_ids": blocker_ids,
+        "blocking_scopes": scopes,
+        "gate_effects": ordered_effects,
+    }
 
 
 def _artifact_contract_promotion_blockers(

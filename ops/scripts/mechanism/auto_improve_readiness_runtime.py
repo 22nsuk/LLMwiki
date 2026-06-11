@@ -18,7 +18,6 @@ from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_PROMOTION,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
-    GATE_EFFECTS,
 )
 from ops.scripts.learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,
@@ -73,6 +72,8 @@ from .auto_improve_readiness_release_authority_runtime import (
     _release_authority_preflight_promotion_blockers,
     _release_gate_promotion_blockers,
     _release_gate_summaries,
+    promotion_readiness_payload,
+    promotion_status,
 )
 from .auto_improve_readiness_worktree_guard_runtime import (
     _goal_worktree_guard_promotion_blockers,
@@ -570,41 +571,6 @@ def _execution_status(execution: ExecutionReadinessAssessment) -> str:
     return "pass" if execution.can_run else "blocked"
 
 
-def _promotion_status(promotion_blockers: list[dict[str, Any]]) -> str:
-    return "blocked" if promotion_blockers else "pass"
-
-
-def _promotion_readiness_payload(
-    promotion_blockers: list[dict[str, Any]],
-) -> dict[str, Any]:
-    gate_effects = {
-        str(blocker.get("gate_effect", "")).strip()
-        for blocker in promotion_blockers
-        if str(blocker.get("gate_effect", "")).strip()
-    }
-    ordered_effects = [effect for effect in GATE_EFFECTS if effect in gate_effects]
-    scopes = sorted(
-        {
-            str(blocker.get("scope", "")).strip()
-            for blocker in promotion_blockers
-            if str(blocker.get("scope", "")).strip()
-        }
-    )
-    blocker_ids = [
-        str(blocker.get("id", "")).strip()
-        for blocker in promotion_blockers
-        if str(blocker.get("id", "")).strip()
-    ]
-    return {
-        "status": _promotion_status(promotion_blockers),
-        "can_promote_result": not promotion_blockers,
-        "blocker_count": len(promotion_blockers),
-        "blocker_ids": blocker_ids,
-        "blocking_scopes": scopes,
-        "gate_effects": ordered_effects,
-    }
-
-
 def _readiness_inputs_payload(*, remediation_backlog_path: str) -> dict[str, str]:
     return {
         "refresh_generated_target": REFRESH_GENERATED_TARGET,
@@ -708,11 +674,11 @@ def render_readiness_report(
             "version": inputs.policy["version"],
         },
         "execution_status": _execution_status(execution),
-        "promotion_status": _promotion_status(promotion_blockers),
+        "promotion_status": promotion_status(promotion_blockers),
         "can_execute_trial": can_execute_trial,
         "can_promote_result": can_promote_result,
         "execution_readiness": execution.to_wire(),
-        "promotion_readiness": _promotion_readiness_payload(promotion_blockers),
+        "promotion_readiness": promotion_readiness_payload(promotion_blockers),
         "learning_readiness": learning.to_wire(),
         "execution_blockers": execution_blockers,
         "learning_claim_blockers": learning_claim_blockers,

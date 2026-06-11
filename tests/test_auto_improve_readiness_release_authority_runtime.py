@@ -7,6 +7,8 @@ from ops.scripts.auto_improve_readiness_release_authority_runtime import (
     _artifact_contract_promotion_blockers,
     _release_gate_promotion_blockers,
     _release_gate_summaries,
+    promotion_readiness_payload,
+    promotion_status,
 )
 
 pytestmark = pytest.mark.public
@@ -94,6 +96,62 @@ def _release_gate_blockers(summaries: dict[str, dict]) -> list[dict]:
 
 
 class AutoImproveReadinessReleaseAuthorityRuntimeTests(unittest.TestCase):
+    def test_promotion_readiness_payload_orders_effects_and_scopes(self) -> None:
+        blockers = [
+            {
+                "id": "promotion_blocked_by_release_gate",
+                "scope": "release_gate",
+                "gate_effect": "blocks_promotion",
+            },
+            {
+                "id": "promotion_blocked_by_learning",
+                "scope": "learning_readiness",
+                "gate_effect": "blocks_execution",
+            },
+            {
+                "id": "promotion_blocked_by_artifact_contract",
+                "scope": "artifact_contract",
+                "gate_effect": "blocks_promotion",
+            },
+        ]
+
+        payload = promotion_readiness_payload(blockers)
+
+        self.assertEqual(promotion_status(blockers), "blocked")
+        self.assertEqual(
+            payload,
+            {
+                "status": "blocked",
+                "can_promote_result": False,
+                "blocker_count": 3,
+                "blocker_ids": [
+                    "promotion_blocked_by_release_gate",
+                    "promotion_blocked_by_learning",
+                    "promotion_blocked_by_artifact_contract",
+                ],
+                "blocking_scopes": [
+                    "artifact_contract",
+                    "learning_readiness",
+                    "release_gate",
+                ],
+                "gate_effects": ["blocks_promotion", "blocks_execution"],
+            },
+        )
+
+    def test_promotion_readiness_payload_passes_without_blockers(self) -> None:
+        self.assertEqual(promotion_status([]), "pass")
+        self.assertEqual(
+            promotion_readiness_payload([]),
+            {
+                "status": "pass",
+                "can_promote_result": True,
+                "blocker_count": 0,
+                "blocker_ids": [],
+                "blocking_scopes": [],
+                "gate_effects": [],
+            },
+        )
+
     def test_selected_contract_currentness_blocks_promotion_even_when_artifact_freshness_passes(
         self,
     ) -> None:
