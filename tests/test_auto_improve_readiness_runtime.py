@@ -11,6 +11,7 @@ import sys
 import unittest
 from pathlib import Path
 
+import pytest
 from ops.scripts.auto_improve_readiness_constants_runtime import READINESS_SOURCE_PATHS
 from ops.scripts.auto_improve_readiness_learning_runtime import (
     learning_claim_blocker_payloads,
@@ -31,6 +32,8 @@ from tests.auto_improve_readiness_test_runtime import (
     _canonical_jsonable,
     fixed_context,
 )
+
+pytestmark = pytest.mark.slow
 
 
 class _BlockFlatReadinessAlias(importlib.abc.MetaPathFinder):

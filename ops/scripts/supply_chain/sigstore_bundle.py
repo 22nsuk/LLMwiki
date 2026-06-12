@@ -66,6 +66,31 @@ def _subject(path: Path, vault: Path) -> dict[str, Any]:
     }
 
 
+def _bundle_payload(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _has_sigstore_bundle_shape(payload: dict[str, Any] | None) -> bool:
+    if not payload:
+        return False
+    verification_material = (
+        payload.get("verificationMaterial")
+        or payload.get("verification_material")
+        or payload.get("verification_materials")
+    )
+    signed_content = (
+        payload.get("messageSignature")
+        or payload.get("message_signature")
+        or payload.get("dsseEnvelope")
+        or payload.get("dsse_envelope")
+    )
+    return isinstance(verification_material, dict) and isinstance(signed_content, dict)
+
+
 def build_bundle_verification(
     vault: Path,
     *,
@@ -103,6 +128,9 @@ def build_bundle_verification(
         bundle_path = _resolve_ref(vault, bundle_ref)
         resolved_bundle_ref = report_path(vault, bundle_path) if bundle_path.exists() else bundle_ref
         bundle_present = bundle_path.exists()
+    bundle_payload = _bundle_payload(bundle_path) if bundle_ref and bundle_present else None
+    bundle_parseable = bundle_payload is not None
+    bundle_has_sigstore_shape = _has_sigstore_bundle_shape(bundle_payload)
 
     checks = [
         {
@@ -119,6 +147,24 @@ def build_bundle_verification(
             "rule": "external_bundle_observed",
             "pass": bundle_present,
             "details": "External Sigstore bundle supplied." if bundle_present else "No external Sigstore bundle supplied; local integrity checks only.",
+        },
+        {
+            "rule": "external_bundle_json_parseable",
+            "pass": bundle_parseable,
+            "details": (
+                "External Sigstore bundle is parseable JSON."
+                if bundle_parseable
+                else "External Sigstore bundle is missing or is not parseable JSON."
+            ),
+        },
+        {
+            "rule": "external_bundle_has_sigstore_shape",
+            "pass": bundle_has_sigstore_shape,
+            "details": (
+                "External Sigstore bundle carries verification material and signed content."
+                if bundle_has_sigstore_shape
+                else "External Sigstore bundle lacks verification material or signed content."
+            ),
         },
     ]
     if not bundle_present:

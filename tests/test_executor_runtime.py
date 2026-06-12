@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 from unittest import mock
 
+import pytest
 from ops.scripts.codex_exec_executor import (
     EXTERNAL_WORKSPACE_SANDBOX_FLAG,
     ExecutorContractError,
@@ -36,6 +37,8 @@ from tests.minimal_vault_runtime import (
     seed_minimal_vault,
     seed_subagent_profiles,
 )
+
+pytestmark = pytest.mark.slow
 
 
 def _seed_executor_vault(vault: Path) -> None:

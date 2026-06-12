@@ -46,21 +46,16 @@ class CiTierLaneBridgeTests(unittest.TestCase):
             "make release-closeout-finality-verify-ci-artifact",
             release_closeout_commands,
         )
-        self.assertIn(
-            "make release-closeout-finality-verify",
-            release_closeout_commands,
-        )
+        self.assertNotIn("make release-closeout-finality-verify", release_closeout_commands)
         self.assertIn(
             "make release-authority-sealed-preflight",
             release_closeout_commands,
         )
+        self.assertIn("set +e", release_closeout_commands)
+        self.assertIn("finality_status=$?", release_closeout_commands)
+        self.assertIn("sealed_preflight_status=$?", release_closeout_commands)
         report_contract_run = by_tier["report-contract"]["workflow_run_text"]
-        self.assertIn("make test-report-contract-core", report_contract_run)
-        self.assertIn("make test-report-contract-all", report_contract_run)
-        self.assertIn(
-            "make external-report-reference-manifest-release-check",
-            report_contract_run,
-        )
+        self.assertEqual(report_contract_run.strip(), "make ci-report-contract-tier")
         self.assertEqual(
             validate_with_schema(
                 report,

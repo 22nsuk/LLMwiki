@@ -253,21 +253,12 @@ class CiWorkflowStaticTests(unittest.TestCase):
         self.assertIn("            make check-finalized", text)
         self.assertIn("            make release-smoke-fast", text)
 
-    def test_report_contract_tier_uses_core_on_pull_requests(self) -> None:
+    def test_report_contract_tier_delegates_selection_to_make(self) -> None:
         job = _job(_workflow(), "test-tier")
         step = _step_by_name(job, "Run report-contract tier")
 
         self.assertEqual(step.get("if"), "matrix.tier == 'report-contract'")
-        run_text = _run_text(step)
-        self.assertIn('if [ "${{ github.event_name }}" = "pull_request" ]; then', run_text)
-        self.assertLess(
-            run_text.index("make test-report-contract-core"),
-            run_text.index("make test-report-contract-all"),
-        )
-        self.assertLess(
-            run_text.index("make test-report-contract-all"),
-            run_text.index("make external-report-reference-manifest-release-check"),
-        )
+        self.assertEqual(_run_text(step), "make ci-report-contract-tier")
 
     def test_release_closeout_regression_tier_uploads_diagnostics_without_masking_root_failure(
         self,
@@ -294,9 +285,15 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "always() && matrix.tier == 'release-closeout-regression' && steps.release_closeout_regression.outcome != 'skipped'",
         )
         authority_run_text = _run_text(authority_step)
-        self.assertIn("make release-closeout-finality-verify-ci-artifact", authority_run_text)
-        self.assertIn("make release-closeout-finality-verify", authority_run_text)
-        self.assertIn("make release-authority-sealed-preflight", authority_run_text)
+        authority_commands = {line.strip() for line in authority_run_text.splitlines() if line.strip()}
+        self.assertIn("set +e", authority_commands)
+        self.assertIn("make release-closeout-finality-verify-ci-artifact", authority_commands)
+        self.assertNotIn("make release-closeout-finality-verify", authority_commands)
+        self.assertIn("make release-authority-sealed-preflight", authority_commands)
+        self.assertIn("finality_status=$?", authority_commands)
+        self.assertIn("sealed_preflight_status=$?", authority_commands)
+        self.assertIn('if [ "$finality_status" -ne 0 ]; then', authority_commands)
+        self.assertIn('exit "$sealed_preflight_status"', authority_commands)
 
         diagnostics = _step_by_name(job, "Materialize release closeout upload diagnostics")
         self.assertEqual(
@@ -355,7 +352,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
 
         public_run = _step_by_name(job, "Run public mirror tier")
         self.assertEqual(public_run.get("if"), "matrix.tier == 'public'")
-        self.assertEqual(_run_text(public_run), "make public-check")
+        self.assertEqual(_run_text(public_run), "make ci-public-tier")
 
         upload = _step_by_name(job, "Upload public check summary diagnostics")
         self.assertEqual(upload.get("if"), "always() && matrix.tier == 'public'")

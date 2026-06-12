@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -15,53 +14,18 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_GATE_REPORT_SCHEMA_PATH
+from ops.scripts.supply_chain.ci_install_proof_runtime import (
+    CANONICAL_UV_LOCK_CHECK_COMMAND,
+    UV_LOCK_CHECK_COMMAND,
+    ci_install_evidence_content,
+    collect_ci_install_contract,
+)
 
 GATE_REPORT_SCHEMA_PATH = SUPPLY_CHAIN_GATE_REPORT_SCHEMA_PATH
 PROVENANCE_REPORT_REL_PATH = "ops/reports/supply-chain-provenance.json"
 GATE_REPORT_REL_PATH = "ops/reports/supply-chain-gate-report.json"
 PRODUCER = "ops.scripts.supply_chain_gate_runtime"
 SOURCE_COMMAND = "python -m ops.scripts.supply_chain_gate_runtime --vault ."
-LOCKED_REQUIREMENTS_EXPORT_PATH = "tmp/locked-requirements.ci.txt"
-UV_LOCK_CHECK_COMMAND = "uv lock --check"
-UV_CANONICAL_INDEX_URL = "https://pypi.org/simple"
-CANONICAL_UV_LOCK_CHECK_COMMAND = (
-    f'UV_DEFAULT_INDEX="{UV_CANONICAL_INDEX_URL}" '
-    f'{UV_LOCK_CHECK_COMMAND} --default-index "{UV_CANONICAL_INDEX_URL}"'
-)
-MAKE_UV_LOCK_CHECK_COMMAND = "make uv-lock-check"
-REQUIREMENTS_DEV_INSTALL_PATTERN = re.compile(
-    r"python\s+-m\s+pip\s+install\b[^\n#]*\s-r\s+requirements-dev\.txt(?:\s|$)",
-    flags=re.IGNORECASE,
-)
-EDITABLE_INSTALL_PATTERN = re.compile(
-    r"python\s+-m\s+pip\s+install\b[^\n#]*\s-e\s+\.(?:\s|$)",
-    flags=re.IGNORECASE,
-)
-LOCKED_REQUIREMENTS_INSTALL_PATTERN = re.compile(
-    rf"python\s+-m\s+pip\s+install\b[^\n#]*\s-r\s+{re.escape(LOCKED_REQUIREMENTS_EXPORT_PATH)}(?:\s|$)",
-    flags=re.IGNORECASE,
-)
-
-
-def _line_has_tokens(line: str, tokens: tuple[str, ...]) -> bool:
-    normalized = line.strip()
-    return all(token in normalized for token in tokens)
-
-
-def _line_enforces_canonical_uv_lock_check(line: str) -> bool:
-    normalized = line.strip()
-    if MAKE_UV_LOCK_CHECK_COMMAND in normalized:
-        return True
-    has_uv_check = _line_has_tokens(normalized, ("uv lock", "--check"))
-    has_canonical_index_flag = _line_has_tokens(
-        normalized,
-        ("--default-index", UV_CANONICAL_INDEX_URL),
-    )
-    has_canonical_index_env = _line_has_tokens(
-        normalized,
-        ("UV_DEFAULT_INDEX", UV_CANONICAL_INDEX_URL),
-    )
-    return has_uv_check and has_canonical_index_flag and has_canonical_index_env
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -119,7 +83,8 @@ def _check_ci_install_drift(vault: Path, provenance: dict[str, Any]) -> dict[str
     if not bool(proof.get("workflow_exists")) or not workflow_path.exists():
         return {"rule": "ci_install_note_drift", "pass": False, "details": f"Missing workflow: {workflow_rel}"}
 
-    content = workflow_path.read_text(encoding="utf-8")
+    _workflow_exists, content = ci_install_evidence_content(vault, workflow_rel)
+    current_contract = collect_ci_install_contract(content)
     if not bool(proof.get("checks_uv_lock_freshness")):
         return {
             "rule": "ci_install_note_drift",
@@ -144,28 +109,28 @@ def _check_ci_install_drift(vault: Path, provenance: dict[str, Any]) -> dict[str
             "pass": False,
             "details": "CI proof does not identify canonical lock export install mode",
         }
-    if not any(_line_enforces_canonical_uv_lock_check(line) for line in content.splitlines()):
+    if not bool(current_contract["checks_uv_lock_freshness"]):
         return {
             "rule": "ci_install_note_drift",
             "pass": False,
-            "details": "Workflow does not contain canonical uv-lock-check command",
+            "details": "CI evidence sources do not contain canonical uv-lock-check command",
         }
-    if not any(
-        _line_has_tokens(line, ("uv export", "--frozen", LOCKED_REQUIREMENTS_EXPORT_PATH))
-        for line in content.splitlines()
+    if not bool(current_contract["exports_frozen_uv_lock"]):
+        return {
+            "rule": "ci_install_note_drift",
+            "pass": False,
+            "details": "CI evidence sources do not contain frozen uv.lock export command",
+        }
+    if not bool(current_contract["installs_locked_requirements"]):
+        return {
+            "rule": "ci_install_note_drift",
+            "pass": False,
+            "details": "CI evidence sources do not contain locked requirements install command",
+        }
+    if (
+        bool(current_contract["installs_requirements_dev"])
+        and not bool(current_contract["editable_install"])
     ):
-        return {
-            "rule": "ci_install_note_drift",
-            "pass": False,
-            "details": "Workflow does not contain frozen uv.lock export command",
-        }
-    if not LOCKED_REQUIREMENTS_INSTALL_PATTERN.search(content):
-        return {
-            "rule": "ci_install_note_drift",
-            "pass": False,
-            "details": "Workflow does not contain locked requirements install command",
-        }
-    if REQUIREMENTS_DEV_INSTALL_PATTERN.search(content) and not EDITABLE_INSTALL_PATTERN.search(content):
         return {
             "rule": "ci_install_note_drift",
             "pass": False,
@@ -237,7 +202,10 @@ def build_gate_report(
                     source_command=SOURCE_COMMAND,
                     resolved_policy_path=resolved_policy_path,
                     schema_path=GATE_REPORT_SCHEMA_PATH,
-                    source_paths=["ops/scripts/supply_chain_gate_runtime.py"],
+                    source_paths=[
+                        "ops/scripts/supply_chain/supply_chain_gate_runtime.py",
+                        "ops/scripts/supply_chain/ci_install_proof_runtime.py",
+                    ],
                     file_inputs={"provenance_report": PROVENANCE_REPORT_REL_PATH},
                 ),
                 "$schema": GATE_REPORT_SCHEMA_PATH,
@@ -265,7 +233,10 @@ def build_gate_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=GATE_REPORT_SCHEMA_PATH,
-            source_paths=["ops/scripts/supply_chain_gate_runtime.py"],
+            source_paths=[
+                "ops/scripts/supply_chain/supply_chain_gate_runtime.py",
+                "ops/scripts/supply_chain/ci_install_proof_runtime.py",
+            ],
             file_inputs={"provenance_report": PROVENANCE_REPORT_REL_PATH},
         ),
         "$schema": GATE_REPORT_SCHEMA_PATH,

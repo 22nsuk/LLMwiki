@@ -27,6 +27,8 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
             vault = Path(temp_dir)
             (vault / "mk").mkdir()
             (vault / "ops" / "scripts").mkdir(parents=True)
+            (vault / "ops" / "scripts" / "core").mkdir()
+            (vault / "ops" / "scripts" / "test").mkdir()
             (vault / "ops").mkdir(exist_ok=True)
             (vault / "Makefile").write_text("include mk/test.mk\n", encoding="utf-8")
             (vault / "mk" / "test.mk").write_text(
@@ -36,6 +38,14 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
             )
             (vault / "ops" / "scripts" / "__init__.py").write_text(
                 "class _ReexportFinder: pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "core" / "legacy_runtime.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "test" / "lane_runtime.py").write_text(
+                "def main(): pass\n",
                 encoding="utf-8",
             )
             (vault / "ops" / "script-module-surfaces.json").write_text(
@@ -57,8 +67,24 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
 
         aliases = {(item["alias_type"], item["name"]) for item in report["aliases"]}
         self.assertIn(("make_target", "old-target"), aliases)
-        self.assertIn(("flat_import_reexport", "ops.scripts.<name>"), aliases)
+        self.assertIn(("flat_import_reexport", "ops.scripts.legacy_runtime"), aliases)
+        self.assertIn(("flat_import_reexport", "ops.scripts.lane_runtime"), aliases)
         self.assertIn(("stable_import_surface", "legacy_runtime"), aliases)
+        replacements = {
+            item["name"]: item["preferred_replacement"]
+            for item in report["aliases"]
+            if item["alias_type"] == "flat_import_reexport"
+        }
+        self.assertEqual(
+            replacements,
+            {
+                "ops.scripts.legacy_runtime": "ops.scripts.core.legacy_runtime",
+                "ops.scripts.lane_runtime": "ops.scripts.test.lane_runtime",
+            },
+        )
+        self.assertEqual(report["summary"]["flat_import_reexport_count"], 2)
+        self.assertEqual(report["summary"]["stable_import_surface_count"], 1)
+        self.assertEqual(report["summary"]["make_alias_count"], 1)
         self.assertEqual(report["summary"]["removal_ready_count"], 0)
         self.assertEqual(
             validate_with_schema(report, load_schema("ops/schemas/compatibility-alias-deprecation.schema.json")),

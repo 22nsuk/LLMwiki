@@ -199,6 +199,10 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             "$(MAKE) artifact-freshness",
             "$(MAKE) external-report-action-matrix",
             "$(MAKE) generated-artifact-index",
+            "$(MAKE) artifact-freshness",
+            "$(MAKE) external-report-action-matrix",
+            "$(MAKE) generated-artifact-index-body",
+            "$(MAKE) artifact-freshness",
         ],
     )
     case.assertIn(
@@ -997,6 +1001,7 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         for target in (
             "test-fast",
+            "ci-report-contract-tier",
             "test-report-contract-core",
             "test-report-contract-all",
             "test-release-sealing-core",
@@ -1141,7 +1146,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             '--verify-out "$(RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT)"',
             finality_verify_artifact,
         )
-        self.assertIn("--no-fail", finality_verify_artifact)
+        self.assertNotIn("--no-fail", finality_verify_artifact)
         cost_artifact = _target_block(
             text, "release-closeout-cost-evidence-ci-artifact"
         )
@@ -1622,6 +1627,15 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         self.assertIn("test-report-contract-core", _target_block(text, ".PHONY"))
         self.assertIn("test-report-contract-all", _target_block(text, ".PHONY"))
+        self.assertIn("ci-report-contract-tier", _target_block(text, ".PHONY"))
+        ci_block = _target_block(text, "ci-report-contract-tier")
+        self.assertIn("workflow_dispatch:*", ci_block)
+        self.assertIn("push:refs/heads/main", ci_block)
+        self.assertIn("push:refs/heads/release/*", ci_block)
+        self.assertIn("push:refs/tags/*", ci_block)
+        self.assertIn("$(MAKE) test-report-contract-all", ci_block)
+        self.assertIn("$(MAKE) test-report-contract-core", ci_block)
+        self.assertIn("$(MAKE) external-report-reference-manifest-release-check", ci_block)
         self.assertIn("REPORT_CONTRACT_CORE_TESTS ?=", text)
         self.assertNotIn("REPORT_CONTRACT_EXTENDED_TESTS", text)
         self.assertIn("REPORT_CONTRACT_TESTS ?=", text)

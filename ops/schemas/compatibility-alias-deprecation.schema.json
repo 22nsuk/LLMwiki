@@ -13,10 +13,18 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["alias_count", "make_alias_count", "removal_ready_count"],
+      "required": [
+        "alias_count",
+        "make_alias_count",
+        "stable_import_surface_count",
+        "flat_import_reexport_count",
+        "removal_ready_count"
+      ],
       "properties": {
         "alias_count": { "type": "integer", "minimum": 0 },
         "make_alias_count": { "type": "integer", "minimum": 0 },
+        "stable_import_surface_count": { "type": "integer", "minimum": 0 },
+        "flat_import_reexport_count": { "type": "integer", "minimum": 0 },
         "removal_ready_count": { "type": "integer", "minimum": 0 }
       }
     },

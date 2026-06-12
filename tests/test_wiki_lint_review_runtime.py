@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.wiki_lint import lint
 from ops.scripts.wiki_lint_review_runtime import (
@@ -21,6 +22,8 @@ from ops.scripts.wiki_lint_review_runtime import (
 from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 
 from tests.minimal_vault_runtime import seed_open_question_smoke_vault
+
+pytestmark = pytest.mark.slow
 
 
 def write_page(path: Path, text: str) -> None:

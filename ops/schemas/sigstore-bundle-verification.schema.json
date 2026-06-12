@@ -289,7 +289,9 @@
           "enum": [
             "subject_files_exist",
             "in_toto_subject_digests_match",
-            "external_bundle_observed"
+            "external_bundle_observed",
+            "external_bundle_json_parseable",
+            "external_bundle_has_sigstore_shape"
           ]
         },
         "pass": {

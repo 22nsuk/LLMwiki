@@ -3,15 +3,6 @@
   "artifact_kind": "observation_closeout_registry",
   "retained_observations": [
     {
-      "path": "ops/reports/task-improvement-observations/task-20260607-external-report-p2-final-plan/improvement-observations.json",
-      "observation_id": "release_finality_post_verify_tracked_report_write_ordering",
-      "status": "planned",
-      "retained_reason": "Finality-sensitive Make ordering needs a focused static guard; this task only adds archive-readiness basis and release authority readback planning.",
-      "next_action": "Add a Make static regression that flags tracked report refreshes after finality verification unless fixed-point and finality are rerun.",
-      "exit_condition": "Close when the static guard or release planner test rejects stale post-finality writer orderings.",
-      "owner_or_lane": "release-finality-static-gates"
-    },
-    {
       "path": "ops/reports/task-improvement-observations/task-20260608-active-report-currentness-gap/improvement-observations.json",
       "observation_id": "active_external_report_inputs_missing_from_reuse_currentness",
       "status": "planned",
@@ -21,13 +12,49 @@
       "owner_or_lane": "external-report-lifecycle-refresh"
     },
     {
-      "path": "ops/reports/task-improvement-observations/task-20260608-archived-report-overclosure-audit/improvement-observations.json",
-      "observation_id": "full_vault_archive_mtime_normalization_gap",
+      "path": "ops/reports/task-improvement-observations/task-20260610-active-matrix-priority-plan/improvement-observations.json",
+      "observation_id": "active_matrix_priority_lane_coordination_gap",
       "status": "planned",
-      "retained_reason": "Full-vault review bundle mtime normalization requires operator/full-vault packaging evidence beyond public release smoke.",
-      "next_action": "Add or extend a review-bundle archive portability lane in full-vault context.",
-      "exit_condition": "Close when full-vault review bundle mtime normalization is checked or explicitly declared operator-only.",
-      "owner_or_lane": "review-bundle-portability"
+      "retained_reason": "The active action matrix now mixes release authority, artifact freshness, fixture cost, compatibility alias, and external-verification work; closing this observation before lane sequencing would hide the coordination risk.",
+      "next_action": "Use the active matrix priority order to pick one lane at a time and refresh the matrix/currentness evidence after each completed lane.",
+      "exit_condition": "Close when the active matrix no longer needs a separate priority coordination note because the remaining active actions have current owner lanes and blocking scopes.",
+      "owner_or_lane": "active-matrix-priority-coordination"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260612-freshness-stale-cost-review/improvement-observations.json",
+      "observation_id": "freshness_source_identity_churn_needs_classifier",
+      "status": "planned",
+      "retained_reason": "Artifact freshness correctly reports source-identity drift after ordinary source edits, but the current operator-facing stale summary does not separate that cheap routing case from schema, contract, feedback-loop, or release-authority debt.",
+      "next_action": "Add a lightweight stale-cause classifier or planner hook that routes source_identity_only freshness debt to release-finality-resettle or post-commit checking instead of broad release convergence.",
+      "exit_condition": "Close when freshness/fixed-point reporting distinguishes source_identity_only stale records from actionable schema/contract/feedback debt and focused tests cover the routing.",
+      "owner_or_lane": "artifact-freshness-cost-routing"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260612-freshness-stale-cost-review/improvement-observations.json",
+      "observation_id": "finality_attestation_post_freshness_phase_drift",
+      "status": "planned",
+      "retained_reason": "The latest resettle could regenerate finality attestation after the terminal freshness/action-matrix pass, leaving freshness evidence slightly out of phase with a freshly written payload.",
+      "next_action": "Move finality attestation before the last freshness/action-matrix pass or add a post-scan writer drift check with a targeted recommended lane.",
+      "exit_condition": "Close when fixed-point or static coverage prevents freshness-sensitive writers from running after terminal freshness evidence without recomputing freshness/action-matrix state.",
+      "owner_or_lane": "release-finality-freshness-ordering"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260610-runtime-decomposition-closeout/improvement-observations.json",
+      "observation_id": "flat_import_reexport_migration_remaining",
+      "status": "planned",
+      "retained_reason": "Compatibility alias cleanup is intentionally incremental because removing flat imports without caller inventory would turn a maintenance lane into a broad interface migration.",
+      "next_action": "Update the compatibility-alias inventory on the next touched hotspot and migrate only verified callers in that ownership boundary.",
+      "exit_condition": "Close when the compatibility-alias inventory has no remaining flat import re-export entries or each remaining alias has an explicit retained support contract.",
+      "owner_or_lane": "compatibility-alias-inventory"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260611-active-report-long-term-plan/improvement-observations.json",
+      "observation_id": "long_term_plan_needs_lanes_not_more_reports",
+      "status": "planned",
+      "retained_reason": "This is the umbrella execution guard for the current long-term active-matrix cleanup; closing it would encourage new narrative reports instead of lane work.",
+      "next_action": "Continue burning down the existing active lanes through code, tests, currentness artifacts, and release/supply-chain evidence instead of adding new planning reports.",
+      "exit_condition": "Close when the active matrix blockers are either resolved, explicitly operator-dependent, or represented by narrower retained observations.",
+      "owner_or_lane": "long-term-active-report-lane-execution"
     }
   ]
 }

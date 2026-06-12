@@ -172,7 +172,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             action_statuses(self.vault)["generated_artifact_tracking_policy"],
             "implemented",
         )
-    def test_review_bundle_closeout_does_not_close_mtime_normalization_gap(self) -> None:
+    def test_review_bundle_closeout_closes_mtime_normalization_gap_with_timestamp_evidence(
+        self,
+    ) -> None:
         self._write_clean_review_archive_report()
         (self.external / "review-bundle.md").write_text(
             "# Review Bundle\n\n"
@@ -226,7 +228,11 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 },
                 {
                     "observation_id": "full_vault_archive_mtime_normalization_gap",
-                    "status": "planned",
+                    "status": "automated",
+                    "resolution_evidence": [
+                        "artifact:ops/reports/review-archive-report.json",
+                        "make:review-archive",
+                    ],
                 },
             ]
         )
@@ -242,23 +248,46 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "review_bundle_full_vault_hygiene_gap",
             actions["repo_boundary_history_hygiene"]["status_reason_ids"],
         )
-        for action_id in (
-            "source_package_distribution_binding",
-            "windows_path_and_archive_alias_parity",
-        ):
-            self.assertEqual(
-                actions[action_id]["current_status"],
-                "partially_automated",
-                action_id,
-            )
+        for action_id in ("source_package_distribution_binding",):
             self.assertNotIn(
                 "review_bundle_full_vault_hygiene_gap",
                 actions[action_id]["status_reason_ids"],
             )
-            self.assertIn(
+            self.assertNotIn(
                 "full_vault_archive_mtime_normalization_gap",
                 actions[action_id]["status_reason_ids"],
             )
+        self.assertEqual(
+            actions["windows_path_and_archive_alias_parity"]["current_status"],
+            "implemented",
+        )
+        self.assertNotIn(
+            "full_vault_archive_mtime_normalization_gap",
+            actions["windows_path_and_archive_alias_parity"]["status_reason_ids"],
+        )
+
+    def test_mtime_normalization_observation_stays_active_without_timestamp_evidence(self) -> None:
+        self._write_schema_invalid_clean_review_archive_report()
+        self._write_task_observations(
+            [
+                {
+                    "observation_id": "full_vault_archive_mtime_normalization_gap",
+                    "status": "automated",
+                    "resolution_evidence": [
+                        "artifact:ops/reports/review-archive-report.json",
+                        "make:review-archive",
+                    ],
+                }
+            ]
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertIn(
+            "full_vault_archive_mtime_normalization_gap",
+            actions["windows_path_and_archive_alias_parity"]["status_reason_ids"],
+        )
     def test_broad_actions_do_not_complete_from_surface_only_evidence(self) -> None:
         self._write_json(
             "ops/reports/function-budget-refactor-proposals.json",
@@ -370,7 +399,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "supply_chain_external_verification",
         )
         self.assertNotIn("action_matrix", supply_chain_action["blocking_scopes"])
-        self.assertEqual(supply_chain_action["recommended_target"], "supply-chain-check")
+        self.assertEqual(
+            supply_chain_action["recommended_target"],
+            "sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>",
+        )
         self.assertEqual(
             actions["collaboration_governance_surface"]["current_status"],
             "partially_automated",
@@ -396,10 +428,15 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "maintainability_hotspot_owner_backlog_not_absorbed",
             "maintainability_hotspot_large_main_remains",
         ]
-        supply_chain_reasons = [
+        supply_chain_gate_reasons = [
             "supply_chain_gate_not_pass",
             "supply_chain_sbom_readiness_not_pass",
             "supply_chain_slsa_predicate_missing",
+            "supply_chain_release_attestation_missing",
+            "supply_chain_dependency_review_missing",
+            "supply_chain_sigstore_bundle_target_missing",
+        ]
+        supply_chain_bundle_reasons = [
             "supply_chain_sigstore_local_integrity_only",
             "supply_chain_sigstore_external_bundle_not_verified",
             "supply_chain_sigstore_checks_missing",
@@ -407,13 +444,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "supply_chain_sigstore_bundle_ref_missing",
             "supply_chain_external_bundle_rule_missing",
             "supply_chain_external_bundle_not_observed",
-            "supply_chain_release_attestation_missing",
-            "supply_chain_dependency_review_missing",
-            "supply_chain_sigstore_bundle_target_missing",
         ]
 
         details = action_status_reason_details(
-            [*maintainability_reasons, *supply_chain_reasons],
+            [*maintainability_reasons, *supply_chain_gate_reasons, *supply_chain_bundle_reasons],
             fallback_target="external-report-action-matrix",
         )
 
@@ -429,7 +463,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 detail_by_reason[reason_id]["recommended_targets"],
                 ["function-budget-refactor-proposals"],
             )
-        for reason_id in supply_chain_reasons:
+        for reason_id in supply_chain_gate_reasons:
             self.assertIn(reason_id, detail_by_reason)
             self.assertEqual(
                 detail_by_reason[reason_id]["blocking_scope"],
@@ -439,6 +473,17 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             self.assertEqual(
                 detail_by_reason[reason_id]["recommended_targets"],
                 ["supply-chain-check"],
+            )
+        for reason_id in supply_chain_bundle_reasons:
+            self.assertIn(reason_id, detail_by_reason)
+            self.assertEqual(
+                detail_by_reason[reason_id]["blocking_scope"],
+                "supply_chain_external_verification",
+            )
+            self.assertNotEqual(detail_by_reason[reason_id]["blocking_scope"], "supply_chain")
+            self.assertEqual(
+                detail_by_reason[reason_id]["recommended_targets"],
+                ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
             )
 
         unmapped_details = action_status_reason_details(
@@ -936,15 +981,22 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "ops/scripts/release/release_evidence_cohort.py": (
                 "from ops.scripts.core.release_currentness_state_runtime import currentness_field\n"
             ),
-            "ops/scripts/release/release_closeout_summary.py": (
+            "ops/scripts/release/release_closeout_summary.py": "def build_report(): pass\n",
+            "ops/scripts/release/release_closeout_gate_runtime.py": (
                 "from ops.scripts.core.release_currentness_state_runtime import components_match_current_source_tree\n"
+                "components_match_current_source_tree(\n"
+            ),
+            "ops/scripts/release/release_closeout_risk_runtime.py": (
                 "from ops.scripts.core.release_risk_state_runtime import release_risk_identity\n"
-                "components_match_current_source_tree(\nrelease_risk_identity(\n"
+                "release_risk_identity(\n"
             ),
             "ops/scripts/release/release_evidence_dashboard.py": (
                 "from ops.scripts.core.release_currentness_state_runtime import live_rerun_state\n"
+                "live_rerun_state(\n"
+            ),
+            "ops/scripts/release/release_evidence_dashboard_learning_delta_runtime.py": (
                 "from ops.scripts.core.learning_claim_state_runtime import confirmed_evidence_summary\n"
-                "live_rerun_state(\nconfirmed_evidence_summary(\n"
+                "confirmed_evidence_summary(\n"
             ),
             "ops/scripts/release/release_clean_blocker_ledger.py": (
                 "from ops.scripts.core.release_risk_state_runtime import release_risk_blocks_clean_lane\n"

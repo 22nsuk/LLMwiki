@@ -5,7 +5,7 @@ import datetime as dt
 import json
 from collections.abc import Mapping
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -522,30 +522,66 @@ def _goal_contract_metadata() -> dict[str, str]:
     }
 
 
+@dataclass(frozen=True)
+class AutoImproveGoalContractOptions:
+    contract_id: str = DEFAULT_CONTRACT_ID
+    created_at: str | None = None
+    created_by: str = "codex"
+    storage_path: str = DEFAULT_CONTRACT_PATH
+    backend_type: str = "file"
+    runtime_mode: str = DEFAULT_RUNTIME_MODE
+    max_unattended_seconds: int = DEFAULT_RUNTIME_SECONDS
+    max_proposals: int = 1
+    max_consecutive_failures: int = 1
+    heartbeat_interval_seconds: int = 300
+    checkpoint_interval_seconds: int = 1800
+    goal_status_path: str = DEFAULT_GOAL_STATUS_PATH
+    promotion_guard: Mapping[str, Any] | None = None
+
+
+def _resolve_auto_improve_goal_contract_options(
+    options: AutoImproveGoalContractOptions | None,
+    legacy_options: Mapping[str, Any],
+) -> AutoImproveGoalContractOptions:
+    if options is not None and legacy_options:
+        raise TypeError(
+            "build_auto_improve_goal_contract accepts either an "
+            "AutoImproveGoalContractOptions object or keyword options, not both"
+        )
+    if options is not None:
+        return options
+    if not legacy_options:
+        return AutoImproveGoalContractOptions()
+
+    field_names = {contract_field.name for contract_field in fields(AutoImproveGoalContractOptions)}
+    unexpected = sorted(set(legacy_options) - field_names)
+    if unexpected:
+        if len(unexpected) == 1:
+            raise TypeError(
+                "build_auto_improve_goal_contract got an unexpected keyword "
+                f"argument {unexpected[0]!r}"
+            )
+        unexpected_names = ", ".join(repr(name) for name in unexpected)
+        raise TypeError(
+            "build_auto_improve_goal_contract got unexpected keyword arguments: "
+            f"{unexpected_names}"
+        )
+    return AutoImproveGoalContractOptions(**legacy_options)
+
+
 def build_auto_improve_goal_contract(
-    *,
-    contract_id: str = DEFAULT_CONTRACT_ID,
-    created_at: str | None = None,
-    created_by: str = "codex",
-    storage_path: str = DEFAULT_CONTRACT_PATH,
-    backend_type: str = "file",
-    runtime_mode: str = DEFAULT_RUNTIME_MODE,
-    max_unattended_seconds: int = DEFAULT_RUNTIME_SECONDS,
-    max_proposals: int = 1,
-    max_consecutive_failures: int = 1,
-    heartbeat_interval_seconds: int = 300,
-    checkpoint_interval_seconds: int = 1800,
-    goal_status_path: str = DEFAULT_GOAL_STATUS_PATH,
-    promotion_guard: Mapping[str, Any] | None = None,
+    options: AutoImproveGoalContractOptions | None = None,
+    **legacy_options: Any,
 ) -> dict[str, Any]:
-    if runtime_mode not in RUNTIME_MODES:
-        raise GoalBackendError(f"unsupported goal runtime mode: {runtime_mode}")
-    if backend_type not in GOAL_BACKEND_TYPES:
-        raise GoalBackendError(f"unsupported goal backend type: {backend_type}")
+    resolved = _resolve_auto_improve_goal_contract_options(options, legacy_options)
+    if resolved.runtime_mode not in RUNTIME_MODES:
+        raise GoalBackendError(f"unsupported goal runtime mode: {resolved.runtime_mode}")
+    if resolved.backend_type not in GOAL_BACKEND_TYPES:
+        raise GoalBackendError(f"unsupported goal backend type: {resolved.backend_type}")
     return {
         "$schema": SCHEMA_PATH,
         "schema_version": 1,
-        "contract_id": contract_id,
+        "contract_id": resolved.contract_id,
         "objective": (
             "Run a bounded self-improvement loop whose result is certified by current "
             "readiness, release, source-package, public-check, status, and session evidence."
@@ -553,21 +589,24 @@ def build_auto_improve_goal_contract(
         "non_goals": _goal_contract_non_goals(),
         "allowed_roots": _goal_contract_allowed_roots(),
         "budgets": _goal_contract_budgets(
-            max_unattended_seconds=max_unattended_seconds,
-            max_proposals=max_proposals,
-            max_consecutive_failures=max_consecutive_failures,
-            heartbeat_interval_seconds=heartbeat_interval_seconds,
-            checkpoint_interval_seconds=checkpoint_interval_seconds,
+            max_unattended_seconds=resolved.max_unattended_seconds,
+            max_proposals=resolved.max_proposals,
+            max_consecutive_failures=resolved.max_consecutive_failures,
+            heartbeat_interval_seconds=resolved.heartbeat_interval_seconds,
+            checkpoint_interval_seconds=resolved.checkpoint_interval_seconds,
         ),
         "execution_policy": _goal_contract_execution_policy(),
-        "created_at": created_at or _utc_now(),
-        "created_by": created_by,
+        "created_at": resolved.created_at or _utc_now(),
+        "created_by": resolved.created_by,
         "status": "active",
-        "runtime": _goal_contract_runtime(runtime_mode, max_unattended_seconds),
-        "goal_backend": _goal_backend_contract(backend_type, storage_path),
+        "runtime": _goal_contract_runtime(
+            resolved.runtime_mode,
+            resolved.max_unattended_seconds,
+        ),
+        "goal_backend": _goal_backend_contract(resolved.backend_type, resolved.storage_path),
         "stop_conditions": _goal_contract_stop_conditions(),
-        "required_evidence": _goal_contract_required_evidence(goal_status_path),
-        "promotion_guard": _default_goal_promotion_guard(promotion_guard),
+        "required_evidence": _goal_contract_required_evidence(resolved.goal_status_path),
+        "promotion_guard": _default_goal_promotion_guard(resolved.promotion_guard),
         "metadata": _goal_contract_metadata(),
     }
 
@@ -810,21 +849,23 @@ def main(argv: list[str] | None = None) -> int:
         )
     generated_at = _utc_now()
     contract = build_auto_improve_goal_contract(
-        contract_id=args.contract_id,
-        created_at=args.created_at
-        or _existing_created_at(vault, args.out, args.contract_id)
-        or generated_at,
-        created_by=args.created_by,
-        storage_path=args.out,
-        backend_type=args.backend_type,
-        runtime_mode=args.runtime_mode,
-        max_unattended_seconds=args.max_unattended_seconds,
-        max_proposals=args.max_proposals,
-        max_consecutive_failures=args.max_consecutive_failures,
-        heartbeat_interval_seconds=args.heartbeat_interval_seconds,
-        checkpoint_interval_seconds=args.checkpoint_interval_seconds,
-        goal_status_path=args.goal_status_path,
-        promotion_guard=promotion_guard,
+        AutoImproveGoalContractOptions(
+            contract_id=args.contract_id,
+            created_at=args.created_at
+            or _existing_created_at(vault, args.out, args.contract_id)
+            or generated_at,
+            created_by=args.created_by,
+            storage_path=args.out,
+            backend_type=args.backend_type,
+            runtime_mode=args.runtime_mode,
+            max_unattended_seconds=args.max_unattended_seconds,
+            max_proposals=args.max_proposals,
+            max_consecutive_failures=args.max_consecutive_failures,
+            heartbeat_interval_seconds=args.heartbeat_interval_seconds,
+            checkpoint_interval_seconds=args.checkpoint_interval_seconds,
+            goal_status_path=args.goal_status_path,
+            promotion_guard=promotion_guard,
+        )
     )
     contract = _preserve_existing_runtime_state(contract, existing_contract)
     contract = _embed_contract_artifact_envelope(

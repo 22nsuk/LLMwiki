@@ -266,37 +266,37 @@ SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
     "supply_chain_sigstore_local_integrity_only": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
     ),
     "supply_chain_sigstore_external_bundle_not_verified": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
     ),
     "supply_chain_sigstore_checks_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
     ),
     "supply_chain_sigstore_check_failed": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
     ),
     "supply_chain_sigstore_bundle_ref_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
     ),
     "supply_chain_external_bundle_rule_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
     ),
     "supply_chain_external_bundle_not_observed": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
     ),
     "supply_chain_release_attestation_missing": (
         "supply_chain_external_workflow_verification",
@@ -1202,13 +1202,11 @@ def repository_surface_entrypoint_documentation_status(
     return "partially_automated"
 
 
-def release_mechanism_service_layer_extraction_status(
-    vault: Path,
-    existing_count: int,
-    expected_count: int,
-) -> str:
-    if existing_count == 0:
-        return "planned"
+def _contains_all(text: str, tokens: tuple[str, ...]) -> bool:
+    return all(token in text for token in tokens)
+
+
+def _release_authority_service_complete(vault: Path) -> bool:
     core_text = _read_text_or_empty(vault / "ops/scripts/core/release_authority_state_runtime.py")
     facade_text = _read_text_or_empty(vault / "ops/scripts/release/release_status_v2.py")
     mechanism_text = _read_text_or_empty(
@@ -1218,107 +1216,126 @@ def release_mechanism_service_layer_extraction_status(
         vault / "ops/scripts/release/external_report_lifecycle_runtime.py"
     )
     inventory_text = _read_text_or_empty(vault / "ops/scripts/release/release_authority_inventory.py")
-    currentness_text = _read_text_or_empty(
-        vault / "ops/scripts/core/release_currentness_state_runtime.py"
+    facade_uses_service = (
+        "from ops.scripts.core.release_authority_state_runtime import" in facade_text
+        or "from ops.scripts.core import release_authority_state_runtime" in facade_text
     )
-    risk_text = _read_text_or_empty(vault / "ops/scripts/core/release_risk_state_runtime.py")
-    learning_text = _read_text_or_empty(
-        vault / "ops/scripts/core/learning_claim_state_runtime.py"
-    )
-    cohort_text = _read_text_or_empty(vault / "ops/scripts/release/release_evidence_cohort.py")
-    dashboard_text = _read_text_or_empty(
-        vault / "ops/scripts/release/release_evidence_dashboard.py"
-    )
-    closeout_text = _read_text_or_empty(
-        vault / "ops/scripts/release/release_closeout_summary.py"
-    )
-    clean_blocker_text = _read_text_or_empty(
-        vault / "ops/scripts/release/release_clean_blocker_ledger.py"
-    )
-    unlock_text = _read_text_or_empty(
-        vault / "ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py"
-    )
-    authority_extracted = all(
-        token in core_text
-        for token in (
+    return _contains_all(
+        core_text,
+        (
             "release_status_v2_view",
             "machine_release_allowed_from_status_view",
             "clean_required_preflight_passes",
             "release_authority_reports_verified",
             "current_release_manifest_pass",
             "release_artifact_revision",
+        ),
+    ) and all(
+        (
+            facade_uses_service,
+            "machine_release_allowed_from_status_view" in mechanism_text,
+            "clean_required_preflight_passes" in mechanism_text,
+            "release_authority_reports_verified" in lifecycle_text,
+            "current_release_manifest_pass" in lifecycle_text,
+            "release_artifact_revision" in inventory_text,
         )
     )
-    facade_uses_authority_service = (
-        "from ops.scripts.core.release_authority_state_runtime import" in facade_text
-        or "from ops.scripts.core import release_authority_state_runtime" in facade_text
+
+
+def _release_currentness_service_complete(vault: Path) -> bool:
+    currentness_text = _read_text_or_empty(
+        vault / "ops/scripts/core/release_currentness_state_runtime.py"
     )
-    consumers_use_service = (
-        facade_uses_authority_service
-        and "machine_release_allowed_from_status_view" in mechanism_text
-        and "clean_required_preflight_passes" in mechanism_text
-        and "release_authority_reports_verified" in lifecycle_text
-        and "current_release_manifest_pass" in lifecycle_text
-        and "release_artifact_revision" in inventory_text
+    cohort_text = _read_text_or_empty(vault / "ops/scripts/release/release_evidence_cohort.py")
+    dashboard_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_evidence_dashboard.py"
     )
-    currentness_extracted = all(
-        token in currentness_text
-        for token in (
-            "def currentness_field",
-            "def live_rerun_state",
-            "def components_match_current_source_tree",
+    closeout_gate_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_closeout_gate_runtime.py"
+    )
+    return _contains_all(
+        currentness_text,
+        ("def currentness_field", "def live_rerun_state", "def components_match_current_source_tree"),
+    ) and all(
+        (
+            "from ops.scripts.core.release_currentness_state_runtime import" in cohort_text,
+            "from ops.scripts.core.release_currentness_state_runtime import" in closeout_gate_text,
+            "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_text,
+            "live_rerun_state(" in dashboard_text,
+            "components_match_current_source_tree(" in closeout_gate_text,
         )
     )
-    currentness_consumers_use_service = (
-        "from ops.scripts.core.release_currentness_state_runtime import" in cohort_text
-        and "from ops.scripts.core.release_currentness_state_runtime import" in closeout_text
-        and "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_text
-        and "live_rerun_state(" in dashboard_text
-        and "components_match_current_source_tree(" in closeout_text
+
+
+def _release_risk_service_complete(vault: Path) -> bool:
+    risk_text = _read_text_or_empty(vault / "ops/scripts/core/release_risk_state_runtime.py")
+    closeout_risk_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_closeout_risk_runtime.py"
     )
-    risk_extracted = all(
-        token in risk_text
-        for token in (
+    clean_blocker_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_clean_blocker_ledger.py"
+    )
+    return _contains_all(
+        risk_text,
+        (
             "def release_risk_identity",
             "def release_risk_blocks_clean_lane",
             "def release_risk_list",
             "def release_blocker_entry",
+        ),
+    ) and all(
+        (
+            "from ops.scripts.core.release_risk_state_runtime import" in closeout_risk_text,
+            "from ops.scripts.core.release_risk_state_runtime import" in clean_blocker_text,
+            "release_risk_identity(" in closeout_risk_text,
+            "release_risk_blocks_clean_lane(" in clean_blocker_text,
         )
     )
-    risk_consumers_use_service = (
-        "from ops.scripts.core.release_risk_state_runtime import" in closeout_text
-        and "from ops.scripts.core.release_risk_state_runtime import" in clean_blocker_text
-        and "release_risk_identity(" in closeout_text
-        and "release_risk_blocks_clean_lane(" in clean_blocker_text
+
+
+def _learning_claim_service_complete(vault: Path) -> bool:
+    learning_text = _read_text_or_empty(vault / "ops/scripts/core/learning_claim_state_runtime.py")
+    dashboard_learning_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_evidence_dashboard_learning_delta_runtime.py"
     )
-    learning_extracted = all(
-        token in learning_text
-        for token in (
+    unlock_text = _read_text_or_empty(
+        vault / "ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py"
+    )
+    return _contains_all(
+        learning_text,
+        (
             "def confirmed_evidence_summary",
             "def confirmed_predicate_results",
             "def confirmed_blocking_predicate_ids",
             "def confirmed_wording_allowed",
+        ),
+    ) and all(
+        (
+            "from ops.scripts.core.learning_claim_state_runtime import" in dashboard_learning_text,
+            "from ops.scripts.core.learning_claim_state_runtime import" in unlock_text,
+            "confirmed_evidence_summary(" in dashboard_learning_text,
+            "confirmed_evidence_summary(" in unlock_text,
         )
     )
-    learning_consumers_use_service = (
-        "from ops.scripts.core.learning_claim_state_runtime import" in dashboard_text
-        and "from ops.scripts.core.learning_claim_state_runtime import" in unlock_text
-        and "confirmed_evidence_summary(" in dashboard_text
-        and "confirmed_evidence_summary(" in unlock_text
-    )
+
+
+def release_mechanism_service_layer_extraction_status(
+    vault: Path,
+    existing_count: int,
+    expected_count: int,
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    if existing_count != expected_count or not _release_authority_service_complete(vault):
+        return "partially_automated"
     complete_service_family = all(
         (
-            currentness_extracted,
-            currentness_consumers_use_service,
-            risk_extracted,
-            risk_consumers_use_service,
-            learning_extracted,
-            learning_consumers_use_service,
+            _release_currentness_service_complete(vault),
+            _release_risk_service_complete(vault),
+            _learning_claim_service_complete(vault),
         )
     )
-    if existing_count == expected_count and authority_extracted and consumers_use_service:
-        return "implemented" if complete_service_family else "partially_automated"
-    return "partially_automated"
+    return "implemented" if complete_service_family else "partially_automated"
 
 
 def github_native_security_automation_status(

@@ -96,20 +96,28 @@ def _script_module_compatibility_aliases(vault: Path) -> list[dict[str, Any]]:
     return aliases
 
 
-def _flat_reexport_alias(vault: Path) -> list[dict[str, Any]]:
+def _flat_reexport_aliases(vault: Path) -> list[dict[str, Any]]:
     init_path = vault / "ops" / "scripts" / "__init__.py"
     if "_ReexportFinder" not in _read_text(init_path):
         return []
-    return [
-        {
-            "alias_type": "flat_import_reexport",
-            "name": "ops.scripts.<name>",
-            "path": "ops/scripts/__init__.py",
-            "preferred_replacement": "ops.scripts.<domain>.<name>",
-            "removal_ready": False,
-            "retained_reason": "public_cli_import_compatibility",
-        }
-    ]
+    script_root = vault / "ops" / "scripts"
+    aliases: list[dict[str, Any]] = []
+    for path in sorted(script_root.glob("*/*.py")):
+        if path.name.startswith("_"):
+            continue
+        relative_path = path.relative_to(vault).as_posix()
+        canonical_module = relative_path.removesuffix(".py").replace("/", ".")
+        aliases.append(
+            {
+                "alias_type": "flat_import_reexport",
+                "name": f"ops.scripts.{path.stem}",
+                "path": relative_path,
+                "preferred_replacement": canonical_module,
+                "removal_ready": False,
+                "retained_reason": "public_cli_import_compatibility",
+            }
+        )
+    return aliases
 
 
 def build_report(vault: Path, *, context: RuntimeContext | None = None) -> dict[str, Any]:
@@ -118,7 +126,7 @@ def build_report(vault: Path, *, context: RuntimeContext | None = None) -> dict[
     aliases = [
         *_make_aliases(resolved_vault),
         *_script_module_compatibility_aliases(resolved_vault),
-        *_flat_reexport_alias(resolved_vault),
+        *_flat_reexport_aliases(resolved_vault),
     ]
     ready = [item for item in aliases if item["removal_ready"]]
     return {
@@ -130,6 +138,12 @@ def build_report(vault: Path, *, context: RuntimeContext | None = None) -> dict[
         "summary": {
             "alias_count": len(aliases),
             "make_alias_count": sum(1 for item in aliases if item["alias_type"] == "make_target"),
+            "stable_import_surface_count": sum(
+                1 for item in aliases if item["alias_type"] == "stable_import_surface"
+            ),
+            "flat_import_reexport_count": sum(
+                1 for item in aliases if item["alias_type"] == "flat_import_reexport"
+            ),
             "removal_ready_count": len(ready),
         },
         "aliases": aliases,

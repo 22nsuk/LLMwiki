@@ -216,6 +216,7 @@ class ReleaseSmokeTest(unittest.TestCase):
 
             with zipfile.ZipFile(archive_path) as zf:
                 names = sorted(zf.namelist())
+                infos = {info.filename: info for info in zf.infolist()}
 
             self.assertIn("vault/README.md", names)
             self.assertNotIn("vault/.venv/bin/python", names)
@@ -240,6 +241,20 @@ class ReleaseSmokeTest(unittest.TestCase):
             self.assertEqual(report["policy"], {"path": "ops/policies/wiki-maintainer-policy.yaml", "version": 4})
             self.assertEqual(report["exclusion_policy"], "public_surface_policy")
             self.assertEqual(report["manifest_digest"], report["archive_manifest_digest"])
+            self.assertEqual(
+                report["archive_timestamp_normalization"],
+                {
+                    "status": "pass",
+                    "timestamp_semantics": "normalized_archive_timestamp",
+                    "expected_timestamp_utc": "1980-01-01T00:00:00Z",
+                    "observed_timestamp_count": 1,
+                    "observed_min_timestamp_utc": "1980-01-01T00:00:00Z",
+                    "observed_max_timestamp_utc": "1980-01-01T00:00:00Z",
+                    "mismatch_count": 0,
+                    "mismatch_paths": [],
+                },
+            )
+            self.assertEqual(infos["vault/README.md"].date_time, (1980, 1, 1, 0, 0, 0))
             self.assertEqual(report["current_snapshot_representativeness"]["status"], "representative")
             self.assertEqual(report["snapshot_hygiene"]["status"], "pass")
             self.assertTrue(report["snapshot_hygiene"]["enforced"])

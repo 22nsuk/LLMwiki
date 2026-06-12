@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from ops.scripts.policy_runtime import load_policy, required_sections_from_policy
 from ops.scripts.wiki_page_runtime import (
@@ -23,10 +24,56 @@ from ops.scripts.wiki_quality_runtime import (
 from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 from ops.scripts.wikilink_runtime import build_page_lookup
 
+from tests import minimal_vault_runtime
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 
 class WikiRuntimeHelpersTest(unittest.TestCase):
+    def test_live_policy_reuses_parsed_policy_until_file_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            policy_path = Path(temp_dir) / "wiki-maintainer-policy.yaml"
+            policy_path.write_text(
+                minimal_vault_runtime.POLICY_PATH.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            parse_calls = 0
+            original_safe_load = minimal_vault_runtime.yaml.safe_load
+
+            def counted_safe_load(text: str) -> object:
+                nonlocal parse_calls
+                parse_calls += 1
+                return original_safe_load(text)
+
+            with (
+                mock.patch.object(minimal_vault_runtime, "POLICY_PATH", policy_path),
+                mock.patch.object(
+                    minimal_vault_runtime.yaml,
+                    "safe_load",
+                    side_effect=counted_safe_load,
+                ),
+            ):
+                minimal_vault_runtime.clear_live_policy_cache()
+                try:
+                    vault = Path(temp_dir) / "vault"
+                    vault.mkdir()
+                    seed_minimal_vault(vault)
+                    self.assertEqual(parse_calls, 1)
+
+                    first_policy = minimal_vault_runtime.live_policy()
+                    second_policy = minimal_vault_runtime.live_policy()
+                    self.assertEqual(first_policy, second_policy)
+                    self.assertEqual(parse_calls, 1)
+
+                    policy_path.write_text(
+                        policy_path.read_text(encoding="utf-8") + "\n# cache invalidation\n",
+                        encoding="utf-8",
+                    )
+
+                    minimal_vault_runtime.live_policy()
+                    self.assertEqual(parse_calls, 2)
+                finally:
+                    minimal_vault_runtime.clear_live_policy_cache()
+
     def test_discover_pages_collects_duplicates_by_stem(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

@@ -417,6 +417,7 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
         self.assertIn("--check", sync_check_block)
         self.assertIn('--gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"', sync_check_block)
         public_targets = (
+            "ci-public-tier",
             "public-check",
             "public-check-serial",
             "public-check-parallel",
@@ -428,10 +429,15 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
         for target in public_targets:
             with self.subTest(target=target):
                 block = _target_block(text, target)
-                if target == "public-check-all-check":
+                if target == "ci-public-tier":
+                    self.assertIn("public-check", block)
+                elif target == "public-check-all-check":
                     self.assertIn("public-check-summary-current-check", block)
                 else:
                     self.assertIn("public-check-summary", block)
+        ci_public_block = _target_block(text, "ci-public-tier")
+        self.assertIn("$(MAKE) public-check", ci_public_block)
+        self.assertNotIn("PYTEST_PUBLIC_MARK_EXPR", ci_public_block)
 
     def test_supply_chain_check_targets_exist(self) -> None:
         text = _makefile_text()

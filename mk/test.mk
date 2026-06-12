@@ -21,6 +21,8 @@ PYTEST_PUBLIC_MARK_EXPR ?= public
 PYTEST_REPORT_CONTRACT_MARK_EXPR ?= report_contract
 PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing
 PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess
+CI_REPORT_CONTRACT_EVENT_NAME ?= $(GITHUB_EVENT_NAME)
+CI_REPORT_CONTRACT_REF ?= $(GITHUB_REF)
 # Explicit pytest selector lists are generated from ops/test-lane-registry.json
 # into mk/test-selectors.generated.mk (see: make test-selectors-sync).
 include mk/test-selectors.generated.mk
@@ -54,7 +56,7 @@ RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regressi
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT ?= tmp/release-closeout-finality-verify-ci.json
 
-.PHONY: fast-smoke runtime-hotspot-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess test-selectors-sync test-selectors-sync-check report-schema-samples-check report-schema-samples-regenerate runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke runtime-hotspot-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact ci-report-contract-tier test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess test-selectors-sync test-selectors-sync-check report-schema-samples-check report-schema-samples-regenerate runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 .PHONY: test-schema-static-smoke release-closeout-finality-verify-ci-artifact
 
 test-selectors-sync:
@@ -80,10 +82,19 @@ release-closeout-regression-dry-run: tmp-json-clean
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",) --fail-on-fail
 
 release-closeout-finality-verify-ci-artifact:
-	$(PYTHON) -m ops.scripts.release_closeout_finality_attestation --vault "$(VAULT)" --attestation "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --verify --verify-out "$(RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT)" --no-fail
+	$(PYTHON) -m ops.scripts.release_closeout_finality_attestation --vault "$(VAULT)" --attestation "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --verify --verify-out "$(RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT)"
 
 release-closeout-cost-evidence-ci-artifact:
 	$(PYTHON) -m ops.scripts.release_closeout_fixed_point_cost_trend --vault "$(VAULT)" --previous "$(RELEASE_CLOSEOUT_FIXED_POINT_COST_TREND_OUT)" --out "$(RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT)" --no-fail
+
+ci-report-contract-tier:
+	@case "$(CI_REPORT_CONTRACT_EVENT_NAME):$(CI_REPORT_CONTRACT_REF)" in \
+		workflow_dispatch:*|push:refs/heads/main|push:refs/heads/release/*|push:refs/tags/*) \
+			$(MAKE) test-report-contract-all ;; \
+		*) \
+			$(MAKE) test-report-contract-core ;; \
+	esac
+	$(MAKE) external-report-reference-manifest-release-check
 
 test-report-contract-core:
 	$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)

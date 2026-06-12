@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Sequence
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -328,8 +329,18 @@ SCHEMA_PATHS = {
 }
 
 
+@lru_cache(maxsize=1)
+def _live_policy_from_file(path: str, mtime_ns: int, size: int) -> dict[str, Any]:
+    return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+
+
+def clear_live_policy_cache() -> None:
+    _live_policy_from_file.cache_clear()
+
+
 def live_policy() -> dict[str, Any]:
-    return yaml.safe_load(POLICY_PATH.read_text(encoding="utf-8"))
+    stat = POLICY_PATH.stat()
+    return _live_policy_from_file(POLICY_PATH.as_posix(), stat.st_mtime_ns, stat.st_size)
 
 
 def live_registry_shard_pages() -> list[str]:
@@ -464,8 +475,13 @@ def _ensure_created_frontmatter(root: Path) -> None:
             path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def seed_minimal_vault(root: Path, source_trace_ref: str = "raw/fake.pdf") -> None:
-    _seed_minimal_vault(root, source_trace_ref)
+def seed_minimal_vault(
+    root: Path,
+    source_trace_ref: str = "raw/fake.pdf",
+    *,
+    schema_names: Sequence[str] | None = None,
+) -> None:
+    _seed_minimal_vault(root, source_trace_ref, schema_names=schema_names)
 
 
 def seed_open_question_smoke_vault(root: Path, source_trace_ref: str = "raw/fake.pdf") -> None:

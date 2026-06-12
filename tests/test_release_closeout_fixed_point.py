@@ -45,6 +45,7 @@ TARGET_TO_TRACKED_PATH = {
     "auto-improve-readiness-worktree-guard": "ops/reports/goal-worktree-guard.json",
     "generated-artifact-index-body": "ops/reports/generated-artifact-index.json",
     "artifact-freshness": "ops/reports/artifact-freshness-report.json",
+    "external-report-action-matrix": "ops/reports/external-report-action-matrix.json",
     "auto-improve-readiness-report-body": "ops/reports/auto-improve-readiness.json",
     "release-closeout-summary-report": "ops/reports/release-closeout-summary.json",
     "learning-readiness-signoff-revalidation": "ops/reports/learning-readiness-signoff-revalidation.json",
@@ -257,6 +258,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
                 if target in {
                     "generated-artifact-index-body",
                     "artifact-freshness",
+                    "external-report-action-matrix",
                 }:
                     payload = {
                         "target": target,
@@ -294,7 +296,9 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         }
         self.assertIn("generated-artifact-index-body", selected_by_iteration[2])
         self.assertIn("artifact-freshness", selected_by_iteration[2])
+        self.assertIn("external-report-action-matrix", selected_by_iteration[2])
         self.assertGreaterEqual(calls.count("generated-artifact-index-body"), 2)
+        self.assertGreaterEqual(calls.count("external-report-action-matrix"), 2)
         self.assertEqual(
             json.loads(
                 (self.vault / TARGET_TO_TRACKED_PATH["generated-artifact-index-body"])

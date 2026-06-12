@@ -18,7 +18,7 @@ CBM_EXPORT_FLAGS ?= --summary
 CBM_SEARCH_PATTERN ?= $(CBM_SMOKE_PATTERN)
 CBM_SEARCH_LIMIT ?= 10
 
-.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check-summary-current-or-refresh public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-safe-local-paths cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-search-public cbm-smoke-public cbm-reset-local
+.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check-summary-current-or-refresh ci-public-tier public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-safe-local-paths cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-search-public cbm-smoke-public cbm-reset-local
 
 sync-public-policy:
 	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"
@@ -79,6 +79,9 @@ public-check-summary-current-or-refresh:
 	else \
 		$(MAKE) public-check-summary; \
 	fi
+
+ci-public-tier:
+	$(MAKE) public-check
 
 public-check: public-check-summary
 

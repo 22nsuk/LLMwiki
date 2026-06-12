@@ -18,6 +18,20 @@ LOCKED_CI_INSTALL_SNIPPET = (
     "- run: uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt\n"
     "- run: python -m pip install -r tmp/locked-requirements.ci.txt\n"
 )
+LOCKED_COMPOSITE_ACTION_SNIPPET = """
+name: Setup Python and uv
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies from lock
+      shell: bash
+      run: |
+        python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+        make uv-lock-check
+        uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+        python -m pip install --upgrade pip
+        python -m pip install -r tmp/locked-requirements.ci.txt
+""".strip()
 SOURCE_ZIP_SHA256 = "a" * 64
 
 
@@ -223,6 +237,43 @@ jobs:
             self.assertEqual(
                 persisted["source_package_evidence"]["source_package_reproducibility_status"],
                 "pass",
+            )
+
+    def test_build_report_reads_lock_install_proof_from_local_composite_action(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_dependency_inputs(vault)
+            (vault / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
+            (vault / ".github" / "workflows" / "ci.yml").write_text(
+                """
+name: CI
+jobs:
+  test:
+    steps:
+      - uses: ./.github/actions/setup-python-uv
+""".strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            action_path = vault / ".github" / "actions" / "setup-python-uv" / "action.yml"
+            action_path.parent.mkdir(parents=True, exist_ok=True)
+            action_path.write_text(LOCKED_COMPOSITE_ACTION_SNIPPET + "\n", encoding="utf-8")
+
+            report = build_report(vault, context=fixed_context())
+            proof = report["ci_install_proof"]
+
+            self.assertEqual(report["status"], "pass")
+            self.assertTrue(proof["checks_uv_lock_freshness"])
+            self.assertTrue(proof["exports_frozen_uv_lock"])
+            self.assertTrue(proof["installs_locked_requirements"])
+            self.assertEqual(proof["lock_check_commands"], ["make uv-lock-check"])
+            self.assertEqual(proof["install_resolution_mode"], "canonical_lock_export")
+            self.assertIn("python -m pip install --upgrade pip", proof["install_commands"])
+            self.assertIn(
+                "python -m pip install -r tmp/locked-requirements.ci.txt",
+                proof["install_commands"],
             )
 
     def test_build_report_treats_missing_requirements_files_as_compatibility_not_canonical_failure(self) -> None:

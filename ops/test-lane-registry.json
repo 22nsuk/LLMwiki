@@ -266,9 +266,9 @@
       "authority": "persistent",
       "semantics": "Public-surface contract tests for root-tree and exported-tree checks.",
       "ci_tier": "public",
-      "ci_entrypoint": "public-check",
+      "ci_entrypoint": "ci-public-tier",
       "ci_steps": [
-        "make public-check"
+        "make ci-public-tier"
       ],
       "make_target": "test-public",
       "allowed_markers": [
@@ -287,10 +287,9 @@
       "authority": "persistent",
       "semantics": "Report, schema, template, and generated artifact contract tests.",
       "ci_tier": "report-contract",
-      "ci_entrypoint": "test-report-contract-all",
+      "ci_entrypoint": "ci-report-contract-tier",
       "ci_steps": [
-        "make test-report-contract-all",
-        "make external-report-reference-manifest-release-check"
+        "make ci-report-contract-tier"
       ],
       "make_target": "test-report-contract-all",
       "allowed_markers": [
@@ -589,7 +588,6 @@
         "make release-closeout-post-check-finalizer-ci-artifact",
         "make release-closeout-cost-evidence-ci-artifact",
         "make release-closeout-finality-verify-ci-artifact",
-        "make release-closeout-finality-verify",
         "make release-authority-sealed-preflight"
       ],
       "documented_entrypoints": [
@@ -1005,12 +1003,22 @@
     },
     {
       "kind": "make_target",
+      "name": "ci-public-tier",
+      "maps_to": "public"
+    },
+    {
+      "kind": "make_target",
       "name": "test-report-contract-core",
       "maps_to": "report_contract_core"
     },
     {
       "kind": "make_target",
       "name": "test-report-contract-all",
+      "maps_to": "report_contract"
+    },
+    {
+      "kind": "make_target",
+      "name": "ci-report-contract-tier",
       "maps_to": "report_contract"
     },
     {

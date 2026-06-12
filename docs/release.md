@@ -586,8 +586,9 @@ make sigstore-bundle SIGSTORE_BUNDLE_REF=tmp/sigstore.bundle
 ```
 
 `verified-external-bundle` requires a non-empty bundle reference, passing local
-subject checks, and a passing `external_bundle_observed` check. If a bundle is
-present but another check fails, the report remains non-pass as
+subject checks, a parseable Sigstore bundle JSON payload, and bundle structure
+that carries verification material plus signed content. A placeholder file or a
+bundle with failing checks remains non-pass as
 `external-bundle-verification-failed`.
 
 Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed with

@@ -46,6 +46,9 @@ REVIEW_ARCHIVE_REPORT_PATH = "ops/reports/review-archive-report.json"
 GENERATED_ARTIFACT_INDEX_PATH = "ops/reports/generated-artifact-index.json"
 ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID = "archived_report_action_trace_gap"
 REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID = "review_bundle_full_vault_hygiene_gap"
+FULL_VAULT_ARCHIVE_MTIME_NORMALIZATION_OBSERVATION_ID = (
+    "full_vault_archive_mtime_normalization_gap"
+)
 SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
 ARCHIVED_REPORT_ACTION_BASIS_REQUIRED_FIELDS = (
     "path",
@@ -84,7 +87,7 @@ ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
         "source_package_distribution_binding",
         "windows_path_and_archive_alias_parity",
     },
-    "full_vault_archive_mtime_normalization_gap": {
+    FULL_VAULT_ARCHIVE_MTIME_NORMALIZATION_OBSERVATION_ID: {
         "source_package_distribution_binding",
         "windows_path_and_archive_alias_parity",
     },
@@ -114,6 +117,7 @@ def _review_archive_clean_report_verified(vault: Path) -> bool:
         return False
     hygiene = as_dict(report.get("snapshot_hygiene"))
     representativeness = as_dict(report.get("current_snapshot_representativeness"))
+    timestamp_normalization = as_dict(report.get("archive_timestamp_normalization"))
     archive_file = as_dict(report.get("archive_file"))
     manifest_digest = str(report.get("manifest_digest", "")).strip()
     archive_manifest_digest = str(report.get("archive_manifest_digest", "")).strip()
@@ -137,6 +141,15 @@ def _review_archive_clean_report_verified(vault: Path) -> bool:
         and representativeness.get("representative_of_current_tree") is True
         and representativeness.get("representative_of_current_zip") is True
         and representativeness.get("next_action") == "none"
+        and timestamp_normalization.get("status") == "pass"
+        and timestamp_normalization.get("timestamp_semantics")
+        == "normalized_archive_timestamp"
+        and as_int(timestamp_normalization.get("observed_timestamp_count")) == 1
+        and str(timestamp_normalization.get("expected_timestamp_utc", "")).strip()
+        == str(timestamp_normalization.get("observed_min_timestamp_utc", "")).strip()
+        == str(timestamp_normalization.get("observed_max_timestamp_utc", "")).strip()
+        and as_int(timestamp_normalization.get("mismatch_count")) == 0
+        and as_list(timestamp_normalization.get("mismatch_paths")) == []
         and bool(manifest_digest)
         and manifest_digest == archive_manifest_digest
     )
@@ -196,7 +209,10 @@ def _has_verified_observation_resolution(vault: Path, observation: dict[str, Any
     observation_id = str(observation.get("observation_id", "")).strip()
     if observation_id == ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID:
         return _generated_index_archived_report_basis_verified(vault)
-    if observation_id == REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID:
+    if observation_id in {
+        REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID,
+        FULL_VAULT_ARCHIVE_MTIME_NORMALIZATION_OBSERVATION_ID,
+    }:
         return _review_archive_clean_report_verified(vault)
     return True
 

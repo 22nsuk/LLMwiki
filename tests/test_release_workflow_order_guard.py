@@ -118,6 +118,7 @@ RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
     "generated-artifact-script-output",
     "generated-artifact-finality-suffix",
     "generated-artifact-index",
+    "generated-artifact-index-body",
     "artifact-freshness",
     "release-closeout-summary",
     "release-evidence-dashboard-report",
@@ -228,11 +229,17 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "\t$(MAKE) artifact-freshness\n"
     "\t$(MAKE) external-report-action-matrix\n"
     "\t$(MAKE) generated-artifact-index\n"
+    "\t$(MAKE) artifact-freshness\n"
+    "\t$(MAKE) external-report-action-matrix\n"
+    "\t$(MAKE) generated-artifact-index-body\n"
+    "\t$(MAKE) artifact-freshness\n"
     "script-output-surfaces:\n"
     "\t@true\n"
     "external-report-action-matrix:\n"
     "\t@true\n"
     "generated-artifact-index:\n"
+    "\t@true\n"
+    "generated-artifact-index-body:\n"
     "\t@true\n"
     "artifact-freshness:\n"
     "\t@true\n"

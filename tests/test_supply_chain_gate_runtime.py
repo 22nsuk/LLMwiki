@@ -23,6 +23,18 @@ CANONICAL_LOCK_CHECK_COMMAND = (
     'UV_DEFAULT_INDEX="https://pypi.org/simple" '
     'uv lock --check --default-index "https://pypi.org/simple"'
 )
+LOCKED_COMPOSITE_ACTION_SNIPPET = """
+name: Setup Python and uv
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies from lock
+      shell: bash
+      run: |
+        make uv-lock-check
+        uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+        python -m pip install -r tmp/locked-requirements.ci.txt
+""".strip()
 
 
 class SupplyChainGateRuntimeTests(unittest.TestCase):
@@ -74,6 +86,41 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         )
 
         report = build_gate_report(self.vault, context=fixed_context())
+        self.assertEqual(report["status"], "pass")
+
+    def test_gate_accepts_local_composite_action_install_proof(self) -> None:
+        (self.vault / ".github" / "workflows" / "ci.yml").write_text(
+            "steps:\n  - uses: ./.github/actions/setup-python-uv\n",
+            encoding="utf-8",
+        )
+        action_path = self.vault / ".github" / "actions" / "setup-python-uv" / "action.yml"
+        action_path.parent.mkdir(parents=True, exist_ok=True)
+        action_path.write_text(LOCKED_COMPOSITE_ACTION_SNIPPET + "\n", encoding="utf-8")
+        self._write_provenance(
+            {
+                "inputs": [{"path": "pyproject.toml", "exists": True, "parser_status": {"status": "pass"}}],
+                "lock_evidence": {
+                    "path": "uv.lock",
+                    "parser_status": {"status": "pass"},
+                    "lock_check_status": "enforced",
+                    "lock_check_command": "uv lock --check",
+                    "canonical_lock_check_command": CANONICAL_LOCK_CHECK_COMMAND,
+                    "canonical_lock_policy_status": "enforced",
+                },
+                "ci_install_proof": {
+                    "workflow_path": ".github/workflows/ci.yml",
+                    "workflow_exists": True,
+                    "checks_uv_lock_freshness": True,
+                    "exports_frozen_uv_lock": True,
+                    "installs_locked_requirements": True,
+                    "install_resolution_mode": "canonical_lock_export",
+                    "editable_install": True,
+                },
+            }
+        )
+
+        report = build_gate_report(self.vault, context=fixed_context())
+
         self.assertEqual(report["status"], "pass")
 
     def test_gate_allows_missing_compatibility_requirements_input(self) -> None:

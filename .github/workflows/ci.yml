@@ -99,13 +99,7 @@ jobs:
 
       - name: Run report-contract tier
         if: matrix.tier == 'report-contract'
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            make test-report-contract-core
-          else
-            make test-report-contract-all
-          fi
-          make external-report-reference-manifest-release-check
+        run: make ci-report-contract-tier
 
       - name: Run release closeout regression tier
         id: release_closeout_regression
@@ -120,9 +114,15 @@ jobs:
         id: release_authority_diagnostics
         if: always() && matrix.tier == 'release-closeout-regression' && steps.release_closeout_regression.outcome != 'skipped'
         run: |
+          set +e
           make release-closeout-finality-verify-ci-artifact
-          make release-closeout-finality-verify
+          finality_status=$?
           make release-authority-sealed-preflight
+          sealed_preflight_status=$?
+          if [ "$finality_status" -ne 0 ]; then
+            exit "$finality_status"
+          fi
+          exit "$sealed_preflight_status"
 
       - name: Materialize release closeout upload diagnostics
         if: always() && matrix.tier == 'release-closeout-regression' && (steps.release_closeout_regression.outcome != 'success' || steps.release_authority_diagnostics.outcome != 'success')
@@ -202,7 +202,7 @@ jobs:
 
       - name: Run public mirror tier
         if: matrix.tier == 'public'
-        run: make public-check
+        run: make ci-public-tier
 
       - name: Upload public check summary diagnostics
         if: always() && matrix.tier == 'public'

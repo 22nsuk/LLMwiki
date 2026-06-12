@@ -85,10 +85,16 @@ generated-artifact-converge:
 generated-artifact-script-output:
 	$(MAKE) script-output-surfaces
 
+# These reports feed each other: freshness reads matrix/index, matrix reads freshness,
+# and index reads matrix. Run one full index pass, then a body-only feedback pass.
 generated-artifact-finality-suffix:
 	$(MAKE) artifact-freshness
 	$(MAKE) external-report-action-matrix
 	$(MAKE) generated-artifact-index
+	$(MAKE) artifact-freshness
+	$(MAKE) external-report-action-matrix
+	$(MAKE) generated-artifact-index-body
+	$(MAKE) artifact-freshness
 
 command-log-summary-backfill:
 	$(PYTHON) -m ops.scripts.command_log_summary_backfill --vault "$(VAULT)" --out "$(COMMAND_LOG_SUMMARY_BACKFILL_OUT)" $(if $(COMMAND_LOG_SUMMARY_BACKFILL_APPLY),--apply,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_ALL),--all,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_INCLUDE_RUN_COMMANDS),--include-run-commands,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_CLOSE_PROMOTED_UNREFERENCED),--close-promoted-unreferenced,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_DELETE_RAW),--delete-raw,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION),--operator-confirmation "$(COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION)",) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID),--run-id "$(COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID)",)

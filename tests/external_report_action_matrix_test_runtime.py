@@ -71,6 +71,32 @@ _PUBLIC_REEXPORTS = (
 pytestmark = pytest.mark.public
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "external-report-action-matrix.schema.json"
+EXTERNAL_REPORT_FIXTURE_SCHEMA_NAMES = frozenset(
+    {
+        "artifact-envelope.schema.json",
+        "codex-goal-contract.schema.json",
+        "codex-goal-prompt.schema.json",
+        "executor-report.schema.json",
+        "generated-artifact-index.schema.json",
+        "goal-run-status.schema.json",
+        "goal-runtime-clean-transient.schema.json",
+        "goal-runtime-quarantine-preflight.schema.json",
+        "goal-runtime-run-admission.schema.json",
+        "goal-runtime-stale-closeout.schema.json",
+        "goal-worktree-guard.schema.json",
+        "release-authority-inventory.schema.json",
+        "release-closeout-finality-attestation.schema.json",
+        "release-closeout-sealed-rehearsal-check.schema.json",
+        "release-closeout-summary.schema.json",
+        "remediation-backlog.schema.json",
+        "review-archive-report.schema.json",
+        "self-improvement-negative-lessons.schema.json",
+        "source-package-clean-extract.schema.json",
+        "strict-lint-inventory.schema.json",
+        "strict-type-inventory.schema.json",
+        "wiki-maintainer-policy.schema.json",
+    }
+)
 
 
 def fixed_context() -> RuntimeContext:
@@ -96,7 +122,7 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.vault = Path(self.temp_dir.name) / "vault"
         self.vault.mkdir()
-        seed_minimal_vault(self.vault)
+        seed_minimal_vault(self.vault, schema_names=EXTERNAL_REPORT_FIXTURE_SCHEMA_NAMES)
         self.external = self.vault / "external-reports"
         self.external.mkdir(exist_ok=True)
         (self.external / "archive").mkdir(exist_ok=True)
@@ -172,6 +198,16 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
                 "manifest_digest": manifest_digest,
                 "archive_manifest": manifest,
                 "archive_manifest_digest": manifest_digest,
+                "archive_timestamp_normalization": {
+                    "status": "pass",
+                    "timestamp_semantics": "normalized_archive_timestamp",
+                    "expected_timestamp_utc": "1980-01-01T00:00:00Z",
+                    "observed_timestamp_count": 1,
+                    "observed_min_timestamp_utc": "1980-01-01T00:00:00Z",
+                    "observed_max_timestamp_utc": "1980-01-01T00:00:00Z",
+                    "mismatch_count": 0,
+                    "mismatch_paths": [],
+                },
                 "current_snapshot_representativeness": {
                     "status": "representative",
                     "representative_of_current_tree": True,
@@ -481,4 +517,3 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
                 "unattended_promotion_allowed": True,
             },
         )
-

@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import sys
 import tomllib
 from pathlib import Path
@@ -24,6 +23,14 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_PROVENANCE_SCHEMA_PATH
+    from ops.scripts.supply_chain.ci_install_proof_runtime import (
+        CANONICAL_UV_LOCK_CHECK_COMMAND,
+        CI_WORKFLOW_PATH,
+        LOCKED_REQUIREMENTS_EXPORT_PATH,
+        UV_LOCK_CHECK_COMMAND,
+        ci_install_evidence_content,
+        collect_ci_install_contract,
+    )
     from ops.scripts.wiki_manifest import build_manifest
 else:
     from ops.scripts.artifact_freshness_runtime import (
@@ -40,19 +47,19 @@ else:
     from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_PROVENANCE_SCHEMA_PATH
     from ops.scripts.wiki_manifest import build_manifest
 
+    from .ci_install_proof_runtime import (
+        CANONICAL_UV_LOCK_CHECK_COMMAND,
+        CI_WORKFLOW_PATH,
+        LOCKED_REQUIREMENTS_EXPORT_PATH,
+        UV_LOCK_CHECK_COMMAND,
+        ci_install_evidence_content,
+        collect_ci_install_contract,
+    )
+
 
 SUPPLY_CHAIN_PROVENANCE_SCHEMA = SUPPLY_CHAIN_PROVENANCE_SCHEMA_PATH
 DEFAULT_OUT = "ops/reports/supply-chain-provenance.json"
-CI_WORKFLOW_PATH = ".github/workflows/ci.yml"
-LOCKED_REQUIREMENTS_EXPORT_PATH = "tmp/locked-requirements.ci.txt"
 SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_PATH = "ops/reports/source-package-clean-extract.json"
-UV_LOCK_CHECK_COMMAND = "uv lock --check"
-UV_CANONICAL_INDEX_URL = "https://pypi.org/simple"
-CANONICAL_UV_LOCK_CHECK_COMMAND = (
-    f'UV_DEFAULT_INDEX="{UV_CANONICAL_INDEX_URL}" '
-    f'{UV_LOCK_CHECK_COMMAND} --default-index "{UV_CANONICAL_INDEX_URL}"'
-)
-MAKE_UV_LOCK_CHECK_COMMAND = "make uv-lock-check"
 CANONICAL_DEPENDENCY_INPUTS = (
     "pyproject.toml",
     "uv.lock",
@@ -65,44 +72,6 @@ DEPENDENCY_INPUTS = (
     *CANONICAL_DEPENDENCY_INPUTS,
     *COMPATIBILITY_DEPENDENCY_INPUTS,
 )
-PIP_INSTALL_LINE_PATTERN = re.compile(r"python\s+-m\s+pip\s+install\b", flags=re.IGNORECASE)
-REQUIREMENTS_DEV_INSTALL_PATTERN = re.compile(
-    r"python\s+-m\s+pip\s+install\b[^\n#]*\s-r\s+requirements-dev\.txt(?:\s|$)",
-    flags=re.IGNORECASE,
-)
-EDITABLE_INSTALL_PATTERN = re.compile(
-    r"python\s+-m\s+pip\s+install\b[^\n#]*\s-e\s+\.(?:\s|$)",
-    flags=re.IGNORECASE,
-)
-BUILD_PACKAGE_PATTERN = re.compile(
-    r"python\s+-m\s+pip\s+install\b[^\n#]*\sbuild(?:\s|$)",
-    flags=re.IGNORECASE,
-)
-LOCKED_REQUIREMENTS_INSTALL_PATTERN = re.compile(
-    rf"python\s+-m\s+pip\s+install\b[^\n#]*\s-r\s+{re.escape(LOCKED_REQUIREMENTS_EXPORT_PATH)}(?:\s|$)",
-    flags=re.IGNORECASE,
-)
-
-
-def _line_has_tokens(line: str, tokens: tuple[str, ...]) -> bool:
-    normalized = line.strip()
-    return all(token in normalized for token in tokens)
-
-
-def _line_enforces_canonical_uv_lock_check(line: str) -> bool:
-    normalized = line.strip()
-    if MAKE_UV_LOCK_CHECK_COMMAND in normalized:
-        return True
-    has_uv_check = _line_has_tokens(normalized, ("uv lock", "--check"))
-    has_canonical_index_flag = _line_has_tokens(
-        normalized,
-        ("--default-index", UV_CANONICAL_INDEX_URL),
-    )
-    has_canonical_index_env = _line_has_tokens(
-        normalized,
-        ("UV_DEFAULT_INDEX", UV_CANONICAL_INDEX_URL),
-    )
-    return has_uv_check and has_canonical_index_flag and has_canonical_index_env
 
 
 def sha256_file(path: Path) -> str:
@@ -330,41 +299,13 @@ def ci_install_proof(vault: Path) -> dict:
     if not path.exists():
         return proof
 
-    content = path.read_text(encoding="utf-8")
-    command_lines = []
-    lock_check_commands = []
-    exports_frozen_uv_lock = False
-    checks_uv_lock_freshness = False
-    for line in content.splitlines():
-        if _line_enforces_canonical_uv_lock_check(line):
-            checks_uv_lock_freshness = True
-            lock_check_commands.append(line.strip())
-        if _line_has_tokens(line, ("uv export", "--frozen", LOCKED_REQUIREMENTS_EXPORT_PATH)):
-            exports_frozen_uv_lock = True
-        match = PIP_INSTALL_LINE_PATTERN.search(line)
-        if match is None:
-            continue
-        command_lines.append(line[match.start():].strip())
-    installs_locked_requirements = bool(LOCKED_REQUIREMENTS_INSTALL_PATTERN.search(content))
-    installs_requirements_dev = bool(REQUIREMENTS_DEV_INSTALL_PATTERN.search(content))
-    install_resolution_mode = "unknown"
-    if exports_frozen_uv_lock and installs_locked_requirements:
-        install_resolution_mode = "canonical_lock_export"
-    elif installs_requirements_dev:
-        install_resolution_mode = "range_requirements"
+    _workflow_exists, content = ci_install_evidence_content(vault)
+    contract = collect_ci_install_contract(content)
     proof.update(
         {
             "workflow_exists": True,
             "workflow_sha256": sha256_file(path),
-            "install_commands": command_lines,
-            "lock_check_commands": lock_check_commands,
-            "checks_uv_lock_freshness": checks_uv_lock_freshness,
-            "exports_frozen_uv_lock": exports_frozen_uv_lock,
-            "installs_locked_requirements": installs_locked_requirements,
-            "installs_requirements_dev": installs_requirements_dev,
-            "editable_install": bool(EDITABLE_INSTALL_PATTERN.search(content)) or installs_locked_requirements,
-            "includes_build_package": bool(BUILD_PACKAGE_PATTERN.search(content)) or installs_locked_requirements,
-            "install_resolution_mode": install_resolution_mode,
+            **contract,
         }
     )
     return proof
@@ -543,7 +484,8 @@ def build_report(
         resolved_policy_path=resolved_policy_path,
         schema_path=SUPPLY_CHAIN_PROVENANCE_SCHEMA,
         source_paths=[
-            "ops/scripts/supply_chain_provenance.py",
+            "ops/scripts/supply_chain/supply_chain_provenance.py",
+            "ops/scripts/supply_chain/ci_install_proof_runtime.py",
             "ops/scripts/wiki_manifest.py",
             "ops/scripts/artifact_freshness_runtime.py",
         ],

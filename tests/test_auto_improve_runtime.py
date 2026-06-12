@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
 from ops.scripts.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluateRequest,
@@ -49,6 +50,7 @@ from tests.run_mechanism_experiment_test_utils import (
 from tests.test_codex_goal_contract import sample_goal_contract
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+pytestmark = pytest.mark.slow
 
 
 def _count_routing_decision_field(routing_reports: list[dict], field: str) -> dict[str, int]:

@@ -328,7 +328,7 @@ def build_report(
 
     if unavailable_reasons:
         status = "attention"
-    elif missing_checks or missing_branches or mismatched_branch_count:
+    elif missing_checks or unexpected_checks or missing_branches or mismatched_branch_count:
         status = "fail"
     else:
         status = "pass"
@@ -379,7 +379,7 @@ def build_report(
             "unavailable_reason_count": len(unavailable_reasons),
         },
         "required_status_checks": {
-            "status": "pass" if not missing_checks else "fail",
+            "status": "pass" if not missing_checks and not unexpected_checks else "fail",
             "expected": expected_checks,
             "observed": observed_checks,
             "missing": missing_checks,
