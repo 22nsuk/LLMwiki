@@ -560,6 +560,15 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `artifact-freshness` owner target to restore live counts. Excluded stale
   canonical reports need an explicit non-canonical marker, and preserved stale
   payloads need a preservation reason.
+  When artifact freshness reports `stale_routing.classification:
+  source_identity_only`, use `stale_routing.source_identity_owner_routes` to
+  choose the narrow owner lane for each stale artifact group before paying for
+  broad release evidence convergence. The top-level resettle target remains the
+  safe post-commit fallback, while owner routes point to concrete Make targets
+  such as `external-report-reference-manifest-settle`,
+  `test-execution-summary-full-current-or-refresh`,
+  `goal-runtime-publish-snapshot`, `supply-chain-artifacts-cached`, or
+  `release-source-package-check`.
 - `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
   and the release-run manifest.
 - `tmp/` holds scratch checks and candidate files that must not become authority.

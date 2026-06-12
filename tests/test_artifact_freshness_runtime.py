@@ -796,6 +796,14 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(report["stale_routing"]["source_identity_only_artifact_count"], 1)
             self.assertEqual(report["stale_routing"]["execution_blocking_artifact_count"], 0)
+            self.assertEqual(
+                report["stale_routing"]["source_identity_owner_routes"][0]["recommended_lane"],
+                "public-check-summary-current-or-refresh",
+            )
+            self.assertEqual(
+                report["stale_routing"]["source_identity_owner_routes"][0]["artifact_kinds"],
+                ["public_check_summary"],
+            )
 
     def test_canonical_report_source_revision_mismatch_overrides_self_declared_currentness(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -862,6 +870,10 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["stale_routing"]["recommended_lane"], "release-finality-resettle")
             self.assertEqual(report["stale_routing"]["source_identity_only_artifact_count"], 1)
             self.assertEqual(report["stale_routing"]["source_identity_only_issue_count"], 1)
+            self.assertEqual(
+                report["stale_routing"]["source_identity_owner_routes"][0]["recommended_targets"],
+                ["public-check-summary-current-or-refresh"],
+            )
 
     def test_learning_readiness_signoff_source_identity_drift_points_to_refresh_owner(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

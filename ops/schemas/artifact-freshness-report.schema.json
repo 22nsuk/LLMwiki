@@ -610,6 +610,77 @@
         "mtime_sensitive": { "type": "boolean" }
       }
     },
+    "source_identity_owner_route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_id",
+        "owner_surface",
+        "artifact_count",
+        "issue_count",
+        "artifact_kinds",
+        "recommended_lane",
+        "recommended_targets",
+        "reason_ids",
+        "sample_paths",
+        "summary"
+      ],
+      "properties": {
+        "route_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issue_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifact_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recommended_lane": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reason_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sample_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "stale_routing": {
       "type": "object",
       "additionalProperties": false,
@@ -622,6 +693,7 @@
         "problem_artifact_count",
         "source_identity_only_artifact_count",
         "source_identity_only_issue_count",
+        "source_identity_owner_routes",
         "schema_or_contract_debt_artifact_count",
         "mtime_or_test_target_debt_artifact_count",
         "execution_blocking_artifact_count",
@@ -674,6 +746,12 @@
         "source_identity_only_issue_count": {
           "type": "integer",
           "minimum": 0
+        },
+        "source_identity_owner_routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source_identity_owner_route"
+          }
         },
         "schema_or_contract_debt_artifact_count": {
           "type": "integer",

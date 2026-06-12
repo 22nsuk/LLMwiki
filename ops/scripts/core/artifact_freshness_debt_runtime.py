@@ -22,6 +22,7 @@ ROOT_EPHEMERAL_PATTERNS = [
 TOP_DEBT_LIMIT = 10
 TOP_DEBT_FILE_LIMIT = 10
 DEBT_QUEUE_PATH_LIMIT = 20
+SOURCE_IDENTITY_ROUTE_SAMPLE_PATH_LIMIT = 8
 OWNER_SURFACE_PREFIXES = (
     ("ops/reports/", "ops_reports"),
     ("ops/operator/", "operator_reports"),
@@ -66,6 +67,88 @@ ADVISORY_ONLY_MTIME_DRIFT_PATHS = {
     "ops/reports/generated-artifact-index.json",
 }
 LEARNING_READINESS_SIGNOFF_REPORT = "ops/reports/learning-readiness-signoff.json"
+SUPPLY_CHAIN_SOURCE_IDENTITY_KINDS = {
+    "cyclonedx_sbom",
+    "in_toto_statement",
+    "openvex_draft",
+    "sbom_export_mapping_report",
+    "sbom_readiness_gate_report",
+    "security_advisories_report",
+    "sigstore_bundle_verification",
+    "spdx_sbom",
+    "supply_chain_artifact_model",
+    "supply_chain_gate_report",
+    "supply_chain_provenance_report",
+}
+RELEASE_SOURCE_PACKAGE_SOURCE_IDENTITY_KINDS = {
+    "source_package_clean_extract",
+}
+RELEASE_FINALITY_SOURCE_IDENTITY_KINDS = {
+    "artifact_freshness_report",
+    "auto_improve_readiness_report",
+    "external_report_action_matrix",
+    "generated_artifact_index_report",
+    "release_clean_blocker_ledger",
+    "release_closeout_fixed_point_report",
+    "release_closeout_sealed_rehearsal_check",
+    "release_closeout_summary",
+    "release_evidence_cohort",
+    "release_evidence_dashboard",
+    "release_lane_summary",
+    "release_risk_taxonomy_matrix",
+}
+GOAL_RUNTIME_SOURCE_IDENTITY_KINDS = {
+    "codex_goal_contract",
+    "codex_goal_prompt",
+    "goal_run_status",
+    "goal_runtime_certificate",
+    "goal_worktree_guard",
+    "remediation_backlog",
+    "self_improvement_negative_lessons",
+    "session_synopsis",
+}
+LEARNING_SOURCE_IDENTITY_KINDS = {
+    "learning_claim_activation_report",
+    "learning_claim_evidence_bundle",
+    "learning_claim_unlock_review",
+    "learning_confirmed_evidence_cohort",
+    "learning_confirmed_legacy_reconstruction",
+    "learning_delta_scoreboard",
+    "learning_readiness_signoff_revalidation",
+}
+MAINTAINABILITY_SOURCE_IDENTITY_KINDS = {
+    "function_budget_refactor_proposals",
+    "strict_lint_inventory",
+    "strict_type_inventory",
+    "structural_complexity_budget_report",
+}
+MECHANISM_SOURCE_IDENTITY_TARGETS = {
+    "mechanism_review_candidates_report": (
+        "mechanism-review",
+        ("mechanism-review",),
+        "mechanism_review_candidates_source_identity",
+    ),
+    "mutation_proposals_report": (
+        "mutation-proposal",
+        ("mutation-proposal",),
+        "mutation_proposals_source_identity",
+    ),
+    "outcome_metrics_report": (
+        "outcome-metrics",
+        ("outcome-metrics",),
+        "outcome_metrics_source_identity",
+    ),
+    "outcome_provenance_gate_policy": (
+        "outcome-provenance-gate-policy",
+        ("outcome-provenance-gate-policy",),
+        "outcome_provenance_source_identity",
+    ),
+    "promotion_decision_trends": (
+        "promotion-decision-trends",
+        ("promotion-decision-trends",),
+        "promotion_decision_trends_source_identity",
+    ),
+}
 
 
 def owner_surface(rel_path: str) -> str:
@@ -626,6 +709,208 @@ def _is_source_identity_only_record(record: dict[str, Any]) -> bool:
     return all(issue.startswith(SOURCE_IDENTITY_ISSUES) for issue in issues)
 
 
+def _source_identity_test_summary_lane(rel_path: str) -> tuple[str, tuple[str, ...], str]:
+    if rel_path.endswith("/test-execution-summary-full.json"):
+        return (
+            "test-execution-summary-full-current-or-refresh",
+            ("test-execution-summary-full-current-or-refresh",),
+            "full_suite_test_summary_source_identity",
+        )
+    if rel_path.endswith("/test-execution-summary-public.json"):
+        return (
+            "test-execution-summary-public",
+            ("test-execution-summary-public", "public-check-summary-current-or-refresh"),
+            "public_test_summary_source_identity",
+        )
+    return (
+        "test-execution-summary-current-or-refresh",
+        ("test-execution-summary-current-or-refresh",),
+        "report_contract_test_summary_source_identity",
+    )
+
+
+def _source_identity_release_smoke_lane(rel_path: str) -> tuple[str, tuple[str, ...], str]:
+    if rel_path.endswith("/release-smoke-report-fast.json"):
+        return (
+            "release-smoke-fast-refresh-check",
+            ("release-smoke-fast-refresh-check",),
+            "release_smoke_fast_source_identity",
+        )
+    return (
+        "release-smoke-full-reuse",
+        ("release-smoke-full-reuse",),
+        "release_smoke_full_source_identity",
+    )
+
+
+def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
+    rel_path = str(record.get("path", ""))
+    surface = str(record.get("owner_surface") or owner_surface(rel_path))
+    artifact_kind = str(record.get("artifact_kind", ""))
+    next_action = str(record.get("recommended_next_action", ""))
+    route_id: str
+    lane: str
+    targets: tuple[str, ...]
+    reason_id: str
+
+    if surface == "external_reports":
+        route_id = "external_reports_reference_manifest"
+        lane = "external-report-reference-manifest-settle"
+        targets = (
+            "external-report-reference-manifest-settle",
+            "external-report-lifecycle-refresh",
+        )
+        reason_id = "external_report_reference_manifest_source_identity"
+    elif artifact_kind == "test_execution_summary":
+        lane, targets, reason_id = _source_identity_test_summary_lane(rel_path)
+        route_id = f"ops_reports_{lane.replace('-', '_')}"
+    elif artifact_kind == "public_check_summary":
+        route_id = "ops_reports_public_check_summary"
+        lane = "public-check-summary-current-or-refresh"
+        targets = ("public-check-summary-current-or-refresh",)
+        reason_id = "public_check_summary_source_identity"
+    elif (
+        rel_path == LEARNING_READINESS_SIGNOFF_REPORT
+        or next_action == "refresh_learning_readiness_signoff"
+    ):
+        route_id = "ops_reports_learning_readiness_signoff"
+        lane = "learning-readiness-signoff-refresh"
+        targets = ("learning-readiness-signoff-refresh", "learning-readiness-signoff-revalidation")
+        reason_id = "learning_readiness_signoff_source_identity"
+    elif artifact_kind in LEARNING_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_learning_evidence"
+        lane = "learning-claim-activation-report"
+        targets = (
+            "learning-claim-activation-report",
+            "learning-readiness-signoff-revalidation",
+        )
+        reason_id = "learning_evidence_source_identity"
+    elif artifact_kind in GOAL_RUNTIME_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_goal_runtime"
+        lane = "goal-runtime-publish-snapshot"
+        targets = ("goal-runtime-publish-snapshot", "goal-runtime-certificate")
+        reason_id = "goal_runtime_source_identity"
+    elif artifact_kind in SUPPLY_CHAIN_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_supply_chain"
+        lane = "supply-chain-artifacts-cached"
+        targets = ("supply-chain-artifacts-cached",)
+        reason_id = "supply_chain_source_identity"
+    elif artifact_kind == "release_smoke_report":
+        lane, targets, reason_id = _source_identity_release_smoke_lane(rel_path)
+        route_id = f"ops_reports_{lane.replace('-', '_')}"
+    elif artifact_kind in RELEASE_SOURCE_PACKAGE_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_release_source_package"
+        lane = "release-source-package-check"
+        targets = ("release-source-package-check",)
+        reason_id = "release_source_package_source_identity"
+    elif artifact_kind in MAINTAINABILITY_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_maintainability"
+        lane = "function-budget-refactor-proposals"
+        targets = (
+            "function-budget-refactor-proposals",
+            "lint-uplift-plan",
+            "type-uplift-plan",
+            "complexity-budget",
+        )
+        reason_id = "maintainability_evidence_source_identity"
+    elif artifact_kind in MECHANISM_SOURCE_IDENTITY_TARGETS:
+        lane, targets, reason_id = MECHANISM_SOURCE_IDENTITY_TARGETS[artifact_kind]
+        route_id = f"ops_reports_{lane.replace('-', '_')}"
+    elif artifact_kind in RELEASE_FINALITY_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_release_finality"
+        lane = "release-finality-resettle"
+        targets = ("release-finality-resettle", "release-post-commit-finalize")
+        reason_id = "release_finality_source_identity"
+    elif artifact_kind.startswith("raw_registry_"):
+        route_id = "ops_reports_registry_preflight"
+        lane = "registry-preflight"
+        targets = ("registry-preflight",)
+        reason_id = "registry_preflight_source_identity"
+    elif artifact_kind == "github_governance_live_drift_verification":
+        route_id = "ops_reports_github_governance"
+        lane = "github-governance-live-drift"
+        targets = ("github-governance-live-drift",)
+        reason_id = "github_governance_source_identity"
+    elif artifact_kind == "bootstrap_preflight_report":
+        route_id = "ops_reports_bootstrap_preflight"
+        lane = "bootstrap-preflight"
+        targets = ("bootstrap-preflight",)
+        reason_id = "bootstrap_preflight_source_identity"
+    else:
+        route_id = f"{surface}_source_identity_resettle"
+        lane = "release-finality-resettle"
+        targets = ("release-finality-resettle", "release-post-commit-finalize")
+        reason_id = "source_identity_resettle_fallback"
+
+    return {
+        "route_id": route_id,
+        "owner_surface": surface,
+        "recommended_lane": lane,
+        "recommended_targets": list(targets),
+        "reason_id": reason_id,
+    }
+
+
+def _source_identity_owner_routes(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    routes: dict[tuple[str, str], dict[str, Any]] = {}
+    for record in records:
+        descriptor = _source_identity_route_descriptor(record)
+        key = (str(descriptor["owner_surface"]), str(descriptor["route_id"]))
+        route = routes.setdefault(
+            key,
+            {
+                "route_id": descriptor["route_id"],
+                "owner_surface": descriptor["owner_surface"],
+                "artifact_count": 0,
+                "issue_count": 0,
+                "artifact_kinds": set(),
+                "recommended_lane": descriptor["recommended_lane"],
+                "recommended_targets": descriptor["recommended_targets"],
+                "reason_ids": set(),
+                "sample_paths": [],
+            },
+        )
+        route["artifact_count"] += 1
+        route["issue_count"] += len(_record_source_identity_issues(record))
+        artifact_kind = str(record.get("artifact_kind", ""))
+        if artifact_kind:
+            route["artifact_kinds"].add(artifact_kind)
+        route["reason_ids"].add(descriptor["reason_id"])
+        sample_paths = route["sample_paths"]
+        if len(sample_paths) < SOURCE_IDENTITY_ROUTE_SAMPLE_PATH_LIMIT:
+            sample_paths.append(str(record.get("path", "")))
+
+    result: list[dict[str, Any]] = []
+    for route in routes.values():
+        artifact_kinds = sorted(route["artifact_kinds"])
+        reason_ids = sorted(route["reason_ids"])
+        result.append(
+            {
+                "route_id": route["route_id"],
+                "owner_surface": route["owner_surface"],
+                "artifact_count": route["artifact_count"],
+                "issue_count": route["issue_count"],
+                "artifact_kinds": artifact_kinds,
+                "recommended_lane": route["recommended_lane"],
+                "recommended_targets": route["recommended_targets"],
+                "reason_ids": reason_ids,
+                "sample_paths": sorted(route["sample_paths"]),
+                "summary": (
+                    f"{route['artifact_count']} {route['owner_surface']} source-identity "
+                    f"artifact(s) route to {route['recommended_lane']}."
+                ),
+            }
+        )
+    return sorted(
+        result,
+        key=lambda item: (
+            str(item["owner_surface"]),
+            str(item["recommended_lane"]),
+            str(item["route_id"]),
+        ),
+    )
+
+
 def _artifact_problem_records(artifact_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         record
@@ -650,6 +935,7 @@ def stale_routing(
     source_identity_issue_count = sum(
         len(_record_source_identity_issues(record)) for record in source_identity_records
     )
+    source_identity_owner_routes = _source_identity_owner_routes(source_identity_records)
     schema_or_contract_records = [
         record
         for record in problem_records
@@ -751,6 +1037,7 @@ def stale_routing(
         "problem_artifact_count": len(problem_records) + root_ephemeral_count + non_utf8_count,
         "source_identity_only_artifact_count": len(source_identity_records),
         "source_identity_only_issue_count": source_identity_issue_count,
+        "source_identity_owner_routes": source_identity_owner_routes,
         "schema_or_contract_debt_artifact_count": len(schema_or_contract_records),
         "mtime_or_test_target_debt_artifact_count": len(mtime_or_test_target_records),
         "execution_blocking_artifact_count": execution_blocking_artifact_count,

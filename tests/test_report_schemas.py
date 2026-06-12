@@ -495,6 +495,13 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(missing_gate_effect, schema),
         )
 
+        missing_source_identity_routes = copy.deepcopy(report)
+        missing_source_identity_routes["stale_routing"].pop("source_identity_owner_routes", None)
+        self.assertIn(
+            "$.stale_routing: missing required property 'source_identity_owner_routes'",
+            validate_with_schema(missing_source_identity_routes, schema),
+        )
+
         for legacy_gate_effect in ("active", "review_required", "shadow"):
             invalid = copy.deepcopy(report)
             invalid["gate_effect"] = legacy_gate_effect
