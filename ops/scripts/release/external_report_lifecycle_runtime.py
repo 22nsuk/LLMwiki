@@ -11,6 +11,7 @@ from typing import Any
 from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_CLAIM_BLOCKER,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
 )
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -393,6 +394,16 @@ REASON_PREFIX_TARGETS: tuple[tuple[tuple[str, ...], str, str, str, tuple[str, ..
             "release-auto-promotion-ready-plan",
         ),
     ),
+    (
+        ("goal_run_status_",),
+        "goal_runtime_status",
+        "goal_runtime_status",
+        GATE_EFFECT_CLAIM_BLOCKER,
+        (
+            "goal-run-status",
+            "goal-runtime-reconcile",
+        ),
+    ),
 )
 REASON_EXACT_TARGETS: dict[str, tuple[str, str, str, tuple[str, ...]]] = {
     "release_auto_promotion_not_allowed": (
@@ -463,6 +474,28 @@ def _goal_status_contract_digest(vault: Path, goal: dict[str, Any]) -> str:
         contract = load_json_object(vault / contract_path)
         return _canonical_json_digest(contract) if contract else ""
     return _current_contract_digest(vault)
+
+
+def _goal_runtime_certificate_noncertifiable_closed_failure(
+    vault: Path,
+    goal_status_report: dict[str, Any],
+) -> bool:
+    certificate = load_json_object(vault / "ops/reports/goal-runtime-certificate.json")
+    if (
+        certificate.get("artifact_kind") != "goal_runtime_certificate"
+        or certificate.get("producer") != "ops.scripts.goal_runtime_certificate_report"
+    ):
+        return False
+    diagnosis = as_dict(certificate.get("diagnosis"))
+    if diagnosis.get("certificate_failure_class") != "noncertifiable_closed_failure":
+        return False
+    run = as_dict(goal_status_report.get("run"))
+    current_scope = as_dict(diagnosis.get("current_scope"))
+    return bool(
+        current_scope.get("run_id") == run.get("run_id")
+        and current_scope.get("run_status") == run.get("status")
+        and current_scope.get("runtime_mode") == run.get("runtime_mode")
+    )
 
 
 def _all_evidence_status(existing_count: int, expected_count: int) -> str | None:
@@ -848,6 +881,15 @@ def goal_run_status_audit_resume_status(
         and health.get("can_promote_result") is False
         and runtime_certificate.get("status") in {"pending", "complete"}
     )
+    noncertifiable_closed_failure_state = bool(
+        report.get("status") == "attention"
+        and health.get("promotion_status") == "allowed"
+        and health.get("can_promote_result") is True
+        and runtime_certificate.get("status") == "pending"
+        and runtime_certificate.get("certificate_status") == "unverified"
+        and runtime_certificate.get("mode") == "self_improvement_loop"
+        and _goal_runtime_certificate_noncertifiable_closed_failure(vault, report)
+    )
     verified_completed_state = bool(
         report.get("status") == "pass"
         and health.get("promotion_status") == "allowed"
@@ -870,7 +912,11 @@ def goal_run_status_audit_resume_status(
         and health.get("command_heartbeat_status") in {"current", "stale", "not_recorded"}
         and health.get("backoff_status") in {"inactive", "active", "expired"}
         and health.get("resume_status") in {"not_requested", "ready"}
-        and (blocked_pending_state or verified_completed_state)
+        and (
+            blocked_pending_state
+            or noncertifiable_closed_failure_state
+            or verified_completed_state
+        )
         and runtime_certificate.get("mode") == "self_improvement_loop"
     ):
         return "implemented"
@@ -1966,6 +2012,92 @@ def goal_execution_runtime_certificate_reason_ids(vault: Path) -> list[str]:
     return _dedupe_reason_ids(reasons)
 
 
+def goal_run_status_audit_resume_reason_ids(vault: Path) -> list[str]:
+    report = load_json_object(vault / "ops/reports/goal-run-status.json")
+    if not report:
+        return ["goal_run_status_missing"]
+    goal = as_dict(report.get("goal"))
+    backend = as_dict(goal.get("backend"))
+    artifacts = as_dict(report.get("artifacts"))
+    health = as_dict(report.get("health"))
+    runtime_certificate = as_dict(report.get("runtime_certificate"))
+    contract_digest = _goal_status_contract_digest(vault, goal)
+    status_report_path = str(artifacts.get("status_report_path", "")).strip()
+    status_report_path_valid = status_report_path == "ops/reports/goal-run-status.json" or (
+        status_report_path.startswith("runs/goal-")
+        and status_report_path.endswith("/state/goal-run-status.json")
+    )
+    artifact_paths = {
+        "status_markdown_path": "runs/goal-",
+        "audit_log_path": "runs/goal-",
+        "resume_metadata_path": "runs/goal-",
+        "checkpoint_command_log_path": "runs/goal-",
+    }
+    paths_valid = all(
+        str(artifacts.get(key, "")).startswith(prefix)
+        if prefix.endswith("-")
+        else artifacts.get(key) == prefix
+        for key, prefix in artifact_paths.items()
+    )
+    blocked_pending_state = bool(
+        health.get("promotion_status") == "blocked"
+        and health.get("can_promote_result") is False
+        and runtime_certificate.get("status") in {"pending", "complete"}
+    )
+    noncertifiable_closed_failure_state = bool(
+        report.get("status") == "attention"
+        and health.get("promotion_status") == "allowed"
+        and health.get("can_promote_result") is True
+        and runtime_certificate.get("status") == "pending"
+        and runtime_certificate.get("certificate_status") == "unverified"
+        and runtime_certificate.get("mode") == "self_improvement_loop"
+        and _goal_runtime_certificate_noncertifiable_closed_failure(vault, report)
+    )
+    verified_completed_state = bool(
+        report.get("status") == "pass"
+        and health.get("promotion_status") == "allowed"
+        and health.get("can_promote_result") is True
+        and runtime_certificate.get("status") == "complete"
+        and runtime_certificate.get("certificate_status") == "verified"
+        and runtime_certificate.get("full_gate_clean") is True
+        and not as_list(runtime_certificate.get("promotion_blockers"))
+    )
+    reasons: list[str] = []
+    if report.get("artifact_kind") != "goal_run_status":
+        reasons.append("goal_run_status_wrong_artifact_kind")
+    if report.get("producer") != "ops.scripts.goal_run_status":
+        reasons.append("goal_run_status_wrong_producer")
+    if report.get("status") not in {"pass", "attention", "fail"}:
+        reasons.append("goal_run_status_unrecognized_status")
+    if not bool(backend.get("process_persistent")):
+        reasons.append("goal_run_status_backend_not_process_persistent")
+    if goal.get("contract_sha256") != contract_digest:
+        reasons.append("goal_run_status_contract_digest_mismatch")
+    if not status_report_path_valid:
+        reasons.append("goal_run_status_report_path_invalid")
+    if not paths_valid:
+        reasons.append("goal_run_status_artifact_paths_invalid")
+    if health.get("heartbeat_status") not in {"current", "stale"}:
+        reasons.append("goal_run_status_heartbeat_invalid")
+    if health.get("checkpoint_status") not in {"current", "stale"}:
+        reasons.append("goal_run_status_checkpoint_invalid")
+    if health.get("command_heartbeat_status") not in {"current", "stale", "not_recorded"}:
+        reasons.append("goal_run_status_command_heartbeat_invalid")
+    if health.get("backoff_status") not in {"inactive", "active", "expired"}:
+        reasons.append("goal_run_status_backoff_invalid")
+    if health.get("resume_status") not in {"not_requested", "ready"}:
+        reasons.append("goal_run_status_resume_invalid")
+    if not (
+        blocked_pending_state
+        or noncertifiable_closed_failure_state
+        or verified_completed_state
+    ):
+        reasons.append("goal_run_status_promotion_state_invalid")
+    if runtime_certificate.get("mode") != "self_improvement_loop":
+        reasons.append("goal_run_status_wrong_runtime_mode")
+    return _dedupe_reason_ids(reasons)
+
+
 def action_status_reason_ids(
     vault: Path,
     action_id: str,
@@ -1990,6 +2122,8 @@ def action_status_reason_ids(
         reasons.extend(collaboration_governance_surface_reason_ids(vault))
     elif action_id == "goal_execution_runtime_certificate":
         reasons.extend(goal_execution_runtime_certificate_reason_ids(vault))
+    elif action_id == "goal_run_status_audit_resume":
+        reasons.extend(goal_run_status_audit_resume_reason_ids(vault))
     elif action_id == "artifact_freshness_performance_observability":
         reasons.extend(
             artifact_freshness_performance_observability_reason_ids(
@@ -2087,11 +2221,25 @@ def _action_status_reason_detail(reason_id: str, *, fallback_target: str) -> dic
     for mapping in (
         MAINTAINABILITY_REASON_TARGETS,
         SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS,
-        GITHUB_LIVE_GOVERNANCE_REASON_TARGETS,
     ):
         mapped_detail = _mapped_reason_detail(reason_id, mapping)
         if mapped_detail is not None:
             return mapped_detail
+    mapped_detail = _mapped_reason_detail(
+        reason_id,
+        GITHUB_LIVE_GOVERNANCE_REASON_TARGETS,
+        gate_effect=GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+    )
+    if mapped_detail is not None:
+        return mapped_detail
+    if reason_id == "github_governance_live_drift_gap":
+        archive_live_detail = _mapped_reason_detail(
+            reason_id,
+            ARCHIVE_RECONCILIATION_REASON_TARGETS,
+            gate_effect=GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+        )
+        if archive_live_detail is not None:
+            return archive_live_detail
     archive_detail = _mapped_reason_detail(reason_id, ARCHIVE_RECONCILIATION_REASON_TARGETS)
     if archive_detail is not None:
         return archive_detail

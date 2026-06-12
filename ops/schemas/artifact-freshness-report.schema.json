@@ -846,6 +846,8 @@
         "retention_policy",
         "currentness_status",
         "source_revision_status",
+        "input_fingerprint_status",
+        "input_fingerprint_mismatch_keys",
         "file_mtime_utc",
         "mtime_source",
         "mtime_status",
@@ -918,6 +920,23 @@
             "unknown",
             "not_applicable"
           ]
+        },
+        "input_fingerprint_status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "not_applicable"
+          ]
+        },
+        "input_fingerprint_mismatch_keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
         },
         "currentness_status": {
           "type": "string"

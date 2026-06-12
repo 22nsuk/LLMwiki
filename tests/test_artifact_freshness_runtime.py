@@ -18,6 +18,10 @@ from ops.scripts.artifact_freshness_runtime import (
     write_report,
 )
 from ops.scripts.command_runtime import TimedProcessResult
+from ops.scripts.external_report_action_matrix import (
+    build_report as build_external_report_action_matrix,
+    write_report as write_external_report_action_matrix,
+)
 from ops.scripts.generated_artifact_index import (
     build_report as build_generated_artifact_index,
     write_report as write_generated_artifact_index,
@@ -316,6 +320,95 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["summary"]["stale_artifact_count"], 0)
             self.assertEqual(report["summary"]["mtime_sensitive_artifact_count"], 1)
             self.assertEqual(report["summary"]["mtime_sensitive_attention_artifact_count"], 1)
+
+    def test_source_current_producer_input_fingerprint_drift_is_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            action_matrix = build_external_report_action_matrix(
+                vault,
+                context=fixed_context(),
+            )
+            action_matrix_path = write_external_report_action_matrix(vault, action_matrix)
+            action_matrix["input_fingerprints"] = {
+                **action_matrix["input_fingerprints"],
+                "action_catalog": "stale-fingerprint",
+            }
+            action_matrix_path.write_text(
+                json.dumps(action_matrix, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            generated_index = build_generated_artifact_index(vault, context=fixed_context())
+            generated_index_path = write_generated_artifact_index(vault, generated_index)
+            generated_index["input_fingerprints"] = {
+                **generated_index["input_fingerprints"],
+                "external_report_action_matrix_statuses": "stale-fingerprint",
+            }
+            generated_index_path.write_text(
+                json.dumps(generated_index, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            report = build_report(
+                vault,
+                context=fixed_context(),
+                mtime_source="embedded_currentness",
+            )
+            schema = load_schema(REPORT_SCHEMA_PATH)
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "attention")
+            self.assertEqual(report["gate_effect"], "claim_blocker")
+            self.assertGreaterEqual(report["summary"]["stale_artifact_count"], 2)
+            self.assertGreaterEqual(
+                report["summary"]["operational_attention_artifact_count"],
+                2,
+            )
+
+            records = {
+                record["path"]: record
+                for record in report["artifact_records"]
+                if record["path"]
+                in {
+                    "ops/reports/external-report-action-matrix.json",
+                    "ops/reports/generated-artifact-index.json",
+                }
+            }
+            expected = {
+                "ops/reports/external-report-action-matrix.json": "action_catalog",
+                "ops/reports/generated-artifact-index.json": (
+                    "external_report_action_matrix_statuses"
+                ),
+            }
+            self.assertEqual(set(records), set(expected))
+            for path, expected_key in expected.items():
+                with self.subTest(path=path):
+                    record = records[path]
+                    self.assertEqual(record["source_revision_status"], "current")
+                    self.assertEqual(record["source_tree_fingerprint_status"], "current")
+                    self.assertEqual(record["input_fingerprint_status"], "stale")
+                    self.assertEqual(
+                        record["input_fingerprint_mismatch_keys"],
+                        [expected_key],
+                    )
+                    self.assertEqual(record["currentness_status"], "stale")
+                    self.assertIn(
+                        f"input_fingerprint_mismatch:{expected_key}",
+                        record["issues"],
+                    )
+                    self.assertEqual(
+                        record["contract_issue_class"],
+                        "operational_attention",
+                    )
+                    self.assertEqual(record["gate_effect"], "claim_blocker")
+                    self.assertEqual(
+                        record["recommended_next_action"],
+                        "regenerate_canonical_report",
+                    )
+                    self.assertFalse(record["safe_to_backfill"])
 
     def test_zip_info_mtime_source_uses_archive_metadata_instead_of_filesystem_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

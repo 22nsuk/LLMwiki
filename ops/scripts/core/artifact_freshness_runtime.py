@@ -185,6 +185,8 @@ class _ArtifactRecordCurrentnessState:
     declared_currentness_status: str
     source_tree_fingerprint_status: str
     source_revision_status: str
+    input_fingerprint_status: str
+    input_fingerprint_mismatch_keys: list[str]
     currentness_status: str
     issues: list[str]
 
@@ -552,6 +554,79 @@ def _source_revision_status(
     return "current" if observed == current else "stale"
 
 
+INPUT_FINGERPRINT_CHECKS = {
+    "external_report_action_matrix": "ops/reports/external-report-action-matrix.json",
+    "generated_artifact_index_report": "ops/reports/generated-artifact-index.json",
+}
+
+
+def _live_producer_input_fingerprints(
+    vault: Path,
+    *,
+    artifact_kind: str,
+) -> dict[str, str] | None:
+    if artifact_kind == "external_report_action_matrix":
+        from ops.scripts.release.external_report_action_matrix import (
+            build_report as build_action_matrix_report,
+        )
+
+        payload = build_action_matrix_report(vault)
+    elif artifact_kind == "generated_artifact_index_report":
+        from ops.scripts.core.generated_artifact_index import (
+            build_report as build_generated_artifact_index_report,
+        )
+
+        payload = build_generated_artifact_index_report(vault)
+    else:
+        return None
+    input_fingerprints = payload.get("input_fingerprints")
+    if not isinstance(input_fingerprints, dict):
+        return None
+    return {
+        str(key): str(value)
+        for key, value in input_fingerprints.items()
+        if str(key)
+    }
+
+
+def _input_fingerprint_status(
+    vault: Path,
+    *,
+    rel_path: str,
+    normalized_payload: dict[str, Any],
+    schema_validation_status: str,
+) -> tuple[str, list[str]]:
+    artifact_kind = str(normalized_payload.get("artifact_kind", "")).strip()
+    expected = INPUT_FINGERPRINT_CHECKS.get(artifact_kind)
+    if expected is None or expected != rel_path:
+        return "not_applicable", []
+    if schema_validation_status != "pass":
+        return "not_applicable", []
+    if str(normalized_payload.get("artifact_status", "")).strip() != "current":
+        return "not_applicable", []
+    if str(normalized_payload.get("retention_policy", "")).strip() != "canonical_report":
+        return "not_applicable", []
+    stored = normalized_payload.get("input_fingerprints")
+    if not isinstance(stored, dict):
+        return "unknown", []
+    try:
+        live = _live_producer_input_fingerprints(vault, artifact_kind=artifact_kind)
+    except (OSError, TypeError, ValueError, RuntimeError):
+        return "unknown", []
+    if live is None:
+        return "unknown", []
+    mismatch_keys = sorted(
+        {
+            str(key)
+            for key in set(stored) | set(live)
+            if stored.get(key) != live.get(key)
+        }
+    )
+    if mismatch_keys:
+        return "stale", mismatch_keys
+    return "current", []
+
+
 def _schema_validation(
     vault: Path,
     payload: dict[str, Any],
@@ -741,10 +816,17 @@ def _artifact_record_currentness_state(
         schema_validation_status=schema_validation_status,
         freshness_context=freshness_context,
     )
+    input_fingerprint_status, input_fingerprint_mismatch_keys = _input_fingerprint_status(
+        vault,
+        rel_path=rel_path,
+        normalized_payload=normalized_payload,
+        schema_validation_status=schema_validation_status,
+    )
     currentness_status = _computed_currentness_status(
         declared_currentness_status=declared_currentness_status,
         source_tree_fingerprint_status=source_tree_fingerprint_status,
         source_revision_status=source_revision_status,
+        input_fingerprint_status=input_fingerprint_status,
     )
     issues: list[str] = []
     if source_tree_fingerprint_status == "stale":
@@ -755,10 +837,19 @@ def _artifact_record_currentness_state(
         issues.append("source_revision_mismatch")
     elif source_revision_status == "unknown":
         issues.append("source_revision_unknown")
+    if input_fingerprint_status == "stale":
+        issues.extend(
+            f"input_fingerprint_mismatch:{key}"
+            for key in input_fingerprint_mismatch_keys
+        )
+    elif input_fingerprint_status == "unknown":
+        issues.append("input_fingerprint_unknown")
     return _ArtifactRecordCurrentnessState(
         declared_currentness_status=declared_currentness_status,
         source_tree_fingerprint_status=source_tree_fingerprint_status,
         source_revision_status=source_revision_status,
+        input_fingerprint_status=input_fingerprint_status,
+        input_fingerprint_mismatch_keys=input_fingerprint_mismatch_keys,
         currentness_status=currentness_status,
         issues=issues,
     )
@@ -826,6 +917,7 @@ def _json_artifact_record(
     ) and (
         currentness.source_tree_fingerprint_status != "stale"
         and currentness.source_revision_status != "stale"
+        and currentness.input_fingerprint_status != "stale"
     )
     mtime_sensitive = mtime_status == "stale"
     issues = sorted(set(issues))
@@ -847,6 +939,8 @@ def _json_artifact_record(
         "declared_currentness_status": currentness.declared_currentness_status,
         "source_revision_status": currentness.source_revision_status,
         "source_tree_fingerprint_status": currentness.source_tree_fingerprint_status,
+        "input_fingerprint_status": currentness.input_fingerprint_status,
+        "input_fingerprint_mismatch_keys": currentness.input_fingerprint_mismatch_keys,
         "currentness_status": currentness.currentness_status,
         "file_mtime_utc": _format_mtime(source_mtime),
         "mtime_source": mtime_source,

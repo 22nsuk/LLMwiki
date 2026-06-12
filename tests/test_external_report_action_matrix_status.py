@@ -383,6 +383,11 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             supply_chain_action["current_status"],
             "partially_automated",
         )
+        self.assertEqual(supply_chain_action["source_action_status"], "implemented")
+        self.assertEqual(
+            supply_chain_action["verification_readiness_status"],
+            "operator_pending",
+        )
         self.assertIn(
             "supply_chain_sigstore_local_integrity_only",
             supply_chain_action["status_reason_ids"],
@@ -618,6 +623,8 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             item["action_id"]: item for item in report["action_items"]
         }["supply_chain_external_verification"]
         self.assertEqual(action["current_status"], "partially_automated")
+        self.assertEqual(action["source_action_status"], "implemented")
+        self.assertEqual(action["verification_readiness_status"], "operator_pending")
         self.assertIn(
             "supply_chain_release_attestation_missing",
             action["status_reason_ids"],
@@ -1168,6 +1175,11 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         actions = {item["action_id"]: item for item in report["action_items"]}
         action = actions["artifact_freshness_performance_observability"]
         self.assertEqual(action["current_status"], "partially_automated")
+        self.assertEqual(action["source_action_status"], "implemented")
+        self.assertEqual(
+            action["verification_readiness_status"],
+            "artifact_freshness_pending",
+        )
         self.assertEqual(action["status_reason_ids"], ["artifact_freshness_stable_contract_debt"])
         self.assertEqual(action["blocking_scopes"], ["artifact_freshness"])
         self.assertEqual(action["gate_effects"], ["advisory"])
@@ -1239,6 +1251,8 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "promotion_truth_ladder",
         ):
             self.assertEqual(actions[action_id]["current_status"], "implemented")
+            self.assertEqual(actions[action_id]["source_action_status"], "implemented")
+            self.assertEqual(actions[action_id]["verification_readiness_status"], "ready")
             self.assertEqual(actions[action_id]["status_reason_ids"], [])
             self.assertEqual(actions[action_id]["status_reason_details"], [])
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
@@ -1345,6 +1359,8 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         actions = {item["action_id"]: item for item in report["action_items"]}
         action = actions["full_suite_evidence_currentness"]
         self.assertEqual(action["current_status"], "requires_release_run_verification")
+        self.assertEqual(action["source_action_status"], "implemented")
+        self.assertEqual(action["verification_readiness_status"], "release_run_pending")
         self.assertEqual(action["blocking_scopes"], ["release_run"])
         self.assertEqual(action["gate_effects"], ["blocks_promotion"])
         self.assertEqual(action["strongest_gate_effect"], "blocks_promotion")
@@ -1379,6 +1395,11 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         actions = {item["action_id"]: item for item in report["action_items"]}
         action = actions["promotion_truth_ladder"]
         self.assertEqual(action["current_status"], "requires_release_run_verification")
+        self.assertEqual(action["source_action_status"], "implemented")
+        self.assertEqual(
+            action["verification_readiness_status"],
+            "promotion_readiness_pending",
+        )
         self.assertEqual(action["blocking_scopes"], ["unattended_promotion"])
         self.assertEqual(action["gate_effects"], ["blocks_promotion"])
         self.assertEqual(action["strongest_gate_effect"], "blocks_promotion")
@@ -1864,6 +1885,14 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["goal_execution_runtime_certificate"]["current_status"],
             "requires_release_run_verification",
         )
+        self.assertEqual(
+            actions["goal_execution_runtime_certificate"]["source_action_status"],
+            "implemented",
+        )
+        self.assertEqual(
+            actions["goal_execution_runtime_certificate"]["verification_readiness_status"],
+            "certificate_pending",
+        )
         goal_detail_targets = {
             target
             for item in actions["goal_execution_runtime_certificate"]["status_reason_details"]
@@ -1892,6 +1921,162 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["goal_execution_runtime_certificate"]["recommended_target"],
             "goal-runtime-certificate",
         )
+
+    def test_goal_certificate_failure_budget_blocker_is_noncertifiable(self) -> None:
+        self._write_goal_native_support_surfaces()
+        self._write_json(
+            "ops/reports/goal-runtime-certificate.json",
+            {
+                "artifact_kind": "goal_runtime_certificate",
+                "producer": "ops.scripts.goal_runtime_certificate_report",
+                "status": "fail",
+                "certificate": {
+                    "target_runtime_mode": "self_improvement_loop",
+                    "verification_status": "blocked",
+                    "eligible": False,
+                },
+                "run": {
+                    "run_status": "completed",
+                    "run_runtime_mode": "self_improvement_loop",
+                },
+                "run_artifacts": {"status": "clean"},
+                "session_evidence": {"status": "closed_failure"},
+                "command_observability": {"status": "clean"},
+                "contract_update": {"runtime_certificate_verified_after": False},
+                "blockers": [
+                    "failure_budget_exhausted: noncertifiable closed failure",
+                ],
+            },
+        )
+        (self.external / "certificate-noncertifiable.md").write_text(
+            "# Certificate Review\n\nruntime certificate and self-improvement loop.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        action = {
+            item["action_id"]: item for item in report["action_items"]
+        }["goal_execution_runtime_certificate"]
+        self.assertEqual(action["current_status"], "requires_release_run_verification")
+        self.assertEqual(action["source_action_status"], "implemented")
+        self.assertEqual(
+            action["verification_readiness_status"],
+            "certificate_noncertifiable",
+        )
+        self.assertIn(
+            "goal_runtime_certificate_blocker:failure_budget_exhausted_noncertifiable_closed_failure",
+            action["status_reason_ids"],
+        )
+
+    def test_goal_status_accepts_matching_noncertifiable_closed_failure(self) -> None:
+        for rel_path in (
+            "ops/schemas/goal-run-status.schema.json",
+            "ops/scripts/mechanism/auto_improve_loop.py",
+            "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_runner.py",
+            "tests/test_goal_auto_improve_runtime.py",
+            "tests/test_goal_run_status.py",
+            "tests/test_goal_runtime_runner.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                "{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
+        run_id = "goal-auto-improve-clean"
+        contract_path = f"runs/goal-{run_id}/state/codex-goal-contract.json"
+        contract = {
+            "$schema": "ops/schemas/codex-goal-contract.schema.json",
+            "contract_id": "auto-improve-goal",
+            "runtime": {"mode": "self_improvement_loop"},
+            "budgets": {"max_wall_clock_seconds": 21600},
+            "required_evidence": [
+                {
+                    "evidence_id": "goal_run_status",
+                    "path": f"runs/goal-{run_id}/state/goal-run-status.json",
+                    "required_for_promotion": True,
+                }
+            ],
+        }
+        contract_digest = _canonical_json_digest(contract)
+        self._write_json(contract_path, contract)
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "producer": "ops.scripts.goal_run_status",
+                "status": "attention",
+                "goal": {
+                    "contract_path": contract_path,
+                    "contract_sha256": contract_digest,
+                    "backend": {"process_persistent": True},
+                },
+                "run": {
+                    "run_id": run_id,
+                    "status": "completed",
+                    "runtime_mode": "self_improvement_loop",
+                },
+                "artifacts": {
+                    "status_report_path": f"runs/goal-{run_id}/state/goal-run-status.json",
+                    "status_markdown_path": f"runs/goal-{run_id}/state/status.md",
+                    "audit_log_path": f"runs/goal-{run_id}/state/audit-log.jsonl",
+                    "resume_metadata_path": f"runs/goal-{run_id}/state/resume-metadata.json",
+                    "checkpoint_command_log_path": (
+                        f"runs/goal-{run_id}/state/checkpoint-command-events.jsonl"
+                    ),
+                },
+                "health": {
+                    "heartbeat_status": "stale",
+                    "checkpoint_status": "stale",
+                    "command_heartbeat_status": "stale",
+                    "backoff_status": "inactive",
+                    "resume_status": "ready",
+                    "promotion_status": "allowed",
+                    "can_promote_result": True,
+                },
+                "runtime_certificate": {
+                    "status": "pending",
+                    "mode": "self_improvement_loop",
+                    "certificate_status": "unverified",
+                },
+            },
+        )
+        self._write_json(
+            "ops/reports/goal-runtime-certificate.json",
+            {
+                "artifact_kind": "goal_runtime_certificate",
+                "producer": "ops.scripts.goal_runtime_certificate_report",
+                "status": "attention",
+                "diagnosis": {
+                    "certificate_failure_class": "noncertifiable_closed_failure",
+                    "current_scope": {
+                        "run_id": run_id,
+                        "run_status": "completed",
+                        "runtime_mode": "self_improvement_loop",
+                    },
+                },
+            },
+        )
+        (self.external / "goal-status-noncertifiable.md").write_text(
+            "# Goal Status Review\n\ngoal-run-status, audit-log, checkpoint, resume.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        action = {
+            item["action_id"]: item for item in report["action_items"]
+        }["goal_run_status_audit_resume"]
+        self.assertEqual(action["current_status"], "implemented")
+        self.assertEqual(action["verification_readiness_status"], "ready")
+        self.assertNotIn(
+            "goal_run_status_promotion_state_invalid",
+            action["status_reason_ids"],
+        )
+
     def test_goal_prompt_action_accepts_verified_promotion_prompt_without_ban(self) -> None:
         for rel_path in (
             "ops/scripts/mechanism/codex_goal_prompt.py",
@@ -2190,6 +2375,26 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self.assertEqual(
             missing_contract_actions["goal_run_status_audit_resume"]["current_status"],
             "requires_release_run_verification",
+        )
+        self.assertEqual(
+            missing_contract_actions["goal_run_status_audit_resume"][
+                "source_action_status"
+            ],
+            "implemented",
+        )
+        self.assertEqual(
+            missing_contract_actions["goal_run_status_audit_resume"][
+                "verification_readiness_status"
+            ],
+            "certificate_pending",
+        )
+        self.assertEqual(
+            missing_contract_actions["goal_run_status_audit_resume"]["blocking_scopes"],
+            ["goal_runtime_status"],
+        )
+        self.assertIn(
+            "goal_run_status_contract_digest_mismatch",
+            missing_contract_actions["goal_run_status_audit_resume"]["status_reason_ids"],
         )
     def test_goal_status_audit_resume_action_accepts_verified_completed_runtime_status(self) -> None:
         for rel_path in (

@@ -223,6 +223,8 @@ def _resume_completion_context(vault: Path, session_id: str) -> dict[str, Any]:
         "max_proposals": max_proposals,
         "proposal_budget_exhausted": budget_exhausted,
         "maintenance_status": maintenance_status,
+        "attempted_proposal_ids": _list_strings(session.get("attempted_proposal_ids")),
+        "quarantined_proposal_ids": _list_strings(session.get("quarantined_proposal_ids")),
     }
 
 
@@ -492,10 +494,15 @@ def _mutation_queue_check(
     blocked_available_count = _as_int(queue_selection.get("blocked_available_count"))
     blocked_reason_counts = _list_field(queue_selection, "blocked_reason_counts")
     resume_active = _as_bool(resume_completion.get("active"))
+    effective_selected_ids = _selected_runnable_proposal_ids(
+        mutation_proposals,
+        resume_completion=resume_completion,
+    )
     passed = resume_active or (
         kind_status == "present"
         and runnable_available_count > 0
         and selected_runnable_count > 0
+        and bool(effective_selected_ids)
     )
     return _check(
         check_id="start_runnable_proposal_queue",
@@ -511,6 +518,14 @@ def _mutation_queue_check(
             "proposal_count": len(proposals),
             "runnable_available_count": runnable_available_count,
             "selected_runnable_count": selected_runnable_count,
+            "effective_selected_runnable_count": len(effective_selected_ids),
+            "effective_selected_runnable_proposal_ids": effective_selected_ids,
+            "attempted_proposal_ids": _list_strings(
+                resume_completion.get("attempted_proposal_ids")
+            ),
+            "quarantined_proposal_ids": _list_strings(
+                resume_completion.get("quarantined_proposal_ids")
+            ),
             "blocked_available_count": blocked_available_count,
             "blocked_reason_counts": blocked_reason_counts,
             "resume_completion": resume_completion,
@@ -542,24 +557,43 @@ def _source_tree_fingerprint(payload: dict[str, Any]) -> str:
     return str(payload.get("source_tree_fingerprint", "")).strip()
 
 
-def _selected_runnable_proposal_ids(mutation_proposals: dict[str, Any]) -> list[str]:
+def _resume_queue_exclusions(resume_completion: dict[str, Any]) -> tuple[set[str], set[str]]:
+    return (
+        set(_list_strings(resume_completion.get("attempted_proposal_ids"))),
+        set(_list_strings(resume_completion.get("quarantined_proposal_ids"))),
+    )
+
+
+def _selected_runnable_proposal_ids(
+    mutation_proposals: dict[str, Any],
+    *,
+    resume_completion: dict[str, Any],
+) -> list[str]:
     return [
         str(proposal.get("proposal_id", "")).strip()
-        for proposal in _selected_runnable_proposals(mutation_proposals)
+        for proposal in _selected_runnable_proposals(
+            mutation_proposals,
+            resume_completion=resume_completion,
+        )
         if str(proposal.get("proposal_id", "")).strip()
     ]
 
 
-def _selected_runnable_proposals(mutation_proposals: dict[str, Any]) -> list[dict[str, Any]]:
+def _selected_runnable_proposals(
+    mutation_proposals: dict[str, Any],
+    *,
+    resume_completion: dict[str, Any],
+) -> list[dict[str, Any]]:
     proposals = [
         proposal
         for proposal in _list_field(mutation_proposals, "proposals")
         if isinstance(proposal, dict)
     ]
+    attempted, quarantined = _resume_queue_exclusions(resume_completion)
     queue = build_proposal_queue(
         {"proposals": proposals},
-        attempted=set(),
-        quarantined=set(),
+        attempted=attempted,
+        quarantined=quarantined,
     )
     return [proposal for proposal in queue if _proposal_is_runnable(proposal)]
 
@@ -598,7 +632,10 @@ def _readiness_mutation_proposal_currentness_check(
         )
     ).strip()
     observed_mutation_digest = _artifact_file_sha256(vault, mutation_proposals_path)
-    mutation_selected_ids = _selected_runnable_proposal_ids(mutation_proposals)
+    mutation_selected_ids = _selected_runnable_proposal_ids(
+        mutation_proposals,
+        resume_completion=resume_completion,
+    )
     readiness_runnable_ids = _readiness_runnable_proposal_ids(readiness)
 
     has_canonical_currentness = bool(mutation_currentness or readiness_currentness)
@@ -722,7 +759,10 @@ def _structural_complexity_budget_start_check(
     resume_completion: dict[str, Any],
 ) -> dict[str, Any]:
     resume_active = _as_bool(resume_completion.get("active"))
-    selected = _selected_runnable_proposals(mutation_proposals)
+    selected = _selected_runnable_proposals(
+        mutation_proposals,
+        resume_completion=resume_completion,
+    )
     selected_ids = [
         str(proposal.get("proposal_id", "")).strip()
         for proposal in selected
@@ -965,6 +1005,7 @@ def _maintenance_action_plan_check(
     readiness: dict[str, Any],
     readiness_path: str,
     resume_session_id: str,
+    resume_completion: dict[str, Any],
 ) -> dict[str, Any]:
     kind_status = _artifact_kind_check(
         maintenance_action_plan,
@@ -993,7 +1034,10 @@ def _maintenance_action_plan_check(
     ]
     matching_proposal = matching_proposals[0] if matching_proposals else {}
     selected_in_current_report = bool(matching_proposal)
-    runnable_proposals = _selected_runnable_proposals(mutation_proposals)
+    runnable_proposals = _selected_runnable_proposals(
+        mutation_proposals,
+        resume_completion=resume_completion,
+    )
     matching_runnable_proposals = [
         proposal
         for proposal in runnable_proposals
@@ -1057,6 +1101,12 @@ def _maintenance_action_plan_check(
             "selected_runnable": selected_runnable,
             "selected_blockers": selected_blockers,
             "selected_effective_blockers": selected_effective_blockers,
+            "attempted_proposal_ids": _list_strings(
+                resume_completion.get("attempted_proposal_ids")
+            ),
+            "quarantined_proposal_ids": _list_strings(
+                resume_completion.get("quarantined_proposal_ids")
+            ),
             "execution_readiness.can_run": readiness_can_run,
             "execution_readiness.runnable_proposal_count": readiness_runnable_count,
         },
@@ -1375,6 +1425,7 @@ def _maintenance_action_checks(
             readiness=reports.readiness,
             readiness_path=active_request.readiness_report_path,
             resume_session_id=active_request.resume_session_id,
+            resume_completion=reports.resume_completion,
         )
     ]
 

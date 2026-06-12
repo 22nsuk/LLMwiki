@@ -138,14 +138,16 @@ release-authority-settle:
 	$(MAKE) release-sealed-run-ready
 	@status=0; \
 	$(MAKE) release-auto-promotion-ready || status=$$?; \
+	if [ $$status -eq 0 ]; then \
+		$(MAKE) release-auto-promotion-preflight-check || exit $$?; \
+		$(MAKE) release-run-ready-check || exit $$?; \
+		$(MAKE) release-auto-promotion-preseal-check || exit $$?; \
+		$(MAKE) release-sealed-run-ready-check || exit $$?; \
+		$(MAKE) release-auto-promotion-ready-check || exit $$?; \
+		$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \
+	fi; \
 	$(MAKE) release-authority-post-ready-finality || exit $$?; \
 	if [ $$status -ne 0 ]; then exit $$status; fi
-	$(MAKE) release-auto-promotion-preflight-check
-	$(MAKE) release-run-ready-check
-	$(MAKE) release-auto-promotion-preseal-check
-	$(MAKE) release-sealed-run-ready-check
-	$(MAKE) release-auto-promotion-ready-check
-	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention
 
 release-preflight-current:
 	$(MAKE) release-worktree-clean-check

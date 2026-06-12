@@ -455,6 +455,67 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(report["session_evidence"]["maintenance_status"], "missing")
         self.assertFalse(report["session_evidence"]["requires_meaningful_maintenance"])
 
+    def test_failure_budget_exhausted_session_is_closed_noncertifiable_failure(self) -> None:
+        self._seed_goal_contract()
+        self._seed_full_gate_reports()
+        self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
+        session_path = (
+            self.vault
+            / "ops"
+            / "reports"
+            / "auto-improve-sessions"
+            / "20260517-loop.json"
+        )
+        session = json.loads(session_path.read_text(encoding="utf-8"))
+        session["stop_reason"] = "failure_budget_exhausted"
+        session["iterations"] = [
+            {
+                "index": 1,
+                "status": "promoted",
+                "outcome": "promoted",
+                "decision": "PROMOTE",
+                "run_id": "20260517-loop-run-01",
+                "proposal_id": "repair-runtime",
+            },
+            {
+                "index": 2,
+                "status": "failed",
+                "outcome": "failed",
+                "decision": "REPAIR",
+                "run_id": "20260517-loop-run-02",
+                "proposal_id": "follow-up-runtime",
+                "quarantined": True,
+            },
+        ]
+        session["attempted_proposal_ids"] = ["repair-runtime", "follow-up-runtime"]
+        session["quarantined_proposal_ids"] = ["follow-up-runtime"]
+        session_path.write_text(json.dumps(session, sort_keys=True), encoding="utf-8")
+
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
+            )
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["certificate"]["verification_status"], "blocked")
+        self.assertEqual(report["session_evidence"]["stop_reason"], "failure_budget_exhausted")
+        self.assertEqual(
+            report["diagnosis"]["certificate_failure_class"],
+            "noncertifiable_closed_failure",
+        )
+        self.assertEqual(
+            report["diagnosis"]["certificate_claim_status"],
+            "not_yet_certifiable",
+        )
+        self.assertFalse(report["diagnosis"]["certifiable"])
+        self.assertIn(
+            "auto-improve session closed as noncertifiable failure after failure budget exhausted",
+            report["blockers"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_promoted_mechanism_session_alone_does_not_certify_current_goal_run(self) -> None:
         self._seed_goal_contract()
         self._seed_full_gate_reports()

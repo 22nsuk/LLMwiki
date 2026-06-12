@@ -52,8 +52,12 @@ SOURCE_REVISION_ISSUES = (
     "source_revision_unknown",
 )
 SOURCE_IDENTITY_ISSUES = SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES
+INPUT_FINGERPRINT_ISSUES = (
+    "input_fingerprint_mismatch",
+    "input_fingerprint_unknown",
+)
 OPERATIONAL_ATTENTION_ISSUES = (
-    TEST_TARGET_FINGERPRINT_ISSUES + SOURCE_IDENTITY_ISSUES
+    TEST_TARGET_FINGERPRINT_ISSUES + SOURCE_IDENTITY_ISSUES + INPUT_FINGERPRINT_ISSUES
 )
 EXECUTION_BLOCKING_ISSUES = (
     "root_ephemeral_artifact",
@@ -190,9 +194,9 @@ def is_learning_readiness_signoff_source_identity_issue(
     return bool(matching_issues(issues, SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES))
 
 
-def is_ops_report_source_identity_issue(issue: str, *, rel_path: str) -> bool:
+def is_ops_report_claim_blocker_issue(issue: str, *, rel_path: str) -> bool:
     return owner_surface(rel_path) == "ops_reports" and issue.startswith(
-        SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES
+        SOURCE_IDENTITY_ISSUES + INPUT_FINGERPRINT_ISSUES
     )
 
 
@@ -224,6 +228,8 @@ def recommended_next_action(
         return "regenerate_canonical_report"
     if "source_revision_unknown" in issues:
         return "regenerate_canonical_report_with_source_revision"
+    if matching_issues(issues, INPUT_FINGERPRINT_ISSUES):
+        return "regenerate_canonical_report"
     if "generated_at_older_than_file_mtime" in issues:
         return "regenerate_artifact_or_refresh_timestamp"
     if "missing_generated_at" in issues:
@@ -274,7 +280,7 @@ def issue_gate_effect(issue: str) -> str:
 def issue_gate_effect_for_record(issue: str, *, rel_path: str) -> str:
     if issue == "schema_validation_failed" and is_run_local_artifact(rel_path):
         return GATE_EFFECT_ADVISORY
-    if is_ops_report_source_identity_issue(issue, rel_path=rel_path):
+    if is_ops_report_claim_blocker_issue(issue, rel_path=rel_path):
         return GATE_EFFECT_CLAIM_BLOCKER
     return issue_gate_effect(issue)
 

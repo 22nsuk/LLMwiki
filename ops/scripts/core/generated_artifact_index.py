@@ -24,8 +24,15 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.schema_constants_runtime import (
         GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
     )
+    from ops.scripts.core.source_revision_runtime import resolve_source_revision
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
     from ops.scripts.mechanism.improvement_observations_runtime import (
         improvement_observation_paths,
+    )
+    from ops.scripts.release.external_report_action_matrix import (
+        build_report as build_action_matrix_report,
     )
     from ops.scripts.release.external_report_lifecycle_runtime import (
         action_statuses,
@@ -37,6 +44,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
 else:
     from ops.scripts.mechanism.improvement_observations_runtime import (
         improvement_observation_paths,
+    )
+    from ops.scripts.release.external_report_action_matrix import (
+        build_report as build_action_matrix_report,
     )
     from ops.scripts.release.external_report_lifecycle_runtime import (
         action_statuses,
@@ -56,6 +66,8 @@ else:
     from .policy_runtime import load_policy, report_path
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import GENERATED_ARTIFACT_INDEX_SCHEMA_PATH
+    from .source_revision_runtime import resolve_source_revision
+    from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 
 DEFAULT_OUT = "ops/reports/generated-artifact-index.json"
@@ -189,7 +201,123 @@ def _external_report_inventory(
     }
 
 
-def _action_matrix_statuses(vault: Path) -> dict[str, str]:
+def _action_matrix_basis_state(vault: Path) -> dict[str, Any]:
+    payload, diagnostics = load_optional_json_object_with_diagnostics(
+        vault / EXTERNAL_REPORT_ACTION_MATRIX_PATH
+    )
+    current_revision = resolve_source_revision(vault).revision
+    current_fingerprint = release_source_tree_fingerprint(vault)
+    base = {
+        "path": EXTERNAL_REPORT_ACTION_MATRIX_PATH,
+        "status": "current",
+        "reason_id": "action_matrix_basis_current",
+        "source_revision": "",
+        "source_tree_fingerprint": "",
+        "current_source_revision": current_revision,
+        "current_source_tree_fingerprint": current_fingerprint,
+        "input_fingerprint_mismatch_keys": [],
+    }
+    if diagnostics.get("missing"):
+        return {
+            **base,
+            "status": "missing",
+            "reason_id": "action_matrix_missing",
+        }
+    if not isinstance(payload, dict):
+        return {
+            **base,
+            "status": "unreadable",
+            "reason_id": "action_matrix_unreadable",
+        }
+    source_revision = str(payload.get("source_revision", "")).strip()
+    source_tree_fingerprint = str(payload.get("source_tree_fingerprint", "")).strip()
+    base.update(
+        {
+            "source_revision": source_revision,
+            "source_tree_fingerprint": source_tree_fingerprint,
+        }
+    )
+    if payload.get("artifact_kind") != "external_report_action_matrix":
+        return {
+            **base,
+            "status": "invalid",
+            "reason_id": "action_matrix_wrong_artifact_kind",
+        }
+    if payload.get("artifact_status") != "current":
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_artifact_not_current",
+        }
+    if str(payload.get("currentness", {}).get("status", "")) != "current":
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_currentness_not_current",
+        }
+    if (
+        not source_revision
+        or not source_tree_fingerprint
+        or source_revision != current_revision
+        or source_tree_fingerprint != current_fingerprint
+    ):
+        return {
+            **base,
+            "status": "source_identity_mismatch",
+            "reason_id": "action_matrix_source_identity_mismatch",
+        }
+    if not isinstance(payload.get("action_items"), list):
+        return {
+            **base,
+            "status": "invalid",
+            "reason_id": "action_matrix_action_items_invalid",
+        }
+    stored_fingerprints = payload.get("input_fingerprints")
+    if not isinstance(stored_fingerprints, dict):
+        return {
+            **base,
+            "status": "invalid",
+            "reason_id": "action_matrix_input_fingerprints_invalid",
+        }
+    try:
+        live_fingerprints = build_action_matrix_report(vault).get("input_fingerprints")
+    except (OSError, TypeError, ValueError, RuntimeError):
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_input_fingerprints_unverifiable",
+        }
+    if not isinstance(live_fingerprints, dict):
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_input_fingerprints_unverifiable",
+        }
+    mismatch_keys = sorted(
+        {
+            str(key)
+            for key in set(stored_fingerprints) | set(live_fingerprints)
+            if stored_fingerprints.get(key) != live_fingerprints.get(key)
+        }
+    )
+    if mismatch_keys:
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_input_fingerprint_mismatch",
+            "input_fingerprint_mismatch_keys": mismatch_keys,
+        }
+    return base
+
+
+def _action_matrix_statuses(
+    vault: Path,
+    *,
+    basis_state: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    basis = basis_state or _action_matrix_basis_state(vault)
+    if basis.get("status") != "current":
+        return {}
     payload, diagnostics = load_optional_json_object_with_diagnostics(
         vault / EXTERNAL_REPORT_ACTION_MATRIX_PATH
     )
@@ -215,9 +343,13 @@ def _action_matrix_statuses(vault: Path) -> dict[str, str]:
     return statuses
 
 
-def _external_report_lifecycle_statuses(vault: Path) -> dict[str, str]:
+def _external_report_lifecycle_statuses(
+    vault: Path,
+    *,
+    action_matrix_basis: dict[str, Any] | None = None,
+) -> dict[str, str]:
     statuses = action_statuses(vault)
-    statuses.update(_action_matrix_statuses(vault))
+    statuses.update(_action_matrix_statuses(vault, basis_state=action_matrix_basis))
     return statuses
 
 
@@ -613,7 +745,15 @@ def build_report(
     runtime_context = context or RuntimeContext.from_policy(policy)
     ops_current, ops_archive, ops_summary = _ops_reports(vault)
     operator_current, operator_archive, operator_summary = _operator_reports(vault)
-    external_statuses = _external_report_lifecycle_statuses(vault)
+    action_matrix_basis = _action_matrix_basis_state(vault)
+    action_matrix_statuses = _action_matrix_statuses(
+        vault,
+        basis_state=action_matrix_basis,
+    )
+    external_statuses = _external_report_lifecycle_statuses(
+        vault,
+        action_matrix_basis=action_matrix_basis,
+    )
     archived_external_report_basis = archived_report_action_basis_records(
         vault,
         external_statuses,
@@ -667,7 +807,10 @@ def build_report(
                     )
                 ),
                 "external_report_action_matrix_statuses": _canonical_inventory_text(
-                    _action_matrix_statuses(vault)
+                    action_matrix_statuses
+                ),
+                "external_report_action_matrix_basis": _canonical_inventory_text(
+                    action_matrix_basis
                 ),
                 "task_improvement_observation_inventory": _canonical_inventory_text(task_observation_reports),
             },
@@ -693,6 +836,7 @@ def build_report(
         },
         "canonical_reports": canonical_reports,
         "archive_candidates": archive_candidates,
+        "external_report_action_matrix_basis": action_matrix_basis,
         "archived_external_report_basis": archived_external_report_basis,
     }
 

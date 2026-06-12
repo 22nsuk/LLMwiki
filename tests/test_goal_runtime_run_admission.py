@@ -761,6 +761,83 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertIn("recent_log_overlap", json.dumps(queue_check["observed"]))
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_build_report_excludes_resume_attempted_and_quarantined_proposals(self) -> None:
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["queue"] = {"runnable_proposal_ids": ["repair-runtime"]}
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        for field_name in ("attempted_proposal_ids", "quarantined_proposal_ids"):
+            with self.subTest(field_name=field_name):
+                self._write_json(
+                    "ops/reports/auto-improve-sessions/auto-session-repeat.json",
+                    {
+                        "artifact_kind": "auto_improve_session",
+                        "session_id": "auto-session-repeat",
+                        "status": "running",
+                        "stop_reason": "mutation_failed",
+                        "budget": {
+                            "max_proposals": 2,
+                            "max_minutes": 30,
+                            "max_consecutive_failures": 1,
+                        },
+                        "iterations": [
+                            {
+                                "proposal_id": "repair-runtime",
+                                "status": "failed",
+                                "decision": "REPAIR",
+                            }
+                        ],
+                        "attempted_proposal_ids": (
+                            ["repair-runtime"] if field_name == "attempted_proposal_ids" else []
+                        ),
+                        "quarantined_proposal_ids": (
+                            ["repair-runtime"] if field_name == "quarantined_proposal_ids" else []
+                        ),
+                        "maintenance": {"status": "not_started"},
+                    },
+                )
+
+                report = self._build_report(resume_session_id="auto-session-repeat")
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(report["start_status"], "fail")
+                self.assertFalse(report["decisions"]["can_start_goal_runtime"])
+                queue_check = next(
+                    check
+                    for check in report["checks"]
+                    if check["id"] == "start_runnable_proposal_queue"
+                )
+                currentness_check = next(
+                    check
+                    for check in report["checks"]
+                    if check["id"] == "start_readiness_mutation_proposal_current"
+                )
+                self.assertEqual(queue_check["status"], "fail")
+                self.assertEqual(
+                    queue_check["observed"]["effective_selected_runnable_proposal_ids"],
+                    [],
+                )
+                self.assertEqual(
+                    queue_check["observed"][field_name],
+                    ["repair-runtime"],
+                )
+                self.assertEqual(currentness_check["status"], "fail")
+                self.assertEqual(
+                    currentness_check["observed"][
+                        "mutation_selected_runnable_proposal_ids"
+                    ],
+                    [],
+                )
+                self.assertEqual(
+                    currentness_check["observed"]["readiness_runnable_proposal_ids"],
+                    ["repair-runtime"],
+                )
+                self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_allows_resume_completion_without_new_runnable_proposal(self) -> None:
         self._write_json(
             "ops/reports/mutation-proposals.json",

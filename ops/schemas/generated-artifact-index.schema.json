@@ -28,6 +28,7 @@
     "summary",
     "canonical_reports",
     "archive_candidates",
+    "external_report_action_matrix_basis",
     "archived_external_report_basis"
   ],
   "properties": {
@@ -185,6 +186,9 @@
         "$ref": "#/$defs/archive_candidate"
       }
     },
+    "external_report_action_matrix_basis": {
+      "$ref": "#/$defs/action_matrix_basis"
+    },
     "archived_external_report_basis": {
       "type": "array",
       "items": {
@@ -313,6 +317,47 @@
             "unresolved_actions_covered_by_broader_report",
             "unresolved_actions_keep_report_active"
           ]
+        }
+      }
+    },
+    "action_matrix_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "status",
+        "reason_id",
+        "source_revision",
+        "source_tree_fingerprint",
+        "current_source_revision",
+        "current_source_tree_fingerprint",
+        "input_fingerprint_mismatch_keys"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "const": "ops/reports/external-report-action-matrix.json"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "missing",
+            "unreadable",
+            "invalid",
+            "stale",
+            "source_identity_mismatch"
+          ]
+        },
+        "reason_id": { "type": "string", "minLength": 1 },
+        "source_revision": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" },
+        "current_source_revision": { "type": "string", "minLength": 1 },
+        "current_source_tree_fingerprint": { "type": "string", "minLength": 1 },
+        "input_fingerprint_mismatch_keys": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
         }
       }
     },

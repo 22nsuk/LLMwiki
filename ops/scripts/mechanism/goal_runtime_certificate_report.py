@@ -597,6 +597,15 @@ def _diagnosis(
     run_status = str(run.get("status", run.get("run_status", ""))).strip()
     runtime_mode = str(run.get("runtime_mode", run.get("run_runtime_mode", ""))).strip()
     certifiable = not blockers
+    session_status = str(session_evidence.get("session_status", "")).strip()
+    stop_reason = str(session_evidence.get("stop_reason", "")).strip()
+    certificate_failure_class = (
+        "certifiable"
+        if certifiable
+        else "noncertifiable_closed_failure"
+        if session_status == "complete" and stop_reason == "failure_budget_exhausted"
+        else "pending_evidence"
+    )
     return {
         "claim_type": "sustained_self_improvement_loop_certificate",
         "certificate_claim_status": (
@@ -610,6 +619,7 @@ def _diagnosis(
             if blockers
             else "status=pass means current evidence is eligible to verify the runtime certificate."
         ),
+        "certificate_failure_class": certificate_failure_class,
         "current_scope": {
             "status_report_path": status_report_path,
             "run_id": str(run.get("run_id", "")).strip(),
@@ -929,7 +939,11 @@ def _session_evidence_blockers(session_evidence: Mapping[str, Any]) -> list[str]
         blockers.append("auto-improve session did not complete")
     accepted_stop_reasons = _list_text(session_evidence.get("accepted_stop_reasons"))
     if session_evidence.get("stop_reason") not in accepted_stop_reasons:
-        if accepted_stop_reasons == ["time_budget_exhausted"]:
+        if session_evidence.get("stop_reason") == "failure_budget_exhausted":
+            blockers.append(
+                "auto-improve session closed as noncertifiable failure after failure budget exhausted"
+            )
+        elif accepted_stop_reasons == ["time_budget_exhausted"]:
             blockers.append("auto-improve session did not run until time budget")
         else:
             blockers.append("auto-improve session stop reason is not accepted for runtime certificate")

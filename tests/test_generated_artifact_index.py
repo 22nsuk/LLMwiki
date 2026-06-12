@@ -7,6 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ops.scripts.external_report_action_matrix import (
+    build_report as build_action_matrix_report,
+)
 from ops.scripts.generated_artifact_index import build_report, write_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
@@ -103,6 +106,7 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             self.assertTrue(report["now"])
             self.assertTrue(report["next"])
             self.assertTrue(report["why_blocked"])
+            self.assertEqual(report["external_report_action_matrix_basis"]["status"], "missing")
             self.assertEqual(report["archived_external_report_basis"], [])
             candidate_paths = {item["path"] for item in report["archive_candidates"]}
             self.assertIn("ops/reports/eval-initial-2026-04-12.json", candidate_paths)
@@ -397,6 +401,39 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             vault.mkdir()
             seed_minimal_vault(vault)
             (vault / "external-reports" / "archive").mkdir(parents=True, exist_ok=True)
+            (vault / "external-reports" / "closed_release_evidence_report.md").write_text(
+                "# Closed\n\nevidence bundle\n",
+                encoding="utf-8",
+            )
+            action_matrix = build_action_matrix_report(vault, context=fixed_context())
+            action_matrix["action_items"] = [
+                {
+                    "action_id": "release_evidence_bundle_and_attestation",
+                    "current_status": "implemented",
+                }
+            ]
+            (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "reports" / "external-report-action-matrix.json").write_text(
+                json.dumps(action_matrix),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+            candidate_paths = {item["path"] for item in report["archive_candidates"]}
+            self.assertIn("external-reports/closed_release_evidence_report.md", candidate_paths)
+            self.assertEqual(report["external_report_action_matrix_basis"]["status"], "current")
+            self.assertIn(
+                "external_report_action_matrix_statuses",
+                report["input_fingerprints"],
+            )
+
+    def test_external_report_lifecycle_rejects_stale_action_matrix_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "external-reports" / "archive").mkdir(parents=True, exist_ok=True)
             (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
             (vault / "ops" / "reports" / "external-report-action-matrix.json").write_text(
                 json.dumps(
@@ -404,6 +441,8 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                         "artifact_kind": "external_report_action_matrix",
                         "artifact_status": "current",
                         "currentness": {"status": "current"},
+                        "source_revision": "old-revision",
+                        "source_tree_fingerprint": "old-fingerprint",
                         "action_items": [
                             {
                                 "action_id": "release_evidence_bundle_and_attestation",
@@ -421,12 +460,65 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
 
             report = build_report(vault, context=fixed_context())
 
-            candidate_paths = {item["path"] for item in report["archive_candidates"]}
-            self.assertIn("external-reports/closed_release_evidence_report.md", candidate_paths)
-            self.assertIn(
-                "external_report_action_matrix_statuses",
-                report["input_fingerprints"],
+            self.assertEqual(
+                report["external_report_action_matrix_basis"]["status"],
+                "source_identity_mismatch",
             )
+            self.assertEqual(
+                report["external_report_action_matrix_basis"]["reason_id"],
+                "action_matrix_source_identity_mismatch",
+            )
+            candidate_paths = {item["path"] for item in report["archive_candidates"]}
+            current_paths = {item["path"] for item in report["canonical_reports"]}
+            self.assertNotIn("external-reports/closed_release_evidence_report.md", candidate_paths)
+            self.assertIn("external-reports/closed_release_evidence_report.md", current_paths)
+            self.assertEqual(validate_with_schema(report, load_schema(GENERATED_INDEX_SCHEMA_PATH)), [])
+
+    def test_external_report_lifecycle_rejects_input_stale_action_matrix_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "external-reports" / "archive").mkdir(parents=True, exist_ok=True)
+            (vault / "external-reports" / "closed_release_evidence_report.md").write_text(
+                "# Closed\n\nevidence bundle\n",
+                encoding="utf-8",
+            )
+            action_matrix = build_action_matrix_report(vault, context=fixed_context())
+            action_matrix["action_items"] = [
+                {
+                    "action_id": "release_evidence_bundle_and_attestation",
+                    "current_status": "implemented",
+                }
+            ]
+            action_matrix["input_fingerprints"] = {
+                **action_matrix["input_fingerprints"],
+                "action_catalog": "stale-fingerprint",
+            }
+            (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "reports" / "external-report-action-matrix.json").write_text(
+                json.dumps(action_matrix),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+            self.assertEqual(report["external_report_action_matrix_basis"]["status"], "stale")
+            self.assertEqual(
+                report["external_report_action_matrix_basis"]["reason_id"],
+                "action_matrix_input_fingerprint_mismatch",
+            )
+            self.assertEqual(
+                report["external_report_action_matrix_basis"][
+                    "input_fingerprint_mismatch_keys"
+                ],
+                ["action_catalog"],
+            )
+            candidate_paths = {item["path"] for item in report["archive_candidates"]}
+            current_paths = {item["path"] for item in report["canonical_reports"]}
+            self.assertNotIn("external-reports/closed_release_evidence_report.md", candidate_paths)
+            self.assertIn("external-reports/closed_release_evidence_report.md", current_paths)
+            self.assertEqual(validate_with_schema(report, load_schema(GENERATED_INDEX_SCHEMA_PATH)), [])
 
     def test_index_summary_and_input_fingerprints_track_task_improvement_observations(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -70,7 +70,12 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
             git_commit=lambda _vault: "abc123",
         )
 
-    def _write_authority_inputs(self, *, preflight_revision: str = "abc123") -> None:
+    def _write_authority_inputs(
+        self,
+        *,
+        preflight_revision: str = "abc123",
+        ready_revision: str = "abc123",
+    ) -> None:
         authority_specs = [
             (
                 "build/release/release-auto-promotion-preflight.json",
@@ -95,7 +100,7 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
             (
                 "build/release/release-auto-promotion-ready-manifest.json",
                 "release_auto_promotion_ready_manifest",
-                "old-revision",
+                ready_revision,
             ),
         ]
         for rel_path, artifact_kind, revision in authority_specs:
@@ -264,7 +269,7 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
         self.assertTrue(report["summary"]["revision_changed_since_snapshot"])
         self.assertEqual(report["minimal_next_target"], "release-source-ready-prepare")
 
-    def test_finalizer_does_not_require_final_auto_promotion_authority(self) -> None:
+    def test_finalizer_requires_final_auto_promotion_ready_authority(self) -> None:
         self._write_authority_inputs()
         (self.vault / "build/release/release-auto-promotion-ready-manifest.json").unlink()
         self._init_clean_git()
@@ -273,11 +278,30 @@ class ReleasePostCommitFinalizerTests(unittest.TestCase):
             report = build_report(self.vault, mode="verify", context=fixed_context())
 
         self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["authority_readback"]["status"], "pass")
+        self.assertEqual(report["authority_readback"]["status"], "attention")
+        self.assertEqual(report["authority_readback"]["blocker_class"], "authority_stale")
+        self.assertEqual(
+            report["authority_readback"]["minimal_next_target"],
+            "release-auto-promotion-ready",
+        )
         self.assertEqual(report["blocker_class"], "none")
-        self.assertNotIn(
+        self.assertIn(
             "release-auto-promotion-ready",
             {item["stage"] for item in report["authority_inputs"]},
+        )
+        ready = next(
+            item
+            for item in report["authority_inputs"]
+            if item["stage"] == "release-auto-promotion-ready"
+        )
+        self.assertEqual(
+            ready["issues"],
+            [
+                "not_loadable",
+                "artifact_kind_mismatch",
+                "source_revision_missing",
+                "source_tree_fingerprint_missing",
+            ],
         )
 
     def test_current_authority_status_failure_does_not_block_post_commit_currentness(

@@ -155,9 +155,10 @@ surface comparison; this document owns release evidence and staged authority.
   staged authority manifests, report writer clusters, or action lifecycle
   cleanup. It also does not replace `release-run-ready`,
   `release-sealed-run-ready`, or `release-auto-promotion-ready` authority.
-  When those staged authority sidecars are stale, the top-level post-commit
-  status may still pass while `authority_readback.status=attention` names the
-  owning authority target.
+  When those staged authority sidecars, including the final
+  auto-promotion-ready manifest, are stale or missing, the top-level
+  post-commit status may still pass while `authority_readback.status=attention`
+  names the owning authority target.
   `make head-aligned-evidence-converge` is a compatibility alias for this target.
 - `make release-authority-settle`: explicit staged-authority writer lane for
   unattended promotion after release evidence is current. It runs report finality
@@ -167,8 +168,9 @@ surface comparison; this document owns release evidence and staged authority.
   rewrites release closeout fixed-point/finality, replay-verifies the same ZIP
   metadata, and then verifies finality so no tracked report writer runs after
   finality. If ready is blocked, this finality tail still runs and the original
-  ready failure is returned. On a clean ready pass, the target ends with
-  check-only authority readback plus post-commit finalizer verification.
+  ready failure is returned. On a clean ready pass, check-only authority
+  readback plus post-commit finalizer verification run before the same terminal
+  finality tail.
   It does not regenerate long-tail report producers; run
   `make release-evidence-converge` or the owning evidence refresh target first
   when stale generated reports are the blocker.

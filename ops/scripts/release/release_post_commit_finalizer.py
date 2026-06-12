@@ -61,6 +61,12 @@ AUTHORITY_INPUTS = [
         "artifact_kind": "release_sealed_run_manifest",
         "owning_target": "release-sealed-run-ready",
     },
+    {
+        "stage": "release-auto-promotion-ready",
+        "path": "build/release/release-auto-promotion-ready-manifest.json",
+        "artifact_kind": "release_auto_promotion_ready_manifest",
+        "owning_target": "release-auto-promotion-ready",
+    },
 ]
 
 

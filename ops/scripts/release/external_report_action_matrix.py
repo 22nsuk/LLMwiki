@@ -90,6 +90,80 @@ DEFAULT_OUT = "ops/reports/external-report-action-matrix.json"
 PRODUCER = "ops.scripts.external_report_action_matrix"
 SCHEMA_PATH = "ops/schemas/external-report-action-matrix.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.external_report_action_matrix --vault ."
+SOURCE_ACTION_STATUSES = ("implemented", "partially_automated", "planned")
+VERIFICATION_READINESS_STATUSES = (
+    "ready",
+    "release_run_pending",
+    "promotion_readiness_pending",
+    "operator_pending",
+    "certificate_pending",
+    "certificate_noncertifiable",
+    "artifact_freshness_pending",
+    "readback_pending",
+    "source_action_required",
+)
+
+
+def _verification_readiness_status(
+    *,
+    current_status: str,
+    status_reason_ids: list[str],
+    status_reason_details: list[dict[str, Any]],
+) -> str:
+    if current_status == "implemented":
+        return "ready"
+    scopes = {
+        str(detail.get("blocking_scope", "")).strip()
+        for detail in status_reason_details
+        if isinstance(detail, dict) and str(detail.get("blocking_scope", "")).strip()
+    }
+    gate_effects = {
+        str(detail.get("gate_effect", "")).strip()
+        for detail in status_reason_details
+        if isinstance(detail, dict) and str(detail.get("gate_effect", "")).strip()
+    }
+    reason_text = " ".join(status_reason_ids)
+    if "goal_runtime_status" in scopes:
+        return "certificate_pending"
+    if "unattended_promotion" in scopes and any(
+        reason.startswith("goal_runtime_") for reason in status_reason_ids
+    ):
+        if any(
+            token in reason_text
+            for token in (
+                "failure_budget_exhausted",
+                "noncertifiable",
+                "closed_failure",
+                "quarantined",
+            )
+        ):
+            return "certificate_noncertifiable"
+        return "certificate_pending"
+    if (
+        "supply_chain_external_verification" in scopes
+        or "github_live_governance" in scopes
+        or "operator_review_required" in gate_effects
+    ):
+        return "operator_pending"
+    if scopes.intersection({"release_run", "sealed_release"}):
+        return "release_run_pending"
+    if "unattended_promotion" in scopes:
+        return "promotion_readiness_pending"
+    if "artifact_freshness" in scopes:
+        return "artifact_freshness_pending"
+    if "release_preseal" in scopes:
+        return "readback_pending"
+    if current_status == "requires_release_run_verification":
+        return "readback_pending"
+    return "source_action_required"
+
+
+def _source_action_status(current_status: str, verification_readiness_status: str) -> str:
+    if current_status == "implemented" or verification_readiness_status != "source_action_required":
+        return "implemented"
+    if current_status == "planned":
+        return "planned"
+    return "partially_automated"
 
 
 def _reason_detail_summary(
@@ -140,12 +214,20 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
             fallback_target=str(action["recommended_target"]),
         )
         reason_detail_summary = _reason_detail_summary(status_reason_details)
+        verification_readiness_status = _verification_readiness_status(
+            current_status=status,
+            status_reason_ids=status_reason_ids,
+            status_reason_details=status_reason_details,
+        )
+        source_action_status = _source_action_status(status, verification_readiness_status)
         sprint_priority = SPRINT_PRIORITIES.get(action_id)
         item = {
             "action_id": action_id,
             "priority": action["priority"],
             "theme": action["theme"],
             "current_status": status,
+            "source_action_status": source_action_status,
+            "verification_readiness_status": verification_readiness_status,
             "status_reason_ids": status_reason_ids,
             "status_reason_details": status_reason_details,
             **reason_detail_summary,
@@ -202,12 +284,27 @@ def _summary(
     canonical_artifact_freshness_state_record: dict[str, Any],
 ) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
+    source_action_status_counts: dict[str, int] = dict.fromkeys(SOURCE_ACTION_STATUSES, 0)
+    verification_readiness_status_counts: dict[str, int] = dict.fromkeys(
+        VERIFICATION_READINESS_STATUSES,
+        0,
+    )
     gate_effect_action_counts: dict[str, int] = dict.fromkeys(GATE_EFFECTS, 0)
     blocking_scope_action_counts: dict[str, int] = {}
     sprint_backlog: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
     for action in actions:
         status = str(action["current_status"])
         status_counts[status] = status_counts.get(status, 0) + 1
+        source_action_status = str(action.get("source_action_status", "")).strip()
+        if source_action_status not in source_action_status_counts:
+            source_action_status_counts[source_action_status] = 0
+        source_action_status_counts[source_action_status] += 1
+        verification_readiness_status = str(
+            action.get("verification_readiness_status", "")
+        ).strip()
+        if verification_readiness_status not in verification_readiness_status_counts:
+            verification_readiness_status_counts[verification_readiness_status] = 0
+        verification_readiness_status_counts[verification_readiness_status] += 1
         strongest_effect = str(action.get("strongest_gate_effect", GATE_EFFECT_NONE)).strip()
         if strongest_effect not in gate_effect_action_counts:
             gate_effect_action_counts[strongest_effect] = 0
@@ -231,6 +328,14 @@ def _summary(
         "partially_automated_count": status_counts.get("partially_automated", 0),
         "requires_release_run_verification_count": status_counts.get("requires_release_run_verification", 0),
         "planned_count": status_counts.get("planned", 0),
+        "source_action_status_counts": source_action_status_counts,
+        "verification_readiness_status_counts": verification_readiness_status_counts,
+        "unresolved_source_action_count": sum(
+            1 for action in actions if action.get("source_action_status") != "implemented"
+        ),
+        "verification_readiness_pending_count": sum(
+            1 for action in actions if action.get("verification_readiness_status") != "ready"
+        ),
         "gate_effect_action_counts": gate_effect_action_counts,
         "blocking_scope_action_counts": blocking_scope_action_counts,
         "unmatched_active_report_count": sum(

@@ -26,6 +26,10 @@ from .auto_improve_readiness_constants_runtime import (
 )
 from .auto_improve_readiness_learning_runtime import _build_loop_health_summary
 
+AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
+LATEST_SESSION_ATTEMPTED_BLOCKER = "latest_session_attempted"
+LATEST_SESSION_QUARANTINED_BLOCKER = "latest_session_quarantined"
+
 
 @dataclass(frozen=True)
 class ReadinessRemediation:
@@ -188,15 +192,37 @@ def _upstream_attention_summaries(
     return summaries
 
 
-def _runnable_proposal_ids(mutation_proposal_report: dict[str, Any]) -> list[str]:
+def _latest_auto_improve_session(vault: Path) -> dict[str, Any]:
+    sessions_dir = vault / AUTO_IMPROVE_SESSIONS_DIR
+    if not sessions_dir.is_dir():
+        return {}
+    latest_key = ("", "")
+    latest_session: dict[str, Any] = {}
+    for path in sorted(sessions_dir.glob("*.json")):
+        session = load_optional_json_object(path)
+        if not isinstance(session, dict):
+            continue
+        generated_at = str(session.get("generated_at", "")).strip()
+        candidate_key = (generated_at, path.relative_to(vault).as_posix())
+        if candidate_key >= latest_key:
+            latest_key = candidate_key
+            latest_session = session
+    return latest_session
+
+
+def _runnable_proposal_ids(
+    vault: Path,
+    mutation_proposal_report: dict[str, Any],
+) -> list[str]:
     proposals = mutation_proposal_report.get("proposals")
     if not isinstance(proposals, list):
         return []
+    latest_session = _latest_auto_improve_session(vault)
     try:
         runnable = build_proposal_queue(
             mutation_proposal_report,
-            attempted=set(),
-            quarantined=set(),
+            attempted=set(_string_list(latest_session.get("attempted_proposal_ids"))),
+            quarantined=set(_string_list(latest_session.get("quarantined_proposal_ids"))),
         )
     except (KeyError, TypeError):
         return []
@@ -205,6 +231,63 @@ def _runnable_proposal_ids(mutation_proposal_report: dict[str, Any]) -> list[str
         for proposal in runnable
         if proposal
     ]
+
+
+def _latest_session_exclusion_blockers(
+    vault: Path,
+    mutation_proposal_report: dict[str, Any],
+) -> tuple[dict[str, int], dict[str, list[str]]]:
+    proposals = mutation_proposal_report.get("proposals")
+    if not isinstance(proposals, list):
+        return {}, {}
+    latest_session = _latest_auto_improve_session(vault)
+    attempted = set(_string_list(latest_session.get("attempted_proposal_ids")))
+    quarantined = set(_string_list(latest_session.get("quarantined_proposal_ids")))
+    proposal_ids_by_reason: dict[str, list[str]] = {}
+    for proposal in proposals:
+        if not isinstance(proposal, dict):
+            continue
+        proposal_id = str(proposal.get("proposal_id", "")).strip()
+        if not proposal_id:
+            continue
+        if proposal_id in quarantined:
+            proposal_ids_by_reason.setdefault(LATEST_SESSION_QUARANTINED_BLOCKER, [])
+            proposal_ids_by_reason[LATEST_SESSION_QUARANTINED_BLOCKER].append(
+                proposal_id
+            )
+        elif proposal_id in attempted:
+            proposal_ids_by_reason.setdefault(LATEST_SESSION_ATTEMPTED_BLOCKER, [])
+            proposal_ids_by_reason[LATEST_SESSION_ATTEMPTED_BLOCKER].append(proposal_id)
+    return (
+        {
+            reason: len(proposal_ids)
+            for reason, proposal_ids in proposal_ids_by_reason.items()
+        },
+        proposal_ids_by_reason,
+    )
+
+
+def _merge_blocked_reason_counts(
+    left: dict[str, int],
+    right: dict[str, int],
+) -> dict[str, int]:
+    merged = dict(left)
+    for reason, count in right.items():
+        merged[reason] = max(merged.get(reason, 0), count)
+    return merged
+
+
+def _merge_blocked_proposal_ids(
+    left: dict[str, list[str]],
+    right: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    merged = {reason: list(proposal_ids) for reason, proposal_ids in left.items()}
+    for reason, proposal_ids in right.items():
+        bucket = merged.setdefault(reason, [])
+        for proposal_id in proposal_ids:
+            if proposal_id not in bucket:
+                bucket.append(proposal_id)
+    return merged
 
 
 def _blocked_reason_counts(mutation_proposal_report: dict[str, Any]) -> dict[str, int]:
@@ -338,6 +421,36 @@ def _proposal_blocker_remediation(
         payload = dict(RECENT_LOG_OVERLAP_REMEDIATION)
     elif reason == "recent_outcome_rework":
         payload = dict(RECENT_OUTCOME_REWORK_REMEDIATION)
+    elif reason == LATEST_SESSION_QUARANTINED_BLOCKER:
+        payload = {
+            "remediation_code": "repair_quarantined_proposal_before_retry",
+            "blocker_kind": "runtime_history",
+            "unblock_action_type": "repair_quarantined_proposal",
+            "minimum_evidence": [
+                "The refreshed mutation proposal queue selects a different runnable "
+                "proposal or repairs the latest quarantined proposal.",
+                "goal-runtime-run-admission reports no selected quarantined proposal.",
+            ],
+            "retry_condition": (
+                "Do not rerun the same quarantined proposal until a repair proposal "
+                "or fresh mutation proposal supersedes it."
+            ),
+        }
+    elif reason == LATEST_SESSION_ATTEMPTED_BLOCKER:
+        payload = {
+            "remediation_code": "select_unattempted_proposal_or_repair_previous_session",
+            "blocker_kind": "runtime_history",
+            "unblock_action_type": "queue_rotation_or_repair",
+            "minimum_evidence": [
+                "The refreshed mutation proposal queue contains a runnable proposal "
+                "not attempted by the latest auto-improve session.",
+                "goal-runtime-run-admission reports no selected attempted proposal repeat.",
+            ],
+            "retry_condition": (
+                "Do not rerun the same attempted proposal in a fresh session unless "
+                "a repair-only plan explicitly supersedes the previous attempt."
+            ),
+        }
     else:
         blocker_source = (
             "blocked_by for every emitted proposal"
@@ -783,12 +896,31 @@ def readiness_queue_state(
         vault, reports["mutation_proposal"]
     )
     proposals_emitted = int(proposal_summary.get("proposals_emitted", 0) or 0)
-    runnable_proposal_ids = _runnable_proposal_ids(reports["mutation_proposal"])
-    blocked_proposal_count = _blocked_proposal_count(
-        proposal_summary, proposal_diagnostics
+    runnable_proposal_ids = _runnable_proposal_ids(vault, reports["mutation_proposal"])
+    session_blocked_reason_counts, session_blocked_proposal_ids = (
+        _latest_session_exclusion_blockers(vault, reports["mutation_proposal"])
     )
-    blocked_reason_counts = _blocked_reason_counts(reports["mutation_proposal"])
-    blocked_proposal_ids = _blocked_proposal_ids_by_reason(reports["mutation_proposal"])
+    blocked_reason_counts = _merge_blocked_reason_counts(
+        _blocked_reason_counts(reports["mutation_proposal"]),
+        session_blocked_reason_counts,
+    )
+    blocked_proposal_ids = _merge_blocked_proposal_ids(
+        _blocked_proposal_ids_by_reason(reports["mutation_proposal"]),
+        session_blocked_proposal_ids,
+    )
+    blocked_proposal_count = max(
+        _blocked_proposal_count(
+            proposal_summary,
+            proposal_diagnostics,
+        ),
+        len(
+            {
+                proposal_id
+                for proposal_ids in blocked_proposal_ids.values()
+                for proposal_id in proposal_ids
+            }
+        ),
+    )
     blocked_reasons = list(blocked_reason_counts)
     queue_ready = bool(runnable_proposal_ids)
     queue_evidence_gaps = _queue_evidence_gaps(

@@ -108,6 +108,8 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         previous_shape["action_items"][0].pop("blocking_scopes", None)
         previous_shape["action_items"][0].pop("gate_effects", None)
         previous_shape["action_items"][0].pop("strongest_gate_effect", None)
+        previous_shape["action_items"][0].pop("source_action_status", None)
+        previous_shape["action_items"][0].pop("verification_readiness_status", None)
         detailed_previous_action = next(
             item for item in previous_shape["action_items"] if item["status_reason_details"]
         )
@@ -116,6 +118,14 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         previous_errors = validate_with_schema(previous_shape, schema)
         self.assertIn(
             "$.action_items[0]: missing required property 'blocking_scopes'",
+            previous_errors,
+        )
+        self.assertIn(
+            "$.action_items[0]: missing required property 'source_action_status'",
+            previous_errors,
+        )
+        self.assertIn(
+            "$.action_items[0]: missing required property 'verification_readiness_status'",
             previous_errors,
         )
         self.assertIn(
@@ -781,6 +791,13 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         }["github_governance_live_drift_gap"]
         self.assertEqual(live_detail["owning_stage"], "github_live_governance_verification")
         self.assertEqual(live_detail["blocking_scope"], "github_live_governance")
+        self.assertEqual(live_detail["gate_effect"], "operator_review_required")
+        self.assertEqual(
+            missing_evidence_actions["github_governance_live_drift_verification"][
+                "verification_readiness_status"
+            ],
+            "operator_pending",
+        )
         review_detail = {
             item["reason_id"]: item
             for item in missing_evidence_actions[
