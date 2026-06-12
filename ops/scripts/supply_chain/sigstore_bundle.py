@@ -91,48 +91,80 @@ def _has_sigstore_bundle_shape(payload: dict[str, Any] | None) -> bool:
     return isinstance(verification_material, dict) and isinstance(signed_content, dict)
 
 
-def build_bundle_verification(
-    vault: Path,
-    *,
-    policy_path: str | None = None,
-    artifact_model: dict[str, Any] | None = None,
-    bundle_ref: str | None = None,
-) -> dict[str, Any]:
-    policy, resolved_policy_path = load_policy(vault, policy_path)
-    model = artifact_model or build_model(vault, policy_path=policy_path)
-    refs = [
-        model["artifact_context"]["cyclonedx_ref"],
-        model["artifact_context"]["spdx_ref"],
-        model["artifact_context"]["openvex_ref"],
-        model["artifact_context"]["in_toto_statement_ref"],
+def _artifact_subject_refs(model: dict[str, Any]) -> list[str]:
+    context = model["artifact_context"]
+    return [
+        context["cyclonedx_ref"],
+        context["spdx_ref"],
+        context["openvex_ref"],
+        context["in_toto_statement_ref"],
     ]
-    subjects = []
-    missing = []
+
+
+def _collect_subjects(vault: Path, refs: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
+    subjects: list[dict[str, Any]] = []
+    missing: list[str] = []
     for report_ref in refs:
         path = _resolve_ref(vault, report_ref)
         if path.exists():
             subjects.append(_subject(path, vault))
         else:
             missing.append(report_ref)
+    return subjects, missing
 
-    statement_path = _resolve_ref(vault, model["artifact_context"]["in_toto_statement_ref"])
-    in_toto_match = False
-    if statement_path.exists():
-        statement = json.loads(statement_path.read_text(encoding="utf-8"))
-        digest_by_name = {item["name"]: item["digest"]["sha256"] for item in statement.get("subject", [])}
-        in_toto_match = all(digest_by_name.get(item["path"]) == item["sha256"] for item in subjects if item["path"] in digest_by_name)
 
-    bundle_present = False
-    resolved_bundle_ref = ""
-    if bundle_ref:
-        bundle_path = _resolve_ref(vault, bundle_ref)
-        resolved_bundle_ref = report_path(vault, bundle_path) if bundle_path.exists() else bundle_ref
-        bundle_present = bundle_path.exists()
-    bundle_payload = _bundle_payload(bundle_path) if bundle_ref and bundle_present else None
+def _in_toto_subject_digests_match(
+    vault: Path,
+    statement_ref: str,
+    subjects: list[dict[str, Any]],
+) -> bool:
+    statement_path = _resolve_ref(vault, statement_ref)
+    if not statement_path.exists():
+        return False
+    statement = json.loads(statement_path.read_text(encoding="utf-8"))
+    digest_by_name = {
+        item["name"]: item["digest"]["sha256"] for item in statement.get("subject", [])
+    }
+    statement_report_path = report_path(vault, statement_path)
+    expected_subjects = [
+        item for item in subjects if item["path"] != statement_report_path
+    ]
+    if not expected_subjects:
+        return False
+    return all(
+        digest_by_name.get(item["path"]) == item["sha256"]
+        for item in expected_subjects
+    )
+
+
+def _bundle_evidence(
+    vault: Path,
+    bundle_ref: str | None,
+) -> tuple[str, bool, bool, bool]:
+    if not bundle_ref:
+        return "", False, False, False
+    bundle_path = _resolve_ref(vault, bundle_ref)
+    resolved_bundle_ref = report_path(vault, bundle_path) if bundle_path.exists() else bundle_ref
+    bundle_present = bundle_path.exists()
+    bundle_payload = _bundle_payload(bundle_path) if bundle_present else None
     bundle_parseable = bundle_payload is not None
-    bundle_has_sigstore_shape = _has_sigstore_bundle_shape(bundle_payload)
+    return (
+        resolved_bundle_ref,
+        bundle_present,
+        bundle_parseable,
+        _has_sigstore_bundle_shape(bundle_payload),
+    )
 
-    checks = [
+
+def _verification_checks(
+    *,
+    missing: list[str],
+    in_toto_match: bool,
+    bundle_present: bool,
+    bundle_parseable: bool,
+    bundle_has_sigstore_shape: bool,
+) -> list[dict[str, Any]]:
+    return [
         {
             "rule": "subject_files_exist",
             "pass": not missing,
@@ -167,12 +199,62 @@ def build_bundle_verification(
             ),
         },
     ]
+
+
+def _verification_status(
+    checks: list[dict[str, Any]],
+    *,
+    bundle_present: bool,
+) -> str:
     if not bundle_present:
-        status = "local-integrity-only"
-    elif all(check["pass"] for check in checks):
-        status = "verified-external-bundle"
-    else:
-        status = "external-bundle-verification-failed"
+        return "local-integrity-only"
+    if all(check["pass"] for check in checks):
+        return "verified-external-bundle"
+    return "external-bundle-verification-failed"
+
+
+def _report_subjects(vault: Path, subjects: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if subjects:
+        return subjects
+    in_toto_path = _resolve_ref(vault, IN_TOTO_DEFAULT_OUT)
+    return [_subject(in_toto_path, vault)] if in_toto_path.exists() else []
+
+
+def _artifact_context(model: dict[str, Any]) -> dict[str, Any]:
+    context = model["artifact_context"]
+    return {
+        "artifact_set_id": context["artifact_set_id"],
+        "in_toto_statement_ref": context["in_toto_statement_ref"],
+        "spdx_ref": context["spdx_ref"],
+        "openvex_ref": context["openvex_ref"],
+    }
+
+
+def build_bundle_verification(
+    vault: Path,
+    *,
+    policy_path: str | None = None,
+    artifact_model: dict[str, Any] | None = None,
+    bundle_ref: str | None = None,
+) -> dict[str, Any]:
+    policy, resolved_policy_path = load_policy(vault, policy_path)
+    model = artifact_model or build_model(vault, policy_path=policy_path)
+    subjects, missing = _collect_subjects(vault, _artifact_subject_refs(model))
+    resolved_bundle_ref, bundle_present, bundle_parseable, bundle_has_sigstore_shape = (
+        _bundle_evidence(vault, bundle_ref)
+    )
+    checks = _verification_checks(
+        missing=missing,
+        in_toto_match=_in_toto_subject_digests_match(
+            vault,
+            model["artifact_context"]["in_toto_statement_ref"],
+            subjects,
+        ),
+        bundle_present=bundle_present,
+        bundle_parseable=bundle_parseable,
+        bundle_has_sigstore_shape=bundle_has_sigstore_shape,
+    )
+    status = _verification_status(checks, bundle_present=bundle_present)
     report = {
         "$schema": SIGSTORE_BUNDLE_VERIFICATION_SCHEMA_PATH,
         "vault": report_path(vault, vault),
@@ -181,15 +263,10 @@ def build_bundle_verification(
             "path": report_path(vault, resolved_policy_path),
             "version": policy.get("version"),
         },
-        "artifact_context": {
-            "artifact_set_id": model["artifact_context"]["artifact_set_id"],
-            "in_toto_statement_ref": model["artifact_context"]["in_toto_statement_ref"],
-            "spdx_ref": model["artifact_context"]["spdx_ref"],
-            "openvex_ref": model["artifact_context"]["openvex_ref"],
-        },
+        "artifact_context": _artifact_context(model),
         "status": status,
         "bundle_ref": resolved_bundle_ref,
-        "subjects": subjects or [_subject(_resolve_ref(vault, IN_TOTO_DEFAULT_OUT), vault)] if _resolve_ref(vault, IN_TOTO_DEFAULT_OUT).exists() else [],
+        "subjects": _report_subjects(vault, subjects),
         "verification_checks": checks,
     }
     envelope = build_canonical_report_envelope(
@@ -201,9 +278,9 @@ def build_bundle_verification(
         resolved_policy_path=resolved_policy_path,
         schema_path=SIGSTORE_BUNDLE_VERIFICATION_SCHEMA_PATH,
         source_paths=[
-            "ops/scripts/sigstore_bundle.py",
-            "ops/scripts/in_toto_statement.py",
-            "ops/scripts/supply_chain_artifact_model.py",
+            "ops/scripts/supply_chain/sigstore_bundle.py",
+            "ops/scripts/supply_chain/in_toto_statement.py",
+            "ops/scripts/supply_chain/supply_chain_artifact_model.py",
         ],
         text_inputs={
             "artifact_set_id": str(model["artifact_context"]["artifact_set_id"]),

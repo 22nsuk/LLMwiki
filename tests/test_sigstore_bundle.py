@@ -153,6 +153,43 @@ class SigstoreBundleTests(unittest.TestCase):
                 )
             )
 
+    def test_build_bundle_verification_rejects_omitted_in_toto_subject(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            model = self._seed_supply_chain_reports(vault)
+            statement_path = vault / "ops/reports/in-toto-statement.json"
+            statement = json.loads(statement_path.read_text(encoding="utf-8"))
+            statement["subject"] = [
+                item
+                for item in statement["subject"]
+                if item["name"] != "ops/reports/openvex-draft.json"
+            ]
+            statement_path.write_text(json.dumps(statement), encoding="utf-8")
+            bundle = vault / "tmp" / "sigstore.bundle"
+            bundle.parent.mkdir(parents=True, exist_ok=True)
+            bundle.write_text(json.dumps(valid_sigstore_bundle_payload()), encoding="utf-8")
+
+            report = build_bundle_verification(vault, artifact_model=model, bundle_ref="tmp/sigstore.bundle")
+            destination = write_bundle_verification(
+                vault,
+                report,
+                "ops/reports/sigstore-bundle-verification.json",
+            )
+            persisted = json.loads(destination.read_text(encoding="utf-8"))
+
+            self.assertEqual(persisted["status"], "external-bundle-verification-failed")
+            self.assertFalse(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "in_toto_subject_digests_match"
+                )
+            )
+            self.assertTrue(
+                next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "external_bundle_observed")
+            )
+
     def test_build_bundle_verification_keeps_failed_external_bundle_distinct(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -174,6 +211,41 @@ class SigstoreBundleTests(unittest.TestCase):
             )
             self.assertTrue(
                 next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "external_bundle_observed")
+            )
+
+    def test_build_bundle_verification_preserves_partial_subjects_when_in_toto_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            model = self._seed_supply_chain_reports(vault)
+            (vault / "ops/reports/in-toto-statement.json").unlink()
+
+            report = build_bundle_verification(vault, artifact_model=model)
+            destination = write_bundle_verification(
+                vault,
+                report,
+                "ops/reports/sigstore-bundle-verification.json",
+            )
+            persisted = json.loads(destination.read_text(encoding="utf-8"))
+
+            self.assertEqual(persisted["status"], "local-integrity-only")
+            self.assertEqual(
+                {item["path"] for item in persisted["subjects"]},
+                {
+                    "ops/reports/cyclonedx-bom.json",
+                    "ops/reports/openvex-draft.json",
+                    "ops/reports/spdx-sbom.json",
+                },
+            )
+            self.assertFalse(
+                next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "subject_files_exist")
+            )
+            self.assertFalse(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "in_toto_subject_digests_match"
+                )
             )
 
 

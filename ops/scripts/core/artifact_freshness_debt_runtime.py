@@ -922,6 +922,141 @@ def _artifact_problem_records(artifact_records: list[dict[str, Any]]) -> list[di
     ]
 
 
+def _schema_or_contract_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        record
+        for record in records
+        if record.get("stable_contract_issues")
+        or str(record.get("schema_validation_status", "")) in {"fail", "schema_unavailable", "historical_schema_drift"}
+    ]
+
+
+def _mtime_or_test_target_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        record
+        for record in records
+        if record.get("mtime_sensitive_issues") or _record_test_target_issues(record)
+    ]
+
+
+def _execution_blocking_artifact_count(
+    records: list[dict[str, Any]],
+    *,
+    root_ephemeral_count: int,
+    non_utf8_count: int,
+) -> int:
+    return root_ephemeral_count + non_utf8_count + sum(
+        1
+        for record in records
+        if str(record.get("gate_effect", "")) == GATE_EFFECT_BLOCKS_EXECUTION
+    )
+
+
+def _other_operational_attention_count(
+    problem_records: list[dict[str, Any]],
+    *categorized_groups: list[dict[str, Any]],
+) -> int:
+    categorized_record_ids = {
+        id(record) for records in categorized_groups for record in records
+    }
+    categorized_record_ids.update(
+        id(record)
+        for record in problem_records
+        if str(record.get("gate_effect", "")) == GATE_EFFECT_BLOCKS_EXECUTION
+    )
+    return sum(1 for record in problem_records if id(record) not in categorized_record_ids)
+
+
+def _stale_routing_decision(
+    *,
+    problem_count: int,
+    source_identity_count: int,
+    schema_or_contract_count: int,
+    mtime_or_test_target_count: int,
+    execution_blocking_count: int,
+) -> dict[str, Any]:
+    source_identity_only = (
+        problem_count > 0
+        and source_identity_count == problem_count
+        and execution_blocking_count == 0
+    )
+    if problem_count == 0 and execution_blocking_count == 0:
+        return {
+            "classification": "clean",
+            "recommended_lane": "none",
+            "recommended_targets": [],
+            "reason_ids": ["artifact_freshness_clean"],
+            "summary": "No artifact freshness debt needs routing.",
+        }
+    if source_identity_only:
+        return {
+            "classification": "source_identity_only",
+            "recommended_lane": "release-finality-resettle",
+            "recommended_targets": [
+                "release-finality-resettle",
+                "release-post-commit-finalize",
+            ],
+            "reason_ids": ["source_identity_only_stale"],
+            "summary": (
+                f"{source_identity_count} stale artifact(s) only differ by source "
+                "revision or source-tree fingerprint; use a narrow resettle/post-commit lane "
+                "before broad release convergence."
+            ),
+        }
+    if execution_blocking_count:
+        return {
+            "classification": "execution_blocking_debt",
+            "recommended_lane": "artifact-freshness-refresh-check",
+            "recommended_targets": ["artifact-freshness-refresh-check"],
+            "reason_ids": ["execution_blocking_artifact_debt"],
+            "summary": (
+                f"{execution_blocking_count} execution-blocking artifact freshness "
+                "issue(s) need direct repair before release evidence routing."
+            ),
+        }
+    if schema_or_contract_count:
+        return {
+            "classification": "schema_or_contract_debt",
+            "recommended_lane": "release-evidence-converge",
+            "recommended_targets": [
+                "release-evidence-converge",
+                "artifact-freshness-refresh-check",
+            ],
+            "reason_ids": ["schema_or_contract_artifact_debt"],
+            "summary": (
+                f"{schema_or_contract_count} artifact(s) have schema or contract debt; "
+                "use the broader evidence convergence lane after fixing the producer or schema."
+            ),
+        }
+    if mtime_or_test_target_count:
+        return {
+            "classification": "mtime_or_test_target_debt",
+            "recommended_lane": "release-evidence-converge",
+            "recommended_targets": [
+                "release-evidence-converge",
+                "artifact-freshness-refresh-check",
+            ],
+            "reason_ids": ["mtime_or_test_target_artifact_debt"],
+            "summary": (
+                f"{mtime_or_test_target_count} artifact(s) have mtime or test target "
+                "freshness debt; regenerate the owning evidence before final release checks."
+            ),
+        }
+    return {
+        "classification": "mixed",
+        "recommended_lane": "release-evidence-converge",
+        "recommended_targets": [
+            "release-evidence-converge",
+            "artifact-freshness-refresh-check",
+        ],
+        "reason_ids": ["mixed_artifact_freshness_debt"],
+        "summary": (
+            f"{problem_count} artifact freshness issue(s) need owner-specific repair "
+            "before broad release evidence can be trusted."
+        ),
+    }
+
+
 def stale_routing(
     artifact_records: list[dict[str, Any]],
     *,
@@ -936,104 +1071,33 @@ def stale_routing(
         len(_record_source_identity_issues(record)) for record in source_identity_records
     )
     source_identity_owner_routes = _source_identity_owner_routes(source_identity_records)
-    schema_or_contract_records = [
-        record
-        for record in problem_records
-        if record.get("stable_contract_issues")
-        or str(record.get("schema_validation_status", "")) in {"fail", "schema_unavailable", "historical_schema_drift"}
-    ]
-    mtime_or_test_target_records = [
-        record
-        for record in problem_records
-        if record.get("mtime_sensitive_issues") or _record_test_target_issues(record)
-    ]
-    execution_blocking_artifact_count = root_ephemeral_count + non_utf8_count + sum(
-        1
-        for record in problem_records
-        if str(record.get("gate_effect", "")) == GATE_EFFECT_BLOCKS_EXECUTION
+    schema_or_contract_records = _schema_or_contract_records(problem_records)
+    mtime_or_test_target_records = _mtime_or_test_target_records(problem_records)
+    execution_blocking_artifact_count = _execution_blocking_artifact_count(
+        problem_records,
+        root_ephemeral_count=root_ephemeral_count,
+        non_utf8_count=non_utf8_count,
     )
-    categorized_record_ids = {
-        id(record)
-        for records in (
-            source_identity_records,
-            schema_or_contract_records,
-            mtime_or_test_target_records,
-        )
-        for record in records
-    }
-    categorized_record_ids.update(
-        id(record)
-        for record in problem_records
-        if str(record.get("gate_effect", "")) == GATE_EFFECT_BLOCKS_EXECUTION
+    other_operational_attention_artifact_count = _other_operational_attention_count(
+        problem_records,
+        source_identity_records,
+        schema_or_contract_records,
+        mtime_or_test_target_records,
     )
-    other_operational_attention_artifact_count = sum(
-        1 for record in problem_records if id(record) not in categorized_record_ids
+    decision = _stale_routing_decision(
+        problem_count=len(problem_records),
+        source_identity_count=len(source_identity_records),
+        schema_or_contract_count=len(schema_or_contract_records),
+        mtime_or_test_target_count=len(mtime_or_test_target_records),
+        execution_blocking_count=execution_blocking_artifact_count,
     )
-    source_identity_only = (
-        bool(problem_records)
-        and len(source_identity_records) == len(problem_records)
-        and execution_blocking_artifact_count == 0
-    )
-
-    if not problem_records and execution_blocking_artifact_count == 0:
-        classification = "clean"
-        recommended_lane = "none"
-        recommended_targets: list[str] = []
-        reason_ids = ["artifact_freshness_clean"]
-        summary = "No artifact freshness debt needs routing."
-    elif source_identity_only:
-        classification = "source_identity_only"
-        recommended_lane = "release-finality-resettle"
-        recommended_targets = ["release-finality-resettle", "release-post-commit-finalize"]
-        reason_ids = ["source_identity_only_stale"]
-        summary = (
-            f"{len(source_identity_records)} stale artifact(s) only differ by source "
-            "revision or source-tree fingerprint; use a narrow resettle/post-commit lane "
-            "before broad release convergence."
-        )
-    elif execution_blocking_artifact_count:
-        classification = "execution_blocking_debt"
-        recommended_lane = "artifact-freshness-refresh-check"
-        recommended_targets = ["artifact-freshness-refresh-check"]
-        reason_ids = ["execution_blocking_artifact_debt"]
-        summary = (
-            f"{execution_blocking_artifact_count} execution-blocking artifact freshness "
-            "issue(s) need direct repair before release evidence routing."
-        )
-    elif schema_or_contract_records:
-        classification = "schema_or_contract_debt"
-        recommended_lane = "release-evidence-converge"
-        recommended_targets = ["release-evidence-converge", "artifact-freshness-refresh-check"]
-        reason_ids = ["schema_or_contract_artifact_debt"]
-        summary = (
-            f"{len(schema_or_contract_records)} artifact(s) have schema or contract debt; "
-            "use the broader evidence convergence lane after fixing the producer or schema."
-        )
-    elif mtime_or_test_target_records:
-        classification = "mtime_or_test_target_debt"
-        recommended_lane = "release-evidence-converge"
-        recommended_targets = ["release-evidence-converge", "artifact-freshness-refresh-check"]
-        reason_ids = ["mtime_or_test_target_artifact_debt"]
-        summary = (
-            f"{len(mtime_or_test_target_records)} artifact(s) have mtime or test target "
-            "freshness debt; regenerate the owning evidence before final release checks."
-        )
-    else:
-        classification = "mixed"
-        recommended_lane = "release-evidence-converge"
-        recommended_targets = ["release-evidence-converge", "artifact-freshness-refresh-check"]
-        reason_ids = ["mixed_artifact_freshness_debt"]
-        summary = (
-            f"{len(problem_records)} artifact freshness issue(s) need owner-specific repair "
-            "before broad release evidence can be trusted."
-        )
 
     return {
-        "classification": classification,
-        "recommended_lane": recommended_lane,
-        "recommended_targets": recommended_targets,
+        "classification": decision["classification"],
+        "recommended_lane": decision["recommended_lane"],
+        "recommended_targets": decision["recommended_targets"],
         "post_commit_lane": "release-post-commit-finalize",
-        "reason_ids": reason_ids,
+        "reason_ids": decision["reason_ids"],
         "problem_artifact_count": len(problem_records) + root_ephemeral_count + non_utf8_count,
         "source_identity_only_artifact_count": len(source_identity_records),
         "source_identity_only_issue_count": source_identity_issue_count,
@@ -1042,5 +1106,5 @@ def stale_routing(
         "mtime_or_test_target_debt_artifact_count": len(mtime_or_test_target_records),
         "execution_blocking_artifact_count": execution_blocking_artifact_count,
         "other_operational_attention_artifact_count": other_operational_attention_artifact_count,
-        "summary": summary,
+        "summary": decision["summary"],
     }
