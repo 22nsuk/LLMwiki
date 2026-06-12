@@ -21,24 +21,6 @@
       "owner_or_lane": "active-matrix-priority-coordination"
     },
     {
-      "path": "ops/reports/task-improvement-observations/task-20260612-freshness-stale-cost-review/improvement-observations.json",
-      "observation_id": "freshness_source_identity_churn_needs_classifier",
-      "status": "planned",
-      "retained_reason": "Artifact freshness correctly reports source-identity drift after ordinary source edits, but the current operator-facing stale summary does not separate that cheap routing case from schema, contract, feedback-loop, or release-authority debt.",
-      "next_action": "Add a lightweight stale-cause classifier or planner hook that routes source_identity_only freshness debt to release-finality-resettle or post-commit checking instead of broad release convergence.",
-      "exit_condition": "Close when freshness/fixed-point reporting distinguishes source_identity_only stale records from actionable schema/contract/feedback debt and focused tests cover the routing.",
-      "owner_or_lane": "artifact-freshness-cost-routing"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260612-freshness-stale-cost-review/improvement-observations.json",
-      "observation_id": "finality_attestation_post_freshness_phase_drift",
-      "status": "planned",
-      "retained_reason": "The latest resettle could regenerate finality attestation after the terminal freshness/action-matrix pass, leaving freshness evidence slightly out of phase with a freshly written payload.",
-      "next_action": "Move finality attestation before the last freshness/action-matrix pass or add a post-scan writer drift check with a targeted recommended lane.",
-      "exit_condition": "Close when fixed-point or static coverage prevents freshness-sensitive writers from running after terminal freshness evidence without recomputing freshness/action-matrix state.",
-      "owner_or_lane": "release-finality-freshness-ordering"
-    },
-    {
       "path": "ops/reports/task-improvement-observations/task-20260610-runtime-decomposition-closeout/improvement-observations.json",
       "observation_id": "flat_import_reexport_migration_remaining",
       "status": "planned",

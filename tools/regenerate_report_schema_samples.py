@@ -11,6 +11,7 @@ from pathlib import Path
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from ops.scripts.artifact_freshness_debt_runtime import stale_routing
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.auto_improve_readiness_runtime import build_readiness_report
 from ops.scripts.cyclonedx_sbom import build_bom
@@ -249,6 +250,11 @@ def build_artifact_freshness_schema_sample_for_vault(vault: Path) -> dict:
         "status": "pass",
         "gate_effect": "none",
         "recommended_next_action": "No artifact freshness debt detected.",
+        "stale_routing": stale_routing(
+            [],
+            root_ephemeral_count=0,
+            non_utf8_count=0,
+        ),
         "safe_to_backfill": False,
         "mtime_sensitive": False,
         "summary": _artifact_freshness_zero_summary(),

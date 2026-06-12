@@ -34,6 +34,7 @@ from .artifact_freshness_debt_runtime import (
     owner_surface_rollup,
     recommended_next_action,
     report_next_action,
+    stale_routing,
     top_debt,
     top_debt_files,
 )
@@ -119,6 +120,9 @@ _PAYLOAD_COMPAT_EXPORTS = (
     embed_artifact_envelope_metadata,
 )
 PROGRESS_FORMATS = ("none", "jsonl")
+FINALITY_OWNED_TERMINAL_ARTIFACT_PATHS = {
+    "ops/reports/release-closeout-finality-attestation.json",
+}
 NON_SEALING_ARTIFACT_PATHS = {
     "ops/reports/archive-execution-manifest.json",
     "ops/reports/make-target-inventory.json",
@@ -126,6 +130,7 @@ NON_SEALING_ARTIFACT_PATHS = {
     "ops/reports/release-evidence-closeout-self-check.json",
     "ops/reports/release-workflow-order-guard.json",
     "ops/reports/workflow-dependency-planner.json",
+    *FINALITY_OWNED_TERMINAL_ARTIFACT_PATHS,
 }
 _SCHEMA_COMPAT_EXPORTS = (
     NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES,
@@ -1108,6 +1113,11 @@ def _assemble_artifact_freshness_payload(
             missing_schema_count=counts.missing_schema_count,
             stale_count=counts.stale_count,
             unknown_currentness_count=counts.unknown_currentness_count,
+        ),
+        "stale_routing": stale_routing(
+            scan_inputs.artifact_records,
+            root_ephemeral_count=len(scan_inputs.root_ephemeral),
+            non_utf8_count=len(scan_inputs.non_utf8),
         ),
         "safe_to_backfill": counts.safe_to_backfill_count > 0
         and counts.schema_invalid_count == 0

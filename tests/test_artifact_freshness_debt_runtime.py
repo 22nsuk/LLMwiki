@@ -9,6 +9,7 @@ from ops.scripts.artifact_freshness_debt_runtime import (
     debt_queues,
     owner_surface,
     report_next_action,
+    stale_routing,
     top_debt,
     top_debt_files,
 )
@@ -119,6 +120,101 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
             ),
             "regenerate_stale_artifacts",
         )
+
+    def test_source_identity_only_stale_records_route_to_narrow_resettle(self) -> None:
+        routing = stale_routing(
+            [
+                {
+                    "path": "ops/reports/public-check-summary.json",
+                    "issues": [
+                        "source_tree_fingerprint_mismatch",
+                        "source_revision_mismatch",
+                    ],
+                    "stable_contract_issues": [],
+                    "mtime_sensitive_issues": [],
+                    "schema_validation_status": "pass",
+                    "gate_effect": "claim_blocker",
+                }
+            ],
+            root_ephemeral_count=0,
+            non_utf8_count=0,
+        )
+
+        self.assertEqual(routing["classification"], "source_identity_only")
+        self.assertEqual(routing["recommended_lane"], "release-finality-resettle")
+        self.assertEqual(
+            routing["recommended_targets"],
+            ["release-finality-resettle", "release-post-commit-finalize"],
+        )
+        self.assertEqual(routing["source_identity_only_artifact_count"], 1)
+        self.assertEqual(routing["source_identity_only_issue_count"], 2)
+        self.assertEqual(routing["execution_blocking_artifact_count"], 0)
+
+    def test_mixed_source_identity_and_schema_debt_keeps_broad_routing(self) -> None:
+        routing = stale_routing(
+            [
+                {
+                    "path": "ops/reports/public-check-summary.json",
+                    "issues": [
+                        "source_tree_fingerprint_mismatch",
+                        "schema_validation_failed",
+                    ],
+                    "stable_contract_issues": ["schema_validation_failed"],
+                    "mtime_sensitive_issues": [],
+                    "schema_validation_status": "fail",
+                    "gate_effect": "blocks_execution",
+                }
+            ],
+            root_ephemeral_count=0,
+            non_utf8_count=0,
+        )
+
+        self.assertEqual(routing["classification"], "execution_blocking_debt")
+        self.assertEqual(routing["recommended_lane"], "artifact-freshness-refresh-check")
+        self.assertEqual(routing["source_identity_only_artifact_count"], 0)
+        self.assertEqual(routing["schema_or_contract_debt_artifact_count"], 1)
+        self.assertEqual(routing["execution_blocking_artifact_count"], 1)
+
+    def test_overlapping_debt_buckets_do_not_hide_other_operational_attention(self) -> None:
+        routing = stale_routing(
+            [
+                {
+                    "path": "ops/reports/schema-and-mtime.json",
+                    "issues": [
+                        "schema_validation_failed",
+                        "generated_at_older_than_file_mtime",
+                    ],
+                    "stable_contract_issues": ["schema_validation_failed"],
+                    "mtime_sensitive_issues": ["generated_at_older_than_file_mtime"],
+                    "schema_validation_status": "fail",
+                    "gate_effect": "claim_blocker",
+                },
+                {
+                    "path": "ops/reports/unknown-currentness.json",
+                    "issues": ["unknown_currentness"],
+                    "stable_contract_issues": [],
+                    "mtime_sensitive_issues": [],
+                    "schema_validation_status": "pass",
+                    "gate_effect": "claim_blocker",
+                },
+            ],
+            root_ephemeral_count=0,
+            non_utf8_count=0,
+        )
+
+        self.assertEqual(routing["classification"], "schema_or_contract_debt")
+        self.assertEqual(routing["problem_artifact_count"], 2)
+        self.assertEqual(routing["schema_or_contract_debt_artifact_count"], 1)
+        self.assertEqual(routing["mtime_or_test_target_debt_artifact_count"], 1)
+        self.assertEqual(routing["other_operational_attention_artifact_count"], 1)
+
+    def test_clean_routing_has_no_release_lane(self) -> None:
+        routing = stale_routing([], root_ephemeral_count=0, non_utf8_count=0)
+
+        self.assertEqual(routing["classification"], "clean")
+        self.assertEqual(routing["recommended_lane"], "none")
+        self.assertEqual(routing["recommended_targets"], [])
+        self.assertEqual(routing["problem_artifact_count"], 0)
 
 
 if __name__ == "__main__":

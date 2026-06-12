@@ -788,6 +788,14 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["gate_effect"], "claim_blocker")
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
+            self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
+            self.assertEqual(report["stale_routing"]["recommended_lane"], "release-finality-resettle")
+            self.assertEqual(
+                report["stale_routing"]["recommended_targets"],
+                ["release-finality-resettle", "release-post-commit-finalize"],
+            )
+            self.assertEqual(report["stale_routing"]["source_identity_only_artifact_count"], 1)
+            self.assertEqual(report["stale_routing"]["execution_blocking_artifact_count"], 0)
 
     def test_canonical_report_source_revision_mismatch_overrides_self_declared_currentness(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -850,6 +858,10 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["gate_effect"], "claim_blocker")
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
+            self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
+            self.assertEqual(report["stale_routing"]["recommended_lane"], "release-finality-resettle")
+            self.assertEqual(report["stale_routing"]["source_identity_only_artifact_count"], 1)
+            self.assertEqual(report["stale_routing"]["source_identity_only_issue_count"], 1)
 
     def test_learning_readiness_signoff_source_identity_drift_points_to_refresh_owner(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -907,6 +919,50 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertIn("source_tree_fingerprint_mismatch", record["issues"])
             self.assertIn("source_revision_mismatch", record["issues"])
             self.assertEqual(record["recommended_next_action"], "refresh_learning_readiness_signoff")
+            self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
+            self.assertEqual(report["stale_routing"]["recommended_lane"], "release-finality-resettle")
+
+    def test_finality_attestation_is_finality_owned_not_freshness_debt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            finality_path = vault / "ops" / "reports" / "release-closeout-finality-attestation.json"
+            finality_path.parent.mkdir(parents=True, exist_ok=True)
+            finality_path.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/release-closeout-finality-attestation.schema.json",
+                        "artifact_kind": "release_closeout_finality_attestation",
+                        "generated_at": "2000-01-01T00:00:00Z",
+                        "producer": "ops.scripts.release_closeout_finality_attestation",
+                        "source_command": "python -m ops.scripts.release_closeout_finality_attestation --vault .",
+                        "source_revision": "old-revision",
+                        "source_tree_fingerprint": "old-source-tree",
+                        "input_fingerprints": {},
+                        "schema_version": 1,
+                        "artifact_status": "current",
+                        "retention_policy": "canonical_report",
+                        "encoding": "utf-8",
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2000-01-01T00:00:00Z",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+            schema = load_schema(REPORT_SCHEMA_PATH)
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["stale_routing"]["classification"], "clean")
+            self.assertNotIn(
+                "ops/reports/release-closeout-finality-attestation.json",
+                {record["path"] for record in report["artifact_records"]},
+            )
 
     def test_active_run_auxiliary_json_is_not_canonical_release_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

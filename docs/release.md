@@ -516,12 +516,14 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `public-check-summary-current-check` itself.
 - `ops/reports/release-closeout-finality-attestation.json` is diagnostic only;
   release authority is the staged `release-run`, `release-sealed-run`, and
-  `release-auto-promotion-ready` manifests under `build/release/`. Treat
-  finality verification as terminal for tracked report writers: after refreshing
-  `artifact-freshness`, `external-report-action-matrix`,
-  `generated-artifact-index`, `release-closeout-summary-report`, or another
-  fixed-point tracked report, rerun `make release-finality-resettle` so the
-  attestation is written after the last writer.
+  `release-auto-promotion-ready` manifests under `build/release/`. Artifact
+  freshness excludes this finality-owned diagnostic so a terminal finality write
+  does not create freshness debt; validate it with
+  `make release-closeout-finality-verify`. After refreshing `artifact-freshness`,
+  `external-report-action-matrix`, `generated-artifact-index`,
+  `release-closeout-summary-report`, or another fixed-point tracked report,
+  rerun `make release-finality-resettle` so the attestation is rewritten and
+  verified after the last tracked writer.
   For staged authority settle, prefer `make release-authority-settle`; its
   terminal tail binds the effective distribution ZIP into the batch manifest,
   fixed point, replay verification, and finality verification together.
