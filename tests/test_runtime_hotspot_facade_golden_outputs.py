@@ -58,9 +58,9 @@ AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve
 
 GOLDEN_DIGESTS = {
     "mutation_proposal": "dcb98cd75a4ecdf3900005f9608906d1c968aa08ae903dd1977502c038a405fe",
-    "release_evidence_dashboard": "abb6e075836737799bfd4b5208d076f909de6997fd92fde80d205b2c0b802dd4",
-    "release_closeout_summary": "46b2c5b281d04307443daf4b9b8561326ade241e400a5d8bb00102aa6fd7bbd2",
-    "auto_improve_session_bundle": "bd7bb38f73a80393f75b6ca39b60864b773e03d27ea027a33084c00629384ca5",
+    "release_evidence_dashboard": "debefd8a9cd728779cd5571a303b036f7cc492e2a1b94842107ca540e0402595",
+    "release_closeout_summary": "f829a6b353823cfeb106d1f2059b765299a3573549f2b46eb376cd596aed5653",
+    "auto_improve_session_bundle": "754d7f74bf4c0edcbe75ef78c1b31f93da1b09c034c755ae7fca983fa42bbbbe",
 }
 GOLDEN_CHECK_COMMAND = "make runtime-hotspot-goldens-check"
 
