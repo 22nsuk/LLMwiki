@@ -4,8 +4,20 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "$schema",
     "artifact_kind",
     "producer",
+    "generated_at",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
     "session_id",
     "status",
     "current_max_proposals",
@@ -18,8 +30,37 @@
     "decisions"
   ],
   "properties": {
+    "$schema": { "const": "ops/schemas/goal-runtime-maintenance-action-plan.schema.json" },
     "artifact_kind": { "const": "goal_runtime_maintenance_action_plan" },
     "producer": { "const": "ops.scripts.auto_improve_runtime" },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "const": "current" },
+    "retention_policy": { "const": "run_local_state" },
+    "encoding": { "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "const": "current" },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": { "type": "string" },
     "session_id": { "type": "string", "minLength": 1 },
     "status": { "type": "string", "enum": ["pass", "attention"] },
     "current_max_proposals": { "type": "integer", "minimum": 0 },

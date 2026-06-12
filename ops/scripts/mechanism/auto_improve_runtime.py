@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import time
 from collections.abc import Mapping
@@ -7,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
@@ -19,7 +21,7 @@ from ops.scripts.observability_artifacts_runtime import (
     write_promotion_decision_trends,
     write_run_artifact_fingerprint,
 )
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.proposal_scope_runtime import build_scope_freeze, write_scope_freeze
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.runtime_event_logging_runtime import append_runtime_event
@@ -121,6 +123,26 @@ DEFAULT_MECHANISM_REVIEW_REPORT = "ops/reports/mechanism-review-candidates.json"
 DEFAULT_MUTATION_PROPOSAL_REPORT = "ops/reports/mutation-proposals.json"
 DEFAULT_MAINTENANCE_ACTION_PLAN = "tmp/goal-runtime-maintenance-action.json"
 MAINTENANCE_ACTION_PLAN_SCHEMA = "ops/schemas/goal-runtime-maintenance-action-plan.schema.json"
+MAINTENANCE_ACTION_PLAN_SOURCE_COMMAND = (
+    "python -m ops.scripts.auto_improve_loop "
+    "--print-maintenance-action-next-max-proposals"
+)
+MAINTENANCE_ACTION_PLAN_ENVELOPE_FIELDS = frozenset(
+    {
+        "$schema",
+        "generated_at",
+        "source_command",
+        "source_revision",
+        "source_tree_fingerprint",
+        "input_fingerprints",
+        "schema_version",
+        "artifact_status",
+        "retention_policy",
+        "encoding",
+        "currentness",
+        "vault",
+    }
+)
 
 
 _build_proposal_queue = build_proposal_queue
@@ -521,10 +543,47 @@ def write_maintenance_action_resume_plan(
     *,
     out_path: str = DEFAULT_MAINTENANCE_ACTION_PLAN,
 ) -> Path:
+    policy, resolved_policy_path = load_policy(vault)
+    runtime_context = RuntimeContext.from_policy(policy)
+    business_payload = {
+        str(key): value
+        for key, value in dict(plan).items()
+        if str(key) not in MAINTENANCE_ACTION_PLAN_ENVELOPE_FIELDS
+    }
+    enriched_plan = {
+        **business_payload,
+        **build_canonical_report_envelope(
+            vault,
+            generated_at=runtime_context.isoformat_z(),
+            artifact_kind="goal_runtime_maintenance_action_plan",
+            producer="ops.scripts.auto_improve_runtime",
+            source_command=MAINTENANCE_ACTION_PLAN_SOURCE_COMMAND,
+            resolved_policy_path=resolved_policy_path,
+            schema_path=MAINTENANCE_ACTION_PLAN_SCHEMA,
+            source_paths=[
+                "ops/scripts/mechanism/auto_improve_runtime.py",
+                "ops/scripts/mechanism/auto_improve_maintenance_decision_runtime.py",
+                "ops/scripts/mechanism/auto_improve_loop.py",
+                "ops/schemas/goal-runtime-maintenance-action-plan.schema.json",
+                "mk/mechanism.mk",
+            ],
+            text_inputs={
+                "maintenance_action_plan_payload": json.dumps(
+                    business_payload,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                "maintenance_action_plan_out": str(out_path),
+            },
+        ),
+        "retention_policy": "run_local_state",
+        "vault": report_path(vault, vault),
+    }
     return write_schema_backed_report(
         SchemaBackedReportWriteRequest(
             vault=vault,
-            payload=dict(plan),
+            payload=enriched_plan,
             schema_path=MAINTENANCE_ACTION_PLAN_SCHEMA,
             out_path=out_path,
             default_relative_path=DEFAULT_MAINTENANCE_ACTION_PLAN,

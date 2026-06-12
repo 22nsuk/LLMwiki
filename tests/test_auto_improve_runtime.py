@@ -197,6 +197,39 @@ def _assert_successful_runtime_events_and_learning(case: unittest.TestCase, arti
 
 
 class AutoImproveRuntimeTests(unittest.TestCase):
+    def test_maintenance_action_plan_schema_requires_canonical_envelope(self) -> None:
+        plan_schema = load_schema(REPO_ROOT / "ops/schemas/goal-runtime-maintenance-action-plan.schema.json")
+        bare_business_plan = {
+            "artifact_kind": "goal_runtime_maintenance_action_plan",
+            "producer": "ops.scripts.auto_improve_runtime",
+            "session_id": "auto-session-maintenance-action",
+            "status": "pass",
+            "current_max_proposals": 1,
+            "current_iteration_count": 1,
+            "next_max_proposals": 2,
+            "queue_action": {
+                "status": "action_required",
+                "reason": "stable_runnable_queue",
+                "proposal_ids": ["proposal-b"],
+                "runner_action": "resume_session_with_additional_proposal_budget",
+                "proposal_budget_increment": 1,
+                "resume_target": "auto-improve-goal-maintenance-action",
+            },
+            "selected_proposal": {
+                "proposal_id": "proposal-b",
+                "family": "runtime",
+                "failure_mode": "stable_runnable_queue",
+            },
+            "blockers": [],
+            "recommended_next_action": "Run make auto-improve-goal-maintenance-action.",
+            "decisions": {
+                "can_resume": True,
+                "requires_budget_increment": True,
+            },
+        }
+
+        self.assertNotEqual(validate_with_schema(bare_business_plan, plan_schema), [])
+
     def test_mutation_error_classifies_codex_usage_limit_as_retryable_capacity(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -587,6 +620,22 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             plan_schema = load_schema(REPO_ROOT / "ops/schemas/goal-runtime-maintenance-action-plan.schema.json")
             written_plan = json.loads(plan_path.read_text(encoding="utf-8"))
             self.assertEqual(validate_with_schema(written_plan, plan_schema), [])
+            self.assertEqual(
+                written_plan["$schema"],
+                "ops/schemas/goal-runtime-maintenance-action-plan.schema.json",
+            )
+            self.assertEqual(written_plan["artifact_status"], "current")
+            self.assertEqual(written_plan["retention_policy"], "run_local_state")
+            self.assertEqual(written_plan["encoding"], "utf-8")
+            self.assertEqual(written_plan["currentness"]["status"], "current")
+            self.assertEqual(
+                written_plan["currentness"]["checked_at"],
+                written_plan["generated_at"],
+            )
+            self.assertIn(
+                "maintenance_action_plan_payload",
+                written_plan["input_fingerprints"],
+            )
 
             extended_contract = sample_goal_contract()
             extended_contract["budgets"]["max_proposals"] = 2

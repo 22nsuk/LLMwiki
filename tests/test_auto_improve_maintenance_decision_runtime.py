@@ -17,17 +17,36 @@ from ops.scripts.auto_improve_maintenance_decision_runtime import (
     _resolve_post_promote_maintenance_cycles,
     build_maintenance_action_resume_plan,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 from ops.scripts import auto_improve_runtime
 from ops.scripts.mechanism import auto_improve_maintenance_decision_runtime
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MAINTENANCE_ACTION_SCHEMA = REPO_ROOT / "ops/schemas/goal-runtime-maintenance-action-plan.schema.json"
+
+BUSINESS_PLAN_REQUIRED_FIELDS = {
+    "artifact_kind",
+    "producer",
+    "session_id",
+    "status",
+    "current_max_proposals",
+    "current_iteration_count",
+    "next_max_proposals",
+    "queue_action",
+    "selected_proposal",
+    "blockers",
+    "recommended_next_action",
+    "decisions",
+}
 
 
 def _assert_valid_plan(plan: dict) -> None:
-    assert validate_with_schema(plan, load_schema(MAINTENANCE_ACTION_SCHEMA)) == []
+    assert set(plan) >= BUSINESS_PLAN_REQUIRED_FIELDS
+    assert plan["artifact_kind"] == "goal_runtime_maintenance_action_plan"
+    assert plan["producer"] == "ops.scripts.auto_improve_runtime"
+    assert isinstance(plan["queue_action"], dict)
+    assert isinstance(plan["selected_proposal"], dict)
+    assert isinstance(plan["blockers"], list)
+    assert isinstance(plan["decisions"], dict)
 
 
 def _loader_must_not_run() -> dict:
