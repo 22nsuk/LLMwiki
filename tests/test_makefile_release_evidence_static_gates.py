@@ -721,6 +721,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
                 "$(MAKE) generated-artifact-finality-suffix",
                 "$(MAKE) release-closeout-summary-report",
                 "$(MAKE) release-closeout-fixed-point",
+                "$(MAKE) external-report-action-matrix",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
             ],

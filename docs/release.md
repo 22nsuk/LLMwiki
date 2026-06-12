@@ -523,7 +523,9 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `external-report-action-matrix`, `generated-artifact-index`,
   `release-closeout-summary-report`, or another fixed-point tracked report,
   rerun `make release-finality-resettle` so the attestation is rewritten and
-  verified after the last tracked writer.
+  verified after the last tracked writer. The action matrix is refreshed once
+  after the attestation so it can report the terminal finality result, but it is
+  not itself a finality digest-bound artifact.
   For staged authority settle, prefer `make release-authority-settle`; its
   terminal tail binds the effective distribution ZIP into the batch manifest,
   fixed point, replay verification, and finality verification together.

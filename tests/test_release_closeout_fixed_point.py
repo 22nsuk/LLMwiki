@@ -56,6 +56,11 @@ TARGET_TO_TRACKED_PATH = {
     "release-closeout-batch-manifest-promote": "ops/reports/release-closeout-batch-manifest.json",
     "release-evidence-closeout-self-check": "ops/reports/release-evidence-closeout-self-check.json",
 }
+FINALITY_TRACKED_PATHS = {
+    path
+    for target, path in TARGET_TO_TRACKED_PATH.items()
+    if target != "external-report-action-matrix"
+}
 
 
 class ReleaseCloseoutFixedPointTests(unittest.TestCase):
@@ -158,7 +163,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         )
         final_digest_map = {
             rel_path: hashlib.sha256((self.vault / rel_path).read_bytes()).hexdigest()
-            for rel_path in TARGET_TO_TRACKED_PATH.values()
+            for rel_path in FINALITY_TRACKED_PATHS
         }
         self._write_tracked_payload(
             DEFAULT_OUT,
@@ -236,7 +241,11 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertTrue(expensive["skip_policy_effective"])
         self.assertEqual(
             sorted(report["final_digest_map"]),
-            sorted(TARGET_TO_TRACKED_PATH.values()),
+            sorted(FINALITY_TRACKED_PATHS),
+        )
+        self.assertNotIn(
+            TARGET_TO_TRACKED_PATH["external-report-action-matrix"],
+            report["final_digest_map"],
         )
         for rel_path, digest in report["final_digest_map"].items():
             actual = hashlib.sha256((self.vault / rel_path).read_bytes()).hexdigest()

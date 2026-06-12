@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "max_iterations": 10,
   "feedback_refresh_targets": [
     "generated-artifact-index-body",
@@ -151,7 +151,6 @@
     "ops/reports/goal-worktree-guard.json",
     "ops/reports/generated-artifact-index.json",
     "ops/reports/artifact-freshness-report.json",
-    "ops/reports/external-report-action-matrix.json",
     "ops/reports/auto-improve-readiness.json",
     "ops/reports/release-closeout-summary.json",
     "ops/reports/learning-readiness-signoff-revalidation.json",
