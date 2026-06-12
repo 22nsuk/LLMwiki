@@ -224,6 +224,23 @@ def test_initial_maintenance_payload_and_terminal_conditions_are_pure_decisions(
         )
         == "stable_queue_snapshot"
     )
+    stable_empty_session = {
+        "maintenance": {
+            "stable_queue_snapshot": [],
+            "stable_queue_snapshot_count": 2,
+            "cycle_count": 2,
+        }
+    }
+    assert (
+        _maintenance_terminal_completion_condition(
+            stable_empty_session,
+            default_completion_condition="time_budget",
+            max_cycles=None,
+            elapsed_seconds=300,
+            target_elapsed_seconds=600,
+        )
+        == "stable_queue_snapshot"
+    )
     assert _maintenance_completion_stop_reason("stable_queue_snapshot") == "stable_queue_snapshot"
     assert (
         _maintenance_completion_stop_reason("post_promote_cycle_limit")
@@ -250,6 +267,35 @@ def test_maintenance_action_resume_plan_returns_pass_without_required_action() -
         "requires_budget_increment": False,
     }
     assert plan["recommended_next_action"] == "No maintenance queue action requires a resume."
+    _assert_valid_plan(plan)
+
+
+def test_maintenance_action_resume_plan_blocks_queue_empty_after_attempted_session() -> None:
+    plan = build_maintenance_action_resume_plan(
+        {
+            "budget": {"max_proposals": 1},
+            "iterations": [{"proposal_id": "proposal-a"}],
+            "attempted_proposal_ids": ["proposal-a"],
+            "maintenance": {
+                "queue_action": {
+                    "status": "none",
+                    "reason": "queue_empty",
+                }
+            },
+        },
+        session_id="auto-session-attempted-empty-queue",
+        mutation_proposals_report_loader=lambda: {
+            "proposals": [{"proposal_id": "proposal-a", "blocked_by": []}]
+        },
+    )
+
+    assert plan["status"] == "attention"
+    assert plan["blockers"] == ["no unattempted runnable proposal is available"]
+    assert plan["next_max_proposals"] == 1
+    assert plan["decisions"] == {
+        "can_resume": False,
+        "requires_budget_increment": False,
+    }
     _assert_valid_plan(plan)
 
 

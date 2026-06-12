@@ -235,7 +235,10 @@ def _maintenance_terminal_completion_condition(
     maintenance = _mapping_value(session, "maintenance")
     stable_count = _int_value(maintenance.get("stable_queue_snapshot_count"))
     stable_snapshot = _list_text(maintenance.get("stable_queue_snapshot"))
-    if stable_snapshot and stable_count >= STABLE_MAINTENANCE_QUEUE_THRESHOLD:
+    if stable_count >= STABLE_MAINTENANCE_QUEUE_THRESHOLD and (
+        stable_snapshot
+        or _maintenance_cycle_count(session) >= STABLE_MAINTENANCE_QUEUE_THRESHOLD
+    ):
         return "stable_queue_snapshot"
     if max_cycles is not None and _maintenance_cycle_count(session) >= max_cycles:
         return default_completion_condition
@@ -368,6 +371,20 @@ def _maintenance_action_base_plan(
     }
 
 
+def _queue_empty_after_recorded_attempts(
+    session: Mapping[str, Any],
+    queue_action_payload: Mapping[str, Any],
+) -> bool:
+    if str(queue_action_payload.get("status", "")).strip() != "none":
+        return False
+    if str(queue_action_payload.get("reason", "")).strip() != "queue_empty":
+        return False
+    return bool(
+        _list_text(session.get("attempted_proposal_ids"))
+        or _list_text(session.get("quarantined_proposal_ids"))
+    )
+
+
 def _block_maintenance_action_plan(
     base_plan: dict[str, Any],
     *,
@@ -458,6 +475,19 @@ def build_maintenance_action_resume_plan(
         queue_action_payload=queue_action_payload,
     )
     if str(queue_action_payload.get("status", "")).strip() != "action_required":
+        if _queue_empty_after_recorded_attempts(session, queue_action_payload):
+            proposals = mutation_proposals_report_loader().get("proposals")
+            if isinstance(proposals, list):
+                selected, _ = _selected_maintenance_proposal(session, proposals)
+                if not selected:
+                    return _block_maintenance_action_plan(
+                        base_plan,
+                        blocker="no unattempted runnable proposal is available",
+                        recommended_next_action=(
+                            "Refresh mutation proposals and readiness. If the queue remains blocked, "
+                            "the maintenance action cannot complete by adding proposal budget alone."
+                        ),
+                    )
         base_plan["status"] = "pass"
         base_plan["recommended_next_action"] = "No maintenance queue action requires a resume."
         return base_plan

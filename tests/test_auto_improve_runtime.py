@@ -533,18 +533,16 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(maintenance["meaningful_cycle_count"], 1)
             self.assertEqual(maintenance["stable_queue_snapshot_count"], 2)
             self.assertEqual(maintenance["last_cycle_elapsed_seconds"], 300)
-            self.assertEqual(maintenance["queue_action"]["status"], "action_required")
-            self.assertEqual(maintenance["queue_action"]["reason"], "stable_runnable_queue")
-            self.assertEqual(
-                maintenance["queue_action"]["runner_action"],
-                "resume_session_with_additional_proposal_budget",
-            )
-            self.assertEqual(maintenance["queue_action"]["proposal_budget_increment"], 1)
-            self.assertEqual(
-                maintenance["queue_action"]["resume_target"],
-                "auto-improve-goal-maintenance-action",
-            )
+            self.assertEqual(maintenance["queue_action"]["status"], "none")
+            self.assertEqual(maintenance["queue_action"]["reason"], "queue_empty")
+            self.assertEqual(maintenance["queue_action"]["runner_action"], "none")
+            self.assertEqual(maintenance["queue_action"]["proposal_budget_increment"], 0)
+            self.assertEqual(maintenance["queue_action"]["resume_target"], "")
             self.assertTrue(all(cycle["status"] == "pass" for cycle in maintenance["cycles"]))
+            self.assertTrue(all(cycle["queue_snapshot"] == [] for cycle in maintenance["cycles"]))
+            self.assertTrue(
+                all(cycle["runnable_proposal_count"] == 0 for cycle in maintenance["cycles"])
+            )
             self.assertTrue(maintenance["cycles"][0]["meaningful"])
             self.assertFalse(maintenance["cycles"][1]["meaningful"])
             self.assertTrue(
