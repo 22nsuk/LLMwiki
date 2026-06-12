@@ -315,6 +315,9 @@ def build_report(
                 "ops/scripts/external_report_lifecycle_runtime.py",
                 "ops/scripts/external_report_reference_manifest.py",
             ],
+            file_inputs={
+                "external_report_reference_manifest": REFERENCE_MANIFEST,
+            },
             path_group_inputs={
                 "active_external_reports": [report_path(resolved_vault, path) for path in report_paths],
                 "archived_external_reports": [

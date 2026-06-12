@@ -3,15 +3,6 @@
   "artifact_kind": "observation_closeout_registry",
   "retained_observations": [
     {
-      "path": "ops/reports/task-improvement-observations/task-20260608-active-report-currentness-gap/improvement-observations.json",
-      "observation_id": "active_external_report_inputs_missing_from_reuse_currentness",
-      "status": "planned",
-      "retained_reason": "The gap depends on full-vault active external-report inputs and report-contract summary reuse; public source must not infer private report currentness.",
-      "next_action": "Add a focused currentness reuse regression after the external-report lifecycle refresh lane is next touched in full-vault context.",
-      "exit_condition": "Close when report-contract reuse includes active external-report manifest/action-matrix input drift or an equivalent preflight.",
-      "owner_or_lane": "external-report-lifecycle-refresh"
-    },
-    {
       "path": "ops/reports/task-improvement-observations/task-20260610-active-matrix-priority-plan/improvement-observations.json",
       "observation_id": "active_matrix_priority_lane_coordination_gap",
       "status": "planned",

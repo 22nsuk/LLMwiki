@@ -5,6 +5,9 @@ import unittest
 
 import pytest
 
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.external_report_lifecycle_runtime import (
     release_lane_mutability_split_status,
 )
@@ -302,6 +305,97 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         self.assertEqual(self_evidence["status"], report["status"])
         self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+    def test_reference_manifest_drift_is_not_masked_by_reused_report_contract_summary(self) -> None:
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nexternal report lifecycle.\n",
+            encoding="utf-8",
+        )
+        (self.external / "new-active.md").write_text(
+            "# Follow-up Review\n\nexternal report lifecycle.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [
+                    {"path": "external-reports/release.md"},
+                ],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+        self._write_json(
+            "ops/reports/test-execution-summary.json",
+            {
+                "artifact_kind": "test_execution_summary",
+                "producer": "ops.scripts.test_execution_summary",
+                "status": "pass",
+                "source_revision": "source_package_without_git",
+                "source_tree_fingerprint": release_source_tree_fingerprint(self.vault),
+                "currentness": {"status": "current"},
+                "suite": "report-contract",
+            },
+        )
+
+        stale_manifest_report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(stale_manifest_report["status"], "attention")
+        self.assertEqual(
+            stale_manifest_report["summary"]["reference_manifest_alignment_status"],
+            "drift",
+        )
+        self.assertEqual(
+            stale_manifest_report["summary"][
+                "reference_manifest_missing_active_report_count"
+            ],
+            1,
+        )
+        self.assertEqual(
+            stale_manifest_report["reference_manifest_alignment"][
+                "missing_active_report_paths"
+            ],
+            ["external-reports/new-active.md"],
+        )
+        self.assertIn(
+            "external_report_reference_manifest",
+            stale_manifest_report["input_fingerprints"],
+        )
+
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [
+                    {"path": "external-reports/new-active.md"},
+                    {"path": "external-reports/release.md"},
+                ],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        current_manifest_report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            current_manifest_report["summary"]["reference_manifest_alignment_status"],
+            "current",
+        )
+        self.assertEqual(
+            current_manifest_report["summary"][
+                "reference_manifest_missing_active_report_count"
+            ],
+            0,
+        )
+        self.assertNotEqual(
+            stale_manifest_report["input_fingerprints"][
+                "external_report_reference_manifest"
+            ],
+            current_manifest_report["input_fingerprints"][
+                "external_report_reference_manifest"
+            ],
+        )
+        self.assertEqual(
+            current_manifest_report["input_fingerprints"]["active_external_reports"],
+            stale_manifest_report["input_fingerprints"]["active_external_reports"],
+        )
+        self.assertEqual(validate_with_schema(current_manifest_report, load_schema(SCHEMA_PATH)), [])
     def test_open_archive_reconciliation_observations_keep_absorption_actions_active(self) -> None:
         self._write_static_github_security_surfaces()
         for rel_path, text in {
