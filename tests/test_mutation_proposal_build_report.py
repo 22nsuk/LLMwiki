@@ -5,11 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mutation_proposal import main as mutation_proposal_main
-from ops.scripts.mutation_proposal_runtime import build_report
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.mechanism.mutation_proposal import main as mutation_proposal_main
+from ops.scripts.mechanism.mutation_proposal_runtime import (
+    MUTATION_PROPOSAL_SOURCE_PATHS,
+    build_report,
+)
 from tests.cli_test_runtime import invoke_cli_main
 from tests.mutation_proposal_test_runtime import (
     ENVELOPE_SCHEMA_PATH,
@@ -22,6 +25,26 @@ from tests.mutation_proposal_test_runtime import (
 
 
 class MutationProposalBuildReportTest(unittest.TestCase):
+    def test_source_paths_include_loader_dependency(self) -> None:
+        self.assertEqual(
+            MUTATION_PROPOSAL_SOURCE_PATHS,
+            [
+                "ops/scripts/mechanism/mutation_proposal_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_bootstrap_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_candidate_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_loader_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_promotion_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_recent_log_overlap_runtime.py",
+                "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
+                "ops/scripts/mechanism/current_target_path_runtime.py",
+                "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
+                "ops/scripts/mechanism/noop_repair_classifier_runtime.py",
+            ],
+        )
+        repo_root = Path(__file__).resolve().parents[1]
+        for rel_path in MUTATION_PROPOSAL_SOURCE_PATHS:
+            self.assertTrue((repo_root / rel_path).is_file(), rel_path)
+
     def test_cli_writes_relative_out_under_vault(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

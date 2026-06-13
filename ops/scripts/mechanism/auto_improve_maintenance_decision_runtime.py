@@ -396,6 +396,17 @@ def _block_maintenance_action_plan(
     return base_plan
 
 
+def _block_missing_mutation_proposal_report(base_plan: dict[str, Any]) -> dict[str, Any]:
+    return _block_maintenance_action_plan(
+        base_plan,
+        blocker="mutation proposal report is missing or invalid",
+        recommended_next_action=(
+            "Run make mutation-proposal or make goal-runtime-between-run-settle, "
+            "then rerun the maintenance action."
+        ),
+    )
+
+
 def _selected_maintenance_proposal(
     session: Mapping[str, Any],
     proposals: list[Any],
@@ -477,17 +488,18 @@ def build_maintenance_action_resume_plan(
     if str(queue_action_payload.get("status", "")).strip() != "action_required":
         if _queue_empty_after_recorded_attempts(session, queue_action_payload):
             proposals = mutation_proposals_report_loader().get("proposals")
-            if isinstance(proposals, list):
-                selected, _ = _selected_maintenance_proposal(session, proposals)
-                if not selected:
-                    return _block_maintenance_action_plan(
-                        base_plan,
-                        blocker="no unattempted runnable proposal is available",
-                        recommended_next_action=(
-                            "Refresh mutation proposals and readiness. If the queue remains blocked, "
-                            "the maintenance action cannot complete by adding proposal budget alone."
-                        ),
-                    )
+            if not isinstance(proposals, list):
+                return _block_missing_mutation_proposal_report(base_plan)
+            selected, _ = _selected_maintenance_proposal(session, proposals)
+            if not selected:
+                return _block_maintenance_action_plan(
+                    base_plan,
+                    blocker="no unattempted runnable proposal is available",
+                    recommended_next_action=(
+                        "Refresh mutation proposals and readiness. If the queue remains blocked, "
+                        "the maintenance action cannot complete by adding proposal budget alone."
+                    ),
+                )
         base_plan["status"] = "pass"
         base_plan["recommended_next_action"] = "No maintenance queue action requires a resume."
         return base_plan
@@ -511,14 +523,7 @@ def build_maintenance_action_resume_plan(
         )
     proposals = mutation_proposals_report_loader().get("proposals")
     if not isinstance(proposals, list):
-        return _block_maintenance_action_plan(
-            base_plan,
-            blocker="mutation proposal report is missing or invalid",
-            recommended_next_action=(
-                "Run make mutation-proposal or make goal-runtime-between-run-settle, "
-                "then rerun the maintenance action."
-            ),
-        )
+        return _block_missing_mutation_proposal_report(base_plan)
     selected, actionable_queue = _selected_maintenance_proposal(session, proposals)
     action_proposal_ids = set(_list_text(queue_action_payload.get("proposal_ids")))
     if not selected:

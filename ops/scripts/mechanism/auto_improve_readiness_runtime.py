@@ -14,11 +14,7 @@ from ops.scripts.artifact_io_runtime import (
     read_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.core.payload_field_runtime import dict_field
-from ops.scripts.gate_effect_vocabulary import (
-    GATE_EFFECT_BLOCKS_PROMOTION,
-    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
-)
+from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
 from ops.scripts.learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,
     learning_readiness_signoff_summary,
@@ -75,6 +71,10 @@ from .auto_improve_readiness_release_authority_runtime import (
     _release_gate_summaries,
     promotion_readiness_payload,
     promotion_status,
+)
+from .auto_improve_readiness_remediation_runtime import (
+    remediation_backlog_promotion_blockers,
+    remediation_backlog_summary,
 )
 from .auto_improve_readiness_worktree_guard_runtime import (
     _goal_worktree_guard_promotion_blockers,
@@ -192,12 +192,6 @@ def _load_release_authority_preflight_json(vault: Path) -> dict[str, Any]:
     return {}
 
 
-def _string_list(value: object) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [str(item).strip() for item in value if str(item).strip()]
-
-
 def _load_readiness_report_payloads(
     vault: Path,
     *,
@@ -250,82 +244,6 @@ def _load_readiness_report_payloads(
         ),
         "remediation_backlog": _load_json(vault / remediation_backlog_path),
         "learning_signoff": _load_optional_json(vault / SIGNOFF_REPORT_REL_PATH),
-    }
-
-
-def _remediation_backlog_summary(
-    payload: dict[str, Any],
-    *,
-    remediation_backlog_path: str,
-) -> dict[str, Any]:
-    if not payload:
-        return {
-            "path": remediation_backlog_path,
-            "expected_artifact_kind": "remediation_backlog",
-            "artifact_kind": "",
-            "status": "fail",
-            "source_status": "missing",
-            "release_blocking": True,
-            "open_total_count": 0,
-            "open_promotion_count": 0,
-            "open_repeat_count": 0,
-            "active_blocker_count": 0,
-            "blocking_item_count": 0,
-            "signal_ids": ["remediation_backlog_missing"],
-            "summary": "remediation backlog report is missing",
-        }
-
-    blocking_signal_ids: list[str] = []
-    open_total_count = 0
-    open_blocks_promotion_count = 0
-    open_blocks_repeat_count = 0
-    items = payload.get("items", [])
-    if isinstance(items, list):
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("status", "")).strip() != "open":
-                continue
-            open_total_count += 1
-            severity = str(item.get("severity", "")).strip()
-            if severity == "blocks_repeat":
-                open_blocks_repeat_count += 1
-            if severity != "blocks_promotion":
-                continue
-            open_blocks_promotion_count += 1
-            blocker_id = str(item.get("blocker_id", "")).strip()
-            if blocker_id:
-                blocking_signal_ids.append(blocker_id)
-
-    blocking_signal_ids = list(dict.fromkeys(blocking_signal_ids))
-    report_status = str(payload.get("status", "")).strip() or "unknown"
-    release_blocking = open_blocks_promotion_count > 0 or bool(blocking_signal_ids)
-    signal_ids = blocking_signal_ids or (
-        ["remediation_backlog_open"] if release_blocking else []
-    )
-    return {
-        "path": remediation_backlog_path,
-        "expected_artifact_kind": "remediation_backlog",
-        "artifact_kind": str(payload.get("artifact_kind", "")).strip(),
-        "status": "fail" if release_blocking else "pass",
-        "source_status": report_status if release_blocking else "pass",
-        "release_blocking": release_blocking,
-        "open_total_count": open_total_count,
-        "open_promotion_count": open_blocks_promotion_count,
-        "open_repeat_count": open_blocks_repeat_count,
-        "active_blocker_count": open_blocks_promotion_count,
-        "blocking_item_count": len(blocking_signal_ids),
-        "signal_ids": signal_ids,
-        "currentness_status": str(
-            dict_field(payload, "currentness").get("status", "")
-        ).strip(),
-        "summary": (
-            "remediation backlog "
-            f"status={report_status}; open_total_count={open_total_count}; "
-            f"open_promotion_count={open_blocks_promotion_count}; "
-            f"open_repeat_count={open_blocks_repeat_count}; "
-            f"blocking_item_count={len(blocking_signal_ids)}"
-        ),
     }
 
 
@@ -395,7 +313,7 @@ def load_readiness_inputs(
         goal_worktree_guard_summary=_goal_worktree_guard_summary(
             reports["goal_worktree_guard"]
         ),
-        remediation_backlog_summary=_remediation_backlog_summary(
+        remediation_backlog_summary=remediation_backlog_summary(
             reports["remediation_backlog"],
             remediation_backlog_path=remediation_backlog_path,
         ),
@@ -490,41 +408,6 @@ def _execution_blockers(
     ]
 
 
-def _remediation_backlog_promotion_blockers(
-    summary: dict[str, Any],
-) -> list[dict[str, Any]]:
-    if not bool(summary.get("release_blocking", False)):
-        return []
-    signal_ids = _string_list(summary.get("signal_ids")) or [
-        "remediation_backlog_not_clear"
-    ]
-    return [
-        {
-            "id": "promotion_blocked_by_remediation_backlog_open",
-            "scope": "remediation_backlog",
-            "status": "open",
-            "severity": "blocker",
-            "accepted_risk": False,
-            "gate_effect": GATE_EFFECT_BLOCKS_PROMOTION,
-            "source_status": str(summary.get("source_status", "")).strip() or "open",
-            "reason": (
-                "remediation backlog is not clear for promotion: "
-                f"{str(summary.get('summary', '')).strip() or 'summary unavailable'}"
-            ),
-            "signal_ids": signal_ids,
-            "required_evidence": [
-                "Run make remediation-backlog and confirm open_promotion_count=0.",
-                "Close or explicitly defer blocks_promotion backlog items before promotion.",
-                "can_promote_result must stay false while remediation backlog items are open.",
-            ],
-            "recommended_next_step": (
-                "Close or explicitly defer remediation backlog items, rerun make remediation-backlog, "
-                "then rerun make auto-improve-readiness."
-            ),
-        }
-    ]
-
-
 def _readiness_promotion_blockers(
     inputs: ReadinessInputs,
     learning: LearningReadinessAssessment,
@@ -556,7 +439,7 @@ def _readiness_promotion_blockers(
         *_goal_worktree_guard_promotion_blockers(
             inputs.goal_worktree_guard_summary,
         ),
-        *_remediation_backlog_promotion_blockers(
+        *remediation_backlog_promotion_blockers(
             inputs.remediation_backlog_summary,
         ),
     ]

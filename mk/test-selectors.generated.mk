@@ -20,6 +20,7 @@ FAST_SMOKE_TESTS ?= \
 	tests/test_mutation_proposal_build_report.py::MutationProposalBuildReportTest::test_unknown_currentness_fails_fast_for_primary_evidence \
 	tests/test_auto_improve_readiness_runtime.py \
 	tests/test_auto_improve_readiness_queue_runtime.py \
+	tests/test_auto_improve_readiness_release_authority_runtime.py \
 	tests/test_artifact_freshness_runtime.py::test_no_root_ephemeral_test_artifacts \
 	tests/test_artifact_freshness_runtime.py::ArtifactFreshnessRuntimeTests::test_report_accepts_enveloped_current_json_artifact \
 	tests/test_release_smoke.py::ReleaseSmokeTest::test_build_smoke_commands_match_release_gate_profiles \
@@ -30,6 +31,7 @@ FAST_SMOKE_TESTS ?= \
 RUNTIME_HOTSPOT_SMOKE_TESTS ?= \
 	tests/test_auto_improve_readiness_runtime.py \
 	tests/test_auto_improve_readiness_queue_runtime.py \
+	tests/test_auto_improve_readiness_release_authority_runtime.py \
 	tests/test_mutation_proposal_build_report.py \
 	tests/test_mutation_proposal_recent_log_overlap.py \
 	tests/test_mutation_proposal_promotion.py \

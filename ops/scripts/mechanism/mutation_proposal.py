@@ -12,7 +12,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.mutation_proposal_runtime import (
+    from ops.scripts.mechanism.mutation_proposal_runtime import (
         MUTATION_PROPOSAL_SCHEMA,
         build_report,
     )

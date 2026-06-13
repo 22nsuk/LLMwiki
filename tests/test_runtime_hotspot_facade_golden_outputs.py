@@ -11,9 +11,6 @@ from unittest import mock
 
 import pytest
 from ops.scripts.auto_improve_runtime import run_auto_improve_session
-from ops.scripts.mutation_proposal_runtime import (
-    build_report as build_mutation_proposal_report,
-)
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.release_closeout_summary import build_report as build_closeout_report
 from ops.scripts.release_evidence_dashboard import (
@@ -23,6 +20,9 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 import tests.test_release_closeout_summary as closeout_fixture
 import tests.test_release_evidence_dashboard as dashboard_fixture
+from ops.scripts.mechanism.mutation_proposal_runtime import (
+    build_report as build_mutation_proposal_report,
+)
 from tests.auto_improve_test_utils import (
     _fake_successful_mechanism_experiment,
     _incrementing_runtime_context,
@@ -57,7 +57,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json"
 
 GOLDEN_DIGESTS = {
-    "mutation_proposal": "dcb98cd75a4ecdf3900005f9608906d1c968aa08ae903dd1977502c038a405fe",
+    "mutation_proposal": "5b6b923639d36d4b7a5af1d60c50163779298f86ee6af3feba320a01f9dd3c4c",
     "release_evidence_dashboard": "0a72c0e15eeafa09a1db4c3247c8b721623c6e04f70fd1076b3bfca528f26314",
     "release_closeout_summary": "4aae0513a262c463184fdbf4e390880573cf241a9cc0ec5a945a62b8c83fefda",
     "auto_improve_session_bundle": "90be2247fa3cc4c0fd96cd240d717a966b08a8c9b17af7acf8b881cae7767f65",

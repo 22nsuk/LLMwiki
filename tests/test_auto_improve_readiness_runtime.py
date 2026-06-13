@@ -12,11 +12,18 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.auto_improve_readiness_constants_runtime import READINESS_SOURCE_PATHS
-from ops.scripts.auto_improve_readiness_learning_runtime import (
+
+from ops.scripts.mechanism.auto_improve_readiness import main as readiness_cli_main
+from ops.scripts.mechanism.auto_improve_readiness_constants_runtime import (
+    READINESS_SOURCE_PATHS,
+)
+from ops.scripts.mechanism.auto_improve_readiness_learning_runtime import (
     learning_claim_blocker_payloads,
 )
-from ops.scripts.auto_improve_readiness_runtime import (
+from ops.scripts.mechanism.auto_improve_readiness_remediation_runtime import (
+    remediation_backlog_summary,
+)
+from ops.scripts.mechanism.auto_improve_readiness_runtime import (
     assess_learning_readiness,
     build_readiness_report,
     load_readiness_inputs,
@@ -24,8 +31,6 @@ from ops.scripts.auto_improve_readiness_runtime import (
     readiness_exit_code,
     write_readiness_report,
 )
-
-from ops.scripts.mechanism.auto_improve_readiness import main as readiness_cli_main
 from tests.auto_improve_readiness_test_runtime import (
     REPO_ROOT,
     AutoImproveReadinessRuntimeFixture,
@@ -62,6 +67,7 @@ class AutoImproveReadinessRuntimeTests(
                 "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_remediation_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py",
             ],
         )
@@ -378,6 +384,103 @@ class AutoImproveReadinessRuntimeTests(
             report["diagnostics"]["remediation_backlog_summary"]["release_blocking"]
         )
         self.assertIn("Trial only; do not promote.", report["next_action"])
+
+    def test_remediation_backlog_summary_uses_schema_summary_when_items_drift(self) -> None:
+        summary = remediation_backlog_summary(
+            {
+                "status": "attention",
+                "artifact_kind": "remediation_backlog",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 1,
+                    "open_total_count": 1,
+                    "open_promotion_count": 1,
+                    "open_repeat_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close promotion blockers.",
+                },
+                "items": [],
+                "currentness": {"status": "current"},
+            },
+            remediation_backlog_path="ops/reports/remediation-backlog.json",
+        )
+
+        self.assertEqual(summary["status"], "fail")
+        self.assertTrue(summary["release_blocking"])
+        self.assertEqual(summary["open_total_count"], 1)
+        self.assertEqual(summary["open_promotion_count"], 1)
+        self.assertEqual(summary["active_blocker_count"], 1)
+        self.assertEqual(summary["signal_ids"], ["remediation_backlog_open"])
+
+    def test_remediation_backlog_summary_item_counts_can_raise_summary_floor(self) -> None:
+        summary = remediation_backlog_summary(
+            {
+                "status": "attention",
+                "artifact_kind": "remediation_backlog",
+                "summary": {
+                    "backlog_item_count": 0,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 0,
+                    "open_total_count": 0,
+                    "open_promotion_count": 0,
+                    "open_repeat_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close promotion blockers.",
+                },
+                "items": [
+                    {
+                        "blocker_id": "item_only_promotion_blocker",
+                        "status": "open",
+                        "severity": "blocks_promotion",
+                    }
+                ],
+            },
+            remediation_backlog_path="ops/reports/remediation-backlog.json",
+        )
+
+        self.assertEqual(summary["status"], "fail")
+        self.assertTrue(summary["release_blocking"])
+        self.assertEqual(summary["open_total_count"], 1)
+        self.assertEqual(summary["open_promotion_count"], 1)
+        self.assertEqual(summary["active_blocker_count"], 1)
+        self.assertEqual(summary["signal_ids"], ["item_only_promotion_blocker"])
+
+    def test_remediation_backlog_summary_drift_blocks_promotion_not_trial(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/remediation-backlog.json",
+            {
+                "status": "attention",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 1,
+                    "open_total_count": 1,
+                    "open_promotion_count": 1,
+                    "open_repeat_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close promotion blockers.",
+                },
+                "items": [],
+                "inputs": {},
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["can_execute_trial"])
+        self.assertFalse(report["can_promote_result"])
+        blockers = {item["id"]: item for item in report["promotion_blockers"]}
+        blocker = blockers["promotion_blocked_by_remediation_backlog_open"]
+        self.assertEqual(blocker["signal_ids"], ["remediation_backlog_open"])
+        self.assertIn("open_promotion_count=1", blocker["reason"])
+        self.assertEqual(
+            report["diagnostics"]["remediation_backlog_summary"]["status"], "fail"
+        )
+        self.assertTrue(
+            report["diagnostics"]["remediation_backlog_summary"]["release_blocking"]
+        )
 
     def test_run_local_remediation_backlog_override_controls_promotion_blocker(
         self,

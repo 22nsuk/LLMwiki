@@ -19,9 +19,6 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.core.release_currentness_state_runtime import (
-        live_rerun_state,
-    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
     from ops.scripts.release.release_evidence_dashboard_closeout_runtime import (
@@ -44,6 +41,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SIGNOFF_REVALIDATION_PATH,
         DashboardRenderInputs,
         _render_dashboard_report,
+    )
+    from ops.scripts.release.release_evidence_dashboard_status_runtime import (
+        component_gate,
+        dashboard_status_counts,
+        signoff_revalidation_gate,
+        test_failure_lane_gate,
     )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
@@ -58,7 +61,6 @@ else:
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.core.release_currentness_state_runtime import live_rerun_state
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
     from ops.scripts.release.release_evidence_dashboard_closeout_runtime import (
@@ -81,6 +83,12 @@ else:
         SIGNOFF_REVALIDATION_PATH,
         DashboardRenderInputs,
         _render_dashboard_report,
+    )
+    from ops.scripts.release.release_evidence_dashboard_status_runtime import (
+        component_gate,
+        dashboard_status_counts,
+        signoff_revalidation_gate,
+        test_failure_lane_gate,
     )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
@@ -120,17 +128,6 @@ class DashboardSignals:
     closeout_input: dict[str, Any]
     finalizer_duration: dict[str, Any]
     learning_guard: dict[str, Any]
-
-
-@dataclass(frozen=True)
-class DashboardStatusCounts:
-    required_input_fail_count: int
-    fail_count: int
-    not_run_count: int
-    accepted_risk_count: int
-    gate_attention_count: int
-    budget_attention_count: int
-    status: str
 
 
 def _load(vault: Path, rel_path: str) -> tuple[dict[str, Any], str]:
@@ -270,201 +267,6 @@ def _advisory_lifecycle_gate(
     }
 
 
-def _risk_owner_and_expiry(risks: list[dict[str, Any]]) -> tuple[str, str]:
-    owners: set[str] = set()
-    expiries: list[str] = []
-    for risk in risks:
-        acceptance = risk.get("risk_acceptance")
-        if not isinstance(acceptance, dict):
-            continue
-        owner = str(acceptance.get("risk_owner", "")).strip()
-        expiry = str(acceptance.get("expires_at", "")).strip()
-        if owner:
-            owners.add(owner)
-        if expiry:
-            expiries.append(expiry)
-    expiries.sort()
-    return ", ".join(sorted(owners)), (expiries[0] if expiries else "")
-
-
-def _next_action(blockers: list[dict[str, Any]], risks: list[dict[str, Any]]) -> str:
-    for blocker in blockers:
-        required = blocker.get("required_evidence")
-        if isinstance(required, list):
-            for item in required:
-                text = str(item).strip()
-                if text:
-                    return text
-        message = str(blocker.get("message", "")).strip()
-        if message:
-            return message
-    for risk in risks:
-        acceptance = risk.get("risk_acceptance")
-        if isinstance(acceptance, dict):
-            text = str(acceptance.get("revalidation_condition", "")).strip()
-            if text:
-                return text
-    return "none"
-
-
-def _component_evidence_label(live: dict[str, str]) -> str:
-    reason = str(live.get("reason", "")).strip()
-    if "matches current source tree" in reason:
-        return "fingerprint_equivalent_to_checked_in"
-    return "diagnostic_workspace_only"
-
-
-def _component_gate(
-    component: dict[str, Any],
-    *,
-    blockers: list[dict[str, Any]],
-    accepted_risks: list[dict[str, Any]],
-    current_fingerprint: str,
-) -> dict[str, Any]:
-    ready = bool(component.get("ready"))
-    live = live_rerun_state(component, current_fingerprint=current_fingerprint)
-    owner, expiry = _risk_owner_and_expiry(accepted_risks)
-    checked_state = "pass" if ready else ("attention" if accepted_risks else "fail")
-    if ready and blockers:
-        checked_state = "attention"
-    if live["status"] == "fail" and accepted_risks:
-        live = {
-            "status": "attention",
-            "reason": "checked-in component matches current source tree and is covered by accepted risk",
-        }
-    if live["status"] == "pass" and blockers:
-        live = {
-            "status": "attention",
-            "reason": "checked-in component is source-clean but has non-source lane blockers",
-        }
-    claim_label = _component_evidence_label(live)
-    return {
-        "gate_id": str(component.get("name", "")).strip(),
-        "source_path": str(component.get("path", "")).strip(),
-        "checked_in_state": checked_state,
-        "live_rerun_state": live,
-        "authoritative_for_release": checked_state == "pass"
-        and live["status"] == "pass",
-        "accepted_risk": {
-            "count": len(accepted_risks),
-            "codes": [str(item.get("code", "")).strip() for item in accepted_risks],
-        },
-        "owner": owner or "runtime-maintainer",
-        "expiry": expiry,
-        "next_action": _next_action(blockers, accepted_risks),
-        "required_evidence": [
-            str(evidence)
-            for blocker in blockers
-            for evidence in blocker.get("required_evidence", [])
-            if str(evidence).strip()
-        ],
-        "claims": [
-            {
-                "claim": f"{component.get('name', 'gate')} checked-in release evidence state is {checked_state}",
-                "provenance_label": "checked_in_json_confirmed",
-            },
-            {
-                "claim": (
-                    f"{component.get('name', 'gate')} fingerprint/currentness diagnostic state "
-                    f"is {live['status']}"
-                ),
-                "provenance_label": claim_label,
-            },
-        ],
-    }
-
-
-def _signoff_revalidation_gate(
-    payload: dict[str, Any], load_status: str
-) -> dict[str, Any]:
-    status = (
-        str(payload.get("status", "")).strip() if load_status == "ok" else "not_run"
-    )
-    required_actions = payload.get("required_actions", [])
-    required_evidence = [
-        str(item.get("action", "") or item.get("summary", "")).strip()
-        for item in required_actions
-        if isinstance(item, dict)
-        and str(item.get("action", "") or item.get("summary", "")).strip()
-    ]
-    signoff_payload = payload.get("signoff")
-    signoff: dict[str, Any] = (
-        signoff_payload if isinstance(signoff_payload, dict) else {}
-    )
-    return {
-        "gate_id": "learning_readiness_signoff_revalidation",
-        "source_path": SIGNOFF_REVALIDATION_PATH,
-        "checked_in_state": status or "not_run",
-        "live_rerun_state": {
-            "status": "not_run" if load_status != "ok" else status,
-            "reason": "loaded checked-in revalidation report"
-            if load_status == "ok"
-            else f"load_status={load_status}",
-        },
-        "authoritative_for_release": status == "pass",
-        "accepted_risk": {
-            "count": 0,
-            "codes": [],
-        },
-        "owner": str(signoff.get("risk_owner", "")).strip() or "runtime-maintainer",
-        "expiry": str(signoff.get("expires_at", "")).strip(),
-        "next_action": required_evidence[0] if required_evidence else "none",
-        "required_evidence": required_evidence,
-        "claims": [
-            {
-                "claim": f"learning readiness signoff revalidation state is {status or 'not_run'}",
-                "provenance_label": "checked_in_json_confirmed"
-                if load_status == "ok"
-                else "diagnostic_workspace_only",
-            }
-        ],
-    }
-
-
-def _test_failure_lane_gate(lane: dict[str, Any]) -> dict[str, Any]:
-    lane_id = str(lane.get("lane_id", "")).strip()
-    status = str(lane.get("status", "")).strip() or "not_run"
-    failed_nodeids = [
-        str(item).strip()
-        for item in lane.get("failed_nodeids", [])
-        if str(item).strip()
-    ]
-    next_action = str(lane.get("next_action", "")).strip() or "none"
-    return {
-        "gate_id": f"test_failure_lane_{lane_id}",
-        "source_path": str(lane.get("source_path", "")).strip()
-        or "ops/reports/test-execution-summary.json",
-        "checked_in_state": status,
-        "live_rerun_state": {
-            "status": status,
-            "reason": str(lane.get("summary", "")).strip()
-            or f"{lane_id} status={status}",
-        },
-        "authoritative_for_release": status == "pass",
-        "accepted_risk": {
-            "count": 0,
-            "codes": [],
-        },
-        "owner": "runtime-maintainer",
-        "expiry": "",
-        "next_action": next_action,
-        "required_evidence": [next_action] if next_action != "none" else [],
-        "claims": [
-            {
-                "claim": f"{lane_id} release test lane state is {status}",
-                "provenance_label": "checked_in_json_confirmed",
-            },
-            *[
-                {
-                    "claim": f"{lane_id} failing test: {nodeid}",
-                    "provenance_label": "checked_in_json_confirmed",
-                }
-                for nodeid in failed_nodeids
-            ],
-        ],
-    }
-
-
 def _load_dashboard_reports(vault: Path) -> DashboardReports:
     closeout, closeout_load_status = _load(vault, CLOSEOUT_PATH)
     fixed_point, fixed_point_load_status = _load(vault, FIXED_POINT_PATH)
@@ -520,7 +322,7 @@ def _dashboard_gates(
     risks = _issues_by_source(reports.closeout.get("accepted_risks", []))
     gates = [closeout_decision_gate(signals.closeout_input)]
     gates.extend(
-        _component_gate(
+        component_gate(
             component,
             blockers=blockers.get(str(component.get("name", "")), []),
             accepted_risks=risks.get(str(component.get("name", "")), []),
@@ -530,12 +332,12 @@ def _dashboard_gates(
         if isinstance(component, dict)
     )
     gates.extend(
-        _test_failure_lane_gate(lane)
+        test_failure_lane_gate(lane)
         for lane in reports.closeout.get("test_failure_lanes", [])
         if isinstance(lane, dict)
     )
     gates.append(
-        _signoff_revalidation_gate(
+        signoff_revalidation_gate(
             reports.revalidation, reports.revalidation_load_status
         )
     )
@@ -544,97 +346,6 @@ def _dashboard_gates(
         gates.append(advisory_gate)
     gates.append(learning_delta_guard_gate(signals.learning_guard))
     return gates
-
-
-def _required_input_fail_count(reports: DashboardReports) -> int:
-    return sum(
-        1
-        for load_status in (
-            reports.closeout_load_status,
-            reports.freshness_load_status,
-            reports.learning_scoreboard_load_status,
-        )
-        if load_status != "ok"
-    )
-
-
-def _accepted_risk_count(closeout: dict[str, Any]) -> int:
-    summary = closeout.get("summary")
-    count = int(
-        summary.get("accepted_risk_instance_count", 0)
-        if isinstance(summary, dict)
-        else 0
-    )
-    if count == 0 and isinstance(closeout.get("accepted_risks"), list):
-        return len(closeout.get("accepted_risks", []))
-    return count
-
-
-def _gate_fail_count(gates: list[dict[str, Any]]) -> int:
-    return sum(
-        1
-        for gate in gates
-        if gate["checked_in_state"] == "fail"
-        or gate["live_rerun_state"]["status"] == "fail"
-    )
-
-
-def _gate_not_run_count(gates: list[dict[str, Any]]) -> int:
-    return sum(1 for gate in gates if gate["live_rerun_state"]["status"] == "not_run")
-
-
-def _gate_attention_count(gates: list[dict[str, Any]]) -> int:
-    return sum(
-        1
-        for gate in gates
-        if gate["checked_in_state"] == "attention"
-        or gate["live_rerun_state"]["status"] == "attention"
-    )
-
-
-def _dashboard_status(
-    *,
-    fail_count: int,
-    required_input_fail_count: int,
-    not_run_count: int,
-    gate_attention_count: int,
-    budget_attention_count: int,
-) -> str:
-    if fail_count or required_input_fail_count:
-        return "fail"
-    if not_run_count or gate_attention_count or budget_attention_count:
-        return "attention"
-    return "pass"
-
-
-def _dashboard_status_counts(
-    reports: DashboardReports,
-    signals: DashboardSignals,
-    gates: list[dict[str, Any]],
-) -> DashboardStatusCounts:
-    required_input_fail_count = _required_input_fail_count(reports)
-    fail_count = _gate_fail_count(gates)
-    not_run_count = _gate_not_run_count(gates)
-    gate_attention_count = _gate_attention_count(gates)
-    budget_attention_count = (
-        1 if signals.finalizer_duration["status"] == "attention" else 0
-    )
-    status = _dashboard_status(
-        fail_count=fail_count,
-        required_input_fail_count=required_input_fail_count,
-        not_run_count=not_run_count,
-        gate_attention_count=gate_attention_count,
-        budget_attention_count=budget_attention_count,
-    )
-    return DashboardStatusCounts(
-        required_input_fail_count=required_input_fail_count,
-        fail_count=fail_count,
-        not_run_count=not_run_count,
-        accepted_risk_count=_accepted_risk_count(reports.closeout),
-        gate_attention_count=gate_attention_count,
-        budget_attention_count=budget_attention_count,
-        status=status,
-    )
 
 
 def build_report(
@@ -655,7 +366,7 @@ def build_report(
         current_fingerprint=current_fingerprint,
         generated_at=generated_at,
     )
-    status_counts = _dashboard_status_counts(reports, signals, gates)
+    status_counts = dashboard_status_counts(reports, signals, gates)
     return _render_dashboard_report(
         DashboardRenderInputs(
             vault=vault,

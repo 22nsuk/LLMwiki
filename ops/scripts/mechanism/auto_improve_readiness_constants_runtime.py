@@ -38,6 +38,7 @@ READINESS_SOURCE_PATHS = [
     "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+    "ops/scripts/mechanism/auto_improve_readiness_remediation_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py",
 ]
 FALLBACK_PRIMARY_TARGETS = [

@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ops.scripts.auto_improve_maintenance_decision_runtime import (
+
+from ops.scripts.mechanism import (
+    auto_improve_maintenance_decision_runtime,
+    auto_improve_runtime,
+)
+from ops.scripts.mechanism.auto_improve_maintenance_decision_runtime import (
     MAINTENANCE_ACTION_RESUME_TARGET,
     MAINTENANCE_ACTION_RUNNER_ACTION,
     _expected_maintenance_cycle_count,
@@ -17,9 +22,6 @@ from ops.scripts.auto_improve_maintenance_decision_runtime import (
     _resolve_post_promote_maintenance_cycles,
     build_maintenance_action_resume_plan,
 )
-
-from ops.scripts import auto_improve_runtime
-from ops.scripts.mechanism import auto_improve_maintenance_decision_runtime
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -387,4 +389,31 @@ def test_maintenance_action_resume_plan_blocks_missing_mutation_proposal_report(
     assert plan["status"] == "attention"
     assert plan["blockers"] == ["mutation proposal report is missing or invalid"]
     assert plan["next_max_proposals"] == 1
+    _assert_valid_plan(plan)
+
+
+def test_maintenance_action_resume_plan_blocks_missing_report_for_recorded_empty_queue() -> None:
+    plan = build_maintenance_action_resume_plan(
+        {
+            "budget": {"max_proposals": 1},
+            "iterations": [{"proposal_id": "proposal-a"}],
+            "attempted_proposal_ids": ["proposal-a"],
+            "maintenance": {
+                "queue_action": {
+                    "status": "none",
+                    "reason": "queue_empty",
+                }
+            },
+        },
+        session_id="auto-session-attempted-empty-queue-missing-report",
+        mutation_proposals_report_loader=dict,
+    )
+
+    assert plan["status"] == "attention"
+    assert plan["blockers"] == ["mutation proposal report is missing or invalid"]
+    assert plan["next_max_proposals"] == 1
+    assert plan["decisions"] == {
+        "can_resume": False,
+        "requires_budget_increment": False,
+    }
     _assert_valid_plan(plan)

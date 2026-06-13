@@ -7,7 +7,7 @@
       "observation_id": "active_matrix_priority_lane_coordination_gap",
       "status": "planned",
       "retained_reason": "The active action matrix now mixes release authority, artifact freshness, fixture cost, compatibility alias, and external-verification work; closing this observation before lane sequencing would hide the coordination risk.",
-      "next_action": "Use the active matrix priority order to pick one lane at a time and refresh the matrix/currentness evidence after each completed lane.",
+      "next_action": "Continue operator/release-run verification lanes for the remaining 7 matrix items; refresh action matrix after each completed lane instead of adding coordination reports.",
       "exit_condition": "Close when the active matrix no longer needs a separate priority coordination note because the remaining active actions have current owner lanes and blocking scopes.",
       "owner_or_lane": "active-matrix-priority-coordination"
     },
@@ -25,7 +25,7 @@
       "observation_id": "long_term_plan_needs_lanes_not_more_reports",
       "status": "planned",
       "retained_reason": "This is the umbrella execution guard for the current long-term active-matrix cleanup; closing it would encourage new narrative reports instead of lane work.",
-      "next_action": "Continue burning down the existing active lanes through code, tests, currentness artifacts, and release/supply-chain evidence instead of adding new planning reports.",
+      "next_action": "Phase 6 backlog execution completed hotspot splits for closeout summary envelope glue and dashboard status aggregation; next lanes are remaining decomposition hotspots and operator-dependent release verification.",
       "exit_condition": "Close when the active matrix blockers are either resolved, explicitly operator-dependent, or represented by narrower retained observations.",
       "owner_or_lane": "long-term-active-report-lane-execution"
     }

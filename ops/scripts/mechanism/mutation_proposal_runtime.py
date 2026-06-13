@@ -62,6 +62,20 @@ SOURCE_COMMAND = (
     "--vault . "
     "--policy-path ops/policies/wiki-maintainer-policy.yaml"
 )
+MUTATION_PROPOSAL_SOURCE_PATHS = [
+    "ops/scripts/mechanism/mutation_proposal_runtime.py",
+    "ops/scripts/mechanism/mutation_proposal_bootstrap_runtime.py",
+    "ops/scripts/mechanism/mutation_proposal_candidate_runtime.py",
+    "ops/scripts/mechanism/mutation_proposal_loader_runtime.py",
+    "ops/scripts/mechanism/mutation_proposal_promotion_runtime.py",
+    "ops/scripts/mechanism/mutation_proposal_recent_log_overlap_runtime.py",
+    "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
+    "ops/scripts/mechanism/current_target_path_runtime.py",
+    "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
+    "ops/scripts/mechanism/noop_repair_classifier_runtime.py",
+]
+
+
 @dataclass(frozen=True)
 class QueueSelectionDiagnostics:
     available_proposal_count: int
@@ -574,17 +588,7 @@ def _mutation_report_payload(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=policy_path,
             schema_path=MUTATION_PROPOSAL_SCHEMA,
-            source_paths=[
-                "ops/scripts/mechanism/mutation_proposal_runtime.py",
-                "ops/scripts/mechanism/mutation_proposal_bootstrap_runtime.py",
-                "ops/scripts/mechanism/mutation_proposal_candidate_runtime.py",
-                "ops/scripts/mechanism/mutation_proposal_promotion_runtime.py",
-                "ops/scripts/mechanism/mutation_proposal_recent_log_overlap_runtime.py",
-                "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
-                "ops/scripts/mechanism/current_target_path_runtime.py",
-                "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
-                "ops/scripts/mechanism/noop_repair_classifier_runtime.py",
-            ],
+            source_paths=MUTATION_PROPOSAL_SOURCE_PATHS,
             file_inputs={
                 "mechanism_review_report": report_path(vault, inputs.mechanism_review_path),
                 "outcome_metrics": report_path(vault, inputs.outcome_metrics_path),

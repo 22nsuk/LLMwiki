@@ -31,7 +31,7 @@ INPUT_PATHS = {
     "learning_delta_scoreboard": "ops/reports/learning-delta-scoreboard.json",
     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
     "source_package_clean_extract": "ops/reports/source-package-clean-extract.json",
-    "task_observations": "ops/reports/task-improvement-observations/task-20260515-reconciled-improvement-plan/improvement-observations.json",
+    "task_observations": "ops/reports/task-improvement-observations/task-20260611-active-report-long-term-plan/improvement-observations.json",
 }
 INPUT_PATH_ARG_NAMES = {
     "auto_improve_readiness": "--auto-improve-readiness",

@@ -7,9 +7,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.compatibility_alias_deprecation import build_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
+from ops.scripts.core.compatibility_alias_deprecation import build_report
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -29,6 +30,7 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
             (vault / "ops" / "scripts").mkdir(parents=True)
             (vault / "ops" / "scripts" / "core").mkdir()
             (vault / "ops" / "scripts" / "test").mkdir()
+            (vault / "tests").mkdir()
             (vault / "ops").mkdir(exist_ok=True)
             (vault / "Makefile").write_text("include mk/test.mk\n", encoding="utf-8")
             (vault / "mk" / "test.mk").write_text(
@@ -46,6 +48,11 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
             )
             (vault / "ops" / "scripts" / "test" / "lane_runtime.py").write_text(
                 "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_flat_caller.py").write_text(
+                "from ops.scripts.legacy_runtime import main\n"
+                "from ops.scripts.test.lane_runtime import main as canonical_main\n",
                 encoding="utf-8",
             )
             (vault / "ops" / "script-module-surfaces.json").write_text(
@@ -82,7 +89,33 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
                 "ops.scripts.lane_runtime": "ops.scripts.test.lane_runtime",
             },
         )
+        actual_caller_counts = {
+            item["name"]: item.get("actual_caller_count")
+            for item in report["aliases"]
+            if item["alias_type"] == "flat_import_reexport"
+        }
+        self.assertEqual(
+            actual_caller_counts,
+            {
+                "ops.scripts.legacy_runtime": 1,
+                "ops.scripts.lane_runtime": 0,
+            },
+        )
+        self.assertEqual(
+            report["flat_import_actual_callers"],
+            [
+                {
+                    "alias": "ops.scripts.legacy_runtime",
+                    "preferred_replacement": "ops.scripts.core.legacy_runtime",
+                    "path": "tests/test_flat_caller.py",
+                    "line": 1,
+                    "usage_kind": "from_import",
+                }
+            ],
+        )
         self.assertEqual(report["summary"]["flat_import_reexport_count"], 2)
+        self.assertEqual(report["summary"]["flat_import_actual_caller_count"], 1)
+        self.assertEqual(report["summary"]["flat_import_actual_alias_count"], 1)
         self.assertEqual(report["summary"]["stable_import_surface_count"], 1)
         self.assertEqual(report["summary"]["make_alias_count"], 1)
         self.assertEqual(report["summary"]["removal_ready_count"], 0)
