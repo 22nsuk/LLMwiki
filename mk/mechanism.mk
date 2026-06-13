@@ -252,6 +252,7 @@ goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python
 	$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-pre-run-cleanup
+	$(MAKE) mechanism-review
 	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-stale-closeout
 	$(MAKE) goal-runtime-publish-local-evidence
@@ -261,6 +262,7 @@ goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-p
 	$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-pre-run-cleanup
+	$(MAKE) mechanism-review
 	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-stale-closeout
 

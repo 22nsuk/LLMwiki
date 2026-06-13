@@ -443,6 +443,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"',
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) mechanism-review",
                 "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-stale-closeout",
                 "$(MAKE) goal-runtime-publish-local-evidence",
@@ -457,6 +458,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"',
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) mechanism-review",
                 "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-stale-closeout",
             ),
@@ -525,6 +527,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             )
             self.assertLess(
                 admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
+                admission_recipe.index("$(MAKE) mechanism-review"),
+            )
+            self.assertLess(
+                admission_recipe.index("$(MAKE) mechanism-review"),
                 admission_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
             )
 
