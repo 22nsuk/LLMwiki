@@ -413,6 +413,48 @@ def _queue_unblock_decision_superseded_by_current_rotation(
     )
 
 
+def _noop_repair_superseded_source_observed_at_by_key(
+    vault: Path,
+    decisions: list[dict],
+    *,
+    recent_log_overlap_unblock_family: str,
+) -> dict[str, str]:
+    superseded: dict[str, str] = {}
+    for decision in decisions:
+        if not repair_decision_ended_as_noop_mutation_failure(
+            vault,
+            decision,
+            queue_unblock_family=recent_log_overlap_unblock_family,
+        ):
+            continue
+        observed_at = str(decision.get("observed_at", "")).strip()
+        for field in ("source_candidate_id", "proposal_id"):
+            key = str(decision.get(field, "")).strip()
+            if not key:
+                continue
+            previous = superseded.get(key)
+            if previous is None or observed_at >= previous:
+                superseded[key] = observed_at
+    return superseded
+
+
+def _decision_superseded_by_noop_repair(
+    decision: dict,
+    superseded_source_observed_at_by_key: dict[str, str],
+) -> bool:
+    if not superseded_source_observed_at_by_key:
+        return False
+    observed_at = str(decision.get("observed_at", "")).strip()
+    for field in ("decision_id", "target_proposal_id", "proposal_id"):
+        key = str(decision.get(field, "")).strip()
+        if not key or key not in superseded_source_observed_at_by_key:
+            continue
+        superseded_at = superseded_source_observed_at_by_key[key]
+        if not observed_at or not superseded_at or superseded_at >= observed_at:
+            return True
+    return False
+
+
 def open_carry_forward_decisions(
     next_run_decisions: list[dict],
     *,
@@ -423,6 +465,7 @@ def open_carry_forward_decisions(
     recent_log_overlap_unblock_family: str,
 ) -> list[dict]:
     latest_by_target: dict[str, dict] = {}
+    normalized_decisions: list[dict] = []
     consumed_decision_ids = consumed_decision_ids or set()
     current_proposal_ids = current_proposal_ids or set()
     for decision in next_run_decisions:
@@ -444,12 +487,25 @@ def open_carry_forward_decisions(
                 primary_targets,
                 failure_taxonomy,
             )
-        latest_by_target[target_proposal_id] = {**decision, "target_proposal_id": target_proposal_id}
+        normalized_decision = {**decision, "target_proposal_id": target_proposal_id}
+        latest_by_target[target_proposal_id] = normalized_decision
+        normalized_decisions.append(normalized_decision)
 
     open_decisions: list[dict] = []
+    superseded_by_noop_repair = (
+        _noop_repair_superseded_source_observed_at_by_key(
+            vault,
+            normalized_decisions,
+            recent_log_overlap_unblock_family=recent_log_overlap_unblock_family,
+        )
+        if vault is not None
+        else {}
+    )
     for decision in latest_by_target.values():
         decision_id = str(decision.get("decision_id", "")).strip()
         if decision_id and decision_id in consumed_decision_ids:
+            continue
+        if _decision_superseded_by_noop_repair(decision, superseded_by_noop_repair):
             continue
         if vault is not None and repair_decision_ended_as_noop_mutation_failure(
             vault,

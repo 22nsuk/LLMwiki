@@ -5,7 +5,10 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.executor_noop_runtime import EXECUTOR_NOOP_MUTATION_FAILURE_MARKER
+from ops.scripts.executor_noop_runtime import (
+    EXECUTOR_NOOP_MUTATION_FAILURE_MARKER,
+    executor_noop_mutation_failure_message,
+)
 
 from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
@@ -93,6 +96,66 @@ def test_open_carry_forward_decisions_suppresses_all_missing_leaf_evidence() -> 
                         "runs/missing-run/reviewer-executor-report.json",
                     ]
                 )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_source_after_noop_repair_attempt() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        primary_target = "ops/scripts/mechanism/auto_improve_loop.py"
+        source_run_id = "run-source"
+        source_evidence = vault / "runs" / source_run_id / "worker-executor-report.json"
+        source_evidence.parent.mkdir(parents=True, exist_ok=True)
+        source_evidence.write_text("{}", encoding="utf-8")
+        noop_run_id = "run-noop"
+        noop_run = vault / "runs" / noop_run_id
+        noop_run.mkdir(parents=True, exist_ok=True)
+        (noop_run / "mutation-command.stderr.txt").write_text(
+            executor_noop_mutation_failure_message("worker", [primary_target]),
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    decision_id="next-run-decision:source",
+                    observed_at="2026-01-01T00:00:00Z",
+                    proposal_family="queue_unblock",
+                    proposal_id="recent_log_overlap_queue_blocked__auto-improve-loop",
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-loop__repo-health-blocked"
+                    ),
+                    source_run_id=source_run_id,
+                    primary_targets=[primary_target],
+                    failure_taxonomy="repo_health_blocked",
+                    evidence_paths=[
+                        f"runs/{source_run_id}/worker-executor-report.json"
+                    ],
+                ),
+                _carry_forward_decision(
+                    decision_id="next-run-decision:noop",
+                    observed_at="2026-01-02T00:00:00Z",
+                    proposal_family="next_run_failure_repair",
+                    proposal_id=(
+                        "next_run_failure_repair__auto-improve-loop__repo-health-blocked"
+                    ),
+                    source_candidate_id="next-run-decision:source",
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-loop__mutation-failed"
+                    ),
+                    source_run_id=noop_run_id,
+                    primary_targets=[primary_target],
+                    failure_taxonomy="mutation_failed",
+                    evidence_paths=[
+                        f"runs/{noop_run_id}/mutation-command.stderr.txt"
+                    ],
+                ),
             ],
             vault=vault,
             recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
