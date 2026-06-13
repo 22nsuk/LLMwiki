@@ -413,6 +413,40 @@ class AutoImproveReadinessRuntimeTests(
         self.assertEqual(summary["active_blocker_count"], 1)
         self.assertEqual(summary["signal_ids"], ["remediation_backlog_open"])
 
+    def test_deferred_active_backlog_count_does_not_block_promotion(self) -> None:
+        summary = remediation_backlog_summary(
+            {
+                "status": "pass",
+                "artifact_kind": "remediation_backlog",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 1,
+                    "open_total_count": 0,
+                    "open_promotion_count": 0,
+                    "open_repeat_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "No remediation backlog items detected.",
+                },
+                "items": [
+                    {
+                        "blocker_id": "goal_status_self_improvement_loop_certificate_incomplete",
+                        "item_type": "active_blocker",
+                        "status": "deferred",
+                        "severity": "blocks_promotion",
+                    }
+                ],
+                "currentness": {"status": "current"},
+            },
+            remediation_backlog_path="ops/reports/remediation-backlog.json",
+        )
+
+        self.assertEqual(summary["status"], "pass")
+        self.assertFalse(summary["release_blocking"])
+        self.assertEqual(summary["open_promotion_count"], 0)
+        self.assertEqual(summary["active_blocker_count"], 1)
+        self.assertEqual(summary["signal_ids"], [])
+
     def test_remediation_backlog_summary_item_counts_can_raise_summary_floor(self) -> None:
         summary = remediation_backlog_summary(
             {

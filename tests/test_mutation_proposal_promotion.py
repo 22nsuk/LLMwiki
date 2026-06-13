@@ -526,6 +526,173 @@ class MutationProposalPromotionTest(unittest.TestCase):
                     ],
                 },
             )
+    def test_over_budget_next_run_repair_is_not_selected_as_runnable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            target = "ops/scripts/mechanism/oversized_runtime.py"
+            test_target = "tests/test_oversized_runtime.py"
+            (vault / target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / target).write_text(
+                "\n".join(f"VALUE_{index} = {index}" for index in range(950)) + "\n",
+                encoding="utf-8",
+            )
+            (vault / test_target).write_text(
+                "def test_oversized_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            source_run_id = "auto-session-a-run-01-oversized-runtime"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(run_dir / "run-telemetry.json", {"status": "blocked"})
+            write_json(run_dir / "repo-health.json", {"status": "fail"})
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:repo-health",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__oversized-runtime__repo-health-blocked"
+                            ),
+                            "proposal_family": "contract_regression_signals",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "repo_health_blocked",
+                            "blocking_role": "repo_health",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "repo-health failure should become next-run repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [target],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": [test_target],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/run-telemetry.json",
+                                f"runs/{source_run_id}/repo-health.json",
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair = proposal_report["proposals"][0]
+
+            self.assertEqual(proposal_report["status"], "attention")
+            self.assertEqual(repair["failure_mode"], "next_run_failure_repair")
+            self.assertEqual(repair["blocked_by"], ["structural_complexity_budget"])
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"]["selected_runnable_count"],
+                0,
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"]["selected_blocked_count"],
+                1,
+            )
+            structural_blockers = [
+                item
+                for item in proposal_report["diagnostics"]["queue_selection"][
+                    "blocked_reason_counts"
+                ]
+                if item["reason"] == "structural_complexity_budget"
+            ]
+            self.assertEqual(len(structural_blockers), 1)
+            self.assertGreaterEqual(structural_blockers[0]["count"], 1)
+
+    def test_generated_report_support_does_not_block_single_source_next_run_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            target = "ops/scripts/mechanism/auto_improve_loop.py"
+            test_target = "tests/test_goal_auto_improve_runtime.py"
+            support_target = "ops/reports/large-generated-support.json"
+            (vault / target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / target).write_text(
+                "def run_loop() -> None:\n    return None\n",
+                encoding="utf-8",
+            )
+            (vault / test_target).write_text(
+                "def test_goal_auto_improve_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            (vault / support_target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / support_target).write_text(
+                "\n".join(f'  "item_{index}": true,' for index in range(950)) + "\n",
+                encoding="utf-8",
+            )
+            source_run_id = "auto-session-a-run-01-auto-improve-loop"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(run_dir / "run-telemetry.json", {"status": "blocked"})
+            write_json(
+                vault / "ops" / "reports" / "mechanism-review-candidates.json",
+                mechanism_review_report(),
+            )
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:repo-health",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "recent_log_overlap_queue_blocked__auto-improve-loop",
+                            "source_candidate_id": "recent-log-overlap",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__auto-improve-loop__repo-health-blocked"
+                            ),
+                            "proposal_family": "queue_unblock",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "repo_health_blocked",
+                            "blocking_role": "repo_health",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "repo-health failure should become next-run repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [target],
+                            "supporting_targets": [support_target],
+                            "must_change_tests": [test_target],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/run-telemetry.json",
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair = proposal_report["proposals"][0]
+
+            self.assertEqual(
+                repair["proposal_id"],
+                "next_run_failure_repair__auto-improve-loop__repo-health-blocked",
+            )
+            self.assertEqual(repair["primary_targets"], [target])
+            self.assertIn(support_target, repair["supporting_targets"])
+            self.assertEqual(repair["blocked_by"], [])
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"]["selected_runnable_count"],
+                1,
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"]["selected_blocked_count"],
+                0,
+            )
     def test_next_run_decision_why_now_omits_missing_leaf_evidence_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

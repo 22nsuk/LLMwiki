@@ -154,6 +154,7 @@ _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS = (
     ("GOAL_ARTIFACT_CLASS", "system_mechanism"),
     ("GOAL_FINAL_STATUS", "stopped"),
     ("GOAL_RUN_LOG_DIR", "build/goal-runs"),
+    ("MUTATION_MAX_PROPOSALS", ""),
 )
 
 _AUTO_IMPROVE_GOAL_EMPTY_ASSIGNMENTS = (
@@ -312,6 +313,11 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--maintenance-action-plan-out \"$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)\"",
             ),
         )
+        mutation_proposal_recipe = _target_block(text, "mutation-proposal")
+        self.assertIn(
+            '$(if $(MUTATION_MAX_PROPOSALS),--max-proposals "$(MUTATION_MAX_PROPOSALS)",)',
+            mutation_proposal_recipe,
+        )
 
     def test_auto_improve_goal_phony_targets_and_dependencies(self) -> None:
         text = _makefile_text()
@@ -434,7 +440,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-run-admission-converge",
             (
-                "$(MAKE) refresh-generated-core",
+                '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"',
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-quarantine-preflight",
@@ -448,7 +454,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-run-admission-local-refresh",
             (
-                "$(MAKE) refresh-generated-core",
+                '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"',
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-quarantine-preflight",
@@ -471,7 +477,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-between-run-settle",
             (
-                "$(MAKE) refresh-generated-core",
+                '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"',
                 "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-stale-closeout",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
@@ -493,7 +499,9 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             )
         settle_recipe = _recipe_lines(text, "goal-runtime-between-run-settle")
         self.assertLess(
-            settle_recipe.index("$(MAKE) refresh-generated-core"),
+            settle_recipe.index(
+                '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"'
+            ),
             settle_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
         )
         self.assertLess(
@@ -510,7 +518,9 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         ):
             admission_recipe = _recipe_lines(text, admission_target)
             self.assertLess(
-                admission_recipe.index("$(MAKE) refresh-generated-core"),
+                admission_recipe.index(
+                    '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"'
+                ),
                 admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
             )
             self.assertLess(

@@ -5,6 +5,7 @@ OUTCOME_PROVENANCE_GATE_POLICY_OUT ?= ops/reports/outcome-provenance-gate-policy
 OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT ?= tmp/outcome-provenance-gate-policy.candidate.json
 MECHANISM_REVIEW_OUT ?= ops/reports/mechanism-review-candidates.json
 MUTATION_PROPOSAL_OUT ?= ops/reports/mutation-proposals.json
+MUTATION_MAX_PROPOSALS ?=
 MECHANISM_NAVIGATION_INDEX_OUT ?= tmp/mechanism-navigation-index.json
 OBSERVATION_CLOSEOUT_LINT_OUT ?= tmp/observation-closeout-lint.json
 OBSERVATION_CLOSEOUT_REGISTRY ?= ops/observation-closeout-registry.json
@@ -178,7 +179,7 @@ goal-runtime-pre-run-cleanup:
 	$(MAKE) artifact-freshness-refresh-check
 
 goal-runtime-between-run-settle: goal-runtime-lock-check goal-runtime-python-preflight
-	$(MAKE) refresh-generated-core
+	$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"
 	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-stale-closeout
 	$(MAKE) goal-runtime-pre-run-cleanup
@@ -248,7 +249,7 @@ goal-runtime-fixed-point-check:
 	$(PYTHON) -m ops.scripts.goal_runtime_fixed_point_check --vault "$(VAULT)" --out "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)"
 
 goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python-preflight
-	$(MAKE) refresh-generated-core
+	$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-pre-run-cleanup
 	$(MAKE) goal-runtime-quarantine-preflight
@@ -257,7 +258,7 @@ goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python
 	$(MAKE) goal-runtime-fixed-point-check
 
 goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight
-	$(MAKE) refresh-generated-core
+	$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-pre-run-cleanup
 	$(MAKE) goal-runtime-quarantine-preflight
@@ -321,7 +322,7 @@ mechanism-review:
 	$(PYTHON) -m ops.scripts.mechanism_review --vault "$(VAULT)"
 
 mutation-proposal:
-	$(PYTHON) -m ops.scripts.mutation_proposal --vault "$(VAULT)"
+	$(PYTHON) -m ops.scripts.mutation_proposal --vault "$(VAULT)" $(if $(MUTATION_MAX_PROPOSALS),--max-proposals "$(MUTATION_MAX_PROPOSALS)",)
 
 run-mechanism-experiment-linux-tmp:
 	TMPDIR=/tmp TEMP=/tmp TMP=/tmp $(PYTHON) -m ops.scripts.run_mechanism_experiment --vault "$(VAULT)" $(MECHANISM_RUN_ARGS)

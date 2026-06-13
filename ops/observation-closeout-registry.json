@@ -46,6 +46,15 @@
       "next_action": "Next lanes: mutation_proposal repair/queue-pressure helper, auto_improve promotion/stop-condition helper, auto_improve_readiness report-loading split.",
       "exit_condition": "Close when those hotspot next lanes are either implemented with focused tests and runtime-hotspot golden coverage, or replaced by narrower retained observations in the runtime decomposition plan.",
       "owner_or_lane": "runtime-hotspot-decomposition"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
+      "observation_id": "goal_certificate_admission_requires_structural_slice",
+      "status": "planned",
+      "retained_reason": "The promotion certificate lane is blocked at admission by selected proposals that touch over-budget runtime surfaces; retaining this keeps the next attempt focused on a bounded structural slice before rerunning the goal runtime.",
+      "next_action": "Split or re-scope the selected goal certificate repair proposals, rerun goal-runtime-run-admission with the same explicit GOAL_RUN_ID, and only start auto-improve-goal-run after can_start_goal_runtime is true.",
+      "exit_condition": "Close when goal-runtime-run-admission passes start checks for the explicit promotion certificate run id and the resulting run can produce completed status, command heartbeat, and verified contract evidence.",
+      "owner_or_lane": "goal-runtime-certificate-promotion"
     }
   ]
 }

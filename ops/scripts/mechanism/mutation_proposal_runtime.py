@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
@@ -53,9 +53,15 @@ from .next_run_repair_queue_runtime import (
     next_run_decision_queue_diagnostics,
     next_run_repair_proposal_models,
 )
+from .structural_complexity_scope_runtime import (
+    proposal_declares_structural_complexity_repair,
+    source_targets_within_structural_complexity_budget,
+    structural_complexity_source_targets,
+)
 
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
 QUEUE_PRESSURE_SUMMARY_TOP_N = 3
+STRUCTURAL_COMPLEXITY_BUDGET_BLOCKER = "structural_complexity_budget"
 PRODUCER = "ops.scripts.mutation_proposal_runtime"
 SOURCE_COMMAND = (
     "python -m ops.scripts.mutation_proposal "
@@ -73,6 +79,7 @@ MUTATION_PROPOSAL_SOURCE_PATHS = [
     "ops/scripts/mechanism/current_target_path_runtime.py",
     "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
     "ops/scripts/mechanism/noop_repair_classifier_runtime.py",
+    "ops/scripts/mechanism/structural_complexity_scope_runtime.py",
 ]
 
 
@@ -167,6 +174,48 @@ def _select_report_proposals(
     ]
     selectable = repair_proposals or proposals
     return sorted(selectable, key=_report_selection_sort_key)[:max_proposals]
+
+
+def _proposal_target_paths(proposal: MutationProposal) -> list[str]:
+    return list(
+        dict.fromkeys(
+            [
+                *proposal.primary_targets,
+                *proposal.supporting_targets,
+            ]
+        )
+    )
+
+
+def _with_start_admission_blockers(
+    vault: Path,
+    proposal: MutationProposal,
+    *,
+    context: RuntimeContext,
+) -> MutationProposal:
+    if proposal.failure_mode != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE:
+        return proposal
+    target_paths = _proposal_target_paths(proposal)
+    source_targets = structural_complexity_source_targets(target_paths)
+    if not source_targets:
+        return proposal
+    if proposal_declares_structural_complexity_repair(proposal.to_wire()):
+        return proposal
+    if source_targets_within_structural_complexity_budget(
+        vault,
+        source_targets,
+        context=context,
+    ):
+        return proposal
+    blocked_by = list(
+        dict.fromkeys(
+            [
+                *proposal.blocked_by,
+                STRUCTURAL_COMPLEXITY_BUDGET_BLOCKER,
+            ]
+        )
+    )
+    return replace(proposal, blocked_by=blocked_by)
 
 
 def _blocked_reason_counts(proposals: list[dict]) -> list[dict]:
@@ -489,6 +538,14 @@ def _assemble_mutation_proposals(
         next_run_decisions=inputs.next_run_decisions,
         consumed_next_run_decision_ids=inputs.consumed_next_run_decision_ids,
     )
+    available_proposal_models = [
+        _with_start_admission_blockers(
+            vault,
+            proposal,
+            context=inputs.runtime_context,
+        )
+        for proposal in available_proposal_models
+    ]
     proposal_models = _select_report_proposals(
         available_proposal_models,
         max_proposals=int(inputs.mutation_policy["max_proposals"]),

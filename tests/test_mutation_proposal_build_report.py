@@ -39,6 +39,7 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 "ops/scripts/mechanism/current_target_path_runtime.py",
                 "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
                 "ops/scripts/mechanism/noop_repair_classifier_runtime.py",
+                "ops/scripts/mechanism/structural_complexity_scope_runtime.py",
             ],
         )
         repo_root = Path(__file__).resolve().parents[1]

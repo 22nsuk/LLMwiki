@@ -35,6 +35,7 @@ from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.structural_complexity_scope_runtime import (
     generated_canonical_targets,
+    proposal_declares_structural_complexity_repair,
     source_targets_structural_complexity_report,
     structural_complexity_source_targets,
 )
@@ -57,15 +58,6 @@ SOURCE_COMMAND = "python -m ops.scripts.goal_runtime_run_admission --vault ."
 START_BLOCKER_SEVERITY = "block_start"
 PROMOTION_BLOCKER_SEVERITY = "block_promotion"
 MAINTENANCE_ACTION_RUNNER_ACTION = "resume_session_with_additional_proposal_budget"
-STRUCTURAL_COMPLEXITY_REPAIR_MARKERS = (
-    "structural_complexity",
-    "structural-complexity",
-    "complexity_non_regression",
-    "complexity-non-regression",
-    "function_budget",
-    "function-budget",
-)
-
 
 def _default_gate_effect(*, status: str, severity: str) -> str:
     if status == "pass":
@@ -730,21 +722,6 @@ def _proposal_target_paths(proposal: dict[str, Any]) -> list[str]:
     )
 
 
-def _proposal_declares_structural_complexity_repair(proposal: dict[str, Any]) -> bool:
-    fields = [
-        proposal.get("proposal_id", ""),
-        proposal.get("failure_mode", ""),
-        proposal.get("single_mechanism_scope", ""),
-        proposal.get("change_hypothesis", ""),
-        proposal.get("expected_binary_signal", ""),
-        *_list_strings(proposal.get("metrics_triggered")),
-    ]
-    budget_signal = _dict_field(proposal, "must_change_budget_signal")
-    fields.extend(str(value) for value in budget_signal.values())
-    text = "\n".join(str(field).lower() for field in fields)
-    return any(marker in text for marker in STRUCTURAL_COMPLEXITY_REPAIR_MARKERS)
-
-
 def _structural_complexity_budget_start_check(
     vault: Path,
     mutation_proposals: dict[str, Any],
@@ -774,7 +751,7 @@ def _structural_complexity_budget_start_check(
     generated_targets = generated_canonical_targets(target_paths)
     source_target_paths = structural_complexity_source_targets(target_paths)
     structural_repair_allowed = any(
-        _proposal_declares_structural_complexity_repair(proposal)
+        proposal_declares_structural_complexity_repair(proposal)
         for proposal in selected
     )
     report_status = "not_applicable"

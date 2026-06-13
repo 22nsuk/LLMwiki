@@ -81,11 +81,7 @@ def remediation_backlog_summary(
     active_blocker_count = max(summary_active_blocker_count, item_open_promotion_count)
     blocking_signal_ids = list(dict.fromkeys(blocking_signal_ids))
     report_status = str(payload.get("status", "")).strip() or "unknown"
-    release_blocking = (
-        open_promotion_count > 0
-        or active_blocker_count > 0
-        or bool(blocking_signal_ids)
-    )
+    release_blocking = open_promotion_count > 0 or bool(blocking_signal_ids)
     signal_ids = blocking_signal_ids or (
         ["remediation_backlog_open"] if release_blocking else []
     )
