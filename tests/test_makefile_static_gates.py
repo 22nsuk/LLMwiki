@@ -165,7 +165,7 @@ def _pytest_ini_marker_docs() -> dict[str, str]:
 
 def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) -> None:
     case.assertIn(
-        "refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics promotion-decision-trends mechanism-review mutation-proposal",
+        "refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics promotion-decision-trends artifact-freshness mechanism-review mutation-proposal",
         text,
     )
     case.assertEqual(

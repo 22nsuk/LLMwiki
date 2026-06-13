@@ -64,7 +64,8 @@ tmp-json-clean:
 	@if [ -d tmp ]; then find tmp -mindepth 1 -delete; fi
 
 tmp-clean: tmp-json-clean
-refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics promotion-decision-trends mechanism-review mutation-proposal
+# Keep the canonical freshness report current before queue/readiness consumers read it.
+refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics promotion-decision-trends artifact-freshness mechanism-review mutation-proposal
 
 refresh-generated-observability:
 	$(MAKE) make-target-inventory

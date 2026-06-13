@@ -417,6 +417,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("do not generate or require those artifacts inside the worker phase", prompt)
             self.assertIn("actual changed source and `tests/**` files", prompt)
             self.assertIn("skip promotion even when executor roles report pass", prompt)
+            self.assertIn("Before editing, inspect the primary target's current shape", prompt)
+            self.assertIn("line, function, and branch footprint", prompt)
+            self.assertIn("For structural-complexity repairs", prompt)
+            self.assertIn("measured simplification or decomposition slice", prompt)
+            self.assertIn("broad fallback branches", prompt)
             self.assertLess(
                 prompt.index("Repository write boundary:"),
                 prompt.index("Worker structural budget guardrails:"),
