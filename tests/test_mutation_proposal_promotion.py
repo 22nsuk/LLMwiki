@@ -845,7 +845,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
             )
             (vault / "tests" / "fixtures").mkdir(parents=True, exist_ok=True)
             (vault / "tests" / "fixtures" / "report_schema_samples.json").write_text(
-                "{}\n",
+                "\n".join(f'  "sample_{index}": true,' for index in range(1000)) + "\n",
                 encoding="utf-8",
             )
             source_run_id = "auto-session-a-run-03-example-runtime"
@@ -915,6 +915,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
                     "ops/reports/auto-improve-sessions/session-a.json",
                 ],
             )
+            self.assertEqual(repair["blocked_by"], [])
             self.assertEqual(
                 repair["must_change_tests"],
                 [

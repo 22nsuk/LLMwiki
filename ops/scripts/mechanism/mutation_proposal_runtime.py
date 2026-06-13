@@ -187,6 +187,11 @@ def _proposal_target_paths(proposal: MutationProposal) -> list[str]:
     )
 
 
+def _proposal_primary_target_paths(proposal: MutationProposal) -> list[str]:
+    primary_targets = list(dict.fromkeys(proposal.primary_targets))
+    return primary_targets or _proposal_target_paths(proposal)
+
+
 def _with_start_admission_blockers(
     vault: Path,
     proposal: MutationProposal,
@@ -195,7 +200,7 @@ def _with_start_admission_blockers(
 ) -> MutationProposal:
     if proposal.failure_mode != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE:
         return proposal
-    target_paths = _proposal_target_paths(proposal)
+    target_paths = _proposal_primary_target_paths(proposal)
     source_targets = structural_complexity_source_targets(target_paths)
     if not source_targets:
         return proposal

@@ -722,6 +722,11 @@ def _proposal_target_paths(proposal: dict[str, Any]) -> list[str]:
     )
 
 
+def _proposal_primary_target_paths(proposal: dict[str, Any]) -> list[str]:
+    primary_targets = list(dict.fromkeys(_list_strings(proposal.get("primary_targets"))))
+    return primary_targets or _proposal_target_paths(proposal)
+
+
 def _structural_complexity_budget_start_check(
     vault: Path,
     mutation_proposals: dict[str, Any],
@@ -738,9 +743,17 @@ def _structural_complexity_budget_start_check(
     selected_ids = [
         str(proposal.get("proposal_id", "")).strip()
         for proposal in selected
-        if str(proposal.get("proposal_id", "")).strip()
+            if str(proposal.get("proposal_id", "")).strip()
     ]
     target_paths = list(
+        dict.fromkeys(
+            path
+            for proposal in selected
+            for path in _proposal_primary_target_paths(proposal)
+            if path
+        )
+    )
+    raw_target_paths = list(
         dict.fromkeys(
             path
             for proposal in selected
@@ -748,7 +761,7 @@ def _structural_complexity_budget_start_check(
             if path
         )
     )
-    generated_targets = generated_canonical_targets(target_paths)
+    generated_targets = generated_canonical_targets(raw_target_paths)
     source_target_paths = structural_complexity_source_targets(target_paths)
     structural_repair_allowed = any(
         proposal_declares_structural_complexity_repair(proposal)
@@ -805,7 +818,7 @@ def _structural_complexity_budget_start_check(
         observed={
             "selected_proposal_ids": selected_ids,
             "target_paths": source_target_paths,
-            "raw_target_paths": target_paths,
+            "raw_target_paths": raw_target_paths,
             "ignored_generated_canonical_targets": generated_targets,
             "structural_complexity_repair_allowed": structural_repair_allowed,
             "status": report_status,
