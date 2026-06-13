@@ -436,6 +436,123 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
             )
             self.assertEqual(rotation["blocked_by"], [])
+
+    def test_blocked_queue_unblock_rotation_does_not_suppress_next_run_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "outcome-metrics.json",
+                {
+                    "recent_attempts": [
+                        {
+                            "run_id": "mutation-proposal-rerun",
+                            "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+                            "outcome": "validation_blocked",
+                            "decision": "HOLD",
+                        },
+                        {
+                            "run_id": "mechanism-validation-rerun",
+                            "proposal_id": (
+                                "recent_log_overlap_queue_blocked__"
+                                "mechanism-run-validation-runtime"
+                            ),
+                            "outcome": "validation_blocked",
+                            "decision": "HOLD",
+                        },
+                    ],
+                },
+            )
+            source_run_id = "mechanism-validation-rerun"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(run_dir / "run-telemetry.json", {"status": "blocked"})
+            write_json(run_dir / "validator-executor-report.json", {"status": "fail"})
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:mechanism-validation-rerun:validation",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": (
+                                "recent_log_overlap_queue_blocked__"
+                                "mechanism-run-validation-runtime"
+                            ),
+                            "source_candidate_id": (
+                                "recent_log_overlap_queue_unblock__"
+                                "mechanism-run-validation-runtime"
+                            ),
+                            "target_proposal_id": (
+                                "next_run_failure_repair__mechanism-run-validation-runtime__"
+                                "validation-blocked"
+                            ),
+                            "proposal_family": "queue_unblock",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "validation_blocked",
+                            "blocking_role": "validator",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "blocked rotation should not hide repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+                            ],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": [
+                                "tests/test_mechanism_run_validation_runtime.py"
+                            ],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/run-telemetry.json",
+                                f"runs/{source_run_id}/validator-executor-report.json",
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text(
+                "# System Log\n\n"
+                "## [2026-04-14 00:00] decision | prior overlapping experiments\n\n"
+                "### Artifacts\n"
+                "- `ops/scripts/promotion_gate.py`\n"
+                "- `ops/scripts/wiki_lint.py`\n"
+                "- `ops/scripts/mechanism_assess.py`\n",
+                encoding="utf-8",
+            )
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["status"], "pass")
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 1)
+            self.assertEqual(
+                [proposal["failure_mode"] for proposal in proposal_report["proposals"]],
+                ["next_run_failure_repair"],
+            )
+            self.assertEqual(
+                proposal_report["proposals"][0]["proposal_id"],
+                (
+                    "next_run_failure_repair__mechanism-run-validation-runtime__"
+                    "validation-blocked"
+                ),
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"]["selection_mode"],
+                "carry_forward_repair_only",
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"]["blocked_reason_counts"],
+                [
+                    {"reason": "recent_log_overlap", "count": 3},
+                    {"reason": "recent_outcome_rework", "count": 1},
+                ],
+            )
+
     def test_recent_log_overlap_rotation_blocks_after_repeated_recent_outcome_rework(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

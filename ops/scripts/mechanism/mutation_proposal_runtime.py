@@ -511,8 +511,10 @@ def _proposal_models_from_candidates(
     )
     if recent_log_overlap_unblock is not None:
         available_proposal_models.append(recent_log_overlap_unblock)
-    current_proposal_ids = {
-        proposal.proposal_id for proposal in available_proposal_models if proposal.proposal_id
+    current_runnable_proposal_ids = {
+        proposal.proposal_id
+        for proposal in available_proposal_models
+        if proposal.proposal_id and not proposal.blocked_by
     }
     available_proposal_models.extend(
         next_run_repair_proposal_models(
@@ -520,7 +522,7 @@ def _proposal_models_from_candidates(
             effective_policy,
             next_run_decisions,
             consumed_decision_ids=set(consumed_next_run_decision_ids),
-            current_proposal_ids=current_proposal_ids,
+            current_proposal_ids=current_runnable_proposal_ids,
             dependencies=_next_run_repair_dependencies(),
             recent_log_overlap_unblock_failure_mode=RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
             recent_log_overlap_unblock_family=RECENT_LOG_OVERLAP_UNBLOCK_FAMILY,
