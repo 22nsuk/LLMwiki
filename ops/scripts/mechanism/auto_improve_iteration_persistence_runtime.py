@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ops.scripts.experiment_telemetry_runtime import run_rel, write_run_telemetry
 from ops.scripts.promotion_decision_registry_runtime import (
@@ -642,7 +642,7 @@ def write_iteration_telemetry(
         )
     )
     same_eval_existing_report = (
-        {**existing_report, "promotion_report": same_eval_promotion.payload}
+        {"promotion_report": cast(LoadedPromotionReport, same_eval_promotion).payload}
         if same_eval_is_current
         else existing_report if same_eval_promotion is None else {}
     )
@@ -650,7 +650,7 @@ def write_iteration_telemetry(
     if same_eval_reason:
         payload["same_eval_reason"] = same_eval_reason
     same_eval_contract = iteration_same_eval_contract(
-        request.result,
+        (request.result, None)[same_eval_is_current],
         same_eval_existing_report,
         same_eval_reason=same_eval_reason,
         behavior_delta_digest=behavior_delta_digest,
