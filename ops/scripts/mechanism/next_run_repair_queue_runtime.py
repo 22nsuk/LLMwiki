@@ -307,6 +307,9 @@ def _decision_source_tree_fingerprint(vault: Path, decision: dict) -> str:
                 f"runs/{source_run_id}/promotion-report.json",
             ]
         )
+    source_session_report = _source_session_report_path(vault, decision)
+    if source_session_report:
+        evidence_paths.append(source_session_report)
     for rel_path in dedupe_preserve_order(evidence_paths):
         normalized = safe_repo_relative_path(rel_path)
         if normalized is None:

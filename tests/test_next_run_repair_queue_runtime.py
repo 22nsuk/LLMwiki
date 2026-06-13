@@ -448,6 +448,62 @@ def test_open_carry_forward_decisions_suppresses_contract_structural_after_sourc
         assert open_decisions == []
 
 
+def test_open_carry_forward_decisions_suppresses_contract_structural_after_source_session_report_change() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def persist():\n    return True\n", encoding="utf-8")
+        session_report = "ops/reports/auto-improve-sessions/session-a.json"
+        session_report_path = vault / session_report
+        session_report_path.parent.mkdir(parents=True, exist_ok=True)
+        session_report_path.write_text(
+            json.dumps(
+                embed_artifact_envelope_metadata(
+                    {"session_id": "session-a", "next_run_decisions": []},
+                    {
+                        "artifact_kind": "auto_improve_session",
+                        "source_revision": "old",
+                        "source_tree_fingerprint": "old-tree",
+                    },
+                ),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="contract_regression_signals",
+                    proposal_id=(
+                        "repeated_same_eval_after_promote__"
+                        "auto-improve-iteration-persistence-runtime"
+                    ),
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                    evidence_paths=[
+                        "runs/missing-run/run-telemetry.json",
+                        "runs/missing-run/promotion-report.json",
+                    ],
+                    **{SOURCE_SESSION_REPORT_DECISION_KEY: session_report},
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
 def test_open_carry_forward_decisions_suppresses_clean_queue_unblock_structural() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         vault = Path(temp_dir)
