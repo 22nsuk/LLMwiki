@@ -595,11 +595,7 @@ def write_iteration_telemetry(
     )
     existing_report = loaded_existing_report if isinstance(loaded_existing_report, dict) else {}
     observed_at = request.context.isoformat_z()
-    executor_report_rels = _iteration_executor_report_rels(
-        request.vault,
-        request.run_id,
-        request.roles,
-    )
+    executor_report_rels = _iteration_executor_report_rels(request.vault, request.run_id, request.roles)
     payload = {
         "session_id": request.session_id,
         "run_id": request.run_id,
@@ -618,21 +614,12 @@ def write_iteration_telemetry(
         "finalize_result": (request.result or {}).get("finalize_result", {}),
     }
     _preserve_existing_telemetry_fields(payload, existing_report)
-    decision_record = _iteration_decision_record(
-        request.vault,
-        request.run_id,
-        request.result,
-        existing_report,
-    )
+    decision_record = _iteration_decision_record(request.vault, request.run_id, request.result, existing_report)
     if isinstance(decision_record, dict):
         payload["decision_record"] = decision_record
         payload["decision"] = _decision_from_record(decision_record)
     discard_evidence = _discard_non_regression_evidence(
-        request.vault,
-        request.run_id,
-        request.outcome,
-        request.result,
-        existing_report,
+        request.vault, request.run_id, request.outcome, request.result, existing_report
     )
     if discard_evidence is not None:
         payload["discard_non_regression_evidence"] = discard_evidence
@@ -645,15 +632,11 @@ def write_iteration_telemetry(
     command_timeouts = _iteration_command_timeouts(request.vault, request.run_id, request.result)
     if command_timeouts is not None:
         payload["command_timeouts"] = command_timeouts
-    timeout_failure_artifacts = _iteration_timeout_failure_artifacts(
-        request.vault, request.run_id, request.result
-    )
+    timeout_failure_artifacts = _iteration_timeout_failure_artifacts(request.vault, request.run_id, request.result)
     if timeout_failure_artifacts:
         payload["timeout_failure_artifacts"] = timeout_failure_artifacts
     pre_promotion_failure_artifacts = _iteration_pre_promotion_failure_artifacts(
-        request.vault,
-        request.run_id,
-        request.outcome,
+        request.vault, request.run_id, request.outcome
     )
     if pre_promotion_failure_artifacts:
         payload["pre_promotion_failure_artifacts"] = pre_promotion_failure_artifacts
@@ -661,27 +644,34 @@ def write_iteration_telemetry(
     behavior_delta_digest = ""
     if behavior_delta:
         payload["behavior_delta"] = behavior_delta
-        behavior_delta_digest = iteration_behavior_delta_digest(
-            request.vault,
-            behavior_delta,
-            existing_report,
-        )
+        behavior_delta_digest = iteration_behavior_delta_digest(request.vault, behavior_delta, existing_report)
         if behavior_delta_digest:
             payload["behavior_delta_digest"] = behavior_delta_digest
-    same_eval_reason = iteration_same_eval_reason(request.result, existing_report)
+    same_eval_promotion = _iteration_promotion_report(request.vault, request.run_id, request.result, existing_report)
+    same_eval_existing_report = (
+        {**existing_report, "promotion_report": same_eval_promotion.payload}
+        if same_eval_promotion is not None
+        else existing_report
+    )
+    same_eval_reason = iteration_same_eval_reason(request.result, same_eval_existing_report)
     if same_eval_reason:
         payload["same_eval_reason"] = same_eval_reason
     same_eval_contract = iteration_same_eval_contract(
         request.result,
-        existing_report,
+        same_eval_existing_report,
         same_eval_reason=same_eval_reason,
         behavior_delta_digest=behavior_delta_digest,
     )
-    if same_eval_reason or same_eval_contract["same_eval_reason_code"] != "unknown":
+    if any(
+        (
+            same_eval_reason,
+            same_eval_contract["same_eval_reason_code"] != "unknown",
+            same_eval_contract["strict_secondary_improvement_present"],
+            same_eval_contract["secondary_improvement_axes"],
+        )
+    ):
         payload["same_eval_reason_code"] = same_eval_contract["same_eval_reason_code"]
-        payload["strict_secondary_improvement_present"] = same_eval_contract[
-            "strict_secondary_improvement_present"
-        ]
+        payload["strict_secondary_improvement_present"] = same_eval_contract["strict_secondary_improvement_present"]
         payload["secondary_improvement_axes"] = same_eval_contract["secondary_improvement_axes"]
     return write_run_telemetry(request.vault, request.run_id, payload)
 

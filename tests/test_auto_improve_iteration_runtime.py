@@ -998,6 +998,116 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertTrue(payload["strict_secondary_improvement_present"])
             self.assertEqual(payload["secondary_improvement_axes"], ["lint"])
 
+    def test_write_iteration_telemetry_records_same_eval_secondary_evidence_from_promotion_path(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-same-eval-report-evidence"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "PASS",
+                                "detail": (
+                                    "allowed=true, score_equal=true, selected_axes=['lint'], "
+                                    "selected_non_regression=true, selected_any_improvement=true"
+                                ),
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={"decision": "PROMOTE", "promotion_report": promotion_rel},
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["same_eval_reason_code"], "unknown")
+            self.assertTrue(payload["strict_secondary_improvement_present"])
+            self.assertEqual(payload["secondary_improvement_axes"], ["lint"])
+
+    def test_write_iteration_telemetry_rejects_cross_run_same_eval_promotion_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-same-eval-current"
+            other_run_id = "auto-session-run-same-eval-other"
+            (vault / "runs" / run_id).mkdir(parents=True)
+            other_run_dir = vault / "runs" / other_run_id
+            other_run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{other_run_id}/promotion-report.json"
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": other_run_id,
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "PASS",
+                                "detail": (
+                                    "allowed=true, score_equal=true, selected_axes=['lint'], "
+                                    "selected_non_regression=true, selected_any_improvement=true"
+                                ),
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={"decision": "PROMOTE", "promotion_report": promotion_rel},
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertNotIn("same_eval_reason_code", payload)
+            self.assertNotIn("strict_secondary_improvement_present", payload)
+            self.assertNotIn("secondary_improvement_axes", payload)
+
     def test_write_iteration_telemetry_recovers_decision_record_from_promotion_report_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
