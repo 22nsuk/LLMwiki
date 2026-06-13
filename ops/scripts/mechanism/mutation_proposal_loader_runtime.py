@@ -55,6 +55,13 @@ class MutationReportInputs:
     recent_log_section_ordering: str
 
 
+@dataclass(frozen=True)
+class NextRunDecisionQueueInputs:
+    auto_improve_session_report_paths: list[str]
+    consumed_next_run_decision_ids: list[str]
+    next_run_decisions: list[dict]
+
+
 def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -184,6 +191,21 @@ def _load_consumed_next_run_decision_ids(
             ):
                 consumed.add(source_candidate_id)
     return sorted(consumed)
+
+
+def load_next_run_decision_queue_inputs(vault: Path) -> NextRunDecisionQueueInputs:
+    session_report_paths = _auto_improve_session_report_paths(vault)
+    next_run_decisions = _load_next_run_decisions(vault, session_report_paths)
+    consumed_next_run_decision_ids = _load_consumed_next_run_decision_ids(
+        vault,
+        session_report_paths,
+        next_run_decisions,
+    )
+    return NextRunDecisionQueueInputs(
+        auto_improve_session_report_paths=session_report_paths,
+        consumed_next_run_decision_ids=consumed_next_run_decision_ids,
+        next_run_decisions=next_run_decisions,
+    )
 
 
 def _parse_log_heading_timestamp(heading: str) -> tuple[int, int, int, int, int] | None:
@@ -377,16 +399,7 @@ def load_mutation_report_inputs(
     outcome_metrics_report = _read_optional_report(outcome_metrics_path)
     remediation_backlog_path = (vault / DEFAULT_REMEDIATION_BACKLOG_REPORT).resolve()
     remediation_backlog_report = _read_optional_report(remediation_backlog_path)
-    auto_improve_session_report_paths = _auto_improve_session_report_paths(vault)
-    next_run_decisions = _load_next_run_decisions(
-        vault,
-        auto_improve_session_report_paths,
-    )
-    consumed_next_run_decision_ids = _load_consumed_next_run_decision_ids(
-        vault,
-        auto_improve_session_report_paths,
-        next_run_decisions,
-    )
+    next_run_decision_inputs = load_next_run_decision_queue_inputs(vault)
     system_log = (vault / (system_log_path or DEFAULT_SYSTEM_LOG)).resolve()
     recent_log_sections, recent_log_section_ordering = _read_log_sections(
         system_log,
@@ -404,9 +417,9 @@ def load_mutation_report_inputs(
         outcome_metrics_report=outcome_metrics_report,
         remediation_backlog_path=remediation_backlog_path,
         remediation_backlog_report=remediation_backlog_report,
-        auto_improve_session_report_paths=auto_improve_session_report_paths,
-        consumed_next_run_decision_ids=consumed_next_run_decision_ids,
-        next_run_decisions=next_run_decisions,
+        auto_improve_session_report_paths=next_run_decision_inputs.auto_improve_session_report_paths,
+        consumed_next_run_decision_ids=next_run_decision_inputs.consumed_next_run_decision_ids,
+        next_run_decisions=next_run_decision_inputs.next_run_decisions,
         system_log=system_log,
         recent_log_sections=recent_log_sections,
         recent_log_section_ordering=recent_log_section_ordering,

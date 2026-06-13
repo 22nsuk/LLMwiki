@@ -7,6 +7,7 @@ from ops.scripts.auto_improve_readiness_learning_runtime import (
     learning_claim_blocker_payloads,
 )
 from ops.scripts.auto_improve_readiness_queue_runtime import (
+    OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER,
     readiness_execution_fields,
     readiness_queue_payloads,
     readiness_queue_state,
@@ -374,6 +375,186 @@ class AutoImproveReadinessQueueRuntimeTests(
                 "latest_session_quarantined": ["quarantined-in-latest"],
             },
         )
+        self.assertTrue(state.queue_ready)
+
+    def test_open_next_run_repair_quarantines_source_but_keeps_repair_target(
+        self,
+    ) -> None:
+        source = "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime"
+        repair = "next_run_failure_repair__auto-improve-readiness-queue-runtime__validation-blocked"
+        reports = {
+            "outcome_metrics": {
+                "summary": {
+                    "attempts_considered": 8,
+                    "session_reports_considered": 1,
+                }
+            },
+            "mechanism_review": {
+                "summary": {"candidates_emitted": 2},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
+            },
+            "mutation_proposal": {
+                "summary": {
+                    "source_candidates_read": 2,
+                    "proposals_emitted": 2,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "repair plus stale source",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": source,
+                        "blocked_by": [],
+                        "failure_mode": "recent_log_overlap_queue_blocked",
+                        "priority": 100,
+                    },
+                    {
+                        "proposal_id": repair,
+                        "blocked_by": [],
+                        "failure_mode": "next_run_failure_repair",
+                        "priority": 90,
+                    },
+                ],
+            },
+        }
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            reports["mutation_proposal"],
+            enveloped=False,
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/source-failed.json",
+            {
+                "session_id": "source-failed",
+                "generated_at": "2026-04-21T04:00:00Z",
+                "next_run_decisions": [
+                    {
+                        "decision_id": "next-run-decision:source-failed",
+                        "observed_at": "2026-04-21T03:59:00Z",
+                        "proposal_id": source,
+                        "target_proposal_id": repair,
+                        "proposal_family": "queue_unblock",
+                        "decision": "carry_forward",
+                        "next_run_action": "repair_failure",
+                        "status": "open",
+                        "failure_taxonomy": "validation_blocked",
+                        "quarantined_source_proposal": True,
+                        "primary_targets": [
+                            "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+                        ],
+                        "evidence_paths": ["ops/reports/mutation-proposals.json"],
+                    }
+                ],
+            },
+            enveloped=False,
+        )
+
+        state = readiness_queue_state(self.vault, reports)
+
+        self.assertEqual(state.runnable_proposal_ids, [repair])
+        self.assertEqual(state.blocked_proposal_count, 1)
+        self.assertEqual(
+            state.blocked_reason_counts,
+            {OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER: 1},
+        )
+        self.assertEqual(
+            state.blocked_proposal_ids,
+            {OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER: [source]},
+        )
+        self.assertTrue(state.queue_ready)
+
+    def test_consumed_next_run_repair_decision_no_longer_quarantines_source(
+        self,
+    ) -> None:
+        source = "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime"
+        repair = "next_run_failure_repair__auto-improve-readiness-queue-runtime__validation-blocked"
+        decision_id = "next-run-decision:source-failed"
+        reports = {
+            "outcome_metrics": {
+                "summary": {
+                    "attempts_considered": 8,
+                    "session_reports_considered": 2,
+                }
+            },
+            "mechanism_review": {
+                "summary": {"candidates_emitted": 2},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
+            },
+            "mutation_proposal": {
+                "summary": {
+                    "source_candidates_read": 2,
+                    "proposals_emitted": 2,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": source,
+                        "blocked_by": [],
+                        "failure_mode": "recent_log_overlap_queue_blocked",
+                        "priority": 100,
+                    },
+                    {
+                        "proposal_id": repair,
+                        "blocked_by": [],
+                        "failure_mode": "next_run_failure_repair",
+                        "priority": 90,
+                    },
+                ],
+            },
+        }
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            reports["mutation_proposal"],
+            enveloped=False,
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/source-failed.json",
+            {
+                "session_id": "source-failed",
+                "generated_at": "2026-04-21T04:00:00Z",
+                "next_run_decisions": [
+                    {
+                        "decision_id": decision_id,
+                        "observed_at": "2026-04-21T03:59:00Z",
+                        "proposal_id": source,
+                        "target_proposal_id": repair,
+                        "proposal_family": "queue_unblock",
+                        "decision": "carry_forward",
+                        "next_run_action": "repair_failure",
+                        "status": "open",
+                        "failure_taxonomy": "validation_blocked",
+                        "quarantined_source_proposal": True,
+                        "primary_targets": [
+                            "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+                        ],
+                        "evidence_paths": ["ops/reports/mutation-proposals.json"],
+                    }
+                ],
+            },
+            enveloped=False,
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/repair-consumed.json",
+            {
+                "session_id": "repair-consumed",
+                "generated_at": "2026-04-22T04:00:00Z",
+                "iterations": [{"source_candidate_id": decision_id}],
+            },
+            enveloped=False,
+        )
+
+        state = readiness_queue_state(self.vault, reports)
+
+        self.assertEqual(state.runnable_proposal_ids, [source, repair])
+        self.assertEqual(state.blocked_proposal_count, 0)
+        self.assertEqual(state.blocked_reason_counts, {})
+        self.assertEqual(state.blocked_proposal_ids, {})
         self.assertTrue(state.queue_ready)
 
     def test_build_readiness_report_blocks_latest_session_quarantined_repeat(
