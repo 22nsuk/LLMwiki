@@ -142,8 +142,19 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
     release_check_block = _target_block(text, "external-report-reference-manifest-release-check")
     case.assertIn("external-report-reference-manifest-strict", release_check_block)
     case.assertIn("EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE=advisory", release_check_block)
-    case.assertEqual(
-        _recipe_lines(text, "external-report-reference-manifest-settle"),
+    settle_block = _target_block(text, "external-report-reference-manifest-settle")
+    case.assertIn("RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP", settle_block)
+    case.assertIn(
+        'EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+        settle_block,
+    )
+    case.assertIn(
+        'EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+        settle_block,
+    )
+    _assert_ordered_subsequence(
+        case,
+        settle_block.splitlines(),
         [
             "$(MAKE) external-report-reference-manifest-release-check",
             "$(MAKE) external-report-reference-manifest-release-check",

@@ -222,8 +222,13 @@ external-report-reference-manifest-release-check:
 	$(if $(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH),$(MAKE) external-report-reference-manifest-strict,$(MAKE) external-report-reference-manifest EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE=advisory)
 
 external-report-reference-manifest-settle:
-	$(MAKE) external-report-reference-manifest-release-check
-	$(MAKE) external-report-reference-manifest-release-check
+	@if [ -n "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" ]; then \
+		$(MAKE) external-report-reference-manifest-release-check EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
+		$(MAKE) external-report-reference-manifest-release-check EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
+	else \
+		$(MAKE) external-report-reference-manifest-release-check; \
+		$(MAKE) external-report-reference-manifest-release-check; \
+	fi
 
 external-report-action-matrix:
 	$(PYTHON) -m ops.scripts.external_report_action_matrix --vault "$(VAULT)" --out "$(EXTERNAL_REPORT_ACTION_MATRIX_OUT)"
