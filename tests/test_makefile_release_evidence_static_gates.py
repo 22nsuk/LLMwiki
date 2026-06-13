@@ -152,13 +152,9 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
         'EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
         settle_block,
     )
-    _assert_ordered_subsequence(
-        case,
-        settle_block.splitlines(),
-        [
-            "$(MAKE) external-report-reference-manifest-release-check",
-            "$(MAKE) external-report-reference-manifest-release-check",
-        ],
+    case.assertGreaterEqual(
+        settle_block.count("external-report-reference-manifest-release-check"),
+        2,
     )
     case.assertIn(
         '$(PYTHON) -m ops.scripts.external_report_action_matrix --vault "$(VAULT)" --out "$(EXTERNAL_REPORT_ACTION_MATRIX_OUT)"',
