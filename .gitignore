@@ -52,6 +52,7 @@ tmp/test-runs/
 Thumbs.db
 
 # Extra local tool caches
+.hypothesis/
 .mypy_cache/
 .ruff_cache/
 .cache/
