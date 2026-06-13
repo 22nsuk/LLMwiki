@@ -254,16 +254,6 @@ def _normalized_repo_relative_path(rel_path: object) -> str:
     return "/".join(parts)
 
 
-def _promotion_report_path_matches_run(rel_path: object, run_id: str) -> bool:
-    if not isinstance(rel_path, str) or not rel_path.strip():
-        return True
-    normalized = _normalized_repo_relative_path(rel_path)
-    return bool(normalized) and (
-        normalized == run_rel(run_id, "promotion-report.json")
-        or normalized.startswith(run_rel(run_id, ""))
-    )
-
-
 def _decision_record_matches_run(decision_record: object, run_id: str) -> bool:
     if not isinstance(decision_record, dict):
         return True
@@ -287,14 +277,6 @@ def _iteration_executor_report_rels(vault: Path, run_id: str, roles: list[str]) 
     ]
 
 
-def _role_from_executor_report_rel(rel_path: str) -> str:
-    filename = rel_path.rsplit("/", 1)[-1]
-    suffix = "-executor-report.json"
-    if filename.endswith(suffix):
-        return filename[: -len(suffix)]
-    return ""
-
-
 def _blocking_role_from_executor_reports(vault: Path, report_rels: list[str]) -> str:
     for rel_path in report_rels:
         payload = _load_repo_relative_json(vault, rel_path)
@@ -302,7 +284,10 @@ def _blocking_role_from_executor_reports(vault: Path, report_rels: list[str]) ->
             continue
         status = str(payload.get("status", "")).strip().lower()
         if status and status != "pass":
-            return str(payload.get("role", "")).strip() or _role_from_executor_report_rel(rel_path)
+            suffix = "-executor-report.json"
+            filename = rel_path.rsplit("/", 1)[-1]
+            fallback_role = filename[: -len(suffix)] if filename.endswith(suffix) else ""
+            return str(payload.get("role", "")).strip() or fallback_role
     return ""
 
 
@@ -313,14 +298,15 @@ def _load_promotion_report_from_rel(
     run_id: str,
     source_kind: str,
 ) -> LoadedPromotionReport | None:
-    if not _promotion_report_path_matches_run(rel_path, run_id):
+    normalized_path = _normalized_repo_relative_path(rel_path)
+    if not normalized_path.startswith(run_rel(run_id, "")):
         return None
-    payload = _load_repo_relative_json(vault, rel_path)
+    payload = _load_repo_relative_json(vault, normalized_path)
     if payload is None:
         return None
     if not _promotion_report_matches_run(payload, run_id):
         return None
-    return LoadedPromotionReport(payload=payload, source_kind=source_kind, source_path=str(rel_path).strip())
+    return LoadedPromotionReport(payload=payload, source_kind=source_kind, source_path=normalized_path)
 
 
 def _promotion_report_from_source(

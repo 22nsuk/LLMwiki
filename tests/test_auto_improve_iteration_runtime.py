@@ -114,27 +114,26 @@ def _write_iteration_executor_report(
     *,
     role: str,
     status: str,
+    include_role: bool = True,
 ) -> str:
     report_rel = f"runs/{run_id}/{role}-executor-report.json"
     report_path = vault / report_rel
     report_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "$schema": "ops/schemas/executor-report.schema.json",
+        "run_id": run_id,
+        "generated_at": "2026-05-20T12:00:00Z",
+        "executor": {"name": "unit-test", "sandbox_mode": "workspace-write"},
+        "status": status,
+        "command": {"argv": ["unit-test"]},
+        "artifacts": {},
+        "result": {"returncode": 0, "timed_out": False},
+        "diagnostics": {},
+    }
+    if include_role:
+        payload["role"] = role
     report_path.write_text(
-        json.dumps(
-            {
-                "$schema": "ops/schemas/executor-report.schema.json",
-                "run_id": run_id,
-                "role": role,
-                "generated_at": "2026-05-20T12:00:00Z",
-                "executor": {"name": "unit-test", "sandbox_mode": "workspace-write"},
-                "status": status,
-                "command": {"argv": ["unit-test"]},
-                "artifacts": {},
-                "result": {"returncode": 0, "timed_out": False},
-                "diagnostics": {},
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
+        json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     return report_rel
@@ -588,6 +587,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 run_id,
                 role="provenance-auditor",
                 status="fail",
+                include_role=False,
             )
             session: dict[str, Any] = {
                 "iterations": [],
