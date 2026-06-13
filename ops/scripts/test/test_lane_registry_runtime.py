@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 from collections import Counter
 from pathlib import Path
@@ -156,17 +157,57 @@ def selector_test_file(selector: str) -> str:
     return _non_empty_str(selector).split("::", 1)[0]
 
 
+def _pytest_mark_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Call):
+        return _pytest_mark_name(node.func)
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == "mark"
+        and isinstance(node.value.value, ast.Name)
+        and node.value.value.id == "pytest"
+    ):
+        return node.attr
+    return ""
+
+
+def _pytestmark_names(node: ast.AST) -> set[str]:
+    if isinstance(node, ast.List | ast.Tuple | ast.Set):
+        marks: set[str] = set()
+        for item in node.elts:
+            marks.update(_pytestmark_names(item))
+        return marks
+    mark = _pytest_mark_name(node)
+    return {mark} if mark else set()
+
+
+def _pytestmark_value(statement: ast.stmt) -> ast.AST | None:
+    if isinstance(statement, ast.Assign) and any(
+        isinstance(target, ast.Name) and target.id == "pytestmark"
+        for target in statement.targets
+    ):
+        return statement.value
+    if (
+        isinstance(statement, ast.AnnAssign)
+        and isinstance(statement.target, ast.Name)
+        and statement.target.id == "pytestmark"
+    ):
+        return statement.value
+    return None
+
+
 def module_level_pytest_marks(test_file: Path) -> set[str]:
     if not test_file.is_file():
         return set()
+    try:
+        module = ast.parse(test_file.read_text(encoding="utf-8"), filename=test_file.as_posix())
+    except SyntaxError:
+        return set()
     marks: set[str] = set()
-    for line in test_file.read_text(encoding="utf-8").splitlines()[:80]:
-        stripped = line.strip()
-        if not stripped.startswith("pytestmark"):
-            continue
-        for mark in ("slow", "integration_heavy", "report_contract", "public"):
-            if f"pytest.mark.{mark}" in stripped:
-                marks.add(mark)
+    for statement in module.body:
+        value = _pytestmark_value(statement)
+        if value is not None:
+            marks.update(_pytestmark_names(value))
     return marks
 
 

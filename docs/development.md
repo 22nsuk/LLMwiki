@@ -53,7 +53,7 @@ When a request says "full pytest", choose the lane by intent:
 | --- | --- | --- |
 | Developer full regression | `make test-all` | Runs all current pytest tests with the default parallel/cache policy and does not write canonical release evidence. |
 | Exact serial reproduction or xdist isolation debugging | `make test-all-serial` or focused `.venv/bin/python -m pytest tests/...` | Use only when the serial behavior itself is the thing being investigated. |
-| Release-grade full-suite evidence | `make test-execution-summary-full-current-or-refresh` | Runs current-check, then aggregate metadata reuse from current shards, then `test-execution-summary-full-refresh-no-converge` only when evidence really needs to be regenerated. |
+| Release-grade full-suite evidence | `make test-execution-summary-full` | Runs the full-suite summary lane and records canonical release evidence. |
 | Runnable release authority | `make release-run-ready` | Owns the runnable release stage, including full-suite evidence plus release smoke, public-check, package, and manifest authority. |
 
 The registry-backed test lane inventory is recorded in
@@ -102,7 +102,7 @@ Before spending release-grade runtime, prefer the check/plan targets:
 `make release-sealed-run-ready-plan`, and
 `make release-auto-promotion-ready-plan`. Run the corresponding refresh target
 only when the check/plan shows stale authority that is relevant to the change.
-`test-execution-summary-full-body`, and therefore `release-run-ready`, uses
+`test-execution-summary-full`, and therefore `release-run-ready`, uses
 `TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS` which defaults to the parallel
 `PYTEST_FLAGS`; set it to `$(PYTEST_SERIAL_FLAGS)` only when debugging a
 known parallel-isolation failure.
@@ -115,7 +115,7 @@ generator, policy, and schema edits first; then run the stabilizers that can
 mutate or prove generated surfaces, such as `make report-schema-samples-check`,
 `make script-output-surfaces-check`, `make script-output-surfaces` when the check
 reports a stale material output/fallback registry, targeted generated-artifact
-converge targets, and `make static`. `test-execution-summary-full-body` runs
+converge targets, and `make static`. `test-execution-summary-full` runs
 `make full-pytest-generated-preflight` before the expensive full suite, so stale
 schema samples, script output surfaces, and runtime hotspot golden digests fail
 early with the owning repair target. After that point, do not edit source or
@@ -124,6 +124,9 @@ docs unless restarting this sequence. Refresh
 `make test-execution-summary-full-current-or-refresh` for
 explicit full-proof lanes such as `make release-run-ready` or
 `make release-source-ready-prepare`. Use
+`test-execution-summary-full-refresh-no-converge` only as the explicit fallback
+when current full-suite evidence cannot be reused and generated-artifact
+convergence must be deferred to a later release lane. Use
 `make release-converge-preflight` before committing, which refreshes
 `generated-artifact-script-output` before report-contract evidence, then refresh
 summaries last. This keeps

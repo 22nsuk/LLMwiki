@@ -503,14 +503,16 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         _assert_batch_manifest_closeout_recipe_targets(self, text)
         _assert_release_audit_and_post_seal_targets(self, text)
 
-    def test_report_contract_closeout_runs_pytest_wrapper_once_between_generated_refreshes(
+    def test_report_contract_closeout_runs_pytest_wrapper_once_before_generated_orchestrator(
         self,
     ) -> None:
         text = _makefile_text()
         block = _target_block(text, "report-contract-closeout")
+        orchestrator_block = _target_block(text, "report-contract-closeout-generated-artifacts")
         precheck_block = _target_block(text, "report-contract-closeout-precheck")
 
         self.assertIn("report-contract-closeout", _target_block(text, ".PHONY"))
+        self.assertIn("report-contract-closeout-generated-artifacts", _target_block(text, ".PHONY"))
         self.assertIn("report-contract-closeout:", text)
         self.assertIn("$(MAKE) release-smoke-full-reuse", block)
         self.assertIn("$(MAKE) report-contract-closeout-precheck", block)
@@ -518,17 +520,19 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             '$(PYTHON) -m ops.scripts.report_contract_closeout_runtime --vault "$(VAULT)"',
             precheck_block,
         )
-        self.assertIn("$(MAKE) test-execution-summary", block)
+        self.assertIn("$(MAKE) test-execution-summary-report-contract", block)
+        self.assertIn("$(MAKE) report-contract-closeout-generated-artifacts", block)
         self.assertNotIn("$(MAKE) script-output-surfaces", block)
         self.assertNotIn("$(MAKE) auto-improve-readiness-report\n", block)
-        self.assertEqual(block.count("$(MAKE) generated-artifact-converge"), 3)
+        self.assertNotIn("$(MAKE) generated-artifact-converge", block)
+        self.assertEqual(orchestrator_block.count("$(MAKE) generated-artifact-converge"), 2)
         self.assertNotIn("$(MAKE) generated-artifact-index", block)
         self.assertEqual(block.count("$(MAKE) archive-execution-manifest-report"), 0)
         self.assertNotIn("$(MAKE) archive-execution-manifest\n", block)
         self.assertNotIn("$(MAKE) artifact-freshness", block)
-        self.assertEqual(block.count("$(MAKE) release-closeout-summary-report"), 2)
-        self.assertIn("$(MAKE) release-evidence-cohort", block)
-        self.assertIn("$(MAKE) auto-improve-readiness-report-body", block)
+        self.assertEqual(orchestrator_block.count("$(MAKE) release-closeout-summary-report"), 2)
+        self.assertIn("$(MAKE) release-evidence-cohort", orchestrator_block)
+        self.assertIn("$(MAKE) auto-improve-readiness-report-body", orchestrator_block)
         self.assertNotIn("$(PYTHON) -m pytest", block)
         self.assertIn("closeout artifacts", block)
         self.assertLess(
@@ -537,7 +541,11 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         )
         self.assertLess(
             block.index("$(MAKE) release-smoke-full-reuse"),
-            block.index("$(MAKE) test-execution-summary"),
+            block.index("$(MAKE) test-execution-summary-report-contract"),
+        )
+        self.assertLess(
+            block.index("$(MAKE) test-execution-summary-report-contract"),
+            block.index("$(MAKE) report-contract-closeout-generated-artifacts"),
         )
 
     def test_report_contract_closeout_precheck_policy_and_runtime_stay_in_sync(

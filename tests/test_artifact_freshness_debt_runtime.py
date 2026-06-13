@@ -333,6 +333,12 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
             routes["ops_reports_test_execution_summary_full_current_or_refresh"]["recommended_lane"],
             "test-execution-summary-full-current-or-refresh",
         )
+        self.assertEqual(
+            routes["ops_reports_test_execution_summary_full_current_or_refresh"][
+                "recommended_targets"
+            ],
+            ["test-execution-summary-full-current-or-refresh"],
+        )
 
     def test_source_identity_route_sample_paths_are_capped(self) -> None:
         routing = stale_routing(

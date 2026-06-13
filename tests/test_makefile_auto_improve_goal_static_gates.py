@@ -897,6 +897,8 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             (
                 "@set -e; \\",
                 "--budget cheap --candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\" --format targets",
+                "printf '%s\\n' \"$$targets\" | while IFS= read -r target; do \\",
+                "[ -n \"$$target\" ] || continue; \\",
                 "$(MAKE) $$target",
                 "GOAL_RUNTIME_CLOSEOUT_BUDGET=cheap",
             ),
@@ -908,12 +910,16 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             (
                 "@set -e; \\",
                 "--budget full --candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\" --format targets",
+                "printf '%s\\n' \"$$targets\" | while IFS= read -r target; do \\",
+                "[ -n \"$$target\" ] || continue; \\",
                 "$(MAKE) $$target",
                 "GOAL_RUNTIME_CLOSEOUT_BUDGET=full",
             ),
         )
+        self.assertNotIn("for target in $$(", _target_block(text, "goal-runtime-closeout"))
+        self.assertNotIn("for target in $$(", _target_block(text, "goal-runtime-closeout-full"))
         self.assertNotIn(
-            "test-execution-summary-full-refresh",
+            "TEST_EXECUTION_SUMMARY_FULL_MODE=refresh",
             _target_block(text, "goal-runtime-closeout"),
         )
 

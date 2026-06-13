@@ -218,7 +218,10 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) test-execution-summary-report-contract-refresh-no-smoke",
             ],
         )
-        self.assertNotIn("$(MAKE) test-execution-summary-report-contract-refresh\n", preflight_block)
+        self.assertNotIn(
+            "$(MAKE) test-execution-summary-report-contract-refresh\n",
+            preflight_block,
+        )
 
         converge_block = _target_block(text, "release-converge")
         self.assertIn("$(MAKE) release-converge-preflight", converge_block)
@@ -619,8 +622,14 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
 
         core_block = _target_block(text, "release-check-core")
         self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
-        self.assertIn("$(MAKE) test-execution-summary-current-check", core_block)
-        self.assertIn("$(MAKE) test-execution-summary-full-current-check", core_block)
+        self.assertIn(
+            "$(MAKE) test-execution-summary-current-check",
+            core_block,
+        )
+        self.assertIn(
+            "$(MAKE) test-execution-summary-full-current-check",
+            core_block,
+        )
         self.assertNotIn("$(MAKE) test-report-contract-all", core_block)
         self.assertIn("$(MAKE) static", core_block)
         self.assertIn("$(MAKE) artifact-freshness-check", core_block)
@@ -638,10 +647,14 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) unit-tests-all", core_block)
         self.assertLess(
             core_block.index("$(MAKE) release-worktree-clean-check"),
-            core_block.index("$(MAKE) test-execution-summary-current-check"),
+            core_block.index(
+                "$(MAKE) test-execution-summary-current-check"
+            ),
         )
         self.assertLess(
-            core_block.index("$(MAKE) test-execution-summary-full-current-check"),
+            core_block.index(
+                "$(MAKE) test-execution-summary-full-current-check"
+            ),
             core_block.index("$(MAKE) release-smoke-full-current-check"),
         )
 

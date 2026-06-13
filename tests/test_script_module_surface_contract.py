@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import tomllib
 import unittest
 from pathlib import Path
@@ -19,6 +20,7 @@ SCRIPT_LIFECYCLE_POLICY = Path("ops/script-lifecycle-policy.json")
 SCRIPT_LIFECYCLE_POLICY_SCHEMA = Path("ops/schemas/script-lifecycle-policy.schema.json")
 SCRIPT_MODULE_SURFACES = Path("ops/script-module-surfaces.json")
 SCRIPT_MODULE_SURFACES_SCHEMA = Path("ops/schemas/script-module-surfaces.schema.json")
+MAKE_FILES = [Path("Makefile"), *sorted(Path("mk").glob("*.mk"))]
 CONSOLE_SCRIPT_PREFIX = "llm-wiki-"
 INSTALLED_POLICY_STATES = {"public_cli", "transitional_installed"}
 PUBLIC_CLI_COMMANDS = {
@@ -53,6 +55,11 @@ def _project_scripts() -> dict[str, str]:
     pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     scripts = pyproject.get("project", {}).get("scripts", {})
     return {str(name): str(target) for name, target in scripts.items()}
+
+
+def _make_targets() -> set[str]:
+    text = "\n".join(path.read_text(encoding="utf-8") for path in MAKE_FILES)
+    return set(re.findall(r"^([A-Za-z0-9_.%/@-]+):", text, flags=re.MULTILINE))
 
 
 def _policy_project_scripts() -> dict[str, str]:
@@ -176,6 +183,18 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
                 continue
             with self.subTest(module=module["canonical_module"]):
                 self.assertTrue(module["replacement"])
+
+    def test_make_lifecycle_replacements_point_to_existing_targets(self) -> None:
+        targets = _make_targets()
+        for module in _load_lifecycle_policy()["modules"]:
+            replacement = str(module.get("replacement", ""))
+            if not replacement.startswith("make "):
+                continue
+            command_parts = replacement.split()
+            if len(command_parts) < 2 or "=" in command_parts[1]:
+                continue
+            with self.subTest(module=module["canonical_module"]):
+                self.assertIn(command_parts[1], targets)
 
     def test_lifecycle_policy_is_packaged_with_ops_control_files(self) -> None:
         pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))

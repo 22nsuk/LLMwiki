@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from ops.scripts.test.test_lane_registry_runtime import (
     excluded_markers_from_expr,
@@ -21,6 +22,22 @@ class TestLaneRegistryMarkerFilteringTests(unittest.TestCase):
     def test_module_level_pytest_marks_detects_slow_marker(self) -> None:
         marks = module_level_pytest_marks(Path("tests/test_auto_improve_readiness_runtime.py"))
         self.assertIn("slow", marks)
+
+    def test_module_level_pytest_marks_detects_multiline_pytestmark(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            test_file = Path(temp_dir) / "test_multiline_marks.py"
+            test_file.write_text(
+                "import pytest\n\n"
+                "pytestmark = [\n"
+                "    pytest.mark.slow,\n"
+                "    pytest.mark.integration_heavy,\n"
+                "]\n",
+                encoding="utf-8",
+            )
+
+            marks = module_level_pytest_marks(test_file)
+
+        self.assertEqual(marks, {"slow", "integration_heavy"})
 
     def test_fast_smoke_effective_selectors_exclude_module_slow_files(self) -> None:
         registry = load_registry(Path("."))

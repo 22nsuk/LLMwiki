@@ -724,8 +724,8 @@ def _source_identity_test_summary_lane(rel_path: str) -> tuple[str, tuple[str, .
         )
     if rel_path.endswith("/test-execution-summary-public.json"):
         return (
-            "test-execution-summary-public",
-            ("test-execution-summary-public", "public-check-summary-current-or-refresh"),
+            "public-check-summary-current-or-refresh",
+            ("public-check-summary-current-or-refresh",),
             "public_test_summary_source_identity",
         )
     return (

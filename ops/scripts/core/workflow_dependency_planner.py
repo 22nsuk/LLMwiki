@@ -61,7 +61,7 @@ TARGET_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.%/@-]+$")
 OPTION_OR_ASSIGNMENT_RE = re.compile(r"^(?:-|[A-Za-z_][A-Za-z0-9_]*=)")
 
 REPORT_CLOSEOUT_TARGETS = [
-    "test-execution-summary",
+    "test-execution-summary-report-contract",
     "generated-artifact-converge",
     "release-closeout-summary-conditional",
     "release-evidence-cohort",
@@ -496,7 +496,7 @@ def _primary_report_for_target(target: str) -> str:
         "release-evidence-dashboard-report": "ops/reports/release-evidence-dashboard.json",
         "release-lane-summary": "ops/reports/release-lane-summary.json",
         "release-smoke-full": "ops/reports/release-smoke-report.json",
-        "test-execution-summary": "ops/reports/test-execution-summary.json",
+        "test-execution-summary-report-contract": "ops/reports/test-execution-summary.json",
         "workflow-dependency-planner": "ops/reports/workflow-dependency-planner.json",
     }.get(target, "")
 

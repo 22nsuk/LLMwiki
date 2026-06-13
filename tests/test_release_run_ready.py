@@ -135,9 +135,9 @@ def _test_execution_summary_payload(
         "suite": suite,
         "suite_scope": suite_scope,
         "represents_full_suite": represents_full_suite,
-        "not_full_suite_reason": ""
-        if represents_full_suite
-        else "report-contract fixture",
+        "not_full_suite_reason": (
+            "" if represents_full_suite else "report-contract fixture"
+        ),
         "full_suite_evidence": {
             "status": full_suite_status,
             "required_command": "make test-execution-summary-full-current-or-refresh",

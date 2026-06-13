@@ -57,7 +57,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         (self.vault / "Makefile").write_text(
             ".PHONY: static ruff typecheck release-evidence-converge release-smoke-full "
             "release-evidence-closeout "
-            "test-execution-summary generated-artifact-converge generated-artifact-script-output "
+            "test-execution-summary-report-contract generated-artifact-converge generated-artifact-script-output "
             "generated-artifact-finality-suffix script-output-surfaces "
             "external-report-action-matrix generated-artifact-index generated-artifact-index-body artifact-freshness "
             "release-closeout-summary-report release-closeout-fixed-point "
@@ -72,12 +72,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "release-evidence-converge:\n"
             "\t$(MAKE) static\n"
             "\t$(MAKE) release-smoke-full\n"
-            "\t$(MAKE) test-execution-summary\n"
+            "\t$(MAKE) test-execution-summary-report-contract\n"
             "release-evidence-closeout: release-evidence-converge\n"
             "\t@echo compatibility alias\n"
             "release-smoke-full:\n"
             "\t@echo smoke\n"
-            "test-execution-summary:\n"
+            "test-execution-summary-report-contract:\n"
             "\t@echo tests\n"
             "generated-artifact-converge:\n"
             "\t$(MAKE) generated-artifact-finality-suffix\n"
@@ -114,7 +114,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "workflow-dependency-planner:\n"
             "\t@echo planner\n"
             "report-contract-closeout:\n"
-            "\t$(MAKE) test-execution-summary\n"
+            "\t$(MAKE) test-execution-summary-report-contract\n"
             "\t$(MAKE) generated-artifact-converge\n",
             encoding="utf-8",
         )

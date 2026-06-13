@@ -219,14 +219,18 @@ goal-runtime-closeout-finalize:
 
 goal-runtime-closeout:
 	@set -e; \
-	for target in $$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget cheap --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets); do \
+	targets="$$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget cheap --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets)"; \
+	printf '%s\n' "$$targets" | while IFS= read -r target; do \
+		[ -n "$$target" ] || continue; \
 		$(MAKE) $$target; \
 	done
 	$(MAKE) goal-runtime-closeout-plan GOAL_RUNTIME_CLOSEOUT_BUDGET=cheap
 
 goal-runtime-closeout-full:
 	@set -e; \
-	for target in $$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget full --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets); do \
+	targets="$$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget full --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets)"; \
+	printf '%s\n' "$$targets" | while IFS= read -r target; do \
+		[ -n "$$target" ] || continue; \
 		$(MAKE) $$target; \
 	done
 	$(MAKE) goal-runtime-closeout-plan GOAL_RUNTIME_CLOSEOUT_BUDGET=full

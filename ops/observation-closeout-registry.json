@@ -7,7 +7,7 @@
       "observation_id": "active_matrix_priority_lane_coordination_gap",
       "status": "planned",
       "retained_reason": "The active action matrix now mixes release authority, artifact freshness, fixture cost, compatibility alias, and external-verification work; closing this observation before lane sequencing would hide the coordination risk.",
-      "next_action": "Continue operator/release-run verification lanes for the remaining 7 matrix items; refresh action matrix after each completed lane instead of adding coordination reports.",
+      "next_action": "Continue one active-matrix lane at a time for the 10 currently-valid actions: first release-run authority binding, then goal-runtime certificate, artifact-freshness attention, maintainability source-action lanes, and operator-only supply-chain/GitHub governance evidence; refresh external-report-action-matrix after each completed lane instead of adding coordination reports.",
       "exit_condition": "Close when the active matrix no longer needs a separate priority coordination note because the remaining active actions have current owner lanes and blocking scopes.",
       "owner_or_lane": "active-matrix-priority-coordination"
     },
@@ -25,9 +25,27 @@
       "observation_id": "long_term_plan_needs_lanes_not_more_reports",
       "status": "planned",
       "retained_reason": "This is the umbrella execution guard for the current long-term active-matrix cleanup; closing it would encourage new narrative reports instead of lane work.",
-      "next_action": "Phase 6 backlog execution completed hotspot splits, golden structural contracts, fast-smoke selector filtering, and god-module plan registration; next lanes are external_report_lifecycle, release_closeout_batch_manifest, and goal_runtime_run_admission decomposition.",
+      "next_action": "Keep executing the active matrix as lanes, not narrative reports: release-run authority binding, goal-runtime certificate, artifact-freshness attention, maintainability hotspot/service-layer source work, and operator-only supply-chain/GitHub governance evidence. Fold completed P1 decomposition slices into the runtime plan and refresh external-report-action-matrix after each lane.",
       "exit_condition": "Close when the active matrix blockers are either resolved, explicitly operator-dependent, or represented by narrower retained observations.",
       "owner_or_lane": "long-term-active-report-lane-execution"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
+      "observation_id": "release_authority_operator_lane_remains_for_matrix_closure",
+      "status": "planned",
+      "retained_reason": "The refreshed action matrix still has release-run, sealed-release, supply-chain, and GitHub governance blockers that require official release/operator lanes rather than more source-only refactoring.",
+      "next_action": "Run the official release verification lane when operator context is available; until then keep github-governance-live-drift and supply-chain external verification as recorded operator dependencies.",
+      "exit_condition": "Close when release-run/sealed-release manifests are current and pass, and supply-chain plus GitHub governance external verification either have current operator evidence or are explicitly retained as operator-only non-blocking risks.",
+      "owner_or_lane": "release-authority-operator-lane"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
+      "observation_id": "hotspot_decomposition_next_lanes_remain",
+      "status": "planned",
+      "retained_reason": "P1 decomposition made progress, but the runtime plan still has concrete next helper lanes for mutation proposal, auto-improve, and readiness ownership that should be executed incrementally.",
+      "next_action": "Next lanes: mutation_proposal repair/queue-pressure helper, auto_improve promotion/stop-condition helper, auto_improve_readiness report-loading split.",
+      "exit_condition": "Close when those hotspot next lanes are either implemented with focused tests and runtime-hotspot golden coverage, or replaced by narrower retained observations in the runtime decomposition plan.",
+      "owner_or_lane": "runtime-hotspot-decomposition"
     }
   ]
 }
