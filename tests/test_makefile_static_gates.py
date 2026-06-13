@@ -19,6 +19,7 @@ from ops.scripts.test.test_lane_registry_runtime import (
     load_registry,
     marker_semantics,
     pack_by_id,
+    pack_effective_selectors,
     pack_mark_expr,
     pack_selectors,
     pack_summary_suite,
@@ -130,7 +131,7 @@ def _assert_hybrid_make_selector_variable_matches_pack(
     items = _makefile_assignment_items(text, variable)
     case.assertGreaterEqual(len(items), 2)
     case.assertEqual(items[:2], ("-m", f'"$({mark_expr_variable})"'))
-    case.assertEqual(items[2:], pack_selectors(registry, pack_id))
+    case.assertEqual(items[2:], pack_effective_selectors(registry, pack_id))
     return items
 
 
@@ -882,7 +883,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         block = _target_block(text, "fast-smoke")
-        expected_tests = pack_selectors(registry, "fast_smoke")
+        expected_tests = pack_effective_selectors(registry, "fast_smoke")
 
         self.assertIn("fast-smoke", _target_block(text, ".PHONY"))
         self.assertIn(

@@ -405,7 +405,6 @@
           "tests/test_mechanism_review_history_runtime.py",
           "tests/test_mutation_proposal_build_report.py::MutationProposalBuildReportTest::test_missing_artifact_envelope_fails_fast_for_primary_evidence",
           "tests/test_mutation_proposal_build_report.py::MutationProposalBuildReportTest::test_unknown_currentness_fails_fast_for_primary_evidence",
-          "tests/test_auto_improve_readiness_runtime.py",
           "tests/test_auto_improve_readiness_queue_runtime.py",
           "tests/test_auto_improve_readiness_release_authority_runtime.py",
           "tests/test_artifact_freshness_runtime.py::test_no_root_ephemeral_test_artifacts",

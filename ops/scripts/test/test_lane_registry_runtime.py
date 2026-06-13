@@ -152,6 +152,56 @@ def pack_selectors(registry: dict[str, Any], pack_id: str) -> tuple[str, ...]:
     return tuple(_non_empty_str(item) for item in pack_selection(pack).get("selectors", []) if _non_empty_str(item))
 
 
+def selector_test_file(selector: str) -> str:
+    return _non_empty_str(selector).split("::", 1)[0]
+
+
+def module_level_pytest_marks(test_file: Path) -> set[str]:
+    if not test_file.is_file():
+        return set()
+    marks: set[str] = set()
+    for line in test_file.read_text(encoding="utf-8").splitlines()[:80]:
+        stripped = line.strip()
+        if not stripped.startswith("pytestmark"):
+            continue
+        for mark in ("slow", "integration_heavy", "report_contract", "public"):
+            if f"pytest.mark.{mark}" in stripped:
+                marks.add(mark)
+    return marks
+
+
+def excluded_markers_from_expr(mark_expr: str) -> set[str]:
+    expr = _non_empty_str(mark_expr)
+    excluded: set[str] = set()
+    for mark in ("slow", "integration_heavy", "report_contract", "public"):
+        if f"not {mark}" in expr:
+            excluded.add(mark)
+    return excluded
+
+
+def pack_effective_selectors(
+    registry: dict[str, Any],
+    pack_id: str,
+    *,
+    vault: Path | None = None,
+) -> tuple[str, ...]:
+    selectors = pack_selectors(registry, pack_id)
+    mark_expr = pack_mark_expr(registry, pack_id)
+    if not mark_expr:
+        return selectors
+    excluded_marks = excluded_markers_from_expr(mark_expr)
+    if not excluded_marks:
+        return selectors
+    root = (vault or Path(".")).resolve()
+    kept: list[str] = []
+    for selector in selectors:
+        module_marks = module_level_pytest_marks(root / selector_test_file(selector))
+        if module_marks & excluded_marks:
+            continue
+        kept.append(selector)
+    return tuple(kept)
+
+
 def pack_deselects(registry: dict[str, Any], pack_id: str) -> tuple[str, ...]:
     pack = pack_by_id(registry)[pack_id]
     return tuple(_non_empty_str(item) for item in pack_selection(pack).get("deselects", []) if _non_empty_str(item))

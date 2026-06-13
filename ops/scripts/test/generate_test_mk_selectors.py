@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ops.scripts.test.test_lane_registry_runtime import (
     load_registry,
+    pack_effective_selectors,
     pack_mark_expr,
     pack_selectors,
 )
@@ -57,8 +58,12 @@ def render_test_selectors_mk(vault: Path) -> str:
     blocks: list[str] = [GENERATED_HEADER.rstrip()]
 
     for pack_id, variable in PACK_VARIABLES.items():
-        selectors = pack_selectors(registry, pack_id)
         mark_expr_variable = PACK_MARK_EXPR_MAKE_VARIABLES.get(pack_id)
+        mark_expr = pack_mark_expr(registry, pack_id)
+        if mark_expr_variable is not None or mark_expr:
+            selectors = pack_effective_selectors(registry, pack_id, vault=vault)
+        else:
+            selectors = pack_selectors(registry, pack_id)
         if mark_expr_variable is not None:
             registry_mark_expr = pack_mark_expr(registry, pack_id)
             if not registry_mark_expr:
