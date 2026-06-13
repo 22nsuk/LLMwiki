@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.artifact_freshness_payload_runtime import embedded_artifact_envelope
 from ops.scripts.artifact_io_runtime import load_optional_json_object
 from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.gate_effect_vocabulary import (
@@ -113,6 +114,32 @@ def _latest_auto_improve_session(vault: Path) -> dict[str, Any]:
     return latest_session
 
 
+def _source_tree_fingerprint(payload: dict[str, Any]) -> str:
+    for source in (payload, embedded_artifact_envelope(payload)):
+        fingerprint = str(source.get("source_tree_fingerprint", "")).strip()
+        if fingerprint:
+            return fingerprint
+    return ""
+
+
+def _latest_session_source_changed(
+    latest_session: dict[str, Any],
+    mutation_proposal_report: dict[str, Any],
+) -> bool:
+    latest_fingerprint = _source_tree_fingerprint(latest_session)
+    current_fingerprint = _source_tree_fingerprint(mutation_proposal_report)
+    return bool(latest_fingerprint and current_fingerprint) and latest_fingerprint != current_fingerprint
+
+
+def _latest_session_attempted(
+    latest_session: dict[str, Any],
+    mutation_proposal_report: dict[str, Any],
+) -> set[str]:
+    if _latest_session_source_changed(latest_session, mutation_proposal_report):
+        return set()
+    return set(_string_list(latest_session.get("attempted_proposal_ids")))
+
+
 def _runnable_proposal_ids(
     vault: Path,
     mutation_proposal_report: dict[str, Any],
@@ -128,7 +155,7 @@ def _runnable_proposal_ids(
     try:
         runnable = build_proposal_queue(
             mutation_proposal_report,
-            attempted=set(_string_list(latest_session.get("attempted_proposal_ids"))),
+            attempted=_latest_session_attempted(latest_session, mutation_proposal_report),
             quarantined=quarantined,
         )
     except (KeyError, TypeError):
@@ -148,7 +175,7 @@ def _latest_session_exclusion_blockers(
     if not isinstance(proposals, list):
         return {}, {}
     latest_session = _latest_auto_improve_session(vault)
-    attempted = set(_string_list(latest_session.get("attempted_proposal_ids")))
+    attempted = _latest_session_attempted(latest_session, mutation_proposal_report)
     quarantined = set(_string_list(latest_session.get("quarantined_proposal_ids")))
     open_repair_quarantined = set(
         open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)

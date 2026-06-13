@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import unittest
 
+from ops.scripts.artifact_freshness_payload_runtime import (
+    embed_artifact_envelope_metadata,
+)
 from ops.scripts.auto_improve_readiness_learning_runtime import (
     learning_claim_blocker_payloads,
 )
@@ -376,6 +379,59 @@ class AutoImproveReadinessQueueRuntimeTests(
             },
         )
         self.assertTrue(state.queue_ready)
+
+    def test_latest_session_attempted_id_becomes_runnable_after_source_tree_change(
+        self,
+    ) -> None:
+        reports = {
+            "outcome_metrics": {
+                "summary": {
+                    "attempts_considered": 7,
+                    "session_reports_considered": 2,
+                }
+            },
+            "mechanism_review": {"summary": {"candidates_emitted": 1}},
+            "mutation_proposal": {
+                "source_tree_fingerprint": "current-tree",
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": "attempted-after-source-change",
+                        "blocked_by": [],
+                        "priority": 100,
+                    }
+                ],
+            },
+        }
+        self._write_report(
+            "ops/reports/auto-improve-sessions/latest.json",
+            embed_artifact_envelope_metadata(
+                {
+                    "session_id": "latest",
+                    "generated_at": "2026-04-22T04:00:00Z",
+                    "attempted_proposal_ids": ["attempted-after-source-change"],
+                    "quarantined_proposal_ids": [],
+                },
+                {
+                    "artifact_kind": "auto_improve_session",
+                    "source_revision": "old",
+                    "source_tree_fingerprint": "old-tree",
+                },
+            ),
+            enveloped=False,
+        )
+
+        state = readiness_queue_state(self.vault, reports)
+
+        self.assertEqual(state.runnable_proposal_ids, ["attempted-after-source-change"])
+        self.assertEqual(state.blocked_proposal_count, 0)
+        self.assertEqual(state.blocked_reason_counts, {})
 
     def test_open_next_run_repair_quarantines_source_but_keeps_repair_target(
         self,
