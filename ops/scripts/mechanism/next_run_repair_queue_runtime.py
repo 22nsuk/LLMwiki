@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.artifact_freshness_payload_runtime import embedded_artifact_envelope
 from ops.scripts.path_runtime import normalize_repo_path_text
 from ops.scripts.proposal_scope_runtime import dedupe_preserve_order
 from ops.scripts.schema_runtime import (
@@ -283,6 +284,44 @@ def _structural_complexity_targets_pass(vault: Path, targets: list[str]) -> bool
     return all(target_statuses.get(target) == "pass" for target in primary_targets)
 
 
+def _source_tree_fingerprint_from_artifact(vault: Path, rel_path: str) -> str:
+    try:
+        payload = _read_json(vault / rel_path)
+    except (OSError, json.JSONDecodeError):
+        return ""
+    envelope = embedded_artifact_envelope(payload)
+    for source in (payload, envelope):
+        fingerprint = str(source.get("source_tree_fingerprint", "")).strip()
+        if fingerprint:
+            return fingerprint
+    return ""
+
+
+def _decision_source_tree_fingerprint(vault: Path, decision: dict) -> str:
+    source_run_id = str(decision.get("source_run_id", "")).strip()
+    evidence_paths = _string_list(decision.get("evidence_paths"))
+    if source_run_id:
+        evidence_paths.extend(
+            [
+                f"runs/{source_run_id}/run-telemetry.json",
+                f"runs/{source_run_id}/promotion-report.json",
+            ]
+        )
+    for rel_path in dedupe_preserve_order(evidence_paths):
+        normalized = safe_repo_relative_path(rel_path)
+        if normalized is None:
+            continue
+        fingerprint = _source_tree_fingerprint_from_artifact(vault, normalized)
+        if fingerprint:
+            return fingerprint
+    return ""
+
+
+def _decision_source_tree_changed(vault: Path, decision: dict) -> bool:
+    fingerprint = _decision_source_tree_fingerprint(vault, decision)
+    return bool(fingerprint) and fingerprint != release_source_tree_fingerprint(vault)
+
+
 def _repair_decision_ended_as_clean_structural_complexity(
     vault: Path,
     decision: dict,
@@ -292,12 +331,17 @@ def _repair_decision_ended_as_clean_structural_complexity(
     proposal_family = str(decision.get("proposal_family", "")).strip()
     failure_mode = str(decision.get("failure_mode", "")).strip()
     proposal_id = str(decision.get("proposal_id", "")).strip()
-    if proposal_family == "contract_regression_signals":
+    target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
+    target_is_explicit_repair = target_proposal_id.startswith("next_run_failure_repair__")
+    if proposal_family == "contract_regression_signals" and not (
+        target_is_explicit_repair and _decision_source_tree_changed(vault, decision)
+    ):
         return False
     if (
         proposal_family not in STRUCTURAL_CLEAN_SUPPRESSIBLE_SOURCE_FAMILIES
         and failure_mode != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
         and not proposal_id.startswith("next_run_failure_repair__")
+        and not target_is_explicit_repair
     ):
         return False
     return _structural_complexity_targets_pass(

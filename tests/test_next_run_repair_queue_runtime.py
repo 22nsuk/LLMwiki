@@ -5,6 +5,9 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+from ops.scripts.artifact_freshness_payload_runtime import (
+    embed_artifact_envelope_metadata,
+)
 from ops.scripts.executor_noop_runtime import (
     EXECUTOR_NOOP_MUTATION_FAILURE_MARKER,
     executor_noop_mutation_failure_message,
@@ -325,7 +328,7 @@ def test_open_carry_forward_decisions_suppresses_resolved_structural_budget() ->
         assert open_decisions == []
 
 
-def test_open_carry_forward_decisions_keeps_standard_structural_non_regression() -> None:
+def test_open_carry_forward_decisions_keeps_contract_structural_without_source_change_evidence() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         vault = Path(temp_dir)
         seed_policy(vault)
@@ -361,6 +364,59 @@ def test_open_carry_forward_decisions_keeps_standard_structural_non_regression()
             "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
             "structural-complexity-non-regression"
         ]
+
+
+def test_open_carry_forward_decisions_suppresses_contract_structural_after_source_change() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def persist():\n    return True\n", encoding="utf-8")
+        source_run_id = "run-structural-contract-repair"
+        telemetry_path = vault / "runs" / source_run_id / "run-telemetry.json"
+        telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+        telemetry_path.write_text(
+            json.dumps(
+                embed_artifact_envelope_metadata(
+                    {"run_id": source_run_id},
+                    {
+                        "artifact_kind": "run_telemetry",
+                        "source_revision": "old",
+                        "source_tree_fingerprint": "old-tree",
+                    },
+                ),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="contract_regression_signals",
+                    proposal_id=(
+                        "repeated_same_eval_after_promote__"
+                        "auto-improve-iteration-persistence-runtime"
+                    ),
+                    source_run_id=source_run_id,
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                    evidence_paths=[f"runs/{source_run_id}/run-telemetry.json"],
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
 
 
 def test_open_carry_forward_decisions_suppresses_clean_queue_unblock_structural() -> None:
