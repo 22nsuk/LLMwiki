@@ -497,3 +497,66 @@ def test_open_carry_forward_decisions_suppresses_resolved_repo_health_generated_
             )
 
         assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_stale_run_artifact_schema_debt() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        source_run_id = "run-repo-health-run-artifact-schema-debt"
+        report_path = vault / "runs" / source_run_id / "repo-health-artifact-freshness-report-check.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(
+            json.dumps(
+                {
+                    "status": "fail",
+                    "source_tree_fingerprint": "candidate-workspace-fingerprint",
+                    "recommended_next_action": "regenerate_schema_invalid_artifacts",
+                    "top_debt_files": [
+                        {
+                            "path": "runs/old-run/run-telemetry.json",
+                            "issues": ["schema_validation_failed"],
+                            "recommended_next_action": "regenerate_canonical_report",
+                        },
+                        {
+                            "path": "runs/old-run/promotion-report.json",
+                            "issues": ["missing_artifact_envelope", "unknown_currentness"],
+                            "recommended_next_action": "backfill_artifact_envelope",
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with mock.patch(
+            "ops.scripts.mechanism.next_run_repair_queue_runtime."
+            "_current_artifact_freshness_report",
+            return_value={
+                "status": "attention",
+                "top_debt_files": [
+                    {
+                        "path": "ops/reports/generated-artifact-index.json",
+                        "issues": ["source_tree_fingerprint_mismatch"],
+                        "recommended_next_action": "regenerate_canonical_report",
+                    }
+                ],
+            },
+        ):
+            open_decisions = open_carry_forward_decisions(
+                [
+                    _carry_forward_decision(
+                        failure_taxonomy="repo_health_blocked",
+                        proposal_family="next_run_failure_repair",
+                        proposal_id=(
+                            "next_run_failure_repair__target__"
+                            "repo-health-blocked"
+                        ),
+                        source_run_id=source_run_id,
+                    )
+                ],
+                vault=vault,
+                recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+                recent_log_overlap_unblock_family="queue_unblock",
+            )
+
+        assert open_decisions == []

@@ -200,6 +200,10 @@ def _artifact_freshness_settle_debt_now_clean(vault: Path, report: dict) -> bool
     )
 
 
+def _all_run_artifact_paths(paths: list[str]) -> bool:
+    return bool(paths) and all(path.startswith("runs/") for path in paths)
+
+
 def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id: str) -> bool:
     report_path = vault / "runs" / source_run_id / "repo-health-artifact-freshness-report-check.json"
     try:
@@ -226,7 +230,9 @@ def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id
         and observed_source_tree_fingerprint != release_source_tree_fingerprint(vault)
     )
     if source_tree_mismatch and schema_invalid_files:
-        return False
+        return _all_run_artifact_paths(
+            schema_invalid_files
+        ) and _artifact_freshness_settle_debt_now_clean(vault, report)
     if not schema_invalid_files:
         return _artifact_freshness_settle_debt_now_clean(vault, report)
     return all(

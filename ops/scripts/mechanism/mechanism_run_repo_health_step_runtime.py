@@ -56,8 +56,7 @@ NON_SETTLE_REPO_HEALTH_OUTPUT_RE = re.compile(
     r"(^|\n)(=+\s+FAILURES\s+=+|FAILED\s+tests/|ERROR\s+tests/)"
     r"|\b\d+\s+failed\b"
     r"|\bFound\s+\d+\s+errors?\b"
-    r"|\bwould reformat\b"
-    r"|(^|\n)make(?:\[\d+\])?: \*\*\*",
+    r"|\bwould reformat\b",
     flags=re.IGNORECASE,
 )
 

@@ -634,6 +634,79 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
                 GENERATED_EVIDENCE_SETTLE_REQUIRED,
             )
 
+    def test_repo_health_step_treats_make_artifact_freshness_failure_as_settle(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            workspace = Path(temp_dir) / "workspace"
+            vault.mkdir()
+            workspace.mkdir()
+            diagnostic_payload = {
+                "status": "attention",
+                "gate_effect": "blocks_promotion",
+                "recommended_next_action": "regenerate_stale_artifacts",
+                "currentness": {"status": "stale"},
+                "top_debt_files": [
+                    {
+                        "path": "ops/reports/generated.json",
+                        "issues": ["source_tree_fingerprint_mismatch"],
+                    }
+                ],
+            }
+            dependencies = RepoHealthStepDependencies(
+                command_argv=mock.Mock(return_value=["make", "check"]),
+                run_command=_run_command_with_diagnostic(
+                    workspace,
+                    diagnostic_payload=diagnostic_payload,
+                    result={
+                        "command": "make check",
+                        "argv": ["make", "check"],
+                        "returncode": 2,
+                        "stdout": "tmp/artifact-freshness-report-check.json\n",
+                        "stderr": (
+                            "make[1]: *** [mk/public-registry.mk:118: "
+                            "artifact-freshness-check] Error 1\n"
+                            "make: *** [Makefile:624: check] Error 2\n"
+                        ),
+                    },
+                ),
+                write_command_logs=mock.Mock(
+                    return_value=[
+                        "runs/run-steps/repo-health.stdout.txt",
+                        "runs/run-steps/repo-health.stderr.txt",
+                    ]
+                ),
+                write_timeout_failure_artifact=mock.Mock(),
+                append_ledger_event=mock.Mock(),
+                write_changed_files_manifest=mock.Mock(
+                    return_value="runs/run-steps/changed-files-manifest.json"
+                ),
+                write_structural_complexity_budget_artifact=mock.Mock(
+                    return_value=_structural_budget_pass()
+                ),
+                write_behavior_delta_artifact=mock.Mock(
+                    return_value="runs/run-steps/behavior-delta.json"
+                ),
+                sanitize_path_text=mock.Mock(side_effect=lambda text, *, roots: text),
+            )
+
+            result = repo_health_step(
+                vault,
+                workspace,
+                run_id="run-steps",
+                resolution=_resolution(),
+                baseline_file_digests={},
+                dependencies=dependencies,
+            )
+
+            self.assertFalse(result.passed)
+            self.assertEqual(result.failure_taxonomy, GENERATED_EVIDENCE_SETTLE_REQUIRED)
+            self.assertEqual(
+                dependencies.append_ledger_event.call_args.kwargs["decision"],
+                GENERATED_EVIDENCE_SETTLE_REQUIRED,
+            )
+
     def test_repo_health_step_keeps_pytest_failure_budget_consuming_with_generated_evidence(
         self,
     ) -> None:
