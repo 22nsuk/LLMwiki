@@ -191,6 +191,45 @@ def test_open_carry_forward_decisions_keeps_partially_present_leaf_evidence() ->
         ]
 
 
+def test_open_carry_forward_decisions_keeps_latest_surviving_decision_per_target() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        target_proposal_id = "next_run_failure_repair__target__review-blocked"
+        older_evidence = vault / "runs" / "older-run" / "worker-executor-report.json"
+        older_evidence.parent.mkdir(parents=True, exist_ok=True)
+        older_evidence.write_text("{}", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    decision_id="next-run-decision:older",
+                    observed_at="2026-01-01T00:00:00Z",
+                    source_run_id="older-run",
+                    target_proposal_id=target_proposal_id,
+                    evidence_paths=[
+                        "runs/older-run/worker-executor-report.json",
+                    ],
+                ),
+                _carry_forward_decision(
+                    decision_id="next-run-decision:newer-missing-evidence",
+                    observed_at="2026-01-02T00:00:00Z",
+                    source_run_id="newer-run",
+                    target_proposal_id=target_proposal_id,
+                    evidence_paths=[
+                        "runs/newer-run/worker-executor-report.json",
+                    ],
+                ),
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert [decision["decision_id"] for decision in open_decisions] == [
+            "next-run-decision:older"
+        ]
+
+
 def test_open_carry_forward_decisions_suppresses_superseded_queue_rotation() -> None:
     open_decisions = open_carry_forward_decisions(
         [
@@ -322,6 +361,36 @@ def test_open_carry_forward_decisions_keeps_standard_structural_non_regression()
             "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
             "structural-complexity-non-regression"
         ]
+
+
+def test_open_carry_forward_decisions_suppresses_clean_queue_unblock_structural() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_execute_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def execute():\n    return True\n", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="queue_unblock",
+                    proposal_id="recent_log_overlap_queue_blocked__auto-improve-execute-runtime",
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-execute-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
 
 
 def test_open_carry_forward_decisions_suppresses_resolved_generated_evidence_settle() -> None:

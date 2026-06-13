@@ -31,6 +31,12 @@ from .noop_repair_classifier_runtime import (
 
 ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX = "artifact_freshness_"
 STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY = "structural_complexity_non_regression"
+STRUCTURAL_CLEAN_SUPPRESSIBLE_SOURCE_FAMILIES = frozenset(
+    {
+        NEXT_RUN_FAILURE_REPAIR_FAMILY,
+        "queue_unblock",
+    }
+)
 GENERATED_EVIDENCE_SETTLE_ISSUES = frozenset(
     {
         "missing_artifact_envelope",
@@ -280,8 +286,10 @@ def _repair_decision_ended_as_clean_structural_complexity(
     proposal_family = str(decision.get("proposal_family", "")).strip()
     failure_mode = str(decision.get("failure_mode", "")).strip()
     proposal_id = str(decision.get("proposal_id", "")).strip()
+    if proposal_family == "contract_regression_signals":
+        return False
     if (
-        proposal_family != NEXT_RUN_FAILURE_REPAIR_FAMILY
+        proposal_family not in STRUCTURAL_CLEAN_SUPPRESSIBLE_SOURCE_FAMILIES
         and failure_mode != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
         and not proposal_id.startswith("next_run_failure_repair__")
     ):
@@ -464,19 +472,8 @@ def _decision_superseded_by_noop_repair(
     return False
 
 
-def open_carry_forward_decisions(
-    next_run_decisions: list[dict],
-    *,
-    vault: Path | None = None,
-    consumed_decision_ids: set[str] | None = None,
-    current_proposal_ids: set[str] | None = None,
-    recent_log_overlap_unblock_failure_mode: str,
-    recent_log_overlap_unblock_family: str,
-) -> list[dict]:
-    latest_by_target: dict[str, dict] = {}
+def _normalized_carry_forward_decisions(next_run_decisions: list[dict]) -> list[dict]:
     normalized_decisions: list[dict] = []
-    consumed_decision_ids = consumed_decision_ids or set()
-    current_proposal_ids = current_proposal_ids or set()
     for decision in next_run_decisions:
         if str(decision.get("decision", "")).strip() != CARRY_FORWARD_DECISION:
             continue
@@ -496,11 +493,63 @@ def open_carry_forward_decisions(
                 primary_targets,
                 failure_taxonomy,
             )
-        normalized_decision = {**decision, "target_proposal_id": target_proposal_id}
-        latest_by_target[target_proposal_id] = normalized_decision
-        normalized_decisions.append(normalized_decision)
+        normalized_decisions.append({**decision, "target_proposal_id": target_proposal_id})
+    return normalized_decisions
 
-    open_decisions: list[dict] = []
+
+def _carry_forward_decision_currently_suppressed(
+    decision: dict,
+    *,
+    vault: Path | None,
+    consumed_decision_ids: set[str],
+    current_proposal_ids: set[str],
+    superseded_by_noop_repair: dict[str, str],
+    recent_log_overlap_unblock_failure_mode: str,
+    recent_log_overlap_unblock_family: str,
+) -> bool:
+    decision_id = str(decision.get("decision_id", "")).strip()
+    if decision_id and decision_id in consumed_decision_ids:
+        return True
+    if _decision_superseded_by_noop_repair(decision, superseded_by_noop_repair):
+        return True
+    if vault is not None and repair_decision_ended_as_noop_mutation_failure(
+        vault,
+        decision,
+        queue_unblock_family=recent_log_overlap_unblock_family,
+    ):
+        return True
+    if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
+        return True
+    if vault is not None and _repair_decision_ended_as_clean_structural_complexity(
+        vault,
+        decision,
+    ):
+        return True
+    if vault is not None and _repair_decision_ended_as_clean_raw_registry(vault, decision):
+        return True
+    if vault is not None and _decision_evidence_paths_are_all_missing(vault, decision):
+        return True
+    return _queue_unblock_decision_superseded_by_current_rotation(
+        decision,
+        current_proposal_ids,
+        recent_log_overlap_unblock_failure_mode=recent_log_overlap_unblock_failure_mode,
+        recent_log_overlap_unblock_family=recent_log_overlap_unblock_family,
+    )
+
+
+def open_carry_forward_decisions(
+    next_run_decisions: list[dict],
+    *,
+    vault: Path | None = None,
+    consumed_decision_ids: set[str] | None = None,
+    current_proposal_ids: set[str] | None = None,
+    recent_log_overlap_unblock_failure_mode: str,
+    recent_log_overlap_unblock_family: str,
+) -> list[dict]:
+    latest_by_target: dict[str, dict] = {}
+    consumed_decision_ids = consumed_decision_ids or set()
+    current_proposal_ids = current_proposal_ids or set()
+    normalized_decisions = _normalized_carry_forward_decisions(next_run_decisions)
     superseded_by_noop_repair = (
         _noop_repair_superseded_source_observed_at_by_key(
             vault,
@@ -510,37 +559,30 @@ def open_carry_forward_decisions(
         if vault is not None
         else {}
     )
-    for decision in latest_by_target.values():
-        decision_id = str(decision.get("decision_id", "")).strip()
-        if decision_id and decision_id in consumed_decision_ids:
-            continue
-        if _decision_superseded_by_noop_repair(decision, superseded_by_noop_repair):
-            continue
-        if vault is not None and repair_decision_ended_as_noop_mutation_failure(
-            vault,
+
+    for decision in normalized_decisions:
+        if _carry_forward_decision_currently_suppressed(
             decision,
-            queue_unblock_family=recent_log_overlap_unblock_family,
-        ):
-            continue
-        if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
-            continue
-        if vault is not None and _repair_decision_ended_as_clean_structural_complexity(
-            vault,
-            decision,
-        ):
-            continue
-        if vault is not None and _repair_decision_ended_as_clean_raw_registry(vault, decision):
-            continue
-        if vault is not None and _decision_evidence_paths_are_all_missing(vault, decision):
-            continue
-        if _queue_unblock_decision_superseded_by_current_rotation(
-            decision,
-            current_proposal_ids,
+            vault=vault,
+            consumed_decision_ids=consumed_decision_ids,
+            current_proposal_ids=current_proposal_ids,
+            superseded_by_noop_repair=superseded_by_noop_repair,
             recent_log_overlap_unblock_failure_mode=recent_log_overlap_unblock_failure_mode,
             recent_log_overlap_unblock_family=recent_log_overlap_unblock_family,
         ):
             continue
-        open_decisions.append(decision)
+        target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
+        previous = latest_by_target.get(target_proposal_id)
+        if previous is None or (
+            str(decision.get("observed_at", "")),
+            str(decision.get("decision_id", "")),
+        ) >= (
+            str(previous.get("observed_at", "")),
+            str(previous.get("decision_id", "")),
+        ):
+            latest_by_target[target_proposal_id] = decision
+
+    open_decisions = list(latest_by_target.values())
     return sorted(
         open_decisions,
         key=lambda item: (
