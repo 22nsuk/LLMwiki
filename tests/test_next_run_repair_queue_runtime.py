@@ -266,6 +266,11 @@ def test_open_carry_forward_decisions_suppresses_resolved_structural_budget() ->
             [
                 _carry_forward_decision(
                     failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="next_run_failure_repair",
+                    proposal_id=(
+                        "next_run_failure_repair__auto-improve-readiness-runtime__"
+                        "repo-health-blocked"
+                    ),
                     primary_targets=[target],
                     target_proposal_id=(
                         "next_run_failure_repair__auto-improve-readiness-runtime__"
@@ -279,6 +284,44 @@ def test_open_carry_forward_decisions_suppresses_resolved_structural_budget() ->
         )
 
         assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_keeps_standard_structural_non_regression() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def persist():\n    return True\n", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="contract_regression_signals",
+                    proposal_id=(
+                        "repeated_same_eval_after_promote__"
+                        "auto-improve-iteration-persistence-runtime"
+                    ),
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert [
+            decision["target_proposal_id"] for decision in open_decisions
+        ] == [
+            "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+            "structural-complexity-non-regression"
+        ]
 
 
 def test_open_carry_forward_decisions_suppresses_resolved_generated_evidence_settle() -> None:

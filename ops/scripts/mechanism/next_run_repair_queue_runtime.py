@@ -277,6 +277,15 @@ def _repair_decision_ended_as_clean_structural_complexity(
 ) -> bool:
     if str(decision.get("failure_taxonomy", "")).strip() != STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY:
         return False
+    proposal_family = str(decision.get("proposal_family", "")).strip()
+    failure_mode = str(decision.get("failure_mode", "")).strip()
+    proposal_id = str(decision.get("proposal_id", "")).strip()
+    if (
+        proposal_family != NEXT_RUN_FAILURE_REPAIR_FAMILY
+        and failure_mode != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
+        and not proposal_id.startswith("next_run_failure_repair__")
+    ):
+        return False
     return _structural_complexity_targets_pass(
         vault,
         [str(target) for target in decision.get("primary_targets", [])],
