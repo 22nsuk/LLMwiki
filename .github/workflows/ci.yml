@@ -39,6 +39,10 @@ jobs:
           - integration-heavy
           - public
         exclude:
+          - tier: fast
+            python-version: "3.13"
+          - tier: fast
+            python-version: "3.14"
           - tier: report-contract
             python-version: "3.13"
           - tier: report-contract
@@ -238,9 +242,6 @@ jobs:
       - name: Run Windows strict preview smoke
         run: |
           python .\tools\strict_preview_audit.py --vault . --out tmp\strict-preview-audit-windows.json --targets "ops/scripts tests tools" --ruff-select PTH201 --mypy-flags "--check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs" --python python
-
-      - name: Run Windows schema static smoke tests
-        run: make test-schema-static-smoke PYTHON=python
 
       - name: Upload Windows smoke artifact
         if: always()

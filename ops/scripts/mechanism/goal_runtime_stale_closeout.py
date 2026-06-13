@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -11,6 +10,9 @@ from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
     write_vault_schema_validated_json,
+)
+from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
+    load_json_object_from_path,
 )
 from ops.scripts.observability_artifacts_shared_runtime import (
     AUTO_IMPROVE_SESSION_REPORT_DIR,
@@ -41,14 +43,6 @@ class GoalRuntimeStaleCloseoutRequest:
     out_path: str | None = None
     policy_path: str | None = None
     context: RuntimeContext | None = None
-
-
-def _load_json_object(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
 
 
 def _dict_field(payload: dict[str, Any], key: str) -> dict[str, Any]:
@@ -190,7 +184,7 @@ def _session_stale_issue(vault: Path, path: Path, session: dict[str, Any]) -> di
 def _session_issues(vault: Path) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
     for path in _session_report_paths(vault):
-        session = _load_json_object(path)
+        session = load_json_object_from_path(path)
         path_issue = _session_path_resolution_issue(vault, path, session)
         if path_issue is not None:
             issues.append(path_issue)
@@ -213,7 +207,7 @@ def _latest_history_event_status(ledger: dict[str, Any]) -> str:
 
 
 def _promotion_history_status(path: Path) -> str:
-    promotion = _load_json_object(path.parent / "promotion-report.json")
+    promotion = load_json_object_from_path(path.parent / "promotion-report.json")
     return _text(_dict_field(promotion, "history").get("status"))
 
 
@@ -271,7 +265,7 @@ def _ledger_issue(vault: Path, path: Path, ledger: dict[str, Any]) -> dict[str, 
 def _ledger_issues(vault: Path) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
     for path in _run_ledger_paths(vault):
-        ledger = _load_json_object(path)
+        ledger = load_json_object_from_path(path)
         issue = _ledger_issue(vault, path, ledger)
         if issue is not None:
             issues.append(issue)
@@ -322,7 +316,7 @@ def _recommended_next_action(summary: dict[str, Any]) -> str:
 
 def _closeout_session(vault: Path, issue: dict[str, Any], *, context: RuntimeContext) -> None:
     rel_path = str(issue["path"])
-    session = _load_json_object(vault / rel_path)
+    session = load_json_object_from_path(vault / rel_path)
     metadata = session.get("metadata")
     if not isinstance(metadata, dict):
         metadata = {}
@@ -347,7 +341,7 @@ def _closeout_session(vault: Path, issue: dict[str, Any], *, context: RuntimeCon
 
 def _closeout_ledger(vault: Path, issue: dict[str, Any]) -> None:
     rel_path = str(issue["path"])
-    ledger = _load_json_object(vault / rel_path)
+    ledger = load_json_object_from_path(vault / rel_path)
     ledger["status"] = "blocked"
     write_vault_schema_validated_json(
         vault,

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import configparser
-import os
 import re
 import subprocess
-import sys
 import tomllib
 import unittest
 from pathlib import Path
@@ -878,59 +876,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
 
-    def test_fast_smoke_is_curated_developer_feedback_loop(self) -> None:
-        registry = _test_lane_registry()
-        text = _makefile_text()
-        development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
-        block = _target_block(text, "fast-smoke")
-        expected_tests = pack_effective_selectors(registry, "fast_smoke")
-
-        self.assertIn("fast-smoke", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "PYTEST_FAST_SMOKE_MARK_EXPR ?= not slow and not integration_heavy", text
-        )
-        self.assertIn("FAST_SMOKE_TESTS ?=", text)
-        self.assertIn(
-            "`make fast-smoke` is the curated Subagent/developer precheck pytest slice.",
-            development_text,
-        )
-        for test_path in expected_tests:
-            with self.subTest(test_path=test_path):
-                self.assertIn(test_path, text)
-        self.assertIn(
-            '$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)',
-            block,
-        )
-        self.assertNotIn("lint", block)
-        self.assertNotIn("eval", block)
-        self.assertNotIn("stage2-eval", block)
-        self.assertNotIn("release-smoke", block)
-        self.assertNotIn("tests/test_report_generation_smoke.py", block)
-        self.assertNotIn("tests/test_mutation_proposal.py \\", block)
-        self.assertNotIn("tests/test_artifact_freshness_runtime.py \\", block)
-        self.assertNotIn("tests/test_release_smoke.py \\", block)
-
-    def test_runtime_hotspot_smoke_is_curated_decomposition_feedback_loop(self) -> None:
-        registry = _test_lane_registry()
-        text = _makefile_text()
-        development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
-        block = _target_block(text, "runtime-hotspot-smoke")
-        expected_tests = pack_selectors(registry, "runtime_hotspot_smoke")
-
-        self.assertIn("runtime-hotspot-smoke", _target_block(text, ".PHONY"))
-        self.assertIn("RUNTIME_HOTSPOT_SMOKE_TESTS ?=", text)
-        self.assertIn("`make runtime-hotspot-smoke`", development_text)
-        for test_path in expected_tests:
-            with self.subTest(test_path=test_path):
-                self.assertIn(test_path, text)
-        self.assertIn(
-            "$(PYTHON) -m pytest -q $(RUNTIME_HOTSPOT_SMOKE_TESTS) "
-            "$(PYTEST_CACHE_ISOLATION_FLAGS) $(PYTEST_SERIAL_FLAGS)",
-            block,
-        )
-        self.assertNotIn("test-report-contract", block)
-        self.assertNotIn("test-fast", block)
-
     def test_schema_static_smoke_is_named_windows_ci_target(self) -> None:
         text = _makefile_text()
         selectors = _makefile_assignment_items(text, "SCHEMA_STATIC_SMOKE_TESTS")
@@ -943,6 +888,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "tests/test_ci_tier_lane_bridge.py",
                 "tests/test_ci_workflow_static.py",
                 "tests/test_makefile_static_gates.py",
+                "tests/test_makefile_fast_smoke_static_gates.py",
                 "tests/test_makefile_release_orchestration_static_gates.py",
                 "tests/test_makefile_release_evidence_static_gates.py",
                 "tests/test_makefile_release_smoke_static_gates.py",
@@ -958,43 +904,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             "$(PYTHON) -m pytest -q $(SCHEMA_STATIC_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)",
             block,
-        )
-
-    def test_fast_smoke_selectors_collect_via_supported_pytest_entrypoint(self) -> None:
-        text = _makefile_text()
-        selectors = _makefile_assignment_items(text, "FAST_SMOKE_TESTS")
-        env = os.environ.copy()
-        env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-        env["PYTHONDONTWRITEBYTECODE"] = "1"
-
-        completed = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                "--collect-only",
-                "-q",
-                "-p",
-                "no:cacheprovider",
-                *selectors,
-            ],
-            cwd=REPO_ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-        )
-
-        self.assertEqual(
-            completed.returncode,
-            0,
-            msg=(
-                "FAST_SMOKE_TESTS contains an uncollectable pytest selector.\n"
-                f"stdout:\n{completed.stdout}\n"
-                f"stderr:\n{completed.stderr}"
-            ),
         )
 
     def test_makefile_exposes_lane_targets_and_compatibility_aliases(self) -> None:

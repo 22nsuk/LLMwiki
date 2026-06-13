@@ -70,12 +70,13 @@ def seed_vault(vault: Path) -> None:
         )
 
 
+FIXED_GENERATED_AT = "2026-04-14T12:00:00Z"
+
+
 def write_json(path: Path, payload: dict) -> None:
     payload_to_write = copy.deepcopy(payload)
     if "generated_at" in payload_to_write:
-        timestamp = (
-            dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        )
+        timestamp = FIXED_GENERATED_AT
         payload_to_write["generated_at"] = timestamp
         currentness = payload_to_write.get("currentness")
         if isinstance(currentness, dict):

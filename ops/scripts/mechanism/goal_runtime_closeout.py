@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +10,9 @@ from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelo
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
+)
+from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
+    load_json_object_from_path,
 )
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
@@ -109,14 +111,6 @@ EVIDENCE_REPORTS = (
         expensive=True,
     ),
 )
-
-
-def _load_json_object(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
 
 
 def _git_status_entries(vault: Path) -> tuple[str, list[dict[str, str]]]:
@@ -241,7 +235,7 @@ def _evidence_decisions(
     decisions: list[dict[str, Any]] = []
     targets: list[str] = []
     for report in EVIDENCE_REPORTS:
-        payload = _load_json_object(vault / report.path)
+        payload = load_json_object_from_path(vault / report.path)
         observed_status = str(payload.get("status", "")).strip()
         observed_source_tree_fingerprint = str(payload.get("source_tree_fingerprint", "")).strip()
         if _report_is_current(payload, source_fingerprint, report):

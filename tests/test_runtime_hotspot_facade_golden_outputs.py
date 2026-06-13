@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import datetime as dt
 import hashlib
-import json
 import tempfile
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -40,6 +39,12 @@ from tests.run_mechanism_experiment_test_utils import (
     mutation_proposal_report as auto_improve_mutation_proposal_report,
     seed_wrapper_vault,
 )
+from tests.runtime_hotspot_golden_contract import (
+    STRUCTURAL_GOLDEN_DIGESTS,
+    assert_structural_contract,
+    canonical_bytes,
+    structural_digest,
+)
 from tests.test_release_closeout_summary import (
     BASE_PROFILE,
     ENVELOPE_SCHEMA_PATH as CLOSEOUT_ENVELOPE_SCHEMA_PATH,
@@ -49,13 +54,6 @@ from tests.test_release_closeout_summary import (
 from tests.test_release_evidence_dashboard import (
     DASHBOARD_SCHEMA_PATH,
     fixed_context as dashboard_fixed_context,
-)
-
-from tests.runtime_hotspot_golden_contract import (
-    STRUCTURAL_GOLDEN_DIGESTS,
-    assert_structural_contract,
-    canonical_bytes,
-    structural_digest,
 )
 
 pytestmark = pytest.mark.slow

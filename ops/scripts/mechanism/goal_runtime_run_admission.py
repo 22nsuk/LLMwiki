@@ -23,6 +23,9 @@ from ops.scripts.mechanism.auto_improve_learning_preflight_runtime import (
     goal_contract_authorizes_learning_uncertain,
 )
 from ops.scripts.mechanism.auto_improve_queue_runtime import build_proposal_queue
+from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
+    load_json_object_from_vault,
+)
 from ops.scripts.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel,
     resolve_auto_improve_session_report_rel,
@@ -117,14 +120,6 @@ class _AdmissionReportInputs:
     inputs: dict[str, str]
 
 
-def _load_json_object(vault: Path, rel_path: str) -> dict[str, Any]:
-    try:
-        payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
 def _as_bool(value: object) -> bool:
     return value is True
 
@@ -197,7 +192,7 @@ def _resume_completion_context(vault: Path, session_id: str) -> dict[str, Any]:
     path = resolve_auto_improve_session_report_rel(vault, session_id) or _resume_session_report_path(session_id)
     if not path:
         return {"active": False, "session_report": ""}
-    session = _load_json_object(vault, path)
+    session = load_json_object_from_vault(vault, path)
     iterations = _list_field(session, "iterations")
     budget = _dict_field(session, "budget")
     max_proposals = _as_int(budget.get("max_proposals"))
@@ -1379,31 +1374,31 @@ def _load_admission_reports(
     active_request: GoalRuntimeRunAdmissionRequest,
 ) -> _AdmissionReports:
     return _AdmissionReports(
-        cleanup=_load_json_object(vault, active_request.cleanup_report_path),
-        quarantine_preflight=_load_json_object(
+        cleanup=load_json_object_from_vault(vault, active_request.cleanup_report_path),
+        quarantine_preflight=load_json_object_from_vault(
             vault,
             active_request.quarantine_preflight_report_path,
         ),
-        fixed_point=_load_json_object(vault, active_request.fixed_point_report_path),
-        guard=_load_json_object(vault, active_request.goal_worktree_guard_report_path),
-        mutation_proposals=_load_json_object(
+        fixed_point=load_json_object_from_vault(vault, active_request.fixed_point_report_path),
+        guard=load_json_object_from_vault(vault, active_request.goal_worktree_guard_report_path),
+        mutation_proposals=load_json_object_from_vault(
             vault,
             active_request.mutation_proposals_report_path,
         ),
-        readiness=_load_json_object(vault, active_request.readiness_report_path),
-        remediation_backlog=_load_json_object(
+        readiness=load_json_object_from_vault(vault, active_request.readiness_report_path),
+        remediation_backlog=load_json_object_from_vault(
             vault,
             active_request.remediation_backlog_report_path,
         ),
-        goal_contract=_load_json_object(vault, active_request.goal_contract_path),
-        goal_run_status=_load_json_object(vault, active_request.goal_run_status_path),
+        goal_contract=load_json_object_from_vault(vault, active_request.goal_contract_path),
+        goal_run_status=load_json_object_from_vault(vault, active_request.goal_run_status_path),
         resume_completion=_resume_completion_context(vault, active_request.resume_session_id),
         maintenance_action_plan=(
-            _load_json_object(vault, active_request.maintenance_action_plan_path)
+            load_json_object_from_vault(vault, active_request.maintenance_action_plan_path)
             if active_request.maintenance_action_plan_path
             else {}
         ),
-        runtime_certificate=_load_json_object(
+        runtime_certificate=load_json_object_from_vault(
             vault,
             active_request.runtime_certificate_report_path,
         ),

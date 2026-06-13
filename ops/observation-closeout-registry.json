@@ -16,7 +16,7 @@
       "observation_id": "flat_import_reexport_migration_remaining",
       "status": "planned",
       "retained_reason": "Compatibility alias cleanup is intentionally incremental because removing flat imports without caller inventory would turn a maintenance lane into a broad interface migration.",
-      "next_action": "Update the compatibility-alias inventory on the next touched hotspot and migrate only verified callers in that ownership boundary.",
+      "next_action": "Continue lane-based hotspot decomposition for external_report_lifecycle, release_closeout_batch_manifest, and goal_runtime_run_admission; refresh compatibility-alias inventory on each touched hotspot.",
       "exit_condition": "Close when the compatibility-alias inventory has no remaining flat import re-export entries or each remaining alias has an explicit retained support contract.",
       "owner_or_lane": "compatibility-alias-inventory"
     },
@@ -25,7 +25,7 @@
       "observation_id": "long_term_plan_needs_lanes_not_more_reports",
       "status": "planned",
       "retained_reason": "This is the umbrella execution guard for the current long-term active-matrix cleanup; closing it would encourage new narrative reports instead of lane work.",
-      "next_action": "Phase 6 backlog execution completed hotspot splits for closeout summary envelope glue and dashboard status aggregation; next lanes are remaining decomposition hotspots and operator-dependent release verification.",
+      "next_action": "Phase 6 backlog execution completed hotspot splits, golden structural contracts, fast-smoke selector filtering, and god-module plan registration; next lanes are external_report_lifecycle, release_closeout_batch_manifest, and goal_runtime_run_admission decomposition.",
       "exit_condition": "Close when the active matrix blockers are either resolved, explicitly operator-dependent, or represented by narrower retained observations.",
       "owner_or_lane": "long-term-active-report-lane-execution"
     }

@@ -11,6 +11,7 @@ from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 
 from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.runtime_test_context import frozen_context
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
@@ -83,10 +84,7 @@ READINESS_FIXTURE_SCHEMA_NAMES = frozenset(
 
 
 def fixed_context() -> RuntimeContext:
-    return RuntimeContext(
-        display_timezone=dt.UTC,
-        clock=lambda: dt.datetime(2026, 4, 22, 4, 0, tzinfo=dt.UTC),
-    )
+    return frozen_context(dt.datetime(2026, 4, 22, 4, 0, tzinfo=dt.UTC))
 
 
 def _canonical_jsonable(value: object, *, vault_root: Path | None = None) -> object:

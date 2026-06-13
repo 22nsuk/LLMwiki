@@ -12,6 +12,9 @@ from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
+from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
+    load_json_object_from_path,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -55,14 +58,6 @@ class GoalRuntimeCleanTransientRequest:
     context: RuntimeContext | None = None
 
 
-def _load_json_object(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
 def _repo_path(vault: Path, rel_path: str) -> Path:
     path = vault / rel_path
     resolved = path.resolve(strict=False)
@@ -102,7 +97,7 @@ def _path_kind(path: Path) -> str:
 
 def _status_report(vault: Path, rel_path: str) -> dict[str, Any]:
     path = _repo_path_or_none(vault, rel_path)
-    return _load_json_object(path) if path is not None else {}
+    return load_json_object_from_path(path) if path is not None else {}
 
 
 def _string_values(payload: dict[str, Any]) -> list[str]:

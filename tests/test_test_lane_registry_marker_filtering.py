@@ -8,7 +8,6 @@ from ops.scripts.test.test_lane_registry_runtime import (
     load_registry,
     module_level_pytest_marks,
     pack_effective_selectors,
-    pack_selectors,
 )
 
 

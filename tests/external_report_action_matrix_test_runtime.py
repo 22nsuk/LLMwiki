@@ -47,6 +47,7 @@ from ops.scripts.release.release_closeout_finality_attestation import (
 )
 from ops.scripts.release.review_archive import CLEAN_SOURCE_COMMAND
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
+from tests.runtime_test_context import frozen_context
 
 _PUBLIC_REEXPORTS = (
     action_status_reason_details,
@@ -100,10 +101,7 @@ EXTERNAL_REPORT_FIXTURE_SCHEMA_NAMES = frozenset(
 
 
 def fixed_context() -> RuntimeContext:
-    return RuntimeContext(
-        display_timezone=dt.UTC,
-        clock=lambda: dt.datetime(2026, 5, 10, 8, 30, tzinfo=dt.UTC),
-    )
+    return frozen_context(dt.datetime(2026, 5, 10, 8, 30, tzinfo=dt.UTC))
 
 
 def _canonical_json_digest(payload: dict) -> str:

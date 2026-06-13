@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,6 +9,9 @@ from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelo
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
+)
+from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
+    load_json_object_from_vault,
 )
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
@@ -30,14 +32,6 @@ class GoalRuntimeQuarantinePreflightRequest:
     policy_path: str | None = None
     mechanism_review_report_path: str = DEFAULT_MECHANISM_REVIEW_REPORT
     context: RuntimeContext | None = None
-
-
-def _load_json_object(vault: Path, rel_path: str) -> dict[str, Any]:
-    try:
-        payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
 
 
 def _dict_field(payload: dict[str, Any], key: str) -> dict[str, Any]:
@@ -205,7 +199,7 @@ def build_report(
     vault = active_request.vault.resolve()
     policy, resolved_policy_path = load_policy(vault, active_request.policy_path)
     context = active_request.context or RuntimeContext.from_policy(policy)
-    mechanism_review = _load_json_object(vault, active_request.mechanism_review_report_path)
+    mechanism_review = load_json_object_from_vault(vault, active_request.mechanism_review_report_path)
     diagnostics = _dict_field(mechanism_review, "diagnostics")
     skipped_runs = [
         item for item in _list_field(diagnostics, "skipped_runs") if isinstance(item, dict)
