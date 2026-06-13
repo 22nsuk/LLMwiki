@@ -51,22 +51,23 @@ from tests.test_release_evidence_dashboard import (
     fixed_context as dashboard_fixed_context,
 )
 
+from tests.runtime_hotspot_golden_contract import (
+    STRUCTURAL_GOLDEN_DIGESTS,
+    assert_structural_contract,
+    canonical_bytes,
+    structural_digest,
+)
+
 pytestmark = pytest.mark.slow
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json"
 
-GOLDEN_DIGESTS = {
-    "mutation_proposal": "5b6b923639d36d4b7a5af1d60c50163779298f86ee6af3feba320a01f9dd3c4c",
-    "release_evidence_dashboard": "0a72c0e15eeafa09a1db4c3247c8b721623c6e04f70fd1076b3bfca528f26314",
-    "release_closeout_summary": "4aae0513a262c463184fdbf4e390880573cf241a9cc0ec5a945a62b8c83fefda",
-    "auto_improve_session_bundle": "90be2247fa3cc4c0fd96cd240d717a966b08a8c9b17af7acf8b881cae7767f65",
-}
 GOLDEN_CHECK_COMMAND = "make runtime-hotspot-goldens-check"
 
 
 def _canonical_bytes(payload: object) -> bytes:
-    return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+    return canonical_bytes(payload)
 
 
 def _assert_schema_valid(payload: dict[str, object], schema_path: Path) -> None:
@@ -100,10 +101,10 @@ def _assert_no_local_path_leak(payload: object) -> None:
 
 def _golden_digest_failure_message(facade_name: str, *, expected: str, actual: str) -> str:
     return (
-        f"runtime hotspot golden digest drift for {facade_name}: "
+        f"runtime hotspot structural golden digest drift for {facade_name}: "
         f"expected={expected} actual={actual}. "
-        f"Run `{GOLDEN_CHECK_COMMAND}` to reproduce; update GOLDEN_DIGESTS only after "
-        "reviewing the canonical payload change."
+        f"Run `{GOLDEN_CHECK_COMMAND}` to reproduce; update STRUCTURAL_GOLDEN_DIGESTS only after "
+        "reviewing the semantic payload change."
     )
 
 
@@ -244,8 +245,9 @@ def test_runtime_hotspot_facade_golden_output_is_byte_stable(facade_name: str) -
         f"run `{GOLDEN_CHECK_COMMAND}` and inspect injected clocks, paths, and ordering."
     )
     _assert_no_local_path_leak(first_payload)
-    actual_digest = hashlib.sha256(first_bytes).hexdigest()
-    expected_digest = GOLDEN_DIGESTS[facade_name]
+    assert_structural_contract(facade_name, first_payload)
+    actual_digest = structural_digest(first_payload)
+    expected_digest = STRUCTURAL_GOLDEN_DIGESTS[facade_name]
     assert actual_digest == expected_digest, _golden_digest_failure_message(
         facade_name,
         expected=expected_digest,
