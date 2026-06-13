@@ -65,6 +65,7 @@ class AutoImproveReadinessRuntimeTests(
                 "ops/scripts/core/payload_field_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_next_run_repair_runtime.py",
                 "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",

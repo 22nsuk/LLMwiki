@@ -10,7 +10,6 @@ from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_NONE,
 )
 
-from .auto_improve_next_run_decision_runtime import NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
 from .auto_improve_queue_runtime import build_proposal_queue
 from .auto_improve_readiness_constants_runtime import (
     AUTO_IMPROVE_GOAL_RUN_COMMAND,
@@ -22,6 +21,10 @@ from .auto_improve_readiness_constants_runtime import (
     RECENT_OUTCOME_REWORK_REMEDIATION,
 )
 from .auto_improve_readiness_learning_runtime import _build_loop_health_summary
+from .auto_improve_readiness_next_run_repair_runtime import (
+    OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER,
+    open_repair_quarantined_source_proposal_ids,
+)
 from .auto_improve_readiness_queue_models_runtime import (
     ReadinessExecutionFields,
     ReadinessQueue,
@@ -34,17 +37,10 @@ from .auto_improve_readiness_queue_telemetry_runtime import (
     matching_fallback_seed_runs,
     same_eval_telemetry_summary,
 )
-from .mutation_proposal_loader_runtime import load_next_run_decision_queue_inputs
-from .mutation_proposal_recent_log_overlap_runtime import (
-    RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
-    RECENT_LOG_OVERLAP_UNBLOCK_FAMILY,
-)
-from .next_run_repair_queue_runtime import open_carry_forward_decisions
 
 AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
 LATEST_SESSION_ATTEMPTED_BLOCKER = "latest_session_attempted"
 LATEST_SESSION_QUARANTINED_BLOCKER = "latest_session_quarantined"
-OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER = "open_next_run_repair_quarantined_source"
 
 
 def _string_list(value: object) -> list[str]:
@@ -117,52 +113,6 @@ def _latest_auto_improve_session(vault: Path) -> dict[str, Any]:
     return latest_session
 
 
-def _current_source_proposal_ids(mutation_proposal_report: dict[str, Any]) -> set[str]:
-    proposals = mutation_proposal_report.get("proposals")
-    if not isinstance(proposals, list):
-        return set()
-    return {
-        str(proposal.get("proposal_id", "")).strip()
-        for proposal in proposals
-        if isinstance(proposal, dict)
-        and str(proposal.get("failure_mode", "")).strip()
-        != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
-        and str(proposal.get("proposal_id", "")).strip()
-    }
-
-
-def _open_repair_quarantined_source_proposal_ids(
-    vault: Path,
-    mutation_proposal_report: dict[str, Any],
-) -> list[str]:
-    queue_inputs = load_next_run_decision_queue_inputs(vault)
-    open_decisions = open_carry_forward_decisions(
-        queue_inputs.next_run_decisions,
-        vault=vault,
-        consumed_decision_ids=set(queue_inputs.consumed_next_run_decision_ids),
-        current_proposal_ids=_current_source_proposal_ids(mutation_proposal_report),
-        recent_log_overlap_unblock_failure_mode=RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
-        recent_log_overlap_unblock_family=RECENT_LOG_OVERLAP_UNBLOCK_FAMILY,
-    )
-    target_proposal_ids = {
-        str(decision.get("target_proposal_id", "")).strip()
-        for decision in open_decisions
-        if str(decision.get("target_proposal_id", "")).strip()
-    }
-    source_proposal_ids: list[str] = []
-    for decision in open_decisions:
-        if not bool(decision.get("quarantined_source_proposal")):
-            continue
-        proposal_id = str(decision.get("proposal_id", "")).strip()
-        if (
-            proposal_id
-            and proposal_id not in target_proposal_ids
-            and proposal_id not in source_proposal_ids
-        ):
-            source_proposal_ids.append(proposal_id)
-    return source_proposal_ids
-
-
 def _runnable_proposal_ids(
     vault: Path,
     mutation_proposal_report: dict[str, Any],
@@ -173,7 +123,7 @@ def _runnable_proposal_ids(
     latest_session = _latest_auto_improve_session(vault)
     quarantined = set(_string_list(latest_session.get("quarantined_proposal_ids")))
     quarantined.update(
-        _open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)
+        open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)
     )
     try:
         runnable = build_proposal_queue(
@@ -201,7 +151,7 @@ def _latest_session_exclusion_blockers(
     attempted = set(_string_list(latest_session.get("attempted_proposal_ids")))
     quarantined = set(_string_list(latest_session.get("quarantined_proposal_ids")))
     open_repair_quarantined = set(
-        _open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)
+        open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)
     )
     proposal_ids_by_reason: dict[str, list[str]] = {}
     for proposal in proposals:
