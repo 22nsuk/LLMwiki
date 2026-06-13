@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-06 — Runtime decomposition, release evidence, and public mirror hygiene
+
+- Continued the runtime-codehealth-hardening sprint: extracted readiness remediation,
+  dashboard status, closeout render/envelope, and mutation proposal helpers while
+  keeping façade contracts and golden digests stable.
+- Hardened artifact freshness stale routing, source-identity ownership, and Sigstore
+  verification paths; tightened release CI evidence and supply-chain closeout gates.
+- Decoupled external-report action matrix finality binding and stabilized release
+  readiness status lanes, auto-improve maintenance empty-queue handling, and
+  envelope maintenance action plans.
+- Added compatibility alias deprecation tracking extensions and refreshed related
+  schema fixtures and tests.
+- Included `CHANGELOG.md` in the public export allowlist so public mirror history
+  stays aligned with doc-graph `ROOT_DOCS`.
+
 ## CycloneDX / OpenVEX SBOM draft surface
 
 - Added `uv.lock` dependency edge parsing to the repo-native supply-chain provenance report.

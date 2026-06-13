@@ -3,6 +3,7 @@ from __future__ import annotations
 PUBLIC_INCLUDE_FILES = (
     "AGENTS.md",
     "ARCHITECTURE.md",
+    "CHANGELOG.md",
     ".gitattributes",
     ".gitignore",
     "CONTRIBUTING.md",
@@ -83,6 +84,7 @@ def render_public_gitignore_block() -> str:
         "!/mk/**",
         "!/AGENTS.md",
         "!/ARCHITECTURE.md",
+        "!/CHANGELOG.md",
         "!/CONTRIBUTING.md",
         "!/LICENSE",
         "!/Makefile",
