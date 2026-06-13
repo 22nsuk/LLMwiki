@@ -320,11 +320,7 @@ def _load_promotion_report_from_rel(
         return None
     if not _promotion_report_matches_run(payload, run_id):
         return None
-    return LoadedPromotionReport(
-        payload=payload,
-        source_kind=source_kind,
-        source_path=str(rel_path).strip(),
-    )
+    return LoadedPromotionReport(payload=payload, source_kind=source_kind, source_path=str(rel_path).strip())
 
 
 def _promotion_report_from_source(
@@ -338,11 +334,7 @@ def _promotion_report_from_source(
     if isinstance(promotion_report, dict):
         if not _promotion_report_matches_run(promotion_report, run_id):
             return None
-        return LoadedPromotionReport(
-            payload=promotion_report,
-            source_kind="inline",
-            source_path="",
-        )
+        return LoadedPromotionReport(payload=promotion_report, source_kind="inline", source_path="")
     return _load_promotion_report_from_rel(
         vault,
         promotion_report,
@@ -379,11 +371,7 @@ def _decision_record_from_source(vault: Path, run_id: str, source: object) -> di
                 promotion_report.payload,
                 require_record=False,
             )
-            return (
-                decision_record
-                if _decision_record_matches_run(decision_record, run_id)
-                else None
-            )
+            return decision_record if _decision_record_matches_run(decision_record, run_id) else None
         except PromotionDecisionRegistryError:
             pass
     decision_record = source.get("decision_record")
@@ -526,11 +514,7 @@ def _iteration_decision_record(
             promotion_report.payload,
             require_record=False,
         )
-        return (
-            decision_record
-            if _decision_record_matches_run(decision_record, run_id)
-            else None
-        )
+        return decision_record if _decision_record_matches_run(decision_record, run_id) else None
     except PromotionDecisionRegistryError:
         return None
 
@@ -648,10 +632,19 @@ def write_iteration_telemetry(
         if behavior_delta_digest:
             payload["behavior_delta_digest"] = behavior_delta_digest
     same_eval_promotion = _iteration_promotion_report(request.vault, request.run_id, request.result, existing_report)
+    same_eval_is_current = same_eval_promotion is not None and (
+        _promotion_check_statuses(same_eval_promotion.payload).get("eval_score_improves") == "WARN"
+        or any(
+            isinstance(check, dict)
+            and str(check.get("id", "")).strip() == "equal_score_secondary_eligibility"
+            and "score_equal=true" in str(check.get("detail", "")).lower()
+            for check in same_eval_promotion.payload.get("checks", [])
+        )
+    )
     same_eval_existing_report = (
         {**existing_report, "promotion_report": same_eval_promotion.payload}
-        if same_eval_promotion is not None
-        else existing_report
+        if same_eval_is_current
+        else existing_report if same_eval_promotion is None else {}
     )
     same_eval_reason = iteration_same_eval_reason(request.result, same_eval_existing_report)
     if same_eval_reason:

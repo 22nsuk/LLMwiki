@@ -1052,6 +1052,72 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertTrue(payload["strict_secondary_improvement_present"])
             self.assertEqual(payload["secondary_improvement_axes"], ["lint"])
 
+    def test_write_iteration_telemetry_does_not_carry_stale_same_eval_fields_for_improved_score(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-improved-score"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (run_dir / "run-telemetry.json").write_text(
+                json.dumps(
+                    {
+                        "same_eval_reason": "previous equal-score lint improvement",
+                        "same_eval_reason_code": "telemetry_discoverability_improved",
+                        "strict_secondary_improvement_present": True,
+                        "secondary_improvement_axes": ["lint"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {"id": "eval_score_improves", "status": "PASS", "detail": "baseline=10, candidate=11"},
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "WARN",
+                                "detail": "allowed=true, score_equal=false, selected_axes=['lint']",
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={"decision": "PROMOTE", "promotion_report": promotion_rel},
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertNotIn("same_eval_reason", payload)
+            self.assertNotIn("same_eval_reason_code", payload)
+            self.assertNotIn("strict_secondary_improvement_present", payload)
+            self.assertNotIn("secondary_improvement_axes", payload)
+
     def test_write_iteration_telemetry_rejects_cross_run_same_eval_promotion_evidence(
         self,
     ) -> None:
