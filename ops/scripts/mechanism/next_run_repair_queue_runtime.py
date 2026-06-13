@@ -402,6 +402,11 @@ def _decision_evidence_paths_are_all_missing(vault: Path, decision: dict) -> boo
     evidence_paths = _string_list(decision.get("evidence_paths"))
     if not evidence_paths:
         return False
+    if (
+        str(decision.get("failure_taxonomy", "")).strip() == STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY
+        and _source_session_report_path(vault, decision)
+    ):
+        return False
     normalized_paths = [
         rel_path
         for rel_path in (safe_repo_relative_path(path) for path in evidence_paths)

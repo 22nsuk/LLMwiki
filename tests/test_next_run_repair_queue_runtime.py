@@ -21,6 +21,7 @@ from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
 )
 from ops.scripts.mechanism.next_run_repair_queue_runtime import (
+    SOURCE_SESSION_REPORT_DECISION_KEY,
     open_carry_forward_decisions,
 )
 from tests.test_mechanism_assess import seed_policy
@@ -106,6 +107,34 @@ def test_open_carry_forward_decisions_suppresses_all_missing_leaf_evidence() -> 
         )
 
         assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_keeps_structural_missing_leaf_evidence_with_source_session_report() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        session_report = "ops/reports/auto-improve-sessions/session-a.json"
+        (vault / session_report).parent.mkdir(parents=True)
+        (vault / session_report).write_text('{"next_run_decisions": []}\n', encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    evidence_paths=[
+                        "runs/missing-run/run-telemetry.json",
+                        "runs/missing-run/promotion-report.json",
+                    ],
+                    **{SOURCE_SESSION_REPORT_DECISION_KEY: session_report},
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert [decision["decision_id"] for decision in open_decisions] == [
+            "next-run-decision:run-1"
+        ]
 
 
 def test_open_carry_forward_decisions_suppresses_source_after_noop_repair_attempt() -> None:
