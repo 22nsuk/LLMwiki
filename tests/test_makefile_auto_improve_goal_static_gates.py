@@ -424,7 +424,11 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         )
         _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
-        _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-status")
+        _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-contract")
+        self.assertNotIn(
+            "auto-improve-goal-status",
+            _target_block(text, "goal-runtime-certificate").splitlines()[0],
+        )
         _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
 
     def test_auto_improve_goal_admission_ordering_recipes(self) -> None:
@@ -1048,6 +1052,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-certificate",
             (
+                "$(MAKE) auto-improve-goal-status",
                 "ops.scripts.goal_runtime_certificate_report",
                 "--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
                 "--status-report \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
@@ -1061,4 +1066,14 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "ops/schemas/goal-runtime-certificate.schema.json",
                 "--expected-artifact-kind goal_runtime_certificate",
             ),
+        )
+        certificate_recipe = _recipe_lines(text, "goal-runtime-certificate")
+        self.assertEqual(certificate_recipe[0], "$(MAKE) auto-improve-goal-status")
+        self.assertLess(
+            certificate_recipe[1].index("ops.scripts.goal_runtime_certificate_report"),
+            certificate_recipe[1].index("$(MAKE) auto-improve-goal-status"),
+        )
+        self.assertLess(
+            certificate_recipe[1].index("$(MAKE) auto-improve-goal-status"),
+            certificate_recipe[1].index('--candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)"'),
         )

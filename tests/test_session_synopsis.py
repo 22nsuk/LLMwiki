@@ -266,6 +266,7 @@ class SessionSynopsisTests(unittest.TestCase):
                         "checkpoint stale",
                         "periodic evidence checkpoint missing",
                         "git_worktree_dirty",
+                        "self-improvement loop release evidence incomplete",
                         "custom runtime drift",
                     ],
                     "runtime_certificate": {"status": "pending"},
@@ -289,6 +290,12 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertIn(
                 "dirty-worktree blocker",
                 blocker_repairs["goal_status_git_worktree_dirty"],
+            )
+            self.assertIn(
+                "missing release evidence",
+                blocker_repairs[
+                    "goal_status_self_improvement_loop_release_evidence_incomplete"
+                ],
             )
             self.assertIn(
                 "runner-backed evidence",

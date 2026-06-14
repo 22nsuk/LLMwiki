@@ -282,7 +282,7 @@ def _should_preserve_terminal_run_status(
     prior_status = _prior_text_field(prior_report, "run", "status")
     if prior_status not in TERMINAL_RUN_STATUSES:
         return False
-    if request.status not in STATUS_REFRESH_RUN_STATUSES:
+    if request.status not in STATUS_REFRESH_RUN_STATUSES and request.status != prior_status:
         return False
     return not bool(request.started_at or request.completed_at)
 
@@ -353,6 +353,8 @@ def _merged_run_state(
             else ""
         )
     )
+    if not completed_at and status in TERMINAL_RUN_STATUSES:
+        completed_at = generated_at
     started_at = request.started_at or _prior_text_field(prior_report, "run", "started_at") or generated_at
     return _MergedRunState(
         status=status,

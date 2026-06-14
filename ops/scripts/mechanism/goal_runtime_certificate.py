@@ -278,6 +278,13 @@ def build_runtime_certificate(
 def runtime_certificate_blockers(certificate: Mapping[str, Any]) -> list[str]:
     if certificate.get("status") == "inconsistent":
         return ["self-improvement loop certificate inconsistent"]
+    certificate_status = str(certificate.get("certificate_status", "")).strip()
+    mode_consistent = bool(certificate.get("mode_consistent", True))
+    if certificate_status == "verified" and mode_consistent:
+        missing_evidence = certificate.get("missing_evidence")
+        if isinstance(missing_evidence, list) and missing_evidence:
+            return ["self-improvement loop release evidence incomplete"]
+        return []
     if certificate.get("status") != "complete":
         return ["self-improvement loop certificate incomplete"]
     return []

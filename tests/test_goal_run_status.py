@@ -882,6 +882,50 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(refreshed["auto_improve_session"]["promoted_iteration_count"], 1)
         self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
 
+    def test_goal_run_status_completed_refresh_preserves_prior_completed_at(self) -> None:
+        self._seed_goal_contract()
+        final = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="completed",
+                started_at="2026-05-17T11:00:00Z",
+                completed_at="2026-05-17T12:00:00Z",
+                context=context_at(12, 0),
+            )
+        )
+        write_report(self.vault, final)
+        write_run_artifacts(self.vault, final)
+
+        refreshed = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="completed",
+                context=context_at(12, 5),
+            )
+        )
+
+        self.assertEqual(refreshed["run"]["status"], "completed")
+        self.assertEqual(refreshed["run"]["completed_at"], "2026-05-17T12:00:00Z")
+        self.assertEqual(refreshed["run"]["updated_at"], "2026-05-17T12:05:00Z")
+        self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_terminal_status_without_completed_at_uses_generated_at(self) -> None:
+        self._seed_goal_contract()
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="completed",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["run"]["completed_at"], "2026-05-17T12:00:00Z")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_goal_run_status_links_archived_auto_improve_session_report(self) -> None:
         self._seed_goal_contract()
         self._seed_auto_improve_session(
@@ -1041,6 +1085,73 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertTrue(report["runtime_certificate"]["full_gate_clean"])
         self.assertEqual(report["blockers"], [])
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_does_not_report_verified_certificate_as_incomplete(self) -> None:
+        contract = sample_goal_contract()
+        contract["runtime"]["certificate_status"] = "verified"
+        contract["runtime"]["verified_at"] = "2026-05-17T11:00:00Z"
+        contract["promotion_guard"].update(
+            {
+                "can_promote_result": False,
+                "promotion_blockers": [
+                    "promotion_blocked_by_release_batch_manifest_failure",
+                ],
+                "sealed_authority_clean": False,
+                "runtime_certificate_verified": True,
+                "sustained_runtime_claimed": False,
+            }
+        )
+        self._seed_full_gate_reports()
+        set_goal(contract, vault=self.vault)
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260522-sustained",
+                status="completed",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["runtime_certificate"]["status"], "pending")
+        self.assertEqual(report["runtime_certificate"]["certificate_status"], "verified")
+        self.assertIn(
+            "promotion_blocked_by_release_batch_manifest_failure",
+            report["blockers"],
+        )
+        self.assertNotIn("self-improvement loop certificate incomplete", report["blockers"])
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_reports_verified_certificate_missing_release_evidence(self) -> None:
+        contract = sample_goal_contract()
+        contract["runtime"]["certificate_status"] = "verified"
+        contract["runtime"]["verified_at"] = "2026-05-17T11:00:00Z"
+        contract["promotion_guard"].update(
+            {
+                "can_promote_result": True,
+                "promotion_blockers": [],
+                "sealed_authority_clean": True,
+                "runtime_certificate_verified": True,
+                "sustained_runtime_claimed": False,
+            }
+        )
+        set_goal(contract, vault=self.vault)
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260522-sustained",
+                status="completed",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["runtime_certificate"]["certificate_status"], "verified")
+        self.assertIn("self-improvement loop release evidence incomplete", report["blockers"])
+        self.assertNotIn("self-improvement loop certificate incomplete", report["blockers"])
+        self.assertEqual(report["status"], "attention")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
 
