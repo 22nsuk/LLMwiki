@@ -122,6 +122,10 @@ class AutoImproveSessionReportRuntimeTests(unittest.TestCase):
                 source_paths,
             )
             self.assertIn(
+                "ops/scripts/mechanism/auto_improve_promotion_stop_runtime.py",
+                source_paths,
+            )
+            self.assertIn(
                 "ops/scripts/mechanism/auto_improve_session_report_runtime.py",
                 source_paths,
             )

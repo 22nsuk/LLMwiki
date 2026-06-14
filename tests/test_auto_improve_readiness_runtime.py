@@ -61,6 +61,7 @@ class AutoImproveReadinessRuntimeTests(
             READINESS_SOURCE_PATHS,
             [
                 "ops/scripts/mechanism/auto_improve_readiness_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_loader_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_payload_runtime.py",
                 "ops/scripts/core/payload_field_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",

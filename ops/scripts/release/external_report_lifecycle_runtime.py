@@ -1296,8 +1296,19 @@ def _release_currentness_service_complete(vault: Path) -> bool:
     dashboard_text = _read_text_or_empty(
         vault / "ops/scripts/release/release_evidence_dashboard.py"
     )
+    dashboard_status_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_evidence_dashboard_status_runtime.py"
+    )
     closeout_gate_text = _read_text_or_empty(
         vault / "ops/scripts/release/release_closeout_gate_runtime.py"
+    )
+    dashboard_uses_currentness_service = (
+        "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_text
+        or "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_status_text
+    )
+    dashboard_uses_live_rerun_state = (
+        "live_rerun_state(" in dashboard_text
+        or "live_rerun_state(" in dashboard_status_text
     )
     return _contains_all(
         currentness_text,
@@ -1306,8 +1317,8 @@ def _release_currentness_service_complete(vault: Path) -> bool:
         (
             "from ops.scripts.core.release_currentness_state_runtime import" in cohort_text,
             "from ops.scripts.core.release_currentness_state_runtime import" in closeout_gate_text,
-            "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_text,
-            "live_rerun_state(" in dashboard_text,
+            dashboard_uses_currentness_service,
+            dashboard_uses_live_rerun_state,
             "components_match_current_source_tree(" in closeout_gate_text,
         )
     )

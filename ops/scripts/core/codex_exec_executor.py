@@ -513,6 +513,34 @@ def _executor_report_template(
     }
 
 
+def _worker_structural_budget_guardrails(role: str) -> str:
+    if role != "worker":
+        return ""
+    return (
+        "Worker structural budget guardrails:\n"
+        "- The parent run creates `changed-files-manifest.json` and "
+        "`structural-complexity-budget.json` after worker execution; do not "
+        "generate or require those artifacts inside the worker phase.\n"
+        "- Repo-health re-checks structural budget using the actual changed "
+        "source and `tests/**` files, and a non-pass result can skip "
+        "promotion even when executor roles report pass.\n"
+        "- Before editing, inspect the primary target's current shape and "
+        "choose a patch that keeps touched files at or below their existing "
+        "line, function, and branch footprint when possible.\n"
+        "- Keep touched structure bounded: prefer reusing existing helpers, "
+        "simplifying adjacent code, and focused assertions over broad "
+        "branches, copied fixtures, or large new test blocks.\n"
+        "- For structural-complexity repairs, make the first patch a "
+        "measured simplification or decomposition slice; for non-structural "
+        "fixes, do not add compatibility aliases, broad fallback branches, "
+        "or large fixtures unless the proposal explicitly needs them.\n"
+        "- If the smallest correct fix must add substantial structure, "
+        "explain why in `diagnostics.notes` and include the focused "
+        "validation that covers the added behavior.\n"
+        "\n"
+    )
+
+
 def _executor_prompt_text(
     request: PromptMaterializationRequest,
     *,
@@ -546,31 +574,7 @@ def _executor_prompt_text(
             "Treat the role sandbox_mode above as the write contract, and rely on the "
             "parent apply guardrails for live-repo mutation.\n"
         )
-    structural_budget_guardrails = ""
-    if request.role == "worker":
-        structural_budget_guardrails = (
-            "Worker structural budget guardrails:\n"
-            "- The parent run creates `changed-files-manifest.json` and "
-            "`structural-complexity-budget.json` after worker execution; do not "
-            "generate or require those artifacts inside the worker phase.\n"
-            "- Repo-health re-checks structural budget using the actual changed "
-            "source and `tests/**` files, and a non-pass result can skip "
-            "promotion even when executor roles report pass.\n"
-            "- Before editing, inspect the primary target's current shape and "
-            "choose a patch that keeps touched files at or below their existing "
-            "line, function, and branch footprint when possible.\n"
-            "- Keep touched structure bounded: prefer reusing existing helpers, "
-            "simplifying adjacent code, and focused assertions over broad "
-            "branches, copied fixtures, or large new test blocks.\n"
-            "- For structural-complexity repairs, make the first patch a "
-            "measured simplification or decomposition slice; for non-structural "
-            "fixes, do not add compatibility aliases, broad fallback branches, "
-            "or large fixtures unless the proposal explicitly needs them.\n"
-            "- If the smallest correct fix must add substantial structure, "
-            "explain why in `diagnostics.notes` and include the focused "
-            "validation that covers the added behavior.\n"
-            "\n"
-        )
+    structural_budget_guardrails = _worker_structural_budget_guardrails(request.role)
     return f"""You are executing the `{request.role}` role for LLM Wiki vNext.
 
 Role profile:

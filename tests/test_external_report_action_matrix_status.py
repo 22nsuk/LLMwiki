@@ -998,6 +998,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "release_risk_identity(\n"
             ),
             "ops/scripts/release/release_evidence_dashboard.py": (
+                "from ops.scripts.release.release_evidence_dashboard_status_runtime import component_gate\n"
+                "component_gate(\n"
+            ),
+            "ops/scripts/release/release_evidence_dashboard_status_runtime.py": (
                 "from ops.scripts.core.release_currentness_state_runtime import live_rerun_state\n"
                 "live_rerun_state(\n"
             ),

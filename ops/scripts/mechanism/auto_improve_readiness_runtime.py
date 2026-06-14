@@ -4,19 +4,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import (
-    build_canonical_report_envelope,
-    canonical_report_loading_issue,
-)
+from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
-    load_optional_json_object,
-    read_json_object,
     write_schema_backed_report,
 )
 from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
 from ops.scripts.learning_readiness_signoff_state import (
-    SIGNOFF_REPORT_REL_PATH,
     learning_readiness_signoff_summary,
 )
 from ops.scripts.learning_readiness_vocabulary import (
@@ -29,30 +23,19 @@ from ops.scripts.schema_constants_runtime import (
 )
 
 from .auto_improve_readiness_constants_runtime import (
-    ARTIFACT_FRESHNESS_REPORT_REL_PATH,
-    GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
-    MECHANISM_REVIEW_REPORT_REL_PATH,
-    MUTATION_PROPOSAL_REPORT_REL_PATH,
-    OUTCOME_METRICS_REPORT_REL_PATH,
     READINESS_REPORT_PRODUCER,
     READINESS_REPORT_REL_PATH,
     READINESS_REPORT_SOURCE_COMMAND,
     READINESS_SOURCE_PATHS,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS,
-    RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
-    RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH,
-    RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
-    RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH,
-    RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
     REMEDIATION_BACKLOG_REPORT_REL_PATH,
-    SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
-    SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH,
 )
 from .auto_improve_readiness_learning_runtime import (
     LearningReadinessAssessment,
     _learning_readiness_assessment,
     learning_claim_blocker_payloads,
 )
+from .auto_improve_readiness_loader_runtime import load_readiness_report_payloads
 from .auto_improve_readiness_payload_runtime import (
     readiness_diagnostics_payload,
     readiness_file_inputs,
@@ -161,99 +144,6 @@ def learning_review_required(report: dict[str, Any]) -> bool:
     )
 
 
-def _load_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    payload = read_json_object(path)
-    if canonical_report_loading_issue(path, payload):
-        return {}
-    return payload
-
-
-def _load_selected_contract_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    payload = read_json_object(path)
-    loading_issue = canonical_report_loading_issue(path, payload)
-    if loading_issue and not loading_issue.startswith("currentness_status="):
-        return {}
-    return payload
-
-
-def _load_optional_json(path: Path) -> dict[str, Any]:
-    return load_optional_json_object(path)
-
-
-def _load_release_authority_preflight_json(vault: Path) -> dict[str, Any]:
-    for rel_path in RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS:
-        payload = _load_optional_json(vault / rel_path)
-        if payload:
-            return {**payload, "_source_rel_path": rel_path}
-    return {}
-
-
-def _load_readiness_report_payloads(
-    vault: Path,
-    *,
-    outcome_metrics_report: dict[str, Any] | None,
-    mechanism_review_report: dict[str, Any] | None,
-    mutation_proposal_report: dict[str, Any] | None,
-    remediation_backlog_path: str,
-) -> dict[str, dict[str, Any]]:
-    return {
-        "outcome_metrics": (
-            outcome_metrics_report
-            if isinstance(outcome_metrics_report, dict)
-            else _load_json(vault / OUTCOME_METRICS_REPORT_REL_PATH)
-        ),
-        "mechanism_review": (
-            mechanism_review_report
-            if isinstance(mechanism_review_report, dict)
-            else _load_json(vault / MECHANISM_REVIEW_REPORT_REL_PATH)
-        ),
-        "mutation_proposal": (
-            mutation_proposal_report
-            if isinstance(mutation_proposal_report, dict)
-            else _load_json(vault / MUTATION_PROPOSAL_REPORT_REL_PATH)
-        ),
-        "artifact_freshness": _load_json(vault / ARTIFACT_FRESHNESS_REPORT_REL_PATH),
-        "selected_contract": _load_selected_contract_json(
-            vault / SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH
-        ),
-        "source_package": _load_json(
-            vault / SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH
-        ),
-        "release_closeout": _load_json(
-            vault / RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH
-        ),
-        "release_batch_manifest": _load_json(
-            vault / RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH
-        ),
-        "release_finality": _load_json(
-            vault / RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH
-        ),
-        "release_evidence_cohort": _load_json(
-            vault / RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH
-        ),
-        "artifact_finalization": _load_json(
-            vault / RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH
-        ),
-        "release_authority_preflight": _load_release_authority_preflight_json(vault),
-        "goal_worktree_guard": _load_optional_json(
-            vault / GOAL_WORKTREE_GUARD_REPORT_REL_PATH
-        ),
-        "remediation_backlog": _load_json(vault / remediation_backlog_path),
-        "learning_signoff": _load_optional_json(vault / SIGNOFF_REPORT_REL_PATH),
-    }
-
-
-def _required_reports_present(reports: dict[str, dict[str, Any]]) -> bool:
-    return all(
-        bool(reports[name])
-        for name in ("outcome_metrics", "mechanism_review", "mutation_proposal")
-    )
-
-
 def load_readiness_inputs(
     vault: Path,
     *,
@@ -266,17 +156,17 @@ def load_readiness_inputs(
 ) -> ReadinessInputs:
     policy, resolved_policy_path = load_policy(vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    reports = _load_readiness_report_payloads(
+    loaded_reports = load_readiness_report_payloads(
         vault,
         outcome_metrics_report=outcome_metrics_report,
         mechanism_review_report=mechanism_review_report,
         mutation_proposal_report=mutation_proposal_report,
         remediation_backlog_path=remediation_backlog_path,
     )
+    reports = loaded_reports.reports
     release_summaries = _release_gate_summaries(reports)
     queue_state = readiness_queue_state(vault, reports)
 
-    reports_present = _required_reports_present(reports)
     return ReadinessInputs(
         policy=policy,
         resolved_policy_path=resolved_policy_path,
@@ -322,7 +212,7 @@ def load_readiness_inputs(
             generated_at=runtime_context.isoformat_z(),
         ),
         queue_state=queue_state,
-        reports_present=reports_present,
+        reports_present=loaded_reports.reports_present,
     )
 
 

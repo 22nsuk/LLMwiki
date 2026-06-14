@@ -34,6 +34,7 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 "ops/scripts/mechanism/mutation_proposal_candidate_runtime.py",
                 "ops/scripts/mechanism/mutation_proposal_loader_runtime.py",
                 "ops/scripts/mechanism/mutation_proposal_promotion_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_queue_runtime.py",
                 "ops/scripts/mechanism/mutation_proposal_recent_log_overlap_runtime.py",
                 "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
                 "ops/scripts/mechanism/current_target_path_runtime.py",

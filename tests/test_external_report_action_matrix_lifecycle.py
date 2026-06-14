@@ -720,7 +720,8 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         for action_id, reason_id in reason_expectations.items():
             with self.subTest(action_id=action_id):
                 self.assertNotIn(reason_id, actions[action_id]["status_reason_ids"])
-    def test_operator_observations_need_resolution_evidence_to_close(self) -> None:
+
+    def _write_github_governance_live_drift_fixture(self) -> None:
         self._write_static_github_security_surfaces()
         for rel_path, text in {
             ".github/CODEOWNERS": "* @maintainers\n",
@@ -744,6 +745,65 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
                 "status": "attention",
             },
         )
+
+    def _assert_observation_gap_open(
+        self,
+        actions: dict[str, dict],
+        *,
+        action_id: str,
+        reason_id: str,
+    ) -> None:
+        self.assertEqual(actions[action_id]["current_status"], "partially_automated")
+        self.assertIn(reason_id, actions[action_id]["status_reason_ids"])
+
+    def _assert_static_github_actions_ignore_live_gap(
+        self,
+        actions: dict[str, dict],
+    ) -> None:
+        for static_action_id in (
+            "collaboration_governance_surface",
+            "github_native_security_automation",
+        ):
+            self.assertEqual(
+                actions[static_action_id]["current_status"],
+                "implemented",
+                static_action_id,
+            )
+            self.assertNotIn(
+                "github_governance_live_drift_gap",
+                actions[static_action_id]["status_reason_ids"],
+            )
+
+    def _assert_github_live_gap_requires_operator_evidence(
+        self,
+        actions: dict[str, dict],
+    ) -> None:
+        live_action = actions["github_governance_live_drift_verification"]
+        live_detail = {
+            item["reason_id"]: item for item in live_action["status_reason_details"]
+        }["github_governance_live_drift_gap"]
+        self.assertEqual(live_detail["owning_stage"], "github_live_governance_verification")
+        self.assertEqual(live_detail["blocking_scope"], "github_live_governance")
+        self.assertEqual(live_detail["gate_effect"], "operator_review_required")
+        self.assertEqual(live_action["verification_readiness_status"], "operator_pending")
+
+    def _assert_review_bundle_gap_requires_clean_report(
+        self,
+        actions: dict[str, dict],
+    ) -> None:
+        review_detail = {
+            item["reason_id"]: item
+            for item in actions["source_package_distribution_binding"]["status_reason_details"]
+        }["review_bundle_full_vault_hygiene_gap"]
+        self.assertEqual(review_detail["owning_stage"], "review_bundle_hygiene")
+        self.assertEqual(review_detail["blocking_scope"], "review_archive")
+        self.assertEqual(
+            review_detail["recommended_targets"],
+            ["review-archive", "external-report-action-matrix"],
+        )
+
+    def test_operator_observations_need_resolution_evidence_to_close(self) -> None:
+        self._write_github_governance_live_drift_fixture()
         self._write_release_verification_reports()
         self._write_task_observations(
             [
@@ -765,51 +825,14 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
             "source_package_distribution_binding": "review_bundle_full_vault_hygiene_gap",
             "github_governance_live_drift_verification": "github_governance_live_drift_gap",
         }.items():
-            self.assertEqual(
-                missing_evidence_actions[action_id]["current_status"],
-                "partially_automated",
+            self._assert_observation_gap_open(
+                missing_evidence_actions,
+                action_id=action_id,
+                reason_id=reason_id,
             )
-            self.assertIn(reason_id, missing_evidence_actions[action_id]["status_reason_ids"])
-        for static_action_id in (
-            "collaboration_governance_surface",
-            "github_native_security_automation",
-        ):
-            self.assertEqual(
-                missing_evidence_actions[static_action_id]["current_status"],
-                "implemented",
-                static_action_id,
-            )
-            self.assertNotIn(
-                "github_governance_live_drift_gap",
-                missing_evidence_actions[static_action_id]["status_reason_ids"],
-            )
-        live_detail = {
-            item["reason_id"]: item
-            for item in missing_evidence_actions[
-                "github_governance_live_drift_verification"
-            ]["status_reason_details"]
-        }["github_governance_live_drift_gap"]
-        self.assertEqual(live_detail["owning_stage"], "github_live_governance_verification")
-        self.assertEqual(live_detail["blocking_scope"], "github_live_governance")
-        self.assertEqual(live_detail["gate_effect"], "operator_review_required")
-        self.assertEqual(
-            missing_evidence_actions["github_governance_live_drift_verification"][
-                "verification_readiness_status"
-            ],
-            "operator_pending",
-        )
-        review_detail = {
-            item["reason_id"]: item
-            for item in missing_evidence_actions[
-                "source_package_distribution_binding"
-            ]["status_reason_details"]
-        }["review_bundle_full_vault_hygiene_gap"]
-        self.assertEqual(review_detail["owning_stage"], "review_bundle_hygiene")
-        self.assertEqual(review_detail["blocking_scope"], "review_archive")
-        self.assertEqual(
-            review_detail["recommended_targets"],
-            ["review-archive", "external-report-action-matrix"],
-        )
+        self._assert_static_github_actions_ignore_live_gap(missing_evidence_actions)
+        self._assert_github_live_gap_requires_operator_evidence(missing_evidence_actions)
+        self._assert_review_bundle_gap_requires_clean_report(missing_evidence_actions)
 
         self._write_task_observations(
             [
@@ -839,13 +862,10 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         unverified_actions = self._actions_by_id(
             prefixed_evidence_without_clean_review_report
         )
-        self.assertEqual(
-            unverified_actions["source_package_distribution_binding"]["current_status"],
-            "partially_automated",
-        )
-        self.assertIn(
-            "review_bundle_full_vault_hygiene_gap",
-            unverified_actions["source_package_distribution_binding"]["status_reason_ids"],
+        self._assert_observation_gap_open(
+            unverified_actions,
+            action_id="source_package_distribution_binding",
+            reason_id="review_bundle_full_vault_hygiene_gap",
         )
 
         self._write_schema_invalid_clean_review_archive_report()
@@ -853,17 +873,10 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         invalid_schema_report = build_report(self.vault, context=fixed_context())
 
         invalid_schema_actions = self._actions_by_id(invalid_schema_report)
-        self.assertEqual(
-            invalid_schema_actions["source_package_distribution_binding"][
-                "current_status"
-            ],
-            "partially_automated",
-        )
-        self.assertIn(
-            "review_bundle_full_vault_hygiene_gap",
-            invalid_schema_actions["source_package_distribution_binding"][
-                "status_reason_ids"
-            ],
+        self._assert_observation_gap_open(
+            invalid_schema_actions,
+            action_id="source_package_distribution_binding",
+            reason_id="review_bundle_full_vault_hygiene_gap",
         )
 
         self._write_clean_review_archive_report()
@@ -879,18 +892,7 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
             "review_bundle_full_vault_hygiene_gap",
             closed_actions["source_package_distribution_binding"]["status_reason_ids"],
         )
-        self.assertEqual(
-            closed_actions["collaboration_governance_surface"]["current_status"],
-            "implemented",
-        )
-        self.assertNotIn(
-            "github_governance_live_drift_gap",
-            closed_actions["collaboration_governance_surface"]["status_reason_ids"],
-        )
-        self.assertEqual(
-            closed_actions["github_native_security_automation"]["current_status"],
-            "implemented",
-        )
+        self._assert_static_github_actions_ignore_live_gap(closed_actions)
         self.assertEqual(
             closed_actions["github_governance_live_drift_verification"]["current_status"],
             "partially_automated",

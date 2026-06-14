@@ -112,6 +112,32 @@ class _AdmissionReportInputs:
     inputs: dict[str, str]
 
 
+@dataclass(frozen=True)
+class _MaintenanceActionPlanState:
+    status: str
+    can_resume: bool
+    plan_session_id: str
+    plan_blockers: list[str]
+    runner_action: str
+    proposal_ids: list[str]
+    selected_proposal_id: str
+    selected_in_action_queue: bool
+    selected_in_current_report: bool
+    selected_runnable: bool
+    selected_blockers: list[str]
+    selected_effective_blockers: list[str]
+
+
+@dataclass(frozen=True)
+class _StructuralComplexityBudgetState:
+    status: str
+    target_count: int
+    attention_count: int
+    failure_count: int
+    over_budget_targets: list[dict[str, Any]]
+    error: str = ""
+
+
 def _as_bool(value: object) -> bool:
     return value is True
 
@@ -727,6 +753,57 @@ def _proposal_primary_target_paths(proposal: dict[str, Any]) -> list[str]:
     return primary_targets or _proposal_target_paths(proposal)
 
 
+def _structural_complexity_budget_state(
+    vault: Path,
+    source_target_paths: list[str],
+    *,
+    context: RuntimeContext,
+) -> _StructuralComplexityBudgetState:
+    if not source_target_paths:
+        return _StructuralComplexityBudgetState(
+            status="not_applicable",
+            target_count=0,
+            attention_count=0,
+            failure_count=0,
+            over_budget_targets=[],
+        )
+    try:
+        budget_report = source_targets_structural_complexity_report(
+            vault,
+            source_target_paths,
+            context=context,
+        )
+        summary = _dict_field(budget_report, "summary")
+        over_budget_targets = [
+            {
+                "path": str(target.get("path", "")).strip(),
+                "status": str(target.get("status", "")).strip(),
+                "over_budget_metrics": _list_strings(target.get("over_budget_metrics")),
+                "function_budget_candidate_count": _as_int(
+                    target.get("function_budget_candidate_count")
+                ),
+            }
+            for target in _list_field(budget_report, "targets")
+            if str(target.get("status", "")).strip() in {"warn", "fail"}
+        ]
+        return _StructuralComplexityBudgetState(
+            status=str(budget_report.get("status", "")).strip(),
+            target_count=_as_int(summary.get("target_count")),
+            attention_count=_as_int(summary.get("targets_with_attention_count")),
+            failure_count=_as_int(summary.get("targets_with_failure_count")),
+            over_budget_targets=over_budget_targets,
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        return _StructuralComplexityBudgetState(
+            status="fail",
+            target_count=0,
+            attention_count=0,
+            failure_count=0,
+            over_budget_targets=[],
+            error=str(exc),
+        )
+
+
 def _structural_complexity_budget_start_check(
     vault: Path,
     mutation_proposals: dict[str, Any],
@@ -767,41 +844,13 @@ def _structural_complexity_budget_start_check(
         proposal_declares_structural_complexity_repair(proposal)
         for proposal in selected
     )
-    report_status = "not_applicable"
-    target_count = 0
-    attention_count = 0
-    failure_count = 0
-    over_budget_targets: list[dict[str, Any]] = []
-    error = ""
-    if source_target_paths:
-        try:
-            budget_report = source_targets_structural_complexity_report(
-                vault,
-                source_target_paths,
-                context=context,
-            )
-            report_status = str(budget_report.get("status", "")).strip()
-            summary = _dict_field(budget_report, "summary")
-            target_count = _as_int(summary.get("target_count"))
-            attention_count = _as_int(summary.get("targets_with_attention_count"))
-            failure_count = _as_int(summary.get("targets_with_failure_count"))
-            over_budget_targets = [
-                {
-                    "path": str(target.get("path", "")).strip(),
-                    "status": str(target.get("status", "")).strip(),
-                    "over_budget_metrics": _list_strings(target.get("over_budget_metrics")),
-                    "function_budget_candidate_count": _as_int(
-                        target.get("function_budget_candidate_count")
-                    ),
-                }
-                for target in _list_field(budget_report, "targets")
-                if str(target.get("status", "")).strip() in {"warn", "fail"}
-            ]
-        except (OSError, TypeError, ValueError) as exc:
-            report_status = "fail"
-            error = str(exc)
+    budget = _structural_complexity_budget_state(
+        vault,
+        source_target_paths,
+        context=context,
+    )
     passed = resume_active or not source_target_paths or (
-        report_status == "pass" or structural_repair_allowed
+        budget.status == "pass" or structural_repair_allowed
     )
     return _check(
         check_id="start_structural_complexity_budget_clear",
@@ -821,12 +870,12 @@ def _structural_complexity_budget_start_check(
             "raw_target_paths": raw_target_paths,
             "ignored_generated_canonical_targets": generated_targets,
             "structural_complexity_repair_allowed": structural_repair_allowed,
-            "status": report_status,
-            "target_count": target_count,
-            "targets_with_attention_count": attention_count,
-            "targets_with_failure_count": failure_count,
-            "over_budget_targets": over_budget_targets,
-            "error": error,
+            "status": budget.status,
+            "target_count": budget.target_count,
+            "targets_with_attention_count": budget.attention_count,
+            "targets_with_failure_count": budget.failure_count,
+            "over_budget_targets": budget.over_budget_targets,
+            "error": budget.error,
             "resume_completion": resume_completion,
         },
         reason=(
@@ -835,7 +884,7 @@ def _structural_complexity_budget_start_check(
             else "no selected proposal targets require an early structural budget check"
             if not source_target_paths
             else "selected proposal is an explicit bounded structural complexity repair"
-            if structural_repair_allowed and report_status != "pass"
+            if structural_repair_allowed and budget.status != "pass"
             else "selected proposal targets are within touched structural complexity budget"
             if passed
             else "selected proposal touches over-budget runtime surface without being scoped as a structural complexity repair"
@@ -981,6 +1030,61 @@ def _proposal_is_runnable(proposal: dict[str, Any]) -> bool:
     return not blocked_by and not blockers and status not in {"blocked", "discarded", "quarantined"}
 
 
+def _maintenance_action_plan_state(
+    maintenance_action_plan: dict[str, Any],
+    mutation_proposals: dict[str, Any],
+    *,
+    resume_completion: dict[str, Any],
+) -> _MaintenanceActionPlanState:
+    status = str(maintenance_action_plan.get("status", "missing")).strip() or "missing"
+    decisions = _dict_field(maintenance_action_plan, "decisions")
+    queue_action = _dict_field(maintenance_action_plan, "queue_action")
+    selected = _dict_field(maintenance_action_plan, "selected_proposal")
+    selected_proposal_id = str(selected.get("proposal_id", "")).strip()
+    proposal_ids = _list_strings(queue_action.get("proposal_ids"))
+    runner_action = str(queue_action.get("runner_action", "")).strip()
+    matching_proposal = next(
+        (
+            proposal
+            for proposal in _list_field(mutation_proposals, "proposals")
+            if isinstance(proposal, dict)
+            and str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
+        ),
+        {},
+    )
+    matching_runnable_proposal = next(
+        (
+            proposal
+            for proposal in _selected_runnable_proposals(
+                mutation_proposals,
+                resume_completion=resume_completion,
+            )
+            if str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
+        ),
+        {},
+    )
+    selected_blockers = _list_strings(matching_proposal.get("blocked_by")) if matching_proposal else []
+    selected_effective_blockers = (
+        _list_strings(matching_runnable_proposal.get("blocked_by"))
+        if matching_runnable_proposal
+        else selected_blockers
+    )
+    return _MaintenanceActionPlanState(
+        status=status,
+        can_resume=_as_bool(decisions.get("can_resume")),
+        plan_session_id=str(maintenance_action_plan.get("session_id", "")).strip(),
+        plan_blockers=_list_strings(maintenance_action_plan.get("blockers")),
+        runner_action=runner_action,
+        proposal_ids=proposal_ids,
+        selected_proposal_id=selected_proposal_id,
+        selected_in_action_queue=not proposal_ids or selected_proposal_id in proposal_ids,
+        selected_in_current_report=bool(matching_proposal),
+        selected_runnable=bool(matching_runnable_proposal),
+        selected_blockers=selected_blockers,
+        selected_effective_blockers=selected_effective_blockers,
+    )
+
+
 def _maintenance_action_plan_check(
     maintenance_action_plan: dict[str, Any],
     path: str,
@@ -996,63 +1100,27 @@ def _maintenance_action_plan_check(
         maintenance_action_plan,
         "goal_runtime_maintenance_action_plan",
     )
-    status = str(maintenance_action_plan.get("status", "missing")).strip() or "missing"
-    decisions = _dict_field(maintenance_action_plan, "decisions")
-    queue_action = _dict_field(maintenance_action_plan, "queue_action")
-    selected = _dict_field(maintenance_action_plan, "selected_proposal")
-    selected_proposal_id = str(selected.get("proposal_id", "")).strip()
-    proposal_ids = _list_strings(queue_action.get("proposal_ids"))
-    runner_action = str(queue_action.get("runner_action", "")).strip()
-    can_resume = _as_bool(decisions.get("can_resume"))
-    plan_session_id = str(maintenance_action_plan.get("session_id", "")).strip()
-    plan_blockers = _list_strings(maintenance_action_plan.get("blockers"))
-
-    proposals = [
-        proposal
-        for proposal in _list_field(mutation_proposals, "proposals")
-        if isinstance(proposal, dict)
-    ]
-    matching_proposals = [
-        proposal
-        for proposal in proposals
-        if str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
-    ]
-    matching_proposal = matching_proposals[0] if matching_proposals else {}
-    selected_in_current_report = bool(matching_proposal)
-    runnable_proposals = _selected_runnable_proposals(
+    plan_state = _maintenance_action_plan_state(
+        maintenance_action_plan,
         mutation_proposals,
         resume_completion=resume_completion,
-    )
-    matching_runnable_proposals = [
-        proposal
-        for proposal in runnable_proposals
-        if str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
-    ]
-    matching_runnable_proposal = matching_runnable_proposals[0] if matching_runnable_proposals else {}
-    selected_runnable = bool(matching_runnable_proposal)
-    selected_blockers = _list_strings(matching_proposal.get("blocked_by")) if matching_proposal else []
-    selected_effective_blockers = (
-        _list_strings(matching_runnable_proposal.get("blocked_by"))
-        if matching_runnable_proposal
-        else selected_blockers
     )
 
     execution = _dict_field(readiness, "execution_readiness")
     readiness_can_run = _as_bool(execution.get("can_run"))
     readiness_runnable_count = _as_int(execution.get("runnable_proposal_count"))
-    selected_in_action_queue = not proposal_ids or selected_proposal_id in proposal_ids
     passed = (
         kind_status == "present"
-        and status == "pass"
-        and can_resume
+        and plan_state.status == "pass"
+        and plan_state.can_resume
         and bool(resume_session_id)
-        and plan_session_id == resume_session_id
-        and not plan_blockers
-        and runner_action == MAINTENANCE_ACTION_RUNNER_ACTION
-        and bool(selected_proposal_id)
-        and selected_in_action_queue
-        and selected_in_current_report
-        and selected_runnable
+        and plan_state.plan_session_id == resume_session_id
+        and not plan_state.plan_blockers
+        and plan_state.runner_action == MAINTENANCE_ACTION_RUNNER_ACTION
+        and bool(plan_state.selected_proposal_id)
+        and plan_state.selected_in_action_queue
+        and plan_state.selected_in_current_report
+        and plan_state.selected_runnable
         and readiness_can_run
         and readiness_runnable_count > 0
     )
@@ -1073,19 +1141,19 @@ def _maintenance_action_plan_check(
         },
         observed={
             "artifact_status": kind_status,
-            "status": status,
-            "decisions.can_resume": can_resume,
+            "status": plan_state.status,
+            "decisions.can_resume": plan_state.can_resume,
             "resume_session_id": resume_session_id,
-            "plan_session_id": plan_session_id,
-            "blockers": plan_blockers,
-            "queue_action.runner_action": runner_action,
-            "queue_action.proposal_ids": proposal_ids,
-            "selected_proposal_id": selected_proposal_id,
-            "selected_in_action_queue": selected_in_action_queue,
-            "selected_in_current_report": selected_in_current_report,
-            "selected_runnable": selected_runnable,
-            "selected_blockers": selected_blockers,
-            "selected_effective_blockers": selected_effective_blockers,
+            "plan_session_id": plan_state.plan_session_id,
+            "blockers": plan_state.plan_blockers,
+            "queue_action.runner_action": plan_state.runner_action,
+            "queue_action.proposal_ids": plan_state.proposal_ids,
+            "selected_proposal_id": plan_state.selected_proposal_id,
+            "selected_in_action_queue": plan_state.selected_in_action_queue,
+            "selected_in_current_report": plan_state.selected_in_current_report,
+            "selected_runnable": plan_state.selected_runnable,
+            "selected_blockers": plan_state.selected_blockers,
+            "selected_effective_blockers": plan_state.selected_effective_blockers,
             "attempted_proposal_ids": _list_strings(
                 resume_completion.get("attempted_proposal_ids")
             ),

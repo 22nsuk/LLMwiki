@@ -191,6 +191,24 @@ class _ArtifactRecordCurrentnessState:
     issues: list[str]
 
 
+@dataclass(frozen=True)
+class _ArtifactRecordPayloadInputs:
+    rel_path: str
+    fields: dict[str, Any]
+    normalized_payload: dict[str, Any]
+    currentness: _ArtifactRecordCurrentnessState
+    source_mtime: dt.datetime | None
+    mtime_source: str
+    mtime_status: str
+    mtime_sensitive: bool
+    schema_validation_status: str
+    schema_validation_errors: list[str]
+    safe_to_backfill: bool
+    issues: list[str]
+    stable_contract_issues: list[str]
+    mtime_sensitive_issues: list[str]
+
+
 @dataclass
 class ArtifactFreshnessContext:
     vault: Path
@@ -855,6 +873,64 @@ def _artifact_record_currentness_state(
     )
 
 
+def _json_artifact_record_payload(inputs: _ArtifactRecordPayloadInputs) -> dict[str, Any]:
+    fields = inputs.fields
+    rel_path = inputs.rel_path
+    return {
+        "path": rel_path,
+        "owner_surface": owner_surface(rel_path),
+        "artifact_kind": str(inputs.normalized_payload.get("artifact_kind", "json_artifact")).strip()
+        or "json_artifact",
+        "utf8_ok": bool(fields["utf8_ok"]),
+        "json_ok": bool(fields["json_ok"]),
+        "has_schema": bool(fields["has_schema"]),
+        "has_generated_at": bool(fields["has_generated_at"]),
+        "has_artifact_envelope": bool(fields["has_envelope"]),
+        "generated_at": str(fields["generated_at"]),
+        "artifact_status": str(fields["artifact_status"]),
+        "retention_policy": str(fields["retention_policy"]),
+        "declared_currentness_status": inputs.currentness.declared_currentness_status,
+        "source_revision_status": inputs.currentness.source_revision_status,
+        "source_tree_fingerprint_status": inputs.currentness.source_tree_fingerprint_status,
+        "input_fingerprint_status": inputs.currentness.input_fingerprint_status,
+        "input_fingerprint_mismatch_keys": inputs.currentness.input_fingerprint_mismatch_keys,
+        "currentness_status": inputs.currentness.currentness_status,
+        "file_mtime_utc": _format_mtime(inputs.source_mtime),
+        "mtime_source": inputs.mtime_source,
+        "mtime_status": inputs.mtime_status,
+        "mtime_sensitive": inputs.mtime_sensitive,
+        "schema_validation_status": inputs.schema_validation_status,
+        "schema_validation_errors": inputs.schema_validation_errors,
+        "safe_to_backfill": inputs.safe_to_backfill,
+        "recommended_next_action": recommended_next_action(
+            inputs.issues,
+            inputs.schema_validation_status,
+            rel_path=rel_path,
+        ),
+        "contract_issue_class": contract_issue_class(
+            rel_path=rel_path,
+            issues=inputs.issues,
+            stable_contract_issues=inputs.stable_contract_issues,
+            mtime_sensitive_issues=inputs.mtime_sensitive_issues,
+            schema_validation_status=inputs.schema_validation_status,
+        ),
+        "gate_effect": artifact_record_gate_effect(
+            rel_path=rel_path,
+            issues=inputs.issues,
+            stable_contract_issues=inputs.stable_contract_issues,
+            mtime_sensitive_issues=inputs.mtime_sensitive_issues,
+        ),
+        "stable_contract_issues": inputs.stable_contract_issues,
+        "mtime_sensitive_issues": inputs.mtime_sensitive_issues,
+        "schema_contract": _schema_contract(
+            rel_path,
+            has_schema=bool(fields["has_schema"]),
+            schema_validation_status=inputs.schema_validation_status,
+        ),
+        "issues": inputs.issues,
+    }
+
+
 def _json_artifact_record(
     vault: Path,
     path: Path,
@@ -924,58 +1000,24 @@ def _json_artifact_record(
     stable_contract_issues = matching_issues(issues, STABLE_CONTRACT_ISSUES)
     mtime_sensitive_issues = sorted(set(mtime_sensitive_issues + matching_issues(issues, MTIME_SENSITIVE_ISSUES)))
 
-    return {
-        "path": rel_path,
-        "owner_surface": owner_surface(rel_path),
-        "artifact_kind": str(normalized_payload.get("artifact_kind", "json_artifact")).strip() or "json_artifact",
-        "utf8_ok": utf8_ok,
-        "json_ok": json_ok,
-        "has_schema": bool(fields["has_schema"]),
-        "has_generated_at": bool(fields["has_generated_at"]),
-        "has_artifact_envelope": bool(fields["has_envelope"]),
-        "generated_at": generated_at,
-        "artifact_status": str(fields["artifact_status"]),
-        "retention_policy": str(fields["retention_policy"]),
-        "declared_currentness_status": currentness.declared_currentness_status,
-        "source_revision_status": currentness.source_revision_status,
-        "source_tree_fingerprint_status": currentness.source_tree_fingerprint_status,
-        "input_fingerprint_status": currentness.input_fingerprint_status,
-        "input_fingerprint_mismatch_keys": currentness.input_fingerprint_mismatch_keys,
-        "currentness_status": currentness.currentness_status,
-        "file_mtime_utc": _format_mtime(source_mtime),
-        "mtime_source": mtime_source,
-        "mtime_status": mtime_status,
-        "mtime_sensitive": mtime_sensitive,
-        "schema_validation_status": schema_validation_status,
-        "schema_validation_errors": schema_validation_errors,
-        "safe_to_backfill": safe_to_backfill,
-        "recommended_next_action": recommended_next_action(
-            issues,
-            schema_validation_status,
+    return _json_artifact_record_payload(
+        _ArtifactRecordPayloadInputs(
             rel_path=rel_path,
-        ),
-        "contract_issue_class": contract_issue_class(
-            rel_path=rel_path,
+            fields={**fields, "utf8_ok": utf8_ok, "json_ok": json_ok},
+            normalized_payload=normalized_payload,
+            currentness=currentness,
+            source_mtime=source_mtime,
+            mtime_source=mtime_source,
+            mtime_status=mtime_status,
+            mtime_sensitive=mtime_sensitive,
+            schema_validation_status=schema_validation_status,
+            schema_validation_errors=schema_validation_errors,
+            safe_to_backfill=safe_to_backfill,
             issues=issues,
             stable_contract_issues=stable_contract_issues,
             mtime_sensitive_issues=mtime_sensitive_issues,
-            schema_validation_status=schema_validation_status,
-        ),
-        "gate_effect": artifact_record_gate_effect(
-            rel_path=rel_path,
-            issues=issues,
-            stable_contract_issues=stable_contract_issues,
-            mtime_sensitive_issues=mtime_sensitive_issues,
-        ),
-        "stable_contract_issues": stable_contract_issues,
-        "mtime_sensitive_issues": mtime_sensitive_issues,
-        "schema_contract": _schema_contract(
-            rel_path,
-            has_schema=bool(fields["has_schema"]),
-            schema_validation_status=schema_validation_status,
-        ),
-        "issues": issues,
-    }
+        )
+    )
 
 
 def _collect_artifact_freshness_scan_inputs(

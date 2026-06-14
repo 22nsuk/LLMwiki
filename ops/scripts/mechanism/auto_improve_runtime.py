@@ -73,11 +73,9 @@ from .auto_improve_maintenance_decision_runtime import (
     MAINTENANCE_ACTION_RUNNER_ACTION as MAINTENANCE_ACTION_RUNNER_ACTION,
     STABLE_MAINTENANCE_QUEUE_THRESHOLD as STABLE_MAINTENANCE_QUEUE_THRESHOLD,
     _initial_maintenance_payload,
-    _last_iteration_outcome,
     _maintenance_completion_stop_reason,
     _maintenance_cycle_count,
     _maintenance_cycle_queue_metadata,
-    _maintenance_run_eligibility,
     _maintenance_terminal_completion_condition,
     _resolve_maintenance_interval as _resolve_maintenance_interval,
     _resolve_post_promote_maintenance_cycles as _resolve_post_promote_maintenance_cycles,
@@ -91,6 +89,9 @@ from .auto_improve_outcome_runtime import (
     evaluate_mutation_error,
     evaluate_scope_blocked,
     role_report_path,
+)
+from .auto_improve_promotion_stop_runtime import (
+    promotion_maintenance_stop_decision as _promotion_maintenance_stop_decision,
 )
 from .auto_improve_queue_runtime import (
     build_proposal_queue,
@@ -761,27 +762,27 @@ def _maybe_run_proposal_budget_maintenance(
 ) -> None:
     elapsed_seconds = int(time.monotonic() - state.start_monotonic)
     target_elapsed_seconds = start.session["budget"]["max_minutes"] * 60
-    eligibility = _maintenance_run_eligibility(
+    decision = _promotion_maintenance_stop_decision(
+        start.session,
         maintain_until_budget=request.maintain_until_budget,
         post_promote_maintenance_cycles=request.post_promote_maintenance_cycles,
         maintenance_interval_seconds=request.maintenance_interval_seconds,
         new_iteration_count=new_iteration_count,
         stop_reason=state.stop_reason,
-        last_iteration_outcome=_last_iteration_outcome(start.session),
         elapsed_seconds=elapsed_seconds,
         target_elapsed_seconds=target_elapsed_seconds,
     )
-    if eligibility.stop_reason is not None:
-        state.stop_reason = eligibility.stop_reason
+    if decision.stop_reason is not None:
+        state.stop_reason = decision.stop_reason
         return
-    if not eligibility.should_run:
+    if not decision.should_run_maintenance:
         return
     _run_proposal_budget_maintenance(
         vault,
         start,
         state,
-        interval_seconds=eligibility.interval_seconds,
-        max_cycles=eligibility.max_cycles,
+        interval_seconds=decision.interval_seconds,
+        max_cycles=decision.max_cycles,
     )
 
 

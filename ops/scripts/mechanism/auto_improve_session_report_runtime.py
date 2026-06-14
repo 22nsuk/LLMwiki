@@ -87,6 +87,7 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
             "ops/scripts/mechanism/auto_improve_learning_preflight_runtime.py",
             "ops/scripts/mechanism/auto_improve_loop_decision_runtime.py",
             "ops/scripts/mechanism/auto_improve_maintenance_decision_runtime.py",
+            "ops/scripts/mechanism/auto_improve_promotion_stop_runtime.py",
             "ops/scripts/mechanism/auto_improve_session_report_runtime.py",
             "ops/scripts/mechanism/auto_improve_session_start_runtime.py",
             "ops/scripts/mechanism/auto_improve_session_completion_runtime.py",
