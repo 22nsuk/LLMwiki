@@ -573,6 +573,14 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `test-execution-summary-full-current-or-refresh`,
   `goal-runtime-publish-snapshot`, `supply-chain-artifacts-cached`, or
   `release-source-package-check`.
+  To avoid source-identity churn, finish and commit all tracked source,
+  policy, schema, fixture, and documentation changes before refreshing
+  generated evidence. Then refresh test, public, goal-runtime, owner-routed
+  freshness lanes, release smoke/package/run-ready evidence, and finally rerun
+  `artifact-freshness-refresh-check` plus `external-report-action-matrix`.
+  If this final freshness pass does not change tracked source inputs,
+  `release-run-ready-plan-check` should remain a reuse-only ready plan rather
+  than opening another release evidence loop.
 - `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
   and the release-run manifest.
 - `tmp/` holds scratch checks and candidate files that must not become authority.
