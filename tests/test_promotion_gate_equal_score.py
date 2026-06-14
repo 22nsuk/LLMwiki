@@ -602,6 +602,7 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
 
             report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
             self.assertEqual(report["decision"], "PROMOTE")
+            self.assertEqual(report["outcome"], "promoted")
             self.assertEqual(report["decision_record"]["decision"], "PROMOTE")
             self.assertEqual(report["decision_record"]["source_rule"], "default_promote")
             self.assertEqual(
@@ -646,6 +647,7 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
             report = self.run_module(vault, *self.base_args(vault))
 
             self.assertEqual(report["decision"], "DISCARD")
+            self.assertEqual(report["outcome"], "discarded")
             self.assertEqual(report["decision_record"]["decision"], "DISCARD")
             self.assertEqual(report["decision_record"]["source_rule"], "behavior_delta_presence")
             presence_check = next(

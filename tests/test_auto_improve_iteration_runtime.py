@@ -221,6 +221,8 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             run_id = "auto-session-run-01"
             run_dir = vault / "runs" / run_id
             run_dir.mkdir(parents=True)
+            (run_dir / "promotion-report.json").write_text("{}\n", encoding="utf-8")
+            (run_dir / "changed-files-manifest.json").write_text("{}\n", encoding="utf-8")
             existing_workspace_preparation = {
                 "mode": "full_copy",
                 "baseline_file_count": 10,
@@ -243,6 +245,8 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                         "generated_at": "2026-04-15T00:00:00Z",
                         "metadata": existing_metadata,
                         "proposal_snapshot": f"runs/{run_id}/proposal-snapshot.json",
+                        "promotion_report": f"runs/{run_id}/promotion-report.json",
+                        "changed_files_manifest": f"runs/{run_id}/changed-files-manifest.json",
                         "scope_freeze": f"runs/{run_id}/scope-freeze.json",
                         "routing_reports": [],
                         "executor_reports": [],
@@ -296,6 +300,12 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
 
             payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
             self.assertEqual(payload["source_candidate_id"], "candidate-1")
+            self.assertEqual(payload["outcome"], "promoted")
+            self.assertEqual(payload["promotion_report"], f"runs/{run_id}/promotion-report.json")
+            self.assertEqual(
+                payload["changed_files_manifest"],
+                f"runs/{run_id}/changed-files-manifest.json",
+            )
             metadata_properties = payload["metadata"]["properties"]
             embedded_envelopes = [
                 json.loads(item["value"])

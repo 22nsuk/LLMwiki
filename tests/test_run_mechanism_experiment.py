@@ -167,7 +167,14 @@ def _assert_full_promote_ledger_and_telemetry(
     run_ledger = artifacts["run_ledger"]
     case.assertEqual(promotion_report["log"]["status"], "recorded")
     case.assertEqual(promotion_report["decision_record"]["decision"], "PROMOTE")
+    case.assertEqual(promotion_report["outcome"], "promoted")
     case.assertEqual(run_telemetry["decision_record"]["decision"], "PROMOTE")
+    case.assertEqual(run_telemetry["outcome"], "promoted")
+    case.assertEqual(run_telemetry["promotion_report"], "runs/run-wrapper-promote/promotion-report.json")
+    case.assertEqual(
+        run_telemetry["changed_files_manifest"],
+        "runs/run-wrapper-promote/changed-files-manifest.json",
+    )
     case.assertEqual(artifacts["promotion_decision_trends"]["decision_counts"], {"PROMOTE": 1})
     case.assertEqual(run_ledger["status"], "complete")
     rehearsed_event = next(event for event in run_ledger["events"] if event["type"] == "workspace_rollback_rehearsed")

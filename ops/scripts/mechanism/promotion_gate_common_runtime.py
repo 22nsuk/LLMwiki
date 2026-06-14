@@ -176,11 +176,15 @@ def build_history_status(*, status: str = "active", reason: str = "", by: str = 
     }
 
 
-def decision_to_next_action(decision: str, signoff_required: bool, log_required: bool) -> str:
+def decision_to_outcome(decision: str) -> str:
     try:
-        outcome = decision_outcome(decision)
+        return decision_outcome(decision)
     except PromotionDecisionRegistryError:
-        outcome = ""
+        return ""
+
+
+def decision_to_next_action(decision: str, signoff_required: bool, log_required: bool) -> str:
+    outcome = decision_to_outcome(decision)
     if outcome == "promoted":
         if log_required:
             return "Append the matching entry to system/system-log.md if not yet recorded, then persist the report."

@@ -41,6 +41,7 @@ ITERATION_TELEMETRY_WRITTEN_FIELDS = frozenset(
         "routing_reports",
         "executor_reports",
         "phase_durations",
+        "outcome",
         "failure_taxonomy",
         "decision",
         "finalized",
@@ -55,6 +56,8 @@ ITERATION_TELEMETRY_MERGED_FIELDS = frozenset(
         "command_timeouts",
         "timeout_failure_artifacts",
         "pre_promotion_failure_artifacts",
+        "promotion_report",
+        "changed_files_manifest",
         "behavior_delta",
         "behavior_delta_digest",
         "same_eval_reason",
@@ -254,6 +257,13 @@ def _normalized_repo_relative_path(rel_path: object) -> str:
     return "/".join(parts)
 
 
+def _existing_repo_relative_file(vault: Path, rel_path: object) -> str:
+    normalized_path = _normalized_repo_relative_path(rel_path)
+    if not normalized_path:
+        return ""
+    return normalized_path if (vault / normalized_path).is_file() else ""
+
+
 def _decision_record_matches_run(decision_record: object, run_id: str) -> bool:
     if not isinstance(decision_record, dict):
         return True
@@ -344,6 +354,39 @@ def _iteration_promotion_report(
         run_rel(run_id, "promotion-report.json"),
         run_id=run_id,
         source_kind="default_path",
+    )
+
+
+def _changed_files_manifest_from_source(vault: Path, source: object) -> str:
+    if not isinstance(source, dict):
+        return ""
+    direct_path = _existing_repo_relative_file(vault, source.get("changed_files_manifest"))
+    if direct_path:
+        return direct_path
+    inputs = source.get("inputs")
+    if isinstance(inputs, dict):
+        return _existing_repo_relative_file(vault, inputs.get("changed_files_manifest"))
+    return ""
+
+
+def _iteration_changed_files_manifest(
+    vault: Path,
+    *,
+    result: dict | None,
+    existing_report: dict,
+    promotion_report: LoadedPromotionReport | None,
+) -> str:
+    return next(
+        (
+            rel_path
+            for source in (
+                result,
+                existing_report,
+                promotion_report.payload if promotion_report is not None else None,
+            )
+            if (rel_path := _changed_files_manifest_from_source(vault, source))
+        ),
+        "",
     )
 
 
@@ -566,6 +609,12 @@ def write_iteration_telemetry(
     existing_report = loaded_existing_report if isinstance(loaded_existing_report, dict) else {}
     observed_at = request.context.isoformat_z()
     executor_report_rels = _iteration_executor_report_rels(request.vault, request.run_id, request.roles)
+    promotion_report = _iteration_promotion_report(
+        request.vault,
+        request.run_id,
+        request.result,
+        existing_report,
+    )
     payload = {
         "session_id": request.session_id,
         "run_id": request.run_id,
@@ -578,11 +627,22 @@ def write_iteration_telemetry(
         "routing_reports": request.routing_report_rels,
         "executor_reports": executor_report_rels,
         "phase_durations": request.phase_durations,
+        "outcome": str(request.outcome).strip(),
         "failure_taxonomy": request.outcome if request.outcome != "promoted" else "",
         "decision": (request.result or {}).get("decision", ""),
         "finalized": bool((request.result or {}).get("finalized")),
         "finalize_result": (request.result or {}).get("finalize_result", {}),
     }
+    if promotion_report is not None and promotion_report.source_path:
+        payload["promotion_report"] = promotion_report.source_path
+    changed_files_manifest = _iteration_changed_files_manifest(
+        request.vault,
+        result=request.result,
+        existing_report=existing_report,
+        promotion_report=promotion_report,
+    )
+    if changed_files_manifest:
+        payload["changed_files_manifest"] = changed_files_manifest
     _preserve_existing_telemetry_fields(payload, existing_report)
     decision_record = _iteration_decision_record(request.vault, request.run_id, request.result, existing_report)
     if isinstance(decision_record, dict):
@@ -617,7 +677,7 @@ def write_iteration_telemetry(
         behavior_delta_digest = iteration_behavior_delta_digest(request.vault, behavior_delta, existing_report)
         if behavior_delta_digest:
             payload["behavior_delta_digest"] = behavior_delta_digest
-    same_eval_promotion = _iteration_promotion_report(request.vault, request.run_id, request.result, existing_report)
+    same_eval_promotion = promotion_report
     same_eval_is_current = same_eval_promotion is not None and (
         _promotion_check_statuses(same_eval_promotion.payload).get("eval_score_improves") == "WARN"
         or any(

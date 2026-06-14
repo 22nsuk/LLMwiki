@@ -15,6 +15,7 @@ from ops.scripts.experiment_telemetry_runtime import (
 from ops.scripts.runtime_context import RuntimeContext
 
 from .mechanism_run_common_runtime import ExperimentResolution
+from .promotion_gate_common_runtime import decision_to_outcome
 
 
 def run_rel(run_id: str, filename: str) -> str:
@@ -139,9 +140,17 @@ def write_experiment_telemetry(
             },
         },
         "decision": result.get("decision", ""),
+        "outcome": decision_to_outcome(str(result.get("decision", "")).strip()),
         "finalized": result.get("finalized", False),
         "finalize_result": result.get("finalize_result", {}),
     }
+    if isinstance(result.get("promotion_report"), str) and result["promotion_report"].strip():
+        payload["promotion_report"] = result["promotion_report"]
+    if (
+        isinstance(result.get("changed_files_manifest"), str)
+        and result["changed_files_manifest"].strip()
+    ):
+        payload["changed_files_manifest"] = result["changed_files_manifest"]
     if isinstance(result.get("workspace_preparation"), dict):
         payload["workspace_preparation"] = result["workspace_preparation"]
     if isinstance(result.get("post_mutation_generated_artifact_convergence"), dict):

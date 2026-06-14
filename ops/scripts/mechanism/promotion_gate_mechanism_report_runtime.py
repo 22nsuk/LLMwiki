@@ -7,6 +7,7 @@ from .promotion_gate_common_runtime import (
     PROMOTION_REPORT_SCHEMA,
     build_history_status,
     decision_to_next_action,
+    decision_to_outcome,
 )
 from .promotion_gate_mechanism_state_runtime import MechanismGateInputs
 
@@ -88,6 +89,7 @@ def assemble_mechanism_promotion_report(
         "mode": "report_only",
         "artifact_class": request.artifact_class,
         "decision": request.decision,
+        "outcome": decision_to_outcome(request.decision),
         "summary": request.log["summary"],
         "primary_targets": request.primary_targets,
         "supporting_targets": request.supporting_targets,

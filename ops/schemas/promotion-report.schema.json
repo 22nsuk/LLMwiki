@@ -58,6 +58,14 @@
         "DISCARD"
       ]
     },
+    "promotion_outcome": {
+      "type": "string",
+      "enum": [
+        "promoted",
+        "hold",
+        "discarded"
+      ]
+    },
     "decision_record": {
       "type": "object",
       "additionalProperties": false,
@@ -243,6 +251,9 @@
     },
     "decision": {
       "$ref": "#/$defs/promotion_decision"
+    },
+    "outcome": {
+      "$ref": "#/$defs/promotion_outcome"
     },
     "decision_record": {
       "$ref": "#/$defs/decision_record"
