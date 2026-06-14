@@ -31,6 +31,15 @@ MECHANISM_FINALIZED_EVENT_SEQUENCE = [
     *MECHANISM_EVALUATED_EVENT_SEQUENCE,
     "finalized",
 ]
+MECHANISM_EVENT_SEQUENCE_BY_PHASE = {
+    "mechanism_evaluated": MECHANISM_EVALUATED_EVENT_SEQUENCE,
+    "mechanism_finalized": MECHANISM_FINALIZED_EVENT_SEQUENCE,
+}
+MECHANISM_TERMINAL_EVENT_BY_PHASE = {
+    "mechanism_evaluated": "promotion_evaluated",
+    "mechanism_finalized": "finalized",
+}
+SUPPORTED_MECHANISM_PHASES = tuple(MECHANISM_EVENT_SEQUENCE_BY_PHASE)
 
 
 @dataclass(frozen=True)
@@ -589,11 +598,13 @@ def build_changed_files_primary_target_touched_check(
 
 
 def event_sequence_state(run_ledger_report: dict, *, phase: str) -> EventSequenceState:
-    expected_sequence = (
-        MECHANISM_FINALIZED_EVENT_SEQUENCE
-        if phase == "mechanism_finalized"
-        else MECHANISM_EVALUATED_EVENT_SEQUENCE
-    )
+    if phase not in MECHANISM_EVENT_SEQUENCE_BY_PHASE:
+        supported_phases = ", ".join(SUPPORTED_MECHANISM_PHASES)
+        raise ValueError(
+            f"unsupported mechanism validation phase: {phase}; supported={supported_phases}"
+        )
+    expected_sequence = MECHANISM_EVENT_SEQUENCE_BY_PHASE[phase]
+    expected_terminal_event = MECHANISM_TERMINAL_EVENT_BY_PHASE[phase]
     observed_event_types = [
         event_type
         for event in run_ledger_report.get("events", [])
@@ -606,7 +617,6 @@ def event_sequence_state(run_ledger_report: dict, *, phase: str) -> EventSequenc
     observed_required_event_types = [
         event_type for event_type in observed_event_types if event_type in expected_sequence
     ]
-    expected_terminal_event = "finalized" if phase == "mechanism_finalized" else "promotion_evaluated"
     return EventSequenceState(
         observed_event_types=observed_event_types,
         observed_required_event_types=observed_required_event_types,

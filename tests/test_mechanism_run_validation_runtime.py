@@ -303,6 +303,27 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
         self.assertTrue(by_check["mechanism_run_event_order"]["pass"])
         self.assertTrue(by_check["mechanism_run_terminal_event"]["pass"])
 
+    def test_event_sequence_checks_fail_closed_for_unknown_phase(self) -> None:
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": {},
+                "run_ledger_report": evaluated_run_ledger("ops/scripts/example.py"),
+            }
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "unsupported mechanism validation phase: mechanism_replayed; "
+            "supported=mechanism_evaluated, mechanism_finalized",
+        ):
+            build_event_sequence_phase_checks(bundle, phase="mechanism_replayed")
+
     def test_event_sequence_checks_allow_history_update_after_finalized(self) -> None:
         ledger = evaluated_run_ledger("ops/scripts/example.py")
         ledger["events"].append(
