@@ -7,6 +7,7 @@ import os
 import shlex
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
+    from ops.scripts.command_runtime import (
+        CommandHeartbeat,
+        TimedProcessResult,
+        run_with_timeout,
+    )
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
@@ -89,7 +94,11 @@ else:
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
+    from ops.scripts.command_runtime import (
+        CommandHeartbeat,
+        TimedProcessResult,
+        run_with_timeout,
+    )
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
@@ -917,6 +926,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--suite", default="pytest")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument(
+        "--heartbeat-interval-seconds",
+        type=int,
+        default=0,
+        help="Emit stderr progress heartbeats while the wrapped test command is quiet; 0 disables.",
+    )
+    parser.add_argument(
+        "--heartbeat-label",
+        default="",
+        help="Optional shard or lane label included in heartbeat lines.",
+    )
     parser.add_argument("--collect-nodeids", action="store_true")
     parser.add_argument("--collect-timeout-seconds", type=int, default=300)
     parser.add_argument("--junit-xml-path")
@@ -945,6 +965,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.command and args.command[0] == "--":
         args.command = args.command[1:]
+    if args.heartbeat_interval_seconds < 0:
+        parser.error("--heartbeat-interval-seconds must be >= 0")
     if not args.command and not args.aggregate and not args.aggregate_from:
         parser.error("test command required for non-aggregate summaries; pass -- <command>")
     return args
@@ -1087,6 +1109,38 @@ def _evidence_artifacts_for_args(
     return evidence_artifacts
 
 
+def _execution_heartbeat_callback(
+    vault: Path,
+    args: argparse.Namespace,
+) -> Callable[[CommandHeartbeat], None] | None:
+    if int(args.heartbeat_interval_seconds or 0) <= 0:
+        return None
+    heartbeat_label = str(args.heartbeat_label or "").strip()
+    execution_log_out = str(args.execution_log_out or "").strip()
+    display_log_path = (
+        display_path(vault, vault / execution_log_out)
+        if execution_log_out
+        else ""
+    )
+
+    def emit_heartbeat(heartbeat: CommandHeartbeat) -> None:
+        fields = [
+            "test-execution-summary-heartbeat",
+            f"suite={args.suite}",
+            f"heartbeat={heartbeat.heartbeat_index}",
+            f"elapsed_seconds={heartbeat.elapsed_seconds:.1f}",
+            f"quiet_seconds={heartbeat.quiet_seconds}",
+            f"timeout_seconds={heartbeat.timeout_seconds}",
+        ]
+        if heartbeat_label:
+            fields.insert(2, f"shard={heartbeat_label}")
+        if display_log_path:
+            fields.append(f"log={display_log_path}")
+        print(" ".join(fields), file=sys.stderr, flush=True)
+
+    return emit_heartbeat
+
+
 def _executed_report_for_args(
     vault: Path,
     args: argparse.Namespace,
@@ -1095,11 +1149,21 @@ def _executed_report_for_args(
 ) -> tuple[dict[str, Any], int]:
     started_at = time.monotonic()
     try:
-        result = run_with_timeout(
-            args.command,
-            cwd=vault,
-            timeout_seconds=args.timeout_seconds,
-        )
+        heartbeat_callback = _execution_heartbeat_callback(vault, args)
+        if heartbeat_callback is None:
+            result = run_with_timeout(
+                args.command,
+                cwd=vault,
+                timeout_seconds=args.timeout_seconds,
+            )
+        else:
+            result = run_with_timeout(
+                args.command,
+                cwd=vault,
+                timeout_seconds=args.timeout_seconds,
+                heartbeat_interval_seconds=args.heartbeat_interval_seconds,
+                heartbeat_callback=heartbeat_callback,
+            )
     except KeyboardInterrupt:
         return (
             _interrupted_report(

@@ -126,7 +126,11 @@ explicit full-proof lanes such as `make release-run-ready` or
 `make release-source-ready-prepare`. Use
 `test-execution-summary-full-refresh-no-converge` only as the explicit fallback
 when current full-suite evidence cannot be reused and generated-artifact
-convergence must be deferred to a later release lane. Use
+convergence must be deferred to a later release lane. The full-suite shard
+wrapper emits an outer heartbeat by default (`suite`, shard label, elapsed
+seconds, quiet seconds, timeout, and execution log path), so a quiet raw pytest
+period should be treated as observable progress unless the heartbeat itself
+stops. Use
 `make release-converge-preflight` before committing, which refreshes
 `generated-artifact-script-output` before report-contract evidence, then refresh
 summaries last. This keeps
@@ -196,7 +200,7 @@ rebase produces jobs that reach checkout.
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
 | Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | proves planner recommendations and changed-path minimums |
 | Registry/Make/CI lane-contract proof | `make test-report-contract-core` | proves registry/Make/CI lane-contract parity after lane selector, CI routing, or report-contract semantics changed |
-| Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | `make complexity-budget-touched-check CHANGED_FILES_MANIFEST=<manifest>` or `STRUCTURAL_COMPLEXITY_BUDGET_TARGETS=...`; without touched inputs the target skips and the ratchet stays inactive |
+| Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | Before and after structural edits, prefer `make function-budget-edit-check STRUCTURAL_COMPLEXITY_BUDGET_TARGETS="path/to/file.py"` (or `CHANGED_FILES_MANIFEST=<manifest>`); it refreshes function-budget proposals and then runs the touched complexity ratchet. Without touched inputs, `complexity-budget-touched-check` skips and the ratchet stays inactive |
 | Dependency input | `make uv-lock-check` | `make static` after any intentional lock refresh |
 | Schema/report contract | `make test-report-contract-core` | regenerate artifacts, then rerun the focused schema/report tests |
 | Public export policy | `make sync-public-policy` | `make public-check` |

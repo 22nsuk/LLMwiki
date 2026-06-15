@@ -222,6 +222,7 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         "generated-artifact-retention-clean",
         "script-output-surfaces",
         "function-budget-refactor-proposals",
+        "function-budget-edit-check",
         "outcome-provenance-gate-policy",
         "external-report-action-matrix",
         "artifact-relocation-audit",
@@ -352,12 +353,15 @@ def _assert_release_workflow_order_guard_target(case: unittest.TestCase, text: s
 
 def _assert_function_budget_and_outcome_targets(case: unittest.TestCase, text: str) -> None:
     proposal_block = _target_block(text, "function-budget-refactor-proposals")
+    edit_check_block = _target_block(text, "function-budget-edit-check")
     case.assertIn("function-budget-refactor-proposals: wiki-lint-review-classification", text)
     case.assertIn(
         '$(PYTHON) -m ops.scripts.function_budget_refactor_proposals --vault "$(VAULT)" --classification "$(WIKI_LINT_REVIEW_CLASSIFICATION_OUT)" --out "$(FUNCTION_BUDGET_REFACTOR_PROPOSALS_CANDIDATE_OUT)"',
         proposal_block,
     )
     case.assertIn("--schema ops/schemas/function-budget-refactor-proposals.schema.json", proposal_block)
+    case.assertIn("function-budget-edit-check: function-budget-refactor-proposals", text)
+    case.assertIn("$(MAKE) complexity-budget-touched-check", edit_check_block)
 
     outcome_policy_block = _target_block(text, "outcome-provenance-gate-policy")
     case.assertIn("outcome-provenance-gate-policy: outcome-metrics routing-provenance-aggregate", text)

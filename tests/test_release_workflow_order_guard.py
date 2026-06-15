@@ -89,6 +89,7 @@ RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
     "release-evidence-converge",
     "release-evidence-closeout",
     "release-finality-resettle",
+    "release-authority-sealed-preflight",
     "release-converge-preflight",
     "release-source-ready",
     "release-source-ready-snapshot",
@@ -155,6 +156,7 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "\t@echo compatibility alias\n"
     "release-finality-resettle:\n"
     "\t$(MAKE) workflow-dependency-planner\n"
+    "\t$(MAKE) release-authority-sealed-preflight\n"
     "\t$(MAKE) generated-artifact-finality-suffix\n"
     "\t$(MAKE) release-closeout-summary-report\n"
     "\t$(MAKE) release-closeout-fixed-point\n"
@@ -409,6 +411,30 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")
         self.assertEqual(check["violations"][0]["reason"], "finality_verify_must_be_terminal")
+
+    def test_guard_fails_when_finality_resettle_skips_sealed_preflight(self) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "\t$(MAKE) release-authority-sealed-preflight\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_finality_resettle_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(
+            check["violations"][0]["expected_role"],
+            "release-authority-sealed-preflight",
+        )
 
     def test_guard_fails_when_fixed_point_policy_order_is_not_topological(self) -> None:
         self._write_fixed_point_policy(invert_dependency=True)

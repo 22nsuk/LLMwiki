@@ -102,6 +102,7 @@ TEST_EXECUTION_SUMMARY_ASSIGNMENTS = (
         "TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR",
         "ops/reports/test-execution-summary-full-shards",
     ),
+    ("TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS", "30"),
 )
 
 TEST_EXECUTION_SUMMARY_ABSENT_ASSIGNMENTS = (
@@ -270,6 +271,8 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 "$(MAKE) full-pytest-generated-preflight",
                 'rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
                 'mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
+                '--heartbeat-interval-seconds "$(TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS)"',
+                '--heartbeat-label "full-suite-shard-1"',
                 "--junit-xml-path",
                 "--execution-log-out",
                 "--failed-nodeids-out",

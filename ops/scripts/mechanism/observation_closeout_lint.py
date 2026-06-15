@@ -23,6 +23,7 @@ DEFAULT_REGISTRY = "ops/observation-closeout-registry.json"
 PRODUCER = "ops.scripts.observation_closeout_lint"
 SCHEMA_PATH = "ops/schemas/observation-closeout-registry.schema.json"
 OPEN_STATUSES = {"open", "planned"}
+TERMINAL_STATUSES_REQUIRING_EVIDENCE = {"wontfix"}
 OBSERVATION_ROOTS = (
     "ops/reports/task-improvement-observations",
     "runs",
@@ -108,6 +109,31 @@ def _open_observations(vault: Path) -> list[dict[str, Any]]:
     return observations
 
 
+def _terminal_status_issues(vault: Path) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    for path in _observation_files(vault):
+        payload = _read_json(path)
+        rel_path = path.relative_to(vault).as_posix()
+        for item in payload.get("observations", []):
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status", "")).strip()
+            if status not in TERMINAL_STATUSES_REQUIRING_EVIDENCE:
+                continue
+            evidence = item.get("resolution_evidence")
+            if isinstance(evidence, list) and evidence:
+                continue
+            issues.append(
+                {
+                    "path": rel_path,
+                    "observation_id": str(item.get("observation_id", "")).strip(),
+                    "status": status,
+                    "reason": "terminal_status_missing_resolution_evidence",
+                }
+            )
+    return issues
+
+
 def build_report(
     vault: Path,
     *,
@@ -121,6 +147,7 @@ def build_report(
     allowed = _registry_keys(registry)
     duplicate_registry_entries = _duplicate_registry_entries(registry)
     open_observations = _open_observations(resolved_vault)
+    terminal_status_issues = _terminal_status_issues(resolved_vault)
     unregistered = [
         item
         for item in open_observations
@@ -149,7 +176,12 @@ def build_report(
     ]
     status = (
         "pass"
-        if not unregistered and not stale_registry_entries and not duplicate_registry_entries
+        if (
+            not unregistered
+            and not stale_registry_entries
+            and not duplicate_registry_entries
+            and not terminal_status_issues
+        )
         else "fail"
     )
     return {
@@ -166,12 +198,14 @@ def build_report(
             "stale_registry_entry_count": len(stale_registry_entries),
             "duplicate_registry_key_count": len(duplicate_registry_entries),
             "unavailable_registry_entry_count": len(unavailable_registry_entries),
+            "terminal_status_issue_count": len(terminal_status_issues),
         },
         "open_observations": open_observations,
         "unregistered_open_observations": unregistered,
         "stale_registry_entries": stale_registry_entries,
         "duplicate_registry_entries": duplicate_registry_entries,
         "unavailable_registry_entries": unavailable_registry_entries,
+        "terminal_status_issues": terminal_status_issues,
     }
 
 

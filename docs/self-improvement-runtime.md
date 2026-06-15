@@ -193,16 +193,27 @@ surfaces or direct-script fallback entrypoints, and no longer carries
 generated-at, source-revision, source-tree-fingerprint, or currentness envelope
 fields in the tracked fixture.
 
-`release-finality-resettle` uses the generated-artifact finality suffix
-(`artifact-freshness -> external-report-action-matrix ->
-generated-artifact-index`), refreshes `release-closeout-summary-report`, then
-runs `release-closeout-fixed-point`, refreshes `external-report-action-matrix`
+`release-finality-resettle` first refreshes the sealed rehearsal authority with
+`release-authority-sealed-preflight`, then uses the generated-artifact finality
+suffix (`artifact-freshness -> external-report-action-matrix ->
+generated-artifact-index`), refreshes `release-closeout-summary-report`, runs
+`release-closeout-fixed-point`, refreshes `external-report-action-matrix`
 against the just-written finality attestation, and verifies finality. The action
 matrix remains a feedback writer but is not a finality digest-bound tracked
 artifact; this keeps the matrix's finality status explanation from invalidating
 the attestation it reads. Treat the finality verify as terminal: if any
 finality-tracked report writer runs afterward, rerun `make release-finality-resettle`
-instead of hand-patching the attestation.
+instead of hand-patching the attestation. Observation registry edits that change
+tracked source, including `ops/observation-closeout-registry.json`, must happen
+before this terminal seal. Open or planned observations remain registry-owned
+even when their artifact is generated/local-only; after finality, either keep
+only closed observations with resolution evidence in generated artifacts, or
+update the registry and restart the resettle lane so the source-tree fingerprint
+and finality evidence stay aligned.
+Within `release-closeout-fixed-point`, raw digests still prove convergence, but
+the next iteration's target list is selected from per-report semantic digest
+changes so envelope/currentness churn does not repeatedly schedule the expensive
+generated-artifact feedback suffix.
 The workflow planner now records the generated-artifact fan-out explicitly in
 each selected step's `fanout_targets` field so the repair suffix is inspectable
 rather than implicit in Make recipes alone.

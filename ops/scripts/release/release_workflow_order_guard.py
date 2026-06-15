@@ -490,6 +490,7 @@ def _release_converge_repetition_budget(invocations: list[dict[str, Any]]) -> di
 def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     expected = [
         "workflow-dependency-planner",
+        "release-authority-sealed-preflight",
         "generated-artifact-finality-suffix",
         "release-closeout-summary-report",
         "release-closeout-fixed-point",
@@ -502,6 +503,7 @@ def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[
         expected,
         details=(
             "release-finality-resettle must keep narrow generated-report repairs cheap, "
+            "refresh sealed rehearsal authority before freshness/finality scans, "
             "refresh the summary tracked by fixed-point, "
             "then make release-closeout-fixed-point the terminal writer before finality verify."
         ),

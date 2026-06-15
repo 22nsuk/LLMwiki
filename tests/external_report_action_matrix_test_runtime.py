@@ -22,6 +22,7 @@ from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 from ops.scripts.release.external_report_action_matrix import (
+    _active_action_resolution_summary,
     _reason_detail_summary,
     build_report,
     write_report,
@@ -66,6 +67,7 @@ _PUBLIC_REEXPORTS = (
     validate_with_schema,
     write_generated_artifact_index_report,
     write_report,
+    _active_action_resolution_summary,
     _reason_detail_summary,
 )
 

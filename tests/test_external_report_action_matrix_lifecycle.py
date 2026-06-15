@@ -14,6 +14,7 @@ from ops.scripts.release.external_report_lifecycle_runtime import (
 from tests.external_report_action_matrix_test_runtime import (
     SCHEMA_PATH,
     ExternalReportActionMatrixTestBase,
+    _active_action_resolution_summary,
     _reason_detail_summary,
     _sha256_file,
     archive_reconciliation_observation_inventory,
@@ -86,6 +87,68 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         self.assertEqual(summary["blocking_scopes"], ["operator_review", "unattended_promotion"])
         self.assertEqual(summary["gate_effects"], ["claim_blocker", "operator_review_required"])
         self.assertEqual(summary["strongest_gate_effect"], "operator_review_required")
+
+    def test_active_action_resolution_summary_separates_source_from_authority(self) -> None:
+        summary = _active_action_resolution_summary(
+            [
+                {
+                    "action_id": "source_fix",
+                    "is_active": True,
+                    "verification_readiness_status": "source_action_required",
+                },
+                {
+                    "action_id": "release_evidence",
+                    "is_active": True,
+                    "verification_readiness_status": "release_run_pending",
+                },
+                {
+                    "action_id": "operator_review",
+                    "is_active": True,
+                    "verification_readiness_status": "operator_pending",
+                },
+                {
+                    "action_id": "resolved_source_fix",
+                    "is_active": False,
+                    "verification_readiness_status": "source_action_required",
+                },
+            ]
+        )
+
+        self.assertEqual(summary["status"], "source_action_available")
+        self.assertTrue(summary["code_action_available"])
+        self.assertEqual(summary["recommended_lane"], "source-action")
+        self.assertEqual(summary["source_action_required_count"], 1)
+        self.assertEqual(summary["release_or_operator_pending_count"], 2)
+        self.assertEqual(
+            summary["active_action_ids_by_verification_readiness_status"],
+            {
+                "operator_pending": ["operator_review"],
+                "release_run_pending": ["release_evidence"],
+                "source_action_required": ["source_fix"],
+            },
+        )
+
+        authority_only = _active_action_resolution_summary(
+            [
+                {
+                    "action_id": "release_evidence",
+                    "is_active": True,
+                    "verification_readiness_status": "release_run_pending",
+                },
+                {
+                    "action_id": "operator_review",
+                    "is_active": True,
+                    "verification_readiness_status": "operator_pending",
+                },
+            ]
+        )
+
+        self.assertEqual(
+            authority_only["status"],
+            "release_or_operator_authority_required",
+        )
+        self.assertFalse(authority_only["code_action_available"])
+        self.assertEqual(authority_only["recommended_lane"], "release-or-operator-authority")
     def test_schema_rejects_unknown_gate_effects_and_previous_action_shape(self) -> None:
         report = build_report(self.vault, context=fixed_context())
         schema = load_schema(SCHEMA_PATH)

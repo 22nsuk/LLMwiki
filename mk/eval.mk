@@ -12,7 +12,7 @@ TYPE_UPLIFT_PLAN_OUT ?= ops/reports/type-uplift-plan.json
 DOC_GRAPH_INTEGRITY_OUT ?= tmp/doc-graph-integrity.json
 DOC_GRAPH_ORPHAN_ALLOWLIST ?= ops/doc-graph-orphan-allowlist.json
 
-.PHONY: lint lint-uplift-plan type-uplift-plan doc-graph-integrity wiki-lint-review-classification function-budget-refactor-proposals eval stage2-eval planning-gate warning-budget complexity-budget complexity-budget-check complexity-budget-touched-check
+.PHONY: lint lint-uplift-plan type-uplift-plan doc-graph-integrity wiki-lint-review-classification function-budget-refactor-proposals function-budget-edit-check eval stage2-eval planning-gate warning-budget complexity-budget complexity-budget-check complexity-budget-touched-check
 
 lint:
 	$(PYTHON) -m ops.scripts.wiki_lint --vault "$(VAULT)"
@@ -32,6 +32,9 @@ wiki-lint-review-classification:
 function-budget-refactor-proposals: wiki-lint-review-classification
 	$(PYTHON) -m ops.scripts.function_budget_refactor_proposals --vault "$(VAULT)" --classification "$(WIKI_LINT_REVIEW_CLASSIFICATION_OUT)" --out "$(FUNCTION_BUDGET_REFACTOR_PROPOSALS_CANDIDATE_OUT)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(FUNCTION_BUDGET_REFACTOR_PROPOSALS_CANDIDATE_OUT)" --out "$(FUNCTION_BUDGET_REFACTOR_PROPOSALS_OUT)" --schema ops/schemas/function-budget-refactor-proposals.schema.json --expected-artifact-kind function_budget_refactor_proposals --expected-producer ops.scripts.function_budget_refactor_proposals
+
+function-budget-edit-check: function-budget-refactor-proposals
+	$(MAKE) complexity-budget-touched-check
 
 eval:
 	$(PYTHON) -m ops.scripts.wiki_eval --vault "$(VAULT)" $(EVAL_FLAGS)

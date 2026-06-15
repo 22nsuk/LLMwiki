@@ -16,7 +16,7 @@ from unittest.mock import patch
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-from ops.scripts.command_runtime import TimedProcessResult
+from ops.scripts.command_runtime import CommandHeartbeat, TimedProcessResult
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
@@ -257,6 +257,76 @@ class TestExecutionSummaryTest(unittest.TestCase):
             classify_status(_result(returncode=130), parse_pytest_counts("")),
             "interrupted",
         )
+
+    def test_main_emits_opt_in_command_heartbeat(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            def fake_run_with_timeout(request: object, **_kwargs: object) -> TimedProcessResult:
+                heartbeat_callback = cast(
+                    Callable[[CommandHeartbeat], None] | None,
+                    _kwargs.get("heartbeat_callback"),
+                )
+                self.assertEqual(_kwargs.get("heartbeat_interval_seconds"), 1)
+                self.assertIsNotNone(heartbeat_callback)
+                heartbeat_callback(
+                    CommandHeartbeat(
+                        args=["python", "-m", "pytest"],
+                        heartbeat_index=1,
+                        elapsed_seconds=12.25,
+                        timeout_seconds=30,
+                        quiet_seconds=12,
+                    )
+                )
+                return _result(
+                    returncode=0,
+                    stdout="= 1 passed in 0.01s =",
+                    termination_reason="completed",
+                )
+
+            stderr = io.StringIO()
+            stdout = io.StringIO()
+            with (
+                patch(
+                    "ops.scripts.test.test_execution_summary.run_with_timeout",
+                    side_effect=fake_run_with_timeout,
+                ),
+                redirect_stderr(stderr),
+                redirect_stdout(stdout),
+            ):
+                status = summary_main(
+                    [
+                        "--vault",
+                        str(vault),
+                        "--out",
+                        "tmp/test-summary.json",
+                        "--suite",
+                        "unit",
+                        "--timeout-seconds",
+                        "30",
+                        "--heartbeat-interval-seconds",
+                        "1",
+                        "--heartbeat-label",
+                        "unit-shard-1",
+                        "--execution-log-out",
+                        "build/test-summary.log",
+                        "--",
+                        sys.executable,
+                        "-m",
+                        "pytest",
+                    ]
+                )
+
+            self.assertEqual(status, 0)
+            heartbeat = stderr.getvalue()
+            self.assertIn("test-execution-summary-heartbeat", heartbeat)
+            self.assertIn("suite=unit", heartbeat)
+            self.assertIn("shard=unit-shard-1", heartbeat)
+            self.assertIn("elapsed_seconds=12.2", heartbeat)
+            self.assertIn("quiet_seconds=12", heartbeat)
+            self.assertIn("log=build/test-summary.log", heartbeat)
 
     def test_build_report_validates_schema_and_preserves_partial_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

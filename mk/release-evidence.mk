@@ -68,6 +68,7 @@ release-evidence-converge-phase-3: release-evidence-converge-phase-2
 
 release-finality-resettle:
 	$(MAKE) workflow-dependency-planner
+	$(MAKE) release-authority-sealed-preflight
 	$(MAKE) generated-artifact-finality-suffix
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) release-closeout-fixed-point

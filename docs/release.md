@@ -525,9 +525,16 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `external-report-action-matrix`, `generated-artifact-index`,
   `release-closeout-summary-report`, or another fixed-point tracked report,
   rerun `make release-finality-resettle` so the attestation is rewritten and
-  verified after the last tracked writer. The action matrix is refreshed once
-  after the attestation so it can report the terminal finality result, but it is
-  not itself a finality digest-bound artifact.
+  verified after the last tracked writer. The resettle lane refreshes
+  `release-authority-sealed-preflight` before artifact freshness/finality scans
+  so `ops/reports/release-closeout-sealed-rehearsal-check.json` is not left as a
+  source-identity-only stale record after fixed-point attestation. Do not run
+  `release-closeout-finality-attestation` directly after a freshness or summary
+  refresh: finality verification reads the fixed-point digest map, so the
+  durable repair is `make release-closeout-fixed-point` followed by terminal
+  `make release-closeout-finality-verify`, or simply `make release-finality-resettle`.
+  The action matrix is refreshed once after the attestation so it can report the
+  terminal finality result, but it is not itself a finality digest-bound artifact.
   For staged authority settle, prefer `make release-authority-settle`; its
   terminal tail binds the effective distribution ZIP into the batch manifest,
   fixed point, replay verification, and finality verification together.
@@ -539,6 +546,16 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   archived reports are retained outside Git/source-release authority.
   `ops/reports/external-report-action-matrix.json` separates action lifecycle
   as `resolved`, `historically_true`, `superseded`, or `currently_valid`.
+  It also summarizes currently valid actions by source-action availability,
+  artifact-freshness backlog, and release/operator authority needs so the next
+  lane is visible without reading every action row. Open or planned observations
+  are not generated-only backlog: register them in
+  `ops/observation-closeout-registry.json` before finality sealing, or update the
+  registry and rerun the full resettle lane afterward. Finality-after generated
+  observations are only appropriate for closed statuses with resolution evidence;
+  do not mark an open follow-up `wontfix` merely to avoid the tracked registry
+  update, and do not mutate tracked source while treating the existing finality
+  attestation as current.
   Before a root report is moved to archive, require a per-report absorption
   check: matched action IDs, evidence status, lifecycle, unmatched
   recommendation count, and any operator-only rationale must be recorded in

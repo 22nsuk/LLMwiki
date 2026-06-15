@@ -21,6 +21,7 @@ from ops.scripts.release_closeout_fixed_point import (
     main as fixed_point_main,
     write_dry_run_plan,
     write_dry_run_recommended_targets,
+    write_report,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
@@ -71,7 +72,9 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         seed_minimal_vault(self.vault)
         (self.vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
         self._copy_support_file("ops/schemas/release-closeout-fixed-point.schema.json")
-        self._copy_support_file("ops/schemas/release-closeout-post-check-finalizer.schema.json")
+        self._copy_support_file(
+            "ops/schemas/release-closeout-post-check-finalizer.schema.json"
+        )
         self._copy_support_file("ops/policies/release-closeout-fixed-point.json")
 
     def tearDown(self) -> None:
@@ -170,6 +173,39 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             {"final_digest_map": final_digest_map, "status": "pass"},
         )
 
+    def _seed_existing_converged_fixed_point_report(self) -> dict[str, Any]:
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            target = argv[1]
+            if target in TARGET_TO_TRACKED_PATH:
+                self._write_tracked_payload(
+                    TARGET_TO_TRACKED_PATH[target],
+                    {"target": target, "stable": True},
+                )
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        report = build_report(
+            self.vault,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+        )
+        write_report(self.vault, report, DEFAULT_OUT)
+        return report
+
     def test_fixed_point_passes_when_digest_map_repeats(self) -> None:
         calls: list[str] = []
 
@@ -252,6 +288,62 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             self.assertEqual(digest, actual)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_fixed_point_progress_reports_iteration_and_target_boundaries(self) -> None:
+        events: list[str] = []
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            target = argv[1]
+            if target in TARGET_TO_TRACKED_PATH:
+                self._write_tracked_payload(
+                    TARGET_TO_TRACKED_PATH[target],
+                    {"target": target, "stable": True},
+                )
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 17,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        report = build_report(
+            self.vault,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+            progress_sink=events.append,
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertTrue(
+            any("iteration=1/5" in event for event in events),
+            events,
+        )
+        self.assertTrue(
+            any(
+                "start target=generated-artifact-index-body" in event
+                for event in events
+            ),
+            events,
+        )
+        self.assertTrue(
+            any(
+                "done target=generated-artifact-index-body status=pass duration_ms=17"
+                in event
+                for event in events
+            ),
+            events,
+        )
+        self.assertTrue(any("status=converged" in event for event in events), events)
+
     def test_fixed_point_reruns_feedback_targets_after_downstream_changes(self) -> None:
         calls: list[str] = []
         downstream_version = 0
@@ -275,7 +367,10 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
                     }
                 else:
                     downstream_version = 1
-                    payload = {"target": target, "downstream_version": downstream_version}
+                    payload = {
+                        "target": target,
+                        "downstream_version": downstream_version,
+                    }
                 self._write_tracked_payload(rel_path, payload)
             return {
                 "command": list(argv),
@@ -310,11 +405,69 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertGreaterEqual(calls.count("external-report-action-matrix"), 2)
         self.assertEqual(
             json.loads(
-                (self.vault / TARGET_TO_TRACKED_PATH["generated-artifact-index-body"])
-                .read_text(encoding="utf-8")
+                (
+                    self.vault / TARGET_TO_TRACKED_PATH["generated-artifact-index-body"]
+                ).read_text(encoding="utf-8")
             )["observed_downstream_version"],
             1,
         )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_fixed_point_uses_semantic_changes_for_feedback_reselection(self) -> None:
+        calls: list[str] = []
+        write_count = 0
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            nonlocal write_count
+            target = argv[1]
+            calls.append(target)
+            rel_path = TARGET_TO_TRACKED_PATH.get(target)
+            if rel_path:
+                write_count += 1
+                self._write_tracked_payload(
+                    rel_path,
+                    {
+                        "target": target,
+                        "stable_semantic_value": "unchanged",
+                        "generated_at": f"raw-only-{write_count}",
+                    },
+                )
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        report = build_report(
+            self.vault,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["iteration_count"], 3)
+        self.assertEqual(report["converged_iteration"], 3)
+        selected_by_iteration = {
+            item["iteration_index"]: item["selected_targets"]
+            for item in report["iterations"]
+        }
+        self.assertIn("generated-artifact-index-body", selected_by_iteration[2])
+        self.assertEqual(selected_by_iteration[3], [])
+        self.assertEqual(report["iterations"][1]["semantic_changed_paths"], [])
+        self.assertEqual(calls.count("generated-artifact-index-body"), 2)
+        self.assertEqual(calls.count("artifact-freshness"), 2)
+        self.assertEqual(calls.count("external-report-action-matrix"), 2)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_dry_run_reports_affected_paths_and_recommended_targets(self) -> None:
@@ -330,7 +483,9 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(report["diagnostic_status"], "drift_detected")
         self.assertTrue(report["refresh_required"])
         self.assertEqual(report["affected_paths"], [rel_path])
-        self.assertEqual(report["mutating_finalizer_target"], "release-closeout-fixed-point")
+        self.assertEqual(
+            report["mutating_finalizer_target"], "release-closeout-fixed-point"
+        )
         self.assertEqual(
             report["recommended_targets"],
             [
@@ -362,7 +517,10 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             r"^[a-f0-9]{64}$",
         )
         self.assertFalse(plan["recommended_targets"][0]["safe_to_run_in_dry_run"])
-        self.assertEqual(validate_with_schema(report, load_schema(REPO_ROOT / DRY_RUN_SCHEMA_PATH)), [])
+        self.assertEqual(
+            validate_with_schema(report, load_schema(REPO_ROOT / DRY_RUN_SCHEMA_PATH)),
+            [],
+        )
 
     def test_dry_run_writes_recommended_targets_text_for_ci_artifact(self) -> None:
         self._seed_tracked_artifacts_with_fixed_point_baseline()
@@ -394,9 +552,14 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         path = write_dry_run_plan(self.vault, report, "tmp/closeout-plan.json")
 
         payload = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(payload["artifact_kind"], "release_closeout_post_check_finalizer_plan")
+        self.assertEqual(
+            payload["artifact_kind"], "release_closeout_post_check_finalizer_plan"
+        )
         self.assertEqual(payload["status"], "drift_detected")
-        self.assertEqual(payload["recommended_targets"], report["closeout_plan"]["recommended_targets"])
+        self.assertEqual(
+            payload["recommended_targets"],
+            report["closeout_plan"]["recommended_targets"],
+        )
 
     def test_dry_run_writes_placeholder_when_no_recommended_targets(self) -> None:
         self._seed_tracked_artifacts_with_fixed_point_baseline()
@@ -430,7 +593,9 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
 
         self.assertEqual(status, 1)
 
-    def test_dry_run_passes_when_fixed_point_digest_map_and_source_tree_match(self) -> None:
+    def test_dry_run_passes_when_fixed_point_digest_map_and_source_tree_match(
+        self,
+    ) -> None:
         self._seed_tracked_artifacts_with_fixed_point_baseline()
 
         report = build_dry_run_report(self.vault, context=fixed_context())
@@ -441,7 +606,10 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(report["affected_paths"], [])
         self.assertEqual(report["recommended_targets"], [])
         self.assertEqual(report["closeout_plan"]["recommended_targets"], [])
-        self.assertEqual(validate_with_schema(report, load_schema(REPO_ROOT / DRY_RUN_SCHEMA_PATH)), [])
+        self.assertEqual(
+            validate_with_schema(report, load_schema(REPO_ROOT / DRY_RUN_SCHEMA_PATH)),
+            [],
+        )
 
     def test_dry_run_distinguishes_missing_evidence_from_drift(self) -> None:
         report = build_dry_run_report(self.vault, context=fixed_context())
@@ -449,9 +617,15 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(report["status"], "attention")
         self.assertEqual(report["diagnostic_status"], "evidence_insufficient")
         self.assertTrue(report["refresh_required"])
-        self.assertIn("fixed_point_report_unavailable", report["closeout_plan"]["evidence_gap_reasons"])
+        self.assertIn(
+            "fixed_point_report_unavailable",
+            report["closeout_plan"]["evidence_gap_reasons"],
+        )
         self.assertEqual(report["closeout_plan"]["drift_reasons"], [])
-        self.assertEqual(validate_with_schema(report, load_schema(REPO_ROOT / DRY_RUN_SCHEMA_PATH)), [])
+        self.assertEqual(
+            validate_with_schema(report, load_schema(REPO_ROOT / DRY_RUN_SCHEMA_PATH)),
+            [],
+        )
 
     def test_fixed_point_reports_non_converged_when_budget_exhausted(self) -> None:
         call_count = 0
@@ -549,6 +723,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
     ) -> None:
         self._write_artifact_freshness_fixed_point_debt(has_debt=True)
         calls: list[str] = []
+        events: list[str] = []
 
         def runner(
             argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
@@ -582,20 +757,115 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             python_executable="python",
             context=fixed_context(),
             command_runner=runner,
+            progress_sink=events.append,
         )
 
         self.assertEqual(result["status"], "pass")
         self.assertEqual(result["bootstrap_required"], True)
         self.assertEqual(len(result["passes"]), 1)
         self.assertTrue(result["initial_fixed_point_freshness_debt"]["has_schema_debt"])
-        self.assertTrue(result["initial_fixed_point_freshness_debt"]["has_freshness_debt"])
+        self.assertTrue(
+            result["initial_fixed_point_freshness_debt"]["has_freshness_debt"]
+        )
         self.assertFalse(result["final_fixed_point_freshness_debt"]["has_schema_debt"])
-        self.assertFalse(result["final_fixed_point_freshness_debt"]["has_freshness_debt"])
+        self.assertFalse(
+            result["final_fixed_point_freshness_debt"]["has_freshness_debt"]
+        )
         self.assertGreaterEqual(calls.count("artifact-freshness"), 1)
         fixed_point = json.loads((self.vault / DEFAULT_OUT).read_text(encoding="utf-8"))
         self.assertEqual(fixed_point["status"], "pass")
         self.assertEqual(
             validate_with_schema(fixed_point, load_schema(SCHEMA_PATH)), []
+        )
+        self.assertTrue(
+            any(
+                "bootstrap-post-promote pass=1/2 refresh=artifact-freshness" in event
+                for event in events
+            ),
+            events,
+        )
+        self.assertTrue(
+            any("rebuild=fixed-point-candidate" in event for event in events),
+            events,
+        )
+        self.assertTrue(
+            any("fixed_point_freshness_debt=false" in event for event in events),
+            events,
+        )
+
+    def test_post_promote_bootstrap_rebases_existing_converged_fixed_point_without_rerunning_writers(
+        self,
+    ) -> None:
+        existing = self._seed_existing_converged_fixed_point_report()
+        self._write_artifact_freshness_fixed_point_debt(has_debt=True)
+        calls: list[str] = []
+        events: list[str] = []
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            target = argv[1]
+            calls.append(target)
+            if target != "artifact-freshness":
+                self.fail(f"bootstrap rebase should not rerun fixed-point writer target {target}")
+            self._write_artifact_freshness_fixed_point_debt(has_debt=False)
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        result = bootstrap_post_promote_freshness(
+            self.vault,
+            max_bootstrap_passes=2,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+            progress_sink=events.append,
+        )
+
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(calls, ["artifact-freshness"])
+        pass_record = result["passes"][0]
+        self.assertEqual(
+            pass_record["fixed_point_rebuild_mode"],
+            "rebase_existing_converged_report",
+        )
+        self.assertEqual(
+            pass_record["fixed_point_rebase_reason"],
+            "existing_converged_report_rebased",
+        )
+        fixed_point = json.loads((self.vault / DEFAULT_OUT).read_text(encoding="utf-8"))
+        self.assertEqual(fixed_point["status"], "pass")
+        self.assertEqual(
+            fixed_point["convergence_summary"]["reason"],
+            "bootstrap_post_promote_rebased_after_artifact_freshness",
+        )
+        rebase = fixed_point["bootstrap_post_promote_rebase"]
+        self.assertEqual(rebase["status"], "applied")
+        self.assertEqual(
+            rebase["source_report_generated_at"],
+            existing["generated_at"],
+        )
+        self.assertIn(ARTIFACT_FRESHNESS_REPORT_PATH, rebase["updated_digest_paths"])
+        self.assertEqual(
+            fixed_point["final_digest_map"][ARTIFACT_FRESHNESS_REPORT_PATH],
+            hashlib.sha256(
+                (self.vault / ARTIFACT_FRESHNESS_REPORT_PATH).read_bytes()
+            ).hexdigest(),
+        )
+        self.assertEqual(validate_with_schema(fixed_point, load_schema(SCHEMA_PATH)), [])
+        self.assertTrue(
+            any("rebase=fixed-point-candidate" in event for event in events),
+            events,
         )
 
     def test_post_promote_bootstrap_refreshes_fixed_point_currentness_debt_in_artifact_freshness(
@@ -686,5 +956,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(result["status"], "pass")
         self.assertEqual(result["bootstrap_required"], False)
         self.assertEqual(result["passes"], [])
-        self.assertFalse(result["initial_fixed_point_freshness_debt"]["has_freshness_debt"])
+        self.assertFalse(
+            result["initial_fixed_point_freshness_debt"]["has_freshness_debt"]
+        )
         self.assertEqual(calls, [])

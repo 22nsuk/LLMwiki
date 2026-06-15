@@ -84,6 +84,7 @@
         "reference_manifest_missing_active_report_count",
         "reference_manifest_stale_reference_count",
         "sprint_backlog",
+        "active_action_resolution_summary",
         "lifecycle_counts",
         "currently_valid_action_count",
         "resolved_action_count",
@@ -161,6 +162,50 @@
             "P0": { "type": "integer", "minimum": 0 },
             "P1": { "type": "integer", "minimum": 0 },
             "P2": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "active_action_resolution_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "code_action_available",
+            "recommended_lane",
+            "source_action_required_count",
+            "artifact_freshness_pending_count",
+            "release_or_operator_pending_count",
+            "active_action_ids_by_verification_readiness_status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "source_action_available",
+                "artifact_freshness_pending",
+                "release_or_operator_authority_required",
+                "no_active_blockers"
+              ]
+            },
+            "code_action_available": { "type": "boolean" },
+            "recommended_lane": {
+              "type": "string",
+              "enum": [
+                "source-action",
+                "artifact-freshness",
+                "release-or-operator-authority",
+                "none"
+              ]
+            },
+            "source_action_required_count": { "type": "integer", "minimum": 0 },
+            "artifact_freshness_pending_count": { "type": "integer", "minimum": 0 },
+            "release_or_operator_pending_count": { "type": "integer", "minimum": 0 },
+            "active_action_ids_by_verification_readiness_status": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
           }
         },
         "lifecycle_counts": { "$ref": "#/$defs/lifecycle_counts" },

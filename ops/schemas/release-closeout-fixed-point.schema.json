@@ -195,7 +195,10 @@
           "command_results",
           "digest_map",
           "digest_changed",
-          "changed_paths"
+          "changed_paths",
+          "semantic_digest_map",
+          "semantic_digest_modes",
+          "semantic_changed_paths"
         ],
         "properties": {
           "iteration_index": {
@@ -288,6 +291,22 @@
             "items": {
               "type": "string"
             }
+          },
+          "semantic_digest_map": {
+            "$ref": "#/$defs/digestMap"
+          },
+          "semantic_digest_modes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "semantic_changed_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       }
@@ -330,6 +349,51 @@
         "current_iteration": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "bootstrap_post_promote_rebase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason",
+        "source_report_generated_at",
+        "source_report_iteration_count",
+        "updated_digest_path_count",
+        "updated_digest_paths",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "applied"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_report_generated_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_report_iteration_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "updated_digest_path_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "updated_digest_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

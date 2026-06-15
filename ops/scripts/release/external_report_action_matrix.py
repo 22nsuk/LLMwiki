@@ -102,6 +102,14 @@ VERIFICATION_READINESS_STATUSES = (
     "readback_pending",
     "source_action_required",
 )
+AUTHORITY_OR_OPERATOR_READINESS_STATUSES = (
+    "release_run_pending",
+    "promotion_readiness_pending",
+    "operator_pending",
+    "certificate_pending",
+    "certificate_noncertifiable",
+    "readback_pending",
+)
 
 
 def _verification_readiness_status(
@@ -275,6 +283,52 @@ def _report_coverage(vault: Path, paths: list[Path]) -> list[dict[str, Any]]:
     return [report_coverage_item(vault, path) for path in paths]
 
 
+def _active_action_resolution_summary(actions: list[dict[str, Any]]) -> dict[str, Any]:
+    active_by_readiness: dict[str, list[str]] = {}
+    for action in actions:
+        if not action.get("is_active"):
+            continue
+        action_id = str(action.get("action_id", "")).strip()
+        readiness = str(action.get("verification_readiness_status", "")).strip()
+        if not action_id or not readiness:
+            continue
+        active_by_readiness.setdefault(readiness, []).append(action_id)
+
+    for action_ids in active_by_readiness.values():
+        action_ids.sort()
+
+    source_action_required_count = len(active_by_readiness.get("source_action_required", []))
+    artifact_freshness_pending_count = len(
+        active_by_readiness.get("artifact_freshness_pending", [])
+    )
+    release_or_operator_pending_count = sum(
+        len(active_by_readiness.get(status, []))
+        for status in AUTHORITY_OR_OPERATOR_READINESS_STATUSES
+    )
+    if source_action_required_count:
+        status = "source_action_available"
+        recommended_lane = "source-action"
+    elif artifact_freshness_pending_count:
+        status = "artifact_freshness_pending"
+        recommended_lane = "artifact-freshness"
+    elif release_or_operator_pending_count:
+        status = "release_or_operator_authority_required"
+        recommended_lane = "release-or-operator-authority"
+    else:
+        status = "no_active_blockers"
+        recommended_lane = "none"
+
+    return {
+        "status": status,
+        "code_action_available": source_action_required_count > 0,
+        "recommended_lane": recommended_lane,
+        "source_action_required_count": source_action_required_count,
+        "artifact_freshness_pending_count": artifact_freshness_pending_count,
+        "release_or_operator_pending_count": release_or_operator_pending_count,
+        "active_action_ids_by_verification_readiness_status": active_by_readiness,
+    }
+
+
 def _summary(
     *,
     coverage: list[dict[str, Any]],
@@ -347,6 +401,7 @@ def _summary(
         ),
         "reference_manifest_stale_reference_count": len(manifest_alignment["stale_reference_paths"]),
         "sprint_backlog": sprint_backlog,
+        "active_action_resolution_summary": _active_action_resolution_summary(actions),
         **lifecycle_summary,
     }
 
