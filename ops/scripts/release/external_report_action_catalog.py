@@ -645,7 +645,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             "tests/test_goal_runtime_certificate.py",
             "tests/test_goal_run_status.py",
         ],
-        "recommended_target": "goal-runtime-certificate",
+        "recommended_target": "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
     },
     {
         "action_id": "command_heartbeat_observability",

@@ -126,7 +126,7 @@ def _goal_runtime_certificate_requirements(
             certificate_input["load_status"],
             "ok",
             "Goal-runtime certificate evidence is missing or invalid.",
-            "Run make goal-runtime-certificate for the selected completed run.",
+            "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate for the selected completed run.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_artifact_kind_ok"],
@@ -136,7 +136,7 @@ def _goal_runtime_certificate_requirements(
             certificate_input["artifact_kind"],
             "goal_runtime_certificate",
             "Goal-runtime certificate evidence has an unexpected artifact kind.",
-            "Regenerate goal-runtime certificate evidence.",
+            "Regenerate selected completed run certificate evidence with GOAL_RUN_ID=<completed-run-id>.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_current"],
@@ -149,7 +149,7 @@ def _goal_runtime_certificate_requirements(
             ),
             f"source_revision=current;source_tree_fingerprint={fingerprint}",
             "Goal-runtime certificate evidence does not describe the current source tree.",
-            "Refresh the goal-runtime certificate for the current source tree.",
+            "Refresh the selected completed run certificate with GOAL_RUN_ID=<completed-run-id>.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_run_id_match"],
@@ -159,7 +159,7 @@ def _goal_runtime_certificate_requirements(
             goal_runtime_certificate["run_id"],
             selected_goal_run_id,
             "Goal-runtime certificate does not match the selected release goal run.",
-            "Regenerate the certificate for the GOAL_RUN_ID bound by preflight and preseal.",
+            "Regenerate with GOAL_RUN_ID bound to the completed run selected by preflight and preseal.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_completed"],
@@ -183,6 +183,6 @@ def _goal_runtime_certificate_requirements(
             ),
             "status=pass; verification_status in eligible,already_verified; eligible=true",
             "The selected goal run does not have verified certificate evidence.",
-            "Run make goal-runtime-certificate after a certifiable completed goal run exists.",
+            "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate after certifiable completed run evidence exists.",
         ),
     ]

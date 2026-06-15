@@ -391,7 +391,7 @@ REASON_PREFIX_TARGETS: tuple[tuple[tuple[str, ...], str, str, str, tuple[str, ..
         "unattended_promotion",
         GATE_EFFECT_CLAIM_BLOCKER,
         (
-            "goal-runtime-certificate",
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
             "release-auto-promotion-goal-run-id-guard",
             "release-auto-promotion-ready-plan",
         ),

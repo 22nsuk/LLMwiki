@@ -535,7 +535,8 @@ def _auto_promotion_ready_blockers(
             "goal_runtime_certificate_not_reusable",
             "Verified goal-runtime certificate evidence is missing, stale, invalid, or not verified.",
             (
-                "Run make goal-runtime-certificate for the selected completed run, "
+                "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate "
+                "for the selected completed run, "
                 "then rerun the planner."
             ),
         ),

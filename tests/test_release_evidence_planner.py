@@ -334,7 +334,10 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("goal_runtime_certificate_not_reusable", plan["failures"])
         self.assertIn("not_verified", plan["nodes"]["goal_runtime_certificate"]["issues"])
-        self.assertIn("goal-runtime-certificate", plan["blockers"][-1]["recommended_next_step"])
+        self.assertIn(
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+            plan["blockers"][-1]["recommended_next_step"],
+        )
 
     def test_auto_promotion_plan_requires_preflight_before_run_ready(self) -> None:
         self._write_authorities()

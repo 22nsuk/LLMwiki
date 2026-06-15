@@ -484,7 +484,7 @@ def _goal_runtime_certificate_requirements(
             certificate_input["load_status"],
             "ok",
             "Goal runtime certificate evidence is missing or invalid.",
-            "Run make goal-runtime-certificate for the promoted run.",
+            "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate for the promoted completed run.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_artifact_kind_ok"],
@@ -494,7 +494,7 @@ def _goal_runtime_certificate_requirements(
             certificate_input["artifact_kind"],
             "goal_runtime_certificate",
             "Goal runtime certificate evidence has an unexpected artifact kind.",
-            "Regenerate goal-runtime certificate evidence.",
+            "Regenerate promoted completed run certificate evidence with GOAL_RUN_ID=<completed-run-id>.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_current"],
@@ -504,7 +504,7 @@ def _goal_runtime_certificate_requirements(
             certificate_input["source_tree_fingerprint"],
             fingerprint,
             "Goal runtime certificate evidence does not describe the current source tree.",
-            "Refresh the goal-runtime certificate for the current source tree.",
+            "Refresh the promoted completed run certificate with GOAL_RUN_ID=<completed-run-id>.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_run_id_match"],
@@ -528,7 +528,7 @@ def _goal_runtime_certificate_requirements(
             ),
             "report_status=pass; verification_status in eligible,already_verified; eligible=true",
             "The selected goal run does not have verified certificate evidence.",
-            "Run make goal-runtime-certificate after the promoted run is complete.",
+            "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate after the promoted run is complete.",
         ),
     ]
 

@@ -228,7 +228,10 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertIn("make goal-runtime-status-finalize", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make auto-improve-goal-preflight", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make auto-improve-goal-run", report["next_session_entrypoint"]["first_commands"])
-            self.assertIn("make goal-runtime-certificate", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn(
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+                report["next_session_entrypoint"]["first_commands"],
+            )
             self.assertIn("make session-synopsis", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make remediation-backlog", report["next_session_entrypoint"]["first_commands"])
             self.assertTrue(

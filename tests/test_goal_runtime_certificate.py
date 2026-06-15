@@ -362,7 +362,9 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertTrue(report["run_artifacts"]["runner_command_audit_current"])
         self.assertEqual(report["command_observability"]["status"], "clean")
         self.assertNotIn(
-            "goal run command audit was not written by goal runtime runner",
+            "goal run command audit was not written by goal runtime runner for the "
+            "selected completed run; rerun with GOAL_RUN_ID=<completed-run-id> "
+            "through goal-runtime runner before certifying",
             report["blockers"],
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
@@ -622,6 +624,12 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertIn("runtime_run", report["diagnosis"]["primary_blocker_categories"])
         self.assertIn("session_evidence", report["diagnosis"]["primary_blocker_categories"])
         self.assertIn("command_observability", report["diagnosis"]["primary_blocker_categories"])
+        self.assertIn(
+            "goal run command audit was not written by goal runtime runner for the "
+            "selected completed run; rerun with GOAL_RUN_ID=<completed-run-id> "
+            "through goal-runtime runner before certifying",
+            report["blockers"],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_existing_verified_certificate_is_preserved_when_new_default_run_is_blocked(self) -> None:

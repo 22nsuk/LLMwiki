@@ -141,9 +141,16 @@ def _goal_runtime_certificate(status_report: dict[str, Any]) -> dict[str, Any]:
 
 def _goal_status_repair_target(blocker: str) -> str:
     if blocker == "self-improvement loop certificate incomplete":
-        return "Run the bounded self-improvement loop and full gates, then finalize goal-runtime status and refresh goal-runtime-certificate."
+        return (
+            "Run the bounded self-improvement loop and full gates, then finalize "
+            "goal-runtime status and run GOAL_RUN_ID=<completed-run-id> make "
+            "goal-runtime-certificate."
+        )
     if blocker == "self-improvement loop release evidence incomplete":
-        return "Refresh missing release evidence paths, then finalize goal-runtime status and rerun goal-runtime-certificate."
+        return (
+            "Refresh missing release evidence paths, then finalize goal-runtime status "
+            "and rerun GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate."
+        )
     if "sealed authority" in blocker:
         return "Refresh sealed authority preflight evidence before promotion."
     if blocker in {"heartbeat stale", "checkpoint stale"}:
@@ -541,7 +548,7 @@ def _next_session_entrypoint(
             "make test-public",
             "make auto-improve-goal-preflight",
             "make auto-improve-goal-run",
-            "make goal-runtime-certificate",
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
         ],
         "stop_conditions": [
             "Do not promote while promotion_allowed is false.",

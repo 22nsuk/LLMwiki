@@ -539,7 +539,11 @@ def _command_observability_blockers(
     if summary.get("mode") != "process_heartbeat":
         blockers.append("goal run command observation mode is not process_heartbeat")
     if not _bool_value(summary.get("runner_audit_current")):
-        blockers.append("goal run command audit was not written by goal runtime runner")
+        blockers.append(
+            "goal run command audit was not written by goal runtime runner for the "
+            "selected completed run; rerun with GOAL_RUN_ID=<completed-run-id> "
+            "through goal-runtime runner before certifying"
+        )
     if _integer_value(summary.get("heartbeat_count")) < _integer_value(
         summary.get("expected_min_heartbeat_count")
     ):

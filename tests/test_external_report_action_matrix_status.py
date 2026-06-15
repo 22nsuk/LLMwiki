@@ -1948,9 +1948,13 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             for item in actions["goal_execution_runtime_certificate"]["status_reason_details"]
             for target in item["recommended_targets"]
         }
-        self.assertIn("goal-runtime-certificate", goal_detail_targets)
+        self.assertIn(
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+            goal_detail_targets,
+        )
         self.assertIn("release-auto-promotion-goal-run-id-guard", goal_detail_targets)
         self.assertIn("release-auto-promotion-ready-plan", goal_detail_targets)
+        self.assertNotIn("goal-runtime-certificate", goal_detail_targets)
         self.assertNotIn("auto-improve-goal-run", goal_detail_targets)
         self.assertEqual(
             actions["goal_execution_runtime_certificate"]["blocking_scopes"],
@@ -1969,7 +1973,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             self.assertEqual(detail["gate_effect"], "claim_blocker")
         self.assertEqual(
             actions["goal_execution_runtime_certificate"]["recommended_target"],
-            "goal-runtime-certificate",
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
         )
 
     def test_goal_certificate_failure_budget_blocker_is_noncertifiable(self) -> None:

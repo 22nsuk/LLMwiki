@@ -350,7 +350,8 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "gate_effect": "blocks_promotion",
                 "summary": "The selected goal run does not have verified certificate evidence.",
                 "recommended_next_step": (
-                    "Run make goal-runtime-certificate after the promoted run is complete."
+                    "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate "
+                    "after the promoted run is complete."
                 ),
             }
         ]
