@@ -606,11 +606,14 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `make freshness-source-identity-converge`; it refreshes freshness/index
   identity evidence and then uses the finality current-or-refresh wrapper
   without entering full-suite, release-run-ready, promotion authority, or goal
-  publish lanes. The top-level resettle target remains the safe post-commit
+  publish lanes. Treat this as source-identity/finality readback debt, not as
+  evidence payload freshness debt that automatically justifies broad release
+  convergence. The top-level resettle target remains the safe post-commit
   fallback, while owner routes point to concrete Make targets such as
   `external-report-reference-manifest-settle`,
   `test-execution-summary-full-current-or-refresh`,
-  `goal-runtime-publish-snapshot GOAL_RUN_ID=<completed-run-id>`,
+  `release-finality-resettle-current-or-refresh`,
+  `GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot`,
   `supply-chain-artifacts-cached`, or
   `release-source-package-check`.
   Broad freshness refresh targets do not publish goal runtime status snapshots

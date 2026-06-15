@@ -793,9 +793,12 @@ def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
         reason_id = "learning_evidence_source_identity"
     elif artifact_kind in GOAL_RUNTIME_SOURCE_IDENTITY_KINDS:
         route_id = "ops_reports_goal_runtime"
-        lane = "goal-runtime-publish-snapshot"
-        targets = ("goal-runtime-publish-snapshot", "goal-runtime-certificate")
-        reason_id = "goal_runtime_source_identity"
+        lane = "goal-runtime-completed-run-evidence"
+        targets = (
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot",
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+        )
+        reason_id = "goal_runtime_completed_run_evidence_required"
     elif artifact_kind in SUPPLY_CHAIN_SOURCE_IDENTITY_KINDS:
         route_id = "ops_reports_supply_chain"
         lane = "supply-chain-artifacts-cached"
@@ -824,8 +827,8 @@ def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
         route_id = f"ops_reports_{lane.replace('-', '_')}"
     elif artifact_kind in RELEASE_FINALITY_SOURCE_IDENTITY_KINDS:
         route_id = "ops_reports_release_finality"
-        lane = "release-finality-resettle"
-        targets = ("release-finality-resettle", "release-post-commit-finalize")
+        lane = "release-finality-resettle-current-or-refresh"
+        targets = ("release-finality-resettle-current-or-refresh",)
         reason_id = "release_finality_source_identity"
     elif artifact_kind.startswith("raw_registry_"):
         route_id = "ops_reports_registry_preflight"
@@ -844,8 +847,8 @@ def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
         reason_id = "bootstrap_preflight_source_identity"
     else:
         route_id = f"{surface}_source_identity_resettle"
-        lane = "release-finality-resettle"
-        targets = ("release-finality-resettle", "release-post-commit-finalize")
+        lane = "freshness-source-identity-converge"
+        targets = ("freshness-source-identity-converge",)
         reason_id = "source_identity_resettle_fallback"
 
     return {
@@ -855,6 +858,29 @@ def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
         "recommended_targets": list(targets),
         "reason_id": reason_id,
     }
+
+
+def _source_identity_route_summary(route: dict[str, Any]) -> str:
+    artifact_count = route["artifact_count"]
+    owner_surface_value = route["owner_surface"]
+    recommended_lane = route["recommended_lane"]
+    reason_ids = set(route["reason_ids"])
+    if "goal_runtime_completed_run_evidence_required" in reason_ids:
+        return (
+            f"{artifact_count} {owner_surface_value} source-identity artifact(s) require "
+            "completed goal-run evidence; set GOAL_RUN_ID=<completed-run-id> before "
+            "publishing or certifying canonical goal runtime evidence."
+        )
+    if "release_finality_source_identity" in reason_ids:
+        return (
+            f"{artifact_count} {owner_surface_value} source-identity artifact(s) require "
+            "release finality readback/resettle; start with "
+            f"{recommended_lane}."
+        )
+    return (
+        f"{artifact_count} {owner_surface_value} source-identity artifact(s) route to "
+        f"{recommended_lane}."
+    )
 
 
 def _source_identity_owner_routes(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -901,10 +927,7 @@ def _source_identity_owner_routes(records: list[dict[str, Any]]) -> list[dict[st
                 "recommended_targets": route["recommended_targets"],
                 "reason_ids": reason_ids,
                 "sample_paths": sorted(route["sample_paths"]),
-                "summary": (
-                    f"{route['artifact_count']} {route['owner_surface']} source-identity "
-                    f"artifact(s) route to {route['recommended_lane']}."
-                ),
+                "summary": _source_identity_route_summary(route),
             }
         )
     return sorted(
@@ -997,16 +1020,14 @@ def _stale_routing_decision(
     if source_identity_only:
         return {
             "classification": "source_identity_only",
-            "recommended_lane": "release-finality-resettle",
-            "recommended_targets": [
-                "release-finality-resettle",
-                "release-post-commit-finalize",
-            ],
+            "recommended_lane": "freshness-source-identity-converge",
+            "recommended_targets": ["freshness-source-identity-converge"],
             "reason_ids": ["source_identity_only_stale"],
             "summary": (
                 f"{source_identity_count} stale artifact(s) only differ by source "
-                "revision or source-tree fingerprint; use a narrow resettle/post-commit lane "
-                "before broad release convergence."
+                "revision or source-tree fingerprint. Use the source-identity convergence "
+                "lane before broad release convergence; use owner routes for artifacts that "
+                "need explicit release finality or completed goal-run evidence."
             ),
         }
     if execution_blocking_count:

@@ -882,10 +882,13 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
             self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
-            self.assertEqual(report["stale_routing"]["recommended_lane"], "release-finality-resettle")
+            self.assertEqual(
+                report["stale_routing"]["recommended_lane"],
+                "freshness-source-identity-converge",
+            )
             self.assertEqual(
                 report["stale_routing"]["recommended_targets"],
-                ["release-finality-resettle", "release-post-commit-finalize"],
+                ["freshness-source-identity-converge"],
             )
             self.assertEqual(report["stale_routing"]["source_identity_only_artifact_count"], 1)
             self.assertEqual(report["stale_routing"]["execution_blocking_artifact_count"], 0)
@@ -960,7 +963,10 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
             self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
-            self.assertEqual(report["stale_routing"]["recommended_lane"], "release-finality-resettle")
+            self.assertEqual(
+                report["stale_routing"]["recommended_lane"],
+                "freshness-source-identity-converge",
+            )
             self.assertEqual(report["stale_routing"]["source_identity_only_artifact_count"], 1)
             self.assertEqual(report["stale_routing"]["source_identity_only_issue_count"], 1)
             self.assertEqual(
@@ -1025,7 +1031,10 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertIn("source_revision_mismatch", record["issues"])
             self.assertEqual(record["recommended_next_action"], "refresh_learning_readiness_signoff")
             self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
-            self.assertEqual(report["stale_routing"]["recommended_lane"], "release-finality-resettle")
+            self.assertEqual(
+                report["stale_routing"]["recommended_lane"],
+                "freshness-source-identity-converge",
+            )
 
     def test_finality_attestation_is_finality_owned_not_freshness_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

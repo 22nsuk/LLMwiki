@@ -121,7 +121,7 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
             "regenerate_stale_artifacts",
         )
 
-    def test_source_identity_only_stale_records_route_to_narrow_resettle(self) -> None:
+    def test_source_identity_only_stale_records_route_to_source_identity_converge(self) -> None:
         routing = stale_routing(
             [
                 {
@@ -143,11 +143,12 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
         )
 
         self.assertEqual(routing["classification"], "source_identity_only")
-        self.assertEqual(routing["recommended_lane"], "release-finality-resettle")
+        self.assertEqual(routing["recommended_lane"], "freshness-source-identity-converge")
         self.assertEqual(
             routing["recommended_targets"],
-            ["release-finality-resettle", "release-post-commit-finalize"],
+            ["freshness-source-identity-converge"],
         )
+        self.assertIn("source-identity convergence", routing["summary"])
         self.assertEqual(routing["source_identity_only_artifact_count"], 1)
         self.assertEqual(routing["source_identity_only_issue_count"], 2)
         self.assertEqual(routing["execution_blocking_artifact_count"], 0)
@@ -190,11 +191,67 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
 
         route = routing["source_identity_owner_routes"][0]
         self.assertEqual(route["route_id"], "ops_reports_source_identity_resettle")
-        self.assertEqual(route["recommended_lane"], "release-finality-resettle")
+        self.assertEqual(route["recommended_lane"], "freshness-source-identity-converge")
         self.assertEqual(
             route["recommended_targets"],
-            ["release-finality-resettle", "release-post-commit-finalize"],
+            ["freshness-source-identity-converge"],
         )
+
+    def test_source_identity_route_points_release_finality_kind_to_current_or_refresh(self) -> None:
+        routing = stale_routing(
+            [
+                {
+                    "path": "ops/reports/generated-artifact-index.json",
+                    "owner_surface": "ops_reports",
+                    "artifact_kind": "generated_artifact_index_report",
+                    "issues": ["source_tree_fingerprint_mismatch"],
+                    "stable_contract_issues": [],
+                    "mtime_sensitive_issues": [],
+                    "schema_validation_status": "pass",
+                    "gate_effect": "claim_blocker",
+                }
+            ],
+            root_ephemeral_count=0,
+            non_utf8_count=0,
+        )
+
+        route = routing["source_identity_owner_routes"][0]
+        self.assertEqual(route["route_id"], "ops_reports_release_finality")
+        self.assertEqual(route["recommended_lane"], "release-finality-resettle-current-or-refresh")
+        self.assertEqual(route["recommended_targets"], ["release-finality-resettle-current-or-refresh"])
+        self.assertIn("release finality readback/resettle", route["summary"])
+
+    def test_source_identity_route_requires_completed_goal_run_for_goal_runtime(self) -> None:
+        routing = stale_routing(
+            [
+                {
+                    "path": "ops/reports/goal-runtime-certificate.json",
+                    "owner_surface": "ops_reports",
+                    "artifact_kind": "goal_runtime_certificate",
+                    "issues": ["source_revision_mismatch"],
+                    "stable_contract_issues": [],
+                    "mtime_sensitive_issues": [],
+                    "schema_validation_status": "pass",
+                    "gate_effect": "claim_blocker",
+                }
+            ],
+            root_ephemeral_count=0,
+            non_utf8_count=0,
+        )
+
+        route = routing["source_identity_owner_routes"][0]
+        self.assertEqual(route["route_id"], "ops_reports_goal_runtime")
+        self.assertEqual(route["recommended_lane"], "goal-runtime-completed-run-evidence")
+        self.assertEqual(
+            route["recommended_targets"],
+            [
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot",
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+            ],
+        )
+        self.assertEqual(route["reason_ids"], ["goal_runtime_completed_run_evidence_required"])
+        self.assertIn("completed goal-run evidence", route["summary"])
+        self.assertIn("GOAL_RUN_ID=<completed-run-id>", route["summary"])
 
     def test_source_identity_route_points_supply_chain_kind_to_supply_chain_lane(self) -> None:
         routing = stale_routing(
