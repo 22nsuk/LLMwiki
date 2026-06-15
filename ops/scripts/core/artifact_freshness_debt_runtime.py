@@ -113,7 +113,8 @@ GOAL_RUNTIME_SOURCE_IDENTITY_KINDS = {
 }
 GOAL_RUNTIME_COMPLETED_RUN_LANE = "goal-runtime-completed-run-evidence"
 GOAL_RUNTIME_COMPLETED_RUN_TARGETS = (
-    "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot",
+    "GOAL_RUN_ID=<completed-run-id> make goal-runtime-status-finalize",
+    "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-local-evidence",
     "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
 )
 LEARNING_SOURCE_IDENTITY_KINDS = {

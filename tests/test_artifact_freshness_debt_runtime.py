@@ -247,7 +247,8 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
         self.assertEqual(
             routing["recommended_targets"],
             [
-                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot",
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-status-finalize",
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-local-evidence",
                 "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
             ],
         )
@@ -264,7 +265,8 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
         self.assertEqual(
             route["recommended_targets"],
             [
-                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot",
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-status-finalize",
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-local-evidence",
                 "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
             ],
         )
