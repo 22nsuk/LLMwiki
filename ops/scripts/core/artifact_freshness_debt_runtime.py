@@ -111,6 +111,11 @@ GOAL_RUNTIME_SOURCE_IDENTITY_KINDS = {
     "self_improvement_negative_lessons",
     "session_synopsis",
 }
+GOAL_RUNTIME_COMPLETED_RUN_LANE = "goal-runtime-completed-run-evidence"
+GOAL_RUNTIME_COMPLETED_RUN_TARGETS = (
+    "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot",
+    "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+)
 LEARNING_SOURCE_IDENTITY_KINDS = {
     "learning_claim_activation_report",
     "learning_claim_evidence_bundle",
@@ -793,11 +798,8 @@ def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
         reason_id = "learning_evidence_source_identity"
     elif artifact_kind in GOAL_RUNTIME_SOURCE_IDENTITY_KINDS:
         route_id = "ops_reports_goal_runtime"
-        lane = "goal-runtime-completed-run-evidence"
-        targets = (
-            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot",
-            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
-        )
+        lane = GOAL_RUNTIME_COMPLETED_RUN_LANE
+        targets = GOAL_RUNTIME_COMPLETED_RUN_TARGETS
         reason_id = "goal_runtime_completed_run_evidence_required"
     elif artifact_kind in SUPPLY_CHAIN_SOURCE_IDENTITY_KINDS:
         route_id = "ops_reports_supply_chain"
@@ -1003,6 +1005,7 @@ def _stale_routing_decision(
     schema_or_contract_count: int,
     mtime_or_test_target_count: int,
     execution_blocking_count: int,
+    source_identity_owner_routes: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source_identity_only = (
         problem_count > 0
@@ -1018,6 +1021,25 @@ def _stale_routing_decision(
             "summary": "No artifact freshness debt needs routing.",
         }
     if source_identity_only:
+        goal_runtime_only = source_identity_owner_routes and all(
+            str(route.get("recommended_lane", "")) == GOAL_RUNTIME_COMPLETED_RUN_LANE
+            for route in source_identity_owner_routes
+        )
+        if goal_runtime_only:
+            return {
+                "classification": "source_identity_only",
+                "recommended_lane": GOAL_RUNTIME_COMPLETED_RUN_LANE,
+                "recommended_targets": list(GOAL_RUNTIME_COMPLETED_RUN_TARGETS),
+                "reason_ids": [
+                    "source_identity_only_stale",
+                    "goal_runtime_completed_run_evidence_required",
+                ],
+                "summary": (
+                    f"{source_identity_count} stale goal runtime artifact(s) require "
+                    "completed run evidence. Set GOAL_RUN_ID=<completed-run-id> and "
+                    "publish/certify that run instead of using a generic freshness refresh."
+                ),
+            }
         return {
             "classification": "source_identity_only",
             "recommended_lane": "freshness-source-identity-converge",
@@ -1117,6 +1139,7 @@ def stale_routing(
         schema_or_contract_count=len(schema_or_contract_records),
         mtime_or_test_target_count=len(mtime_or_test_target_records),
         execution_blocking_count=execution_blocking_artifact_count,
+        source_identity_owner_routes=source_identity_owner_routes,
     )
 
     return {

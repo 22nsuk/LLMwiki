@@ -239,6 +239,25 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
             non_utf8_count=0,
         )
 
+        self.assertEqual(routing["classification"], "source_identity_only")
+        self.assertEqual(
+            routing["recommended_lane"],
+            "goal-runtime-completed-run-evidence",
+        )
+        self.assertEqual(
+            routing["recommended_targets"],
+            [
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot",
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+            ],
+        )
+        self.assertIn(
+            "goal_runtime_completed_run_evidence_required",
+            routing["reason_ids"],
+        )
+        self.assertIn("completed run evidence", routing["summary"])
+        self.assertIn("generic freshness refresh", routing["summary"])
+
         route = routing["source_identity_owner_routes"][0]
         self.assertEqual(route["route_id"], "ops_reports_goal_runtime")
         self.assertEqual(route["recommended_lane"], "goal-runtime-completed-run-evidence")
