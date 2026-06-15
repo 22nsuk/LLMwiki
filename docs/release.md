@@ -533,8 +533,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   refresh: finality verification reads the fixed-point digest map, so the
   durable repair is `make release-closeout-fixed-point` followed by terminal
   `make release-closeout-finality-verify`, or simply `make release-finality-resettle`.
-  The action matrix is refreshed once after the attestation so it can report the
-  terminal finality result, but it is not itself a finality digest-bound artifact.
+  The action matrix is a generated-artifact-index input, so it must be refreshed
+  inside the fixed-point/finality suffix before the attestation, not after it.
+  Any canonical report writer after the attestation can invalidate the finality
+  digest map and should be treated as a reason to rerun the resettle lane.
   For staged authority settle, prefer `make release-authority-settle`; its
   terminal tail binds the effective distribution ZIP into the batch manifest,
   fixed point, replay verification, and finality verification together.
