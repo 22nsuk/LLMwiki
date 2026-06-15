@@ -79,6 +79,15 @@ class _FixedPointIterationState:
     converged_iteration: int
 
 
+@dataclass(frozen=True)
+class _FixedPointIterationSnapshot:
+    record: dict[str, Any]
+    digest_map: dict[str, str]
+    semantic_digest_map: dict[str, str]
+    changed_paths: list[str]
+    semantic_changed_paths: list[str]
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -474,6 +483,46 @@ def _run_iteration(
             failed = True
             break
     return command_results, failed
+
+
+def _fixed_point_iteration_snapshot(
+    vault: Path,
+    *,
+    runtime: _FixedPointPolicyRuntime,
+    iteration_index: int,
+    selected_targets: Sequence[str],
+    command_results: Sequence[dict[str, Any]],
+    command_failed: bool,
+    previous_digest_map: dict[str, str] | None,
+    previous_semantic_digest_map: dict[str, str] | None,
+) -> _FixedPointIterationSnapshot:
+    current_digest_map = _digest_map(vault, runtime.tracked_artifacts)
+    current_semantic_digest_map, current_semantic_digest_modes = semantic_digest_maps(
+        vault, runtime.tracked_paths
+    )
+    changed_paths = _changed_paths(previous_digest_map, current_digest_map)
+    semantic_changed_paths = _changed_paths(
+        previous_semantic_digest_map,
+        current_semantic_digest_map,
+    )
+    return _FixedPointIterationSnapshot(
+        record={
+            "iteration_index": iteration_index,
+            "status": "fail" if command_failed else "pass",
+            "selected_targets": list(selected_targets),
+            "command_results": list(command_results),
+            "digest_map": current_digest_map,
+            "digest_changed": previous_digest_map is None or bool(changed_paths),
+            "changed_paths": changed_paths,
+            "semantic_digest_map": current_semantic_digest_map,
+            "semantic_digest_modes": current_semantic_digest_modes,
+            "semantic_changed_paths": semantic_changed_paths,
+        },
+        digest_map=current_digest_map,
+        semantic_digest_map=current_semantic_digest_map,
+        changed_paths=changed_paths,
+        semantic_changed_paths=semantic_changed_paths,
+    )
 
 
 def _selected_targets_by_iteration(
@@ -1696,42 +1745,31 @@ def _fixed_point_iteration_state(
             runtime_env=runtime_env,
             progress_sink=progress_sink,
         )
-        current_digest_map = _digest_map(vault, runtime.tracked_artifacts)
-        current_semantic_digest_map, current_semantic_digest_modes = semantic_digest_maps(
-            vault, runtime.tracked_paths
+        snapshot = _fixed_point_iteration_snapshot(
+            vault,
+            runtime=runtime,
+            iteration_index=iteration_index,
+            selected_targets=next_targets,
+            command_results=command_results,
+            command_failed=command_failed,
+            previous_digest_map=previous_digest_map,
+            previous_semantic_digest_map=previous_semantic_digest_map,
         )
-        changed_paths = _changed_paths(previous_digest_map, current_digest_map)
-        semantic_changed_paths = _changed_paths(
-            previous_semantic_digest_map,
-            current_semantic_digest_map,
-        )
-        iterations.append(
-            {
-                "iteration_index": iteration_index,
-                "status": "fail" if command_failed else "pass",
-                "selected_targets": list(next_targets),
-                "command_results": command_results,
-                "digest_map": current_digest_map,
-                "digest_changed": previous_digest_map is None or bool(changed_paths),
-                "changed_paths": changed_paths,
-                "semantic_digest_map": current_semantic_digest_map,
-                "semantic_digest_modes": current_semantic_digest_modes,
-                "semantic_changed_paths": semantic_changed_paths,
-            }
-        )
+        iterations.append(snapshot.record)
         if command_failed:
             failed = True
             _emit_progress(
                 progress_sink,
                 (
                     "release-closeout-fixed-point: "
-                    f"iteration={iteration_index} status=fail changed_path_count={len(changed_paths)}"
+                    f"iteration={iteration_index} status=fail "
+                    f"changed_path_count={len(snapshot.changed_paths)}"
                 ),
             )
             break
         if (
             previous_digest_map is not None
-            and current_digest_map == previous_digest_map
+            and snapshot.digest_map == previous_digest_map
         ):
             converged = True
             converged_iteration = iteration_index
@@ -1743,19 +1781,22 @@ def _fixed_point_iteration_state(
                 ),
             )
             break
-        next_targets = _next_iteration_targets(semantic_changed_paths, runtime=runtime)
+        next_targets = _next_iteration_targets(
+            snapshot.semantic_changed_paths,
+            runtime=runtime,
+        )
         _emit_progress(
             progress_sink,
             (
                 "release-closeout-fixed-point: "
                 f"iteration={iteration_index} status=changed "
-                f"changed_path_count={len(changed_paths)} "
-                f"semantic_changed_path_count={len(semantic_changed_paths)} "
+                f"changed_path_count={len(snapshot.changed_paths)} "
+                f"semantic_changed_path_count={len(snapshot.semantic_changed_paths)} "
                 f"next_target_count={len(next_targets)}"
             ),
         )
-        previous_digest_map = current_digest_map
-        previous_semantic_digest_map = current_semantic_digest_map
+        previous_digest_map = snapshot.digest_map
+        previous_semantic_digest_map = snapshot.semantic_digest_map
 
     final_digest_map = (
         iterations[-1]["digest_map"]
