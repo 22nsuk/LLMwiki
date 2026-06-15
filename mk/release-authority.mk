@@ -1,4 +1,4 @@
-.PHONY: head-aligned-evidence-converge release-authority-inventory release-authority-post-ready-finality release-authority-sealed-preflight release-authority-settle release-auto-promotion-goal-run-id-guard release-auto-promotion-operator-summary release-auto-promotion-preflight release-auto-promotion-preflight-check release-auto-promotion-preflight-prerequisites release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-check release-auto-promotion-ready-invalidate release-auto-promotion-ready-plan release-auto-promotion-safe-cleanup release-check release-check-all-surfaces release-check-core release-check-finalized release-check-post-check release-check-post-converge release-check-preflight-converge release-converge release-converge-all-surfaces release-converge-post release-converge-preflight release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-evidence-closeout-sealed-sidecars release-package-current release-package-current-check release-package-current-or-refresh release-post-commit-finalize release-preflight-current release-public-current release-run-ready release-run-ready-check release-run-ready-plan release-run-ready-plan-check release-seal-current release-sealed-post-seal-attestation release-sealed-run-ready release-sealed-run-ready-check release-sealed-run-ready-plan release-source-package-clean-extract release-source-package-clean-extract-current-check release-source-package-clean-extract-current-or-refresh release-source-package-smoke release-source-package-smoke-current-check release-source-package-smoke-current-or-refresh release-source-ready release-source-ready-commit release-source-ready-post-verify release-source-ready-prepare release-source-ready-snapshot release-source-ready-status release-test-current release-worktree-clean-check
+.PHONY: head-aligned-evidence-converge release-authority-inventory release-authority-post-ready-finality release-authority-post-ready-finality-current-check release-authority-post-ready-finality-current-or-refresh release-authority-sealed-preflight release-authority-settle release-auto-promotion-goal-run-id-guard release-auto-promotion-operator-summary release-auto-promotion-preflight release-auto-promotion-preflight-check release-auto-promotion-preflight-prerequisites release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-check release-auto-promotion-ready-invalidate release-auto-promotion-ready-plan release-auto-promotion-safe-cleanup release-auto-promotion-safe-cleanup-cleanup-only release-auto-promotion-safe-cleanup-finalize release-check release-check-all-surfaces release-check-core release-check-finalized release-check-post-check release-check-post-converge release-check-preflight-converge release-converge release-converge-all-surfaces release-converge-post release-converge-preflight release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-evidence-closeout-sealed-sidecars release-package-current release-package-current-check release-package-current-or-refresh release-post-commit-finalize release-preflight-current release-public-current release-run-ready release-run-ready-check release-run-ready-plan release-run-ready-plan-check release-seal-current release-sealed-post-seal-attestation release-sealed-run-ready release-sealed-run-ready-check release-sealed-run-ready-plan release-source-package-clean-extract release-source-package-clean-extract-current-check release-source-package-clean-extract-current-or-refresh release-source-package-smoke release-source-package-smoke-current-check release-source-package-smoke-current-or-refresh release-source-ready release-source-ready-commit release-source-ready-post-verify release-source-ready-prepare release-source-ready-snapshot release-source-ready-status release-test-current release-worktree-clean-check
 
 release-authority-inventory:
 	$(PYTHON) -m ops.scripts.release_authority_inventory --vault "$(VAULT)" --out "$(RELEASE_AUTHORITY_INVENTORY_OUT)"
@@ -56,13 +56,18 @@ release-auto-promotion-preflight-prerequisites:
 	$(MAKE) external-report-action-matrix
 	$(MAKE) generated-artifact-index
 
-release-auto-promotion-safe-cleanup:
+release-auto-promotion-safe-cleanup: release-auto-promotion-safe-cleanup-cleanup-only
+	$(MAKE) release-auto-promotion-safe-cleanup-finalize
+	$(MAKE) tmp-json-clean
+
+release-auto-promotion-safe-cleanup-cleanup-only:
 	$(MAKE) goal-runtime-clean-transient
 	$(MAKE) tmp-json-clean
 	$(PYTHON) -m ops.scripts.backfill_archived_run_artifacts --vault "$(VAULT)"
 	$(MAKE) generated-artifact-index
-	$(MAKE) release-authority-sealed-preflight
 	$(MAKE) artifact-freshness-refresh-check
+
+release-auto-promotion-safe-cleanup-finalize:
 	@if [ -n "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" ]; then \
 		$(MAKE) external-report-reference-manifest-release-check EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
 		$(MAKE) release-closeout-batch-manifest-promote RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
@@ -70,8 +75,6 @@ release-auto-promotion-safe-cleanup:
 	else \
 		$(MAKE) external-report-reference-manifest-release-check; \
 	fi
-	$(MAKE) release-closeout-summary-report
-	$(MAKE) tmp-json-clean
 
 release-auto-promotion-preseal:
 	$(MAKE) release-auto-promotion-ready-invalidate
@@ -82,7 +85,7 @@ release-auto-promotion-preseal:
 	$(MAKE) registry-preflight
 	$(MAKE) release-smoke-full-current-check
 	$(MAKE) release-smoke-fast-refresh-check
-	$(MAKE) release-auto-promotion-safe-cleanup
+	$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1
 	$(MAKE) remediation-backlog
@@ -130,8 +133,21 @@ release-authority-post-ready-finality:
 	$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
 	$(MAKE) release-closeout-finality-verify
 
+release-authority-post-ready-finality-current-check:
+	$(MAKE) tmp-json-clean
+	$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
+	$(MAKE) release-closeout-finality-verify
+
+release-authority-post-ready-finality-current-or-refresh:
+	@if $(MAKE) release-authority-post-ready-finality-current-check; then \
+		echo "release authority post-ready finality evidence is current"; \
+	else \
+		$(MAKE) tmp-json-clean; \
+		$(MAKE) release-authority-post-ready-finality; \
+	fi
+
 release-authority-settle:
-	$(MAKE) release-finality-resettle
+	$(MAKE) release-finality-resettle-current-or-refresh
 	$(MAKE) release-auto-promotion-preflight
 	$(MAKE) release-run-ready
 	$(MAKE) release-auto-promotion-preseal
@@ -146,7 +162,7 @@ release-authority-settle:
 		$(MAKE) release-auto-promotion-ready-check || exit $$?; \
 		$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \
 	fi; \
-	$(MAKE) release-authority-post-ready-finality || exit $$?; \
+	$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \
 	if [ $$status -ne 0 ]; then exit $$status; fi
 
 release-preflight-current:
@@ -282,8 +298,8 @@ release-post-commit-finalize:
 	$(MAKE) sync-public-policy-check
 	$(MAKE) public-check-summary-current-check
 	$(MAKE) artifact-freshness-check
-	$(MAKE) release-closeout-finality-verify
 	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention
+	$(MAKE) release-closeout-finality-verify
 
 head-aligned-evidence-converge: release-post-commit-finalize
 	@echo "head-aligned-evidence-converge is a compatibility alias; prefer release-post-commit-finalize."

@@ -547,8 +547,8 @@ def _release_post_commit_finalizer_sequence_check(
         expected,
         details=(
             "release-post-commit-finalize must stay a focused HEAD-bound suffix: "
-            "current/check-only surfaces first, terminal finality verify, then "
-            "the non-mutating post-commit readback."
+            "current/check-only surfaces first, post-commit readback before "
+            "the terminal finality verify."
         ),
     )
     if invocations and str(invocations[-1]["target"]) != "release-closeout-finality-verify":

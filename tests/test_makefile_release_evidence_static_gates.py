@@ -416,8 +416,8 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
                 "$(MAKE) sync-public-policy-check",
                 "$(MAKE) public-check-summary-current-check",
                 "$(MAKE) artifact-freshness-check",
-                "$(MAKE) release-closeout-finality-verify",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention',
+                "$(MAKE) release-closeout-finality-verify",
             ],
         )
         forbidden_default_refreshes = {
@@ -434,7 +434,8 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         }
         self.assertEqual(forbidden_default_refreshes & set(finalizer_lines), set())
         self.assertEqual(finalizer_lines.count("$(MAKE) release-closeout-finality-verify"), 1)
-        self.assertIn("--mode verify", finalizer_lines[-1])
+        self.assertIn("--mode verify", finalizer_lines[-2])
+        self.assertEqual(finalizer_lines[-1], "$(MAKE) release-closeout-finality-verify")
 
     def test_release_closeout_summary_report_target_is_write_only(self) -> None:
         text = _makefile_text()
@@ -746,6 +747,8 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         recipe_lines = _recipe_lines(text, "release-finality-resettle")
 
         self.assertIn("release-finality-resettle", _target_block(text, ".PHONY"))
+        self.assertIn("release-finality-resettle-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-finality-resettle-current-or-refresh", _target_block(text, ".PHONY"))
         self.assertEqual(
             recipe_lines,
             [
@@ -758,6 +761,22 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-closeout-finality-verify",
             ],
         )
+        self.assertEqual(
+            _recipe_lines(text, "release-finality-resettle-current-check"),
+            [
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) release-closeout-batch-manifest-replay-verify",
+                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) release-closeout-finality-verify",
+            ],
+        )
+        current_or_refresh_block = _target_block(
+            text,
+            "release-finality-resettle-current-or-refresh",
+        )
+        self.assertIn("$(MAKE) release-finality-resettle-current-check", current_or_refresh_block)
+        self.assertIn("$(MAKE) release-finality-resettle", current_or_refresh_block)
         self.assertNotIn("$(MAKE) release-evidence-converge", recipe_lines)
         self.assertEqual(recipe_lines[-1], "$(MAKE) release-closeout-finality-verify")
 

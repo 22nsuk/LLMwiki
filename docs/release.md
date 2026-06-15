@@ -84,12 +84,15 @@ surface comparison; this document owns release evidence and staged authority.
   auto-improve readiness without building release artifacts, sealing, or
   creating runtime-trial evidence. It removes any older final ready manifest
   before writing new preflight evidence.
-- `make release-auto-promotion-safe-cleanup`: normalize safe generated
-  evidence before preseal. It removes stale goal-runtime transients, cleans tmp
-  JSON candidates, backfills schema-backed historical run artifacts, refreshes
-  generated-artifact index and artifact freshness, refreshes external report
-  reference diagnostics, and rewrites the closeout summary from those current
-  inputs.
+- `make release-auto-promotion-safe-cleanup-cleanup-only`: normalize safe
+  generated evidence before preseal. It removes stale goal-runtime transients,
+  cleans tmp JSON candidates, backfills schema-backed historical run artifacts,
+  and refreshes generated-artifact index plus artifact freshness without running
+  fixed-point.
+- `make release-auto-promotion-safe-cleanup-finalize`: run the optional
+  ZIP-bound external-reference, batch-manifest, and fixed-point suffix. The
+  legacy `make release-auto-promotion-safe-cleanup` target remains a wrapper for
+  cleanup-only plus this explicit finalize step.
 - `make generated-artifact-retention-clean`: dry-run a retention-aware cleanup
   of regenerated local residue. Pass `GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY=1`
   only when you intentionally want to remove allowlisted ignored residue such as
@@ -148,9 +151,10 @@ surface comparison; this document owns release evidence and staged authority.
   release summary is local-only evidence and is refreshed during the prepare
   convergence flow.
 - `make release-post-commit-finalize`: official post-commit evidence suffix for
-  source-ready commits. It runs check/current-only surfaces, verifies finality,
-  and fails if source fingerprint or source contract paths drift. Dirty tracked
-  generated evidence is `attention` and points back to
+  source-ready commits. It runs check/current-only surfaces, writes the
+  post-commit readback report, then leaves `release-closeout-finality-verify` as
+  the final Make invocation. It fails if source fingerprint or source contract
+  paths drift. Dirty tracked generated evidence is `attention` and points back to
   `release-source-ready-prepare`. It does not refresh full pytest evidence,
   staged authority manifests, report writer clusters, or action lifecycle
   cleanup. It also does not replace `release-run-ready`,
@@ -161,13 +165,17 @@ surface comparison; this document owns release evidence and staged authority.
   names the owning authority target.
   `make head-aligned-evidence-converge` is a compatibility alias for this target.
 - `make release-authority-settle`: explicit staged-authority writer lane for
-  unattended promotion after release evidence is current. It runs report finality
-  resettle once, then preflight, run-ready, preseal, sealed-run-ready, and
-  auto-promotion-ready manifests. After the ready attempt, it refresh-checks
-  artifact freshness, promotes the ZIP-bound release closeout batch manifest,
-  rewrites release closeout fixed-point/finality, replay-verifies the same ZIP
-  metadata, and then verifies finality so no tracked report writer runs after
-  finality. If ready is blocked, this finality tail still runs and the original
+  unattended promotion after release evidence is current. It first runs
+  `release-finality-resettle-current-or-refresh`, which skips the expensive
+  resettle when replay/current finality checks already pass, then runs
+  preflight, run-ready, preseal, sealed-run-ready, and auto-promotion-ready
+  manifests. After the ready attempt, it runs a post-ready
+  `current-or-refresh` finality tail: replay/current checks skip the ZIP-bound
+  batch-manifest and fixed-point writers when they are already current, otherwise
+  the tail promotes the batch manifest, rewrites fixed-point/finality,
+  replay-verifies the same ZIP metadata, and then verifies finality so no
+  tracked report writer runs after finality. If ready is blocked, this finality
+  tail still runs and the original
   ready failure is returned. On a clean ready pass, check-only authority
   readback plus post-commit finalizer verification run before the same terminal
   finality tail.
@@ -222,9 +230,9 @@ surface comparison; this document owns release evidence and staged authority.
    explicit `GOAL_RUN_ID=<goal-run-id>` is allowed but the guard can infer the
    effective id from verified global evidence. This includes
    `make release-auto-promotion-goal-run-id-guard` and
-   `make release-auto-promotion-safe-cleanup`; run the safe cleanup target
-   directly only when you need to settle safe generated evidence before retrying
-   preseal.
+   `make release-auto-promotion-safe-cleanup-cleanup-only`; run the cleanup-only
+   target directly when you need to settle safe generated evidence before
+   retrying preseal.
 5. Run `make release-sealed-run-ready` when you need source ZIP and sidecar
    evidence sealed for release review. Its planner requires a current passing
    run-ready manifest plus current passing auto-promotion preseal evidence, and
@@ -397,9 +405,10 @@ only when the operator is renewing or replacing the acceptance decision.
    residual non-advisory gate attention, rerun `make release-auto-promotion-preseal`
    and then `make release-sealed-run-ready` so the sealed operator summary is
    regenerated from current source evidence.
-   The `release-authority-settle` tail then performs ZIP-bound batch-manifest
+   The `release-authority-settle` tail then first tries a ZIP-bound replay and
+   finality current check. Only stale evidence triggers batch-manifest
    promotion, fixed-point rewrite, batch replay verification, and finality
-   verification as one terminal report-writer suffix.
+   verification as the terminal report-writer suffix.
 
 Completion is proven only by
 `build/release/release-auto-promotion-ready-manifest.json` with:
@@ -524,15 +533,17 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `make release-closeout-finality-verify`. After refreshing `artifact-freshness`,
   `external-report-action-matrix`, `generated-artifact-index`,
   `release-closeout-summary-report`, or another fixed-point tracked report,
-  rerun `make release-finality-resettle` so the attestation is rewritten and
-  verified after the last tracked writer. The resettle lane refreshes
+  rerun `make release-finality-resettle-current-or-refresh` so current finality
+  evidence is reused when possible, or the attestation is rewritten and verified
+  after the last tracked writer when needed. The resettle lane refreshes
   `release-authority-sealed-preflight` before artifact freshness/finality scans
   so `ops/reports/release-closeout-sealed-rehearsal-check.json` is not left as a
   source-identity-only stale record after fixed-point attestation. Do not run
   `release-closeout-finality-attestation` directly after a freshness or summary
   refresh: finality verification reads the fixed-point digest map, so the
   durable repair is `make release-closeout-fixed-point` followed by terminal
-  `make release-closeout-finality-verify`, or simply `make release-finality-resettle`.
+  `make release-closeout-finality-verify`, or simply
+  `make release-finality-resettle-current-or-refresh`.
   The action matrix is a generated-artifact-index input, so it must be refreshed
   inside the fixed-point/finality suffix before the attestation, not after it.
   `release-closeout-fixed-point` performs the final action-matrix readback after
@@ -541,8 +552,9 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   Any canonical report writer after the attestation can invalidate the finality
   digest map and should be treated as a reason to rerun the resettle lane.
   For staged authority settle, prefer `make release-authority-settle`; its
-  terminal tail binds the effective distribution ZIP into the batch manifest,
-  fixed point, replay verification, and finality verification together.
+  terminal tail checks the effective distribution ZIP first and only rewrites
+  the batch manifest, fixed point, replay verification, and finality evidence
+  when current evidence cannot be reused.
 - `ops/reports/` and `ops/operator/` are preserved locally and ignored by Git.
   If older branches still track entries under those paths, remove them from the
   index with `git rm --cached` while leaving the local files on disk.

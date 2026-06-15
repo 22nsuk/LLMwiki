@@ -225,7 +225,9 @@ surfaces or direct-script fallback entrypoints, and no longer carries
 generated-at, source-revision, source-tree-fingerprint, or currentness envelope
 fields in the tracked fixture.
 
-`release-finality-resettle` first refreshes the sealed rehearsal authority with
+`release-finality-resettle-current-or-refresh` first replay-checks current
+finality and reuses it when possible. When a refresh is needed,
+`release-finality-resettle` refreshes the sealed rehearsal authority with
 `release-authority-sealed-preflight`, then uses the generated-artifact finality
 suffix (`artifact-freshness -> external-report-action-matrix ->
 generated-artifact-index`), refreshes `release-closeout-summary-report`, runs
@@ -235,7 +237,7 @@ after the post-promote artifact-freshness bootstrap, it refreshes the action
 matrix readback and only then writes the attestation. No canonical report writer
 should run between that attestation and `release-closeout-finality-verify`. Treat
 the finality verify as terminal: if any finality-tracked report writer runs afterward, rerun
-`make release-finality-resettle` instead of hand-patching the attestation.
+`make release-finality-resettle-current-or-refresh` instead of hand-patching the attestation.
 Observation registry edits that change tracked source, including
 `ops/observation-closeout-registry.json`, must happen before this terminal seal.
 Open or planned observations remain registry-owned even when their artifact is

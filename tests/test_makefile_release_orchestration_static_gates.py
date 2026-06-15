@@ -24,6 +24,8 @@ _AUTO_PROMOTION_PHONY_TARGETS = (
     "release-auto-promotion-preflight",
     "release-auto-promotion-preflight-check",
     "release-auto-promotion-safe-cleanup",
+    "release-auto-promotion-safe-cleanup-cleanup-only",
+    "release-auto-promotion-safe-cleanup-finalize",
     "release-auto-promotion-preseal",
     "release-auto-promotion-preseal-check",
     "release-auto-promotion-ready-plan",
@@ -130,7 +132,7 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
             "$(MAKE) registry-preflight",
             "$(MAKE) release-smoke-full-current-check",
             "$(MAKE) release-smoke-fast-refresh-check",
-            "$(MAKE) release-auto-promotion-safe-cleanup",
+            "$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only",
             "$(MAKE) learning-readiness-signoff-revalidation",
             "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
             "$(MAKE) remediation-backlog",
@@ -458,19 +460,35 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         _assert_recipe_contains_tokens(
             self,
             text,
-            "release-auto-promotion-safe-cleanup",
+            "release-auto-promotion-safe-cleanup-cleanup-only",
             (
                 "$(MAKE) goal-runtime-clean-transient",
                 "$(MAKE) tmp-json-clean",
                 "ops.scripts.backfill_archived_run_artifacts",
                 "$(MAKE) generated-artifact-index",
-                "$(MAKE) release-authority-sealed-preflight",
                 "$(MAKE) artifact-freshness-refresh-check",
+            ),
+        )
+        self.assertNotIn(
+            "$(MAKE) release-closeout-fixed-point",
+            _target_block(text, "release-auto-promotion-safe-cleanup-cleanup-only"),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "release-auto-promotion-safe-cleanup-finalize",
+            (
                 "$(MAKE) external-report-reference-manifest-release-check",
                 "$(MAKE) release-closeout-batch-manifest-promote",
                 "$(MAKE) release-closeout-fixed-point",
-                "$(MAKE) release-closeout-summary-report",
             ),
+        )
+        self.assertEqual(
+            _recipe_lines(text, "release-auto-promotion-safe-cleanup"),
+            [
+                "$(MAKE) release-auto-promotion-safe-cleanup-finalize",
+                "$(MAKE) tmp-json-clean",
+            ],
         )
         for expensive_writer in _AUTO_PROMOTION_PRESEAL_EXPENSIVE_WRITERS:
             self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
@@ -519,6 +537,8 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) release-auto-promotion-preseal", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-sealed-run-ready-check", auto_promotion_block)
         self.assertIn("release-authority-post-ready-finality", phony_block)
+        self.assertIn("release-authority-post-ready-finality-current-check", phony_block)
+        self.assertIn("release-authority-post-ready-finality-current-or-refresh", phony_block)
         self.assertEqual(
             _recipe_lines(text, "release-authority-post-ready-finality"),
             [
@@ -531,9 +551,29 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             ],
         )
         self.assertEqual(
+            _recipe_lines(text, "release-authority-post-ready-finality-current-check"),
+            [
+                "$(MAKE) tmp-json-clean",
+                '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+                "$(MAKE) release-closeout-finality-verify",
+            ],
+        )
+        current_or_refresh_block = _target_block(
+            text,
+            "release-authority-post-ready-finality-current-or-refresh",
+        )
+        self.assertIn(
+            "$(MAKE) release-authority-post-ready-finality-current-check",
+            current_or_refresh_block,
+        )
+        self.assertIn(
+            "$(MAKE) release-authority-post-ready-finality",
+            current_or_refresh_block,
+        )
+        self.assertEqual(
             _recipe_lines(text, "release-authority-settle"),
             [
-                "$(MAKE) release-finality-resettle",
+                "$(MAKE) release-finality-resettle-current-or-refresh",
                 "$(MAKE) release-auto-promotion-preflight",
                 "$(MAKE) release-run-ready",
                 "$(MAKE) release-auto-promotion-preseal",
@@ -548,7 +588,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-auto-promotion-ready-check || exit $$?; \\",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \\',
                 "fi; \\",
-                "$(MAKE) release-authority-post-ready-finality || exit $$?; \\",
+                "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\",
                 "if [ $$status -ne 0 ]; then exit $$status; fi",
             ],
         )
@@ -557,6 +597,8 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             "release-auto-promotion-preflight",
             "release-auto-promotion-preflight-check",
             "release-auto-promotion-safe-cleanup",
+            "release-auto-promotion-safe-cleanup-cleanup-only",
+            "release-auto-promotion-safe-cleanup-finalize",
             "release-auto-promotion-preseal",
             "release-auto-promotion-preseal-check",
             "release-auto-promotion-ready-plan",
@@ -564,6 +606,8 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             "release-auto-promotion-ready",
             "release-auto-promotion-ready-check",
             "release-authority-settle",
+            "release-authority-post-ready-finality-current-check",
+            "release-authority-post-ready-finality-current-or-refresh",
         ):
             seen: set[str] = set()
             stack = [release_target]
