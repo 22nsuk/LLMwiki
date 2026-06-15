@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +15,8 @@ from tests.makefile_static_helpers import (
 )
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+
+DOCS_SELF_IMPROVEMENT_RUNTIME = Path("docs/self-improvement-runtime.md")
 
 
 _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS = (
@@ -73,6 +76,10 @@ _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS = (
     (
         "GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT",
         "tmp/goal-runtime-certificate.candidate.json",
+    ),
+    (
+        "GOAL_RUNTIME_CERTIFICATE_RUN_ID_GUARD_OUT",
+        "tmp/goal-runtime-certificate-run-id-guard.json",
     ),
     ("GOAL_RUNTIME_CLEAN_TRANSIENT_OUT", "tmp/goal-runtime-clean-transient.json"),
     ("GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY", "1"),
@@ -1052,6 +1059,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-certificate",
             (
+                "$(MAKE) goal-runtime-certificate-run-id-guard",
                 "$(MAKE) auto-improve-goal-status",
                 "ops.scripts.goal_runtime_certificate_report",
                 "--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
@@ -1067,13 +1075,43 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--expected-artifact-kind goal_runtime_certificate",
             ),
         )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-certificate-run-id-guard",
+            (
+                "ops.scripts.goal_runtime_certificate_run_id_guard",
+                "--goal-run-id \"$(GOAL_RUN_ID)\"",
+                "--goal-run-id-origin \"$(origin GOAL_RUN_ID)\"",
+                "--goal-run-status \"$(GOAL_RUN_STATUS_OUT)\"",
+                "--goal-runtime-certificate \"$(GOAL_RUNTIME_CERTIFICATE_OUT)\"",
+                "--out \"$(GOAL_RUNTIME_CERTIFICATE_RUN_ID_GUARD_OUT)\"",
+            ),
+        )
         certificate_recipe = _recipe_lines(text, "goal-runtime-certificate")
-        self.assertEqual(certificate_recipe[0], "$(MAKE) auto-improve-goal-status")
+        self.assertEqual(certificate_recipe[0], "$(MAKE) goal-runtime-certificate-run-id-guard")
+        self.assertEqual(certificate_recipe[1], "$(MAKE) auto-improve-goal-status")
         self.assertLess(
-            certificate_recipe[1].index("ops.scripts.goal_runtime_certificate_report"),
-            certificate_recipe[1].index("$(MAKE) auto-improve-goal-status"),
+            certificate_recipe[2].index("ops.scripts.goal_runtime_certificate_report"),
+            certificate_recipe[2].index("$(MAKE) auto-improve-goal-status"),
         )
         self.assertLess(
-            certificate_recipe[1].index("$(MAKE) auto-improve-goal-status"),
-            certificate_recipe[1].index('--candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)"'),
+            certificate_recipe[2].index("$(MAKE) auto-improve-goal-status"),
+            certificate_recipe[2].index('--candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)"'),
         )
+
+    def test_goal_runtime_certificate_status_write_contract_is_documented(self) -> None:
+        text = _makefile_text()
+        docs_text = DOCS_SELF_IMPROVEMENT_RUNTIME.read_text(encoding="utf-8")
+        certificate_recipe = _recipe_lines(text, "goal-runtime-certificate")
+
+        self.assertEqual(certificate_recipe[0], "$(MAKE) goal-runtime-certificate-run-id-guard")
+        self.assertEqual(certificate_recipe[1], "$(MAKE) auto-improve-goal-status")
+        self.assertIn("$(MAKE) auto-improve-goal-status", certificate_recipe[2])
+        self.assertIn('--candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)"', certificate_recipe[2])
+        self.assertIn('--out "$(GOAL_RUN_STATUS_OUT)"', certificate_recipe[2])
+        self.assertIn("mutating certificate-and-status target", docs_text)
+        self.assertIn("preserves an existing terminal status and `completed_at`", docs_text)
+        self.assertIn("runs a run-id guard before any status write", docs_text)
+        self.assertIn("GOAL_RUN_ID", docs_text)
+        self.assertIn("GOAL_COMPLETED_AT=<timestamp>", docs_text)

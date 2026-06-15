@@ -29,6 +29,24 @@ Useful targets:
 - `make goal-runtime-certificate`
 - `make goal-runtime-closeout`
 
+`goal-runtime-certificate` is a mutating certificate-and-status target, not a
+read-only certificate renderer. It runs `auto-improve-goal-status` before and
+after building the candidate certificate, then promotes the run-local
+`goal-run-status` snapshot to `ops/reports/goal-run-status.json`. The status
+generator preserves an existing terminal status and `completed_at` for the same
+run when no explicit replacement clock is provided, but operators should still
+bind `GOAL_RUN_ID` to the intended completed run and use
+`make auto-improve-goal-finalize` with `GOAL_FINAL_STATUS=completed` and
+`GOAL_COMPLETED_AT=<timestamp>` first when creating completion evidence. For
+readback-only release checks, use the release auto-promotion check targets that
+read the current status and certificate instead of invoking
+`goal-runtime-certificate`.
+
+The target also runs a run-id guard before any status write: if Make's default
+`GOAL_RUN_ID=auto-improve-trial` would overwrite canonical status or
+certificate evidence for another run, it fails and asks for an explicit
+`GOAL_RUN_ID=<completed-run-id>`.
+
 Default goal runs do not spend the remaining wall-clock budget after one
 promotion. `GOAL_POST_PROMOTE_MAINTENANCE_CYCLES ?= 1` keeps a single
 post-promote stabilization cycle, while `GOAL_MAINTAIN_UNTIL_BUDGET ?= 0`
