@@ -298,9 +298,22 @@ def _assert_batch_manifest_closeout_recipe_targets(case: unittest.TestCase, text
         '$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --max-iterations "$(RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS)"',
         "--schema ops/schemas/release-closeout-fixed-point.schema.json",
         "--bootstrap-post-promote",
+        "$(MAKE) external-report-action-matrix",
         "$(MAKE) release-closeout-finality-attestation",
     ):
         case.assertIn(needle, fixed_point)
+    fixed_point_lines = _recipe_lines(text, "release-closeout-fixed-point")
+    bootstrap_index = next(
+        index
+        for index, line in enumerate(fixed_point_lines)
+        if "--bootstrap-post-promote" in line
+    )
+    matrix_index = fixed_point_lines.index("$(MAKE) external-report-action-matrix")
+    attestation_index = fixed_point_lines.index(
+        "$(MAKE) release-closeout-finality-attestation"
+    )
+    case.assertLess(bootstrap_index, matrix_index)
+    case.assertLess(matrix_index, attestation_index)
     post_check_dry_run = _target_block(text, "release-closeout-post-check-finalizer-dry-run")
     case.assertIn('--dry-run --out "$(RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_OUT)"', post_check_dry_run)
     case.assertIn("$(RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS)", post_check_dry_run)

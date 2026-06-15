@@ -535,6 +535,9 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `make release-closeout-finality-verify`, or simply `make release-finality-resettle`.
   The action matrix is a generated-artifact-index input, so it must be refreshed
   inside the fixed-point/finality suffix before the attestation, not after it.
+  `release-closeout-fixed-point` performs the final action-matrix readback after
+  its post-promote artifact-freshness bootstrap and before it writes the
+  attestation, so the matrix does not retain a pre-bootstrap freshness blocker.
   Any canonical report writer after the attestation can invalidate the finality
   digest map and should be treated as a reason to rerun the resettle lane.
   For staged authority settle, prefer `make release-authority-settle`; its

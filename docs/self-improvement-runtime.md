@@ -216,10 +216,11 @@ fields in the tracked fixture.
 suffix (`artifact-freshness -> external-report-action-matrix ->
 generated-artifact-index`), refreshes `release-closeout-summary-report`, runs
 `release-closeout-fixed-point`, and verifies finality. `release-closeout-fixed-point`
-owns the last action-matrix refresh before it writes the finality attestation;
-no canonical report writer should run between that attestation and
-`release-closeout-finality-verify`. Treat the finality verify as terminal: if
-any finality-tracked report writer runs afterward, rerun
+owns the last action-matrix refresh before it writes the finality attestation:
+after the post-promote artifact-freshness bootstrap, it refreshes the action
+matrix readback and only then writes the attestation. No canonical report writer
+should run between that attestation and `release-closeout-finality-verify`. Treat
+the finality verify as terminal: if any finality-tracked report writer runs afterward, rerun
 `make release-finality-resettle` instead of hand-patching the attestation.
 Observation registry edits that change tracked source, including
 `ops/observation-closeout-registry.json`, must happen before this terminal seal.
