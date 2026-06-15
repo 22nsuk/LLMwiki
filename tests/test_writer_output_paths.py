@@ -25,7 +25,7 @@ from ops.scripts.schema_constants_runtime import (
 )
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.script_output_surfaces import (
-    NON_PATH_STATUS_OPTION_SUFFIXES,
+    NON_PATH_STATUS_OUTPUT_OPTIONS,
     build_registry as build_script_output_surface_registry,
 )
 from ops.scripts.starter_bundle_runtime import (
@@ -83,9 +83,9 @@ def _output_option_names(rel_path: str) -> set[str]:
         for arg in node.args:
             if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
                 continue
-            if arg.value == "--out" or (
-                arg.value.endswith("-out") and not arg.value.endswith(NON_PATH_STATUS_OPTION_SUFFIXES)
-            ):
+            if arg.value in NON_PATH_STATUS_OUTPUT_OPTIONS:
+                continue
+            if arg.value == "--out" or arg.value.endswith("-out"):
                 options.add(arg.value)
     return options
 
@@ -361,7 +361,7 @@ class WriterOutputPathsTest(unittest.TestCase):
             if entry["output_options"]:
                 self.assertIn(entry["classification"], OUTPUT_WRITER_CLASSIFICATIONS)
 
-    def test_status_flags_ending_in_out_are_not_output_options(self) -> None:
+    def test_status_flags_ending_in_out_are_explicitly_allowlisted(self) -> None:
         registry = build_script_output_surface_registry(REPO_ROOT)
         goal_status = next(
             entry
@@ -369,6 +369,31 @@ class WriterOutputPathsTest(unittest.TestCase):
             if entry["path"] == "ops/scripts/mechanism/goal_run_status.py"
         )
         self.assertNotIn("--last-command-timed-out", goal_status["output_options"])
+
+    def test_only_allowlisted_non_path_status_options_are_excluded(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            script_dir = vault / "ops" / "scripts"
+            script_dir.mkdir(parents=True, exist_ok=True)
+            (script_dir / "status_flags.py").write_text(
+                "import argparse\n"
+                "parser = argparse.ArgumentParser()\n"
+                "parser.add_argument('--last-command-timed-out')\n"
+                "parser.add_argument('--synthetic-timed-out')\n",
+                encoding="utf-8",
+            )
+
+            registry = build_script_output_surface_registry(vault)
+
+        entry = next(
+            item
+            for item in registry["surfaces"]
+            if item["path"] == "ops/scripts/status_flags.py"
+        )
+        self.assertEqual(entry["output_options"], ["--synthetic-timed-out"])
+        self.assertNotIn("--last-command-timed-out", entry["output_options"])
 
     def test_no_output_entries_are_direct_fallback_registry_entries(self) -> None:
         for entry in _script_output_surface_entries():

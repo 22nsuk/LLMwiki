@@ -31,7 +31,11 @@ USER_EXPORT_OUTPUT_OPTION_OVERRIDES = frozenset(
     }
 )
 SOURCE_TREE_INCLUDED_PREFIXES = ("ops/scripts",)
-NON_PATH_STATUS_OPTION_SUFFIXES = ("-timed-out",)
+NON_PATH_STATUS_OUTPUT_OPTIONS = frozenset(
+    {
+        "--last-command-timed-out",
+    }
+)
 
 
 def _script_files(vault: Path) -> list[Path]:
@@ -90,9 +94,9 @@ def _output_option_names(tree: ast.AST) -> list[str]:
         for arg in node.args:
             if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
                 continue
-            if arg.value == "--out" or (
-                arg.value.endswith("-out") and not arg.value.endswith(NON_PATH_STATUS_OPTION_SUFFIXES)
-            ):
+            if arg.value in NON_PATH_STATUS_OUTPUT_OPTIONS:
+                continue
+            if arg.value == "--out" or arg.value.endswith("-out"):
                 options.add(arg.value)
     return sorted(options)
 
