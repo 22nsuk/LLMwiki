@@ -722,6 +722,15 @@ def write_run_artifacts(
     return _write_run_artifacts(vault, report, writer=writer)
 
 
+def _parse_bool(value: str) -> bool:
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise argparse.ArgumentTypeError("expected one of: true, false, 1, 0, yes, no")
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
@@ -737,6 +746,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--last-heartbeat-at", default="")
     parser.add_argument("--last-checkpoint-at", default="")
     parser.add_argument("--last-command-heartbeat-at", default="")
+    parser.add_argument("--command-observation-mode", default="")
+    parser.add_argument("--command-heartbeat-count", type=int, default=None)
+    parser.add_argument("--command-timeout-seconds", type=int, default=None)
+    parser.add_argument("--last-stdout-at", default="")
+    parser.add_argument("--last-stderr-at", default="")
+    parser.add_argument("--last-artifact-touch-at", default="")
+    parser.add_argument("--last-command-returncode", type=int, default=None)
+    parser.add_argument("--last-command-timed-out", type=_parse_bool, default=None)
+    parser.add_argument("--last-command-termination-reason", default="")
     parser.add_argument("--quiet-seconds", type=int, default=0)
     parser.add_argument("--last-backoff-until", default="")
     parser.add_argument("--backoff-reason", default="")
@@ -765,6 +783,15 @@ def main(argv: list[str] | None = None) -> int:
             last_heartbeat_at=args.last_heartbeat_at,
             last_checkpoint_at=args.last_checkpoint_at,
             last_command_heartbeat_at=args.last_command_heartbeat_at,
+            command_observation_mode=args.command_observation_mode,
+            command_heartbeat_count=args.command_heartbeat_count,
+            command_timeout_seconds=args.command_timeout_seconds,
+            last_stdout_at=args.last_stdout_at,
+            last_stderr_at=args.last_stderr_at,
+            last_artifact_touch_at=args.last_artifact_touch_at,
+            last_command_returncode=args.last_command_returncode,
+            last_command_timed_out=args.last_command_timed_out,
+            last_command_termination_reason=args.last_command_termination_reason,
             quiet_seconds=args.quiet_seconds,
             last_backoff_until=args.last_backoff_until,
             backoff_reason=args.backoff_reason,

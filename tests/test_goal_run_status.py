@@ -866,6 +866,52 @@ class GoalRunStatusTests(unittest.TestCase):
         )
         self.assertEqual(refreshed["health"]["resume_status"], "ready")
 
+    def test_goal_run_status_cli_accepts_command_observability(self) -> None:
+        self._seed_goal_contract()
+
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = goal_run_status_main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--run-id",
+                    "20260517-trial",
+                    "--status",
+                    "completed",
+                    "--started-at",
+                    "2026-05-17T11:00:00Z",
+                    "--completed-at",
+                    "2026-05-17T12:00:00Z",
+                    "--last-command-heartbeat-at",
+                    "2026-05-17T12:00:00Z",
+                    "--command-observation-mode",
+                    "process_heartbeat",
+                    "--command-heartbeat-count",
+                    "12",
+                    "--command-timeout-seconds",
+                    "7200",
+                    "--last-command-returncode",
+                    "0",
+                    "--last-command-timed-out",
+                    "false",
+                    "--last-command-termination-reason",
+                    "completed",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout.getvalue().strip(), DEFAULT_STATUS_PATH)
+        refreshed = json.loads((self.vault / DEFAULT_STATUS_PATH).read_text(encoding="utf-8"))
+        observability = refreshed["observability"]
+        self.assertEqual(observability["last_command_heartbeat_at"], "2026-05-17T12:00:00Z")
+        self.assertEqual(observability["command_observation_mode"], "process_heartbeat")
+        self.assertEqual(observability["command_heartbeat_count"], 12)
+        self.assertEqual(observability["command_timeout_seconds"], 7200)
+        self.assertEqual(observability["last_command_returncode"], 0)
+        self.assertEqual(observability["last_command_timed_out"], False)
+        self.assertEqual(observability["last_command_termination_reason"], "completed")
+
     def test_goal_run_status_refresh_preserves_terminal_runner_status(self) -> None:
         self._seed_goal_contract()
         self._seed_auto_improve_session("20260517-trial", include_completion_class=False)
