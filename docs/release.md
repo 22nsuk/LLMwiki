@@ -596,9 +596,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `goal-runtime-publish-snapshot GOAL_RUN_ID=<completed-run-id>`,
   `supply-chain-artifacts-cached`, or
   `release-source-package-check`.
-  Broad freshness refresh targets do not publish goal runtime status snapshots:
-  canonical goal status is run evidence, not a generic currentness artifact,
-  and must be refreshed through the goal-runtime lane with an explicit run ID.
+  Broad freshness refresh targets do not publish goal runtime status snapshots
+  or rewrite canonical goal prompt/contract surfaces: canonical goal evidence is
+  run evidence, not a generic currentness artifact, and must be refreshed
+  through the goal-runtime lane with an explicit run ID.
   To avoid source-identity churn, finish and commit all tracked source,
   policy, schema, fixture, and documentation changes before refreshing
   generated evidence. Then refresh test, public, goal-runtime, owner-routed

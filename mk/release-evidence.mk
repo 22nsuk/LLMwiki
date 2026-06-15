@@ -80,7 +80,6 @@ release-freshness-sensitive-evidence-refresh:
 	$(MAKE) lint-uplift-plan
 	$(MAKE) type-uplift-plan
 	$(MAKE) complexity-budget
-	$(MAKE) codex-goal-prompt
 
 release-verify-current:
 	$(MAKE) release-check-finalized

@@ -143,6 +143,10 @@ def goal_run_artifact_paths(run_id: str, *, status_report_path: str = DEFAULT_ST
     )
 
 
+def _run_local_state_status_report_path(run_id: str) -> str:
+    return f"{DEFAULT_RUN_ROOT_TEMPLATE.format(run_id=run_id)}/state/goal-run-status.json"
+
+
 def _status_from_blockers(run_status: str, blockers: list[str]) -> str:
     if run_status in {"failed", "stopped"}:
         return "fail"
@@ -259,14 +263,53 @@ def _auto_improve_session_link(vault: Path, run_id: str) -> dict[str, Any]:
     }
 
 
+def _prior_status_candidate_paths(request: GoalRunStatusRequest) -> list[str]:
+    paths = [request.status_report_path]
+    run_local_status_path = _run_local_state_status_report_path(request.run_id)
+    if request.status_report_path == DEFAULT_STATUS_PATH:
+        paths.insert(0, run_local_status_path)
+    return list(dict.fromkeys(paths))
+
+
 def _prior_status_for_run(vault: Path, request: GoalRunStatusRequest) -> Mapping[str, Any]:
-    prior_report = load_optional_json_object(vault / request.status_report_path)
-    prior_run = mapping_field(prior_report, "run")
-    prior_status = str(prior_run.get("status", "")).strip()
-    same_run = str(prior_run.get("run_id", "")).strip() == request.run_id
-    if same_run and prior_status in PRIOR_CLOCK_RUN_STATUSES:
-        return prior_report
+    for prior_status_path in _prior_status_candidate_paths(request):
+        prior_report = load_optional_json_object(vault / prior_status_path)
+        prior_run = mapping_field(prior_report, "run")
+        prior_status = str(prior_run.get("status", "")).strip()
+        same_run = str(prior_run.get("run_id", "")).strip() == request.run_id
+        if same_run and prior_status in PRIOR_CLOCK_RUN_STATUSES:
+            return prior_report
     return {}
+
+
+def _prior_artifact_paths(prior_report: Mapping[str, Any]) -> GoalRunArtifactPaths | None:
+    artifacts = mapping_field(prior_report, "artifacts")
+    values = {
+        key: str(artifacts.get(key, "")).strip()
+        for key in (
+            "status_report_path",
+            "status_markdown_path",
+            "audit_log_path",
+            "resume_metadata_path",
+            "checkpoint_command_log_path",
+        )
+    }
+    if not all(values.values()):
+        return None
+    return GoalRunArtifactPaths(**values)
+
+
+def _goal_run_artifact_paths(
+    request: GoalRunStatusRequest,
+    prior_report: Mapping[str, Any],
+) -> GoalRunArtifactPaths:
+    prior_paths = _prior_artifact_paths(prior_report)
+    if prior_paths is not None:
+        return prior_paths
+    return goal_run_artifact_paths(
+        request.run_id,
+        status_report_path=request.status_report_path,
+    )
 
 
 def _should_preserve_terminal_run_status(
@@ -629,10 +672,7 @@ def build_report(request: GoalRunStatusRequest) -> dict[str, Any]:
         resume_from_checkpoint=observability.resume_from_checkpoint,
         resume_command=observability.resume_command,
     )
-    paths = goal_run_artifact_paths(
-        request.run_id,
-        status_report_path=request.status_report_path,
-    )
+    paths = _goal_run_artifact_paths(request, prior_report)
     periodic_generated_at = (
         run_state.completed_at
         if run_state.status in TERMINAL_RUN_STATUSES and run_state.completed_at

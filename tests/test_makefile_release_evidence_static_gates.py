@@ -475,12 +475,14 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
                 "$(MAKE) lint-uplift-plan",
                 "$(MAKE) type-uplift-plan",
                 "$(MAKE) complexity-budget",
-                "$(MAKE) codex-goal-prompt",
             ],
         )
         target_block = _target_block(text, "release-freshness-sensitive-evidence-refresh")
+        self.assertNotIn("$(MAKE) codex-goal-contract", target_block)
+        self.assertNotIn("$(MAKE) codex-goal-prompt", target_block)
         self.assertNotIn("$(MAKE) auto-improve-goal-status", target_block)
         self.assertNotIn("$(MAKE) goal-runtime-publish-snapshot", target_block)
+        self.assertNotIn("$(MAKE) goal-runtime-publish-local-evidence", target_block)
 
         converge_lines = _release_evidence_converge_expanded_recipe_lines(text)
         phase_2_refresh_index = converge_lines.index(

@@ -588,6 +588,74 @@ class GoalRunStatusTests(unittest.TestCase):
             ],
         )
 
+    def test_goal_run_status_default_refresh_preserves_run_local_state_paths(self) -> None:
+        self._seed_goal_contract()
+        state_status_path = "runs/goal-20260517-trial/state/goal-run-status.json"
+        state_report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="completed",
+                started_at="2026-05-17T11:30:00Z",
+                completed_at="2026-05-17T12:00:00Z",
+                last_heartbeat_at="2026-05-17T12:00:00Z",
+                last_checkpoint_at="2026-05-17T12:00:00Z",
+                last_command_heartbeat_at="2026-05-17T12:00:00Z",
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=6,
+                command_timeout_seconds=3600,
+                last_command_returncode=0,
+                last_command_timed_out=False,
+                last_command_termination_reason="completed",
+                status_report_path=state_status_path,
+                context=fixed_context(),
+            )
+        )
+        write_report(self.vault, state_report, out_path=state_status_path)
+        write_run_artifacts(self.vault, state_report, writer="ops.scripts.goal_runtime_runner")
+
+        refreshed = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                context=context_at(12, 30),
+            )
+        )
+        report_path = write_report(self.vault, refreshed)
+        written_paths = write_run_artifacts(self.vault, refreshed)
+
+        self.assertEqual(report_path, self.vault / DEFAULT_STATUS_PATH)
+        self.assertEqual(refreshed["run"]["status"], "completed")
+        self.assertEqual(
+            refreshed["artifacts"]["status_report_path"],
+            state_status_path,
+        )
+        self.assertEqual(
+            refreshed["artifacts"]["audit_log_path"],
+            "runs/goal-20260517-trial/state/audit-log.jsonl",
+        )
+        self.assertEqual(
+            [path.relative_to(self.vault).as_posix() for path in written_paths],
+            [
+                "runs/goal-20260517-trial/state/status.md",
+                "runs/goal-20260517-trial/state/resume-metadata.json",
+                "runs/goal-20260517-trial/state/audit-log.jsonl",
+            ],
+        )
+        self.assertFalse((self.vault / "runs/goal-20260517-trial/audit-log.jsonl").exists())
+        audit_events = [
+            json.loads(line)
+            for line in (
+                self.vault / "runs/goal-20260517-trial/state/audit-log.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual(
+            [event["writer"] for event in audit_events],
+            ["ops.scripts.goal_runtime_runner", "ops.scripts.goal_run_status"],
+        )
+        self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
+
     def test_goal_run_status_finalization_preserves_prior_run_clock(self) -> None:
         self._seed_goal_contract()
         initial = build_report(
