@@ -225,7 +225,7 @@ class SessionSynopsisTests(unittest.TestCase):
                 "pending",
             )
             self.assertFalse(report["next_session_entrypoint"]["runtime_certificate_full_gate_clean"])
-            self.assertIn("make auto-improve-goal-status", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn("make goal-runtime-status-finalize", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make auto-improve-goal-preflight", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make auto-improve-goal-run", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make goal-runtime-certificate", report["next_session_entrypoint"]["first_commands"])

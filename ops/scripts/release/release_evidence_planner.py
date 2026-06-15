@@ -255,7 +255,7 @@ def _goal_run_status_node(
             "release-auto-promotion-ready",
             "cheap",
             "release-auto-promotion-ready-check",
-            "auto-improve-goal-status",
+            "goal-runtime-status-finalize",
             False,
         ),
         current_fingerprint=current_fingerprint,
@@ -526,7 +526,7 @@ def _auto_promotion_ready_blockers(
             "goal_run_status_not_reusable",
             "Completed goal-run status evidence is missing, stale, invalid, or not completed.",
             (
-                "Publish current completed goal-run status evidence for the selected run id, "
+                "Run make goal-runtime-status-finalize for the selected run id, "
                 "then rerun the planner."
             ),
         ),

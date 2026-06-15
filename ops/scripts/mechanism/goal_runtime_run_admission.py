@@ -1360,7 +1360,7 @@ def _durable_goal_authority_check(
         next_action=(
             "Proceed with promotion authority checks."
             if passed
-            else "Run `make auto-improve-goal-contract auto-improve-goal-status goal-runtime-certificate` with the same GOAL_RUN_ID, then rerun admission before claiming completion or promotion."
+            else "Run `make auto-improve-goal-contract goal-runtime-status-finalize goal-runtime-certificate` with the same GOAL_RUN_ID, then rerun admission before claiming completion or promotion."
         ),
         evidence_paths=[contract_path, goal_run_status_path, runtime_certificate_path],
     )

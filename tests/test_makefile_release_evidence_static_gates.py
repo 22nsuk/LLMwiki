@@ -483,6 +483,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) auto-improve-goal-status", target_block)
         self.assertNotIn("$(MAKE) goal-runtime-publish-snapshot", target_block)
         self.assertNotIn("$(MAKE) goal-runtime-publish-local-evidence", target_block)
+        self.assertNotIn("$(MAKE) goal-runtime-certificate-run-id-guard", target_block)
 
         converge_lines = _release_evidence_converge_expanded_recipe_lines(text)
         phase_2_refresh_index = converge_lines.index(
