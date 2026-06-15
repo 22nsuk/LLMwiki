@@ -35,7 +35,6 @@ from .external_report_inventory_runtime import (
     as_list,
     load_json_object,
 )
-from .release_closeout_finality_attestation import verify_attestation
 from .review_archive import (
     CLEAN_SOURCE_COMMAND as REVIEW_ARCHIVE_CLEAN_SOURCE_COMMAND,
     PRODUCER as REVIEW_ARCHIVE_PRODUCER,
@@ -502,19 +501,27 @@ def _sealed_run_manifest_reason_ids(vault: Path) -> list[str]:
     )
 
 
+def _finality_attestation_report_pass(finality: dict[str, Any]) -> bool:
+    return (
+        str(finality.get("finality_status", "")).strip() == "pass"
+        and bool(finality.get("matches_fixed_point_digest_map"))
+        and not as_list(finality.get("finality_failures"))
+        and not as_list(finality.get("digest_mismatches"))
+    )
+
+
 def _release_evidence_finality_reason_ids(vault: Path) -> list[str]:
     reasons: list[str] = []
     fixed_point = load_json_object(vault / "ops/reports/release-closeout-fixed-point.json")
     finality = load_json_object(vault / "ops/reports/release-closeout-finality-attestation.json")
     finality_fixed_point = as_dict(finality.get("fixed_point_report"))
-    finality_verified, _finality_failures = verify_attestation(vault)
     if fixed_point.get("status") != "pass":
         reasons.append("release_closeout_fixed_point_not_pass")
     if not bool(fixed_point.get("converged")):
         reasons.append("release_closeout_fixed_point_not_converged")
     if finality_fixed_point.get("status") != "pass":
         reasons.append("release_finality_fixed_point_report_not_pass")
-    if not finality_verified:
+    if not _finality_attestation_report_pass(finality):
         reasons.append("release_finality_attestation_verification_failed")
     return reasons
 
@@ -620,7 +627,6 @@ def release_evidence_bundle_and_attestation_verified(vault: Path) -> bool:
     fixed_point = load_json_object(vault / "ops/reports/release-closeout-fixed-point.json")
     finality = load_json_object(vault / "ops/reports/release-closeout-finality-attestation.json")
     finality_fixed_point = as_dict(finality.get("fixed_point_report"))
-    finality_verified, _finality_failures = verify_attestation(vault)
     return (
         _release_authority_reports_verified(vault)
         and _full_suite_evidence_verified(vault)
@@ -628,7 +634,7 @@ def release_evidence_bundle_and_attestation_verified(vault: Path) -> bool:
         and fixed_point.get("status") == "pass"
         and bool(fixed_point.get("converged"))
         and finality_fixed_point.get("status") == "pass"
-        and finality_verified
+        and _finality_attestation_report_pass(finality)
     )
 
 

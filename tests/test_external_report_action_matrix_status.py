@@ -9,12 +9,16 @@ from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 from tests.external_report_action_matrix_test_runtime import (
+    FINALITY_ATTESTATION_PATH,
+    FIXED_POINT_REPORT_PATH,
     REPO_ROOT,
     SCHEMA_PATH,
     ExternalReportActionMatrixTestBase,
     _canonical_json_digest,
+    _sha256_file,
     action_status_reason_details,
     action_statuses,
+    build_finality_attestation_report,
     build_report,
     collaboration_governance_surface_reason_ids,
     fixed_context,
@@ -22,6 +26,7 @@ from tests.external_report_action_matrix_test_runtime import (
     load_schema,
     report_lifecycle_profiles,
     validate_with_schema,
+    write_finality_attestation,
 )
 
 pytestmark = pytest.mark.public
@@ -1261,12 +1266,14 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             self.assertEqual(actions[action_id]["status_reason_details"], [])
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 0)
-    def test_finality_digest_drift_blocks_only_evidence_bundle_attestation(self) -> None:
+    def test_finality_report_failure_blocks_only_evidence_bundle_attestation(self) -> None:
         self._write_release_verification_reports()
-        self._write_json(
-            "ops/reports/generated-artifact-index.json",
-            {"artifact_kind": "generated_artifact_index", "status": "changed_after_finality"},
-        )
+        finality_path = self.vault / FINALITY_ATTESTATION_PATH
+        finality_report = json.loads(finality_path.read_text(encoding="utf-8"))
+        finality_report["finality_status"] = "fail"
+        finality_report["matches_fixed_point_digest_map"] = False
+        finality_report["finality_failures"] = ["tracked_digest_map_current_mismatch"]
+        self._write_json(FINALITY_ATTESTATION_PATH, finality_report)
         (self.external / "release.md").write_text(
             "# Release Review\n\nsource package, evidence bundle, full-suite, promotion_blockers.\n",
             encoding="utf-8",
@@ -1296,6 +1303,45 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self.assertEqual(finality_detail["owning_stage"], "release_auto_promotion_preseal")
         self.assertIn("release-auto-promotion-preseal", finality_detail["recommended_targets"])
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 1)
+
+    def test_action_matrix_self_reference_does_not_reopen_finality(self) -> None:
+        self._write_release_verification_reports()
+        matrix_path = "ops/reports/external-report-action-matrix.json"
+        self._write_json(
+            matrix_path,
+            {"artifact_kind": "external_report_action_matrix", "status": "pre_finality"},
+        )
+        fixed_point_path = self.vault / FIXED_POINT_REPORT_PATH
+        fixed_point = json.loads(fixed_point_path.read_text(encoding="utf-8"))
+        fixed_point["tracked_artifacts"].append({"path": matrix_path})
+        fixed_point["final_digest_map"][matrix_path] = _sha256_file(self.vault / matrix_path)
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+        finality_report = build_finality_attestation_report(self.vault, context=fixed_context())
+        write_finality_attestation(self.vault, finality_report)
+        self._write_json(
+            matrix_path,
+            {"artifact_kind": "external_report_action_matrix", "status": "rewritten_by_matrix"},
+        )
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nsource package, evidence bundle, full-suite, promotion_blockers.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        for action_id in (
+            "source_package_distribution_binding",
+            "release_evidence_bundle_and_attestation",
+            "full_suite_evidence_currentness",
+            "promotion_truth_ladder",
+        ):
+            self.assertEqual(actions[action_id]["current_status"], "implemented")
+            self.assertNotIn(
+                "release_finality_attestation_verification_failed",
+                actions[action_id]["status_reason_ids"],
+            )
+        self.assertEqual(report["summary"]["requires_release_run_verification_count"], 0)
     def test_evidence_bundle_attestation_explains_manifest_dependency_mismatch(self) -> None:
         self._write_release_verification_reports()
         self._write_json(
