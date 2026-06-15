@@ -598,6 +598,16 @@
       "replacement": "make goal-runtime-certificate"
     },
     {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_certificate_run_id_guard",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/mechanism/goal_runtime_certificate_run_id_guard.py",
+      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make goal-runtime-certificate-run-id-guard"
+    },
+    {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_clean_transient",
       "console_scripts": [],
       "install_state": "not_installed",
