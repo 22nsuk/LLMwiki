@@ -628,7 +628,34 @@
         "operational_attention_artifact_count": { "$ref": "#/$defs/nullable_count" },
         "summary": { "type": "string", "minLength": 1 },
         "reason_id": { "type": "string", "minLength": 1 },
-        "owner_target": { "const": "artifact-freshness" }
+        "owner_target": { "const": "artifact-freshness" },
+        "stale_routing": { "$ref": "#/$defs/artifact_freshness_stale_routing" }
+      }
+    },
+    "artifact_freshness_stale_routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "recommended_lane",
+        "recommended_targets",
+        "reason_ids",
+        "summary"
+      ],
+      "properties": {
+        "classification": { "type": "string", "minLength": 1 },
+        "recommended_lane": { "type": "string", "minLength": 1 },
+        "recommended_targets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "reason_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "summary": { "type": "string", "minLength": 1 }
       }
     }
   }

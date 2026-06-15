@@ -1156,7 +1156,11 @@ def artifact_freshness_performance_observability_reason_ids(
             summary.get("operational_attention_artifact_count")
         )
         if max(0, stale_artifact_count - operational_attention_count):
-            reasons.append("artifact_freshness_stale_canonical_reports")
+            stale_routing = as_dict(report.get("stale_routing"))
+            if stale_routing.get("classification") == "source_identity_only":
+                reasons.append("artifact_freshness_source_identity_resettle")
+            else:
+                reasons.append("artifact_freshness_stale_canonical_reports")
         if operational_attention_count:
             reasons.append("artifact_freshness_operational_attention")
         if as_int(summary.get("stable_contract_debt_artifact_count")):
@@ -2193,6 +2197,11 @@ def _prefix_reason_detail(reason_id: str) -> dict[str, Any] | None:
             )
     if reason_id.startswith("artifact_freshness_"):
         recommended_targets = ("artifact-freshness-refresh-check",)
+        if reason_id == "artifact_freshness_source_identity_resettle":
+            recommended_targets = (
+                "freshness-source-identity-converge",
+                "artifact-freshness-refresh-check",
+            )
         if reason_id == "artifact_freshness_stable_contract_debt":
             recommended_targets = (
                 "artifact-freshness-stable-contract-debt-refresh",

@@ -344,6 +344,46 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_report(self.vault, report).exists())
+
+    def test_matrix_summary_surfaces_artifact_freshness_stale_routing(self) -> None:
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nexternal report lifecycle.\n",
+            encoding="utf-8",
+        )
+        stale_routing = {
+            "classification": "source_identity_only",
+            "recommended_lane": "freshness-source-identity-converge",
+            "recommended_targets": ["freshness-source-identity-converge"],
+            "reason_ids": ["source_identity_only_stale"],
+            "summary": (
+                "3 stale artifact(s) only differ by source revision or source-tree "
+                "fingerprint; use the source-identity convergence lane first."
+            ),
+        }
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            self._artifact_freshness_payload(
+                artifact_count=12,
+                stale_artifact_count=3,
+                operational_attention_artifact_count=3,
+                status="attention",
+                stale_routing=stale_routing,
+            ),
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            report["summary"]["canonical_artifact_freshness_state"],
+            self._artifact_freshness_state(
+                artifact_count=12,
+                stale_artifact_count=3,
+                operational_attention_artifact_count=3,
+                stale_routing=stale_routing,
+            ),
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_matrix_passes_when_reference_manifest_matches_active_reports(self) -> None:
         self._write_json(
             "ops/reports/external-report-action-matrix.json",

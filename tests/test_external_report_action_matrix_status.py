@@ -1243,6 +1243,67 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         }["artifact_freshness_performance_observability"]
         self.assertEqual(action["status_reason_ids"], ["artifact_freshness_operational_attention"])
         self.assertEqual(action["gate_effects"], ["advisory"])
+
+    def test_artifact_freshness_source_identity_resettle_prefers_narrow_lane(self) -> None:
+        for rel_path, text in {
+            "ops/scripts/core/artifact_freshness_runtime.py": (
+                "class ArtifactFreshnessContext: pass\n"
+                "schema_cache = {}\n"
+                "phase_timings = []\n"
+                "def progress_jsonl(): return '--progress jsonl'\n"
+            ),
+            "tests/test_artifact_freshness_runtime.py": "def test_placeholder(): pass\n",
+            "mk/artifact.mk": (
+                "artifact-freshness-refresh-check:\n\tpython -m ops.scripts.artifact_freshness\n"
+                "freshness-source-identity-converge:\n"
+                "\t$(MAKE) artifact-freshness-refresh-check\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "status": "attention",
+                "stale_routing": {
+                    "classification": "source_identity_only",
+                    "recommended_lane": "freshness-source-identity-converge",
+                    "recommended_targets": ["freshness-source-identity-converge"],
+                    "reason_ids": ["source_identity_only_stale"],
+                    "summary": (
+                        "5 stale artifact(s) only differ by source revision or source-tree "
+                        "fingerprint; use the source-identity convergence lane first."
+                    ),
+                },
+                "summary": {
+                    "stale_artifact_count": 5,
+                    "operational_attention_artifact_count": 0,
+                    "stable_contract_debt_artifact_count": 0,
+                },
+            },
+        )
+        (self.external / "artifact-freshness.md").write_text(
+            "# Artifact Freshness\n\nartifact freshness schema validator cache progress jsonl per-phase timing.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        action = {
+            item["action_id"]: item for item in report["action_items"]
+        }["artifact_freshness_performance_observability"]
+        self.assertEqual(action["status_reason_ids"], ["artifact_freshness_source_identity_resettle"])
+        self.assertEqual(action["recommended_target"], "freshness-source-identity-converge")
+        detail = action["status_reason_details"][0]
+        self.assertEqual(detail["owning_stage"], "artifact_freshness")
+        self.assertEqual(detail["blocking_scope"], "artifact_freshness")
+        self.assertEqual(
+            detail["recommended_targets"],
+            ["freshness-source-identity-converge", "artifact-freshness-refresh-check"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_release_verified_actions_become_implemented_after_closeout(self) -> None:
         self._write_release_verification_reports()
         (self.external / "release.md").write_text(

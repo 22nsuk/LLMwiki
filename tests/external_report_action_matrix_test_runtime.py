@@ -299,8 +299,9 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
         currentness_status: str = "current",
         source_revision: str | None = None,
         source_tree_fingerprint: str | None = None,
+        stale_routing: dict | None = None,
     ) -> dict:
-        return {
+        payload = {
             "artifact_kind": "artifact_freshness_report",
             "artifact_status": "current",
             "currentness": {"status": currentness_status},
@@ -315,14 +316,19 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
                 "operational_attention_artifact_count": operational_attention_artifact_count,
             },
         }
+        if stale_routing is not None:
+            payload["stale_routing"] = stale_routing
+        return payload
+
     def _artifact_freshness_state(
         self,
         *,
         artifact_count: int,
         stale_artifact_count: int,
         operational_attention_artifact_count: int,
+        stale_routing: dict | None = None,
     ) -> dict:
-        return {
+        state = {
             "evidence_status": "current",
             "evidence_path": "ops/reports/artifact-freshness-report.json",
             "stale_artifact_count": stale_artifact_count,
@@ -333,6 +339,10 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
             "reason_id": "artifact_freshness_report_current",
             "owner_target": "artifact-freshness",
         }
+        if stale_routing is not None:
+            state["stale_routing"] = stale_routing
+        return state
+
     def _unavailable_artifact_freshness_state(
         self,
         *,
