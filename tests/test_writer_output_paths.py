@@ -25,6 +25,7 @@ from ops.scripts.schema_constants_runtime import (
 )
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.script_output_surfaces import (
+    NON_PATH_STATUS_OPTION_SUFFIXES,
     build_registry as build_script_output_surface_registry,
 )
 from ops.scripts.starter_bundle_runtime import (
@@ -82,7 +83,9 @@ def _output_option_names(rel_path: str) -> set[str]:
         for arg in node.args:
             if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
                 continue
-            if arg.value == "--out" or arg.value.endswith("-out"):
+            if arg.value == "--out" or (
+                arg.value.endswith("-out") and not arg.value.endswith(NON_PATH_STATUS_OPTION_SUFFIXES)
+            ):
                 options.add(arg.value)
     return options
 
@@ -357,6 +360,15 @@ class WriterOutputPathsTest(unittest.TestCase):
         for entry in _script_output_surface_entries():
             if entry["output_options"]:
                 self.assertIn(entry["classification"], OUTPUT_WRITER_CLASSIFICATIONS)
+
+    def test_status_flags_ending_in_out_are_not_output_options(self) -> None:
+        registry = build_script_output_surface_registry(REPO_ROOT)
+        goal_status = next(
+            entry
+            for entry in registry["surfaces"]
+            if entry["path"] == "ops/scripts/mechanism/goal_run_status.py"
+        )
+        self.assertNotIn("--last-command-timed-out", goal_status["output_options"])
 
     def test_no_output_entries_are_direct_fallback_registry_entries(self) -> None:
         for entry in _script_output_surface_entries():
