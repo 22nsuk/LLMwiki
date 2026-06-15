@@ -198,6 +198,7 @@ rebase produces jobs that reach checkout.
 | --- | --- | --- |
 | Docs only | `make test-public` | `make sync-public-policy-check` if public boundaries changed |
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
+| CLI output/path surface | `make script-output-surfaces-check` | Run `make script-output-surfaces` only when the check reports a stale material output/fallback registry, then rerun the check before committing |
 | Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | proves planner recommendations and changed-path minimums |
 | Registry/Make/CI lane-contract proof | `make test-report-contract-core` | proves registry/Make/CI lane-contract parity after lane selector, CI routing, or report-contract semantics changed |
 | Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | Before and after structural edits, prefer `make function-budget-edit-check STRUCTURAL_COMPLEXITY_BUDGET_TARGETS="path/to/file.py"` (or `CHANGED_FILES_MANIFEST=<manifest>`); it refreshes function-budget proposals and then runs the touched complexity ratchet. Without touched inputs, `complexity-budget-touched-check` skips and the ratchet stays inactive |

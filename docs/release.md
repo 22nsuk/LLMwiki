@@ -620,12 +620,32 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   or rewrite canonical goal prompt/contract surfaces: canonical goal evidence is
   run evidence, not a generic currentness artifact, and must be refreshed
   through the goal-runtime lane with an explicit run ID.
-  To avoid source-identity churn, finish and commit all tracked source,
-  policy, schema, fixture, and documentation changes before refreshing
-  generated evidence. Then refresh test, public, goal-runtime, owner-routed
-  freshness lanes, release smoke/package/run-ready evidence, and finally rerun
-  `artifact-freshness-refresh-check` plus `external-report-action-matrix`.
-  If this final freshness pass does not change tracked source inputs,
+  To avoid source-identity churn, use this order for real run convergence:
+
+  1. Finish all source, code, documentation, policy, schema, fixture, and test
+     edits.
+  2. Validate the changed surface. If a CLI option, output path, or direct
+     script writer surface changed, include `make script-output-surfaces-check`
+     before committing; refresh `make script-output-surfaces` only when the
+     check reports a stale material output/fallback registry.
+  3. Commit the source-ready change before mutating canonical generated
+     evidence.
+  4. Run the narrow generated convergence lane that matches the blocker:
+     `make generated-artifact-converge` for generated-artifact feedback, or
+     `make freshness-source-identity-converge` for source revision/tree
+     fingerprint resettle. Do not jump to broad release convergence unless the
+     owner route still requires it.
+  5. Run `make artifact-freshness-refresh-check`.
+  6. When finality-tracked reports changed, run
+     `make release-finality-resettle-current-or-refresh`.
+  7. Run the release/operator authority lane only after freshness and finality
+     are stable, for example `make release-run-ready` or
+     `make release-authority-settle`.
+  8. Finish with `make release-post-commit-finalize` so HEAD readback,
+     script-output surface checking, artifact freshness checking, and terminal
+     finality verification use the committed tree.
+
+  If the final freshness pass does not change tracked source inputs,
   `release-run-ready-plan-check` should remain a reuse-only ready plan rather
   than opening another release evidence loop.
 - `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
