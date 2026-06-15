@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
 import pytest
+from ops.scripts.goal_contract_digest_runtime import semantic_goal_contract_digest
 from ops.scripts.goal_runtime_run_admission import (
     GoalRuntimeRunAdmissionRequest,
     build_report,
@@ -27,11 +27,6 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 5, 21, 0, 0, tzinfo=dt.UTC),
     )
-
-
-def _canonical_json_digest(payload: dict) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 class GoalRuntimeRunAdmissionTests(unittest.TestCase):
@@ -166,7 +161,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             "runtime": {"certificate_status": "verified"},
             "promotion_guard": {"runtime_certificate_verified": True},
         }
-        contract_digest = _canonical_json_digest(contract)
+        contract_digest = semantic_goal_contract_digest(contract)
         self._write_json("ops/reports/codex-goal-contract.json", contract)
         self._write_json(
             "ops/reports/goal-run-status.json",

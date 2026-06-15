@@ -23,6 +23,9 @@ from ops.scripts.mechanism.auto_improve_learning_preflight_runtime import (
     goal_contract_authorizes_learning_uncertain,
 )
 from ops.scripts.mechanism.auto_improve_queue_runtime import build_proposal_queue
+from ops.scripts.mechanism.goal_contract_digest_runtime import (
+    semantic_goal_contract_digest,
+)
 from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
     load_json_object_from_vault,
 )
@@ -1261,7 +1264,7 @@ def _durable_goal_authority_check(
     runtime_certificate: dict[str, Any],
     runtime_certificate_path: str,
 ) -> dict[str, Any]:
-    contract_digest = _canonical_json_digest(contract) if contract else ""
+    contract_digest = semantic_goal_contract_digest(contract) if contract else ""
     contract_backend = _dict_field(contract, "goal_backend")
     contract_runtime = _dict_field(contract, "runtime")
     contract_guard = _dict_field(contract, "promotion_guard")

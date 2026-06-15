@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import json
 import re
 from collections.abc import Callable
@@ -12,6 +11,9 @@ from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_CLAIM_BLOCKER,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+)
+from ops.scripts.mechanism.goal_contract_digest_runtime import (
+    semantic_goal_contract_digest,
 )
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -456,13 +458,12 @@ def _implemented_artifact_report(vault: Path, rel_path: str, artifact_kind: str)
 
 
 def _canonical_json_digest(payload: dict[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+    return semantic_goal_contract_digest(payload)
 
 
 def _current_contract_digest(vault: Path) -> str:
     contract = load_json_object(vault / "ops/reports/codex-goal-contract.json")
-    return _canonical_json_digest(contract) if contract else ""
+    return semantic_goal_contract_digest(contract) if contract else ""
 
 
 def _goal_status_contract_digest(vault: Path, goal: dict[str, Any]) -> str:
@@ -472,7 +473,7 @@ def _goal_status_contract_digest(vault: Path, goal: dict[str, Any]) -> str:
         and contract_path.endswith("/state/codex-goal-contract.json")
     ):
         contract = load_json_object(vault / contract_path)
-        return _canonical_json_digest(contract) if contract else ""
+        return semantic_goal_contract_digest(contract) if contract else ""
     return _current_contract_digest(vault)
 
 

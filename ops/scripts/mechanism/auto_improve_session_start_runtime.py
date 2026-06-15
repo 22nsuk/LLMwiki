@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -21,6 +19,7 @@ from .auto_improve_loop_decision_runtime import (
 from .auto_improve_maintenance_decision_runtime import MAINTENANCE_ACTION_RUNNER_ACTION
 from .auto_improve_session_report_runtime import _load_session_report
 from .auto_improve_value_runtime import _int_value, _list_text, _mapping_value
+from .goal_contract_digest_runtime import semantic_goal_contract_digest
 from .goal_runtime_certificate import (
     learning_uncertain_policy,
     post_promote_maintenance_policy,
@@ -168,8 +167,7 @@ def _apply_resume_budget_overrides(
 
 
 def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+    return semantic_goal_contract_digest(payload)
 
 
 def _positive_contract_int(payload: Mapping[str, Any], key: str, *, context: str) -> int:
@@ -204,7 +202,7 @@ def _goal_contract_snapshot(
     return {
         "path": report_path(vault, resolved_contract_path),
         "requested_path": contract_path,
-        "contract_sha256": _canonical_json_digest(contract),
+        "contract_sha256": semantic_goal_contract_digest(contract),
         "contract_id": str(contract.get("contract_id", "")).strip(),
         "status": str(contract.get("status", "")).strip(),
         "runtime_mode": str(runtime.get("mode", "")).strip(),

@@ -57,6 +57,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             "ops/scripts/mechanism/goal_runtime_certificate.py",
             "ops/scripts/mechanism/goal_runtime_certificate_report.py",
             "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_contract_digest_runtime.py",
             "ops/scripts/mechanism/goal_runtime_backoff.py",
             "ops/scripts/mechanism/goal_runtime_maintenance.py",
             "ops/scripts/mechanism/goal_runtime_resume.py",

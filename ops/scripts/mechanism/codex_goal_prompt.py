@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -17,15 +15,12 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 
+from .goal_contract_digest_runtime import semantic_goal_contract_digest
+
 DEFAULT_OUT = "ops/reports/codex-goal-prompt.json"
 PRODUCER = "ops.scripts.codex_goal_prompt"
 SCHEMA_PATH = "ops/schemas/codex-goal-prompt.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.codex_goal_prompt --vault ."
-
-
-def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 def _mapping_value(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
@@ -207,6 +202,7 @@ def build_report(
             schema_path=SCHEMA_PATH,
             source_paths=[
                 "ops/scripts/mechanism/codex_goal_prompt.py",
+                "ops/scripts/mechanism/goal_contract_digest_runtime.py",
                 "ops/scripts/core/codex_goal_client.py",
                 "ops/schemas/codex-goal-prompt.schema.json",
                 "ops/schemas/codex-goal-contract.schema.json",
@@ -216,7 +212,7 @@ def build_report(
         ),
         "goal_contract": {
             "path": report_path(resolved_vault, backend.destination),
-            "contract_sha256": _canonical_json_digest(contract),
+            "contract_sha256": semantic_goal_contract_digest(contract),
             "contract_id": str(contract.get("contract_id", "")).strip(),
             "status": str(contract.get("status", "")).strip(),
             "objective": str(contract.get("objective", "")).strip(),

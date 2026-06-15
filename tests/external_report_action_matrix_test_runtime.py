@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 from ops.scripts.gate_effect_vocabulary import strongest_gate_effect
+from ops.scripts.goal_contract_digest_runtime import semantic_goal_contract_digest
 
 from ops.scripts.core.generated_artifact_index import (
     build_report as build_generated_artifact_index_report,
@@ -107,8 +108,7 @@ def fixed_context() -> RuntimeContext:
 
 
 def _canonical_json_digest(payload: dict) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+    return semantic_goal_contract_digest(payload)
 
 
 def _sha256_file(path: Path) -> str:

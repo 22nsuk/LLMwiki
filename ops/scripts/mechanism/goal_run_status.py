@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -24,6 +22,7 @@ from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 
 from .auto_improve_session_completion_runtime import completion_class_for_session
+from .goal_contract_digest_runtime import semantic_goal_contract_digest
 from .goal_run_status_artifacts_runtime import (
     build_status_markdown as _build_status_markdown,
     write_run_artifacts as _write_run_artifacts,
@@ -120,11 +119,6 @@ class _MergedObservability:
     backoff_reason: str
     resume_from_checkpoint: bool
     resume_command: str
-
-
-def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 def goal_run_artifact_paths(run_id: str, *, status_report_path: str = DEFAULT_STATUS_PATH) -> GoalRunArtifactPaths:
@@ -467,6 +461,7 @@ def _goal_status_source_paths() -> list[str]:
         "ops/scripts/mechanism/goal_runtime_backoff.py",
         "ops/scripts/mechanism/goal_runtime_maintenance.py",
         "ops/scripts/mechanism/goal_runtime_certificate.py",
+        "ops/scripts/mechanism/goal_contract_digest_runtime.py",
         "ops/scripts/mechanism/goal_runtime_resume.py",
         "ops/scripts/mechanism/auto_improve_session_completion_runtime.py",
         "ops/scripts/core/codex_goal_client.py",
@@ -494,7 +489,7 @@ def _goal_payload(
 ) -> dict[str, Any]:
     return {
         "contract_path": request.goal_contract_path,
-        "contract_sha256": _canonical_json_digest(contract),
+        "contract_sha256": semantic_goal_contract_digest(contract),
         "contract_status": "loaded",
         "contract_id": str(contract.get("contract_id", "")).strip(),
         "objective": str(contract.get("objective", "")).strip(),

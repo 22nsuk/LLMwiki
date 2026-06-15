@@ -67,6 +67,7 @@ class GoalRunStatusTests(unittest.TestCase):
         self._copy_support_file("ops/scripts/mechanism/goal_runtime_backoff.py")
         self._copy_support_file("ops/scripts/mechanism/goal_runtime_maintenance.py")
         self._copy_support_file("ops/scripts/mechanism/goal_runtime_certificate.py")
+        self._copy_support_file("ops/scripts/mechanism/goal_contract_digest_runtime.py")
         self._copy_support_file("ops/scripts/mechanism/goal_runtime_resume.py")
 
     def tearDown(self) -> None:
@@ -79,6 +80,43 @@ class GoalRunStatusTests(unittest.TestCase):
 
     def _seed_goal_contract(self) -> None:
         set_goal(sample_goal_contract(), vault=self.vault)
+
+    def test_contract_digest_ignores_artifact_envelope_metadata(self) -> None:
+        contract = sample_goal_contract()
+        contract["metadata"] = {
+            "contract_family": "bounded_auto_improve",
+            "properties": [
+                {
+                    "name": "urn:openai:artifact-envelope",
+                    "value": '{"generated_at":"2026-06-15T00:00:00Z"}',
+                }
+            ],
+        }
+        set_goal(contract, vault=self.vault)
+        first = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="metadata-digest",
+                context=fixed_context(),
+            )
+        )
+
+        contract["metadata"]["properties"][0]["value"] = (
+            '{"generated_at":"2026-06-15T01:00:00Z"}'
+        )
+        set_goal(contract, vault=self.vault)
+        second = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="metadata-digest",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(
+            first["goal"]["contract_sha256"],
+            second["goal"]["contract_sha256"],
+        )
 
     def _seed_session_synopsis(self) -> None:
         path = self.vault / "ops" / "reports" / "session-synopsis.json"

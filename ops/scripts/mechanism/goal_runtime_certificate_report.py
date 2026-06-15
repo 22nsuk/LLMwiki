@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
 import json
 from collections.abc import Mapping
 from copy import deepcopy
@@ -29,6 +28,7 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 
+from .goal_contract_digest_runtime import semantic_goal_contract_digest
 from .goal_runtime_certificate import (
     RUNTIME_MODES,
     evidence_statuses,
@@ -48,6 +48,7 @@ SOURCE_PATHS = (
     "ops/scripts/mechanism/goal_runtime_certificate_report.py",
     "ops/scripts/mechanism/goal_runtime_certificate.py",
     "ops/scripts/mechanism/goal_run_status.py",
+    "ops/scripts/mechanism/goal_contract_digest_runtime.py",
     "ops/scripts/core/codex_goal_client.py",
     "ops/schemas/goal-runtime-certificate.schema.json",
     "ops/schemas/codex-goal-contract.schema.json",
@@ -135,11 +136,6 @@ def _integer_value(value: object) -> int:
 
 def _bool_value(value: object) -> bool:
     return value if isinstance(value, bool) else False
-
-
-def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 def _parse_iso_z(value: object) -> dt.datetime | None:
@@ -1167,7 +1163,7 @@ def _certificate_update_state(
     if request.apply_update and apply_allowed:
         updated = backend.update_goal(patch)
         applied = True
-        contract_sha256_after = _canonical_json_digest(updated)
+        contract_sha256_after = semantic_goal_contract_digest(updated)
         certificate_status_after = str(
             _mapping_value(updated, "runtime").get("certificate_status", "unverified")
         )
@@ -1322,7 +1318,7 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
     generated_at = runtime_context.isoformat_z()
     backend = FileGoalBackend(vault=vault, contract_path=request.goal_contract_path)
     contract = backend.get_goal()
-    contract_sha256_before = _canonical_json_digest(contract)
+    contract_sha256_before = semantic_goal_contract_digest(contract)
     target_runtime_mode = request.runtime_mode.strip() or contract_runtime_mode(contract)
     certificate_status_before = (
         str(_mapping_value(contract, "runtime").get("certificate_status", "unverified")).strip()
