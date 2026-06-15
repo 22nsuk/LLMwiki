@@ -460,7 +460,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             _target_block(text, "release-closeout-summary-conditional"),
         )
 
-    def test_release_freshness_sensitive_evidence_refresh_groups_currentness_reports(
+    def test_release_freshness_sensitive_evidence_refresh_avoids_goal_status_publish(
         self,
     ) -> None:
         text = _makefile_text()
@@ -476,10 +476,11 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
                 "$(MAKE) type-uplift-plan",
                 "$(MAKE) complexity-budget",
                 "$(MAKE) codex-goal-prompt",
-                "$(MAKE) auto-improve-goal-status",
-                "$(MAKE) goal-runtime-publish-snapshot",
             ],
         )
+        target_block = _target_block(text, "release-freshness-sensitive-evidence-refresh")
+        self.assertNotIn("$(MAKE) auto-improve-goal-status", target_block)
+        self.assertNotIn("$(MAKE) goal-runtime-publish-snapshot", target_block)
 
         converge_lines = _release_evidence_converge_expanded_recipe_lines(text)
         phase_2_refresh_index = converge_lines.index(

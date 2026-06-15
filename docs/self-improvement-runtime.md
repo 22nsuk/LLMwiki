@@ -46,6 +46,11 @@ The target also runs a run-id guard before any status write: if Make's default
 `GOAL_RUN_ID=auto-improve-trial` would overwrite canonical status or
 certificate evidence for another run, it fails and asks for an explicit
 `GOAL_RUN_ID=<completed-run-id>`.
+The canonical publish targets, including `goal-runtime-publish-snapshot` and
+`goal-runtime-publish-local-evidence`, use the same guard. Release freshness
+refreshes intentionally do not publish goal status snapshots; refresh the goal
+runtime lane with the intended explicit run ID when canonical status or
+certificate evidence needs to move.
 
 Default goal runs do not spend the remaining wall-clock budget after one
 promotion. `GOAL_POST_PROMOTE_MAINTENANCE_CYCLES ?= 1` keeps a single

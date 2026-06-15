@@ -697,6 +697,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-publish-snapshot",
             (
+                "$(MAKE) goal-runtime-certificate-run-id-guard",
                 "--candidate \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
                 "--out \"$(CODEX_GOAL_CONTRACT_OUT)\"",
                 "--candidate \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
@@ -989,8 +990,12 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             6,
         )
         self.assertIn(
-            "$(MAKE) goal-runtime-local-evidence-converge",
+            "$(MAKE) goal-runtime-certificate-run-id-guard",
             _recipe_lines(text, "goal-runtime-publish-local-evidence")[0],
+        )
+        self.assertIn(
+            "$(MAKE) goal-runtime-local-evidence-converge",
+            _recipe_lines(text, "goal-runtime-publish-local-evidence")[1],
         )
 
     def test_auto_improve_goal_runner_finalize_and_certificate_recipes(self) -> None:

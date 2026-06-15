@@ -81,8 +81,6 @@ release-freshness-sensitive-evidence-refresh:
 	$(MAKE) type-uplift-plan
 	$(MAKE) complexity-budget
 	$(MAKE) codex-goal-prompt
-	$(MAKE) auto-improve-goal-status
-	$(MAKE) goal-runtime-publish-snapshot
 
 release-verify-current:
 	$(MAKE) release-check-finalized
