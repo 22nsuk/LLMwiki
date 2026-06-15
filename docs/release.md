@@ -601,9 +601,14 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   When artifact freshness reports `stale_routing.classification:
   source_identity_only`, use `stale_routing.source_identity_owner_routes` to
   choose the narrow owner lane for each stale artifact group before paying for
-  broad release evidence convergence. The top-level resettle target remains the
-  safe post-commit fallback, while owner routes point to concrete Make targets
-  such as `external-report-reference-manifest-settle`,
+  broad release evidence convergence. If the stale set is only source
+  revision/tree fingerprint drift, start with
+  `make freshness-source-identity-converge`; it refreshes freshness/index
+  identity evidence and then uses the finality current-or-refresh wrapper
+  without entering full-suite, release-run-ready, promotion authority, or goal
+  publish lanes. The top-level resettle target remains the safe post-commit
+  fallback, while owner routes point to concrete Make targets such as
+  `external-report-reference-manifest-settle`,
   `test-execution-summary-full-current-or-refresh`,
   `goal-runtime-publish-snapshot GOAL_RUN_ID=<completed-run-id>`,
   `supply-chain-artifacts-cached`, or

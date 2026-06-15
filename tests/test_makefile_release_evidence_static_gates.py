@@ -505,6 +505,35 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             ),
         )
 
+    def test_freshness_source_identity_converge_stays_narrow(self) -> None:
+        text = _makefile_text()
+        phony = _target_block(text, ".PHONY")
+        target_block = _target_block(text, "freshness-source-identity-converge")
+
+        self.assertIn("freshness-source-identity-converge", phony)
+        self.assertEqual(
+            _recipe_lines(text, "freshness-source-identity-converge"),
+            [
+                "$(MAKE) artifact-freshness-refresh-check",
+                "$(MAKE) generated-artifact-index",
+                "$(MAKE) artifact-freshness-refresh-check",
+                "$(MAKE) release-finality-resettle-current-or-refresh",
+            ],
+        )
+        for forbidden_target in (
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
+            "$(MAKE) test-execution-summary-full-refresh",
+            "$(MAKE) release-run-ready",
+            "$(MAKE) release-authority-settle",
+            "$(MAKE) release-evidence-converge",
+            "$(MAKE) release-smoke-full",
+            "$(MAKE) release-source-package-check",
+            "$(MAKE) goal-runtime-publish-snapshot",
+            "$(MAKE) goal-runtime-publish-local-evidence",
+        ):
+            with self.subTest(forbidden_target=forbidden_target):
+                self.assertNotIn(forbidden_target, target_block)
+
     def test_release_clean_lane_evidence_review_target_exists(self) -> None:
         text = _makefile_text()
 
