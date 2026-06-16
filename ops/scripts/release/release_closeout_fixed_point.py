@@ -80,6 +80,19 @@ class _FixedPointIterationState:
 
 
 @dataclass(frozen=True)
+class _FixedPointIterationConfig:
+    initial_targets: Sequence[str]
+    baseline_before_first_iteration: bool
+    max_iterations: int
+    timeout_seconds: int
+    python_executable: str
+    make_variables: Sequence[str]
+    runtime_env: Mapping[str, str]
+    command_runner: CommandRunner
+    progress_sink: ProgressSink | None = None
+
+
+@dataclass(frozen=True)
 class _FixedPointIterationSnapshot:
     record: dict[str, Any]
     digest_map: dict[str, str]
@@ -1341,6 +1354,55 @@ def _bootstrap_freshness_result(
     return result
 
 
+def _initial_iteration_digest_maps(
+    vault: Path,
+    runtime: _FixedPointPolicyRuntime,
+    *,
+    baseline_before_first_iteration: bool,
+) -> tuple[dict[str, str] | None, dict[str, str] | None]:
+    if not baseline_before_first_iteration:
+        return None, None
+    semantic_digest_map, _ = semantic_digest_maps(vault, runtime.tracked_paths)
+    return _digest_map(vault, runtime.tracked_artifacts), semantic_digest_map
+
+
+def _fixed_point_iteration_result(
+    vault: Path,
+    runtime: _FixedPointPolicyRuntime,
+    *,
+    iterations: list[dict[str, Any]],
+    failed: bool,
+    converged: bool,
+    converged_iteration: int,
+) -> _FixedPointIterationState:
+    final_digest_map = (
+        iterations[-1]["digest_map"]
+        if iterations
+        else _digest_map(vault, runtime.tracked_artifacts)
+    )
+    final_changed_paths = (
+        iterations[-1]["changed_paths"] if iterations else sorted(final_digest_map)
+    )
+    if failed:
+        status = "fail"
+        reason = "iteration_command_failed"
+    elif converged:
+        status = "pass"
+        reason = "digest_map_converged"
+    else:
+        status = "non_converged"
+        reason = "digest_map_changed_until_iteration_budget_exhausted"
+    return _FixedPointIterationState(
+        iterations=iterations,
+        final_digest_map=final_digest_map,
+        final_changed_paths=final_changed_paths,
+        status=status,
+        reason=reason,
+        converged=converged,
+        converged_iteration=converged_iteration,
+    )
+
+
 def _bootstrap_pass_record(
     pass_index: int,
     *,
@@ -1737,50 +1799,37 @@ def _fixed_point_iteration_state(
     vault: Path,
     *,
     runtime: _FixedPointPolicyRuntime,
-    initial_targets: Sequence[str],
-    baseline_before_first_iteration: bool,
-    max_iterations: int,
-    timeout_seconds: int,
-    python_executable: str,
-    make_variables: Sequence[str],
-    runtime_env: Mapping[str, str],
-    command_runner: CommandRunner,
-    progress_sink: ProgressSink | None = None,
+    config: _FixedPointIterationConfig,
 ) -> _FixedPointIterationState:
-    next_targets = list(initial_targets)
+    next_targets = list(config.initial_targets)
     iterations: list[dict[str, Any]] = []
-    previous_digest_map: dict[str, str] | None = (
-        _digest_map(vault, runtime.tracked_artifacts)
-        if baseline_before_first_iteration
-        else None
+    previous_digest_map, previous_semantic_digest_map = _initial_iteration_digest_maps(
+        vault,
+        runtime,
+        baseline_before_first_iteration=config.baseline_before_first_iteration,
     )
-    previous_semantic_digest_map: dict[str, str] | None = None
-    if baseline_before_first_iteration:
-        previous_semantic_digest_map, _ = semantic_digest_maps(
-            vault, runtime.tracked_paths
-        )
     converged = False
     converged_iteration = 0
     failed = False
 
-    for iteration_index in range(1, max_iterations + 1):
+    for iteration_index in range(1, config.max_iterations + 1):
         _emit_progress(
-            progress_sink,
+            config.progress_sink,
             (
                 "release-closeout-fixed-point: "
-                f"iteration={iteration_index}/{max_iterations} "
+                f"iteration={iteration_index}/{config.max_iterations} "
                 f"targets={','.join(next_targets)}"
             ),
         )
         command_results, command_failed = _run_iteration(
             vault,
             targets=next_targets,
-            python_executable=python_executable,
-            make_variables=make_variables,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-            runtime_env=runtime_env,
-            progress_sink=progress_sink,
+            python_executable=config.python_executable,
+            make_variables=config.make_variables,
+            timeout_seconds=config.timeout_seconds,
+            command_runner=config.command_runner,
+            runtime_env=config.runtime_env,
+            progress_sink=config.progress_sink,
         )
         snapshot = _fixed_point_iteration_snapshot(
             vault,
@@ -1796,7 +1845,7 @@ def _fixed_point_iteration_state(
         if command_failed:
             failed = True
             _emit_progress(
-                progress_sink,
+                config.progress_sink,
                 (
                     "release-closeout-fixed-point: "
                     f"iteration={iteration_index} status=fail "
@@ -1811,7 +1860,7 @@ def _fixed_point_iteration_state(
             converged = True
             converged_iteration = iteration_index
             _emit_progress(
-                progress_sink,
+                config.progress_sink,
                 (
                     "release-closeout-fixed-point: "
                     f"iteration={iteration_index} status=converged changed_path_count=0"
@@ -1823,7 +1872,7 @@ def _fixed_point_iteration_state(
             runtime=runtime,
         )
         _emit_progress(
-            progress_sink,
+            config.progress_sink,
             (
                 "release-closeout-fixed-point: "
                 f"iteration={iteration_index} status=changed "
@@ -1835,29 +1884,11 @@ def _fixed_point_iteration_state(
         previous_digest_map = snapshot.digest_map
         previous_semantic_digest_map = snapshot.semantic_digest_map
 
-    final_digest_map = (
-        iterations[-1]["digest_map"]
-        if iterations
-        else _digest_map(vault, runtime.tracked_artifacts)
-    )
-    final_changed_paths = (
-        iterations[-1]["changed_paths"] if iterations else sorted(final_digest_map)
-    )
-    if failed:
-        status = "fail"
-        reason = "iteration_command_failed"
-    elif converged:
-        status = "pass"
-        reason = "digest_map_converged"
-    else:
-        status = "non_converged"
-        reason = "digest_map_changed_until_iteration_budget_exhausted"
-    return _FixedPointIterationState(
+    return _fixed_point_iteration_result(
+        vault,
+        runtime,
         iterations=iterations,
-        final_digest_map=final_digest_map,
-        final_changed_paths=final_changed_paths,
-        status=status,
-        reason=reason,
+        failed=failed,
         converged=converged,
         converged_iteration=converged_iteration,
     )
@@ -1932,15 +1963,17 @@ def build_report(
     iteration_state = _fixed_point_iteration_state(
         vault,
         runtime=runtime,
-        initial_targets=selected_initial_targets,
-        baseline_before_first_iteration=baseline_before_first_iteration,
-        max_iterations=max_iterations,
-        timeout_seconds=timeout_seconds,
-        python_executable=active_python,
-        make_variables=make_variables,
-        runtime_env=runtime_env,
-        command_runner=command_runner,
-        progress_sink=progress_sink,
+        config=_FixedPointIterationConfig(
+            initial_targets=selected_initial_targets,
+            baseline_before_first_iteration=baseline_before_first_iteration,
+            max_iterations=max_iterations,
+            timeout_seconds=timeout_seconds,
+            python_executable=active_python,
+            make_variables=make_variables,
+            runtime_env=runtime_env,
+            command_runner=command_runner,
+            progress_sink=progress_sink,
+        ),
     )
     duration_summary = _duration_summary(
         iteration_state.iterations,
