@@ -123,7 +123,7 @@ def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -
 def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> None:
     preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
     test.assertEqual(
-        preseal_recipe[:14],
+        preseal_recipe[:15],
         [
             "$(MAKE) release-auto-promotion-ready-invalidate",
             "$(MAKE) release-auto-promotion-goal-run-id-guard",
@@ -138,6 +138,7 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
             "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
             "$(MAKE) remediation-backlog",
             "$(MAKE) auto-improve-readiness-report-body",
+            "$(MAKE) release-closeout-summary-report",
             '$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
         ],
     )
@@ -156,6 +157,10 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
     )
     test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
     test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) release-closeout-summary-report"),
+        preseal_recipe.index(preseal_refresh_line),
+    )
     test.assertLess(preseal_recipe.index(preseal_refresh_line), preseal_recipe.index(strict_cohort_line))
     test.assertLess(
         preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
