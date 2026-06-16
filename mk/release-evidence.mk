@@ -91,6 +91,7 @@ release-finality-resettle-current-or-refresh:
 	fi
 
 operator-evidence-closeout-finality-resettle:
+	$(MAKE) test-execution-summary-current-or-refresh
 	$(MAKE) generated-artifact-finality-suffix
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS="$(OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS)"
