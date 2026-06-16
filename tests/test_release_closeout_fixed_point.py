@@ -344,6 +344,74 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         )
         self.assertTrue(any("status=converged" in event for event in events), events)
 
+    def test_fixed_point_can_start_from_narrow_initial_target_slice(self) -> None:
+        self._seed_tracked_artifacts_with_fixed_point_baseline()
+        calls: list[str] = []
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            calls.append(argv[1])
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        initial_targets = (
+            "generated-artifact-index-body",
+            "artifact-freshness",
+            "external-report-action-matrix",
+        )
+        report = build_report(
+            self.vault,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            initial_targets=initial_targets,
+            baseline_before_first_iteration=True,
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["converged_iteration"], 1)
+        self.assertEqual(report["iteration_count"], 1)
+        self.assertEqual(calls, list(initial_targets))
+        self.assertEqual(report["iterations"][0]["selected_targets"], list(initial_targets))
+        self.assertEqual(report["iterations"][0]["changed_paths"], [])
+        self.assertNotIn("closure-registry-envelope", calls)
+        self.assertNotIn("auto-improve-readiness-report-body", calls)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_fixed_point_rejects_unknown_initial_target(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unknown initial target"):
+            build_report(
+                self.vault,
+                max_iterations=5,
+                timeout_seconds=30,
+                python_executable="python",
+                initial_targets=("not-a-real-target",),
+                context=fixed_context(),
+                command_runner=lambda argv, cwd, timeout_seconds, env: {
+                    "command": list(argv),
+                    "returncode": 0,
+                    "timed_out": False,
+                    "timeout_seconds": timeout_seconds,
+                    "termination_reason": "",
+                    "duration_ms": 1,
+                    "stdout_tail": "",
+                    "stderr_tail": "",
+                    "status": "pass",
+                },
+            )
+
     def test_fixed_point_reruns_feedback_targets_after_downstream_changes(self) -> None:
         calls: list[str] = []
         downstream_version = 0

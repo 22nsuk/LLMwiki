@@ -414,6 +414,15 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>",
         )
         self.assertEqual(
+            supply_chain_details["supply_chain_sigstore_local_integrity_only"][
+                "recommended_targets"
+            ],
+            [
+                "sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>",
+                "operator-evidence-closeout-current-or-refresh",
+            ],
+        )
+        self.assertEqual(
             actions["collaboration_governance_surface"]["current_status"],
             "partially_automated",
         )
@@ -493,7 +502,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             self.assertNotEqual(detail_by_reason[reason_id]["blocking_scope"], "supply_chain")
             self.assertEqual(
                 detail_by_reason[reason_id]["recommended_targets"],
-                ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
+                [
+                    "sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>",
+                    "operator-evidence-closeout-current-or-refresh",
+                ],
             )
 
         unmapped_details = action_status_reason_details(

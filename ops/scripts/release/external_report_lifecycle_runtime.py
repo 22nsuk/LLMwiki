@@ -250,6 +250,11 @@ MAINTAINABILITY_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         ["function-budget-refactor-proposals"],
     ),
 }
+SIGSTORE_EXTERNAL_BUNDLE_TARGETS = [
+    "sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>",
+    "operator-evidence-closeout-current-or-refresh",
+]
+
 SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
     "supply_chain_gate_not_pass": (
         "supply_chain_external_gate",
@@ -269,37 +274,37 @@ SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
     "supply_chain_sigstore_local_integrity_only": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_sigstore_external_bundle_not_verified": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_sigstore_checks_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_sigstore_check_failed": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_sigstore_bundle_ref_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_external_bundle_rule_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_external_bundle_not_observed": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_release_attestation_missing": (
         "supply_chain_external_workflow_verification",
@@ -376,7 +381,7 @@ REASON_PREFIX_TARGETS: tuple[tuple[tuple[str, ...], str, str, str, tuple[str, ..
         "collaboration_governance",
         "github_governance",
         GATE_EFFECT_ADVISORY,
-        ("collaboration-governance",),
+        ("collaboration-governance", "operator-evidence-closeout-current-or-refresh"),
     ),
     (
         ("full_suite_",),

@@ -273,6 +273,31 @@ def _initial_iteration_targets(writers: list[dict[str, Any]]) -> list[str]:
     return [*prerequisites, *[str(writer["target"]) for writer in writers]]
 
 
+def _validated_initial_targets(
+    targets: Sequence[str] | None,
+    *,
+    runtime: _FixedPointPolicyRuntime,
+) -> list[str]:
+    if targets is None:
+        return _initial_iteration_targets(runtime.writers)
+    requested = _dedupe_preserve_order(
+        [str(target).strip() for target in targets if str(target).strip()]
+    )
+    if not requested:
+        raise ValueError("initial_targets must include at least one target")
+    known = {
+        str(writer["target"]) for writer in runtime.writers
+    } | {
+        str(target)
+        for writer in runtime.writers
+        for target in writer["expensive_prerequisites_once"]
+    }
+    unknown = sorted(set(requested) - known)
+    if unknown:
+        raise ValueError(f"unknown initial target(s): {unknown}")
+    return requested
+
+
 def fixed_point_initial_targets_from_policy(vault: Path) -> list[str]:
     policy = _load_finalizer_policy(vault)
     return _initial_iteration_targets(_writer_specs(policy))
@@ -1499,6 +1524,8 @@ def _rebased_bootstrap_fixed_point_report(
         vault,
         runtime=runtime,
         generated_at=generated_at,
+        initial_targets=_initial_iteration_targets(runtime.writers),
+        baseline_before_first_iteration=False,
         max_iterations=max_iterations,
         timeout_seconds=timeout_seconds,
         make_variables=make_variables,
@@ -1710,6 +1737,8 @@ def _fixed_point_iteration_state(
     vault: Path,
     *,
     runtime: _FixedPointPolicyRuntime,
+    initial_targets: Sequence[str],
+    baseline_before_first_iteration: bool,
     max_iterations: int,
     timeout_seconds: int,
     python_executable: str,
@@ -1718,10 +1747,18 @@ def _fixed_point_iteration_state(
     command_runner: CommandRunner,
     progress_sink: ProgressSink | None = None,
 ) -> _FixedPointIterationState:
-    next_targets = _initial_iteration_targets(runtime.writers)
+    next_targets = list(initial_targets)
     iterations: list[dict[str, Any]] = []
-    previous_digest_map: dict[str, str] | None = None
+    previous_digest_map: dict[str, str] | None = (
+        _digest_map(vault, runtime.tracked_artifacts)
+        if baseline_before_first_iteration
+        else None
+    )
     previous_semantic_digest_map: dict[str, str] | None = None
+    if baseline_before_first_iteration:
+        previous_semantic_digest_map, _ = semantic_digest_maps(
+            vault, runtime.tracked_paths
+        )
     converged = False
     converged_iteration = 0
     failed = False
@@ -1831,6 +1868,8 @@ def _fixed_point_envelope(
     *,
     runtime: _FixedPointPolicyRuntime,
     generated_at: str,
+    initial_targets: Sequence[str],
+    baseline_before_first_iteration: bool,
     max_iterations: int,
     timeout_seconds: int,
     make_variables: Sequence[str],
@@ -1854,9 +1893,10 @@ def _fixed_point_envelope(
             "timeout_seconds": str(timeout_seconds),
             "writer_targets": "\n".join(runtime.writer_targets),
             "feedback_targets": "\n".join(runtime.feedback_targets),
-            "initial_iteration_targets": "\n".join(
-                _initial_iteration_targets(runtime.writers)
-            ),
+            "initial_iteration_targets": "\n".join(initial_targets),
+            "baseline_before_first_iteration": str(
+                baseline_before_first_iteration
+            ).lower(),
             "make_variables": "\n".join(
                 sanitize_report_text(vault, item) for item in make_variables
             ),
@@ -1872,6 +1912,8 @@ def build_report(
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     python_executable: str | None = None,
     make_variables: Sequence[str] = (),
+    initial_targets: Sequence[str] | None = None,
+    baseline_before_first_iteration: bool = False,
     context: RuntimeContext | None = None,
     command_runner: CommandRunner = _default_runner,
     progress_sink: ProgressSink | None = None,
@@ -1882,10 +1924,16 @@ def build_report(
     generated_at = runtime_context.isoformat_z()
     active_python = python_executable or sys.executable
     runtime = _policy_runtime(vault)
+    selected_initial_targets = _validated_initial_targets(
+        initial_targets,
+        runtime=runtime,
+    )
     runtime_env = {**os.environ, "LLMWIKI_RUNTIME_UTC_NOW": generated_at}
     iteration_state = _fixed_point_iteration_state(
         vault,
         runtime=runtime,
+        initial_targets=selected_initial_targets,
+        baseline_before_first_iteration=baseline_before_first_iteration,
         max_iterations=max_iterations,
         timeout_seconds=timeout_seconds,
         python_executable=active_python,
@@ -1902,6 +1950,8 @@ def build_report(
         vault,
         runtime=runtime,
         generated_at=generated_at,
+        initial_targets=selected_initial_targets,
+        baseline_before_first_iteration=baseline_before_first_iteration,
         max_iterations=max_iterations,
         timeout_seconds=timeout_seconds,
         make_variables=make_variables,
@@ -2054,6 +2104,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         help="Additional KEY=VALUE assignment forwarded to every nested make invocation.",
     )
+    parser.add_argument(
+        "--initial-target",
+        action="append",
+        default=[],
+        help=(
+            "Restrict the first fixed-point iteration to this writer target. "
+            "May be repeated; later iterations still follow policy dependencies."
+        ),
+    )
+    parser.add_argument(
+        "--baseline-before-first-iteration",
+        action="store_true",
+        help=(
+            "Capture digest baselines before the first iteration so narrow initial "
+            "target slices expand only from artifacts that actually changed."
+        ),
+    )
     parser.add_argument("--no-fail", action="store_true")
     return parser.parse_args(argv)
 
@@ -2103,6 +2170,8 @@ def main(argv: list[str] | None = None) -> int:
         timeout_seconds=args.timeout_seconds,
         python_executable=args.python,
         make_variables=tuple(args.make_variable),
+        initial_targets=tuple(args.initial_target) or None,
+        baseline_before_first_iteration=args.baseline_before_first_iteration,
         progress_sink=_stderr_progress,
     )
     path = write_report(vault, report, args.out)

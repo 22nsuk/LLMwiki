@@ -323,12 +323,16 @@ then run:
 
 ```bash
 make collaboration-governance GITHUB_GOVERNANCE_LIVE_INPUT=tmp/github-governance-live-input.json
+make operator-evidence-closeout-current-or-refresh
 ```
 
 The resulting `ops/reports/github-governance-live-drift.json` stores only
 normalized counts, missing or mismatched required checks, input digest, status,
 and redaction metadata. Do not retain raw ruleset dumps, tokens, actor payloads,
-or private repository settings in that report.
+or private repository settings in that report. Use
+`operator-evidence-closeout-current-or-refresh` after the operator evidence
+writer so generated index, artifact freshness, the active matrix, and finality
+settle without rebuilding release packages or rerunning release authority.
 
 Working branches are pushed with `git push -u origin HEAD:<working-branch>`.
 After push, attach the GitHub Actions workflow run and combined status check to
@@ -703,6 +707,7 @@ external Sigstore evidence lane, provide an observed bundle reference:
 
 ```bash
 make sigstore-bundle SIGSTORE_BUNDLE_REF=tmp/sigstore.bundle
+make operator-evidence-closeout-current-or-refresh
 ```
 
 `verified-external-bundle` requires a non-empty bundle reference, passing local
