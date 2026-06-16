@@ -88,6 +88,7 @@ release-auto-promotion-preseal:
 	$(MAKE) registry-preflight
 	$(MAKE) release-smoke-full-current-check
 	$(MAKE) release-smoke-fast-refresh-check
+	$(MAKE) external-report-reference-manifest-settle
 	$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1

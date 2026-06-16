@@ -123,7 +123,7 @@ def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -
 def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> None:
     preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
     test.assertEqual(
-        preseal_recipe[:15],
+        preseal_recipe[:16],
         [
             "$(MAKE) release-auto-promotion-ready-invalidate",
             "$(MAKE) release-auto-promotion-goal-run-id-guard",
@@ -133,6 +133,7 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
             "$(MAKE) registry-preflight",
             "$(MAKE) release-smoke-full-current-check",
             "$(MAKE) release-smoke-fast-refresh-check",
+            "$(MAKE) external-report-reference-manifest-settle",
             "$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only",
             "$(MAKE) learning-readiness-signoff-revalidation",
             "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
@@ -157,6 +158,14 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
     )
     test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
     test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
+        preseal_recipe.index("$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only"),
+    )
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
+        preseal_recipe.index("$(MAKE) release-closeout-summary-report"),
+    )
     test.assertLess(
         preseal_recipe.index("$(MAKE) release-closeout-summary-report"),
         preseal_recipe.index(preseal_refresh_line),
