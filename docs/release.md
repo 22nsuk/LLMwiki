@@ -334,6 +334,9 @@ or private repository settings in that report. Use
 writer so the default test-execution summary, generated index, artifact
 freshness, the active matrix, and finality settle without rebuilding release
 packages or rerunning release authority.
+This lane uses stable JSONL artifact-freshness progress so long scans emit
+heartbeat events without writing nondeterministic phase durations into the
+canonical freshness report.
 
 Working branches are pushed with `git push -u origin HEAD:<working-branch>`.
 After push, attach the GitHub Actions workflow run and combined status check to

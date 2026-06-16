@@ -285,9 +285,11 @@ def _report_coverage(vault: Path, paths: list[Path]) -> list[dict[str, Any]]:
 
 def _active_action_resolution_summary(actions: list[dict[str, Any]]) -> dict[str, Any]:
     active_by_readiness: dict[str, list[str]] = {}
+    active_actions: list[dict[str, Any]] = []
     for action in actions:
         if not action.get("is_active"):
             continue
+        active_actions.append(action)
         action_id = str(action.get("action_id", "")).strip()
         readiness = str(action.get("verification_readiness_status", "")).strip()
         if not action_id or not readiness:
@@ -310,23 +312,84 @@ def _active_action_resolution_summary(actions: list[dict[str, Any]]) -> dict[str
         recommended_lane = "source-action"
     elif artifact_freshness_pending_count:
         status = "artifact_freshness_pending"
-        recommended_lane = "artifact-freshness"
+        recommended_lane = _active_recommended_targets(
+            active_actions,
+            readiness_status="artifact_freshness_pending",
+            fallback="artifact-freshness",
+        )[0]
     elif release_or_operator_pending_count:
         status = "release_or_operator_authority_required"
         recommended_lane = "release-or-operator-authority"
     else:
         status = "no_active_blockers"
         recommended_lane = "none"
+    if artifact_freshness_pending_count:
+        recommended_targets = _active_recommended_targets(
+            active_actions,
+            readiness_status="artifact_freshness_pending",
+            fallback=recommended_lane,
+        )
+    elif source_action_required_count:
+        recommended_targets = _active_recommended_targets(
+            active_actions,
+            readiness_status="source_action_required",
+            fallback=recommended_lane,
+        )
+    elif release_or_operator_pending_count:
+        recommended_targets = _active_recommended_targets_for_statuses(
+            active_actions,
+            readiness_statuses=AUTHORITY_OR_OPERATOR_READINESS_STATUSES,
+            fallback=recommended_lane,
+        )
+    else:
+        recommended_targets = [recommended_lane]
 
     return {
         "status": status,
         "code_action_available": source_action_required_count > 0,
         "recommended_lane": recommended_lane,
+        "recommended_targets": recommended_targets,
         "source_action_required_count": source_action_required_count,
         "artifact_freshness_pending_count": artifact_freshness_pending_count,
         "release_or_operator_pending_count": release_or_operator_pending_count,
         "active_action_ids_by_verification_readiness_status": active_by_readiness,
     }
+
+
+def _active_recommended_targets(
+    actions: list[dict[str, Any]],
+    *,
+    readiness_status: str,
+    fallback: str,
+) -> list[str]:
+    return _active_recommended_targets_for_statuses(
+        actions,
+        readiness_statuses=(readiness_status,),
+        fallback=fallback,
+    )
+
+
+def _active_recommended_targets_for_statuses(
+    actions: list[dict[str, Any]],
+    *,
+    readiness_statuses: tuple[str, ...],
+    fallback: str,
+) -> list[str]:
+    selected_statuses = {status for status in readiness_statuses if status}
+    targets: list[str] = []
+    for action in actions:
+        readiness = str(action.get("verification_readiness_status", "")).strip()
+        if readiness not in selected_statuses:
+            continue
+        target = str(action.get("recommended_target", "")).strip()
+        if target:
+            targets.append(target)
+    deduped = _dedupe_preserve_order(targets)
+    return deduped or [fallback]
+
+
+def _dedupe_preserve_order(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(items))
 
 
 def _summary(

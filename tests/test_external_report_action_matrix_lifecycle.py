@@ -117,6 +117,7 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         self.assertEqual(summary["status"], "source_action_available")
         self.assertTrue(summary["code_action_available"])
         self.assertEqual(summary["recommended_lane"], "source-action")
+        self.assertEqual(summary["recommended_targets"], ["source-action"])
         self.assertEqual(summary["source_action_required_count"], 1)
         self.assertEqual(summary["release_or_operator_pending_count"], 2)
         self.assertEqual(
@@ -149,6 +150,31 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         )
         self.assertFalse(authority_only["code_action_available"])
         self.assertEqual(authority_only["recommended_lane"], "release-or-operator-authority")
+        self.assertEqual(
+            authority_only["recommended_targets"],
+            ["release-or-operator-authority"],
+        )
+
+        artifact_only = _active_action_resolution_summary(
+            [
+                {
+                    "action_id": "artifact_freshness",
+                    "is_active": True,
+                    "verification_readiness_status": "artifact_freshness_pending",
+                    "recommended_target": "freshness-source-identity-converge",
+                }
+            ]
+        )
+
+        self.assertEqual(artifact_only["status"], "artifact_freshness_pending")
+        self.assertEqual(
+            artifact_only["recommended_lane"],
+            "freshness-source-identity-converge",
+        )
+        self.assertEqual(
+            artifact_only["recommended_targets"],
+            ["freshness-source-identity-converge"],
+        )
     def test_schema_rejects_unknown_gate_effects_and_previous_action_shape(self) -> None:
         report = build_report(self.vault, context=fixed_context())
         schema = load_schema(SCHEMA_PATH)

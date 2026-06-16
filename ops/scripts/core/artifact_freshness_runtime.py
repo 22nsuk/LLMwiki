@@ -119,7 +119,7 @@ _PAYLOAD_COMPAT_EXPORTS = (
     canonical_report_loading_issue,
     embed_artifact_envelope_metadata,
 )
-PROGRESS_FORMATS = ("none", "jsonl")
+PROGRESS_FORMATS = ("none", "jsonl", "jsonl-stable")
 FINALITY_OWNED_TERMINAL_ARTIFACT_PATHS = {
     "ops/reports/release-closeout-finality-attestation.json",
 }
@@ -229,7 +229,7 @@ class ArtifactFreshnessContext:
         total: int = 0,
         current_path: str = "",
     ) -> None:
-        if self.progress_format != "jsonl":
+        if self.progress_format not in {"jsonl", "jsonl-stable"}:
             return
         event = {
             "phase": phase,

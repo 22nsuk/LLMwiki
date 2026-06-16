@@ -171,6 +171,7 @@
             "status",
             "code_action_available",
             "recommended_lane",
+            "recommended_targets",
             "source_action_required_count",
             "artifact_freshness_pending_count",
             "release_or_operator_pending_count",
@@ -189,12 +190,11 @@
             "code_action_available": { "type": "boolean" },
             "recommended_lane": {
               "type": "string",
-              "enum": [
-                "source-action",
-                "artifact-freshness",
-                "release-or-operator-authority",
-                "none"
-              ]
+              "minLength": 1
+            },
+            "recommended_targets": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
             },
             "source_action_required_count": { "type": "integer", "minimum": 0 },
             "artifact_freshness_pending_count": { "type": "integer", "minimum": 0 },

@@ -92,9 +92,9 @@ release-finality-resettle-current-or-refresh:
 
 operator-evidence-closeout-finality-resettle:
 	$(MAKE) test-execution-summary-current-or-refresh
-	$(MAKE) generated-artifact-finality-suffix
+	$(MAKE) generated-artifact-finality-suffix ARTIFACT_FRESHNESS_PROGRESS="$(OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS)"
 	$(MAKE) release-closeout-summary-report
-	$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS="$(OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS)"
+	$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS="$(OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS)" ARTIFACT_FRESHNESS_PROGRESS="$(OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS)"
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
 

@@ -197,6 +197,41 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(validate_with_schema(first, load_schema(REPORT_SCHEMA_PATH)), [])
 
+    def test_stable_jsonl_progress_emits_heartbeat_without_timing_churn(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                first = build_report(
+                    vault,
+                    context=fixed_context(),
+                    progress="jsonl-stable",
+                )
+                second = build_report(
+                    vault,
+                    context=fixed_context(),
+                    progress="jsonl-stable",
+                )
+
+            progress_events = [
+                json.loads(line)
+                for line in stderr.getvalue().splitlines()
+                if line.strip()
+            ]
+            self.assertTrue(progress_events)
+            self.assertTrue(
+                any(event["phase"] == "json_schema_validation" for event in progress_events)
+            )
+            self.assertEqual(first, second)
+            self.assertTrue(first["phase_timings"])
+            self.assertTrue(
+                all(item["elapsed_seconds"] == 0.0 for item in first["phase_timings"])
+            )
+            self.assertEqual(validate_with_schema(first, load_schema(REPORT_SCHEMA_PATH)), [])
+
     def test_test_execution_summary_becomes_stale_when_target_test_file_is_newer(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
