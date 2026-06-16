@@ -261,6 +261,10 @@ def _assert_archive_and_complexity_recipes(case: unittest.TestCase, text: str) -
     )
     archive_modes = (
         (
+            "archive-execution-manifest-check",
+            '$(PYTHON) -m ops.scripts.archive_execution_manifest --vault "$(VAULT)" --index-path "$(GENERATED_ARTIFACT_INDEX_OUT)" --out "$(ARCHIVE_EXECUTION_MANIFEST_OUT)" --mode dry_run --fail-on-attention',
+        ),
+        (
             "archive-execution-manifest-apply",
             '$(PYTHON) -m ops.scripts.archive_execution_manifest --vault "$(VAULT)" --index-path "$(GENERATED_ARTIFACT_INDEX_OUT)" --out "$(ARCHIVE_EXECUTION_MANIFEST_OUT)" --mode applied --operator-confirmation "$(ARCHIVE_EXECUTION_OPERATOR_CONFIRMATION)"',
         ),

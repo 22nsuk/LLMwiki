@@ -10,6 +10,7 @@ from ops.scripts.archive_execution_manifest import (
     APPLY_CONFIRMATION,
     ROLLBACK_CONFIRMATION,
     build_report,
+    main,
     write_report,
 )
 from ops.scripts.generated_artifact_index import (
@@ -60,6 +61,29 @@ class ArchiveExecutionManifestTests(unittest.TestCase):
             self.assertEqual(report["moves"][0]["rollback_available"], False)
             self.assertEqual(validate_with_schema(report, load_schema(MANIFEST_SCHEMA_PATH)), [])
             self.assertEqual(validate_with_schema(report, load_schema(ENVELOPE_SCHEMA_PATH)), [])
+
+    def test_fail_on_attention_exits_nonzero_when_archive_candidates_remain(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            report_path = vault / "ops" / "reports" / "eval-initial-2026-04-12.json"
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text("{}", encoding="utf-8")
+            write_index_report(vault, build_index_report(vault, context=fixed_context()))
+
+            exit_code = main(
+                [
+                    "--vault",
+                    str(vault),
+                    "--out",
+                    "tmp/archive-execution-manifest-check.json",
+                    "--fail-on-attention",
+                ]
+            )
+
+            self.assertEqual(exit_code, 1)
+            self.assertTrue(report_path.exists())
 
     def test_applied_manifest_moves_file_and_records_rollback_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -169,7 +169,15 @@ surface comparison; this document owns release evidence and staged authority.
   `release-finality-resettle-current-or-refresh`, which skips the expensive
   resettle when replay/current finality checks already pass, then runs
   preflight, run-ready, preseal, sealed-run-ready, and auto-promotion-ready
-  manifests. After the ready attempt, it runs a post-ready
+  manifests. On a clean ready pass, it refreshes the action matrix and
+  generated artifact index, then runs the archive-candidate gate before
+  post-commit readback or terminal finality. Archive candidates are local-only
+  review-retention decisions, but moving them after finality changes tracked
+  generated evidence and forces another fixed-point pass. If the gate reports
+  candidates, run `make archive-execution-manifest-apply
+  ARCHIVE_EXECUTION_OPERATOR_CONFIRMATION=CONFIRM_ARCHIVE_EXECUTION` when the
+  move is appropriate, then rerun the authority lane from that pre-finality
+  state. After the ready attempt, it runs a post-ready
   `current-or-refresh` finality tail: replay/current checks skip the ZIP-bound
   batch-manifest and fixed-point writers when they are already current, otherwise
   the tail promotes the batch manifest, rewrites fixed-point/finality,
@@ -546,6 +554,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `make release-finality-resettle-current-or-refresh`.
   The action matrix is a generated-artifact-index input, so it must be refreshed
   inside the fixed-point/finality suffix before the attestation, not after it.
+  Staged authority also refreshes the action matrix after
+  `release-auto-promotion-ready` and before archive gating, so release-run and
+  promotion truth-ladder statuses are reflected before terminal finality is
+  considered current.
   `release-closeout-fixed-point` performs the final action-matrix readback after
   its post-promote artifact-freshness bootstrap and before it writes the
   attestation, so the matrix does not retain a pre-bootstrap freshness blocker.
@@ -679,7 +691,8 @@ make sigstore-bundle SIGSTORE_BUNDLE_REF=tmp/sigstore.bundle
 subject checks, a parseable Sigstore bundle JSON payload, and bundle structure
 that carries verification material plus signed content. A placeholder file or a
 bundle with failing checks remains non-pass as
-`external-bundle-verification-failed`.
+`external-bundle-verification-failed`; leave the lane operator-pending until the
+publish/release environment has produced an observed bundle.
 
 Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed with
 the canonical-index `make uv-lock-check` gate and frozen `uv export`

@@ -539,6 +539,15 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertIn("release-authority-post-ready-finality", phony_block)
         self.assertIn("release-authority-post-ready-finality-current-check", phony_block)
         self.assertIn("release-authority-post-ready-finality-current-or-refresh", phony_block)
+        self.assertIn("release-authority-archive-candidate-gate", phony_block)
+        self.assertEqual(
+            _recipe_lines(text, "release-authority-archive-candidate-gate"),
+            [
+                "$(MAKE) external-report-action-matrix",
+                "$(MAKE) generated-artifact-index-body",
+                "$(MAKE) archive-execution-manifest-check",
+            ],
+        )
         self.assertEqual(
             _recipe_lines(text, "release-authority-post-ready-finality"),
             [
@@ -586,6 +595,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-auto-promotion-preseal-check || exit $$?; \\",
                 "$(MAKE) release-sealed-run-ready-check || exit $$?; \\",
                 "$(MAKE) release-auto-promotion-ready-check || exit $$?; \\",
+                "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \\',
                 "fi; \\",
                 "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\",
@@ -606,6 +616,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             "release-auto-promotion-ready",
             "release-auto-promotion-ready-check",
             "release-authority-settle",
+            "release-authority-archive-candidate-gate",
             "release-authority-post-ready-finality-current-check",
             "release-authority-post-ready-finality-current-or-refresh",
         ):

@@ -428,6 +428,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mode", choices=["dry_run", "applied", "deferred", "rollback"], default="dry_run")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--operator-confirmation", default="")
+    parser.add_argument(
+        "--fail-on-attention",
+        action="store_true",
+        help="Exit non-zero when dry-run archive candidates remain.",
+    )
     return parser.parse_args(argv)
 
 
@@ -449,7 +454,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
-    return 1 if report["status"] == "fail" else 0
+    if report["status"] == "fail":
+        return 1
+    if args.fail_on_attention and report["status"] == "attention":
+        return 1
+    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover
