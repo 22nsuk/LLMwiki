@@ -1,4 +1,4 @@
-.PHONY: head-aligned-evidence-converge release-authority-archive-candidate-gate release-authority-inventory release-authority-post-ready-finality release-authority-post-ready-finality-current-check release-authority-post-ready-finality-current-or-refresh release-authority-sealed-preflight release-authority-settle release-auto-promotion-goal-run-id-guard release-auto-promotion-operator-summary release-auto-promotion-preflight release-auto-promotion-preflight-check release-auto-promotion-preflight-prerequisites release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-check release-auto-promotion-ready-invalidate release-auto-promotion-ready-plan release-auto-promotion-safe-cleanup release-auto-promotion-safe-cleanup-cleanup-only release-auto-promotion-safe-cleanup-finalize release-check release-check-all-surfaces release-check-core release-check-finalized release-check-post-check release-check-post-converge release-check-preflight-converge release-converge release-converge-all-surfaces release-converge-post release-converge-preflight release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-evidence-closeout-sealed-sidecars release-package-current release-package-current-check release-package-current-or-refresh release-post-commit-finalize release-preflight-current release-public-current release-run-ready release-run-ready-check release-run-ready-plan release-run-ready-plan-check release-seal-current release-sealed-post-seal-attestation release-sealed-run-ready release-sealed-run-ready-check release-sealed-run-ready-plan release-source-package-clean-extract release-source-package-clean-extract-current-check release-source-package-clean-extract-current-or-refresh release-source-package-smoke release-source-package-smoke-current-check release-source-package-smoke-current-or-refresh release-source-ready release-source-ready-commit release-source-ready-post-verify release-source-ready-prepare release-source-ready-snapshot release-source-ready-status release-test-current release-worktree-clean-check
+.PHONY: head-aligned-evidence-converge release-authority-archive-candidate-gate release-authority-inventory release-authority-post-ready-finality release-authority-post-ready-finality-current-check release-authority-post-ready-finality-current-or-refresh release-authority-sealed-preflight release-authority-settle release-auto-promotion-goal-run-id-guard release-auto-promotion-goal-run-id-verified-check release-auto-promotion-operator-summary release-auto-promotion-preflight release-auto-promotion-preflight-check release-auto-promotion-preflight-prerequisites release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-check release-auto-promotion-ready-invalidate release-auto-promotion-ready-plan release-auto-promotion-safe-cleanup release-auto-promotion-safe-cleanup-cleanup-only release-auto-promotion-safe-cleanup-finalize release-check release-check-all-surfaces release-check-core release-check-finalized release-check-post-check release-check-post-converge release-check-preflight-converge release-converge release-converge-all-surfaces release-converge-post release-converge-preflight release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-evidence-closeout-sealed-sidecars release-package-current release-package-current-check release-package-current-or-refresh release-post-commit-finalize release-preflight-current release-public-current release-run-ready release-run-ready-check release-run-ready-plan release-run-ready-plan-check release-seal-current release-sealed-post-seal-attestation release-sealed-run-ready release-sealed-run-ready-check release-sealed-run-ready-plan release-source-package-clean-extract release-source-package-clean-extract-current-check release-source-package-clean-extract-current-or-refresh release-source-package-smoke release-source-package-smoke-current-check release-source-package-smoke-current-or-refresh release-source-ready release-source-ready-commit release-source-ready-post-verify release-source-ready-prepare release-source-ready-snapshot release-source-ready-status release-test-current release-worktree-clean-check
 
 release-authority-inventory:
 	$(PYTHON) -m ops.scripts.release_authority_inventory --vault "$(VAULT)" --out "$(RELEASE_AUTHORITY_INVENTORY_OUT)"
@@ -33,6 +33,9 @@ release-sealed-run-ready-check:
 
 release-auto-promotion-goal-run-id-guard:
 	$(PYTHON) -m ops.scripts.release_goal_run_identity_guard --vault "$(VAULT)" --out "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)" --goal-run-id "$(GOAL_RUN_ID)" --goal-run-id-origin "$(origin GOAL_RUN_ID)" --goal-run-status "$(GOAL_RUN_STATUS_OUT)" --goal-runtime-certificate "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --check
+
+release-auto-promotion-goal-run-id-verified-check:
+	$(PYTHON) -m ops.scripts.release_goal_run_identity_guard --vault "$(VAULT)" --out "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)" --goal-run-id "$(GOAL_RUN_ID)" --goal-run-id-origin "$(origin GOAL_RUN_ID)" --goal-run-status "$(GOAL_RUN_STATUS_OUT)" --goal-runtime-certificate "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --check --require-verified
 
 release-auto-promotion-preflight:
 	$(MAKE) release-auto-promotion-ready-invalidate
@@ -153,19 +156,20 @@ release-authority-archive-candidate-gate:
 
 release-authority-settle:
 	$(MAKE) release-finality-resettle-current-or-refresh
+	$(MAKE) release-auto-promotion-goal-run-id-verified-check
 	$(MAKE) release-auto-promotion-preflight
 	$(MAKE) release-run-ready
 	$(MAKE) release-auto-promotion-preseal
 	$(MAKE) release-sealed-run-ready
 	@status=0; \
 	$(MAKE) release-auto-promotion-ready || status=$$?; \
+	$(MAKE) release-authority-archive-candidate-gate || exit $$?; \
 	if [ $$status -eq 0 ]; then \
 		$(MAKE) release-auto-promotion-preflight-check || exit $$?; \
 		$(MAKE) release-run-ready-check || exit $$?; \
 		$(MAKE) release-auto-promotion-preseal-check || exit $$?; \
 		$(MAKE) release-sealed-run-ready-check || exit $$?; \
 		$(MAKE) release-auto-promotion-ready-check || exit $$?; \
-		$(MAKE) release-authority-archive-candidate-gate || exit $$?; \
 		$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \
 	fi; \
 	$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \

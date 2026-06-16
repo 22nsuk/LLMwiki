@@ -1155,13 +1155,16 @@ def artifact_freshness_performance_observability_reason_ids(
         operational_attention_count = as_int(
             summary.get("operational_attention_artifact_count")
         )
-        if max(0, stale_artifact_count - operational_attention_count):
-            stale_routing = as_dict(report.get("stale_routing"))
-            if stale_routing.get("classification") == "source_identity_only":
-                reasons.append("artifact_freshness_source_identity_resettle")
-            else:
-                reasons.append("artifact_freshness_stale_canonical_reports")
-        if operational_attention_count:
+        stale_routing = as_dict(report.get("stale_routing"))
+        is_source_identity_resettle = (
+            stale_artifact_count
+            and stale_routing.get("classification") == "source_identity_only"
+        )
+        if is_source_identity_resettle:
+            reasons.append("artifact_freshness_source_identity_resettle")
+        elif max(0, stale_artifact_count - operational_attention_count):
+            reasons.append("artifact_freshness_stale_canonical_reports")
+        if operational_attention_count and not is_source_identity_resettle:
             reasons.append("artifact_freshness_operational_attention")
         if as_int(summary.get("stable_contract_debt_artifact_count")):
             reasons.append("artifact_freshness_stable_contract_debt")
@@ -1603,6 +1606,11 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
         check.get("pass") is True for check in external_bundle_checks
     )
     sigstore_check_failed = any(check.get("pass") is not True for check in sigstore_checks)
+    local_sigstore_check_failed = any(
+        check.get("pass") is not True
+        for check in sigstore_checks
+        if not str(check.get("rule", "")).startswith("external_bundle_")
+    )
     reasons: list[str] = []
     if gate.get("status") != "pass":
         reasons.append("supply_chain_gate_not_pass")
@@ -1616,7 +1624,7 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
         reasons.append("supply_chain_sigstore_external_bundle_not_verified")
     if not sigstore_checks:
         reasons.append("supply_chain_sigstore_checks_missing")
-    elif sigstore_check_failed:
+    elif local_sigstore_check_failed or (sigstore_bundle_ref and sigstore_check_failed):
         reasons.append("supply_chain_sigstore_check_failed")
     if not sigstore_bundle_ref:
         reasons.append("supply_chain_sigstore_bundle_ref_missing")

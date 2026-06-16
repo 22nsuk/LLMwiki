@@ -27,6 +27,7 @@ def _assert_supply_chain_make_variables(case: unittest.TestCase, text: str) -> N
         "SIGSTORE_BUNDLE_OUT ?= ops/reports/sigstore-bundle-verification.json",
         "SIGSTORE_BUNDLE_REF ?=",
         "SUPPLY_CHAIN_BENCHMARK_OUT ?= ops/reports/supply-chain-benchmark.json",
+        "ALLOW_FINALITY_INVALIDATION ?=",
         "UV ?= uv",
         "STRUCTURAL_COMPLEXITY_BUDGET_OUT ?= ops/reports/structural-complexity-budget.json",
         "GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json",
@@ -91,6 +92,7 @@ def _assert_supply_chain_target_names(case: unittest.TestCase, text: str) -> Non
         "in-toto-statement:",
         "sigstore-bundle:",
         "supply-chain-benchmark:",
+        "supply-chain-finality-writer-guard:",
         "sbom-export-mapping:",
         "supply-chain-artifacts-cached:",
         "uv-lock-check:",
@@ -176,6 +178,14 @@ def _assert_sbom_supply_chain_recipes(case: unittest.TestCase, text: str) -> Non
     )
     for target, needle in recipe_expectations:
         case.assertIn(needle, _target_block(text, target))
+    supply_chain_guard = _target_block(text, "supply-chain-finality-writer-guard")
+    case.assertIn("ALLOW_FINALITY_INVALIDATION", supply_chain_guard)
+    case.assertIn("release-closeout-finality-verify", supply_chain_guard)
+    case.assertIn("release-finality-resettle-current-or-refresh", supply_chain_guard)
+    case.assertIn(
+        "supply-chain-artifacts-cached: supply-chain-finality-writer-guard",
+        text,
+    )
 
 
 def _assert_artifact_index_and_freshness_recipes(case: unittest.TestCase, text: str) -> None:

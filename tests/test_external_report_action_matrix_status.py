@@ -646,7 +646,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "supply_chain_sigstore_bundle_ref_missing",
             action["status_reason_ids"],
         )
-        self.assertIn(
+        self.assertNotIn(
             "supply_chain_sigstore_check_failed",
             action["status_reason_ids"],
         )
@@ -1278,7 +1278,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 },
                 "summary": {
                     "stale_artifact_count": 5,
-                    "operational_attention_artifact_count": 0,
+                    "operational_attention_artifact_count": 5,
                     "stable_contract_debt_artifact_count": 0,
                 },
             },

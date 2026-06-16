@@ -681,6 +681,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--goal-run-status", default=DEFAULT_GOAL_RUN_STATUS)
     parser.add_argument("--goal-runtime-certificate", default=DEFAULT_GOAL_RUNTIME_CERTIFICATE)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--require-verified",
+        action="store_true",
+        help="Fail when the selected goal-run identity is not backed by verified completed-run evidence.",
+    )
     return parser.parse_args(argv)
 
 
@@ -701,6 +706,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"release_goal_run_identity_status={report['status']}")
         print(f"release_goal_run_verification_status={report['verification_status']}")
     if report["status"] != "pass":
+        return 1
+    if args.require_verified and report["verification_status"] != VERIFICATION_VERIFIED:
         return 1
     return 0
 

@@ -21,6 +21,7 @@ def _phony_targets(text: str) -> list[str]:
 
 _AUTO_PROMOTION_PHONY_TARGETS = (
     "release-auto-promotion-goal-run-id-guard",
+    "release-auto-promotion-goal-run-id-verified-check",
     "release-auto-promotion-preflight",
     "release-auto-promotion-preflight-check",
     "release-auto-promotion-safe-cleanup",
@@ -428,6 +429,10 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             text,
             "release-auto-promotion-goal-run-id-guard",
         )
+        auto_promotion_verified_goal_identity_block = _target_block(
+            text,
+            "release-auto-promotion-goal-run-id-verified-check",
+        )
         auto_promotion_preflight_block = _target_block(text, "release-auto-promotion-preflight")
         auto_promotion_preseal_block = _target_block(text, "release-auto-promotion-preseal")
         self.assertIn(
@@ -436,6 +441,8 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         )
         self.assertIn('--goal-run-id "$(GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
         self.assertIn('--goal-run-id-origin "$(origin GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
+        self.assertIn("--check", auto_promotion_verified_goal_identity_block)
+        self.assertIn("--require-verified", auto_promotion_verified_goal_identity_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preflight_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preseal_block)
         _assert_auto_promotion_preflight_order(self, text)
@@ -583,27 +590,44 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             _recipe_lines(text, "release-authority-settle"),
             [
                 "$(MAKE) release-finality-resettle-current-or-refresh",
+                "$(MAKE) release-auto-promotion-goal-run-id-verified-check",
                 "$(MAKE) release-auto-promotion-preflight",
                 "$(MAKE) release-run-ready",
                 "$(MAKE) release-auto-promotion-preseal",
                 "$(MAKE) release-sealed-run-ready",
                 "@status=0; \\",
                 "$(MAKE) release-auto-promotion-ready || status=$$?; \\",
+                "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\",
                 "if [ $$status -eq 0 ]; then \\",
                 "$(MAKE) release-auto-promotion-preflight-check || exit $$?; \\",
                 "$(MAKE) release-run-ready-check || exit $$?; \\",
                 "$(MAKE) release-auto-promotion-preseal-check || exit $$?; \\",
                 "$(MAKE) release-sealed-run-ready-check || exit $$?; \\",
                 "$(MAKE) release-auto-promotion-ready-check || exit $$?; \\",
-                "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \\',
                 "fi; \\",
                 "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\",
                 "if [ $$status -ne 0 ]; then exit $$status; fi",
             ],
         )
+        settle_block = _recipe_lines(text, "release-authority-settle")
+        verified_goal_index = settle_block.index(
+            "$(MAKE) release-auto-promotion-goal-run-id-verified-check"
+        )
+        run_ready_index = settle_block.index("$(MAKE) release-run-ready")
+        ready_index = settle_block.index("$(MAKE) release-auto-promotion-ready || status=$$?; \\")
+        archive_gate_index = settle_block.index(
+            "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\"
+        )
+        finality_index = settle_block.index(
+            "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\"
+        )
+        self.assertLess(verified_goal_index, run_ready_index)
+        self.assertLess(ready_index, archive_gate_index)
+        self.assertLess(archive_gate_index, finality_index)
         for release_target in (
             "release-auto-promotion-goal-run-id-guard",
+            "release-auto-promotion-goal-run-id-verified-check",
             "release-auto-promotion-preflight",
             "release-auto-promotion-preflight-check",
             "release-auto-promotion-safe-cleanup",

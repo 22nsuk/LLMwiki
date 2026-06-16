@@ -653,6 +653,16 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   7. Run the release/operator authority lane only after freshness and finality
      are stable, for example `make release-run-ready` or
      `make release-authority-settle`.
+     `release-authority-settle` first checks that the selected goal run is
+     backed by verified completed-run evidence. If the goal certificate/status
+     pair is stale, blocked, or only locally diagnostic, the lane stops before
+     paying for full-suite, release package, or sealed-run evidence.
+     `release-authority-settle` writes or refreshes the
+     `release-auto-promotion-ready` manifest, then refreshes the action matrix,
+     generated-artifact index, and archive execution manifest before terminal
+     finality. This happens even when promotion readiness is blocked, so the
+     active matrix reflects the newest blocker state and archive/source-action
+     candidates stop the run before another finality seal.
   8. Finish with `make release-post-commit-finalize` so HEAD readback,
      script-output surface checking, artifact freshness checking, and terminal
      finality verification use the committed tree.
@@ -660,6 +670,14 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   If the final freshness pass does not change tracked source inputs,
   `release-run-ready-plan-check` should remain a reuse-only ready plan rather
   than opening another release evidence loop.
+  After `release-closeout-finality-verify` passes, avoid mutating freshness,
+  supply-chain, matrix, index, or archive reports directly. If one of those
+  writers is required, treat finality as intentionally invalidated and finish
+  with `make release-finality-resettle-current-or-refresh` as the terminal
+  writer/check sequence. `make supply-chain-artifacts-cached` enforces this
+  rule: when current finality already verifies, it fails unless
+  `ALLOW_FINALITY_INVALIDATION=1` is set, and that bypass must be followed by
+  `make release-finality-resettle-current-or-refresh`.
 - `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
   and the release-run manifest.
 - `tmp/` holds scratch checks and candidate files that must not become authority.
@@ -693,6 +711,10 @@ that carries verification material plus signed content. A placeholder file or a
 bundle with failing checks remains non-pass as
 `external-bundle-verification-failed`; leave the lane operator-pending until the
 publish/release environment has produced an observed bundle.
+The active matrix distinguishes local supply-chain artifact refresh from
+external bundle verification: source-identity drift routes to the freshness
+owner lane, while `supply_chain_external_verification` remains operator-pending
+until `SIGSTORE_BUNDLE_REF=<bundle>` points at an observed bundle.
 
 Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed with
 the canonical-index `make uv-lock-check` gate and frozen `uv export`
