@@ -184,16 +184,16 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         preseal_recipe.index("$(MAKE) remediation-backlog"),
         preseal_recipe.index(strict_cohort_line),
     )
-    test.assertGreater(
+    test.assertLess(
         preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
+        preseal_recipe.index(preseal_fixed_point_line),
+    )
+    test.assertLess(
+        preseal_recipe.index(preseal_fixed_point_line),
         preseal_recipe.index(strict_cohort_line),
     )
     test.assertLess(
-        preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
-        preseal_recipe.index(preseal_fixed_point_line),
-    )
-    test.assertLess(
-        preseal_recipe.index(preseal_fixed_point_line),
+        preseal_recipe.index(strict_cohort_line),
         preseal_recipe.index("$(MAKE) tmp-json-clean"),
     )
 
