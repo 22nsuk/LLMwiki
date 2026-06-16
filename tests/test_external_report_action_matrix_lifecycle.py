@@ -175,6 +175,38 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
             artifact_only["recommended_targets"],
             ["freshness-source-identity-converge"],
         )
+
+        artifact_with_owner_routes = _active_action_resolution_summary(
+            [
+                {
+                    "action_id": "artifact_freshness",
+                    "is_active": True,
+                    "verification_readiness_status": "artifact_freshness_pending",
+                    "recommended_target": "freshness-source-identity-converge",
+                    "status_reason_details": [
+                        {
+                            "reason_id": "artifact_freshness_source_identity_resettle",
+                            "recommended_targets": [
+                                "freshness-source-identity-converge",
+                                "artifact-freshness-refresh-check",
+                                "external-report-reference-manifest-settle",
+                                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-status-finalize",
+                            ],
+                        }
+                    ],
+                }
+            ]
+        )
+
+        self.assertEqual(
+            artifact_with_owner_routes["recommended_targets"],
+            [
+                "freshness-source-identity-converge",
+                "artifact-freshness-refresh-check",
+                "external-report-reference-manifest-settle",
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-status-finalize",
+            ],
+        )
     def test_schema_rejects_unknown_gate_effects_and_previous_action_shape(self) -> None:
         report = build_report(self.vault, context=fixed_context())
         schema = load_schema(SCHEMA_PATH)

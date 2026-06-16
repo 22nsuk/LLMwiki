@@ -1283,6 +1283,30 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                     "recommended_lane": "freshness-source-identity-converge",
                     "recommended_targets": ["freshness-source-identity-converge"],
                     "reason_ids": ["source_identity_only_stale"],
+                    "source_identity_owner_routes": [
+                        {
+                            "route_id": "external_reports_reference_manifest",
+                            "owner_surface": "external_reports",
+                            "artifact_count": 1,
+                            "issue_count": 2,
+                            "artifact_kinds": ["external_report_reference_manifest"],
+                            "recommended_lane": "external-report-reference-manifest-settle",
+                            "recommended_targets": [
+                                "external-report-reference-manifest-settle",
+                                "external-report-lifecycle-refresh",
+                            ],
+                            "reason_ids": [
+                                "external_report_reference_manifest_source_identity"
+                            ],
+                            "sample_paths": [
+                                "external-reports/report-reference-manifest.json"
+                            ],
+                            "summary": (
+                                "1 external_reports source-identity artifact(s) route to "
+                                "external-report-reference-manifest-settle."
+                            ),
+                        }
+                    ],
                     "summary": (
                         "5 stale artifact(s) only differ by source revision or source-tree "
                         "fingerprint; use the source-identity convergence lane first."
@@ -1312,7 +1336,21 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self.assertEqual(detail["blocking_scope"], "artifact_freshness")
         self.assertEqual(
             detail["recommended_targets"],
-            ["freshness-source-identity-converge", "artifact-freshness-refresh-check"],
+            [
+                "freshness-source-identity-converge",
+                "artifact-freshness-refresh-check",
+                "external-report-reference-manifest-settle",
+                "external-report-lifecycle-refresh",
+            ],
+        )
+        self.assertEqual(
+            report["summary"]["active_action_resolution_summary"]["recommended_targets"],
+            [
+                "freshness-source-identity-converge",
+                "artifact-freshness-refresh-check",
+                "external-report-reference-manifest-settle",
+                "external-report-lifecycle-refresh",
+            ],
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 

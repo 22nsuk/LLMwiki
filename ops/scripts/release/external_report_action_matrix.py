@@ -221,6 +221,11 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
             status_reason_ids,
             fallback_target=str(action["recommended_target"]),
         )
+        status_reason_details = _enrich_action_status_reason_details(
+            vault,
+            action_id=action_id,
+            status_reason_details=status_reason_details,
+        )
         reason_detail_summary = _reason_detail_summary(status_reason_details)
         verification_readiness_status = _verification_readiness_status(
             current_status=status,
@@ -251,6 +256,68 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
         item.update(external_report_action_lifecycle_record(item))
         action_items.append(item)
     return action_items
+
+
+def _enrich_action_status_reason_details(
+    vault: Path,
+    *,
+    action_id: str,
+    status_reason_details: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if action_id != "artifact_freshness_performance_observability":
+        return status_reason_details
+    source_identity_targets = _artifact_freshness_source_identity_targets(vault)
+    if not source_identity_targets:
+        return status_reason_details
+
+    enriched: list[dict[str, Any]] = []
+    for detail in status_reason_details:
+        if detail.get("reason_id") != "artifact_freshness_source_identity_resettle":
+            enriched.append(detail)
+            continue
+        current_targets = detail.get("recommended_targets")
+        merged_targets = _dedupe_preserve_order(
+            [
+                *(current_targets if isinstance(current_targets, list) else []),
+                *source_identity_targets,
+            ]
+        )
+        enriched.append({**detail, "recommended_targets": merged_targets})
+    return enriched
+
+
+def _artifact_freshness_source_identity_targets(vault: Path) -> list[str]:
+    try:
+        payload = json.loads(
+            (vault / "ops/reports/artifact-freshness-report.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(payload, dict):
+        return []
+    stale_routing = payload.get("stale_routing")
+    if not isinstance(stale_routing, dict):
+        return []
+    if stale_routing.get("classification") != "source_identity_only":
+        return []
+
+    targets: list[str] = []
+    targets.extend(_string_items(stale_routing.get("recommended_targets")))
+    owner_routes = stale_routing.get("source_identity_owner_routes")
+    if isinstance(owner_routes, list):
+        for route in owner_routes:
+            if not isinstance(route, dict):
+                continue
+            targets.extend(_string_items(route.get("recommended_targets")))
+    return _dedupe_preserve_order(targets)
+
+
+def _string_items(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item]
 
 
 def _recommended_target(
@@ -384,6 +451,10 @@ def _active_recommended_targets_for_statuses(
         target = str(action.get("recommended_target", "")).strip()
         if target:
             targets.append(target)
+        for detail in action.get("status_reason_details", []):
+            if not isinstance(detail, dict):
+                continue
+            targets.extend(_string_items(detail.get("recommended_targets")))
     deduped = _dedupe_preserve_order(targets)
     return deduped or [fallback]
 
