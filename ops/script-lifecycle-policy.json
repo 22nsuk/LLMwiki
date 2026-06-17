@@ -974,6 +974,16 @@
       "replacement": "make registry-preflight"
     },
     {
+      "canonical_module": "ops.scripts.registry.raw_registry_shard_policy_sync",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "path": "ops/scripts/registry/raw_registry_shard_policy_sync.py",
+      "rationale": "Registry shard policy sync is a repository maintenance helper retained behind explicit Make check/write targets rather than public CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make raw-registry-shard-policy-sync-check"
+    },
+    {
       "canonical_module": "ops.scripts.release.external_report_action_matrix",
       "console_scripts": [],
       "install_state": "not_installed",

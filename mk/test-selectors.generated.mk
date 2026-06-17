@@ -134,6 +134,7 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_pytest_entrypoint_guidance.py \
 	tests/test_raw_registry_cross_environment_evidence_bundle.py \
 	tests/test_raw_registry_cross_environment_matrix.py \
+	tests/test_raw_registry_shard_policy_sync.py \
 	tests/test_release_authority_inventory.py \
 	tests/test_release_closeout_summary.py \
 	tests/test_release_evidence_cohort.py \
