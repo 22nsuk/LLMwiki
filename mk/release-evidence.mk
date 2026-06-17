@@ -118,7 +118,7 @@ operator-evidence-closeout-current-or-refresh:
 	fi
 
 freshness-owner-route-converge:
-	$(PYTHON) -m ops.scripts.release.freshness_owner_route_converge --vault "$(VAULT)" --make "$(MAKE)" --python "$(PYTHON)" --plan-out "$(FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT)"
+	$(PYTHON) -m ops.scripts.release.freshness_owner_route_converge --vault "$(VAULT)" --make "$(MAKE)" --python $(PYTHON) --plan-out "$(FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT)"
 
 freshness-source-identity-converge: freshness-owner-route-converge
 

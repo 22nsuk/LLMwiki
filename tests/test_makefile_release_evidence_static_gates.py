@@ -521,7 +521,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertEqual(
             _recipe_lines(text, "freshness-owner-route-converge"),
             [
-                '$(PYTHON) -m ops.scripts.release.freshness_owner_route_converge --vault "$(VAULT)" --make "$(MAKE)" --python "$(PYTHON)" --plan-out "$(FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT)"',
+                '$(PYTHON) -m ops.scripts.release.freshness_owner_route_converge --vault "$(VAULT)" --make "$(MAKE)" --python $(PYTHON) --plan-out "$(FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT)"',
             ],
         )
         self.assertEqual(_recipe_lines(text, "freshness-source-identity-converge"), [])

@@ -994,6 +994,16 @@
       "replacement": "make external-report-action-matrix"
     },
     {
+      "canonical_module": "ops.scripts.release.freshness_owner_route_converge",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "path": "ops/scripts/release/freshness_owner_route_converge.py",
+      "rationale": "Source-identity freshness convergence helper is retained behind the explicit Make owner lane rather than public CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make freshness-owner-route-converge"
+    },
+    {
       "canonical_module": "ops.scripts.release.external_report_reference_manifest",
       "console_scripts": [],
       "install_state": "not_installed",
