@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/raw-registry-shard-policy-sync-report.schema.json",
+  "title": "Raw Registry Shard Policy Sync Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "shard_root",
+    "status",
+    "summary",
+    "discovered_shard_pages",
+    "drift"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/raw-registry-shard-policy-sync-report.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "raw_registry_shard_policy_sync_report"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.raw_registry_shard_policy_sync"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "stale"] },
+    "retention_policy": { "type": "string", "minLength": 1 },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "shard_root": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "discovered_shard_count",
+        "drift_count",
+        "missing_policy_surface_count",
+        "extra_policy_surface_count",
+        "mismatch_count"
+      ],
+      "properties": {
+        "discovered_shard_count": { "type": "integer", "minimum": 0 },
+        "drift_count": { "type": "integer", "minimum": 0 },
+        "missing_policy_surface_count": { "type": "integer", "minimum": 0 },
+        "extra_policy_surface_count": { "type": "integer", "minimum": 0 },
+        "mismatch_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "discovered_shard_pages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/discoveredShardPage" }
+    },
+    "drift": { "$ref": "#/$defs/drift" }
+  },
+  "$defs": {
+    "stringList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "discoveredShardPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "entry_corpus", "required_sections"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "entry_corpus": { "type": "string", "enum": ["wiki", "system"] },
+        "required_sections": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "entryCorpusMismatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "expected", "actual"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "expected": { "type": "string", "enum": ["wiki", "system"] },
+        "actual": { "type": "string" }
+      }
+    },
+    "specialPageShapeMismatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "field"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "field": { "type": "string", "minLength": 1 }
+      }
+    },
+    "requiredSectionsMismatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "policy_sections", "discovered_sections"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "policy_sections": { "$ref": "#/$defs/stringList" },
+        "discovered_sections": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "drift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "missing_raw_registry_shard_pages",
+        "extra_raw_registry_shard_pages",
+        "missing_raw_registry_entry_page_corpus",
+        "extra_raw_registry_entry_page_corpus",
+        "wrong_raw_registry_entry_page_corpus",
+        "missing_special_required_sections",
+        "missing_frontmatter_special_pages",
+        "extra_frontmatter_special_pages",
+        "special_page_shape_mismatches",
+        "required_sections_mismatches"
+      ],
+      "properties": {
+        "missing_raw_registry_shard_pages": { "$ref": "#/$defs/stringList" },
+        "extra_raw_registry_shard_pages": { "$ref": "#/$defs/stringList" },
+        "missing_raw_registry_entry_page_corpus": { "$ref": "#/$defs/stringList" },
+        "extra_raw_registry_entry_page_corpus": { "$ref": "#/$defs/stringList" },
+        "wrong_raw_registry_entry_page_corpus": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/entryCorpusMismatch" }
+        },
+        "missing_special_required_sections": { "$ref": "#/$defs/stringList" },
+        "missing_frontmatter_special_pages": { "$ref": "#/$defs/stringList" },
+        "extra_frontmatter_special_pages": { "$ref": "#/$defs/stringList" },
+        "special_page_shape_mismatches": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/specialPageShapeMismatch" }
+        },
+        "required_sections_mismatches": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/requiredSectionsMismatch" }
+        }
+      }
+    }
+  }
+}

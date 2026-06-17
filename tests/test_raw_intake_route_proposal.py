@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.registry.raw_intake_route_proposal import (
@@ -14,9 +15,10 @@ from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "raw-intake-route-proposal-report.schema.json"
+MATRIX_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "raw-intake-absorption-matrix.schema.json"
 
 
-def write_matrix(path: Path, entries: list[dict]) -> None:
+def write_matrix(path: Path, entries: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -38,7 +40,7 @@ def write_matrix(path: Path, entries: list[dict]) -> None:
     )
 
 
-def matrix_entry(**overrides: str) -> dict[str, str]:
+def matrix_entry(**overrides: Any) -> dict[str, Any]:
     entry = {
         "registry_id": "W-001",
         "title": "Deterministic route",
@@ -99,12 +101,194 @@ class RawIntakeRouteProposalTests(unittest.TestCase):
 
             self.assertEqual(first["status"], "pass")
             self.assertEqual(first["summary"]["review_satisfied_count"], 1)
+            self.assertEqual(first["summary"]["audit_clear_count"], 1)
             self.assertEqual(
                 first["proposals"][0]["route_key"],
                 second["proposals"][0]["route_key"],
             )
             self.assertEqual(first["proposals"][0]["route_basis"]["current_domain"], "domain")
+            self.assertEqual(first["proposals"][0]["route_audit"]["audit_status"], "clear")
             self.assertEqual(validate_with_schema(first, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_audit_flags_broad_term_matches_before_source_generation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        title="Won power price access route candidate",
+                        current_domain="market-access-review",
+                        rationale="Power and price signals may be route hints but need review.",
+                    )
+                ],
+            )
+            matrix_payload = json.loads(matrix_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                validate_with_schema(matrix_payload, load_schema(MATRIX_SCHEMA_PATH)),
+                [],
+            )
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            audit = report["proposals"][0]["route_audit"]
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["audit_review_required_count"], 1)
+            self.assertEqual(
+                audit["candidate_route"]["proposed_action"],
+                "refresh_existing_synthesis",
+            )
+            self.assertEqual(audit["matched_rule"], "broad_term_review")
+            self.assertEqual(audit["matched_terms"], ["access", "power", "price", "won"])
+            self.assertEqual(audit["audit_status"], "review_required")
+            self.assertIn("manual_override_reason_missing", audit["review_reasons"])
+            self.assertEqual(
+                {item["term"] for item in audit["match_evidence"]},
+                {"access", "power", "price", "won"},
+            )
+            self.assertEqual(
+                {item["match_kind"] for item in audit["match_evidence"]},
+                {"token_boundary"},
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_audit_uses_token_boundaries_for_broad_terms(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        title="Empowered accessory wonder material",
+                        current_domain="pricing-accessory-wonderful",
+                    )
+                ],
+            )
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            audit = report["proposals"][0]["route_audit"]
+            self.assertEqual(report["summary"]["audit_clear_count"], 1)
+            self.assertEqual(report["summary"]["audit_review_required_count"], 0)
+            self.assertEqual(audit["audit_status"], "clear")
+            self.assertEqual(audit["matched_terms"], [])
+            self.assertEqual(audit["match_evidence"], [])
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_audit_ignores_route_vocabulary_in_target_and_rationale(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        title="Neutral source title",
+                        current_domain="neutral-source-domain",
+                        target=(
+                            "synthesis--ai-infrastructure-rerating-power-bottlenecks-"
+                            "and-transition-risk-2026-04-14"
+                        ),
+                        rationale=(
+                            "Material, power, cooling, access, and price route vocabulary "
+                            "belongs to the maintained route rationale."
+                        ),
+                    )
+                ],
+            )
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            audit = report["proposals"][0]["route_audit"]
+            self.assertEqual(report["summary"]["audit_clear_count"], 1)
+            self.assertEqual(report["summary"]["audit_review_required_count"], 0)
+            self.assertEqual(audit["audit_status"], "clear")
+            self.assertEqual(audit["match_evidence"], [])
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_audit_records_explicit_rule_and_manual_override_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        matched_rule="operator_reviewed_family_route",
+                        matched_terms=["power"],
+                        manual_override_reason=(
+                            "Operator reviewed the candidate before page generation and kept "
+                            "the route because the source is about energy-market power pricing."
+                        ),
+                    )
+                ],
+            )
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            audit = report["proposals"][0]["route_audit"]
+            self.assertEqual(report["summary"]["audit_manual_override_count"], 1)
+            self.assertEqual(audit["matched_rule"], "operator_reviewed_family_route")
+            self.assertEqual(audit["matched_terms"], ["power"])
+            self.assertEqual(audit["audit_status"], "manual_override_recorded")
+            self.assertTrue(
+                audit["manual_override_reason"].startswith("Operator reviewed")
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_audit_schema_requires_manual_override_reason_when_recorded(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        matched_rule="operator_reviewed_family_route",
+                        matched_terms=["power"],
+                        manual_override_reason="operator reviewed",
+                    )
+                ],
+            )
+            report = build_report(vault, matrix_path=matrix_path)
+            report["proposals"][0]["route_audit"]["manual_override_reason"] = ""
+
+            errors = validate_with_schema(report, load_schema(SCHEMA_PATH))
+
+            self.assertTrue(errors)
+            self.assertTrue(
+                any("manual_override_reason" in error for error in errors),
+                errors,
+            )
+
+    def test_route_audit_schema_requires_match_evidence_when_review_required(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [matrix_entry(title="Power route candidate")],
+            )
+            report = build_report(vault, matrix_path=matrix_path)
+            route_audit = report["proposals"][0]["route_audit"]
+            route_audit["match_evidence"] = []
+            route_audit["review_reasons"] = ["broad_route_term_match"]
+
+            errors = validate_with_schema(report, load_schema(SCHEMA_PATH))
+
+            self.assertTrue(errors)
+            self.assertTrue(
+                any("match_evidence" in error for error in errors),
+                errors,
+            )
 
     def test_absorption_closeout_fails_unreviewed_actions_before_writes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

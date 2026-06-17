@@ -19,15 +19,6 @@
       "next_action": "Execute the current readiness lane only after a concrete churn/failure signal: auto_improve_readiness summary preparation with focused readiness tests and runtime-hotspot golden coverage.",
       "exit_condition": "Close when those hotspot next lanes are implemented with focused tests and runtime-hotspot golden coverage, or replaced by narrower retained observations in the runtime decomposition plan.",
       "owner_or_lane": "runtime-hotspot-decomposition"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/raw-intake-2026-06-17/improvement-observations.json",
-      "observation_id": "raw-intake-route-classifier-term-boundaries",
-      "status": "planned",
-      "retained_reason": "The raw-intake 2026-06-17 observation remains open because broad term matching overmatched unrelated source titles and there is not yet a report-only route audit before source page generation.",
-      "next_action": "Add a raw intake route proposal/audit report that records candidate route, matched rule, confidence, and manual override reason before source pages are generated.",
-      "exit_condition": "Close when raw intake routing emits reviewable route proposal evidence before source page generation or the classifier no longer uses broad substring rules without an audit trail.",
-      "owner_or_lane": "raw-intake-routing"
     }
   ]
 }

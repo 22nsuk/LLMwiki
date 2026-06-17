@@ -58,6 +58,28 @@ objective lane checks that bind HEAD, source fingerprint, and domain-specific
 currentness. Self-declared current fields are diagnostic metadata, not
 authority by themselves.
 
+## Raw Intake And Registry Maintenance
+
+Full-vault raw intake work should move through the reviewable surfaces in this
+order:
+
+1. Run the route proposal audit before writing or promoting pages.
+2. Use the absorption matrix as the per-source decision trail.
+3. Reflect approved source decisions in source, concept, and synthesis bodies,
+   not only in placement metadata.
+4. Check whether raw registry shards need a parent-router or second-order split.
+5. Run `make raw-registry-shard-policy-sync-check` after shard edits; use
+   `make raw-registry-shard-policy-sync-write` only when the check report shows
+   policy surfaces that should be derived from existing shard pages.
+6. Finish with `make lint`, `make stage2-eval`, and
+   `make registry-preflight-check` for full-vault registry changes.
+
+Synthesis and concept pages should read as reusable wiki knowledge, not intake
+or routing memos. Keep route notes in maintenance sections, keep `Related pages`
+focused on navigation rather than source inventories, and use an evidence map
+only when it improves the analysis instead of duplicating `Evidence considered`
+or `Source trace`.
+
 ## Compatibility Surface
 
 Some lifecycle-policy flat module paths such as

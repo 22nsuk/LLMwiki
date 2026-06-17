@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -51,6 +52,15 @@ ALLOWED_ACTIONS = (
 )
 REVIEWED_ROUTE_STATUSES = ("approved", "reviewed")
 CONFIDENCE_LEVELS = ("high", "medium", "low")
+ROUTE_AUDIT_REVIEW_TERMS = ("access", "power", "price", "won")
+ROUTE_AUDIT_TERM_PATTERNS = {
+    term: re.compile(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])")
+    for term in ROUTE_AUDIT_REVIEW_TERMS
+}
+ROUTE_AUDIT_SOURCE_FIELDS = (
+    "title",
+    "current_domain",
+)
 
 
 def _resolved_input_path(vault: Path, path: str | Path) -> Path:
@@ -79,6 +89,83 @@ def _route_key(entry: dict[str, Any]) -> str:
     basis = _route_basis(entry)
     route_material = "\n".join(f"{key}={basis[key]}" for key in sorted(basis))
     return hashlib.sha256(route_material.encode("utf-8")).hexdigest()[:16]
+
+
+def _string_list_value(entry: dict[str, Any], key: str) -> list[str]:
+    value = entry.get(key)
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        return [part.strip() for part in re.split(r"[,;\n]+", value) if part.strip()]
+    return []
+
+
+def _route_term_evidence(entry: dict[str, Any]) -> list[dict[str, Any]]:
+    evidence: list[dict[str, Any]] = []
+    for term, pattern in ROUTE_AUDIT_TERM_PATTERNS.items():
+        fields = [
+            field
+            for field in ROUTE_AUDIT_SOURCE_FIELDS
+            if pattern.search(_string_value(entry, field).lower())
+        ]
+        if fields:
+            evidence.append(
+                {
+                    "term": term,
+                    "fields": fields,
+                    "match_kind": "token_boundary",
+                }
+            )
+    return evidence
+
+
+def _route_audit(
+    entry: dict[str, Any],
+    *,
+    action: str,
+    target: str,
+    confidence: str,
+) -> dict[str, Any]:
+    match_evidence = _route_term_evidence(entry)
+    evidence_terms = [str(item["term"]) for item in match_evidence]
+    matched_terms = sorted(
+        dict.fromkeys([*_string_list_value(entry, "matched_terms"), *evidence_terms])
+    )
+    matched_rule = _string_value(entry, "matched_rule")
+    if not matched_rule:
+        matched_rule = (
+            "broad_term_review"
+            if match_evidence
+            else f"matrix_route:{action or 'missing_action'}"
+        )
+    manual_override_reason = _string_value(entry, "manual_override_reason")
+    review_reasons: list[str] = []
+
+    if match_evidence:
+        review_reasons.append("broad_route_term_match")
+        if not manual_override_reason:
+            review_reasons.append("manual_override_reason_missing")
+
+    if manual_override_reason:
+        audit_status = "manual_override_recorded"
+    elif match_evidence:
+        audit_status = "review_required"
+    else:
+        audit_status = "clear"
+
+    return {
+        "candidate_route": {
+            "proposed_action": action,
+            "target": target,
+            "confidence": confidence,
+        },
+        "matched_rule": matched_rule,
+        "matched_terms": matched_terms,
+        "match_evidence": match_evidence,
+        "manual_override_reason": manual_override_reason,
+        "audit_status": audit_status,
+        "review_reasons": review_reasons,
+    }
 
 
 def _proposal_for_entry(entry: dict[str, Any]) -> dict[str, Any]:
@@ -121,6 +208,12 @@ def _proposal_for_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "target": target,
         "confidence": confidence,
         "review_status": review_status,
+        "route_audit": _route_audit(
+            entry,
+            action=action,
+            target=target,
+            confidence=confidence,
+        ),
         "review_gate": review_gate,
         "closeout_status": closeout_status,
         "issues": issues,
@@ -159,6 +252,9 @@ def build_report(
     ]
     review_gate_counts = Counter(proposal["review_gate"] for proposal in proposals)
     closeout_counts = Counter(proposal["closeout_status"] for proposal in proposals)
+    audit_status_counts = Counter(
+        proposal["route_audit"]["audit_status"] for proposal in proposals
+    )
     status = "fail" if blocking else "pass"
 
     return {
@@ -196,6 +292,13 @@ def build_report(
             "review_satisfied_count": int(review_gate_counts.get("satisfied", 0)),
             "closeout_pass_count": int(closeout_counts.get("pass", 0)),
             "closeout_fail_count": int(closeout_counts.get("fail", 0)),
+            "audit_clear_count": int(audit_status_counts.get("clear", 0)),
+            "audit_review_required_count": int(
+                audit_status_counts.get("review_required", 0)
+            ),
+            "audit_manual_override_count": int(
+                audit_status_counts.get("manual_override_recorded", 0)
+            ),
         },
         "blocking_issues": blocking,
         "proposals": proposals,
