@@ -1030,6 +1030,17 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
+      "path": "ops/scripts/registry/raw_registry_shard_policy_sync.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/release/external_report_action_matrix.py",
       "classification": "repo_artifact",
       "output_options": [
