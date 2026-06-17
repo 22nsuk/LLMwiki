@@ -19,6 +19,22 @@ class CompatibilityAliasImportCodemodTests(unittest.TestCase):
         self.vault = Path(self.temp_dir.name) / "vault"
         self.vault.mkdir()
         self._write("ops/scripts/__init__.py", "# _ReexportFinder\n")
+        self._write(
+            "ops/script-lifecycle-policy.json",
+            """{
+  "modules": [
+    {
+      "canonical_module": "ops.scripts.core.artifact_io_runtime",
+      "lifecycle": "helper"
+    },
+    {
+      "canonical_module": "ops.scripts.core.runtime_context",
+      "lifecycle": "helper"
+    }
+  ]
+}
+""",
+        )
         self._write("ops/scripts/core/runtime_context.py", "class RuntimeContext:\n    pass\n")
         self._write(
             "ops/scripts/core/artifact_io_runtime.py",

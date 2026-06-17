@@ -16,8 +16,11 @@ def _shared() -> Any:
 class _RegistryLinks:
     shard_pages: list[str]
     wiki_family_shard_pages: list[str]
+    system_family_shard_pages: list[str]
+    generated_shard_pages: list[str]
     shard_links: str
     wiki_family_links: str
+    system_family_links: str
     registry_related_links: str
     wiki_shard_related_links: str
     system_shard_related_links: str
@@ -68,11 +71,26 @@ def _prepare_minimal_vault_surface(
 def _registry_links(shared: Any) -> _RegistryLinks:
     shard_pages = shared.live_registry_shard_pages()
     wiki_family_shard_pages = shared.live_registry_wiki_family_shard_pages()
+    system_family_shard_pages = shared.live_registry_child_shard_pages(
+        "system/system-raw-registry/system.md"
+    )
+    generated_shard_pages = [
+        path
+        for path in shard_pages
+        if path
+        not in {
+            "system/system-raw-registry/wiki.md",
+            "system/system-raw-registry/system.md",
+        }
+    ]
     return _RegistryLinks(
         shard_pages=shard_pages,
         wiki_family_shard_pages=wiki_family_shard_pages,
+        system_family_shard_pages=system_family_shard_pages,
+        generated_shard_pages=generated_shard_pages,
         shard_links=shared.bullet_wikilinks(shard_pages),
         wiki_family_links=shared.bullet_wikilinks(wiki_family_shard_pages),
+        system_family_links=shared.bullet_wikilinks(system_family_shard_pages),
         registry_related_links=shared.bullet_wikilinks(
             [path for path in shard_pages if path != "system/system-raw-registry.md"]
         ),
@@ -251,7 +269,10 @@ tags:
 - system corpus registry shard
 - registered entries: `0`
 
-## Registered raw sources
+## Second-order shards
+{links.system_family_links or "- none currently"}
+
+## Directly listed raw sources
 - none currently
 
 ## Related pages
@@ -511,7 +532,7 @@ def _add_registry_family_shards(
     links: _RegistryLinks,
     source_trace_ref: str,
 ) -> None:
-    for relative_path in links.wiki_family_shard_pages:
+    for relative_path in links.generated_shard_pages:
         files[relative_path] = shared.build_registry_family_shard_page(relative_path, source_trace_ref)
 
 

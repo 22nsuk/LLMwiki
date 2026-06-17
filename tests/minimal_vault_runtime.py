@@ -397,11 +397,18 @@ def _registry_family_shard_section(
     source_trace_ref: str,
 ) -> str:
     stem = Path(relative_path).stem
+    if relative_path.startswith("system/system-raw-registry/system-"):
+        parent_router = "system-raw-registry/system"
+        related_index = "system-index"
+    else:
+        parent_router = "system-raw-registry/wiki"
+        related_index = "index"
+
     if heading == "Summary":
         child_count = len(live_registry_child_shard_pages(relative_path))
         return "\n".join(
             [
-                "- parent corpus router: [[system-raw-registry/wiki]]",
+                f"- parent corpus router: [[{parent_router}]]",
                 f"- topic family: `{stem}`",
                 "- registered entries: `0`",
                 f"- child registry shards: `{child_count}`",
@@ -409,7 +416,9 @@ def _registry_family_shard_section(
         )
     if heading == "Registered raw sources":
         return "- none currently"
-    if heading == "Child registry shards":
+    if heading == "Directly listed raw sources":
+        return "- none currently"
+    if heading in {"Child registry shards", "Family shards", "Second-order shards"}:
         child_links = bullet_wikilinks(live_registry_child_shard_pages(relative_path))
         return child_links or "- none currently"
     if heading == "Compaction notes":
@@ -418,8 +427,8 @@ def _registry_family_shard_section(
         return "\n".join(
             [
                 "- [[system-raw-registry]]",
-                "- [[system-raw-registry/wiki]]",
-                "- [[index]]",
+                f"- [[{parent_router}]]",
+                f"- [[{related_index}]]",
             ]
         )
     if heading == "Source trace":

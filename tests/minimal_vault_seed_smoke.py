@@ -17,19 +17,14 @@ def _remove_open_question_extra_pages(root: Path) -> None:
         "wiki/concept--fake.md",
         "wiki/query--fake.md",
         "wiki/synthesis--fake.md",
-        "system/system-raw-registry/wiki/ai-capability.md",
-        "system/system-raw-registry/wiki/ai-compute-control.md",
-        "system/system-raw-registry/wiki/ai-execution.md",
-        "system/system-raw-registry/wiki/coffee.md",
-        "system/system-raw-registry/wiki/europe-tech-sovereignty.md",
-        "system/system-raw-registry/wiki/global-policy-and-market-seeds.md",
-        "system/system-raw-registry/wiki/korea-fx.md",
-        "system/system-raw-registry/wiki/middle-east.md",
-        "system/system-raw-registry/wiki/middle-east-followups.md",
     ):
         path = root / relative_path
         if path.exists():
             path.unlink()
+    for path in sorted((root / "system" / "system-raw-registry" / "wiki").glob("*.md")):
+        path.unlink()
+    for path in sorted((root / "system" / "system-raw-registry").glob("system-*.md")):
+        path.unlink()
 
 
 def _configure_open_question_registry_policy(root: Path, shared: Any) -> None:
@@ -198,7 +193,10 @@ tags:
 - system corpus registry shard
 - registered entries: `0`
 
-## Registered raw sources
+## Second-order shards
+- none currently
+
+## Directly listed raw sources
 - none currently
 
 ## Related pages
