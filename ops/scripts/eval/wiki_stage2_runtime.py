@@ -5,7 +5,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
 
-from .wiki_page_runtime import section_body
+from .wiki_page_runtime import heading_body, section_body
 from .wiki_quality_runtime import missing_required_sections, resolved_wikilink_targets
 
 
@@ -131,3 +131,91 @@ def seed_source_missing_sections(text: str) -> list[str]:
 def content_quality_scaffold_missing_sections(text: str, recommended_headings: list[str]) -> list[str]:
     headings = {match.group(1).strip() for match in CONTENT_QUALITY_HEADING_RE.finditer(text)}
     return [heading for heading in recommended_headings if heading not in headings]
+
+
+def _content_quality_heading_body(text: str, heading: str) -> str | None:
+    for level in range(2, 7):
+        body = heading_body(text, heading, level=level)
+        if body is not None:
+            return body
+    return None
+
+
+def content_quality_scaffold_body_issues(
+    text: str,
+    recommended_headings: list[str],
+    *,
+    min_section_chars: int = 40,
+) -> list[dict]:
+    issues: list[dict] = []
+    for heading in recommended_headings:
+        body = _content_quality_heading_body(text, heading)
+        if body is None:
+            continue
+        stripped = body.strip()
+        if len(stripped) < min_section_chars:
+            issues.append(
+                {
+                    "heading": heading,
+                    "issue": "section_body_too_thin",
+                    "value": len(stripped),
+                    "threshold": min_section_chars,
+                }
+            )
+
+    evidence_ladder = _content_quality_heading_body(text, "Evidence ladder") or ""
+    lowered_ladder = evidence_ladder.lower()
+    has_strong = "강한" in evidence_ladder or "strong" in lowered_ladder
+    has_weak = any(
+        marker in evidence_ladder or marker in lowered_ladder
+        for marker in (
+            "약한",
+            "약하",
+            "중간 evidence",
+            "보조 evidence",
+            "primary evidence가 아니다",
+            "weak",
+            "secondary evidence",
+            "supporting evidence",
+        )
+    )
+    if evidence_ladder.strip() and not (has_strong and has_weak):
+        issues.append(
+            {
+                "heading": "Evidence ladder",
+                "issue": "missing_strength_tiers",
+                "required_markers": ["strong/강한", "weak/약한"],
+            }
+        )
+
+    boundary_parts = [
+        _content_quality_heading_body(text, "Boundary") or "",
+        section_body(text, "Scope boundaries") or "",
+        section_body(text, "Examples and non-examples") or "",
+        section_body(text, "What this synthesis excludes") or "",
+    ]
+    boundary = "\n".join(part for part in boundary_parts if part.strip())
+    lowered_boundary = boundary.lower()
+    if boundary.strip() and not any(
+        marker in boundary or marker in lowered_boundary
+        for marker in (
+            "아니다",
+            "아니라",
+            "않는다",
+            "범위 밖",
+            "흡수하지",
+            "제외",
+            "비예시",
+            "not",
+            "exclude",
+            "non-example",
+        )
+    ):
+        issues.append(
+            {
+                "heading": "Boundary",
+                "issue": "missing_exclusion_language",
+            }
+        )
+
+    return issues
