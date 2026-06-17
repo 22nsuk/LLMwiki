@@ -30,10 +30,10 @@ VOLATILE_FIELD_NAMES = frozenset(
 )
 
 STRUCTURAL_GOLDEN_DIGESTS = {
-    "mutation_proposal": "e1d159a76895dc1c075b2629c64478131c8c8a534dfe4702d7d2571fd214fe63",
-    "release_evidence_dashboard": "a20e22a6e65cd029e9ecdb7df40851a647b9c031f524d02b9a6cdba534c4e653",
-    "release_closeout_summary": "aec02eedf846eaf2f14fc28022fc11b6ce3f97db69116a4f6cb3d081e09a9a99",
-    "auto_improve_session_bundle": "ea3e17dffc82840a0d1f8cff8ef67459e52829817b8d466c6a9fc2616cf4a54b",
+    "mutation_proposal": "92f6e28997edaf53c6b2cbce7632205fba05894f691a0ff7e76ae588a67ddb32",
+    "release_evidence_dashboard": "bdb164ff7b7bdad823d13aecd45624e8d70818f9fcae7e6d2dfa9ce927143993",
+    "release_closeout_summary": "2f428ee62cf9993fde8fbda2303971ab412c62c749aa94a2ed89874b7d309bd6",
+    "auto_improve_session_bundle": "47df5de8dae219ce763f4377bc8f4526d57b5178f229cdfd8202e4414caaa103",
 }
 
 STRUCTURAL_CONTRACTS: dict[str, dict[str, object]] = {
