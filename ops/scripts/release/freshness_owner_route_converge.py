@@ -399,6 +399,51 @@ def _append_command_result(plan: dict[str, Any], phase: str, result: dict[str, A
         results.append({"phase": phase, **result})
 
 
+def _refresh_report_if_needed(
+    *,
+    vault: Path,
+    report_path: str,
+    plan_out: str,
+    make_bin: str,
+    python: str,
+    goal_run_id: str,
+    dry_run: bool,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, int | None]:
+    report = _load_report_or_none(vault / report_path)
+    if dry_run:
+        return report, None, None
+    if (
+        report is not None
+        and _report_is_current(report)
+        and _report_matches_current_source_tree(vault, report)
+    ):
+        return (
+            report,
+            {
+                "target": "artifact-freshness-refresh-check",
+                "status": "skipped",
+                "reason": "existing_report_current",
+            },
+            None,
+        )
+    result = _run_make_target(
+        "artifact-freshness-refresh-check",
+        make_bin=make_bin,
+        python=python,
+        vault=vault,
+        goal_run_id=goal_run_id,
+    )
+    if result["status"] != "pass":
+        plan: dict[str, Any] = {
+            "artifact_kind": "freshness_owner_route_converge_plan",
+            "status": "initial_refresh_failed",
+            "command_results": [{"phase": "initial_refresh", **result}],
+        }
+        _write_plan(vault, plan, plan_out)
+        return report, result, int(result["returncode"]) or 1
+    return _load_json(vault / report_path), result, None
+
+
 def run_converge(
     *,
     vault: Path,
@@ -410,38 +455,17 @@ def run_converge(
     dry_run: bool,
 ) -> int:
     goal_run_id = str(env.get("GOAL_RUN_ID", "")).strip()
-    report = _load_report_or_none(vault / report_path)
-    initial_refresh_result: dict[str, Any] | None = None
-    if not dry_run:
-        if (
-            report is not None
-            and _report_is_current(report)
-            and _report_matches_current_source_tree(vault, report)
-        ):
-            initial_refresh_result = {
-                "target": "artifact-freshness-refresh-check",
-                "status": "skipped",
-                "reason": "existing_report_current",
-            }
-        else:
-            result = _run_make_target(
-                "artifact-freshness-refresh-check",
-                make_bin=make_bin,
-                python=python,
-                vault=vault,
-                goal_run_id=goal_run_id,
-            )
-            if result["status"] != "pass":
-                plan: dict[str, Any] = {
-                    "artifact_kind": "freshness_owner_route_converge_plan",
-                    "status": "initial_refresh_failed",
-                    "command_results": [{"phase": "initial_refresh", **result}],
-                }
-                _write_plan(vault, plan, plan_out)
-                return int(result["returncode"]) or 1
-            initial_refresh_result = result
-            report = _load_json(vault / report_path)
-
+    report, initial_refresh_result, exit_code = _refresh_report_if_needed(
+        vault=vault,
+        report_path=report_path,
+        plan_out=plan_out,
+        make_bin=make_bin,
+        python=python,
+        goal_run_id=goal_run_id,
+        dry_run=dry_run,
+    )
+    if exit_code is not None:
+        return exit_code
     if report is None:
         report = _load_json(vault / report_path)
 

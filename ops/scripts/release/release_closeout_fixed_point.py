@@ -105,6 +105,21 @@ class _FixedPointIterationConfig:
     progress_sink: ProgressSink | None = None
 
 
+@dataclass
+class _IterationExecutionContext:
+    vault: Path
+    python_executable: str
+    make_variables: Sequence[str]
+    timeout_seconds: int
+    command_runner: CommandRunner
+    runtime_env: Mapping[str, str]
+    progress_sink: ProgressSink | None = None
+    progress_prefix: str = "release-closeout-fixed-point"
+    writer_by_target: Mapping[str, dict[str, Any]] | None = None
+    semantic_reuse_signatures: dict[str, dict[str, Any]] | None = None
+    tracked_paths: Sequence[str] = ()
+
+
 @dataclass(frozen=True)
 class _FixedPointIterationSnapshot:
     record: dict[str, Any]
@@ -547,89 +562,89 @@ def _make_command(
 
 
 def _run_iteration(
-    vault: Path,
     *,
     targets: Sequence[str],
-    python_executable: str,
-    make_variables: Sequence[str],
-    timeout_seconds: int,
-    command_runner: CommandRunner,
-    runtime_env: Mapping[str, str],
-    progress_sink: ProgressSink | None = None,
-    progress_prefix: str = "release-closeout-fixed-point",
-    writer_by_target: Mapping[str, dict[str, Any]] | None = None,
-    semantic_reuse_signatures: dict[str, dict[str, Any]] | None = None,
-    tracked_paths: Sequence[str] = (),
+    context: _IterationExecutionContext,
 ) -> tuple[list[dict[str, Any]], bool]:
     command_results: list[dict[str, Any]] = []
     failed = False
     for target in targets:
         command = _make_command(
             target,
-            vault=vault,
-            python_executable=python_executable,
-            make_variables=make_variables,
+            vault=context.vault,
+            python_executable=context.python_executable,
+            make_variables=context.make_variables,
         )
-        writer = (writer_by_target or {}).get(target)
+        writer = (context.writer_by_target or {}).get(target)
         if (
             writer is not None
-            and semantic_reuse_signatures is not None
+            and context.semantic_reuse_signatures is not None
             and target in SEMANTIC_REUSE_FEEDBACK_TARGETS
         ):
             reuse_signature, _reuse_blocker = _writer_output_reuse_signature(
-                vault,
+                context.vault,
                 writer,
-                tracked_paths=tracked_paths,
+                tracked_paths=context.tracked_paths,
             )
             if (
                 reuse_signature is not None
-                and semantic_reuse_signatures.get(target) == reuse_signature
+                and context.semantic_reuse_signatures.get(target) == reuse_signature
             ):
                 payload = _semantic_reuse_skip_result(
-                    vault=vault,
+                    vault=context.vault,
                     target=target,
                     command=command,
-                    timeout_seconds=timeout_seconds,
+                    timeout_seconds=context.timeout_seconds,
                     reuse_signature=reuse_signature,
                 )
                 command_results.append(payload)
                 _emit_progress(
-                    progress_sink,
+                    context.progress_sink,
                     (
-                        f"{progress_prefix}: skipped target={target} "
+                        f"{context.progress_prefix}: skipped target={target} "
                         "reason=semantic_reuse"
                     ),
                 )
                 continue
         _emit_progress(
-            progress_sink,
-            f"{progress_prefix}: start target={target} timeout_seconds={timeout_seconds}",
+            context.progress_sink,
+            (
+                f"{context.progress_prefix}: start target={target} "
+                f"timeout_seconds={context.timeout_seconds}"
+            ),
         )
-        result = command_runner(command, vault, timeout_seconds, runtime_env)
+        result = context.command_runner(
+            command,
+            context.vault,
+            context.timeout_seconds,
+            context.runtime_env,
+        )
         payload = {
             "target": target,
             "command": [
-                sanitize_report_text(vault, str(item))
+                sanitize_report_text(context.vault, str(item))
                 for item in result.get("command", command)
             ],
             "returncode": int(result.get("returncode", 1)),
             "timed_out": bool(result.get("timed_out", False)),
-            "timeout_seconds": int(result.get("timeout_seconds", timeout_seconds)),
+            "timeout_seconds": int(
+                result.get("timeout_seconds", context.timeout_seconds)
+            ),
             "termination_reason": str(result.get("termination_reason", "")),
             "duration_ms": int(result.get("duration_ms", 0) or 0),
             "stdout_tail": sanitize_report_text(
-                vault, str(result.get("stdout_tail", ""))
+                context.vault, str(result.get("stdout_tail", ""))
             ),
             "stderr_tail": sanitize_report_text(
-                vault, str(result.get("stderr_tail", ""))
+                context.vault, str(result.get("stderr_tail", ""))
             ),
             "status": str(result.get("status", "fail")),
         }
         command_results.append(payload)
         _emit_progress(
-            progress_sink,
+            context.progress_sink,
             (
-                f"{progress_prefix}: done target={target} "
+                f"{context.progress_prefix}: done target={target} "
                 f"status={payload['status']} duration_ms={payload['duration_ms']}"
             ),
         )
@@ -638,16 +653,16 @@ def _run_iteration(
             break
         if (
             writer is not None
-            and semantic_reuse_signatures is not None
+            and context.semantic_reuse_signatures is not None
             and target in SEMANTIC_REUSE_FEEDBACK_TARGETS
         ):
             reuse_signature, _reuse_blocker = _writer_output_reuse_signature(
-                vault,
+                context.vault,
                 writer,
-                tracked_paths=tracked_paths,
+                tracked_paths=context.tracked_paths,
             )
             if reuse_signature is not None:
-                semantic_reuse_signatures[target] = reuse_signature
+                context.semantic_reuse_signatures[target] = reuse_signature
     return command_results, failed
 
 
@@ -888,15 +903,17 @@ def _run_target(
     progress_prefix: str = "release-closeout-fixed-point",
 ) -> dict[str, Any]:
     command_results, _failed = _run_iteration(
-        vault,
         targets=[target],
-        python_executable=python_executable,
-        make_variables=make_variables,
-        timeout_seconds=timeout_seconds,
-        command_runner=command_runner,
-        runtime_env=runtime_env,
-        progress_sink=progress_sink,
-        progress_prefix=progress_prefix,
+        context=_IterationExecutionContext(
+            vault=vault,
+            python_executable=python_executable,
+            make_variables=make_variables,
+            timeout_seconds=timeout_seconds,
+            command_runner=command_runner,
+            runtime_env=runtime_env,
+            progress_sink=progress_sink,
+            progress_prefix=progress_prefix,
+        ),
     )
     return command_results[0]
 
@@ -2030,17 +2047,19 @@ def _fixed_point_iteration_state(
             ),
         )
         command_results, command_failed = _run_iteration(
-            vault,
             targets=next_targets,
-            python_executable=config.python_executable,
-            make_variables=config.make_variables,
-            timeout_seconds=config.timeout_seconds,
-            command_runner=config.command_runner,
-            runtime_env=config.runtime_env,
-            progress_sink=config.progress_sink,
-            writer_by_target=writer_by_target,
-            semantic_reuse_signatures=semantic_reuse_signatures,
-            tracked_paths=runtime.tracked_paths,
+            context=_IterationExecutionContext(
+                vault=vault,
+                python_executable=config.python_executable,
+                make_variables=config.make_variables,
+                timeout_seconds=config.timeout_seconds,
+                command_runner=config.command_runner,
+                runtime_env=config.runtime_env,
+                progress_sink=config.progress_sink,
+                writer_by_target=writer_by_target,
+                semantic_reuse_signatures=semantic_reuse_signatures,
+                tracked_paths=runtime.tracked_paths,
+            ),
         )
         snapshot = _fixed_point_iteration_snapshot(
             vault,

@@ -210,6 +210,52 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
     )
 
 
+def _assert_release_targets_do_not_spawn_runtime_trials(
+    test: unittest.TestCase,
+    text: str,
+) -> None:
+    for release_target in (
+        "release-auto-promotion-goal-run-id-guard",
+        "release-auto-promotion-goal-run-id-verified-check",
+        "release-auto-promotion-preflight",
+        "release-auto-promotion-preflight-check",
+        "release-auto-promotion-safe-cleanup",
+        "release-auto-promotion-safe-cleanup-cleanup-only",
+        "release-auto-promotion-safe-cleanup-finalize",
+        "release-auto-promotion-preseal",
+        "release-auto-promotion-preseal-check",
+        "release-auto-promotion-ready-plan",
+        "release-auto-promotion-operator-summary",
+        "release-auto-promotion-ready",
+        "release-auto-promotion-ready-check",
+        "release-authority-settle",
+        "release-authority-archive-candidate-gate",
+        "release-authority-post-ready-finality-current-check",
+        "release-authority-post-ready-finality-current-or-refresh",
+    ):
+        seen: set[str] = set()
+        stack = [release_target]
+        while stack:
+            target = stack.pop()
+            if target in seen:
+                continue
+            seen.add(target)
+            block = _target_block(text, target)
+            for forbidden in (
+                "auto-improve-goal-run",
+                "goal_runtime_runner",
+                "$(GOAL_RUN_COMMAND)",
+            ):
+                test.assertNotIn(
+                    forbidden,
+                    block,
+                    f"{release_target} must not create runtime-trial evidence via {target}",
+                )
+            for line in _recipe_lines(text, target):
+                for match in re.finditer(r"\$\(MAKE\)\s+([A-Za-z0-9_.-]+)", line):
+                    stack.append(match.group(1))
+
+
 class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
     def test_release_converge_targets_preserve_preflight_post_and_all_surface_flow(
         self,
@@ -655,46 +701,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertLess(verified_goal_index, run_ready_index)
         self.assertLess(ready_index, archive_gate_index)
         self.assertLess(archive_gate_index, finality_index)
-        for release_target in (
-            "release-auto-promotion-goal-run-id-guard",
-            "release-auto-promotion-goal-run-id-verified-check",
-            "release-auto-promotion-preflight",
-            "release-auto-promotion-preflight-check",
-            "release-auto-promotion-safe-cleanup",
-            "release-auto-promotion-safe-cleanup-cleanup-only",
-            "release-auto-promotion-safe-cleanup-finalize",
-            "release-auto-promotion-preseal",
-            "release-auto-promotion-preseal-check",
-            "release-auto-promotion-ready-plan",
-            "release-auto-promotion-operator-summary",
-            "release-auto-promotion-ready",
-            "release-auto-promotion-ready-check",
-            "release-authority-settle",
-            "release-authority-archive-candidate-gate",
-            "release-authority-post-ready-finality-current-check",
-            "release-authority-post-ready-finality-current-or-refresh",
-        ):
-            seen: set[str] = set()
-            stack = [release_target]
-            while stack:
-                target = stack.pop()
-                if target in seen:
-                    continue
-                seen.add(target)
-                block = _target_block(text, target)
-                for forbidden in (
-                    "auto-improve-goal-run",
-                    "goal_runtime_runner",
-                    "$(GOAL_RUN_COMMAND)",
-                ):
-                    self.assertNotIn(
-                        forbidden,
-                        block,
-                        f"{release_target} must not create runtime-trial evidence via {target}",
-                    )
-                for line in _recipe_lines(text, target):
-                    for match in re.finditer(r"\$\(MAKE\)\s+([A-Za-z0-9_.-]+)", line):
-                        stack.append(match.group(1))
+        _assert_release_targets_do_not_spawn_runtime_trials(self, text)
 
         auto_promotion_plan_block = _target_block(text, "release-auto-promotion-ready-plan")
         self.assertIn("ops.scripts.release_evidence_planner", auto_promotion_plan_block)

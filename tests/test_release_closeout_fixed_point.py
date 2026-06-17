@@ -22,6 +22,7 @@ from ops.scripts.release.release_closeout_fixed_point import (
     ARTIFACT_FRESHNESS_REPORT_PATH,
     DEFAULT_OUT,
     DRY_RUN_SCHEMA_PATH,
+    _IterationExecutionContext,
     _run_iteration,
     bootstrap_post_promote_freshness,
     build_dry_run_report,
@@ -673,28 +674,32 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
 
         reuse_signatures: dict[str, dict[str, Any]] = {}
         first_results, first_failed = _run_iteration(
-            self.vault,
             targets=["generated-artifact-index-body"],
-            python_executable="python",
-            make_variables=(),
-            timeout_seconds=30,
-            command_runner=runner,
-            runtime_env={},
-            writer_by_target=writer_by_target,
-            semantic_reuse_signatures=reuse_signatures,
-            tracked_paths=tracked_paths,
+            context=_IterationExecutionContext(
+                vault=self.vault,
+                python_executable="python",
+                make_variables=(),
+                timeout_seconds=30,
+                command_runner=runner,
+                runtime_env={},
+                writer_by_target=writer_by_target,
+                semantic_reuse_signatures=reuse_signatures,
+                tracked_paths=tracked_paths,
+            ),
         )
         second_results, second_failed = _run_iteration(
-            self.vault,
             targets=["generated-artifact-index-body"],
-            python_executable="python",
-            make_variables=(),
-            timeout_seconds=30,
-            command_runner=runner,
-            runtime_env={},
-            writer_by_target=writer_by_target,
-            semantic_reuse_signatures=reuse_signatures,
-            tracked_paths=tracked_paths,
+            context=_IterationExecutionContext(
+                vault=self.vault,
+                python_executable="python",
+                make_variables=(),
+                timeout_seconds=30,
+                command_runner=runner,
+                runtime_env={},
+                writer_by_target=writer_by_target,
+                semantic_reuse_signatures=reuse_signatures,
+                tracked_paths=tracked_paths,
+            ),
         )
 
         self.assertFalse(first_failed)
