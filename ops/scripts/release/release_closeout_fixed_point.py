@@ -1734,6 +1734,28 @@ def _bootstrap_rebase_blocker(
     return ""
 
 
+def _bootstrap_no_freshness_debt_result(
+    *,
+    generated_at: str,
+    max_bootstrap_passes: int,
+    initial_debt: dict[str, Any],
+    progress_sink: ProgressSink | None,
+) -> dict[str, Any]:
+    _emit_progress(
+        progress_sink,
+        "release-closeout-fixed-point: bootstrap-post-promote skipped fixed_point_freshness_debt=false",
+    )
+    return _bootstrap_freshness_result(
+        status="pass",
+        bootstrap_required=False,
+        generated_at=generated_at,
+        max_bootstrap_passes=max_bootstrap_passes,
+        passes=[],
+        initial_debt=initial_debt,
+        final_debt=initial_debt,
+    )
+
+
 def bootstrap_post_promote_freshness(
     vault: Path,
     *,
@@ -1757,18 +1779,11 @@ def bootstrap_post_promote_freshness(
     passes: list[dict[str, Any]] = []
 
     if not initial_debt["has_freshness_debt"]:
-        _emit_progress(
-            progress_sink,
-            "release-closeout-fixed-point: bootstrap-post-promote skipped fixed_point_freshness_debt=false",
-        )
-        return _bootstrap_freshness_result(
-            status="pass",
-            bootstrap_required=False,
+        return _bootstrap_no_freshness_debt_result(
             generated_at=generated_at,
             max_bootstrap_passes=max_bootstrap_passes,
-            passes=passes,
             initial_debt=initial_debt,
-            final_debt=initial_debt,
+            progress_sink=progress_sink,
         )
 
     final_debt = initial_debt

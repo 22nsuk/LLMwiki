@@ -23,6 +23,97 @@ from ops.scripts.registry.raw_intake_promotion_shared_runtime import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def sample_synthesis_analysis_blocks() -> list[dict[str, str]]:
+    return [
+        {
+            "heading": "Core model",
+            "body": "브라우저 확장 같은 저수준 surface가 대규모 계정 탈취의 입구가 된다.",
+            "purpose": "core-model",
+        },
+        {
+            "heading": "Common misread",
+            "body": "이 묶음은 AI security claim의 크기를 판정하는 문서가 아니다.",
+            "purpose": "common-misread",
+        },
+        {
+            "heading": "Key variables",
+            "body": "incident surface, actor signal, verification status, policy salience를 분리한다.",
+            "purpose": "key-variables",
+        },
+        {
+            "heading": "Mechanism",
+            "body": "침해는 기술문제이자 외교 압박 메시지가 된다.",
+            "purpose": "mechanism",
+        },
+        {
+            "heading": "How the evidence changes the answer",
+            "body": "incident surface, state actor signal, capability rhetoric를 분리해서 읽는다.",
+            "purpose": "evidence-changes-answer",
+        },
+        {
+            "heading": "Evidence ladder",
+            "body": "실제 breach는 직접 evidence이고, AI security rhetoric는 bridge context다.",
+            "purpose": "evidence-ladder",
+        },
+        {
+            "heading": "Concrete examples",
+            "body": "독립 검증 전에도 capability rhetoric가 지정학적 언어로 증폭된다.",
+            "purpose": "concrete-examples",
+        },
+        {
+            "heading": "Tensions / counterevidence",
+            "body": "계정 탈취와 국가 강압 신호가 같은 security route에서 policy salience를 키운다.",
+            "purpose": "tensions-counterevidence",
+        },
+        {
+            "heading": "What would change the answer",
+            "body": "실제 breach는 강한 evidence이고, AI security rhetoric는 bridge context로만 둔다.",
+            "purpose": "answer-change-conditions",
+        },
+        {
+            "heading": "Boundary",
+            "body": "순수 benchmark debate와 vendor capability marketing은 이 synthesis의 중심이 아니다.",
+            "purpose": "boundary",
+        },
+    ]
+
+
+def sample_concept_body_blocks() -> list[dict[str, str]]:
+    return [
+        {
+            "heading": "Core model",
+            "body": (
+                "브라우저·계정 surface가 침해의 입구가 되고, state pressure surface를 "
+                "함께 묶으면서 capability claim이 국가경쟁 서사로 번지는 경로를 본다."
+            ),
+        },
+        {
+            "heading": "Common misread",
+            "body": "이 concept는 AI security claim의 크기를 판정하는 문서가 아니다.",
+        },
+        {
+            "heading": "Key variables",
+            "body": "incident surface, actor signal, verification status, policy salience를 분리한다.",
+        },
+        {
+            "heading": "Mechanism",
+            "body": "침해는 기술문제이자 외교 압박 메시지가 된다.",
+        },
+        {
+            "heading": "Evidence ladder",
+            "body": "강한 evidence는 확인된 breach이고, 약한 evidence는 AI security rhetoric다.",
+        },
+        {
+            "heading": "Concrete examples",
+            "body": "browser breach와 state-backed coercion 조합을 대표 사례로 둔다.",
+        },
+        {
+            "heading": "Boundary",
+            "body": "순수 benchmark debate와 vendor marketing은 이 concept의 중심이 아니다.",
+        },
+    ]
+
+
 def sample_family() -> dict:
     return {
         "family_slug": "cyber-statecraft-and-ai-security",
@@ -74,58 +165,7 @@ def sample_family() -> dict:
                     "implication": "capability rhetoric는 core evidence가 아니라 bridge evidence로 둔다.",
                 },
             ],
-            "analysis_blocks": [
-                {
-                    "heading": "Core model",
-                    "body": "브라우저 확장 같은 저수준 surface가 대규모 계정 탈취의 입구가 된다.",
-                    "purpose": "core-model",
-                },
-                {
-                    "heading": "Common misread",
-                    "body": "이 묶음은 AI security claim의 크기를 판정하는 문서가 아니다.",
-                    "purpose": "common-misread",
-                },
-                {
-                    "heading": "Key variables",
-                    "body": "incident surface, actor signal, verification status, policy salience를 분리한다.",
-                    "purpose": "key-variables",
-                },
-                {
-                    "heading": "Mechanism",
-                    "body": "침해는 기술문제이자 외교 압박 메시지가 된다.",
-                    "purpose": "mechanism",
-                },
-                {
-                    "heading": "How the evidence changes the answer",
-                    "body": "incident surface, state actor signal, capability rhetoric를 분리해서 읽는다.",
-                    "purpose": "evidence-changes-answer",
-                },
-                {
-                    "heading": "Evidence ladder",
-                    "body": "실제 breach는 직접 evidence이고, AI security rhetoric는 bridge context다.",
-                    "purpose": "evidence-ladder",
-                },
-                {
-                    "heading": "Concrete examples",
-                    "body": "독립 검증 전에도 capability rhetoric가 지정학적 언어로 증폭된다.",
-                    "purpose": "concrete-examples",
-                },
-                {
-                    "heading": "Tensions / counterevidence",
-                    "body": "계정 탈취와 국가 강압 신호가 같은 security route에서 policy salience를 키운다.",
-                    "purpose": "tensions-counterevidence",
-                },
-                {
-                    "heading": "What would change the answer",
-                    "body": "실제 breach는 강한 evidence이고, AI security rhetoric는 bridge context로만 둔다.",
-                    "purpose": "answer-change-conditions",
-                },
-                {
-                    "heading": "Boundary",
-                    "body": "순수 benchmark debate와 vendor capability marketing은 이 synthesis의 중심이 아니다.",
-                    "purpose": "boundary",
-                },
-            ],
+            "analysis_blocks": sample_synthesis_analysis_blocks(),
             "what_this_synthesis_excludes": [
                 "이 문서는 순수 benchmark debate만을 직접 다루지 않는다."
             ],
@@ -154,39 +194,7 @@ def sample_family() -> dict:
             "created": "2026-04-22",
             "summary": "Cyber incident와 국가 강압, AI security rhetoric를 함께 읽는 개념이다.",
             "why_it_matters_here": "보안 뉴스는 실제 침해와 geopolitics를 함께 본다.",
-            "main_body_blocks": [
-                {
-                    "heading": "Core model",
-                    "body": (
-                        "브라우저·계정 surface가 침해의 입구가 되고, state pressure surface를 "
-                        "함께 묶으면서 capability claim이 국가경쟁 서사로 번지는 경로를 본다."
-                    ),
-                },
-                {
-                    "heading": "Common misread",
-                    "body": "이 concept는 AI security claim의 크기를 판정하는 문서가 아니다.",
-                },
-                {
-                    "heading": "Key variables",
-                    "body": "incident surface, actor signal, verification status, policy salience를 분리한다.",
-                },
-                {
-                    "heading": "Mechanism",
-                    "body": "침해는 기술문제이자 외교 압박 메시지가 된다.",
-                },
-                {
-                    "heading": "Evidence ladder",
-                    "body": "강한 evidence는 확인된 breach이고, 약한 evidence는 AI security rhetoric다.",
-                },
-                {
-                    "heading": "Concrete examples",
-                    "body": "browser breach와 state-backed coercion 조합을 대표 사례로 둔다.",
-                },
-                {
-                    "heading": "Boundary",
-                    "body": "순수 benchmark debate와 vendor marketing은 이 concept의 중심이 아니다.",
-                },
-            ],
+            "main_body_blocks": sample_concept_body_blocks(),
             "scope_boundaries": ["이 concept는 incident와 statecraft가 함께 보일 때 적합하다."],
             "examples_and_non_examples": ["example은 browser breach와 state-backed coercion 조합이다."],
             "how_to_reuse_this_concept": ["incident, coercion, rhetoric 세 층을 분리 표시한다."],
@@ -335,6 +343,49 @@ def sample_refresh() -> dict:
     }
 
 
+def write_sample_absorption_matrix(matrix_path: Path) -> None:
+    matrix_path.write_text(
+        json.dumps(
+            {
+                "generated_at": "2026-04-22T11:00:00Z",
+                "matrix": [
+                    {
+                        "registry_id": "W-224",
+                        "source_page": "wiki/source--demo-a-2026-04-21.md",
+                        "proposed_action": "create_new_synthesis_family",
+                        "target": "cyber-statecraft-and-ai-security",
+                        "review_status": "reviewed",
+                    },
+                    {
+                        "registry_id": "W-225",
+                        "source_page": "wiki/source--demo-b-2026-04-21.md",
+                        "proposed_action": "create_new_synthesis_family",
+                        "target": "cyber-statecraft-and-ai-security",
+                        "review_status": "approved",
+                    },
+                    {
+                        "registry_id": "W-999",
+                        "source_page": "wiki/source--demo-pending-2026-04-21.md",
+                        "proposed_action": "create_new_synthesis_family",
+                        "target": "cyber-statecraft-and-ai-security",
+                        "review_status": "pending",
+                    },
+                    {
+                        "registry_id": "W-226",
+                        "source_page": "wiki/source--new-c-2026-04-21.md",
+                        "proposed_action": "refresh_existing_synthesis",
+                        "target": "synthesis--old",
+                        "review_status": "reviewed",
+                    },
+                ],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
 class RawIntakePromotionRuntimeTest(unittest.TestCase):
     def test_scaffold_groups_create_and_refresh_entries(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -428,46 +479,7 @@ takeaway
 """,
                 encoding="utf-8",
             )
-            matrix_path.write_text(
-                json.dumps(
-                    {
-                        "generated_at": "2026-04-22T11:00:00Z",
-                        "matrix": [
-                            {
-                                "registry_id": "W-224",
-                                "source_page": "wiki/source--demo-a-2026-04-21.md",
-                                "proposed_action": "create_new_synthesis_family",
-                                "target": "cyber-statecraft-and-ai-security",
-                                "review_status": "reviewed",
-                            },
-                            {
-                                "registry_id": "W-225",
-                                "source_page": "wiki/source--demo-b-2026-04-21.md",
-                                "proposed_action": "create_new_synthesis_family",
-                                "target": "cyber-statecraft-and-ai-security",
-                                "review_status": "approved",
-                            },
-                            {
-                                "registry_id": "W-999",
-                                "source_page": "wiki/source--demo-pending-2026-04-21.md",
-                                "proposed_action": "create_new_synthesis_family",
-                                "target": "cyber-statecraft-and-ai-security",
-                                "review_status": "pending",
-                            },
-                            {
-                                "registry_id": "W-226",
-                                "source_page": "wiki/source--new-c-2026-04-21.md",
-                                "proposed_action": "refresh_existing_synthesis",
-                                "target": "synthesis--old",
-                                "review_status": "reviewed",
-                            },
-                        ],
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
+            write_sample_absorption_matrix(matrix_path)
 
             manifest = scaffold_profile_bundle(matrix_path, vault=temp_path)
 
