@@ -268,7 +268,7 @@ class CodexGoalClientTests(unittest.TestCase):
         seed_minimal_vault(self.vault)
 
         with patch(
-            "ops.scripts.codex_goal_client._utc_now",
+            "ops.scripts.core.codex_goal_client._utc_now",
             side_effect=["2026-05-21T16:00:00Z", "2026-05-21T16:00:01Z"],
         ):
             exit_code = main(

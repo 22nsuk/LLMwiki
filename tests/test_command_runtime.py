@@ -192,7 +192,7 @@ class CommandRuntimeTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as temp_dir,
             mock.patch.object(command_runtime.os, "name", "posix"),
-            mock.patch("ops.scripts.command_runtime.subprocess.Popen", return_value=process) as popen,
+            mock.patch("ops.scripts.core.command_runtime.subprocess.Popen", return_value=process) as popen,
         ):
             result = command_runtime.run_with_timeout(
                 ["python", "-c", "print('ok')"],
@@ -231,7 +231,7 @@ class CommandRuntimeTests(unittest.TestCase):
         with (
             mock.patch.object(command_runtime.signal, "signal", side_effect=fake_signal),
             mock.patch(
-                "ops.scripts.command_runtime._communicate_with_optional_heartbeats",
+                "ops.scripts.core.command_runtime._communicate_with_optional_heartbeats",
                 side_effect=interrupted_communicate,
             ),
             self.assertRaises(SystemExit) as raised,
@@ -260,7 +260,7 @@ class CommandRuntimeTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as temp_dir,
             mock.patch.object(command_runtime.os, "name", "nt"),
-            mock.patch("ops.scripts.command_runtime.subprocess.Popen", return_value=process) as popen,
+            mock.patch("ops.scripts.core.command_runtime.subprocess.Popen", return_value=process) as popen,
         ):
             result = command_runtime.run_with_timeout(
                 ["python", "-c", "print('ok')"],

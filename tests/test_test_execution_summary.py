@@ -718,7 +718,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             )
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(
                     returncode=0,
                     stdout=(
@@ -727,7 +727,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                     ),
                 ),
             ) as run, patch(
-                "ops.scripts.test_execution_summary.time.monotonic",
+                "ops.scripts.test.test_execution_summary.time.monotonic",
                 side_effect=[10.0, 10.25],
             ):
                 digest = collect_pytest_nodeid_digest(
@@ -749,7 +749,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             vault.mkdir()
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(
                     returncode=0,
                     stdout=(
@@ -852,7 +852,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             )
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(
                     returncode=0,
                     stdout="tests/test_collect_sample.py::test_one\n",
@@ -1286,7 +1286,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path = vault / "ops" / "reports" / "test-execution-summary.json"
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 1 passed in 0.01s ="),
             ) as run:
                 returncode = summary_main(
@@ -1318,7 +1318,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             seed_minimal_vault(vault)
 
             with (
-                patch("ops.scripts.test_execution_summary.run_with_timeout") as run,
+                patch("ops.scripts.test.test_execution_summary.run_with_timeout") as run,
                 redirect_stderr(io.StringIO()) as stderr,
                 self.assertRaises(SystemExit) as raised,
             ):
@@ -1359,7 +1359,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=1, stdout="= 1 failed in 0.01s ="),
             ) as run:
                 returncode = summary_main(
@@ -1406,7 +1406,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             test_file.write_text("def test_ok():\n    assert True\n\ndef test_new():\n    assert True\n", encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
             ) as run:
                 returncode = summary_main(
@@ -1452,7 +1452,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             (vault / "README.md").write_text("# Test\n\nSource tree changed.\n", encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
             ) as run:
                 stdout = io.StringIO()
@@ -1505,7 +1505,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
             ) as run:
                 stdout = io.StringIO()
@@ -1557,7 +1557,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=1, stdout="= 1 failed in 0.01s ="),
             ) as run:
                 returncode = summary_main(
@@ -1804,9 +1804,9 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path = vault / "ops" / "reports" / "test-execution-summary.json"
 
             with (
-                patch("ops.scripts.test_execution_summary.RuntimeContext.from_policy", return_value=_fixed_context()),
+                patch("ops.scripts.test.test_execution_summary.RuntimeContext.from_policy", return_value=_fixed_context()),
                 patch(
-                    "ops.scripts.test_execution_summary.run_with_timeout",
+                    "ops.scripts.test.test_execution_summary.run_with_timeout",
                     return_value=_result(returncode=0, stdout="= 1 passed, 1 deselected in 0.01s ="),
                 ),
             ):
@@ -1850,7 +1850,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 junit_path.write_text("<testsuite tests='3'></testsuite>\n", encoding="utf-8")
                 return _result(returncode=0, stdout="= 1 passed, 2 subtests passed in 0.01s =")
 
-            with patch("ops.scripts.test_execution_summary.run_with_timeout", side_effect=fake_run):
+            with patch("ops.scripts.test.test_execution_summary.run_with_timeout", side_effect=fake_run):
                 returncode = summary_main(
                     [
                         "--vault",
@@ -1898,7 +1898,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 junit_path.write_text("<testsuite tests='1'></testsuite>\n", encoding="utf-8")
                 return _result(returncode=0, stdout="= 2 passed, 1 subtest passed in 0.01s =")
 
-            with patch("ops.scripts.test_execution_summary.run_with_timeout", side_effect=fake_run):
+            with patch("ops.scripts.test.test_execution_summary.run_with_timeout", side_effect=fake_run):
                 returncode = summary_main(
                     [
                         "--vault",
@@ -1934,7 +1934,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path = vault / "ops" / "reports" / "test-execution-summary.json"
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(
                     returncode=1,
                     stdout=(

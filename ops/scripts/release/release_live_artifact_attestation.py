@@ -247,7 +247,7 @@ def build_attestation(
             artifact_kind="release_live_artifact_attestation",
             producer=PRODUCER,
             source_command=(
-                "python -m ops.scripts.release_live_artifact_attestation build "
+                "python -m ops.scripts.release.release_live_artifact_attestation build "
                 "--vault . --source-zip-path "
                 f"{source_zip_path} --evidence-bundle-path {evidence_bundle_path}"
             ),

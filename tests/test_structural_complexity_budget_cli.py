@@ -28,8 +28,8 @@ class StructuralComplexityBudgetCliTests(unittest.TestCase):
             }
 
             with (
-                mock.patch("ops.scripts.structural_complexity_budget.build_report", return_value=report),
-                mock.patch("ops.scripts.structural_complexity_budget.write_report"),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.build_report", return_value=report),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.write_report"),
                 self.assertRaises(SystemExit) as exc,
             ):
                 main(
@@ -62,8 +62,8 @@ class StructuralComplexityBudgetCliTests(unittest.TestCase):
             }
 
             with (
-                mock.patch("ops.scripts.structural_complexity_budget.build_report", return_value=report),
-                mock.patch("ops.scripts.structural_complexity_budget.write_report"),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.build_report", return_value=report),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.write_report"),
                 self.assertRaises(SystemExit) as exc,
             ):
                 main(
@@ -97,8 +97,8 @@ class StructuralComplexityBudgetCliTests(unittest.TestCase):
             }
 
             with (
-                mock.patch("ops.scripts.structural_complexity_budget.build_report", return_value=report),
-                mock.patch("ops.scripts.structural_complexity_budget.write_report"),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.build_report", return_value=report),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.write_report"),
                 contextlib.redirect_stderr(stderr),
                 self.assertRaises(SystemExit) as exc,
             ):
@@ -147,8 +147,8 @@ class StructuralComplexityBudgetCliTests(unittest.TestCase):
             }
 
             with (
-                mock.patch("ops.scripts.structural_complexity_budget.build_report", return_value=report),
-                mock.patch("ops.scripts.structural_complexity_budget.write_report"),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.build_report", return_value=report),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.write_report"),
                 contextlib.redirect_stderr(stderr),
                 self.assertRaises(SystemExit) as exc,
             ):

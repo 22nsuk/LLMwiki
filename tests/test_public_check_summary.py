@@ -144,7 +144,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
             )
 
-        with patch("ops.scripts.public_check_summary.run_with_timeout", fake_run_with_timeout):
+        with patch("ops.scripts.public.public_check_summary.run_with_timeout", fake_run_with_timeout):
             _default_command_runner(
                 ["python", "-m", "pytest"],
                 Path("."),
@@ -189,7 +189,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
             seed_minimal_vault(vault)
             seed_public_policy_file(vault)
 
-            with patch("ops.scripts.public_check_summary.run_with_timeout", fake_run_with_timeout):
+            with patch("ops.scripts.public.public_check_summary.run_with_timeout", fake_run_with_timeout):
                 report = build_report(
                     vault,
                     PublicCheckRequest(
@@ -520,7 +520,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 )
 
             with patch(
-                "ops.scripts.public_check_summary._public_pytest_summary_cache_path",
+                "ops.scripts.public.public_check_summary._public_pytest_summary_cache_path",
                 return_value=cache_path,
             ):
                 report = build_report(

@@ -122,7 +122,8 @@ tests, and fixtures must not assume those private surfaces exist.
 
 Canonical imports use the domain package paths, for example
 `ops.scripts.release.release_status_surface`. The package still keeps flat
-`ops.scripts.<name>` compatibility aliases for existing Make/script callers.
+`ops.scripts.<name>` compatibility aliases only for lifecycle-policy modules
+and explicitly declared compatibility facades.
 
 ## Documentation Map
 

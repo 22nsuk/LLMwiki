@@ -80,6 +80,9 @@ class ImportFallbackContractTests(unittest.TestCase):
         with patch("ops.scripts.test_execution_summary.run_with_timeout", sentinel.run_with_timeout):
             self.assertIs(canonical.run_with_timeout, sentinel.run_with_timeout)
 
+    def test_flat_script_reexport_omits_unclassified_helpers(self) -> None:
+        self.assertIsNone(importlib.util.find_spec("ops.scripts.artifact_io_runtime"))
+
     def test_flat_script_reexport_names_are_unambiguous(self) -> None:
         modules_by_stem: dict[str, list[str]] = {}
         for path in sorted(SCRIPTS_DIR.glob("*/*.py")):
@@ -102,6 +105,26 @@ class ImportFallbackContractTests(unittest.TestCase):
                 sys.executable,
                 "-m",
                 "ops.scripts.test_execution_summary",
+                "--help",
+            ],
+            cwd=Path(__file__).resolve().parents[1],
+            env=env,
+            text=True,
+            check=False,
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("usage:", result.stdout)
+
+    def test_flat_script_reexport_supports_python_m_entrypoint_with_relative_imports(self) -> None:
+        env = os.environ.copy()
+        env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "ops.scripts.sync_public_surface_gitignore",
                 "--help",
             ],
             cwd=Path(__file__).resolve().parents[1],

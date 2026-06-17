@@ -271,7 +271,7 @@ class FinalizeRunTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "ops.scripts.filesystem_runtime._replace_path",
+                    "ops.scripts.core.filesystem_runtime._replace_path",
                     side_effect=fail_on_planning,
                 ),
                 self.assertRaises(FinalizeRunWriteError),
@@ -334,7 +334,7 @@ class FinalizeRunTests(unittest.TestCase):
                 Path(src).replace(dst)
 
             with (
-                mock.patch("ops.scripts.filesystem_runtime._replace_path", side_effect=fail_on_log),
+                mock.patch("ops.scripts.core.filesystem_runtime._replace_path", side_effect=fail_on_log),
                 self.assertRaises(FinalizeRunWriteError),
             ):
                 finalize_run(vault, "run-atomic-log-fail")

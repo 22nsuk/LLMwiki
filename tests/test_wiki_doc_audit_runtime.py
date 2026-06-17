@@ -403,7 +403,7 @@ class WikiDocAuditRuntimeTests(unittest.TestCase):
             _write(vault / "runs" / "run-a" / "duplicate.md", "# Duplicate runs\n")
 
             with patch(
-                "ops.scripts.wiki_doc_audit_runtime.report_path",
+                "ops.scripts.eval.wiki_doc_audit_runtime.report_path",
                 side_effect=lambda _vault, path: path.name,
             ):
                 surfaces = documentation_markdown_surfaces(vault)

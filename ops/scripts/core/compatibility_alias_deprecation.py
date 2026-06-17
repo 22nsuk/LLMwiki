@@ -13,9 +13,17 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts._compatibility_alias_policy import (
+        FlatReexportTarget,
+        discover_flat_reexport_targets,
+    )
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.runtime_context import RuntimeContext
 else:
+    from .._compatibility_alias_policy import (
+        FlatReexportTarget,
+        discover_flat_reexport_targets,
+    )
     from .output_runtime import display_path
     from .runtime_context import RuntimeContext
 
@@ -105,19 +113,22 @@ def _script_module_compatibility_aliases(vault: Path) -> list[dict[str, Any]]:
     return aliases
 
 
-def _flat_reexport_targets(vault: Path) -> dict[str, tuple[str, str]]:
+def _flat_reexport_target_records(vault: Path) -> dict[str, FlatReexportTarget]:
     init_path = vault / "ops" / "scripts" / "__init__.py"
     if "_ReexportFinder" not in _read_text(init_path):
         return {}
     script_root = vault / "ops" / "scripts"
-    targets: dict[str, tuple[str, str]] = {}
-    for path in sorted(script_root.glob("*/*.py")):
-        if path.name.startswith("_"):
-            continue
-        relative_path = path.relative_to(vault).as_posix()
-        canonical_module = relative_path.removesuffix(".py").replace("/", ".")
-        targets[f"ops.scripts.{path.stem}"] = (relative_path, canonical_module)
-    return targets
+    return {
+        target.alias_name: target
+        for target in discover_flat_reexport_targets(script_root).values()
+    }
+
+
+def _flat_reexport_targets(vault: Path) -> dict[str, tuple[str, str]]:
+    return {
+        alias_name: (target.relative_path, target.canonical_module)
+        for alias_name, target in _flat_reexport_target_records(vault).items()
+    }
 
 
 def _flat_reexport_aliases(
@@ -126,17 +137,15 @@ def _flat_reexport_aliases(
     actual_caller_counts: Counter[str] | None = None,
 ) -> list[dict[str, Any]]:
     aliases: list[dict[str, Any]] = []
-    for alias_name, (relative_path, canonical_module) in sorted(
-        _flat_reexport_targets(vault).items()
-    ):
+    for alias_name, target in sorted(_flat_reexport_target_records(vault).items()):
         aliases.append(
             {
                 "alias_type": "flat_import_reexport",
                 "name": alias_name,
-                "path": relative_path,
-                "preferred_replacement": canonical_module,
-                "removal_ready": False,
-                "retained_reason": "public_cli_import_compatibility",
+                "path": target.relative_path,
+                "preferred_replacement": target.canonical_module,
+                "removal_ready": target.removal_ready,
+                "retained_reason": target.retained_reason,
                 "actual_caller_count": (
                     actual_caller_counts.get(alias_name, 0)
                     if actual_caller_counts is not None

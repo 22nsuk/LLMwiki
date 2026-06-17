@@ -81,14 +81,14 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
         self,
     ) -> None:
         with mock.patch(
-            "ops.scripts.run_mechanism_experiment_runtime.tempfile.gettempdir",
+            "ops.scripts.mechanism.run_mechanism_experiment_runtime.tempfile.gettempdir",
             return_value="/mnt/c/Users/ADMINI~1/AppData/Local/Temp",
         ):
             self.assertEqual(_mechanism_temp_dir_parent(), "/tmp")
 
     def test_mechanism_temp_dir_parent_keeps_native_linux_tempdir(self) -> None:
         with mock.patch(
-            "ops.scripts.run_mechanism_experiment_runtime.tempfile.gettempdir",
+            "ops.scripts.mechanism.run_mechanism_experiment_runtime.tempfile.gettempdir",
             return_value="/tmp",
         ):
             self.assertIsNone(_mechanism_temp_dir_parent())
@@ -242,7 +242,7 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                 )
 
             with mock.patch(
-                "ops.scripts.mechanism_run_workspace_runtime.run_with_timeout",
+                "ops.scripts.mechanism.mechanism_run_workspace_runtime.run_with_timeout",
                 side_effect=fake_run_with_timeout,
             ):
                 result = _run_command(

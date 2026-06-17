@@ -109,7 +109,7 @@ class AutoImproveSessionReportRuntimeTests(unittest.TestCase):
             self.assertEqual(embedded_envelope["producer"], "ops.scripts.auto_improve_runtime")
             self.assertEqual(
                 embedded_envelope["source_command"],
-                "python -m ops.scripts.auto_improve_runtime",
+                "python -m ops.scripts.mechanism.auto_improve_runtime",
             )
             self.assertIn("source_paths", embedded_envelope["input_fingerprints"])
             source_paths = build_envelope.call_args.kwargs["source_paths"]

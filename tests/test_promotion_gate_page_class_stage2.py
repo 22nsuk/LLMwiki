@@ -184,11 +184,11 @@ class PromotionGatePageClassStage2Test(unittest.TestCase):
             signoff = build_signoff(policy, "wiki_source", _Args())
             log = build_log(policy, _Args())
 
-            with patch("ops.scripts.promotion_gate.lint_wiki", return_value=lint_report()), patch(
-                "ops.scripts.promotion_gate.evaluate_wiki",
+            with patch("ops.scripts.mechanism.promotion_gate.lint_wiki", return_value=lint_report()), patch(
+                "ops.scripts.mechanism.promotion_gate.evaluate_wiki",
                 return_value=eval_report("wiki/source--seed.md"),
             ), patch(
-                "ops.scripts.promotion_gate.evaluate_stage2",
+                "ops.scripts.mechanism.promotion_gate.evaluate_stage2",
                 return_value=stage2_report("wiki/source--seed.md", score=0, max_score=1, status="fail"),
             ):
                 report = page_class_report(
@@ -229,11 +229,11 @@ class PromotionGatePageClassStage2Test(unittest.TestCase):
             signoff = build_signoff(policy, "wiki_concept", _Args())
             log = build_log(policy, _Args())
 
-            with patch("ops.scripts.promotion_gate.lint_wiki", return_value=lint_report()), patch(
-                "ops.scripts.promotion_gate.evaluate_wiki",
+            with patch("ops.scripts.mechanism.promotion_gate.lint_wiki", return_value=lint_report()), patch(
+                "ops.scripts.mechanism.promotion_gate.evaluate_wiki",
                 return_value=eval_report("wiki/concept--plain.md"),
             ), patch(
-                "ops.scripts.promotion_gate.evaluate_stage2",
+                "ops.scripts.mechanism.promotion_gate.evaluate_stage2",
                 return_value=stage2_report("wiki/concept--plain.md", score=0, max_score=0, status="pass"),
             ):
                 report = page_class_report(

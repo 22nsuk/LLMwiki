@@ -124,8 +124,8 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "worker structural complexity preflight blocked",
@@ -213,8 +213,8 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "worker structural complexity preflight blocked",

@@ -19,7 +19,7 @@ from .wiki_stage2_runtime import (
 
 WIKI_EVAL_COVERAGE_SCHEMA = WIKI_EVAL_COVERAGE_SCHEMA_PATH
 PRODUCER = "ops.scripts.wiki_eval_coverage_runtime"
-SOURCE_COMMAND = "python -m ops.scripts.wiki_eval_coverage"
+SOURCE_COMMAND = "python -m ops.scripts.eval.wiki_eval_coverage"
 
 
 @dataclass(frozen=True)

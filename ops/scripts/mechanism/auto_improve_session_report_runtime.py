@@ -78,7 +78,7 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
         generated_at=generated_at,
         artifact_kind="auto_improve_session",
         producer="ops.scripts.auto_improve_runtime",
-        source_command="python -m ops.scripts.auto_improve_runtime",
+        source_command="python -m ops.scripts.mechanism.auto_improve_runtime",
         resolved_policy_path=resolved_policy_path,
         schema_path=AUTO_IMPROVE_SESSION_SCHEMA,
         source_paths=[

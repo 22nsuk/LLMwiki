@@ -374,7 +374,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -462,7 +462,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -739,7 +739,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 os.environ,
                 {"PATH": f"{venv_bin}{os.pathsep}{outer_codex.parent}"},
             ), mock.patch(
-                "ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run
+                "ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run
             ):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
@@ -796,7 +796,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 selected_rung=3,
             )
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout") as run:
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout") as run:
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -897,7 +897,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 os.environ,
                 {"PATH": f"{workspace_venv_bin}{os.pathsep}{outer_codex.parent}"},
             ), mock.patch(
-                "ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run
+                "ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run
             ):
                 report = execute_codex_exec_role(
                     artifact_root=artifact_root,
@@ -973,7 +973,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=artifact_root,
                     workspace_root=workspace_root,
@@ -1054,7 +1054,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1114,7 +1114,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1161,7 +1161,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1228,7 +1228,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     termination_reason="timeout",
                 )
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1295,7 +1295,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     termination_reason="completed",
                 )
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1366,8 +1366,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
             ):
                 result = run_executor_pipeline(
                     vault,
@@ -1487,8 +1487,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return subprocess.CompletedProcess(argv, 0, stdout="fresh\n", stderr="")
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.executor_runtime.subprocess.run", side_effect=fake_refresh),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_refresh),
             ):
                 run_executor_pipeline(
                     vault,
@@ -1573,8 +1573,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "worker repo-health preflight failed.*ruff check failed",
@@ -1641,7 +1641,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "without modifying any declared primary target",
@@ -1696,8 +1696,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
             ):
                 result = invoke_cli_main(
                     executor_cli_main,
@@ -1769,8 +1769,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
             ):
                 result = invoke_cli_main(
                     executor_cli_main,
@@ -1866,8 +1866,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
                 self.assertRaises(ExecutorRuntimeExecutionError),
             ):
                 run_executor_pipeline(

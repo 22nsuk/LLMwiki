@@ -181,14 +181,14 @@ def _auto_improve_bundle() -> dict[str, object]:
         )
         with (
             mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_reports",
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                 side_effect=fake_refresh_reports,
             ),
             mock.patch(
-                "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                 side_effect=_fake_successful_mechanism_experiment,
             ),
-            mock.patch("ops.scripts.auto_improve_runtime.time.monotonic", return_value=0.0),
+            mock.patch("ops.scripts.mechanism.auto_improve_runtime.time.monotonic", return_value=0.0),
         ):
             result = run_auto_improve_session(
                 vault,

@@ -3,15 +3,6 @@
   "artifact_kind": "observation_closeout_registry",
   "retained_observations": [
     {
-      "path": "ops/reports/task-improvement-observations/task-20260610-runtime-decomposition-closeout/improvement-observations.json",
-      "observation_id": "flat_import_reexport_migration_remaining",
-      "status": "planned",
-      "retained_reason": "The current compatibility-alias inventory still has 368 flat re-export aliases, 0 actual caller records, and removal_ready_count=0 after all detected repo-local flat import callers were migrated, so this is now a retained public import-surface review rather than a caller-migration backlog.",
-      "next_action": "Classify each remaining flat re-export alias as an explicit retained public compatibility surface or mark it removal-ready only after a focused support-contract check; keep ops/scripts/core/_compatibility_alias_import_codemod.py available for any newly detected repo-local callers.",
-      "exit_condition": "Close when the compatibility-alias inventory has no remaining flat import re-export entries or each remaining alias has an explicit retained support contract.",
-      "owner_or_lane": "compatibility-alias-inventory"
-    },
-    {
       "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
       "observation_id": "release_authority_operator_lane_remains_for_matrix_closure",
       "status": "planned",

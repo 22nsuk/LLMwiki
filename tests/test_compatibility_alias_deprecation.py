@@ -50,6 +50,10 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
                 "def main(): pass\n",
                 encoding="utf-8",
             )
+            (vault / "ops" / "scripts" / "core" / "unclassified_runtime.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
             (vault / "tests" / "test_flat_caller.py").write_text(
                 "from ops.scripts.legacy_runtime import main\n"
                 "from ops.scripts.test.lane_runtime import main as canonical_main\n",
@@ -69,6 +73,26 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
+            (vault / "ops" / "script-lifecycle-policy.json").write_text(
+                json.dumps(
+                    {
+                        "modules": [
+                            {
+                                "canonical_module": "ops.scripts.test.lane_runtime",
+                                "path": "ops/scripts/test/lane_runtime.py",
+                                "lifecycle": "test_only",
+                                "install_state": "not_installed",
+                                "console_scripts": [],
+                                "replacement": "python -m ops.scripts.test.lane_runtime",
+                                "removal_ready": False,
+                                "rationale": "fixture lifecycle contract",
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
 
             report = build_report(vault, context=fixed_context())
 
@@ -76,6 +100,7 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
         self.assertIn(("make_target", "old-target"), aliases)
         self.assertIn(("flat_import_reexport", "ops.scripts.legacy_runtime"), aliases)
         self.assertIn(("flat_import_reexport", "ops.scripts.lane_runtime"), aliases)
+        self.assertNotIn(("flat_import_reexport", "ops.scripts.unclassified_runtime"), aliases)
         self.assertIn(("stable_import_surface", "legacy_runtime"), aliases)
         replacements = {
             item["name"]: item["preferred_replacement"]
@@ -99,6 +124,18 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
             {
                 "ops.scripts.legacy_runtime": 1,
                 "ops.scripts.lane_runtime": 0,
+            },
+        )
+        retained_reasons = {
+            item["name"]: item["retained_reason"]
+            for item in report["aliases"]
+            if item["alias_type"] == "flat_import_reexport"
+        }
+        self.assertEqual(
+            retained_reasons,
+            {
+                "ops.scripts.legacy_runtime": "declared_stable_compatibility_facade",
+                "ops.scripts.lane_runtime": "test_only_legacy_module_compatibility",
             },
         )
         self.assertEqual(

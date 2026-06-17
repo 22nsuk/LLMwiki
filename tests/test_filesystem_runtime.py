@@ -88,7 +88,7 @@ class FilesystemRuntimeTests(unittest.TestCase):
                 Path(src).replace(dst)
 
             with (
-                mock.patch("ops.scripts.filesystem_runtime._replace_path", side_effect=flaky_replace),
+                mock.patch("ops.scripts.core.filesystem_runtime._replace_path", side_effect=flaky_replace),
                 self.assertRaises(FilesystemTransactionError),
             ):
                 atomic_multi_write(
@@ -140,7 +140,7 @@ class FilesystemRuntimeTests(unittest.TestCase):
                 Path(src).replace(dst)
 
             with (
-                mock.patch("ops.scripts.filesystem_runtime._replace_path", side_effect=flaky_replace),
+                mock.patch("ops.scripts.core.filesystem_runtime._replace_path", side_effect=flaky_replace),
                 self.assertRaises(FilesystemTransactionError),
             ):
                 apply_manifest_transaction(
@@ -203,7 +203,7 @@ class FilesystemRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "ops.scripts.filesystem_runtime._replace_path",
+                    "ops.scripts.core.filesystem_runtime._replace_path",
                     side_effect=fail_first_live_apply,
                 ),
                 self.assertRaisesRegex(FilesystemTransactionError, "live apply failed"),
@@ -430,7 +430,7 @@ class FilesystemRuntimeTests(unittest.TestCase):
             report_path = live_root / "runs" / "run-rehearsal-fail" / "rollback-rehearsal-report.json"
 
             with mock.patch(
-                "ops.scripts.filesystem_runtime._rollback_manifest_items",
+                "ops.scripts.core.filesystem_runtime._rollback_manifest_items",
                 return_value=["ops/scripts/example.py: simulated rollback failure"],
             ):
                 report = rehearse_manifest_apply_rollback(

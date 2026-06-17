@@ -21,10 +21,10 @@ CBM_SEARCH_LIMIT ?= 10
 .PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check-summary-current-or-refresh ci-public-tier public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-safe-local-paths cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-search-public cbm-smoke-public cbm-reset-local
 
 sync-public-policy:
-	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"
+	$(PYTHON) -m ops.scripts.public.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"
 
 sync-public-policy-check:
-	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)" --check
+	$(PYTHON) -m ops.scripts.public.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)" --check
 
 public-export:
 	$(PYTHON) -m ops.scripts.export_public_repo --vault "$(VAULT)" --out "$(PUBLIC_OUT)"

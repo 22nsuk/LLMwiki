@@ -150,7 +150,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 observation_mode="process_heartbeat",
             )
 
-        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+        with patch("ops.scripts.core.source_package_clean_extract.run_with_timeout", fake_run):
             report = build_report(
                 self.vault,
                 source_zip=source_zip,
@@ -230,7 +230,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 observation_mode="process_heartbeat",
             )
 
-        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+        with patch("ops.scripts.core.source_package_clean_extract.run_with_timeout", fake_run):
             report = build_report(
                 SourcePackageCleanExtractRequest(
                     vault=self.vault,
@@ -305,7 +305,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 observation_mode="process_heartbeat",
             )
 
-        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+        with patch("ops.scripts.core.source_package_clean_extract.run_with_timeout", fake_run):
             report = build_report(
                 SourcePackageCleanExtractRequest(
                     vault=self.vault,
@@ -385,7 +385,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 observation_mode="process_heartbeat",
             )
 
-        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+        with patch("ops.scripts.core.source_package_clean_extract.run_with_timeout", fake_run):
             report = build_report(
                 SourcePackageCleanExtractRequest(
                     vault=self.vault,

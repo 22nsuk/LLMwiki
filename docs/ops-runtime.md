@@ -60,7 +60,8 @@ authority by themselves.
 
 ## Compatibility Surface
 
-Some flat module paths such as `python -m ops.scripts.release_smoke` continue to
-work through compatibility routing. New docs should prefer Make targets or
-canonical package paths such as `ops.scripts.release.release_smoke`; use
-`llm-wiki-*` only for lifecycle policy public CLIs.
+Some lifecycle-policy flat module paths such as
+`python -m ops.scripts.release_smoke` continue to work through compatibility
+routing. New docs should prefer Make targets or canonical package paths such as
+`ops.scripts.release.release_smoke`; use `llm-wiki-*` only for lifecycle policy
+public CLIs.
