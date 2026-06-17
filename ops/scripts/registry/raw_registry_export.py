@@ -10,14 +10,18 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path, write_output_text
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.raw_registry_runtime import (
+    from ops.scripts.core.output_runtime import display_path, write_output_text
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.registry_exceptions_runtime import RawRegistryRuntimeError
+    from ops.scripts.core.schema_constants_runtime import (
+        RAW_REGISTRY_EXPORT_SCHEMA_PATH,
+    )
+    from ops.scripts.registry.raw_registry_runtime import (
         build_raw_registry_export,
         enrich_registry_entries_with_inventory,
         load_exported_registry_enrichment,
@@ -25,18 +29,18 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         registry_entry_page_paths,
         registry_summary_page_path,
     )
-    from ops.scripts.registry_exceptions_runtime import RawRegistryRuntimeError
-    from ops.scripts.schema_constants_runtime import RAW_REGISTRY_EXPORT_SCHEMA_PATH
 else:
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path, write_output_text
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.registry_exceptions_runtime import RawRegistryRuntimeError
-    from ops.scripts.schema_constants_runtime import RAW_REGISTRY_EXPORT_SCHEMA_PATH
+    from ops.scripts.core.output_runtime import display_path, write_output_text
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.registry_exceptions_runtime import RawRegistryRuntimeError
+    from ops.scripts.core.schema_constants_runtime import (
+        RAW_REGISTRY_EXPORT_SCHEMA_PATH,
+    )
 
     from .raw_registry_runtime import (
         build_raw_registry_export,

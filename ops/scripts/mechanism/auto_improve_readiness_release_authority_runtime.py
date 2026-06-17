@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ops.scripts.core.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECTS,
+)
 from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.core.release_authority_state_runtime import (
     clean_required_preflight_passes,
@@ -9,11 +13,7 @@ from ops.scripts.core.release_authority_state_runtime import (
     release_status_v2_view,
     release_status_v2_view_with_readiness_fallback,
 )
-from ops.scripts.gate_effect_vocabulary import (
-    GATE_EFFECT_BLOCKS_PROMOTION,
-    GATE_EFFECTS,
-)
-from ops.scripts.release_authority_vocabulary import (
+from ops.scripts.release.release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
     REASON_RELEASE_AUTHORITY_NOT_CLEAN_PASS,
     REASON_SEALED_RELEASE_NOT_CLEAN_PASS,

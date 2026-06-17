@@ -54,7 +54,10 @@ class FunctionBudgetRefactorProposalsTests(unittest.TestCase):
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text((REPO_ROOT / rel_path).read_text(encoding="utf-8"), encoding="utf-8")
 
-    def _write_classification(self) -> str:
+    def _write_classification(
+        self,
+        manifest_page: str = "ops/scripts/external_report_reference_manifest.py",
+    ) -> str:
         path = self.vault / "tmp" / "classification.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
@@ -101,7 +104,7 @@ class FunctionBudgetRefactorProposalsTests(unittest.TestCase):
                         },
                         {
                             "primary_bucket": "function_budget",
-                            "page": "ops/scripts/external_report_reference_manifest.py",
+                            "page": manifest_page,
                             "symbol": "build_report",
                             "line": 42,
                             "profile": "ops_runtime",
@@ -156,6 +159,23 @@ class FunctionBudgetRefactorProposalsTests(unittest.TestCase):
         self.assertEqual(backlog["owner_design_backlog"]["priority"], "P1")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_report(self.vault, report).exists())
+
+    def test_build_report_groups_canonical_external_report_manifest_path(self) -> None:
+        classification_path = self._write_classification(
+            "ops/scripts/release/external_report_reference_manifest.py"
+        )
+
+        report = build_report(
+            self.vault,
+            classification_path=classification_path,
+            context=fixed_context(),
+        )
+
+        backlog = {item["backlog_theme"]: item for item in report["owner_backlog"]}
+        self.assertEqual(
+            backlog["external_report_reference_manifest_request_object"]["priority"],
+            "P0",
+        )
 
 
 if __name__ == "__main__":

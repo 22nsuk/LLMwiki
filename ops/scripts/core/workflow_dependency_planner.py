@@ -93,11 +93,8 @@ EXTERNAL_REPORT_TARGETS = [
 ]
 FINALITY_RESETTLE_TARGETS = [
     "workflow-dependency-planner",
-    "generated-artifact-finality-suffix",
-    "release-closeout-summary-report",
-    "release-closeout-fixed-point",
-    "tmp-json-clean",
-    "release-closeout-finality-verify",
+    "release-authority-sealed-preflight",
+    "release-terminal-finality",
 ]
 
 GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS = [
@@ -491,11 +488,13 @@ def _primary_report_for_target(target: str) -> str:
         "release-closeout-fixed-point": "ops/reports/release-closeout-fixed-point.json",
         "release-closeout-summary-conditional": "ops/reports/release-closeout-summary.json",
         "release-closeout-summary-report": "ops/reports/release-closeout-summary.json",
+        "release-authority-sealed-preflight": "ops/reports/release-closeout-sealed-rehearsal-check.json",
         "release-evidence-closeout-self-check": "ops/reports/release-evidence-closeout-self-check.json",
         "release-evidence-cohort": "ops/reports/release-evidence-cohort.json",
         "release-evidence-dashboard-report": "ops/reports/release-evidence-dashboard.json",
         "release-lane-summary": "ops/reports/release-lane-summary.json",
         "release-smoke-full": "ops/reports/release-smoke-report.json",
+        "release-terminal-finality": "ops/reports/release-closeout-finality-attestation.json",
         "test-execution-summary-report-contract": "ops/reports/test-execution-summary.json",
         "workflow-dependency-planner": "ops/reports/workflow-dependency-planner.json",
     }.get(target, "")
@@ -506,6 +505,13 @@ def _fanout_targets_for_target(target: str) -> list[str]:
         "generated-artifact-converge": list(GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS),
         "generated-artifact-script-output": list(GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS),
         "generated-artifact-finality-suffix": list(GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS),
+        "release-terminal-finality": [
+            "generated-artifact-finality-suffix",
+            "release-closeout-summary-report",
+            "release-closeout-fixed-point",
+            "release-closeout-post-check-finalizer-dry-run",
+            "release-closeout-finality-verify",
+        ],
     }.get(target, [])
 
 

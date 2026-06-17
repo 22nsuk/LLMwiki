@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_record_from_payload,
     decision_record_from_report,

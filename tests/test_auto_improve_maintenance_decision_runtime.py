@@ -8,6 +8,10 @@ from ops.scripts.mechanism import (
     auto_improve_maintenance_decision_runtime,
     auto_improve_runtime,
 )
+from ops.scripts.mechanism._auto_improve_maintenance_completion_runtime import (
+    maintenance_already_reached_completion,
+    maintenance_completion,
+)
 from ops.scripts.mechanism.auto_improve_maintenance_decision_runtime import (
     MAINTENANCE_ACTION_RESUME_TARGET,
     MAINTENANCE_ACTION_RUNNER_ACTION,
@@ -249,6 +253,44 @@ def test_initial_maintenance_payload_and_terminal_conditions_are_pure_decisions(
         == "post_promote_cycle_limit_reached"
     )
     assert _maintenance_completion_stop_reason("time_budget") == "time_budget_reached"
+
+
+def test_maintenance_completion_helpers_finalize_payload_and_loop_stop_reason() -> None:
+    session = {
+        "maintenance": {
+            "mode": "proposal_budget_runtime_maintenance",
+            "completion_condition": "time_budget",
+        }
+    }
+
+    already_reached = maintenance_already_reached_completion(
+        session,
+        completed_at="2026-04-15T00:00:00Z",
+    )
+    assert already_reached.loop_stop_reason is None
+    assert already_reached.maintenance["status"] == "complete"
+    assert already_reached.maintenance["completed_at"] == "2026-04-15T00:00:00Z"
+    assert already_reached.maintenance["stop_reason"] == "time_budget_already_reached"
+
+    stable = maintenance_completion(
+        session,
+        completion_condition="stable_queue_snapshot",
+        completed_at="2026-04-15T00:05:00Z",
+        last_cycle_elapsed_seconds=300,
+    )
+    assert stable.loop_stop_reason is None
+    assert stable.maintenance["completion_condition"] == "stable_queue_snapshot"
+    assert stable.maintenance["stop_reason"] == "stable_queue_snapshot"
+    assert stable.maintenance["last_cycle_elapsed_seconds"] == 300
+
+    time_budget = maintenance_completion(
+        session,
+        completion_condition="time_budget",
+        completed_at="2026-04-15T00:10:00Z",
+        last_cycle_elapsed_seconds=600,
+    )
+    assert time_budget.loop_stop_reason == "time_budget_exhausted"
+    assert time_budget.maintenance["stop_reason"] == "time_budget_reached"
 
 
 def test_maintenance_action_resume_plan_returns_pass_without_required_action() -> None:

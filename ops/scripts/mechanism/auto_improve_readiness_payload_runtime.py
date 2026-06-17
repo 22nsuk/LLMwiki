@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ops.scripts.learning_readiness_signoff_state import SIGNOFF_REPORT_REL_PATH
+from ops.scripts.learning.learning_readiness_signoff_state import (
+    SIGNOFF_REPORT_REL_PATH,
+)
 
 from .auto_improve_readiness_constants_runtime import (
     ARTIFACT_FRESHNESS_REPORT_REL_PATH,

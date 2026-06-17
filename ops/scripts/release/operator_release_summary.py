@@ -6,15 +6,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    OPERATOR_RELEASE_SUMMARY_SCHEMA_PATH,
+)
 from ops.scripts.learning.learning_claim_model import learning_claim_blocker_status
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release.release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
 )
@@ -22,8 +26,6 @@ from ops.scripts.release.release_status_v2 import (
     release_status_v2_view,
     release_status_v2_view_with_readiness_fallback,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import OPERATOR_RELEASE_SUMMARY_SCHEMA_PATH
 
 PRODUCER = "ops.scripts.operator_release_summary"
 DEFAULT_OUT = "ops/operator/operator-release-summary.json"

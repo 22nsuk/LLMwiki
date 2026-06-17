@@ -8,16 +8,16 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.warning_budget_runtime import (
+    from ops.scripts.eval.warning_budget_runtime import (
         WARNING_BUDGET_REPORT_SCHEMA,
         build_report,
     )
 else:
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )

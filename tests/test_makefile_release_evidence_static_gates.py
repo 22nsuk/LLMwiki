@@ -116,7 +116,7 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
         "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT =",
         "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH =",
         "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
-        "GITHUB_GOVERNANCE_LIVE_INPUT ?= tmp/github-governance-live-input.json",
+        "GITHUB_GOVERNANCE_LIVE_INPUT ?= build/release/github-governance-live-input.json",
         "GITHUB_GOVERNANCE_LIVE_DRIFT_OUT ?= ops/reports/github-governance-live-drift.json",
         "GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT ?= tmp/github-governance-live-drift-check.json",
     ):
@@ -815,18 +815,28 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
     def test_release_finality_resettle_is_focused_terminal_wrapper(self) -> None:
         text = _makefile_text()
         recipe_lines = _recipe_lines(text, "release-finality-resettle")
+        terminal_lines = _recipe_lines(text, "release-terminal-finality")
 
         self.assertIn("release-finality-resettle", _target_block(text, ".PHONY"))
         self.assertIn("release-finality-resettle-current-check", _target_block(text, ".PHONY"))
         self.assertIn("release-finality-resettle-current-or-refresh", _target_block(text, ".PHONY"))
+        self.assertIn("release-terminal-finality", _target_block(text, ".PHONY"))
         self.assertEqual(
             recipe_lines,
             [
                 "$(MAKE) workflow-dependency-planner",
                 "$(MAKE) release-authority-sealed-preflight",
+                "$(MAKE) release-terminal-finality",
+            ],
+        )
+        self.assertEqual(
+            terminal_lines,
+            [
                 "$(MAKE) generated-artifact-finality-suffix",
                 "$(MAKE) release-closeout-summary-report",
                 "$(MAKE) release-closeout-fixed-point",
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
             ],
@@ -848,7 +858,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) release-finality-resettle-current-check", current_or_refresh_block)
         self.assertIn("$(MAKE) release-finality-resettle", current_or_refresh_block)
         self.assertNotIn("$(MAKE) release-evidence-converge", recipe_lines)
-        self.assertEqual(recipe_lines[-1], "$(MAKE) release-closeout-finality-verify")
+        self.assertEqual(terminal_lines[-1], "$(MAKE) release-closeout-finality-verify")
 
     def test_check_finalized_runs_post_check_dry_run_before_mutating_finalizer(self) -> None:
         text = _makefile_text()

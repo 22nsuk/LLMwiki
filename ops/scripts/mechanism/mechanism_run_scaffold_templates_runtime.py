@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     PLANNING_VALIDATION_SCHEMA_PATH,
     PROMOTION_REPORT_SCHEMA_PATH,
     PROPOSAL_SNAPSHOT_SCHEMA_PATH,

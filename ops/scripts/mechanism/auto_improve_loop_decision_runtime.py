@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .auto_improve_queue_runtime import select_next_proposal
 

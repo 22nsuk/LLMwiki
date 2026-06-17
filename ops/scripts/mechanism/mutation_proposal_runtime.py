@@ -3,16 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import MUTATION_PROPOSAL_SCHEMA_PATH
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import MUTATION_PROPOSAL_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
 
+from ._mutation_proposal_next_run_repair_runtime import (
+    next_run_repair_models_for_current_queue as _next_run_repair_models_for_current_queue,
+)
+from ._mutation_proposal_render_runtime import (
+    MUTATION_PROPOSAL_SOURCE_PATHS as _MUTATION_PROPOSAL_SOURCE_PATHS,
+    MutationReportRenderInputs,
+    mutation_report_payload as _mutation_report_payload,
+)
 from .auto_improve_next_run_decision_runtime import NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
 from .mutation_proposal_bootstrap_runtime import (
     bootstrap_proposal_models_from_review as _bootstrap_proposal_models_from_review,
@@ -20,16 +25,7 @@ from .mutation_proposal_bootstrap_runtime import (
 from .mutation_proposal_candidate_runtime import (
     CandidateSuppressedByClosedRemediation,
     MutationProposal,
-    PriorityBreakdown,
-    fixed_priority_breakdown as _fixed_priority_breakdown,
-    generated_must_change_tests as _generated_must_change_tests,
-    must_change_test_paths as _must_change_test_paths,
-    must_not_expand_apply_roots as _must_not_expand_apply_roots,
-    proposal_blast_radius_score as _proposal_blast_radius_score,
     proposal_from_candidate as _proposal_from_candidate,
-    required_artifacts as _required_artifacts,
-    resolve_must_change_tests as _resolve_must_change_tests,
-    with_generated_supporting_targets as _with_generated_supporting_targets,
 )
 from .mutation_proposal_loader_runtime import (
     MutationReportInputs as _MutationReportInputs,
@@ -54,9 +50,7 @@ from .mutation_proposal_recent_log_overlap_runtime import (
     recent_log_overlap_queue_unblock_proposal as _recent_log_overlap_queue_unblock_proposal,
 )
 from .next_run_repair_queue_runtime import (
-    NextRunRepairProposalDependencies,
     next_run_decision_queue_diagnostics,
-    next_run_repair_proposal_models,
 )
 from .structural_complexity_scope_runtime import (
     proposal_declares_structural_complexity_repair,
@@ -65,27 +59,8 @@ from .structural_complexity_scope_runtime import (
 )
 
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
+MUTATION_PROPOSAL_SOURCE_PATHS = _MUTATION_PROPOSAL_SOURCE_PATHS
 STRUCTURAL_COMPLEXITY_BUDGET_BLOCKER = "structural_complexity_budget"
-PRODUCER = "ops.scripts.mutation_proposal_runtime"
-SOURCE_COMMAND = (
-    "python -m ops.scripts.mutation_proposal "
-    "--vault . "
-    "--policy-path ops/policies/wiki-maintainer-policy.yaml"
-)
-MUTATION_PROPOSAL_SOURCE_PATHS = [
-    "ops/scripts/mechanism/mutation_proposal_runtime.py",
-    "ops/scripts/mechanism/mutation_proposal_bootstrap_runtime.py",
-    "ops/scripts/mechanism/mutation_proposal_candidate_runtime.py",
-    "ops/scripts/mechanism/mutation_proposal_loader_runtime.py",
-    "ops/scripts/mechanism/mutation_proposal_promotion_runtime.py",
-    "ops/scripts/mechanism/mutation_proposal_queue_runtime.py",
-    "ops/scripts/mechanism/mutation_proposal_recent_log_overlap_runtime.py",
-    "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
-    "ops/scripts/mechanism/current_target_path_runtime.py",
-    "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
-    "ops/scripts/mechanism/noop_repair_classifier_runtime.py",
-    "ops/scripts/mechanism/structural_complexity_scope_runtime.py",
-]
 
 
 @dataclass(frozen=True)
@@ -106,24 +81,6 @@ class _MutationDiagnosticsAssembly:
     reported_blocked_proposals: int
     status: str
     diagnostics: dict
-
-
-def _next_run_repair_priority_breakdown() -> PriorityBreakdown:
-    return _fixed_priority_breakdown(100)
-
-
-def _next_run_repair_dependencies() -> NextRunRepairProposalDependencies:
-    return NextRunRepairProposalDependencies(
-        with_generated_supporting_targets=_with_generated_supporting_targets,
-        must_change_test_paths=_must_change_test_paths,
-        generated_must_change_tests=_generated_must_change_tests,
-        resolve_must_change_tests=_resolve_must_change_tests,
-        proposal_blast_radius_score=_proposal_blast_radius_score,
-        must_not_expand_apply_roots=_must_not_expand_apply_roots,
-        required_artifacts=_required_artifacts,
-        proposal_factory=MutationProposal,
-        priority_breakdown_factory=_next_run_repair_priority_breakdown,
-    )
 
 
 def _priority_sort_key(proposal: MutationProposal) -> tuple[int, str]:
@@ -344,21 +301,13 @@ def _proposal_models_from_candidates(
     )
     if recent_log_overlap_unblock is not None:
         available_proposal_models.append(recent_log_overlap_unblock)
-    current_runnable_proposal_ids = {
-        proposal.proposal_id
-        for proposal in available_proposal_models
-        if proposal.proposal_id and not proposal.blocked_by
-    }
     available_proposal_models.extend(
-        next_run_repair_proposal_models(
+        _next_run_repair_models_for_current_queue(
             vault,
             effective_policy,
-            next_run_decisions,
-            consumed_decision_ids=set(consumed_next_run_decision_ids),
-            current_proposal_ids=current_runnable_proposal_ids,
-            dependencies=_next_run_repair_dependencies(),
-            recent_log_overlap_unblock_failure_mode=RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
-            recent_log_overlap_unblock_family=RECENT_LOG_OVERLAP_UNBLOCK_FAMILY,
+            available_proposal_models,
+            next_run_decisions=next_run_decisions,
+            consumed_next_run_decision_ids=consumed_next_run_decision_ids,
         )
     )
     return available_proposal_models, skipped_candidates
@@ -466,67 +415,41 @@ def _assemble_mutation_diagnostics(
     )
 
 
-def _mutation_report_payload(
+def _mutation_report_render_inputs(
     vault: Path,
     policy: dict,
     policy_path: Path,
     inputs: _MutationReportInputs,
     proposal_assembly: _MutationProposalAssembly,
     diagnostics_assembly: _MutationDiagnosticsAssembly,
-) -> dict:
-    diagnostics = dict(diagnostics_assembly.diagnostics)
-    diagnostics["source_mechanism_review_report"] = report_path(vault, inputs.mechanism_review_path)
-    return {
-        **build_canonical_report_envelope(
-            vault,
-            generated_at=inputs.runtime_context.isoformat_z(),
-            artifact_kind="mutation_proposals_report",
-            producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
-            resolved_policy_path=policy_path,
-            schema_path=MUTATION_PROPOSAL_SCHEMA,
-            source_paths=MUTATION_PROPOSAL_SOURCE_PATHS,
-            file_inputs={
-                "mechanism_review_report": report_path(vault, inputs.mechanism_review_path),
-                "outcome_metrics": report_path(vault, inputs.outcome_metrics_path),
-                "remediation_backlog": report_path(vault, inputs.remediation_backlog_path),
-                "system_log": report_path(vault, inputs.system_log),
-            },
-            path_group_inputs={
-                "auto_improve_session_reports": inputs.auto_improve_session_report_paths,
-            },
-            text_inputs={
-                "mutation_max_proposals": str(inputs.mutation_policy["max_proposals"]),
-                "mutation_dedupe_window": str(inputs.mutation_policy["dedupe_window"]),
-                "mutation_recent_log_overlap_max_age_days": str(
-                    inputs.mutation_policy["recent_log_overlap_max_age_days"]
-                ),
-            },
+) -> MutationReportRenderInputs:
+    return MutationReportRenderInputs(
+        vault=vault,
+        policy=policy,
+        policy_path=policy_path,
+        generated_at=inputs.runtime_context.isoformat_z(),
+        mechanism_review_path=inputs.mechanism_review_path,
+        outcome_metrics_path=inputs.outcome_metrics_path,
+        remediation_backlog_path=inputs.remediation_backlog_path,
+        system_log=inputs.system_log,
+        auto_improve_session_report_paths=inputs.auto_improve_session_report_paths,
+        mutation_policy=inputs.mutation_policy,
+        source_candidate_count=len(inputs.mechanism_review_report["candidates"]),
+        recent_log_count=len(inputs.recent_log_sections),
+        proposals=proposal_assembly.proposals,
+        diagnostics=diagnostics_assembly.diagnostics,
+        status=diagnostics_assembly.status,
+        blocked_proposal_count=diagnostics_assembly.reported_blocked_proposals,
+        candidate_blocker_count=_candidate_blocker_count(inputs.mechanism_review_report),
+        proposal_blocker_count=len(diagnostics_assembly.empty_queue_blockers),
+        next_run_repair_proposals=diagnostics_assembly.next_run_decision_queue[
+            "repair_proposals_emitted"
+        ],
+        queue_pressure_summary=_queue_pressure_summary(
+            diagnostics_assembly.family_session_calibration,
+            evidence_gaps=diagnostics_assembly.source_evidence_gaps,
         ),
-        "vault": display_path(vault, vault),
-        "policy": {
-            "path": report_path(vault, policy_path),
-            "version": policy["version"],
-        },
-        "status": diagnostics_assembly.status,
-        "summary": {
-            "source_candidates_read": len(inputs.mechanism_review_report["candidates"]),
-            "log_entries_scanned": len(inputs.recent_log_sections),
-            "proposals_emitted": len(proposal_assembly.proposals),
-            "blocked_proposals": diagnostics_assembly.reported_blocked_proposals,
-            "candidate_blocker_count": _candidate_blocker_count(inputs.mechanism_review_report),
-            "proposal_blocker_count": len(diagnostics_assembly.empty_queue_blockers),
-            "next_run_repair_proposals": diagnostics_assembly.next_run_decision_queue[
-                "repair_proposals_emitted"
-            ],
-            "queue_pressure_summary": _queue_pressure_summary(
-                diagnostics_assembly.family_session_calibration,
-                evidence_gaps=diagnostics_assembly.source_evidence_gaps,
-            ),
-        },
-        "diagnostics": diagnostics,
-        "proposals": proposal_assembly.proposals,
-    }
+    )
 
 
 def _validate_and_finalize_mutation_report(
@@ -571,11 +494,13 @@ def build_report(
     proposal_assembly = _assemble_mutation_proposals(vault, inputs)
     diagnostics_assembly = _assemble_mutation_diagnostics(vault, inputs, proposal_assembly)
     report = _mutation_report_payload(
-        vault,
-        policy,
-        policy_path,
-        inputs,
-        proposal_assembly,
-        diagnostics_assembly,
+        _mutation_report_render_inputs(
+            vault,
+            policy,
+            policy_path,
+            inputs,
+            proposal_assembly,
+            diagnostics_assembly,
+        )
     )
     return _validate_and_finalize_mutation_report(vault, report, inputs.runtime_context)

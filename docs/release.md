@@ -77,8 +77,9 @@ surface comparison; this document owns release evidence and staged authority.
   if it would become the effective release auto-promotion run id.
 - `make release-auto-promotion-preflight`: refresh cheap unattended-promotion
   blockers before spending full run-ready cycles. It first runs the goal-run id
-  guard, refreshes cheap generated prerequisites such as queue-input reports and
-  the external-report action matrix, refresh-checks fast smoke, refreshes the
+  guard, refreshes the external-report action matrix and generated-artifact
+  index body without pulling in the broad generated-core writer set,
+  refresh-checks fast smoke, refreshes the
   selected report-contract summary for changed test fingerprints, then runs
   artifact freshness and checks remediation, learning revalidation, and
   auto-improve readiness without building release artifacts, sealing, or
@@ -181,7 +182,8 @@ surface comparison; this document owns release evidence and staged authority.
   `current-or-refresh` finality tail: replay/current checks skip the ZIP-bound
   batch-manifest and fixed-point writers when they are already current, otherwise
   the tail promotes the batch manifest, rewrites fixed-point/finality,
-  replay-verifies the same ZIP metadata, and then verifies finality so no
+  replay-verifies the same ZIP metadata, runs the strict post-check dry-run,
+  and then verifies finality so no
   tracked report writer runs after finality. If ready is blocked, this finality
   tail still runs and the original
   ready failure is returned. On a clean ready pass, check-only authority
@@ -322,14 +324,15 @@ protected branch names, required check contexts, and branch-protection booleans,
 then run:
 
 ```bash
-make collaboration-governance GITHUB_GOVERNANCE_LIVE_INPUT=tmp/github-governance-live-input.json
+make collaboration-governance GITHUB_GOVERNANCE_LIVE_INPUT=build/release/github-governance-live-input.json
 make operator-evidence-closeout-current-or-refresh
 ```
 
 The resulting `ops/reports/github-governance-live-drift.json` stores only
 normalized counts, missing or mismatched required checks, input digest, status,
 and redaction metadata. Do not retain raw ruleset dumps, tokens, actor payloads,
-or private repository settings in that report. Use
+or private repository settings in that report. Keep the operator live input under
+`build/release/`; `tmp/` is scratch space and cleanup targets may delete it. Use
 `operator-evidence-closeout-current-or-refresh` after the operator evidence
 writer so the default test-execution summary, generated index, artifact
 freshness, the active matrix, and finality settle without rebuilding release
@@ -423,8 +426,9 @@ only when the operator is renewing or replacing the acceptance decision.
    regenerated from current source evidence.
    The `release-authority-settle` tail then first tries a ZIP-bound replay and
    finality current check. Only stale evidence triggers batch-manifest
-   promotion, fixed-point rewrite, batch replay verification, and finality
-   verification as the terminal report-writer suffix.
+   promotion, fixed-point rewrite, batch replay verification, strict
+   post-check dry-run, and finality verification as the terminal report-writer
+   suffix.
 
 Completion is proven only by
 `build/release/release-auto-promotion-ready-manifest.json` with:
@@ -551,7 +555,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `release-closeout-summary-report`, or another fixed-point tracked report,
   rerun `make release-finality-resettle-current-or-refresh` so current finality
   evidence is reused when possible, or the attestation is rewritten and verified
-  after the last tracked writer when needed. The resettle lane refreshes
+  after the last tracked writer when needed. The refresh path hands off to
+  `make release-terminal-finality`, which runs the freshness/matrix/index
+  finality suffix, fixed-point writer, strict post-check dry-run, and terminal
+  finality verification in that order. The resettle lane refreshes
   `release-authority-sealed-preflight` before artifact freshness/finality scans
   so `ops/reports/release-closeout-sealed-rehearsal-check.json` is not left as a
   source-identity-only stale record after fixed-point attestation. Do not run

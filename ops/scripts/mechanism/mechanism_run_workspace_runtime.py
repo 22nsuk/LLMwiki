@@ -7,22 +7,24 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.behavior_delta_runtime import (
+from ops.scripts.core.behavior_delta_runtime import (
     build_behavior_delta_report,
     write_behavior_delta_report,
 )
-from ops.scripts.command_runtime import run_with_timeout
-from ops.scripts.filesystem_runtime import (
+from ops.scripts.core.command_runtime import run_with_timeout
+from ops.scripts.core.filesystem_runtime import (
     FilesystemTransactionError,
     apply_manifest_transaction,
     plan_manifest_apply_transaction,
     rehearse_manifest_apply_rollback,
 )
-from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.observability_artifacts_runtime import (
+    write_run_artifact_fingerprint,
+)
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     CHANGED_FILES_MANIFEST_SCHEMA_PATH,
     ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     SHADOW_APPLY_REPORT_SCHEMA_PATH,

@@ -4,24 +4,24 @@ import datetime as dt
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import (
     build_canonical_report_envelope,
     embed_artifact_envelope_metadata,
 )
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     read_json_object,
     write_schema_validated_json,
 )
-from ops.scripts.observability_artifacts_runtime import (
+from ops.scripts.core.observability_artifacts_runtime import (
     write_routing_provenance_aggregate,
 )
-from ops.scripts.observability_artifacts_shared_runtime import (
+from ops.scripts.core.observability_artifacts_shared_runtime import (
     resolve_auto_improve_session_report_rel,
 )
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import AUTO_IMPROVE_SESSION_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema_with_vault_override
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import AUTO_IMPROVE_SESSION_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import load_schema_with_vault_override
 
 from .auto_improve_loop_decision_runtime import _ensure_session_loop_state
 from .auto_improve_session_runtime import (
@@ -86,6 +86,7 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
             "ops/scripts/mechanism/auto_improve_error_runtime.py",
             "ops/scripts/mechanism/auto_improve_learning_preflight_runtime.py",
             "ops/scripts/mechanism/auto_improve_loop_decision_runtime.py",
+            "ops/scripts/mechanism/_auto_improve_maintenance_completion_runtime.py",
             "ops/scripts/mechanism/auto_improve_maintenance_decision_runtime.py",
             "ops/scripts/mechanism/auto_improve_promotion_stop_runtime.py",
             "ops/scripts/mechanism/auto_improve_session_report_runtime.py",

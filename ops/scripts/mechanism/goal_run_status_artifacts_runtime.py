@@ -5,8 +5,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import write_json_object
-from ops.scripts.filesystem_runtime import atomic_write_text
+from ops.scripts.core.artifact_io_runtime import write_json_object
+from ops.scripts.core.filesystem_runtime import atomic_write_text
 
 from .goal_runtime_resume import mapping_field, resume_metadata_from_report
 

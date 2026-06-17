@@ -4,13 +4,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.output_runtime import resolve_vault_path
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.output_runtime import resolve_vault_path
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_outcome,
 )
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.schema_constants_runtime import (
     BEHAVIOR_DELTA_SCHEMA_PATH,
     CHANGED_FILES_MANIFEST_SCHEMA_PATH,
     EVAL_REPORT_SCHEMA_PATH,
@@ -19,7 +19,7 @@ from ops.scripts.schema_constants_runtime import (
     PROMOTION_REPORT_SCHEMA_PATH,
     RUN_LEDGER_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema, validate_or_raise
+from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 
 PROMOTION_REPORT_SCHEMA = PROMOTION_REPORT_SCHEMA_PATH
 LINT_REPORT_SCHEMA = LINT_REPORT_SCHEMA_PATH

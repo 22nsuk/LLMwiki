@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import IMPROVEMENT_OBSERVATIONS_SCHEMA_PATH
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    IMPROVEMENT_OBSERVATIONS_SCHEMA_PATH,
+)
 
 from .mechanism_run_common_runtime import timestamp, write_json
 

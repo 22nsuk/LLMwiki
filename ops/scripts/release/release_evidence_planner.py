@@ -8,12 +8,18 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    producer_input_fingerprint,
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
     _resolve,
@@ -22,12 +28,6 @@ from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_OUT as DEFAULT_SEALED_RUN_MANIFEST,
     _json_identity,
     _unique_failures,
-)
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import (
-    producer_input_fingerprint,
-    release_source_tree_fingerprint,
 )
 
 DEFAULT_OUT = "build/release/release-evidence-plan.json"

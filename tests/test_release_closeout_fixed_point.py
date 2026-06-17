@@ -11,7 +11,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ops.scripts.release_closeout_fixed_point import (
+
+from ops.scripts.core.generated_artifact_semantic_digest import semantic_digest_maps
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
+from ops.scripts.release.release_closeout_fixed_point import (
     ARTIFACT_FRESHNESS_REPORT_PATH,
     DEFAULT_OUT,
     DRY_RUN_SCHEMA_PATH,
@@ -23,10 +30,6 @@ from ops.scripts.release_closeout_fixed_point import (
     write_dry_run_recommended_targets,
     write_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -168,9 +171,22 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             rel_path: hashlib.sha256((self.vault / rel_path).read_bytes()).hexdigest()
             for rel_path in FINALITY_TRACKED_PATHS
         }
+        final_semantic_digest_map, final_semantic_digest_modes = semantic_digest_maps(
+            self.vault, sorted(FINALITY_TRACKED_PATHS)
+        )
         self._write_tracked_payload(
             DEFAULT_OUT,
-            {"final_digest_map": final_digest_map, "status": "pass"},
+            {
+                "final_digest_map": final_digest_map,
+                "status": "pass",
+                "iterations": [
+                    {
+                        "iteration_index": 1,
+                        "semantic_digest_map": final_semantic_digest_map,
+                        "semantic_digest_modes": final_semantic_digest_modes,
+                    }
+                ],
+            },
         )
 
     def _seed_existing_converged_fixed_point_report(self) -> dict[str, Any]:
@@ -567,6 +583,14 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
                 "release-evidence-closeout-self-check",
             ],
         )
+        tracked_record = next(
+            record
+            for record in report["tracked_artifacts"]
+            if record["path"] == rel_path
+        )
+        self.assertEqual(tracked_record["digest_status"], "changed")
+        self.assertEqual(tracked_record["semantic_digest_status"], "changed")
+        self.assertTrue(tracked_record["refresh_needed"])
         plan = report["closeout_plan"]
         self.assertEqual(plan["status"], "drift_detected")
         self.assertEqual(plan["recommended_target_count"], 8)
@@ -585,6 +609,41 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             r"^[a-f0-9]{64}$",
         )
         self.assertFalse(plan["recommended_targets"][0]["safe_to_run_in_dry_run"])
+        self.assertEqual(
+            validate_with_schema(report, load_schema(REPO_ROOT / DRY_RUN_SCHEMA_PATH)),
+            [],
+        )
+
+    def test_dry_run_treats_raw_only_digest_drift_as_diagnostic_not_refresh(
+        self,
+    ) -> None:
+        self._seed_tracked_artifacts_with_fixed_point_baseline()
+        rel_path = "ops/reports/release-closeout-summary.json"
+        payload = json.loads((self.vault / rel_path).read_text(encoding="utf-8"))
+        payload["generated_at"] = "2999-01-01T00:00:00Z"
+        payload["input_fingerprints"] = {"clock": "changed"}
+        self._write_tracked_payload(rel_path, payload)
+
+        report = build_dry_run_report(self.vault, context=fixed_context())
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["diagnostic_status"], "drift_detected")
+        self.assertFalse(report["refresh_required"])
+        self.assertEqual(report["affected_paths"], [])
+        self.assertEqual(report["recommended_targets"], [])
+        self.assertEqual(report["closeout_plan"]["recommended_targets"], [])
+        self.assertIn(
+            f"{rel_path}:digest_changed",
+            report["closeout_plan"]["drift_reasons"],
+        )
+        tracked_record = next(
+            record
+            for record in report["tracked_artifacts"]
+            if record["path"] == rel_path
+        )
+        self.assertEqual(tracked_record["digest_status"], "changed")
+        self.assertEqual(tracked_record["semantic_digest_status"], "current")
+        self.assertFalse(tracked_record["refresh_needed"])
         self.assertEqual(
             validate_with_schema(report, load_schema(REPO_ROOT / DRY_RUN_SCHEMA_PATH)),
             [],

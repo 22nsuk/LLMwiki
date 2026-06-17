@@ -4,9 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.schema_constants_runtime import RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.schema_constants_runtime import (
+    RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH,
+)
 
 from .release_authority_vocabulary import release_authority_vocabulary_payload
 from .release_closeout_risk_runtime import risk_identity

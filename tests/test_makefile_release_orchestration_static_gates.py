@@ -100,10 +100,13 @@ def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -
     test.assertEqual(
         _recipe_lines(text, "release-auto-promotion-preflight-prerequisites"),
         [
-            "$(MAKE) refresh-generated-core",
             "$(MAKE) external-report-action-matrix",
-            "$(MAKE) generated-artifact-index",
+            "$(MAKE) generated-artifact-index-body",
         ],
+    )
+    test.assertNotIn(
+        "$(MAKE) refresh-generated-core",
+        _target_block(text, "release-auto-promotion-preflight-prerequisites"),
     )
     test.assertEqual(
         _recipe_lines(text, "release-auto-promotion-preflight")[:8],
@@ -561,6 +564,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertIn("release-authority-post-ready-finality-current-check", phony_block)
         self.assertIn("release-authority-post-ready-finality-current-or-refresh", phony_block)
         self.assertIn("release-authority-archive-candidate-gate", phony_block)
+        self.assertIn("release-terminal-finality", phony_block)
         self.assertEqual(
             _recipe_lines(text, "release-authority-archive-candidate-gate"),
             [
@@ -577,6 +581,8 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 '$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
                 "$(MAKE) tmp-json-clean",
                 '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+                "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
             ],
         )
@@ -585,6 +591,8 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             [
                 "$(MAKE) tmp-json-clean",
                 '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+                "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
             ],
         )

@@ -55,9 +55,8 @@ release-auto-promotion-preflight-check:
 	$(PYTHON) -m ops.scripts.release_auto_promotion_preflight --vault "$(VAULT)" --phase preflight --out "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)" --auto-improve-readiness "$(AUTO_IMPROVE_READINESS_OUT)" --remediation-backlog "$(REMEDIATION_BACKLOG_OUT)" --learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)" --goal-run-identity "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)" --check
 
 release-auto-promotion-preflight-prerequisites:
-	$(MAKE) refresh-generated-core
 	$(MAKE) external-report-action-matrix
-	$(MAKE) generated-artifact-index
+	$(MAKE) generated-artifact-index-body
 
 release-auto-promotion-safe-cleanup: release-auto-promotion-safe-cleanup-cleanup-only
 	$(MAKE) release-auto-promotion-safe-cleanup-finalize
@@ -135,11 +134,15 @@ release-authority-post-ready-finality:
 	$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
+	$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required
+	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
 
 release-authority-post-ready-finality-current-check:
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
+	$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required
+	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
 
 release-authority-post-ready-finality-current-or-refresh:

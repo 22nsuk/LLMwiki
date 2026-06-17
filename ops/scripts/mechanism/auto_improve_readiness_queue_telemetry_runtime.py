@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.policy_runtime import report_path
 
 from .auto_improve_readiness_constants_runtime import (
     FALLBACK_PRIMARY_TARGETS,

@@ -4,9 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import canonical_report_loading_issue
-from ops.scripts.artifact_io_runtime import load_optional_json_object, read_json_object
-from ops.scripts.learning_readiness_signoff_state import SIGNOFF_REPORT_REL_PATH
+from ops.scripts.core.artifact_freshness_runtime import canonical_report_loading_issue
+from ops.scripts.core.artifact_io_runtime import (
+    load_optional_json_object,
+    read_json_object,
+)
+from ops.scripts.learning.learning_readiness_signoff_state import (
+    SIGNOFF_REPORT_REL_PATH,
+)
 
 from .auto_improve_readiness_constants_runtime import (
     ARTIFACT_FRESHNESS_REPORT_REL_PATH,

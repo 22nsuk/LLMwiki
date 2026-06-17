@@ -13,19 +13,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     promote_schema_validated_json,
     resolve_repo_artifact_path,
     write_schema_backed_report,
 )
-from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
+from ops.scripts.core.command_runtime import TimedProcessResult, run_with_timeout
 from ops.scripts.core.generated_artifact_semantic_digest import semantic_digest_maps
-from ops.scripts.output_runtime import display_path, sanitize_report_text
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 
 DEFAULT_OUT = "ops/reports/release-closeout-fixed-point.json"
 DEFAULT_DRY_RUN_OUT = "tmp/release-closeout-post-check-finalizer.json"
@@ -840,13 +842,32 @@ def _fixed_point_freshness_debt_record(vault: Path) -> dict[str, Any]:
     }
 
 
-def _load_fixed_point_digest_map(vault: Path) -> tuple[dict[str, str], dict[str, Any]]:
+def _semantic_digest_map_from_fixed_point(payload: dict[str, Any]) -> dict[str, str]:
+    raw_iterations = payload.get("iterations")
+    if not isinstance(raw_iterations, list):
+        return {}
+    for iteration in reversed(raw_iterations):
+        if not isinstance(iteration, dict):
+            continue
+        raw_semantic_map = iteration.get("semantic_digest_map")
+        if isinstance(raw_semantic_map, dict):
+            return {
+                str(path): str(digest)
+                for path, digest in raw_semantic_map.items()
+                if isinstance(path, str) and isinstance(digest, str)
+            }
+    return {}
+
+
+def _load_fixed_point_digest_maps(
+    vault: Path,
+) -> tuple[dict[str, str], dict[str, str], dict[str, Any]]:
     payload, diagnostics = load_optional_json_object_with_diagnostics(
         vault / DEFAULT_OUT
     )
     status = str(diagnostics.get("status", "unknown"))
     if status != "ok":
-        return {}, {
+        return {}, {}, {
             "path": DEFAULT_OUT,
             "load_status": status,
             "status": "missing",
@@ -863,8 +884,9 @@ def _load_fixed_point_digest_map(vault: Path) -> tuple[dict[str, str], dict[str,
         if isinstance(raw_digest_map, dict)
         else {}
     )
+    semantic_digest_map = _semantic_digest_map_from_fixed_point(payload)
     report_status = str(payload.get("status", "unknown")).strip() or "unknown"
-    return digest_map, {
+    return digest_map, semantic_digest_map, {
         "path": DEFAULT_OUT,
         "load_status": "ok",
         "status": report_status,
@@ -946,7 +968,9 @@ def _dry_run_tracked_artifact_record(
     item: dict[str, str],
     *,
     baseline_digest_map: dict[str, str],
+    baseline_semantic_digest_map: dict[str, str],
     current_digest_map: dict[str, str],
+    current_semantic_digest_map: dict[str, str],
     freshness_records: dict[str, dict[str, Any]],
     current_source_tree_fingerprint: str,
     producer_by_path: dict[str, str],
@@ -962,14 +986,27 @@ def _dry_run_tracked_artifact_record(
     baseline_digest = baseline_digest_map.get(rel_path, "missing")
     current_digest = current_digest_map.get(rel_path, "missing")
     digest_status = "current" if baseline_digest == current_digest else "changed"
+    baseline_semantic_digest = baseline_semantic_digest_map.get(rel_path, "unknown")
+    current_semantic_digest = current_semantic_digest_map.get(rel_path, "unknown")
+    semantic_digest_status = (
+        "unknown"
+        if "unknown" in {baseline_semantic_digest, current_semantic_digest}
+        else "current"
+        if baseline_semantic_digest == current_semantic_digest
+        else "changed"
+    )
     freshness_record = freshness_records.get(rel_path, {})
     schema_validation_status, issues = _freshness_signal(freshness_record)
     freshness_status = (
         "attention" if issues or schema_validation_status == "fail" else "pass"
     )
+    digest_refresh_required = (
+        semantic_digest_status == "changed"
+        or (semantic_digest_status == "unknown" and digest_status != "current")
+    )
     refresh_needed = (
         load_status != "ok"
-        or digest_status != "current"
+        or digest_refresh_required
         or source_tree_status != "current"
         or freshness_status != "pass"
     )
@@ -981,6 +1018,9 @@ def _dry_run_tracked_artifact_record(
         "baseline_digest": baseline_digest,
         "current_digest": current_digest,
         "digest_status": digest_status,
+        "baseline_semantic_digest": baseline_semantic_digest,
+        "current_semantic_digest": current_semantic_digest,
+        "semantic_digest_status": semantic_digest_status,
         "source_tree_fingerprint": source_tree_fingerprint,
         "source_tree_status": source_tree_status,
         "schema_validation_status": schema_validation_status or "unknown",
@@ -995,7 +1035,9 @@ def _dry_run_tracked_records(
     runtime: _FixedPointPolicyRuntime,
     *,
     baseline_digest_map: dict[str, str],
+    baseline_semantic_digest_map: dict[str, str],
     current_digest_map: dict[str, str],
+    current_semantic_digest_map: dict[str, str],
     freshness_records: dict[str, dict[str, Any]],
     current_source_tree_fingerprint: str,
 ) -> tuple[list[dict[str, Any]], list[str]]:
@@ -1004,7 +1046,9 @@ def _dry_run_tracked_records(
             vault,
             item,
             baseline_digest_map=baseline_digest_map,
+            baseline_semantic_digest_map=baseline_semantic_digest_map,
             current_digest_map=current_digest_map,
+            current_semantic_digest_map=current_semantic_digest_map,
             freshness_records=freshness_records,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
             producer_by_path=runtime.producer_by_path,
@@ -1071,6 +1115,8 @@ def _dry_run_drift_reasons(tracked_records: Sequence[dict[str, Any]]) -> list[st
             and record["current_digest"] != "missing"
         ):
             reasons.append(f"{path}:digest_changed")
+        if record["semantic_digest_status"] == "changed":
+            reasons.append(f"{path}:semantic_digest_changed")
         if record["source_tree_status"] == "stale":
             reasons.append(f"{path}:source_tree_stale")
         if record["freshness_status"] == "attention":
@@ -1137,8 +1183,10 @@ def _target_why(
         for path in direct_paths:
             record = tracked_by_path.get(path, {})
             path_reasons = []
-            if record.get("digest_status") != "current":
-                path_reasons.append("digest drift")
+            if record.get("semantic_digest_status") == "changed":
+                path_reasons.append("semantic digest drift")
+            elif record.get("digest_status") != "current":
+                path_reasons.append("raw digest drift")
             if record.get("source_tree_status") != "current":
                 path_reasons.append(f"source tree {record.get('source_tree_status')}")
             if record.get("freshness_status") != "pass":
@@ -1223,15 +1271,24 @@ def build_dry_run_report(
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     runtime = _policy_runtime(vault)
-    baseline_digest_map, fixed_point_summary = _load_fixed_point_digest_map(vault)
+    (
+        baseline_digest_map,
+        baseline_semantic_digest_map,
+        fixed_point_summary,
+    ) = _load_fixed_point_digest_maps(vault)
     current_digest_map = _digest_map(vault, runtime.tracked_artifacts)
+    current_semantic_digest_map, _current_semantic_digest_modes = semantic_digest_maps(
+        vault, runtime.tracked_paths
+    )
     freshness_records, freshness_summary = _artifact_freshness_records(vault)
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     tracked_records, affected_paths = _dry_run_tracked_records(
         vault,
         runtime,
         baseline_digest_map=baseline_digest_map,
+        baseline_semantic_digest_map=baseline_semantic_digest_map,
         current_digest_map=current_digest_map,
+        current_semantic_digest_map=current_semantic_digest_map,
         freshness_records=freshness_records,
         current_source_tree_fingerprint=current_source_tree_fingerprint,
     )
@@ -1272,7 +1329,7 @@ def build_dry_run_report(
         source_command=DRY_RUN_SOURCE_COMMAND,
         resolved_policy_path=vault / POLICY_PATH,
         schema_path=DRY_RUN_SCHEMA_PATH,
-        source_paths=["ops/scripts/release_closeout_fixed_point.py"],
+        source_paths=["ops/scripts/release/release_closeout_fixed_point.py"],
         path_group_inputs={
             "tracked_artifacts": runtime.tracked_paths,
         },
@@ -1698,12 +1755,6 @@ def bootstrap_post_promote_freshness(
     runtime_env = {**os.environ, "LLMWIKI_RUNTIME_UTC_NOW": generated_at}
     initial_debt = _fixed_point_freshness_debt_record(vault)
     passes: list[dict[str, Any]] = []
-    result_base = {
-        "generated_at": generated_at,
-        "max_bootstrap_passes": max_bootstrap_passes,
-        "passes": passes,
-        "initial_debt": initial_debt,
-    }
 
     if not initial_debt["has_freshness_debt"]:
         _emit_progress(
@@ -1713,8 +1764,11 @@ def bootstrap_post_promote_freshness(
         return _bootstrap_freshness_result(
             status="pass",
             bootstrap_required=False,
+            generated_at=generated_at,
+            max_bootstrap_passes=max_bootstrap_passes,
+            passes=passes,
+            initial_debt=initial_debt,
             final_debt=initial_debt,
-            **result_base,
         )
 
     final_debt = initial_debt
@@ -1748,9 +1802,12 @@ def bootstrap_post_promote_freshness(
             return _bootstrap_freshness_result(
                 status="fail",
                 bootstrap_required=True,
+                generated_at=generated_at,
+                max_bootstrap_passes=max_bootstrap_passes,
+                passes=passes,
+                initial_debt=initial_debt,
                 final_debt=final_debt,
                 reason="artifact_freshness_refresh_failed",
-                **result_base,
             )
 
         pass_record_updates, final_debt = _rebuild_bootstrap_fixed_point_candidate(
@@ -1778,8 +1835,11 @@ def bootstrap_post_promote_freshness(
             return _bootstrap_freshness_result(
                 status="pass",
                 bootstrap_required=True,
+                generated_at=generated_at,
+                max_bootstrap_passes=max_bootstrap_passes,
+                passes=passes,
+                initial_debt=initial_debt,
                 final_debt=final_debt,
-                **result_base,
             )
 
     _emit_progress(
@@ -1789,9 +1849,12 @@ def bootstrap_post_promote_freshness(
     return _bootstrap_freshness_result(
         status="fail",
         bootstrap_required=True,
+        generated_at=generated_at,
+        max_bootstrap_passes=max_bootstrap_passes,
+        passes=passes,
+        initial_debt=initial_debt,
         final_debt=final_debt,
         reason="fixed_point_freshness_debt_persisted",
-        **result_base,
     )
 
 
@@ -1914,7 +1977,7 @@ def _fixed_point_envelope(
         resolved_policy_path=vault / POLICY_PATH,
         schema_path=SCHEMA_PATH,
         source_paths=[
-            "ops/scripts/release_closeout_fixed_point.py",
+            "ops/scripts/release/release_closeout_fixed_point.py",
             "ops/scripts/core/generated_artifact_semantic_digest.py",
         ],
         path_group_inputs={"tracked_artifacts": runtime.tracked_paths},

@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.experiment_telemetry_runtime import run_rel
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.experiment_telemetry_runtime import run_rel
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
 
 
 @dataclass(frozen=True)

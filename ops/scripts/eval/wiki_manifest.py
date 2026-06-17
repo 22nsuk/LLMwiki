@@ -11,23 +11,23 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.path_runtime import normalize_repo_path_text
-    from ops.scripts.schema_constants_runtime import WIKI_MANIFEST_SCHEMA_PATH
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.path_runtime import normalize_repo_path_text
+    from ops.scripts.core.schema_constants_runtime import WIKI_MANIFEST_SCHEMA_PATH
 else:
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.path_runtime import normalize_repo_path_text
-    from ops.scripts.schema_constants_runtime import WIKI_MANIFEST_SCHEMA_PATH
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.path_runtime import normalize_repo_path_text
+    from ops.scripts.core.schema_constants_runtime import WIKI_MANIFEST_SCHEMA_PATH
 
 DEFAULT_EXCLUDED_PREFIXES = (
     "ops/reports/",

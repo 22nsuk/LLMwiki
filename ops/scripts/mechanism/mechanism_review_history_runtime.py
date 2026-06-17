@@ -4,15 +4,15 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.promotion_decision_registry_runtime import decision_from_report
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.promotion_decision_registry_runtime import decision_from_report
+from ops.scripts.core.schema_constants_runtime import (
     CHANGED_FILES_MANIFEST_SCHEMA_PATH,
     EVAL_REPORT_SCHEMA_PATH,
     MECHANISM_ASSESSMENT_SCHEMA_PATH,
     PROMOTION_REPORT_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )

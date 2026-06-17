@@ -9,19 +9,21 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import WIKI_STAGE2_EVAL_SCHEMA_PATH
-    from ops.scripts.wiki_snapshot_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import WIKI_STAGE2_EVAL_SCHEMA_PATH
+    from ops.scripts.eval.wiki_snapshot_runtime import (
         WikiRuntimeSnapshot,
         build_wiki_runtime_snapshot,
     )
-    from ops.scripts.wiki_stage2_runtime import (
+    from ops.scripts.eval.wiki_stage2_runtime import (
         broad_synthesis_boundary_missing_sections,
         broad_wiki_synthesis_metrics,
         content_quality_scaffold_missing_sections,
@@ -32,14 +34,16 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         stable_wiki_inbound_linkers,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import WIKI_STAGE2_EVAL_SCHEMA_PATH
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import WIKI_STAGE2_EVAL_SCHEMA_PATH
 
     from .wiki_snapshot_runtime import WikiRuntimeSnapshot, build_wiki_runtime_snapshot
     from .wiki_stage2_runtime import (
@@ -99,7 +103,7 @@ def _base_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=WIKI_STAGE2_EVAL_SCHEMA_PATH,
-            source_paths=["ops/scripts/wiki_stage2_eval.py"],
+            source_paths=["ops/scripts/eval/wiki_stage2_eval.py"],
             path_group_inputs={
                 "pages": sorted(report_path(vault, path) for path in runtime_snapshot.pages.values()),
             },

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.starter_bundle_runtime import StarterBundleDefinition
+from ops.scripts.core.starter_bundle_runtime import StarterBundleDefinition
 
 from .mechanism_run_validation_runtime import (
     MechanismArtifactBundle,

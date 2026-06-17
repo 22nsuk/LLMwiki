@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.rule_registry_runtime import (
+from ops.scripts.core.rule_registry_runtime import (
     RuleMetadata,
     RuleSpec,
     configured_rule_metadata,

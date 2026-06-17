@@ -5,9 +5,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.command_log_summary_runtime import usage_limit_flag_for_artifact
-from ops.scripts.experiment_telemetry_runtime import run_rel
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.command_log_summary_runtime import usage_limit_flag_for_artifact
+from ops.scripts.core.experiment_telemetry_runtime import run_rel
+from ops.scripts.core.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_from_payload,
     decision_is_terminal,

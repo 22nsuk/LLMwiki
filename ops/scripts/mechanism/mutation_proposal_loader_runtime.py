@@ -6,14 +6,14 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import (
     canonical_artifact_payload,
     canonical_report_loading_issue,
 )
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import MECHANISM_REVIEW_SCHEMA_PATH
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import MECHANISM_REVIEW_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )

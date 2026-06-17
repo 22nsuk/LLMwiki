@@ -6,20 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
-from ops.scripts.observability_artifacts_shared_runtime import (
+from ops.scripts.core.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
+from ops.scripts.core.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel,
     resolve_auto_improve_session_report_rel,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .auto_improve_session_completion_runtime import completion_class_for_session
 from .goal_contract_digest_runtime import semantic_goal_contract_digest

@@ -7,20 +7,20 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     RAW_REGISTRY_CROSS_ENVIRONMENT_EVIDENCE_BUNDLE_SCHEMA_PATH,
     RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
@@ -374,8 +374,8 @@ def build_evidence_bundle(
             resolved_policy_path=resolved_policy_path,
             schema_path=RAW_REGISTRY_CROSS_ENVIRONMENT_EVIDENCE_BUNDLE_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/raw_registry_cross_environment_evidence_bundle.py",
-                "ops/scripts/raw_registry_cross_environment_matrix.py",
+                "ops/scripts/registry/raw_registry_cross_environment_evidence_bundle.py",
+                "ops/scripts/registry/raw_registry_cross_environment_matrix.py",
             ],
             file_inputs=file_inputs,
             text_inputs={

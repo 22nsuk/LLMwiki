@@ -8,18 +8,18 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     resolve_schema_backed_report_output_path,
     write_schema_backed_report,
 )
 from ops.scripts.core.generated_artifact_semantic_digest import semantic_digest_maps
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.release.release_status_v2 import release_status_v2_view
-from ops.scripts.runtime_context import RuntimeContext
 
 DEFAULT_OUT = "ops/reports/release-closeout-finality-attestation.json"
 PRODUCER = "ops.scripts.release_closeout_finality_attestation"
@@ -252,7 +252,7 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/release_closeout_finality_attestation.py",
+                "ops/scripts/release/release_closeout_finality_attestation.py",
                 "ops/scripts/core/generated_artifact_semantic_digest.py",
             ],
             file_inputs={

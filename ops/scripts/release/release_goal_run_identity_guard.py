@@ -7,12 +7,16 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.auto_promotion_manifest_sections import (
     RequirementSpec,
     append_requirement_blockers,
@@ -23,8 +27,6 @@ from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "build/release/release-auto-promotion-goal-run-identity.json"
 DEFAULT_GOAL_RUN_STATUS = "ops/reports/goal-run-status.json"

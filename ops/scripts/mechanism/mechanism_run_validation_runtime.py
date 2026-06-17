@@ -4,9 +4,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.filesystem_runtime import manifest_apply_guard_state
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.validation_check_types_runtime import (
+from ops.scripts.core.filesystem_runtime import manifest_apply_guard_state
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.validation_check_types_runtime import (
     PhaseCheckResult,
     validation_check,
 )

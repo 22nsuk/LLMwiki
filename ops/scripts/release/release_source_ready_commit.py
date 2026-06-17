@@ -17,10 +17,12 @@ from ops.scripts.core.path_classification_runtime import (
     normalize_repo_path,
 )
 from ops.scripts.core.request_coercion_runtime import coerce_request_or_kwargs
+from ops.scripts.release.release_authority_vocabulary import (
+    REASON_MACHINE_RELEASE_NOT_ALLOWED,
+)
 from ops.scripts.release.release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
-from ops.scripts.release_authority_vocabulary import REASON_MACHINE_RELEASE_NOT_ALLOWED
 
 DEFAULT_OUT = "tmp/release-source-ready-commit.json"
 DEFAULT_MESSAGE = "release: converge source-ready surfaces"

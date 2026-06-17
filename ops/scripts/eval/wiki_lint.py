@@ -10,40 +10,41 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import (
+    from ops.scripts.core.policy_runtime import (
         load_policy,
         report_path,
         required_sections_from_policy,
     )
-    from ops.scripts.python_function_budget_runtime import (
+    from ops.scripts.core.python_function_budget_runtime import (
         python_function_budget_candidates,
     )
-    from ops.scripts.raw_markdown_runtime import raw_markdown_quality_pass
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import LINT_REPORT_SCHEMA_PATH
-    from ops.scripts.wiki_doc_audit_runtime import (
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import LINT_REPORT_SCHEMA_PATH
+    from ops.scripts.eval.wiki_doc_audit_runtime import (
         documentation_markdown_surfaces,
         external_report_reference_issues,
         router_summary_count_issues,
     )
-    from ops.scripts.wiki_eval_coverage_runtime import (
+    from ops.scripts.eval.wiki_eval_coverage_runtime import (
         build_report as build_eval_coverage_report,
     )
-    from ops.scripts.wiki_lint_page_runtime import (
+    from ops.scripts.eval.wiki_lint_page_runtime import (
         PageLintContext,
         lint_page,
         orphan_issues,
     )
-    from ops.scripts.wiki_lint_registry_runtime import (
+    from ops.scripts.eval.wiki_lint_registry_runtime import (
         lint_registry_contract,
         registry_review_exempt_paths,
     )
-    from ops.scripts.wiki_lint_review_runtime import (
+    from ops.scripts.eval.wiki_lint_review_runtime import (
         active_source_missing_concept_candidates,
         concept_carryover_continuity_candidates,
         concept_taxonomy_advisory_candidates,
@@ -56,28 +57,31 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         synthesis_follow_up_split_candidates,
         wiki_synthesis_multi_question_candidates,
     )
-    from ops.scripts.wiki_page_runtime import required_sections_for_page
-    from ops.scripts.wiki_snapshot_runtime import (
+    from ops.scripts.eval.wiki_page_runtime import required_sections_for_page
+    from ops.scripts.eval.wiki_snapshot_runtime import (
         WikiRuntimeSnapshot,
         build_wiki_runtime_snapshot,
     )
+    from ops.scripts.registry.raw_markdown_runtime import raw_markdown_quality_pass
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import (
+    from ops.scripts.core.policy_runtime import (
         load_policy,
         report_path,
         required_sections_from_policy,
     )
-    from ops.scripts.python_function_budget_runtime import (
+    from ops.scripts.core.python_function_budget_runtime import (
         python_function_budget_candidates,
     )
-    from ops.scripts.raw_markdown_runtime import raw_markdown_quality_pass
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import LINT_REPORT_SCHEMA_PATH
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import LINT_REPORT_SCHEMA_PATH
+    from ops.scripts.registry.raw_markdown_runtime import raw_markdown_quality_pass
 
     from .wiki_doc_audit_runtime import (
         documentation_markdown_surfaces,
@@ -644,11 +648,11 @@ def _build_lint_report(
             resolved_policy_path=runtime_context.resolved_policy_path,
             schema_path=LINT_REPORT_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/wiki_lint.py",
-                "ops/scripts/wiki_lint_page_runtime.py",
-                "ops/scripts/wiki_quality_runtime.py",
-                "ops/scripts/source_trace_profile_runtime.py",
-                "ops/scripts/source_trace_runtime.py",
+                "ops/scripts/eval/wiki_lint.py",
+                "ops/scripts/eval/wiki_lint_page_runtime.py",
+                "ops/scripts/eval/wiki_quality_runtime.py",
+                "ops/scripts/core/source_trace_profile_runtime.py",
+                "ops/scripts/core/source_trace_runtime.py",
             ],
             path_group_inputs={
                 "pages": sorted(runtime_context.page_relative_paths.values()),

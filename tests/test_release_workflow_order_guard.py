@@ -7,10 +7,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.release_workflow_order_guard import build_report, write_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release.release_workflow_order_guard import build_report, write_report
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -89,6 +89,7 @@ RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
     "release-evidence-converge",
     "release-evidence-closeout",
     "release-finality-resettle",
+    "release-terminal-finality",
     "release-authority-sealed-preflight",
     "release-converge-preflight",
     "release-source-ready",
@@ -157,9 +158,13 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "release-finality-resettle:\n"
     "\t$(MAKE) workflow-dependency-planner\n"
     "\t$(MAKE) release-authority-sealed-preflight\n"
+    "\t$(MAKE) release-terminal-finality\n"
+    "release-terminal-finality:\n"
     "\t$(MAKE) generated-artifact-finality-suffix\n"
     "\t$(MAKE) release-closeout-summary-report\n"
     "\t$(MAKE) release-closeout-fixed-point\n"
+    "\t$(MAKE) tmp-json-clean\n"
+    "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
     "\t$(MAKE) tmp-json-clean\n"
     "\t$(MAKE) release-closeout-finality-verify\n"
     "release-source-ready:\n"
@@ -365,6 +370,12 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(planner_hook["status"], "pass")
         resettle_check = next(item for item in report["checks"] if item["id"] == "release_finality_resettle_sequence")
         self.assertEqual(resettle_check["status"], "pass")
+        terminal_finality_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_terminal_finality_sequence"
+        )
+        self.assertEqual(terminal_finality_check["status"], "pass")
         post_commit_sequence = next(
             item
             for item in report["checks"]
@@ -380,6 +391,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         preflight_check = next(item for item in report["checks"] if item["id"] == "release_converge_preflight_sequence")
         self.assertEqual(preflight_check["status"], "pass")
         self.assertIn("release-finality-resettle", {item["target"] for item in report["target_recipes"]})
+        self.assertIn("release-terminal-finality", {item["target"] for item in report["target_recipes"]})
         self.assertIn("release-post-commit-finalize", {item["target"] for item in report["target_recipes"]})
         self.assertIn("release-converge-preflight", {item["target"] for item in report["target_recipes"]})
         self.assertTrue(write_report(self.vault, report).exists())
@@ -434,6 +446,33 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(
             check["violations"][0]["expected_role"],
             "release-authority-sealed-preflight",
+        )
+
+    def test_guard_fails_when_terminal_finality_runs_writer_after_verify(self) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "\t$(MAKE) release-closeout-finality-verify\n"
+                "release-source-ready:\n",
+                "\t$(MAKE) release-closeout-finality-verify\n"
+                "\t$(MAKE) external-report-action-matrix\n"
+                "release-source-ready:\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_terminal_finality_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(
+            check["violations"][0]["reason"],
+            "finality_verify_must_be_terminal",
         )
 
     def test_guard_fails_when_fixed_point_policy_order_is_not_topological(self) -> None:

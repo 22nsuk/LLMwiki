@@ -5,12 +5,12 @@ from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_event_from_record,
     decision_record_from_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .finalize_run_artifact_runtime import PLANNING_VALIDATION_SCHEMA
 from .finalize_run_errors_runtime import FinalizeRunUsageError

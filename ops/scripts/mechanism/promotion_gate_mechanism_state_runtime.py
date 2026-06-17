@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.policy_runtime import report_path
 
 from .mechanism_run_validation_runtime import (
     MechanismArtifactBundle,

@@ -4,16 +4,16 @@ import time
 from pathlib import Path
 from typing import TypedDict
 
-from ops.scripts.path_runtime import stable_report_path
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.runtime_event_logging_runtime import append_runtime_event
-from ops.scripts.starter_bundle_runtime import (
+from ops.scripts.core.path_runtime import stable_report_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_event_logging_runtime import append_runtime_event
+from ops.scripts.core.starter_bundle_runtime import (
     StarterBundleDefinition,
     starter_bundle_allowed_promotion_input_paths,
     starter_bundle_for_artifact_dir,
 )
-from ops.scripts.validation_check_types_runtime import (
+from ops.scripts.core.validation_check_types_runtime import (
     ValidationCheckResult,
     validation_check,
 )

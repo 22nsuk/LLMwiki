@@ -7,14 +7,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_payload_runtime import embedded_artifact_envelope
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.proposal_scope_runtime import dedupe_preserve_order
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.artifact_freshness_payload_runtime import (
+    embedded_artifact_envelope,
+)
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.proposal_scope_runtime import dedupe_preserve_order
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 
 from .auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
@@ -181,7 +185,7 @@ def _artifact_freshness_settle_debt_paths(report: dict) -> set[str]:
 
 
 def _current_artifact_freshness_report(vault: Path) -> dict:
-    from ops.scripts.artifact_freshness_runtime import build_report
+    from ops.scripts.core.artifact_freshness_runtime import build_report
 
     return build_report(vault)
 
@@ -261,7 +265,7 @@ def _structural_complexity_targets_pass(vault: Path, targets: list[str]) -> bool
     if not primary_targets:
         return False
     try:
-        from ops.scripts.structural_complexity_budget_runtime import (
+        from ops.scripts.eval.structural_complexity_budget_runtime import (
             DEFAULT_TARGET_PROFILES,
             build_report,
             touched_target_profiles,
@@ -446,9 +450,9 @@ def _without_local_only_inventory_targets(paths: list[str]) -> list[str]:
 
 def _raw_registry_currentness_evidence_clean(vault: Path) -> bool:
     try:
-        from ops.scripts.raw_registry_export import raw_registry_export_check
-        from ops.scripts.raw_registry_preflight import preflight
-        from ops.scripts.registry_exceptions_runtime import RawRegistryRuntimeError
+        from ops.scripts.core.registry_exceptions_runtime import RawRegistryRuntimeError
+        from ops.scripts.registry.raw_registry_export import raw_registry_export_check
+        from ops.scripts.registry.raw_registry_preflight import preflight
 
         export_report = raw_registry_export_check(vault)
         if (

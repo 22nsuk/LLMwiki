@@ -8,10 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.schema_constants_runtime import (
     STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
 )
-from ops.scripts.structural_complexity_budget_runtime import (
+from ops.scripts.eval.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,
     build_report as build_structural_complexity_budget_report,
     target_paths_from_changed_files_manifest,

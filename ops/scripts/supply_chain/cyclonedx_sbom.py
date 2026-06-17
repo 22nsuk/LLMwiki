@@ -12,34 +12,38 @@ from urllib.parse import quote
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.sbom_export_mapping import (
-        build_report as build_sbom_export_mapping_report,
-    )
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         CYCLONEDX_16_SCHEMA_PATH,
         CYCLONEDX_16_SCHEMA_URI,
     )
-    from ops.scripts.supply_chain_provenance import (
+    from ops.scripts.supply_chain.sbom_export_mapping import (
+        build_report as build_sbom_export_mapping_report,
+    )
+    from ops.scripts.supply_chain.supply_chain_provenance import (
         build_report as build_supply_chain_provenance_report,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         CYCLONEDX_16_SCHEMA_PATH,
         CYCLONEDX_16_SCHEMA_URI,
     )
@@ -518,7 +522,7 @@ def build_bom(
         source_command=SOURCE_COMMAND,
         resolved_policy_path=resolved_policy_path,
         schema_path=CYCLONEDX_SCHEMA_PATH,
-        source_paths=["ops/scripts/cyclonedx_sbom.py"],
+        source_paths=["ops/scripts/supply_chain/cyclonedx_sbom.py"],
         file_inputs=_envelope_file_inputs(vault, active_provenance_report),
     )
     artifact_envelope["$schema"] = CYCLONEDX_16_SCHEMA_URI

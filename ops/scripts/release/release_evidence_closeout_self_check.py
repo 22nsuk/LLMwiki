@@ -13,16 +13,16 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     RELEASE_EVIDENCE_CLOSEOUT_SELF_CHECK_SCHEMA_PATH,
 )
 
@@ -285,7 +285,7 @@ def build_report(
             source_command=source_command,
             resolved_policy_path=resolved_policy_path,
             schema_path=RELEASE_EVIDENCE_CLOSEOUT_SELF_CHECK_SCHEMA_PATH,
-            source_paths=["ops/scripts/release_evidence_closeout_self_check.py"],
+            source_paths=["ops/scripts/release/release_evidence_closeout_self_check.py"],
             file_inputs={
                 "batch_manifest": batch_manifest_path,
                 "evidence_cohort": evidence_cohort_path,

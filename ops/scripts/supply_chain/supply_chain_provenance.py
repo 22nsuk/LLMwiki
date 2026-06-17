@@ -11,18 +11,21 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_PROVENANCE_SCHEMA_PATH
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        SUPPLY_CHAIN_PROVENANCE_SCHEMA_PATH,
+    )
+    from ops.scripts.eval.wiki_manifest import build_manifest
     from ops.scripts.supply_chain.ci_install_proof_runtime import (
         CANONICAL_UV_LOCK_CHECK_COMMAND,
         CI_WORKFLOW_PATH,
@@ -31,21 +34,22 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         ci_install_evidence_content,
         collect_ci_install_contract,
     )
-    from ops.scripts.wiki_manifest import build_manifest
 else:
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_PROVENANCE_SCHEMA_PATH
-    from ops.scripts.wiki_manifest import build_manifest
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        SUPPLY_CHAIN_PROVENANCE_SCHEMA_PATH,
+    )
+    from ops.scripts.eval.wiki_manifest import build_manifest
 
     from .ci_install_proof_runtime import (
         CANONICAL_UV_LOCK_CHECK_COMMAND,
@@ -486,8 +490,8 @@ def build_report(
         source_paths=[
             "ops/scripts/supply_chain/supply_chain_provenance.py",
             "ops/scripts/supply_chain/ci_install_proof_runtime.py",
-            "ops/scripts/wiki_manifest.py",
-            "ops/scripts/artifact_freshness_runtime.py",
+            "ops/scripts/eval/wiki_manifest.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
         ],
         file_inputs={
             **{rel_path: rel_path for rel_path in CANONICAL_DEPENDENCY_INPUTS},

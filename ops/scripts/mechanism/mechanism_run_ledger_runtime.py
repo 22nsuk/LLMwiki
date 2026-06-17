@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.experiment_telemetry_runtime import (
+from ops.scripts.core.experiment_telemetry_runtime import (
     append_ledger_event as telemetry_append_ledger_event,
     load_run_ledger as telemetry_load_run_ledger,
     run_rel as telemetry_run_rel,
@@ -12,7 +12,7 @@ from ops.scripts.experiment_telemetry_runtime import (
     write_run_telemetry,
     write_timeout_failure_artifact as telemetry_write_timeout_failure_artifact,
 )
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .mechanism_run_common_runtime import ExperimentResolution
 from .promotion_gate_common_runtime import decision_to_outcome

@@ -7,12 +7,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.release_risk_state_runtime import (
     release_blocker_entry,
     release_risk_blocks_clean_lane,
@@ -20,16 +22,16 @@ from ops.scripts.core.release_risk_state_runtime import (
     release_risk_list,
     release_risk_with_effects,
 )
-from ops.scripts.learning_readiness_vocabulary import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
+from ops.scripts.learning.learning_readiness_vocabulary import (
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release.release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from .advisory_lifecycle_runtime import (
     ADVISORY_LIFECYCLE_ACTIVE,

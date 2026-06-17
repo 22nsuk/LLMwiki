@@ -7,18 +7,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
     GATE_EFFECT_NONE,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     canonical_gate_effect,
 )
+from ops.scripts.core.observability_artifacts_shared_runtime import (
+    auto_improve_session_report_rel,
+    resolve_auto_improve_session_report_rel,
+)
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.mechanism.auto_improve_learning_preflight_runtime import (
     goal_contract_authorizes_learning_uncertain,
 )
@@ -29,14 +36,7 @@ from ops.scripts.mechanism.goal_contract_digest_runtime import (
 from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
     load_json_object_from_vault,
 )
-from ops.scripts.observability_artifacts_shared_runtime import (
-    auto_improve_session_report_rel,
-    resolve_auto_improve_session_report_rel,
-)
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.structural_complexity_scope_runtime import (
+from ops.scripts.mechanism.structural_complexity_scope_runtime import (
     generated_canonical_targets,
     proposal_declares_structural_complexity_repair,
     source_targets_structural_complexity_report,
@@ -1634,7 +1634,7 @@ def _admission_envelope(
     active_request: GoalRuntimeRunAdmissionRequest,
     *,
     context: RuntimeContext,
-    resolved_policy_path: str,
+    resolved_policy_path: Path,
     file_inputs: dict[str, str],
 ) -> dict[str, Any]:
     return build_canonical_report_envelope(

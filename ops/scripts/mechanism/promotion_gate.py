@@ -10,15 +10,15 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.promotion_decision_registry_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.promotion_decision_registry_runtime import (
         decision_record_from_report,
     )
-    from ops.scripts.promotion_gate_common_runtime import (
+    from ops.scripts.mechanism.promotion_gate_common_runtime import (
         PROMOTION_REPORT_SCHEMA,
         PromotionGateArtifactDecodeError,
         PromotionGateArtifactMissingError,
@@ -33,13 +33,13 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         ensure_log_args_consistent,
         repo_relative_path,
     )
-    from ops.scripts.promotion_gate_mechanism_runtime import (
+    from ops.scripts.mechanism.promotion_gate_mechanism_runtime import (
         MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
         mechanism_class_report as build_mechanism_class_report,
     )
-    from ops.scripts.promotion_gate_page_runtime import (
+    from ops.scripts.mechanism.promotion_gate_page_runtime import (
         PageClassReportRequest,
         collect_page_gate_inputs,
         evaluate_stage2,
@@ -48,12 +48,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         page_class_report as build_page_class_report,
     )
 else:
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.promotion_decision_registry_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.promotion_decision_registry_runtime import (
         decision_record_from_report,
     )
 

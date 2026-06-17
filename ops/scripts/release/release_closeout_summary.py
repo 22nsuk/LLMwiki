@@ -5,16 +5,18 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
-from ops.scripts.learning_readiness_vocabulary import (
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH,
+)
+from ops.scripts.learning.learning_readiness_vocabulary import (
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH
 
 from . import (
     release_closeout_envelope_runtime,

@@ -3,9 +3,11 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
-from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.observability_artifacts_runtime import (
+    write_run_artifact_fingerprint,
+)
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from . import (
     finalize_run_artifact_runtime as finalize_run_artifact_runtime,

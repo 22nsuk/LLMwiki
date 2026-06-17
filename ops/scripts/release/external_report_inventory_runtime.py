@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.policy_runtime import report_path
 
 from .external_report_action_catalog import ACTION_CATALOG
 

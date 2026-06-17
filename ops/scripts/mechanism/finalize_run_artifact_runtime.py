@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.schema_constants_runtime import (
     CHANGED_FILES_MANIFEST_SCHEMA_PATH,
     PLANNING_VALIDATION_SCHEMA_PATH,
     PROMOTION_REPORT_SCHEMA_PATH,
     RUN_LEDGER_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema, validate_or_raise
+from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 
 from .finalize_run_errors_runtime import (
     FinalizeRunArtifactDecodeError,

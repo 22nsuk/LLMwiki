@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object
-from ops.scripts.output_runtime import display_path
+from ops.scripts.core.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.output_runtime import display_path
 
 DEFAULT_GOAL_RUN_ID = "auto-improve-trial"
 DEFAULT_GOAL_RUN_STATUS = "ops/reports/goal-run-status.json"

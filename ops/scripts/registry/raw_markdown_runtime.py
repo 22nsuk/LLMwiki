@@ -9,8 +9,8 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.yaml_runtime import parse_simple_yaml
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.yaml_runtime import parse_simple_yaml
 
 FRONTMATTER_FIELD_ORDER = [
     "title",

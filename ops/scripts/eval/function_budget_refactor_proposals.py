@@ -11,28 +11,30 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         ReportWriterKernelRequest,
         write_report_with_kernel,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.wiki_lint_review_classification import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.eval.wiki_lint_review_classification import (
         build_report as build_classification_report,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         ReportWriterKernelRequest,
         write_report_with_kernel,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
 
     from .wiki_lint_review_classification import (
         build_report as build_classification_report,
@@ -47,6 +49,10 @@ SOURCE_COMMAND = "python -m ops.scripts.function_budget_refactor_proposals --vau
 SMALL_FUNCTION_LINE_OVERAGE = 40
 SMALL_PARAMETER_OVERAGE = 2
 SMALL_BRANCH_OVERAGE = 4
+EXTERNAL_REPORT_REFERENCE_MANIFEST_PAGES = {
+    "ops/scripts/external_report_reference_manifest.py",
+    "ops/scripts/release/external_report_reference_manifest.py",
+}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -302,7 +308,7 @@ def _owner_groups(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _backlog_theme(candidate: dict[str, Any]) -> str:
     page = str(candidate["page"])
     symbol = str(candidate["symbol"])
-    if page == "ops/scripts/external_report_reference_manifest.py" and symbol == "build_report":
+    if page in EXTERNAL_REPORT_REFERENCE_MANIFEST_PAGES and symbol == "build_report":
         return "external_report_reference_manifest_request_object"
     if page.startswith("ops/scripts/") and (
         "learning_" in page or "release_" in page
@@ -449,9 +455,9 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/function_budget_refactor_proposals.py",
-                "ops/scripts/wiki_lint_review_classification.py",
-                "ops/scripts/python_function_budget_runtime.py",
+                "ops/scripts/eval/function_budget_refactor_proposals.py",
+                "ops/scripts/eval/wiki_lint_review_classification.py",
+                "ops/scripts/core/python_function_budget_runtime.py",
             ],
             file_inputs={"classification_report": classification_source}
             if classification_source != "fresh_wiki_lint_review_classification"

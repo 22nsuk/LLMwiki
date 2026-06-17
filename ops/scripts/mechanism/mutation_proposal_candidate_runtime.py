@@ -5,9 +5,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.filesystem_runtime import manifest_apply_guard_state
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.proposal_scope_runtime import (
+from ops.scripts.core.filesystem_runtime import manifest_apply_guard_state
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.proposal_scope_runtime import (
     dedupe_preserve_order,
     resolve_focus_tests,
 )

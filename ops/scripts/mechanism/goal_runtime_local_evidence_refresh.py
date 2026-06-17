@@ -11,9 +11,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
 
-from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
-from ops.scripts.output_runtime import display_path, sanitize_report_text
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.command_runtime import TimedProcessResult, run_with_timeout
+from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+from ops.scripts.core.runtime_context import RuntimeContext
 
 DEFAULT_OUT = "tmp/goal-runtime-local-evidence-refresh.json"
 PRODUCER = "ops.scripts.goal_runtime_local_evidence_refresh"

@@ -10,31 +10,35 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path, resolve_vault_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.run_artifact_envelope_runtime import (
+    from ops.scripts.core.output_runtime import display_path, resolve_vault_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.run_artifact_envelope_runtime import (
         maybe_embed_run_artifact_envelope,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import MECHANISM_ASSESSMENT_SCHEMA_PATH
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        MECHANISM_ASSESSMENT_SCHEMA_PATH,
+    )
 else:
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path, resolve_vault_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.run_artifact_envelope_runtime import (
+    from ops.scripts.core.output_runtime import display_path, resolve_vault_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.run_artifact_envelope_runtime import (
         maybe_embed_run_artifact_envelope,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import MECHANISM_ASSESSMENT_SCHEMA_PATH
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        MECHANISM_ASSESSMENT_SCHEMA_PATH,
+    )
 
 
 MECHANISM_ASSESSMENT_SCHEMA = MECHANISM_ASSESSMENT_SCHEMA_PATH

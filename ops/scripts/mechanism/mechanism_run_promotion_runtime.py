@@ -5,17 +5,17 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
-from ops.scripts.observability_artifacts_runtime import (
+from ops.scripts.core.observability_artifacts_runtime import (
     write_promotion_decision_trends,
     write_run_artifact_fingerprint,
 )
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_event_from_record,
     decision_record_from_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .finalize_run_runtime import finalize_run
 from .improvement_observations_runtime import IMPROVEMENT_OBSERVATIONS_FILENAME

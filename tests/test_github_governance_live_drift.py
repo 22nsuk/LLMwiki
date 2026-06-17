@@ -6,8 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.release.github_governance_live_drift import build_report, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 
@@ -59,6 +58,27 @@ class GitHubGovernanceLiveDriftTests(unittest.TestCase):
         path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
         return path
 
+    def _live_input_payload(self) -> dict[str, object]:
+        return {
+            "protected_branches": ["main"],
+            "required_status_checks": [
+                "dependency review",
+                "fast / py3.12",
+            ],
+            "branch_protection": {
+                "main": {
+                    "require_pull_request": True,
+                    "require_review_before_merge": True,
+                    "require_required_status_checks": True,
+                    "require_branches_up_to_date": True,
+                    "require_linear_history": True,
+                    "allow_force_pushes": False,
+                    "allow_deletions": False,
+                    "main_direct_push": "forbidden",
+                }
+            },
+        }
+
     def test_build_report_passes_from_sanitized_live_input(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -68,23 +88,7 @@ class GitHubGovernanceLiveDriftTests(unittest.TestCase):
             live_input = self._seed_live_input(
                 vault,
                 {
-                    "protected_branches": ["main"],
-                    "required_status_checks": [
-                        "dependency review",
-                        "fast / py3.12",
-                    ],
-                    "branch_protection": {
-                        "main": {
-                            "require_pull_request": True,
-                            "require_review_before_merge": True,
-                            "require_required_status_checks": True,
-                            "require_branches_up_to_date": True,
-                            "require_linear_history": True,
-                            "allow_force_pushes": False,
-                            "allow_deletions": False,
-                            "main_direct_push": "forbidden",
-                        }
-                    },
+                    **self._live_input_payload(),
                     "raw_ruleset_payload": {
                         "token": "SECRET_TOKEN_SHOULD_NOT_LEAK"
                     },
@@ -101,6 +105,28 @@ class GitHubGovernanceLiveDriftTests(unittest.TestCase):
             self.assertEqual(persisted["summary"]["mismatched_branch_protection_count"], 0)
             self.assertFalse(persisted["redaction"]["raw_live_payload_retained"])
             self.assertNotIn("SECRET_TOKEN_SHOULD_NOT_LEAK", persisted_text)
+
+    def test_default_live_input_path_is_cleanup_safe_build_release(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            self._seed_governance_contract(vault)
+            live_input = vault / "build" / "release" / "github-governance-live-input.json"
+            live_input.parent.mkdir(parents=True, exist_ok=True)
+            live_input.write_text(
+                json.dumps(self._live_input_payload(), indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                report["live_input"]["path"],
+                "build/release/github-governance-live-input.json",
+            )
+            self.assertTrue(report["live_input"]["available"])
 
     def test_build_report_honors_ci_matrix_excludes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

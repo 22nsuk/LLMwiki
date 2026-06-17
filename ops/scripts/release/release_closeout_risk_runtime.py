@@ -3,12 +3,12 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any
 
-from ops.scripts.core.release_risk_state_runtime import release_risk_identity
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_PROMOTION,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     canonical_gate_effect,
 )
+from ops.scripts.core.release_risk_state_runtime import release_risk_identity
 
 from .release_risk_taxonomy_runtime import (
     ADVISORY_REVIEW_BACKLOG,
@@ -129,7 +129,7 @@ def policy_risk_acceptance(issue: dict[str, Any], *, generated_at: str) -> dict[
         "risk_owner": metadata["risk_owner"],
         "revalidation_condition": metadata["revalidation_condition"],
         "rollback_trigger": metadata["rollback_trigger"],
-        "acceptance_source": "ops/scripts/release_closeout_summary.py",
+        "acceptance_source": "ops/scripts/release/release_closeout_summary.py",
         "linked_blocker_id": "",
     }
 

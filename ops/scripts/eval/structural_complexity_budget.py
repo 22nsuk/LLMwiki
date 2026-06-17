@@ -7,9 +7,12 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.complexity_ratchet_runtime import RatchetCeiling, judge_ratchet
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.structural_complexity_budget_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.eval.complexity_ratchet_runtime import (
+        RatchetCeiling,
+        judge_ratchet,
+    )
+    from ops.scripts.eval.structural_complexity_budget_runtime import (
         DEFAULT_REPORT,
         DEFAULT_TARGET_PROFILES,
         build_report,
@@ -18,7 +21,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         write_report,
     )
 else:
-    from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.core.policy_runtime import load_policy
 
     from .complexity_ratchet_runtime import RatchetCeiling, judge_ratchet
     from .structural_complexity_budget_runtime import (

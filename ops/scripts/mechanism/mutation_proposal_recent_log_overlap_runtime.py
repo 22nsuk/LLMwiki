@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ops.scripts.proposal_scope_runtime import dedupe_preserve_order
+from ops.scripts.core.proposal_scope_runtime import dedupe_preserve_order
 
 from .current_target_path_runtime import current_repo_target_paths
 from .mutation_proposal_candidate_runtime import (

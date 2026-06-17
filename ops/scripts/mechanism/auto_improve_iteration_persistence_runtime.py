@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from ops.scripts.experiment_telemetry_runtime import run_rel, write_run_telemetry
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.experiment_telemetry_runtime import run_rel, write_run_telemetry
+from ops.scripts.core.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_record_from_payload,
     decision_record_from_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .auto_improve_execute_runtime import ExecuteEvaluatePhaseResult
 from .auto_improve_iteration_telemetry_runtime import (
@@ -403,13 +403,13 @@ def _decision_record_from_source(vault: Path, run_id: str, source: object) -> di
             return decision_record if _decision_record_matches_run(decision_record, run_id) else None
         except PromotionDecisionRegistryError:
             pass
-    decision_record = source.get("decision_record")
-    if isinstance(decision_record, dict):
-        if not _decision_record_matches_run(decision_record, run_id):
+    raw_decision_record = source.get("decision_record")
+    if isinstance(raw_decision_record, dict):
+        if not _decision_record_matches_run(raw_decision_record, run_id):
             return None
         try:
             return decision_record_from_payload(
-                {"decision_record": decision_record},
+                {"decision_record": raw_decision_record},
                 require_record=True,
             )
         except PromotionDecisionRegistryError:

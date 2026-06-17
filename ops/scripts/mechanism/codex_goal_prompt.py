@@ -5,15 +5,15 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
-from ops.scripts.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .goal_contract_digest_runtime import semantic_goal_contract_digest
 

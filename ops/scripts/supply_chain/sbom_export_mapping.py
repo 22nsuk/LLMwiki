@@ -7,38 +7,48 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.export_public_repo import iter_public_files
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import SBOM_EXPORT_MAPPING_SCHEMA_PATH
-    from ops.scripts.supply_chain_provenance import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        SBOM_EXPORT_MAPPING_SCHEMA_PATH,
+    )
+    from ops.scripts.eval.wiki_manifest import (
+        build_manifest,
+        release_manifest_excludes_path,
+    )
+    from ops.scripts.public.export_public_repo import iter_public_files
+    from ops.scripts.supply_chain.supply_chain_provenance import (
         build_report as build_supply_chain_provenance_report,
     )
-    from ops.scripts.wiki_manifest import build_manifest, release_manifest_excludes_path
 else:
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.export_public_repo import iter_public_files
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import SBOM_EXPORT_MAPPING_SCHEMA_PATH
-    from ops.scripts.wiki_manifest import build_manifest, release_manifest_excludes_path
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        SBOM_EXPORT_MAPPING_SCHEMA_PATH,
+    )
+    from ops.scripts.eval.wiki_manifest import (
+        build_manifest,
+        release_manifest_excludes_path,
+    )
+    from ops.scripts.public.export_public_repo import iter_public_files
 
     from .supply_chain_provenance import (
         build_report as build_supply_chain_provenance_report,
@@ -314,11 +324,11 @@ def build_report(
         resolved_policy_path=resolved_policy_path,
         schema_path=SBOM_EXPORT_MAPPING_SCHEMA,
         source_paths=[
-            "ops/scripts/sbom_export_mapping.py",
-            "ops/scripts/export_public_repo.py",
-            "ops/scripts/supply_chain_provenance.py",
-            "ops/scripts/wiki_manifest.py",
-            "ops/scripts/artifact_freshness_runtime.py",
+            "ops/scripts/supply_chain/sbom_export_mapping.py",
+            "ops/scripts/public/export_public_repo.py",
+            "ops/scripts/supply_chain/supply_chain_provenance.py",
+            "ops/scripts/eval/wiki_manifest.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
         ],
         file_inputs={
             "ops_manifest": "ops/manifest.json",

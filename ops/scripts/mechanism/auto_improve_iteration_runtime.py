@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,

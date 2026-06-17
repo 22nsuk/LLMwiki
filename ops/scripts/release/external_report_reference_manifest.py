@@ -9,26 +9,26 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     resolve_schema_backed_report_output_path,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.path_portability_runtime import (
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.path_portability_runtime import (
     infozip_c_locale_escape_path,
     max_component_metric,
     python_unicode_escape_byte_len,
     utf8_byte_len,
 )
-from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    EXTERNAL_REPORT_REFERENCE_MANIFEST_SCHEMA_PATH,
+)
 from ops.scripts.release.external_report_inventory_runtime import (
     active_reference_report_paths,
-)
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
-    EXTERNAL_REPORT_REFERENCE_MANIFEST_SCHEMA_PATH,
 )
 
 PRODUCER = "ops.scripts.external_report_reference_manifest"
@@ -303,7 +303,7 @@ def build_report(
             source_command=request.source_command,
             resolved_policy_path=resolved_policy_path,
             schema_path=EXTERNAL_REPORT_REFERENCE_MANIFEST_SCHEMA_PATH,
-            source_paths=["ops/scripts/external_report_reference_manifest.py"],
+            source_paths=["ops/scripts/release/external_report_reference_manifest.py"],
             path_group_inputs={"external_reports": rel_paths},
             text_inputs={
                 "active_reference_set_status": active_reference_set["status"],

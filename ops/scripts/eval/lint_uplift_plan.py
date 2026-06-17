@@ -6,16 +6,16 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import STRICT_LINT_INVENTORY_SCHEMA_PATH
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import STRICT_LINT_INVENTORY_SCHEMA_PATH
 
 DEFAULT_OUT = "ops/reports/lint-uplift-plan.json"
 DEFAULT_TARGETS = "ops/scripts tests tools"
@@ -129,7 +129,10 @@ def build_report(
     enforced_select = _read_enforced_select(resolved_vault)
     enforced_rule_families = [family for family in strict_rule_families if family in enforced_select]
     family_counts = _audit_rule_family_counts(audit, strict_rule_families)
-    audit_summary = audit.get("summary") if isinstance(audit.get("summary"), dict) else {}
+    raw_audit_summary = audit.get("summary")
+    audit_summary: dict[str, Any] = (
+        raw_audit_summary if isinstance(raw_audit_summary, dict) else {}
+    )
     audit_status = str(audit.get("status", "missing")) if audit else "missing"
     status = "pass" if target_mode == "full_scope_targets" and audit_status == "pass" else "attention"
     return {
@@ -142,7 +145,7 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=STRICT_LINT_INVENTORY_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/lint_uplift_plan.py",
+                "ops/scripts/eval/lint_uplift_plan.py",
                 "tools/ruff_strict_preview.py",
                 "tools/strict_preview_audit.py",
                 "mk/static.mk",

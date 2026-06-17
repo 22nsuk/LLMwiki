@@ -8,7 +8,8 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.auto_improve_runtime import (
+    from ops.scripts.core.output_runtime import resolve_repo_output_path
+    from ops.scripts.mechanism.auto_improve_runtime import (
         AutoImproveError,
         AutoImproveUsageError,
         maintenance_action_resume_plan,
@@ -16,7 +17,6 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         run_auto_improve_session,
         write_maintenance_action_resume_plan,
     )
-    from ops.scripts.core.output_runtime import resolve_repo_output_path
 else:
     from ops.scripts.core.output_runtime import resolve_repo_output_path
 

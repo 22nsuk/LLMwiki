@@ -6,29 +6,31 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     read_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.mechanism_assess import (
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.python_function_budget_runtime import (
+    python_function_budget_candidates,
+)
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_or_raise,
+)
+from ops.scripts.mechanism.mechanism_assess import (
     MechanismAssessmentState,
     count_nonempty_lines,
     markdown_heading_count,
     python_branch_node_count,
     python_function_count,
     python_test_case_count,
-)
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.python_function_budget_runtime import python_function_budget_candidates
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
-    STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
-)
-from ops.scripts.schema_runtime import (
-    load_schema_with_vault_override,
-    validate_or_raise,
 )
 
 STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA = STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH

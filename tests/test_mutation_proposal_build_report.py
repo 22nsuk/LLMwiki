@@ -5,9 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.mechanism.mutation_proposal import main as mutation_proposal_main
 from ops.scripts.mechanism.mutation_proposal_runtime import (
     MUTATION_PROPOSAL_SOURCE_PATHS,
@@ -30,6 +29,8 @@ class MutationProposalBuildReportTest(unittest.TestCase):
             MUTATION_PROPOSAL_SOURCE_PATHS,
             [
                 "ops/scripts/mechanism/mutation_proposal_runtime.py",
+                "ops/scripts/mechanism/_mutation_proposal_next_run_repair_runtime.py",
+                "ops/scripts/mechanism/_mutation_proposal_render_runtime.py",
                 "ops/scripts/mechanism/mutation_proposal_bootstrap_runtime.py",
                 "ops/scripts/mechanism/mutation_proposal_candidate_runtime.py",
                 "ops/scripts/mechanism/mutation_proposal_loader_runtime.py",

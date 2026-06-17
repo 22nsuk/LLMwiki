@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.policy_runtime import report_path
 
 from .external_report_inventory_runtime import (
     ARCHIVE_STATUS_RE,

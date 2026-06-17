@@ -5,8 +5,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 
 ACTION_LIFECYCLE_RESOLVED = "resolved"
 ACTION_LIFECYCLE_HISTORICALLY_TRUE = "historically_true"

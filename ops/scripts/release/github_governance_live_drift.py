@@ -11,39 +11,43 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH,
     )
-    from ops.scripts.yaml_runtime import parse_simple_yaml
+    from ops.scripts.core.yaml_runtime import parse_simple_yaml
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH,
     )
-    from ops.scripts.yaml_runtime import parse_simple_yaml
+    from ops.scripts.core.yaml_runtime import parse_simple_yaml
 
 
 DEFAULT_OUT = "ops/reports/github-governance-live-drift.json"
-DEFAULT_LIVE_INPUT = "tmp/github-governance-live-input.json"
+DEFAULT_LIVE_INPUT = "build/release/github-governance-live-input.json"
 GOVERNANCE_CONTRACT_PATH = ".github/release-governance.yml"
 ARTIFACT_KIND = "github_governance_live_drift_verification"
 PRODUCER = "ops.scripts.github_governance_live_drift"
 SOURCE_COMMAND = (
     "python -m ops.scripts.release.github_governance_live_drift --vault . "
-    "--live-input tmp/github-governance-live-input.json "
+    "--live-input build/release/github-governance-live-input.json "
     "--out ops/reports/github-governance-live-drift.json"
 )
 BRANCH_PROTECTION_FIELDS = (
@@ -344,7 +348,7 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/github_governance_live_drift.py",
+                "ops/scripts/release/github_governance_live_drift.py",
                 GOVERNANCE_CONTRACT_PATH,
                 GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH,
             ],

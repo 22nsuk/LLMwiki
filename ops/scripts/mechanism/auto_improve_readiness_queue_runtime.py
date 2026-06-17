@@ -3,13 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_payload_runtime import embedded_artifact_envelope
-from ops.scripts.artifact_io_runtime import load_optional_json_object
-from ops.scripts.core.payload_field_runtime import dict_field
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.artifact_freshness_payload_runtime import (
+    embedded_artifact_envelope,
+)
+from ops.scripts.core.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_NONE,
 )
+from ops.scripts.core.payload_field_runtime import dict_field
 
 from .auto_improve_queue_runtime import build_proposal_queue
 from .auto_improve_readiness_constants_runtime import (

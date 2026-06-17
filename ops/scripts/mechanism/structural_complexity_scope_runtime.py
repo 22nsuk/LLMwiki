@@ -7,8 +7,8 @@ from ops.scripts.core.path_classification_runtime import (
     SOURCE_CONTRACT_CATEGORIES,
     classify_path,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.structural_complexity_budget_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.eval.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,
     build_report as build_structural_complexity_budget_report,
     touched_target_profiles,

@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import MUTATION_PROPOSAL_SCHEMA_PATH
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import MUTATION_PROPOSAL_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )

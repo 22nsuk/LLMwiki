@@ -8,23 +8,23 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
-from ops.scripts.core.release_currentness_state_runtime import (
-    components_match_current_source_tree,
-    currentness_field,
-)
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
     canonical_gate_effect,
 )
-from ops.scripts.learning_readiness_vocabulary import (
-    LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
-    LEARNING_STATUS_LIKELY,
+from ops.scripts.core.release_currentness_state_runtime import (
+    components_match_current_source_tree,
+    currentness_field,
 )
-from ops.scripts.source_tree_fingerprint_runtime import (
+from ops.scripts.core.source_tree_fingerprint_runtime import (
     producer_input_fingerprint,
     release_source_tree_divergence_diagnostics,
+)
+from ops.scripts.learning.learning_readiness_vocabulary import (
+    LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
+    LEARNING_STATUS_LIKELY,
 )
 
 from .release_closeout_envelope_runtime import FIXED_POINT_POLICY_PATH

@@ -6,10 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.codex_goal_client import FileGoalBackend
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import AUTO_IMPROVE_SESSION_SCHEMA_PATH
+from ops.scripts.core.codex_goal_client import FileGoalBackend
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import AUTO_IMPROVE_SESSION_SCHEMA_PATH
 
 from .auto_improve_error_runtime import AutoImproveUsageError
 from .auto_improve_loop_decision_runtime import (

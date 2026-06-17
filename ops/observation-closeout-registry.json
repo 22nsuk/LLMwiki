@@ -3,58 +3,40 @@
   "artifact_kind": "observation_closeout_registry",
   "retained_observations": [
     {
-      "path": "ops/reports/task-improvement-observations/task-20260610-active-matrix-priority-plan/improvement-observations.json",
-      "observation_id": "active_matrix_priority_lane_coordination_gap",
-      "status": "planned",
-      "retained_reason": "The active action matrix now mixes release authority, artifact freshness, fixture cost, compatibility alias, and external-verification work; closing this observation before lane sequencing would hide the coordination risk.",
-      "next_action": "Continue one active-matrix lane at a time for the 10 currently-valid actions: first release-run authority binding, then goal-runtime certificate, artifact-freshness attention, maintainability source-action lanes, and operator-only supply-chain/GitHub governance evidence; refresh external-report-action-matrix after each completed lane instead of adding coordination reports.",
-      "exit_condition": "Close when the active matrix no longer needs a separate priority coordination note because the remaining active actions have current owner lanes and blocking scopes.",
-      "owner_or_lane": "active-matrix-priority-coordination"
-    },
-    {
       "path": "ops/reports/task-improvement-observations/task-20260610-runtime-decomposition-closeout/improvement-observations.json",
       "observation_id": "flat_import_reexport_migration_remaining",
       "status": "planned",
-      "retained_reason": "Compatibility alias cleanup is intentionally incremental because removing flat imports without caller inventory would turn a maintenance lane into a broad interface migration.",
-      "next_action": "Continue lane-based hotspot decomposition for external_report_lifecycle, release_closeout_batch_manifest, and goal_runtime_run_admission; refresh compatibility-alias inventory on each touched hotspot.",
+      "retained_reason": "The current compatibility-alias inventory still has 368 flat re-export aliases, 919 actual caller records, and removal_ready_count=0 after the release, supply-chain, eval, mechanism, and registry owner lanes were migrated, so this remains a real interface-migration backlog rather than a closable stale note.",
+      "next_action": "Use ops/scripts/core/_compatibility_alias_import_codemod.py for inventory-driven owner-scope import codemods instead of file-by-file edits; keep migration to Python import statements and verified source-path metadata, then only mark an alias removal-ready after a focused caller/support-contract check.",
       "exit_condition": "Close when the compatibility-alias inventory has no remaining flat import re-export entries or each remaining alias has an explicit retained support contract.",
       "owner_or_lane": "compatibility-alias-inventory"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-20260611-active-report-long-term-plan/improvement-observations.json",
-      "observation_id": "long_term_plan_needs_lanes_not_more_reports",
-      "status": "planned",
-      "retained_reason": "This is the umbrella execution guard for the current long-term active-matrix cleanup; closing it would encourage new narrative reports instead of lane work.",
-      "next_action": "Keep executing the active matrix as lanes, not narrative reports: release-run authority binding, goal-runtime certificate, artifact-freshness attention, maintainability hotspot/service-layer source work, and operator-only supply-chain/GitHub governance evidence. Fold completed P1 decomposition slices into the runtime plan and refresh external-report-action-matrix after each lane.",
-      "exit_condition": "Close when the active matrix blockers are either resolved, explicitly operator-dependent, or represented by narrower retained observations.",
-      "owner_or_lane": "long-term-active-report-lane-execution"
     },
     {
       "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
       "observation_id": "release_authority_operator_lane_remains_for_matrix_closure",
       "status": "planned",
-      "retained_reason": "The refreshed action matrix still has release-run, sealed-release, supply-chain, and GitHub governance blockers that require official release/operator lanes rather than more source-only refactoring.",
-      "next_action": "Run the official release verification lane when operator context is available; until then keep github-governance-live-drift and supply-chain external verification as recorded operator dependencies.",
-      "exit_condition": "Close when release-run/sealed-release manifests are current and pass, and supply-chain plus GitHub governance external verification either have current operator evidence or are explicitly retained as operator-only non-blocking risks.",
+      "retained_reason": "The current action matrix has no local source-action, freshness, release-run, or certificate blockers, but still has two operator/external-authority blockers: GitHub governance live evidence and supply-chain Sigstore bundle verification.",
+      "next_action": "Provide current GitHub governance evidence through build/release/github-governance-live-input.json/collaboration-governance and provide a Sigstore bundle with SIGSTORE_BUNDLE_REF=<bundle>, then run operator-evidence-closeout-current-or-refresh.",
+      "exit_condition": "Close when both active action-matrix items have current operator/external evidence or are explicitly retained as accepted operator-only risks.",
       "owner_or_lane": "release-authority-operator-lane"
     },
     {
       "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
       "observation_id": "hotspot_decomposition_next_lanes_remain",
       "status": "planned",
-      "retained_reason": "P1 decomposition made progress, but the runtime plan still has concrete next helper lanes for mutation proposal, auto-improve, and readiness ownership that should be executed incrementally.",
-      "next_action": "Next lanes: mutation_proposal repair/queue-pressure helper, auto_improve promotion/stop-condition helper, auto_improve_readiness report-loading split.",
-      "exit_condition": "Close when those hotspot next lanes are either implemented with focused tests and runtime-hotspot golden coverage, or replaced by narrower retained observations in the runtime decomposition plan.",
+      "retained_reason": "The runtime decomposition plan still lists a concrete next-safe move for auto_improve_readiness after the mutation proposal and auto_improve maintenance completion splits, so hotspot cleanup remains actionable but must stay lane-sized.",
+      "next_action": "Execute the current readiness lane only after a concrete churn/failure signal: auto_improve_readiness summary preparation with focused readiness tests and runtime-hotspot golden coverage.",
+      "exit_condition": "Close when those hotspot next lanes are implemented with focused tests and runtime-hotspot golden coverage, or replaced by narrower retained observations in the runtime decomposition plan.",
       "owner_or_lane": "runtime-hotspot-decomposition"
     },
     {
-      "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
-      "observation_id": "goal_certificate_admission_requires_structural_slice",
+      "path": "ops/reports/task-improvement-observations/raw-intake-2026-06-17/improvement-observations.json",
+      "observation_id": "raw-intake-route-classifier-term-boundaries",
       "status": "planned",
-      "retained_reason": "The promotion certificate lane is blocked at admission by selected proposals that touch over-budget runtime surfaces; retaining this keeps the next attempt focused on a bounded structural slice before rerunning the goal runtime.",
-      "next_action": "Split or re-scope the selected goal certificate repair proposals, rerun goal-runtime-run-admission with the same explicit GOAL_RUN_ID, and only start auto-improve-goal-run after can_start_goal_runtime is true.",
-      "exit_condition": "Close when goal-runtime-run-admission passes start checks for the explicit promotion certificate run id and the resulting run can produce completed status, command heartbeat, and verified contract evidence.",
-      "owner_or_lane": "goal-runtime-certificate-promotion"
+      "retained_reason": "The raw-intake 2026-06-17 observation remains open because broad term matching overmatched unrelated source titles and there is not yet a report-only route audit before source page generation.",
+      "next_action": "Add a raw intake route proposal/audit report that records candidate route, matched rule, confidence, and manual override reason before source pages are generated.",
+      "exit_condition": "Close when raw intake routing emits reviewable route proposal evidence before source page generation or the classifier no longer uses broad substring rules without an audit trail.",
+      "owner_or_lane": "raw-intake-routing"
     }
   ]
 }

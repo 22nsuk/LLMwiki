@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ops.scripts.core.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
 from ops.scripts.core.payload_field_runtime import dict_field
-from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
 
 
 def _int_value(value: object, default: int = 0) -> int:

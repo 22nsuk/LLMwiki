@@ -8,37 +8,37 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.filesystem_runtime import (
+    from ops.scripts.core.filesystem_runtime import (
         AtomicTextUpdate,
         atomic_multi_write,
         build_atomic_text_updates,
     )
-    from ops.scripts.observability_artifacts_runtime import (
+    from ops.scripts.core.observability_artifacts_runtime import (
         write_run_artifact_fingerprint,
     )
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         PROMOTION_REPORT_SCHEMA_PATH,
         RUN_LEDGER_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import load_schema, validate_or_raise
+    from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 else:
-    from ops.scripts.filesystem_runtime import (
+    from ops.scripts.core.filesystem_runtime import (
         AtomicTextUpdate,
         atomic_multi_write,
         build_atomic_text_updates,
     )
-    from ops.scripts.observability_artifacts_runtime import (
+    from ops.scripts.core.observability_artifacts_runtime import (
         write_run_artifact_fingerprint,
     )
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         PROMOTION_REPORT_SCHEMA_PATH,
         RUN_LEDGER_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import load_schema, validate_or_raise
+    from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 
 
 PROMOTION_REPORT_SCHEMA = PROMOTION_REPORT_SCHEMA_PATH

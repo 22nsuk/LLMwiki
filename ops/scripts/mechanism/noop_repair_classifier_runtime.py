@@ -4,11 +4,13 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.command_log_summary_runtime import (
+from ops.scripts.core.command_log_summary_runtime import (
     command_log_stream_has_flag,
     command_log_stream_text,
 )
-from ops.scripts.executor_noop_runtime import text_has_executor_noop_mutation_failure
+from ops.scripts.core.executor_noop_runtime import (
+    text_has_executor_noop_mutation_failure,
+)
 
 from .auto_improve_next_run_decision_runtime import (
     NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE,

@@ -5,19 +5,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import canonical_report_loading_issue
-from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagnostics
-from ops.scripts.learning_readiness_vocabulary import (
-    LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
+from ops.scripts.core.artifact_freshness_runtime import canonical_report_loading_issue
+from ops.scripts.core.artifact_io_runtime import (
+    load_optional_json_object_with_diagnostics,
 )
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import LEARNING_READINESS_SIGNOFF_SCHEMA_PATH
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    LEARNING_READINESS_SIGNOFF_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
+from ops.scripts.learning.learning_readiness_vocabulary import (
+    LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
+)
 
 from .release_closeout_render_runtime import (
     CloseoutEnvelopeInputs,

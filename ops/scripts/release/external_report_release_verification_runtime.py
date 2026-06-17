@@ -5,6 +5,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
+from ops.scripts.core.policy_runtime import report_path
 from ops.scripts.core.release_authority_state_runtime import (
     RELEASE_AUTHORITY_VERIFIED_STATUSES,
     authoritative_live_rerun_fail_count,
@@ -22,10 +24,10 @@ from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
-from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 
 from .external_report_inventory_runtime import (
     REFERENCE_MANIFEST,

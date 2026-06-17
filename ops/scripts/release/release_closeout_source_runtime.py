@@ -4,8 +4,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import canonical_report_loading_issue
-from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagnostics
+from ops.scripts.core.artifact_freshness_runtime import canonical_report_loading_issue
+from ops.scripts.core.artifact_io_runtime import (
+    load_optional_json_object_with_diagnostics,
+)
 
 from .release_closeout_risk_runtime import release_closeout_issue
 

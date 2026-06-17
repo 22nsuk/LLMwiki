@@ -11,12 +11,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagnostics
+from ops.scripts.core.artifact_io_runtime import (
+    load_optional_json_object_with_diagnostics,
+)
 from ops.scripts.core.release_authority_state_runtime import (
     release_status_v2_view_with_readiness_fallback,
 )
 from ops.scripts.core.release_currentness_state_runtime import currentness_field
 from ops.scripts.core.request_coercion_runtime import coerce_request_or_kwargs
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
@@ -25,7 +28,6 @@ from ops.scripts.learning.learning_readiness_signoff_state import (
     learning_readiness_signoff_summary,
 )
 from ops.scripts.release.release_run_manifest import remote_sync as read_remote_sync
-from ops.scripts.runtime_context import RuntimeContext
 
 STATUS_KEYS = (
     "source_closeout",

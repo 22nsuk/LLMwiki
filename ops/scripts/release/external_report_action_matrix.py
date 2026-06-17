@@ -9,14 +9,33 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.external_report_lifecycle_runtime import (
+    from ops.scripts.core.gate_effect_vocabulary import (
+        GATE_EFFECT_NONE,
+        GATE_EFFECTS,
+        strongest_gate_effect,
+    )
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.release.external_report_action_catalog import (
+        ACTION_CATALOG,
+        SPRINT_PRIORITIES,
+    )
+    from ops.scripts.release.external_report_inventory_runtime import (
+        REFERENCE_MANIFEST,
+        active_report_paths,
+        archived_report_count,
+        archived_report_paths,
+        reference_manifest_alignment,
+    )
+    from ops.scripts.release.external_report_lifecycle_runtime import (
         action_status_reason_details,
         action_status_reason_ids,
         archive_reconciliation_observation_inventory,
@@ -29,39 +48,22 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         report_coverage_item,
         status_from_evidence,
     )
-    from ops.scripts.gate_effect_vocabulary import (
-        GATE_EFFECT_NONE,
-        GATE_EFFECTS,
-        strongest_gate_effect,
-    )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.release.external_report_action_catalog import (
-        ACTION_CATALOG,
-        SPRINT_PRIORITIES,
-    )
-    from ops.scripts.release.external_report_inventory_runtime import (
-        REFERENCE_MANIFEST,
-        active_report_paths,
-        archived_report_count,
-        archived_report_paths,
-        reference_manifest_alignment,
-    )
-    from ops.scripts.runtime_context import RuntimeContext
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.gate_effect_vocabulary import (
+    from ops.scripts.core.gate_effect_vocabulary import (
         GATE_EFFECT_NONE,
         GATE_EFFECTS,
         strongest_gate_effect,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
 
     from .external_report_action_catalog import ACTION_CATALOG, SPRINT_PRIORITIES
     from .external_report_inventory_runtime import (
@@ -603,11 +605,11 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/external_report_action_matrix.py",
-                "ops/scripts/external_report_action_catalog.py",
-                "ops/scripts/external_report_inventory_runtime.py",
-                "ops/scripts/external_report_lifecycle_runtime.py",
-                "ops/scripts/external_report_reference_manifest.py",
+                "ops/scripts/release/external_report_action_matrix.py",
+                "ops/scripts/release/external_report_action_catalog.py",
+                "ops/scripts/release/external_report_inventory_runtime.py",
+                "ops/scripts/release/external_report_lifecycle_runtime.py",
+                "ops/scripts/release/external_report_reference_manifest.py",
             ],
             file_inputs={
                 "external_report_reference_manifest": REFERENCE_MANIFEST,

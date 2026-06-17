@@ -5,9 +5,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.raw_registry_preflight import (
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
+)
+from ops.scripts.core.script_output_surfaces import (
+    DEFAULT_OUT as SCRIPT_OUTPUT_SURFACES_TARGET,
+    build_registry as build_script_output_surface_registry,
+    write_registry as write_script_output_surface_registry,
+)
+from ops.scripts.registry.raw_registry_preflight import (
     DEFAULT_OUT as RAW_REGISTRY_PREFLIGHT_REPORT_OUT,
     REPRODUCIBILITY_DEFAULT_OUT as RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_OUT,
     build_reproducibility_report,
@@ -15,15 +24,6 @@ from ops.scripts.raw_registry_preflight import (
     preflight as raw_registry_preflight,
     write_report as write_raw_registry_preflight_report,
     write_reproducibility_report,
-)
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
-    GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
-)
-from ops.scripts.script_output_surfaces import (
-    DEFAULT_OUT as SCRIPT_OUTPUT_SURFACES_TARGET,
-    build_registry as build_script_output_surface_registry,
-    write_registry as write_script_output_surface_registry,
 )
 
 from .mechanism_run_common_runtime import (

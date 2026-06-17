@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.policy_runtime import (
+from ops.scripts.core.policy_runtime import (
     workspace_preparation_declared_dependencies_from_policy,
     workspace_preparation_mode_from_policy,
 )
-from ops.scripts.promotion_decision_registry_runtime import decision_from_report
-from ops.scripts.run_id_runtime import reject_template_placeholder_run_id
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.promotion_decision_registry_runtime import decision_from_report
+from ops.scripts.core.run_id_runtime import reject_template_placeholder_run_id
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .mechanism_run_capture_runtime import (
     _capture_baseline_step,

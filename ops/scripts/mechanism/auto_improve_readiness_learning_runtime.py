@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_NONE,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
 )
-from ops.scripts.learning_readiness_vocabulary import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.learning.learning_readiness_vocabulary import (
     LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID,
     LEARNING_STATUS_LIKELY,
     LEARNING_STATUS_NOT_RUNNABLE,
@@ -18,7 +19,6 @@ from ops.scripts.learning_readiness_vocabulary import (
     is_signoff_supported_learning_blocker_id,
     learning_blocker_id_for_status,
 )
-from ops.scripts.policy_runtime import report_path
 
 from .auto_improve_readiness_constants_runtime import (
     AUTO_IMPROVE_GOAL_ALLOW_LEARNING_UNCERTAIN_COMMAND,

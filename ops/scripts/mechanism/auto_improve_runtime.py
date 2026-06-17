@@ -8,29 +8,36 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
     write_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.experiment_telemetry_runtime import append_ledger_event
-from ops.scripts.observability_artifacts_runtime import (
+from ops.scripts.core.experiment_telemetry_runtime import append_ledger_event
+from ops.scripts.core.observability_artifacts_runtime import (
     write_outcome_metrics_report,
     write_promotion_decision_trends,
     write_run_artifact_fingerprint,
 )
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.proposal_scope_runtime import build_scope_freeze, write_scope_freeze
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.runtime_event_logging_runtime import append_runtime_event
-from ops.scripts.subagent_routing_runtime import run_selector
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.proposal_scope_runtime import (
+    build_scope_freeze,
+    write_scope_freeze,
+)
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_event_logging_runtime import append_runtime_event
+from ops.scripts.core.subagent_routing_runtime import run_selector
 
 from . import (
     auto_improve_learning_preflight_runtime as _learning_preflight_runtime,
     auto_improve_session_report_runtime as _session_report_runtime,
     auto_improve_session_start_runtime as _session_start_runtime,
+)
+from ._auto_improve_maintenance_completion_runtime import (
+    maintenance_already_reached_completion as _maintenance_already_reached_completion,
+    maintenance_completion as _maintenance_completion,
 )
 from .auto_improve_error_runtime import (
     AutoImproveError as AutoImproveError,
@@ -73,7 +80,6 @@ from .auto_improve_maintenance_decision_runtime import (
     MAINTENANCE_ACTION_RUNNER_ACTION as MAINTENANCE_ACTION_RUNNER_ACTION,
     STABLE_MAINTENANCE_QUEUE_THRESHOLD as STABLE_MAINTENANCE_QUEUE_THRESHOLD,
     _initial_maintenance_payload,
-    _maintenance_completion_stop_reason,
     _maintenance_cycle_count,
     _maintenance_cycle_queue_metadata,
     _maintenance_terminal_completion_condition,
@@ -712,9 +718,11 @@ def _run_proposal_budget_maintenance(
     ).strip()
     _write_session_report(vault, start.session, context=start.context)
     if expected_min_cycle_count == 0:
-        start.session["maintenance"]["status"] = "complete"
-        start.session["maintenance"]["completed_at"] = start.context.isoformat_z()
-        start.session["maintenance"]["stop_reason"] = "time_budget_already_reached"
+        completion = _maintenance_already_reached_completion(
+            start.session,
+            completed_at=start.context.isoformat_z(),
+        )
+        start.session["maintenance"] = completion.maintenance
         _write_session_report(vault, start.session, context=start.context)
         return
 
@@ -740,15 +748,15 @@ def _run_proposal_budget_maintenance(
             break
         time.sleep(min(interval_seconds, target_elapsed_seconds - elapsed_seconds))
 
-    maintenance = dict(_mapping_value(start.session, "maintenance"))
-    maintenance["status"] = "complete"
-    maintenance["completed_at"] = start.context.isoformat_z()
-    maintenance["completion_condition"] = completion_condition
-    maintenance["stop_reason"] = _maintenance_completion_stop_reason(completion_condition)
-    maintenance["last_cycle_elapsed_seconds"] = int(time.monotonic() - state.start_monotonic)
-    start.session["maintenance"] = maintenance
-    if maintenance["stop_reason"] == "time_budget_reached":
-        state.stop_reason = "time_budget_exhausted"
+    completion = _maintenance_completion(
+        start.session,
+        completion_condition=completion_condition,
+        completed_at=start.context.isoformat_z(),
+        last_cycle_elapsed_seconds=int(time.monotonic() - state.start_monotonic),
+    )
+    start.session["maintenance"] = completion.maintenance
+    if completion.loop_stop_reason is not None:
+        state.stop_reason = completion.loop_stop_reason
     _write_session_report(vault, start.session, context=start.context)
 
 

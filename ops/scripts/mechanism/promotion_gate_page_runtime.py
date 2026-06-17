@@ -4,8 +4,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.rule_registry_runtime import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.rule_registry_runtime import (
     RuleMetadata,
     RuleSpec,
     collapse_rule_decision_contract,
@@ -14,9 +14,9 @@ from ops.scripts.rule_registry_runtime import (
     evaluate_rule_registry,
     status_rule_reducer,
 )
-from ops.scripts.wiki_eval import evaluate as evaluate_wiki
-from ops.scripts.wiki_lint import lint as lint_wiki
-from ops.scripts.wiki_stage2_eval import evaluate as evaluate_stage2
+from ops.scripts.eval.wiki_eval import evaluate as evaluate_wiki
+from ops.scripts.eval.wiki_lint import lint as lint_wiki
+from ops.scripts.eval.wiki_stage2_eval import evaluate as evaluate_stage2
 
 from .promotion_gate_common_runtime import (
     PROMOTION_REPORT_SCHEMA,

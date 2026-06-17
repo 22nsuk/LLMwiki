@@ -9,18 +9,25 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.advisory_lifecycle_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        load_optional_json_object_with_diagnostics,
+        write_schema_backed_report,
+    )
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        RELEASE_EVIDENCE_DASHBOARD_SCHEMA_PATH,
+    )
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
+    from ops.scripts.release.advisory_lifecycle_runtime import (
         ADVISORY_LIFECYCLE_NOT_APPLICABLE,
         advisory_lifecycle_assessment,
         advisory_lifecycle_summary,
     )
-    from ops.scripts.artifact_io_runtime import (
-        SchemaBackedReportWriteRequest,
-        load_optional_json_object_with_diagnostics,
-        write_schema_backed_report,
-    )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
     from ops.scripts.release.release_evidence_dashboard_closeout_runtime import (
         closeout_decision_gate,
         closeout_input_status,
@@ -47,22 +54,22 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         dashboard_status_counts,
         signoff_revalidation_gate,
         test_failure_lane_gate,
-    )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
-        RELEASE_EVIDENCE_DASHBOARD_SCHEMA_PATH,
-    )
-    from ops.scripts.source_tree_fingerprint_runtime import (
-        release_source_tree_fingerprint,
     )
 else:
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        RELEASE_EVIDENCE_DASHBOARD_SCHEMA_PATH,
+    )
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
     from ops.scripts.release.release_evidence_dashboard_closeout_runtime import (
         closeout_decision_gate,
         closeout_input_status,
@@ -89,13 +96,6 @@ else:
         dashboard_status_counts,
         signoff_revalidation_gate,
         test_failure_lane_gate,
-    )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
-        RELEASE_EVIDENCE_DASHBOARD_SCHEMA_PATH,
-    )
-    from ops.scripts.source_tree_fingerprint_runtime import (
-        release_source_tree_fingerprint,
     )
 
     from .advisory_lifecycle_runtime import (

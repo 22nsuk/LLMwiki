@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ops.scripts.filesystem_runtime import (
+from ops.scripts.core.filesystem_runtime import (
     AtomicTextUpdate,
     atomic_multi_write,
     build_atomic_text_updates,

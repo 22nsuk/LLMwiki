@@ -5,8 +5,9 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from ops.scripts.core.experiment_telemetry_runtime import run_rel
 from ops.scripts.core.request_coercion_runtime import coerce_request_or_kwargs
-from ops.scripts.experiment_telemetry_runtime import run_rel
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     blocking_role_for_failure_taxonomy,
     failure_taxonomy_from_outcome,
@@ -14,7 +15,6 @@ from ops.scripts.mechanism.failure_taxonomy_runtime import (
     is_retryable_failure_taxonomy,
     is_settle_failure_taxonomy,
 )
-from ops.scripts.runtime_context import RuntimeContext
 
 NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE = "next_run_failure_repair"
 NEXT_RUN_FAILURE_REPAIR_SOURCE_CANDIDATE_TYPE = "auto_improve_next_run_decision_candidate"

@@ -7,18 +7,18 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_CLAIM_BLOCKER,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
 )
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.workflow_dependency_planner import (
+    build_report as build_workflow_dependency_report,
+)
 from ops.scripts.mechanism.goal_contract_digest_runtime import (
     semantic_goal_contract_digest,
-)
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.workflow_dependency_planner import (
-    build_report as build_workflow_dependency_report,
 )
 
 from .external_report_action_catalog import (

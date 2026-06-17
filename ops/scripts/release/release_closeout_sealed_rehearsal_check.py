@@ -10,14 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     resolve_repo_artifact_path,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .release_authority_vocabulary import legacy_sealed_rehearsal_reason_id
 from .release_status_v2 import release_status_v2_view

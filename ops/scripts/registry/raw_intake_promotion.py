@@ -8,20 +8,20 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import resolve_repo_artifact_path
-    from ops.scripts.output_runtime import resolve_output_path, write_output_text
-    from ops.scripts.raw_intake_promotion_runtime import (
+    from ops.scripts.core.artifact_io_runtime import resolve_repo_artifact_path
+    from ops.scripts.core.output_runtime import resolve_output_path, write_output_text
+    from ops.scripts.core.schema_constants_runtime import (
+        RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
+    )
+    from ops.scripts.registry.raw_intake_promotion_runtime import (
         render_family_pages,
         scaffold_profile_bundle,
         validate_profile_bundle,
     )
-    from ops.scripts.schema_constants_runtime import (
-        RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
-    )
 else:
-    from ops.scripts.artifact_io_runtime import resolve_repo_artifact_path
-    from ops.scripts.output_runtime import resolve_output_path, write_output_text
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.artifact_io_runtime import resolve_repo_artifact_path
+    from ops.scripts.core.output_runtime import resolve_output_path, write_output_text
+    from ops.scripts.core.schema_constants_runtime import (
         RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
     )
 

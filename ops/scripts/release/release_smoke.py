@@ -19,61 +19,73 @@ from typing import Any, cast
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         describe_output_file,
         read_json_object,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import run_with_timeout
-    from ops.scripts.output_runtime import display_path, resolve_output_path
-    from ops.scripts.path_portability_runtime import (
+    from ops.scripts.core.command_runtime import run_with_timeout
+    from ops.scripts.core.output_runtime import display_path, resolve_output_path
+    from ops.scripts.core.path_portability_runtime import (
         INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT,
         infozip_c_locale_escape_byte_len,
         python_unicode_escape_byte_len,
         utf8_byte_len,
     )
-    from ops.scripts.policy_runtime import (
+    from ops.scripts.core.policy_runtime import (
         load_policy,
         release_archive_root_name_from_policy,
         zip_normalization_from_policy,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
-    from ops.scripts.schema_runtime import load_schema, validate_with_schema
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
+    from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
-    from ops.scripts.wiki_manifest import build_manifest, exclusion_policy, sha256_file
+    from ops.scripts.eval.wiki_manifest import (
+        build_manifest,
+        exclusion_policy,
+        sha256_file,
+    )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         describe_output_file,
         read_json_object,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import run_with_timeout
-    from ops.scripts.output_runtime import display_path, resolve_output_path
-    from ops.scripts.path_portability_runtime import (
+    from ops.scripts.core.command_runtime import run_with_timeout
+    from ops.scripts.core.output_runtime import display_path, resolve_output_path
+    from ops.scripts.core.path_portability_runtime import (
         INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT,
         infozip_c_locale_escape_byte_len,
         python_unicode_escape_byte_len,
         utf8_byte_len,
     )
-    from ops.scripts.policy_runtime import (
+    from ops.scripts.core.policy_runtime import (
         load_policy,
         release_archive_root_name_from_policy,
         zip_normalization_from_policy,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
-    from ops.scripts.schema_runtime import load_schema, validate_with_schema
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
+    from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
-    from ops.scripts.wiki_manifest import build_manifest, exclusion_policy, sha256_file
+    from ops.scripts.eval.wiki_manifest import (
+        build_manifest,
+        exclusion_policy,
+        sha256_file,
+    )
 
 
 RELEASE_SMOKE_SCHEMA = RELEASE_SMOKE_SCHEMA_PATH
@@ -1029,9 +1041,9 @@ def _render_release_smoke_report(request: ReleaseSmokeReportRequest) -> dict[str
             resolved_policy_path=request.resolved_policy_path,
             schema_path=RELEASE_SMOKE_SCHEMA,
             source_paths=[
-                "ops/scripts/release_smoke.py",
-                "ops/scripts/command_runtime.py",
-                "ops/scripts/wiki_manifest.py",
+                "ops/scripts/release/release_smoke.py",
+                "ops/scripts/core/command_runtime.py",
+                "ops/scripts/eval/wiki_manifest.py",
             ],
         ),
         "vault": display_path(request.vault, request.vault),
@@ -1129,9 +1141,9 @@ def _render_partial_release_smoke_report(
             resolved_policy_path=request.resolved_policy_path,
             schema_path=RELEASE_SMOKE_SCHEMA,
             source_paths=[
-                "ops/scripts/release_smoke.py",
-                "ops/scripts/command_runtime.py",
-                "ops/scripts/wiki_manifest.py",
+                "ops/scripts/release/release_smoke.py",
+                "ops/scripts/core/command_runtime.py",
+                "ops/scripts/eval/wiki_manifest.py",
             ],
         ),
         "vault": display_path(request.vault, request.vault),
@@ -1213,9 +1225,9 @@ def _expected_envelope(
         resolved_policy_path=resolved_policy_path,
         schema_path=RELEASE_SMOKE_SCHEMA,
         source_paths=[
-            "ops/scripts/release_smoke.py",
-            "ops/scripts/command_runtime.py",
-            "ops/scripts/wiki_manifest.py",
+            "ops/scripts/release/release_smoke.py",
+            "ops/scripts/core/command_runtime.py",
+            "ops/scripts/eval/wiki_manifest.py",
         ],
     )
 

@@ -7,10 +7,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.workflow_dependency_planner import build_report, write_report
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.workflow_dependency_planner import build_report, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -296,20 +296,23 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [step["target"] for step in workflow["steps"]],
             [
                 "workflow-dependency-planner",
+                "release-authority-sealed-preflight",
+                "release-terminal-finality",
+            ],
+        )
+        self.assertEqual(
+            workflow["steps"][2]["fanout_targets"],
+            [
                 "generated-artifact-finality-suffix",
                 "release-closeout-summary-report",
                 "release-closeout-fixed-point",
-                "tmp-json-clean",
+                "release-closeout-post-check-finalizer-dry-run",
                 "release-closeout-finality-verify",
             ],
         )
         self.assertEqual(
-            workflow["steps"][1]["fanout_targets"],
-            [
-                "artifact-freshness",
-                "external-report-action-matrix",
-                "generated-artifact-index",
-            ],
+            workflow["steps"][2]["primary_report"],
+            "ops/reports/release-closeout-finality-attestation.json",
         )
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
 
@@ -325,12 +328,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             (
                 "ops/reports/generated-artifact-index.json",
                 "canonical_report_finalization",
-                "generated-artifact-finality-suffix",
+                "release-terminal-finality",
                 "canonical_report_finality_suffix_changed",
                 [
-                    "artifact-freshness",
-                    "external-report-action-matrix",
-                    "generated-artifact-index",
+                    "generated-artifact-finality-suffix",
+                    "release-closeout-summary-report",
+                    "release-closeout-fixed-point",
+                    "release-closeout-post-check-finalizer-dry-run",
+                    "release-closeout-finality-verify",
                 ],
             ),
             (
@@ -376,10 +381,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(workflow["recommended_lane"], "release-finality-resettle")
         self.assertEqual(
             [step["target"] for step in workflow["steps"][:2]],
-            ["workflow-dependency-planner", "generated-artifact-finality-suffix"],
+            ["workflow-dependency-planner", "release-authority-sealed-preflight"],
         )
-        self.assertIn("release-closeout-fixed-point", [step["target"] for step in workflow["steps"]])
-        self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-closeout-finality-verify")
+        self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-terminal-finality")
 
     def test_planner_closeout_steps_are_derived_from_fixed_point_policy(self) -> None:
         self._write_fixed_point_policy()
