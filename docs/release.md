@@ -341,6 +341,35 @@ This lane uses stable JSONL artifact-freshness progress so long scans emit
 heartbeat events without writing nondeterministic phase durations into the
 canonical freshness report.
 
+When GitHub repository rulesets are the authority instead of classic branch
+protection, the live input may provide a sanitized `branch_rules` map. Keep only
+the rule `type` values and non-secret parameters needed for the contract:
+
+```json
+{
+  "branch_rules": {
+    "main": [
+      {"type": "deletion"},
+      {"type": "non_fast_forward"},
+      {"type": "required_linear_history"},
+      {
+        "type": "pull_request",
+        "parameters": {"required_approving_review_count": 1}
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "required_status_checks": [
+            {"context": "fast / py3.12"}
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
 Working branches are pushed with `git push -u origin HEAD:<working-branch>`.
 After push, attach the GitHub Actions workflow run and combined status check to
 the pushed commit. Attachment service/configuration failures are recorded under

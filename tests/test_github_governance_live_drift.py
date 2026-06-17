@@ -128,6 +128,61 @@ class GitHubGovernanceLiveDriftTests(unittest.TestCase):
             )
             self.assertTrue(report["live_input"]["available"])
 
+    def test_build_report_accepts_branch_ruleset_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            self._seed_governance_contract(vault)
+            live_input = self._seed_live_input(
+                vault,
+                {
+                    "branch_rules": {
+                        "main": [
+                            {"type": "deletion"},
+                            {"type": "non_fast_forward"},
+                            {"type": "required_linear_history"},
+                            {
+                                "type": "pull_request",
+                                "parameters": {
+                                    "required_approving_review_count": 1,
+                                },
+                            },
+                            {
+                                "type": "required_status_checks",
+                                "parameters": {
+                                    "strict_required_status_checks_policy": True,
+                                    "required_status_checks": [
+                                        {"context": "dependency review"},
+                                        {"context": "fast / py3.12"},
+                                    ],
+                                },
+                            },
+                        ]
+                    }
+                },
+            )
+
+            report = build_report(vault, live_input=live_input, context=fixed_context())
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["protected_branches"]["observed"], ["main"])
+            self.assertEqual(report["required_status_checks"]["missing"], [])
+            self.assertEqual(report["summary"]["mismatched_branch_protection_count"], 0)
+            self.assertEqual(
+                report["branch_protection"][0]["observed"],
+                {
+                    "require_pull_request": True,
+                    "require_review_before_merge": True,
+                    "require_required_status_checks": True,
+                    "require_branches_up_to_date": True,
+                    "require_linear_history": True,
+                    "allow_force_pushes": False,
+                    "allow_deletions": False,
+                    "main_direct_push": "forbidden",
+                },
+            )
+
     def test_build_report_honors_ci_matrix_excludes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

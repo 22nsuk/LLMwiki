@@ -77,6 +77,7 @@ class _FixedPointPolicyRuntime:
     tracked_paths: list[str]
     writer_targets: list[str]
     feedback_targets: list[str]
+    feedback_exempt_targets: set[str]
     producer_by_path: dict[str, str]
     downstream_by_target: dict[str, set[str]]
 
@@ -164,6 +165,7 @@ def _policy_runtime(vault: Path) -> _FixedPointPolicyRuntime:
     tracked_paths = [item["path"] for item in tracked_artifacts]
     writer_targets = [str(writer["target"]) for writer in writers]
     feedback_targets = _feedback_targets(policy, writers)
+    feedback_exempt_targets = _feedback_exempt_targets(policy, writers)
     return _FixedPointPolicyRuntime(
         policy=policy,
         writers=writers,
@@ -171,6 +173,7 @@ def _policy_runtime(vault: Path) -> _FixedPointPolicyRuntime:
         tracked_paths=tracked_paths,
         writer_targets=writer_targets,
         feedback_targets=feedback_targets,
+        feedback_exempt_targets=feedback_exempt_targets,
         producer_by_path=_producer_by_path(writers),
         downstream_by_target=_downstream_by_target(writers),
     )
@@ -262,6 +265,24 @@ def _feedback_targets(
             f"{POLICY_PATH} feedback_refresh_targets contain unknown targets: {unknown}"
         )
     return _dedupe_preserve_order(targets)
+
+
+def _feedback_exempt_targets(
+    policy: dict[str, Any], writers: list[dict[str, Any]]
+) -> set[str]:
+    raw_targets = policy.get("feedback_refresh_exempt_targets", [])
+    targets = (
+        {str(target).strip() for target in raw_targets if str(target).strip()}
+        if isinstance(raw_targets, list)
+        else set()
+    )
+    known = {str(writer["target"]) for writer in writers}
+    unknown = sorted(targets - known)
+    if unknown:
+        raise ValueError(
+            f"{POLICY_PATH} feedback_refresh_exempt_targets contain unknown targets: {unknown}"
+        )
+    return targets
 
 
 def _producer_by_path(writers: list[dict[str, Any]]) -> dict[str, str]:
@@ -417,7 +438,11 @@ def _feedback_targets_for_changed_paths(
     feedback_target_set = set(runtime.feedback_targets)
     for path in changed_paths:
         producer = runtime.producer_by_path.get(path)
-        if producer and producer not in feedback_target_set:
+        if (
+            producer
+            and producer not in feedback_target_set
+            and producer not in runtime.feedback_exempt_targets
+        ):
             return list(runtime.feedback_targets)
     return []
 

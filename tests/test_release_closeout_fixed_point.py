@@ -23,6 +23,7 @@ from ops.scripts.release.release_closeout_fixed_point import (
     DEFAULT_OUT,
     DRY_RUN_SCHEMA_PATH,
     _IterationExecutionContext,
+    _policy_runtime,
     _run_iteration,
     bootstrap_post_promote_freshness,
     build_dry_run_report,
@@ -431,6 +432,15 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
                 },
             )
 
+    def test_fixed_point_rejects_unknown_feedback_exempt_target(self) -> None:
+        policy_path = self.vault / "ops/policies/release-closeout-fixed-point.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        policy["feedback_refresh_exempt_targets"] = ["not-a-real-target"]
+        policy_path.write_text(json.dumps(policy, indent=2), encoding="utf-8")
+
+        with self.assertRaisesRegex(ValueError, "feedback_refresh_exempt_targets"):
+            _policy_runtime(self.vault)
+
     def test_fixed_point_reruns_feedback_targets_after_downstream_changes(self) -> None:
         calls: list[str] = []
         downstream_version = 0
@@ -498,6 +508,69 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             )["observed_downstream_version"],
             1,
         )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_fixed_point_does_not_rerun_feedback_targets_for_terminal_finality_changes(
+        self,
+    ) -> None:
+        calls: list[str] = []
+        terminal_versions = {
+            "release-closeout-batch-manifest-promote": 0,
+            "release-evidence-closeout-self-check": 0,
+        }
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            target = argv[1]
+            calls.append(target)
+            rel_path = TARGET_TO_TRACKED_PATH.get(target)
+            if rel_path:
+                payload: dict[str, Any] = {
+                    "target": target,
+                    "stable_semantic_value": target,
+                }
+                if target in terminal_versions:
+                    terminal_versions[target] = min(2, terminal_versions[target] + 1)
+                    payload["terminal_version"] = terminal_versions[target]
+                self._write_tracked_payload(rel_path, payload)
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        report = build_report(
+            self.vault,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertEqual(report["status"], "pass")
+        selected_by_iteration = {
+            item["iteration_index"]: item["selected_targets"]
+            for item in report["iterations"]
+        }
+        self.assertIn("generated-artifact-index-body", selected_by_iteration[2])
+        self.assertEqual(
+            selected_by_iteration[3],
+            ["release-evidence-closeout-self-check"],
+        )
+        self.assertNotIn("generated-artifact-index-body", selected_by_iteration[3])
+        self.assertNotIn("artifact-freshness", selected_by_iteration[3])
+        self.assertNotIn("external-report-action-matrix", selected_by_iteration[3])
+        self.assertEqual(calls.count("generated-artifact-index-body"), 2)
+        self.assertEqual(calls.count("artifact-freshness"), 2)
+        self.assertEqual(calls.count("external-report-action-matrix"), 2)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_fixed_point_uses_semantic_changes_for_feedback_reselection(self) -> None:
@@ -578,7 +651,10 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
                         "target": target,
                         "stable_semantic_value": target,
                         "generated_at": f"raw-only-{write_count}",
-                        "input_fingerprints": {"stable_input": target},
+                        "input_fingerprints": {
+                            "target": target,
+                            "write_count": str(write_count),
+                        },
                     },
                 )
             return {
