@@ -55,6 +55,21 @@ WORKER_SOURCE_SNAPSHOT_IGNORE_DIRS = {
 WORKER_SOURCE_SNAPSHOT_IGNORE_SUFFIXES = {".pyc", ".pyo"}
 
 
+def _normalized_scope_rel_paths(values: object) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    normalized: list[str] = []
+    for value in values:
+        rel_path = str(value).strip().replace("\\", "/")
+        if not rel_path:
+            continue
+        path = Path(rel_path)
+        if path.is_absolute() or ".." in path.parts:
+            continue
+        normalized.append(rel_path)
+    return normalized
+
+
 class ExecutorRuntimeError(Exception):
     exit_code = 8
 
@@ -104,19 +119,19 @@ def _scope_freeze_targets(
     inputs = payload.get("inputs", {})
     if not isinstance(inputs, dict):
         return []
-    targets = inputs.get(key, [])
-    if not isinstance(targets, list):
+    return _normalized_scope_rel_paths(inputs.get(key, []))
+
+
+def _scope_freeze_resolution_paths(
+    artifact_root: Path,
+    scope_freeze_rel: str,
+    key: str,
+) -> list[str]:
+    payload = json.loads((artifact_root / scope_freeze_rel).read_text(encoding="utf-8"))
+    resolution = payload.get("resolution", {})
+    if not isinstance(resolution, dict):
         return []
-    normalized: list[str] = []
-    for value in targets:
-        rel_path = str(value).strip().replace("\\", "/")
-        if not rel_path:
-            continue
-        path = Path(rel_path)
-        if path.is_absolute() or ".." in path.parts:
-            continue
-        normalized.append(rel_path)
-    return normalized
+    return _normalized_scope_rel_paths(resolution.get(key, []))
 
 
 def _primary_targets_from_scope_freeze(artifact_root: Path, scope_freeze_rel: str) -> list[str]:
@@ -125,6 +140,10 @@ def _primary_targets_from_scope_freeze(artifact_root: Path, scope_freeze_rel: st
 
 def _supporting_targets_from_scope_freeze(artifact_root: Path, scope_freeze_rel: str) -> list[str]:
     return _scope_freeze_targets(artifact_root, scope_freeze_rel, "supporting_targets")
+
+
+def _test_files_from_scope_freeze(artifact_root: Path, scope_freeze_rel: str) -> list[str]:
+    return _scope_freeze_resolution_paths(artifact_root, scope_freeze_rel, "test_files")
 
 
 def _target_digest_snapshot(workspace_root: Path, targets: list[str]) -> dict[str, str | None]:
@@ -364,12 +383,13 @@ def _run_worker_repo_health_preflight(
     *,
     workspace_root: Path,
     run_id: str,
+    test_files: list[str],
     timeout_seconds: int,
     context: RuntimeContext,
 ) -> None:
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    command = command_argv(default_check_command(), cwd=workspace_root)
+    command = command_argv(default_check_command(test_files), cwd=workspace_root)
     try:
         completed = subprocess.run(
             command,
@@ -481,6 +501,7 @@ def run_executor_pipeline(
 
     primary_targets = _primary_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
     supporting_targets = _supporting_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
+    test_files = _test_files_from_scope_freeze(artifact_root, scope_freeze_rel)
     primary_before_worker = _target_digest_snapshot(workspace_root, primary_targets)
     has_post_worker_roles = any(role != "worker" for role in ordered_roles)
     source_before_worker = (
@@ -534,6 +555,7 @@ def run_executor_pipeline(
                     artifact_root,
                     workspace_root=workspace_root,
                     run_id=run_id,
+                    test_files=test_files,
                     timeout_seconds=timeout_seconds,
                     context=context,
                 )

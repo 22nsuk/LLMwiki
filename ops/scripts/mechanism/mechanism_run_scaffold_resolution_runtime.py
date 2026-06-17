@@ -73,7 +73,14 @@ class _ResolutionContext:
     runtime_context: RuntimeContext
 
 
-def default_check_command() -> str:
+def default_check_command(test_files: list[str] | None = None) -> str:
+    selectors = [str(path).strip() for path in test_files or [] if str(path).strip()]
+    if selectors:
+        quoted_selectors = " ".join(shlex.quote(path) for path in selectors)
+        return (
+            f"{shlex.quote(sys.executable)} -B -m pytest "
+            f"-p no:cacheprovider {quoted_selectors}"
+        )
     return f"make PYTHON={shlex.quote(sys.executable)} check"
 
 
@@ -142,9 +149,10 @@ def prepare_execution_commands(
     check_command: str | None,
     cwd: Path,
     timeout_seconds: int,
+    test_files: list[str] | None = None,
 ) -> PreparedExecutionCommands:
     resolved_mutation_command = mutation_command.strip()
-    resolved_check_command = (check_command or default_check_command()).strip()
+    resolved_check_command = (check_command or default_check_command(test_files)).strip()
     return PreparedExecutionCommands(
         mutation=CommandSpec(
             command=resolved_mutation_command,
@@ -316,6 +324,7 @@ def _prepared_commands(
         check_command=request.check_command,
         cwd=request.vault,
         timeout_seconds=policy["auto_improve_policy"]["defaults"]["wrapper_command_timeout_seconds"],
+        test_files=resolved_test_files,
     )
 
 

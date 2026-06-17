@@ -189,10 +189,10 @@ def _executor_subprocess_completed(
 
 def _is_worker_repo_health_preflight(argv: list[str]) -> bool:
     return (
-        len(argv) >= 3
-        and Path(argv[0]).name == "make"
-        and argv[-1] == "check"
-        and any(arg.startswith("PYTHON=") for arg in argv[1:-1])
+        len(argv) >= 7
+        and Path(argv[0]).name.startswith("python")
+        and argv[1:6] == ["-B", "-m", "pytest", "-p", "no:cacheprovider"]
+        and argv[-1].startswith("tests/")
     )
 
 
