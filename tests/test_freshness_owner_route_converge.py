@@ -63,6 +63,10 @@ class FreshnessOwnerRouteConvergeTests(unittest.TestCase):
                         "route_id": "ops_reports_source_identity_resettle",
                         "recommended_targets": ["freshness-source-identity-converge"],
                     },
+                    {
+                        "route_id": "ops_reports_promotion_decision_trends",
+                        "recommended_targets": ["promotion-decision-trends"],
+                    },
                 ]
             )
         )
@@ -70,7 +74,11 @@ class FreshnessOwnerRouteConvergeTests(unittest.TestCase):
         self.assertEqual(plan["status"], "owner_targets_available")
         self.assertEqual(
             plan["selected_targets"],
-            ["function-budget-refactor-proposals", "lint-uplift-plan"],
+            [
+                "function-budget-refactor-proposals",
+                "lint-uplift-plan",
+                "promotion-decision-trends",
+            ],
         )
         skipped_reasons = {item["reason"] for item in plan["skipped_targets"]}
         self.assertIn("deferred_to_terminal_suffix", skipped_reasons)

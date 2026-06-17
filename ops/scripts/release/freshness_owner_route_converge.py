@@ -92,6 +92,7 @@ ALLOWED_ROUTE_TARGETS: dict[str, frozenset[str]] = {
     "ops_reports_outcome_provenance_gate_policy": frozenset(
         {"outcome-provenance-gate-policy"}
     ),
+    "ops_reports_promotion_decision_trends": frozenset({"promotion-decision-trends"}),
     "ops_reports_registry_preflight": frozenset({"registry-preflight"}),
     "ops_reports_github_governance": frozenset({"github-governance-live-drift"}),
     "ops_reports_bootstrap_preflight": frozenset({"bootstrap-preflight"}),
