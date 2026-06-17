@@ -9,9 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ops.scripts.gate_effect_vocabulary import strongest_gate_effect
-from ops.scripts.goal_contract_digest_runtime import semantic_goal_contract_digest
 
+from ops.scripts.core.gate_effect_vocabulary import strongest_gate_effect
 from ops.scripts.core.generated_artifact_index import (
     build_report as build_generated_artifact_index_report,
     write_report as write_generated_artifact_index_report,
@@ -21,6 +20,9 @@ from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
+)
+from ops.scripts.mechanism.goal_contract_digest_runtime import (
+    semantic_goal_contract_digest,
 )
 from ops.scripts.release.external_report_action_matrix import (
     _active_action_resolution_summary,

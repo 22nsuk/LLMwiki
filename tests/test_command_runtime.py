@@ -7,14 +7,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.command_runtime import (
+from ops.scripts.core import command_runtime
+from ops.scripts.core.command_runtime import (
     FakeProcess,
     FakeProcessBackend,
     RunWithTimeoutRequest,
     run_with_timeout,
 )
-
-from ops.scripts import command_runtime
 
 
 class CompletingOnDrainFakeProcess(FakeProcess):

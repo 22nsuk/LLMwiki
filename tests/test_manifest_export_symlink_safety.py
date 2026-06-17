@@ -6,8 +6,12 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from ops.scripts.export_public_repo import export_public_repo
-from ops.scripts.wiki_manifest import build_manifest, release_manifest_excludes_path
+
+from ops.scripts.eval.wiki_manifest import (
+    build_manifest,
+    release_manifest_excludes_path,
+)
+from ops.scripts.public.export_public_repo import export_public_repo
 
 pytestmark = pytest.mark.report_contract
 

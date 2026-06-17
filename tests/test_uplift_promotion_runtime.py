@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from ops.scripts.uplift_promotion_runtime import (
+
+from ops.scripts.eval.uplift_promotion_runtime import (
     is_promotable,
     lint_promotion_order,
     type_promotion_order,

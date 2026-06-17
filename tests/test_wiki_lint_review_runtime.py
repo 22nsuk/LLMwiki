@@ -5,9 +5,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.wiki_lint import lint
-from ops.scripts.wiki_lint_review_runtime import (
+
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.eval.wiki_lint import lint
+from ops.scripts.eval.wiki_lint_review_runtime import (
     active_source_missing_concept_candidates,
     concept_carryover_continuity_candidates,
     concept_taxonomy_advisory_candidates,
@@ -19,8 +20,7 @@ from ops.scripts.wiki_lint_review_runtime import (
     synthesis_follow_up_split_candidates,
     wiki_synthesis_multi_question_candidates,
 )
-from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
-
+from ops.scripts.eval.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 from tests.minimal_vault_runtime import seed_open_question_smoke_vault
 
 pytestmark = pytest.mark.slow

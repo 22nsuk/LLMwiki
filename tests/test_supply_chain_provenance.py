@@ -7,9 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.supply_chain_provenance import build_report, write_report
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.supply_chain.supply_chain_provenance import build_report, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 LOCKED_CI_INSTALL_SNIPPET = (

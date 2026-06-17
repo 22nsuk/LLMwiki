@@ -4,7 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mechanism_run_validation_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.mechanism_run_validation_runtime import (
     build_changed_files_primary_target_touched_check,
     build_changed_files_scope_gate_check,
     build_event_sequence_phase_checks,
@@ -13,12 +14,10 @@ from ops.scripts.mechanism_run_validation_runtime import (
     display_report_vault,
     normalize_mechanism_artifact_bundle,
 )
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_gate_mechanism_runtime import (
+from ops.scripts.mechanism.promotion_gate_mechanism_runtime import (
     MechanismGateInputs,
     mechanism_class_report,
 )
-
 from tests.test_promotion_gate_equal_score import (
     LIVE_POLICY_VERSION,
     behavior_delta_report,

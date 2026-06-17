@@ -4,9 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.raw_registry_runtime import load_registry_source_trace_resolution_state
-from ops.scripts.source_trace_profile_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.source_trace_profile_runtime import (
     MISSING_EXPORT_EXCLUDED_BOUND,
     MISSING_EXPORT_EXCLUDED_UNBOUND,
     MISSING_GENERATED_REBUILDABLE,
@@ -18,11 +17,13 @@ from ops.scripts.source_trace_profile_runtime import (
     STRICT_PROFILE,
     classify_source_trace_targets,
 )
-from ops.scripts.source_trace_runtime import (
+from ops.scripts.core.source_trace_runtime import (
     extract_source_trace_refs,
     missing_source_trace_targets,
 )
-
+from ops.scripts.registry.raw_registry_runtime import (
+    load_registry_source_trace_resolution_state,
+)
 from tests.minimal_vault_runtime import seed_open_question_smoke_vault
 
 

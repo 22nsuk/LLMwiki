@@ -3,8 +3,10 @@ from __future__ import annotations
 import copy
 
 import pytest
-from ops.scripts.goal_contract_digest_runtime import semantic_goal_contract_digest
 
+from ops.scripts.mechanism.goal_contract_digest_runtime import (
+    semantic_goal_contract_digest,
+)
 from tests.test_codex_goal_contract import sample_goal_contract
 
 pytestmark = pytest.mark.public

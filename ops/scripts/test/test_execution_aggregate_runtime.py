@@ -7,16 +7,18 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
 )
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.test.test_execution_command_runtime import (
     build_execution_environment,
     toolchain_fingerprint as _toolchain_fingerprint,
@@ -383,8 +385,8 @@ def build_aggregate_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/test_execution_summary.py",
-                "ops/scripts/command_runtime.py",
+                "ops/scripts/test/test_execution_summary.py",
+                "ops/scripts/core/command_runtime.py",
             ],
             file_inputs={f"shard_{index}": path for index, path in enumerate(shard_paths, start=1)},
             text_inputs={

@@ -7,22 +7,21 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.learning_claim_evidence_bundle import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.learning.learning_claim_evidence_bundle import (
     build_report as build_bundle,
     write_report as write_bundle,
 )
-from ops.scripts.learning_confirmed_evidence_cohort import (
+from ops.scripts.learning.learning_confirmed_evidence_cohort import (
     build_report,
     validate_learning_confirmed_evidence_cohort,
     write_report,
 )
-from ops.scripts.learning_confirmed_legacy_reconstruction import (
+from ops.scripts.learning.learning_confirmed_legacy_reconstruction import (
     build_report as build_legacy_reconstruction,
     write_report as write_legacy_reconstruction,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

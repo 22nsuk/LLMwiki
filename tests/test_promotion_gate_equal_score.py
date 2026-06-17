@@ -10,12 +10,11 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.behavior_delta_runtime import (
+from ops.scripts.core.behavior_delta_runtime import (
     classify_surface,
     contract_touches_for_path,
 )
-from ops.scripts.policy_runtime import load_policy
-
+from ops.scripts.core.policy_runtime import load_policy
 from tests.minimal_vault_runtime import (
     POLICY_PATH,
     REPO_ROOT,

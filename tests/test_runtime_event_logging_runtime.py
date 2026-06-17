@@ -6,14 +6,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.runtime_event_logging_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_event_logging_runtime import (
     AppendRuntimeEventRequest,
     RuntimeEventRequest,
     append_runtime_event,
     build_runtime_event,
 )
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )

@@ -9,20 +9,20 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.codex_goal_client import set_goal
-from ops.scripts.command_runtime import FakeProcess, FakeProcessBackend
-from ops.scripts.goal_run_status import (
+
+from ops.scripts.core.codex_goal_client import set_goal
+from ops.scripts.core.command_runtime import FakeProcess, FakeProcessBackend
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.goal_run_status import (
     GoalRunStatusRequest,
     build_report as build_goal_run_status_report,
     write_report as write_goal_run_status_report,
 )
-from ops.scripts.goal_runtime_runner import (
+from ops.scripts.mechanism.goal_runtime_runner import (
     CheckpointCommandExecution,
     GoalRuntimeRunnerRequest,
     run_goal_runtime_command,
 )
-from ops.scripts.runtime_context import RuntimeContext
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 

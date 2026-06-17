@@ -6,7 +6,11 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.generated_artifact_converge_summary import build_report, write_report
+
+from ops.scripts.core.generated_artifact_converge_summary import (
+    build_report,
+    write_report,
+)
 
 pytestmark = pytest.mark.public
 

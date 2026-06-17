@@ -6,7 +6,8 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.goal_runtime_certificate_run_id_guard import (
+
+from ops.scripts.mechanism.goal_runtime_certificate_run_id_guard import (
     GoalRuntimeCertificateRunIdGuardRequest,
     build_report,
 )

@@ -5,9 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.release_clean_lane_evidence_review import build_report
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release.release_clean_lane_evidence_review import build_report
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-clean-lane-evidence-review.schema.json"

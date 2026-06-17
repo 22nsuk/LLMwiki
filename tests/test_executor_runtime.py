@@ -13,7 +13,8 @@ from typing import Any, cast
 from unittest import mock
 
 import pytest
-from ops.scripts.codex_exec_executor import (
+
+from ops.scripts.core.codex_exec_executor import (
     EXTERNAL_WORKSPACE_SANDBOX_FLAG,
     ExecutorContractError,
     ExecutorReportRequest,
@@ -24,13 +25,12 @@ from ops.scripts.codex_exec_executor import (
     build_execution_request,
     execute_codex_exec_role,
 )
-from ops.scripts.executor import main as executor_cli_main
-from ops.scripts.executor_runtime import (
+from ops.scripts.core.executor import main as executor_cli_main
+from ops.scripts.core.executor_runtime import (
     ExecutorRuntimeExecutionError,
     run_executor_pipeline,
 )
-from ops.scripts.runtime_context import RuntimeContext
-
+from ops.scripts.core.runtime_context import RuntimeContext
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import (
     REPO_ROOT,

@@ -11,21 +11,20 @@ from pathlib import Path
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ops.scripts.artifact_freshness_debt_runtime import stale_routing
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.auto_improve_readiness_runtime import build_readiness_report
-from ops.scripts.cyclonedx_sbom import build_bom
-from ops.scripts.openvex_draft import build_openvex_draft
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.sbom_export_mapping import (
+from ops.scripts.core.artifact_freshness_debt_runtime import stale_routing
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.auto_improve_readiness_runtime import build_readiness_report
+from ops.scripts.release.release_run_ready import build_run_ready_plan
+from ops.scripts.supply_chain.cyclonedx_sbom import build_bom
+from ops.scripts.supply_chain.openvex_draft import build_openvex_draft
+from ops.scripts.supply_chain.sbom_export_mapping import (
     build_report as build_sbom_export_mapping_report,
 )
-from ops.scripts.supply_chain_provenance import (
+from ops.scripts.supply_chain.supply_chain_provenance import (
     build_report as build_supply_chain_provenance_report,
 )
-
-from ops.scripts.release.release_run_ready import build_run_ready_plan
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 from tests.test_release_run_ready import (
     _copy_plan_schema,

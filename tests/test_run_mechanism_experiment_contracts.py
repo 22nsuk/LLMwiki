@@ -6,12 +6,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.run_mechanism_experiment_runtime import (
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.run_mechanism_experiment_runtime import (
     RunMechanismExperimentUsageError,
     run_mechanism_experiment,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.run_mechanism_experiment_test_utils import (
     mutation_proposal_report,
     seed_wrapper_vault,

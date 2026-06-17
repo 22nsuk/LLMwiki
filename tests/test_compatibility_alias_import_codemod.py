@@ -24,6 +24,7 @@ class CompatibilityAliasImportCodemodTests(unittest.TestCase):
             "ops/scripts/core/artifact_io_runtime.py",
             "def read_json_object():\n    return {}\n",
         )
+        legacy_runtime_context_path = "ops/scripts/" + "runtime_context.py"
         self.target_path = self._write(
             "ops/scripts/supply_chain/example.py",
             "\n".join(
@@ -32,7 +33,7 @@ class CompatibilityAliasImportCodemodTests(unittest.TestCase):
                     "from ops.scripts.artifact_io_runtime import read_json_object",
                     "",
                     "REPORT = build_report(",
-                    "    source_paths=['ops/scripts/runtime_context.py'],",
+                    f"    source_paths=['{legacy_runtime_context_path}'],",
                     ")",
                     "LOGIC_PATH = 'ops/scripts/runtime_context.py'",
                     "",
@@ -86,3 +87,46 @@ class CompatibilityAliasImportCodemodTests(unittest.TestCase):
         )
         self.assertIn("'ops/scripts/core/runtime_context.py'", text)
         self.assertIn("LOGIC_PATH = 'ops/scripts/runtime_context.py'", text)
+
+    def test_write_rewrites_package_and_dotted_module_imports(self) -> None:
+        target_path = self._write(
+            "tests/test_package_imports.py",
+            "\n".join(
+                [
+                    "from ops.scripts import runtime_context",
+                    "from ops.scripts import artifact_io_runtime as io_runtime",
+                    "import ops.scripts.runtime_context as runtime_context_module",
+                    "from ops.scripts import (",
+                    "    runtime_context as ctx_runtime,",
+                    "    artifact_io_runtime,",
+                    ")",
+                    "",
+                ]
+            ),
+        )
+
+        report = rewrite_compatibility_alias_imports(
+            self.vault,
+            prefixes=("tests/",),
+            write=True,
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["selected_caller_count"], 5)
+        self.assertEqual(report["import_rewrite_count"], 5)
+        text = target_path.read_text(encoding="utf-8")
+        self.assertIn("from ops.scripts.core import runtime_context\n", text)
+        self.assertIn(
+            "from ops.scripts.core import artifact_io_runtime as io_runtime\n",
+            text,
+        )
+        self.assertIn(
+            "import ops.scripts.core.runtime_context as runtime_context_module\n",
+            text,
+        )
+        self.assertIn(
+            "from ops.scripts.core import runtime_context as ctx_runtime\n",
+            text,
+        )
+        self.assertIn("from ops.scripts.core import artifact_io_runtime\n", text)
+        self.assertNotIn("from ops.scripts import", text)

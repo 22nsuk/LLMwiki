@@ -7,21 +7,20 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.mechanism_run_common_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.failure_taxonomy_runtime import (
+    GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
+from ops.scripts.mechanism.mechanism_run_common_runtime import (
     CommandSpec,
     ExperimentResolution,
     RunMechanismExperimentUsageError,
 )
-from ops.scripts.mechanism_run_repo_health_step_runtime import (
+from ops.scripts.mechanism.mechanism_run_repo_health_step_runtime import (
     RepoHealthStepDependencies,
     StructuralComplexityBudgetStepResult,
     repo_health_step,
     write_structural_complexity_budget_artifact,
-)
-from ops.scripts.runtime_context import RuntimeContext
-
-from ops.scripts.mechanism.failure_taxonomy_runtime import (
-    GENERATED_EVIDENCE_SETTLE_REQUIRED,
 )
 from tests.minimal_vault_runtime import SCHEMA_PATHS
 from tests.test_mechanism_assess import seed_policy

@@ -9,15 +9,18 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_decision_registry_runtime import attach_decision_contract
-from ops.scripts.run_mechanism_experiment_runtime import run_mechanism_experiment
-from ops.scripts.runtime_context import RuntimeContext
-
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.promotion_decision_registry_runtime import (
+    attach_decision_contract,
+)
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.mechanism import (
     mechanism_run_capture_runtime,
     mechanism_run_promotion_runtime,
     mechanism_run_workspace_runtime,
+)
+from ops.scripts.mechanism.run_mechanism_experiment_runtime import (
+    run_mechanism_experiment,
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 

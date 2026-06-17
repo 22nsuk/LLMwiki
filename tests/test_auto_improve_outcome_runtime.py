@@ -5,7 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.auto_improve_outcome_runtime import (
+from ops.scripts.core.promotion_decision_registry_runtime import (
+    reduce_decision_proposals,
+)
+from ops.scripts.mechanism.auto_improve_outcome_runtime import (
     ExecutionOutcome,
     apply_execution_outcome,
     detect_executor_failure,
@@ -15,8 +18,6 @@ from ops.scripts.auto_improve_outcome_runtime import (
     evaluate_scope_blocked,
     role_report_path,
 )
-from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
-
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
 )

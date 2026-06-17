@@ -4,10 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mutation_proposal_runtime import build_report
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.mutation_proposal_runtime import build_report
 from tests.mutation_proposal_test_runtime import (
     fixed_context,
     mechanism_review_report,

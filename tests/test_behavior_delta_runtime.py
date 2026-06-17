@@ -5,13 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
-from ops.scripts.behavior_delta_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+)
+from ops.scripts.core.behavior_delta_runtime import (
     BehaviorDeltaRequest,
     build_behavior_delta_report,
     write_behavior_delta_report,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

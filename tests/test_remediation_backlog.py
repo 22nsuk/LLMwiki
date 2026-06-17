@@ -7,11 +7,13 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.remediation_backlog import build_report, write_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
+from ops.scripts.learning.remediation_backlog import build_report, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public

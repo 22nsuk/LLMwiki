@@ -5,15 +5,15 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.policy_runtime import load_policy, required_sections_from_policy
-from ops.scripts.wiki_page_runtime import (
+from ops.scripts.core.policy_runtime import load_policy, required_sections_from_policy
+from ops.scripts.eval.wiki_page_runtime import (
     discover_pages,
     open_question_severity_counts,
     required_sections_for_page,
     section_body,
     source_trace_item_count,
 )
-from ops.scripts.wiki_quality_runtime import (
+from ops.scripts.eval.wiki_quality_runtime import (
     broken_wikilinks,
     has_placeholder,
     missing_required_sections,
@@ -21,9 +21,8 @@ from ops.scripts.wiki_quality_runtime import (
     resolved_wikilink_targets,
     source_trace_targets_missing,
 )
-from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
-from ops.scripts.wikilink_runtime import build_page_lookup
-
+from ops.scripts.eval.wiki_snapshot_runtime import build_wiki_runtime_snapshot
+from ops.scripts.eval.wikilink_runtime import build_page_lookup
 from tests import minimal_vault_runtime
 from tests.minimal_vault_runtime import seed_minimal_vault
 

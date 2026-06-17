@@ -7,10 +7,13 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.function_budget_refactor_proposals import build_report, write_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.function_budget_refactor_proposals import (
+    build_report,
+    write_report,
+)
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public

@@ -6,17 +6,17 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.mechanism_run_common_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.mechanism_run_common_runtime import (
     CommandSpec,
     ExperimentResolution,
     RunMechanismExperimentMutationError,
     RunMechanismExperimentUsageError,
 )
-from ops.scripts.mechanism_run_mutation_step_runtime import (
+from ops.scripts.mechanism.mechanism_run_mutation_step_runtime import (
     MutationStepDependencies,
     execute_mutation_step,
 )
-from ops.scripts.runtime_context import RuntimeContext
 
 
 def _context() -> RuntimeContext:

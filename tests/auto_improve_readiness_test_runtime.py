@@ -6,10 +6,9 @@ import json
 import tempfile
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.runtime_test_context import frozen_context
 

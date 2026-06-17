@@ -6,13 +6,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
     SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_slug_curation import scaffold_manifest, validate_manifest
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_slug_curation import scaffold_manifest, validate_manifest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

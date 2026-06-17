@@ -5,27 +5,26 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mechanism_candidate_registry_runtime import (
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.mechanism import mechanism_review_candidate_runtime
+from ops.scripts.mechanism.mechanism_candidate_registry_runtime import (
     BRANCH_GROWTH_CANDIDATE,
     EVAL_STAGNATION_CANDIDATE,
     HIGH_COMPLEXITY_CANDIDATE,
     SCHEMA_DRIFT_CANDIDATE,
 )
-from ops.scripts.mechanism_review_candidate_runtime import (
+from ops.scripts.mechanism.mechanism_review_candidate_runtime import (
     build_candidates,
     candidate_template,
 )
-from ops.scripts.mechanism_review_history_runtime import (
+from ops.scripts.mechanism.mechanism_review_history_runtime import (
     MechanismRunSnapshot,
     load_optional_json,
 )
-from ops.scripts.mechanism_review_session_calibration_runtime import (
+from ops.scripts.mechanism.mechanism_review_session_calibration_runtime import (
     build_session_calibration_diagnostics,
     session_report_for_run,
 )
-from ops.scripts.policy_runtime import load_policy, report_path
-
-from ops.scripts import mechanism_review_candidate_runtime
 from tests.mechanism_review_test_utils import (
     REPO_ROOT,
     changed_files_manifest,

@@ -10,39 +10,45 @@ from typing import Any
 from unittest import mock
 
 import pytest
-from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
-from ops.scripts.auto_improve_execute_runtime import (
+
+from ops.scripts.core.artifact_freshness_runtime import (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+)
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.promotion_decision_registry_runtime import (
+    reduce_decision_proposals,
+)
+from ops.scripts.core.python_function_budget_runtime import (
+    python_function_budget_candidates,
+)
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema
+from ops.scripts.mechanism import auto_improve_iteration_persistence_runtime
+from ops.scripts.mechanism.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluatePhaseResult,
     ExecuteEvaluateRequest,
 )
-from ops.scripts.auto_improve_iteration_persistence_runtime import (
+from ops.scripts.mechanism.auto_improve_iteration_persistence_runtime import (
     IterationTelemetryRequest,
     PersistIterationDependencies,
     PersistIterationPhaseResult,
     persist_iteration_phase,
     write_iteration_telemetry,
 )
-from ops.scripts.auto_improve_iteration_runtime import (
+from ops.scripts.mechanism.auto_improve_iteration_runtime import (
     AutoImproveIterationDependencies,
     AutoImproveIterationRequest,
     execute_evaluate_iteration_phase,
     run_auto_improve_iteration,
 )
-from ops.scripts.auto_improve_outcome_runtime import ExecutionOutcome
-from ops.scripts.mechanism_run_scaffold_templates_runtime import (
-    initial_run_ledger,
-    placeholder_promotion_report,
-)
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
-from ops.scripts.python_function_budget_runtime import python_function_budget_candidates
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema
-
-from ops.scripts import auto_improve_iteration_persistence_runtime
+from ops.scripts.mechanism.auto_improve_outcome_runtime import ExecutionOutcome
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
+from ops.scripts.mechanism.mechanism_run_scaffold_templates_runtime import (
+    initial_run_ledger,
+    placeholder_promotion_report,
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 

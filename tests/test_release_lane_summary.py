@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ops.scripts.release_lane_summary import build_report, main, write_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release.release_lane_summary import build_report, main, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public

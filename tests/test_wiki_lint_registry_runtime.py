@@ -5,28 +5,27 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.registry_alignment_passes_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.registry_alignment_passes_runtime import (
     _locator_raw_path_corpus_consistency_pass,
     _registry_frontmatter_alignment_pass,
 )
-from ops.scripts.registry_diagnostics_runtime import RegistryInventoryContext
-from ops.scripts.registry_pass_support_runtime import registry_review_exempt_paths
-from ops.scripts.registry_review_candidate_passes_runtime import (
+from ops.scripts.core.registry_diagnostics_runtime import RegistryInventoryContext
+from ops.scripts.core.registry_pass_support_runtime import registry_review_exempt_paths
+from ops.scripts.core.registry_review_candidate_passes_runtime import (
     _backlog_refactor_threshold_pass,
     _summary_shard_review_candidate_pass,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.wiki_lint_registry_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.eval.wiki_lint_registry_runtime import (
     RegistryLintEmitter,
     _registry_inventory_context_pass,
     _registry_lint_paths,
     _registry_page_presence_pass,
     lint_registry_contract,
 )
-from ops.scripts.wiki_lint_review_runtime import review_candidates_for
-from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
-
+from ops.scripts.eval.wiki_lint_review_runtime import review_candidates_for
+from ops.scripts.eval.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 from tests.minimal_vault_runtime import (
     add_registry_entry_scalar_field,
     seed_minimal_vault,

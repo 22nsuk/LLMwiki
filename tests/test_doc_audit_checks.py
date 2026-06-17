@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.wiki_lint import lint
 
+from ops.scripts.eval.wiki_lint import lint
 from tests.minimal_vault_runtime import (
     seed_doc_audit_smoke_vault,
     set_summary_count,

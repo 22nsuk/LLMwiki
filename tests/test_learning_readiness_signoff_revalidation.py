@@ -7,12 +7,20 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import write_json_object
-from ops.scripts.learning_readiness_signoff import (
+from ops.scripts.core.artifact_io_runtime import write_json_object
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    LEARNING_READINESS_SIGNOFF_REVALIDATION_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
+from ops.scripts.learning.learning_readiness_signoff import (
     LearningReadinessSignoffRequest,
     build_signoff_report,
 )
-from ops.scripts.learning_readiness_signoff_revalidation import (
+from ops.scripts.learning.learning_readiness_signoff_revalidation import (
     AUTO_IMPROVE_READINESS_PATH,
     DEFAULT_OUT,
     RELEASE_CLOSEOUT_PATH,
@@ -20,18 +28,9 @@ from ops.scripts.learning_readiness_signoff_revalidation import (
     build_revalidation_report,
     write_revalidation_report,
 )
-from ops.scripts.learning_readiness_vocabulary import (
+from ops.scripts.learning.learning_readiness_vocabulary import (
     LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
-    LEARNING_READINESS_SIGNOFF_REVALIDATION_SCHEMA_PATH,
-)
-from ops.scripts.schema_runtime import (
-    load_schema_with_vault_override,
-    validate_with_schema,
-)
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

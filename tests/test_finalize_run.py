@@ -8,15 +8,18 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.filesystem_runtime import FilesystemTransactionError
-from ops.scripts.finalize_run_runtime import (
+from ops.scripts.core.filesystem_runtime import FilesystemTransactionError
+from ops.scripts.core.promotion_decision_registry_runtime import (
+    attach_decision_contract,
+)
+from ops.scripts.mechanism.finalize_run_runtime import (
     FinalizeRunUsageError,
     FinalizeRunWriteError,
     finalize_run,
 )
-from ops.scripts.finalize_run_write_runtime import build_finalize_atomic_updates
-from ops.scripts.promotion_decision_registry_runtime import attach_decision_contract
-
+from ops.scripts.mechanism.finalize_run_write_runtime import (
+    build_finalize_atomic_updates,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
 

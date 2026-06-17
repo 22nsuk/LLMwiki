@@ -7,22 +7,22 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.codex_goal_client import get_goal, set_goal
-from ops.scripts.goal_run_status import (
+
+from ops.scripts.core.codex_goal_client import get_goal, set_goal
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.goal_run_status import (
     DEFAULT_STATUS_PATH,
     GoalRunStatusRequest,
     build_report as build_goal_run_status_report,
     write_report as write_goal_run_status_report,
     write_run_artifacts,
 )
-from ops.scripts.goal_runtime_certificate_report import (
+from ops.scripts.mechanism.goal_runtime_certificate_report import (
     RUNNER_PRODUCER,
     GoalRuntimeCertificateRequest,
     build_report as build_certificate_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 

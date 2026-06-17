@@ -7,14 +7,14 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.goal_runtime_fixed_point_check import (
+
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.goal_runtime_fixed_point_check import (
     GoalRuntimeFixedPointCheckRequest,
     build_report,
     write_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

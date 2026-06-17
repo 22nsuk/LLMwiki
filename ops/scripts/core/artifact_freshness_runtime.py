@@ -1209,8 +1209,8 @@ def _assemble_artifact_freshness_payload(
         resolved_policy_path=scan_inputs.resolved_policy_path,
         schema_path=ARTIFACT_FRESHNESS_REPORT_SCHEMA_PATH,
         source_paths=[
-            "ops/scripts/artifact_freshness_runtime.py",
-            "ops/scripts/artifact_freshness_debt_runtime.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
+            "ops/scripts/core/artifact_freshness_debt_runtime.py",
         ],
         file_inputs=(
             {"zip_metadata": scan_inputs.resolved_zip_metadata_path}

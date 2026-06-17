@@ -8,31 +8,34 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.learning_claim_evidence_bundle import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.learning.learning_claim_evidence_bundle import (
     build_report as build_evidence_bundle,
     write_report as write_evidence_bundle,
 )
-from ops.scripts.learning_claim_model import (
+from ops.scripts.learning.learning_claim_model import (
     ImprovementClaimInputs,
     improvement_claim_model,
 )
-from ops.scripts.learning_claim_unlock_review import build_report as build_unlock_review
-from ops.scripts.learning_confirmed_evidence_cohort import (
+from ops.scripts.learning.learning_claim_unlock_review import (
+    build_report as build_unlock_review,
+)
+from ops.scripts.learning.learning_confirmed_evidence_cohort import (
     build_report as build_confirmed_cohort,
     write_report as write_confirmed_cohort,
 )
-from ops.scripts.learning_confirmed_legacy_reconstruction import (
+from ops.scripts.learning.learning_confirmed_legacy_reconstruction import (
     build_report as build_legacy_reconstruction,
     write_report as write_legacy_reconstruction,
 )
-from ops.scripts.learning_delta_scoreboard import build_report, write_report
-from ops.scripts.learning_delta_scoreboard_constants import SCOREBOARD_SOURCE_PATHS
-from ops.scripts.learning_readiness_vocabulary import (
+from ops.scripts.learning.learning_delta_scoreboard import build_report, write_report
+from ops.scripts.learning.learning_delta_scoreboard_constants import (
+    SCOREBOARD_SOURCE_PATHS,
+)
+from ops.scripts.learning.learning_readiness_vocabulary import (
     LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

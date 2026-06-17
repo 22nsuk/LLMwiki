@@ -7,24 +7,26 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.learning_readiness_signoff import (
+
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    LEARNING_READINESS_SIGNOFF_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
+from ops.scripts.learning.learning_readiness_signoff import (
     SIGNOFF_REPORT_REL_PATH,
     SUPPORTED_BLOCKER_ID,
     LearningReadinessSignoffRequest,
     build_signoff_report,
     write_signoff_report,
 )
-from ops.scripts.learning_readiness_signoff_refresh import (
+from ops.scripts.learning.learning_readiness_signoff_refresh import (
     REFRESH_SOURCE_COMMAND,
     build_refreshed_signoff_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import LEARNING_READINESS_SIGNOFF_SCHEMA_PATH
-from ops.scripts.schema_runtime import (
-    load_schema_with_vault_override,
-    validate_with_schema,
-)
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, TypedDict, cast
 
-from ops.scripts.auto_improve_session_runtime import (
+from ops.scripts.mechanism.auto_improve_session_runtime import (
     AttemptRecord,
     build_attempt_records,
     build_outcome_metrics_from_attempts,
@@ -704,8 +704,8 @@ def build_outcome_metrics_report(
             resolved_policy_path=policy_path,
             schema_path=OUTCOME_METRICS,
             source_paths=[
-                "ops/scripts/observability_decision_metrics_runtime.py",
-                "ops/scripts/auto_improve_session_runtime.py",
+                "ops/scripts/core/observability_decision_metrics_runtime.py",
+                "ops/scripts/mechanism/auto_improve_session_runtime.py",
             ],
             path_group_inputs={
                 "session_reports": session_report_paths,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 from collections.abc import Sequence
@@ -11,7 +12,7 @@ from .compatibility_alias_deprecation import build_report
 from .output_runtime import display_path
 from .runtime_context import RuntimeContext
 
-SUPPORTED_USAGE_KINDS = {"from_import"}
+SUPPORTED_USAGE_KINDS = {"from_import", "from_package_import", "import"}
 SOURCE_PATHS_ASSIGNMENT_RE = re.compile(r"(?<![A-Za-z0-9_])source_paths\s*=")
 
 
@@ -103,6 +104,130 @@ def _rewrite_source_path_metadata(
     return "".join(rewritten_lines), changed_count
 
 
+def _canonical_from_import_line(replacement: str, imported_name: str, asname: str | None) -> str:
+    parent, module_name = replacement.rsplit(".", maxsplit=1)
+    alias_suffix = f" as {asname}" if asname else ""
+    return f"from {parent} import {module_name}{alias_suffix}\n"
+
+
+def _rewrite_import_alias_line(
+    line: str,
+    *,
+    alias: str,
+    replacement: str,
+) -> str | None:
+    if f"import {alias} as " in line or f", {alias} as " in line:
+        return line.replace(alias, replacement, 1)
+    if line.strip() == f"import {alias}":
+        return None
+    return line.replace(alias, replacement, 1) if alias in line else None
+
+
+def _rewrite_direct_import_callers(
+    lines: list[str],
+    callers: Sequence[dict[str, Any]],
+) -> tuple[int, list[dict[str, Any]]]:
+    changed_count = 0
+    missed_rewrites: list[dict[str, Any]] = []
+    for item in sorted(callers, key=lambda value: int(value.get("line", 0) or 0)):
+        line_no = int(item.get("line", 0) or 0)
+        if line_no < 1 or line_no > len(lines):
+            missed_rewrites.append(item)
+            continue
+        alias = str(item.get("alias", ""))
+        replacement = str(item.get("preferred_replacement", ""))
+        usage_kind = str(item.get("usage_kind", ""))
+        original_line = lines[line_no - 1]
+        if usage_kind == "from_import":
+            old_token = f"from {alias} import"
+            new_token = f"from {replacement} import"
+            if old_token not in original_line:
+                missed_rewrites.append(item)
+                continue
+            lines[line_no - 1] = original_line.replace(old_token, new_token)
+        elif usage_kind == "import":
+            rewritten_line = _rewrite_import_alias_line(
+                original_line,
+                alias=alias,
+                replacement=replacement,
+            )
+            if rewritten_line is None or rewritten_line == original_line:
+                missed_rewrites.append(item)
+                continue
+            lines[line_no - 1] = rewritten_line
+        else:
+            missed_rewrites.append(item)
+            continue
+        changed_count += 1
+    return changed_count, missed_rewrites
+
+
+def _rewrite_from_package_import_callers(
+    lines: list[str],
+    callers: Sequence[dict[str, Any]],
+    *,
+    filename: str,
+) -> tuple[int, list[dict[str, Any]]]:
+    if not callers:
+        return 0, []
+
+    source = "".join(lines)
+    try:
+        tree = ast.parse(source, filename=filename)
+    except SyntaxError:
+        return 0, list(callers)
+
+    callers_by_line_and_stem: dict[tuple[int, str], dict[str, Any]] = {}
+    for item in callers:
+        alias = str(item.get("alias", ""))
+        callers_by_line_and_stem[
+            (int(item.get("line", 0) or 0), alias.rsplit(".", maxsplit=1)[-1])
+        ] = item
+
+    replacement_spans: list[tuple[int, int, list[str]]] = []
+    rewritten_keys: set[tuple[int, str]] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.module != "ops.scripts" or node.level != 0:
+            continue
+        end_lineno = getattr(node, "end_lineno", node.lineno)
+        generated_lines: list[str] = []
+        target_count = 0
+        for imported_alias in node.names:
+            key = (node.lineno, imported_alias.name)
+            caller_item = callers_by_line_and_stem.get(key)
+            if caller_item is None:
+                alias_suffix = f" as {imported_alias.asname}" if imported_alias.asname else ""
+                generated_lines.append(
+                    f"from ops.scripts import {imported_alias.name}{alias_suffix}\n"
+                )
+                continue
+            generated_lines.append(
+                _canonical_from_import_line(
+                    str(caller_item.get("preferred_replacement", "")),
+                    imported_alias.name,
+                    imported_alias.asname,
+                )
+            )
+            rewritten_keys.add(key)
+            target_count += 1
+        if target_count:
+            replacement_spans.append((node.lineno, end_lineno, generated_lines))
+
+    for start, end, generated_lines in sorted(replacement_spans, reverse=True):
+        lines[start - 1 : end] = generated_lines
+
+    missed_rewrites = [
+        item
+        for item in callers
+        if (
+            int(item.get("line", 0) or 0),
+            str(item.get("alias", "")).rsplit(".", maxsplit=1)[-1],
+        )
+        not in rewritten_keys
+    ]
+    return len(rewritten_keys), missed_rewrites
+
+
 def rewrite_compatibility_alias_imports(
     vault: Path,
     *,
@@ -135,22 +260,24 @@ def rewrite_compatibility_alias_imports(
     for rel_path, callers in sorted(callers_by_path.items()):
         path = resolved_vault / rel_path
         lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
-        changed_count = 0
-        for item in sorted(callers, key=lambda value: int(value.get("line", 0) or 0)):
-            line_no = int(item.get("line", 0) or 0)
-            if line_no < 1 or line_no > len(lines):
-                missed_rewrites.append(item)
-                continue
-            alias = str(item.get("alias", ""))
-            replacement = str(item.get("preferred_replacement", ""))
-            old_token = f"from {alias} import"
-            new_token = f"from {replacement} import"
-            original_line = lines[line_no - 1]
-            if old_token not in original_line:
-                missed_rewrites.append(item)
-                continue
-            lines[line_no - 1] = original_line.replace(old_token, new_token)
-            changed_count += 1
+        direct_callers = [
+            item for item in callers if str(item.get("usage_kind", "")) in {"from_import", "import"}
+        ]
+        package_callers = [
+            item for item in callers if str(item.get("usage_kind", "")) == "from_package_import"
+        ]
+        direct_changed_count, direct_misses = _rewrite_direct_import_callers(
+            lines,
+            direct_callers,
+        )
+        package_changed_count, package_misses = _rewrite_from_package_import_callers(
+            lines,
+            package_callers,
+            filename=rel_path,
+        )
+        missed_rewrites.extend(direct_misses)
+        missed_rewrites.extend(package_misses)
+        changed_count = direct_changed_count + package_changed_count
         if changed_count:
             import_rewrite_count += changed_count
             changed_files.append({"path": rel_path, "import_rewrite_count": changed_count})

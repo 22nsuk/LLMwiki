@@ -4,8 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.python_function_budget_runtime import python_function_budget_candidates
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.python_function_budget_runtime import (
+    python_function_budget_candidates,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

@@ -7,15 +7,15 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.improvement_observations_runtime import (
+
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.improvement_observations_runtime import (
     backfill_improvement_observations,
     build_run_improvement_observations,
     task_improvement_observations_rel,
     write_task_improvement_observations,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.report_contract

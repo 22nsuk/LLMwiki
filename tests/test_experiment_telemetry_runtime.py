@@ -6,16 +6,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
-from ops.scripts.experiment_telemetry_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+)
+from ops.scripts.core.experiment_telemetry_runtime import (
     append_ledger_event,
     write_command_logs,
     write_run_ledger,
     write_run_telemetry,
     write_timeout_failure_artifact,
 )
-from ops.scripts.runtime_context import RuntimeContext
-
+from ops.scripts.core.runtime_context import RuntimeContext
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

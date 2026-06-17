@@ -8,9 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_gate import main as promotion_gate_main
-
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.promotion_gate import main as promotion_gate_main
 from tests.cli_test_runtime import CliInvocationResult, invoke_cli_main
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

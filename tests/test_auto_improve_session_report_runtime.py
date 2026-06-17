@@ -7,11 +7,12 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
-
-from ops.scripts import auto_improve_runtime
-from ops.scripts.mechanism import auto_improve_session_report_runtime
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism import (
+    auto_improve_runtime,
+    auto_improve_session_report_runtime,
+)
 from tests.run_mechanism_experiment_test_utils import seed_wrapper_vault
 
 

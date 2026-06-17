@@ -6,19 +6,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mechanism_run_common_runtime import (
+from ops.scripts.mechanism.mechanism_run_common_runtime import (
     CommandSpec,
     RunMechanismExperimentArtifactError,
     RunMechanismExperimentUsageError,
     load_current_policy,
 )
-from ops.scripts.mechanism_run_scaffold_resolution_runtime import (
+from ops.scripts.mechanism.mechanism_run_scaffold_resolution_runtime import (
     PreparedExecutionCommands,
     command_argv,
     prepare_execution_commands,
     resolve_experiment_inputs,
 )
-
 from tests.run_mechanism_experiment_test_utils import (
     mutation_proposal_report,
     seed_wrapper_vault,

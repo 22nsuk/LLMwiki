@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.schema_runtime import load_schema, validate_or_raise
+from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 
 REGISTRY_PATH = Path("ops/test-lane-registry.json")
 SCHEMA_PATH = Path("ops/schemas/test-lane-registry.schema.json")

@@ -5,8 +5,7 @@ import unittest
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from ops.scripts.command_runtime import TimedProcessResult
-
+from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.mechanism.goal_runtime_local_evidence_refresh import (
     DEFAULT_TARGET_SEQUENCE,
     GoalRuntimeLocalEvidenceRefreshRequest,

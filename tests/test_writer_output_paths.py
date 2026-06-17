@@ -11,34 +11,37 @@ import unittest
 from collections.abc import Callable
 from pathlib import Path
 
-from ops.scripts.mechanism_assess import main as mechanism_assess_main
-from ops.scripts.output_runtime import resolve_output_path, write_output_text
-from ops.scripts.path_runtime import stable_report_path
-from ops.scripts.planning_gate_validate import main as planning_gate_validate_main
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_gate import main as promotion_gate_main
-from ops.scripts.raw_registry_export import main as raw_registry_export_main
-from ops.scripts.raw_registry_preflight import main as raw_registry_preflight_main
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.output_runtime import resolve_output_path, write_output_text
+from ops.scripts.core.path_runtime import stable_report_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_constants_runtime import (
     RAW_REGISTRY_EXPORT_SCHEMA_PATH,
     WIKI_MANIFEST_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.script_output_surfaces import (
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.script_output_surfaces import (
     NON_PATH_STATUS_OUTPUT_OPTIONS,
     build_registry as build_script_output_surface_registry,
 )
-from ops.scripts.starter_bundle_runtime import (
+from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_main
+from ops.scripts.core.starter_bundle_runtime import (
     DEFAULT_STARTER_BUNDLE,
     starter_bundle_path,
 )
-from ops.scripts.wiki_eval import main as wiki_eval_main
-from ops.scripts.wiki_eval_coverage import main as wiki_eval_coverage_main
-from ops.scripts.wiki_lint import main as wiki_lint_main
-from ops.scripts.wiki_manifest import main as wiki_manifest_main
-from ops.scripts.wiki_stage2_eval import main as wiki_stage2_eval_main
-
-from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_main
+from ops.scripts.eval.wiki_eval import main as wiki_eval_main
+from ops.scripts.eval.wiki_eval_coverage import main as wiki_eval_coverage_main
+from ops.scripts.eval.wiki_lint import main as wiki_lint_main
+from ops.scripts.eval.wiki_manifest import main as wiki_manifest_main
+from ops.scripts.eval.wiki_stage2_eval import main as wiki_stage2_eval_main
+from ops.scripts.mechanism.mechanism_assess import main as mechanism_assess_main
+from ops.scripts.mechanism.planning_gate_validate import (
+    main as planning_gate_validate_main,
+)
+from ops.scripts.mechanism.promotion_gate import main as promotion_gate_main
+from ops.scripts.registry.raw_registry_export import main as raw_registry_export_main
+from ops.scripts.registry.raw_registry_preflight import (
+    main as raw_registry_preflight_main,
+)
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import (
     seed_minimal_vault,

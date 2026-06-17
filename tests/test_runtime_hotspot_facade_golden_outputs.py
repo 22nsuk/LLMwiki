@@ -9,18 +9,20 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from ops.scripts.auto_improve_runtime import run_auto_improve_session
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.release_closeout_summary import build_report as build_closeout_report
-from ops.scripts.release_evidence_dashboard import (
-    build_report as build_dashboard_report,
-)
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 import tests.test_release_closeout_summary as closeout_fixture
 import tests.test_release_evidence_dashboard as dashboard_fixture
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.auto_improve_runtime import run_auto_improve_session
 from ops.scripts.mechanism.mutation_proposal_runtime import (
     build_report as build_mutation_proposal_report,
+)
+from ops.scripts.release.release_closeout_summary import (
+    build_report as build_closeout_report,
+)
+from ops.scripts.release.release_evidence_dashboard import (
+    build_report as build_dashboard_report,
 )
 from tests.auto_improve_test_utils import (
     _fake_successful_mechanism_experiment,

@@ -8,28 +8,28 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from ops.scripts.auto_improve_execute_runtime import (
+
+from ops.scripts.core.codex_goal_client import set_goal
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism import auto_improve_runtime
+from ops.scripts.mechanism.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluateRequest,
     run_full_experiment,
 )
-from ops.scripts.auto_improve_runtime import (
+from ops.scripts.mechanism.auto_improve_runtime import (
     AutoImproveLearningReviewRequiredError,
     AutoImproveUsageError,
     refresh_auto_improve_session_report,
     run_auto_improve_session,
 )
-from ops.scripts.codex_goal_client import set_goal
-from ops.scripts.run_mechanism_experiment_runtime import (
-    RunMechanismExperimentError,
-    RunMechanismExperimentMutationError,
-)
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
-from ops.scripts import auto_improve_runtime
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
+from ops.scripts.mechanism.run_mechanism_experiment_runtime import (
+    RunMechanismExperimentError,
+    RunMechanismExperimentMutationError,
 )
 from tests.auto_improve_test_utils import (
     _expected_timeout_summary,

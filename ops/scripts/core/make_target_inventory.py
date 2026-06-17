@@ -108,7 +108,7 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=MAKE_TARGET_INVENTORY_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/make_target_inventory.py",
+                "ops/scripts/core/make_target_inventory.py",
                 "Makefile",
                 *[path for path in makefile_sources if path != "Makefile"],
             ],

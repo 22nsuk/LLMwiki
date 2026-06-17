@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.artifact_io_runtime import load_optional_json_object
 from ops.scripts.core.learning_claim_state_runtime import (
     confirmed_blocking_predicate_ids,
     confirmed_evidence_summary,

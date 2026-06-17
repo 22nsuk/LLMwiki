@@ -4,15 +4,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.frontmatter_runtime import (
+from ops.scripts.core.frontmatter_runtime import (
     parse_frontmatter,
     validate_frontmatter,
     validate_frontmatter_metadata,
     validate_frontmatter_pending_required_fields,
     validate_source_frontmatter_against_registry,
 )
-from ops.scripts.policy_runtime import load_policy
-
+from ops.scripts.core.policy_runtime import load_policy
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

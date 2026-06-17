@@ -10,8 +10,8 @@ from pathlib import Path
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-from ops.scripts.runtime_context import RuntimeContext
 
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )

@@ -6,15 +6,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import ops.scripts.set_mechanism_run_history as set_history_runtime
-from ops.scripts.filesystem_runtime import FilesystemTransactionError
-from ops.scripts.mechanism_review_runtime import build_report
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.set_mechanism_run_history import (
+import ops.scripts.mechanism.set_mechanism_run_history as set_history_runtime
+from ops.scripts.core.filesystem_runtime import FilesystemTransactionError
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.mechanism_review_runtime import build_report
+from ops.scripts.mechanism.set_mechanism_run_history import (
     SetMechanismRunHistoryUsageError,
     set_mechanism_run_history,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
 

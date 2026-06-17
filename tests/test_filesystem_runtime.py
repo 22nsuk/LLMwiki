@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.filesystem_runtime import (
+from ops.scripts.core.filesystem_runtime import (
     AtomicTextUpdate,
     FilesystemTransactionError,
     apply_manifest_transaction,

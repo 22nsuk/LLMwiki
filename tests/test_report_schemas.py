@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import ClassVar
 
 import pytest
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.report_contract_test_runtime import (
     ReportPayload,
     ReportPayloadMap,

@@ -6,7 +6,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from ops.scripts.command_runtime import run_with_timeout
+
+from ops.scripts.core.command_runtime import run_with_timeout
 
 pytestmark = pytest.mark.subprocess
 

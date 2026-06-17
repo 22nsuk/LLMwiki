@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.wiki_lint import lint
 
+from ops.scripts.eval.wiki_lint import lint
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.slow

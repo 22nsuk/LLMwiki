@@ -5,14 +5,15 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.cbm_public_export import (
+
+from ops.scripts.public.cbm_public_export import (
     CBM_MANIFEST_NAME,
     CbmPublicExportError,
     build_cbm_public_export,
     format_cbm_export_summary,
     validate_cbm_local_paths,
 )
-from ops.scripts.export_public_repo import (
+from ops.scripts.public.export_public_repo import (
     DEFAULT_PUBLIC_OUT,
     build_parser,
     export_public_repo,

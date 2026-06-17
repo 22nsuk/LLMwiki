@@ -5,12 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.codex_goal_client import set_goal
-from ops.scripts.runtime_context import RuntimeContext
-
-from ops.scripts import auto_improve_runtime
+from ops.scripts.core.codex_goal_client import set_goal
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.mechanism import (
     auto_improve_error_runtime,
+    auto_improve_runtime,
     auto_improve_session_start_runtime,
     auto_improve_value_runtime,
 )

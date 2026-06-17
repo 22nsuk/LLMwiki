@@ -11,7 +11,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ops.scripts.release_closeout_finality_attestation import (
+
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release.release_closeout_finality_attestation import (
     BATCH_MANIFEST_PATH,
     DEFAULT_OUT,
     EXTERNAL_REPORT_MANIFEST_PATH,
@@ -23,9 +26,6 @@ from ops.scripts.release_closeout_finality_attestation import (
     verify_attestation_report,
     write_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public

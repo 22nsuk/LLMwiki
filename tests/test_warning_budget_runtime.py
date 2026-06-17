@@ -4,9 +4,9 @@ import datetime as dt
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.warning_budget_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.eval.warning_budget_runtime import (
     build_report,
     evaluate_warning_budget,
     warning_type_counts,

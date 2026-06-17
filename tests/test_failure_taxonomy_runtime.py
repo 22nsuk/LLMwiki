@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from types import SimpleNamespace
 
-from ops.scripts.failure_taxonomy_runtime import (
+from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
     blocking_role_for_failure_taxonomy,
     failure_taxonomy_from_iteration,

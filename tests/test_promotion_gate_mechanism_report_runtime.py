@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import unittest
 
-from ops.scripts.promotion_gate_mechanism_report_runtime import (
+from ops.scripts.mechanism.promotion_gate_mechanism_report_runtime import (
     MechanismPromotionReportAssemblyRequest,
     assemble_mechanism_promotion_report,
     build_mechanism_report_inputs,
 )
-from ops.scripts.promotion_gate_mechanism_state_runtime import MechanismGateInputs
+from ops.scripts.mechanism.promotion_gate_mechanism_state_runtime import (
+    MechanismGateInputs,
+)
 
 
 def _gate_inputs(*, behavior_delta_rel: str = "") -> MechanismGateInputs:

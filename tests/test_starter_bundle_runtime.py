@@ -3,8 +3,8 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.starter_bundle_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.starter_bundle_runtime import (
     DEFAULT_STARTER_BUNDLE,
     SYSTEM_MECHANISM_STARTER_BUNDLE,
     starter_bundle,

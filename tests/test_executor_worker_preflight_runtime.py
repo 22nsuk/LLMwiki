@@ -8,12 +8,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.executor_runtime import (
+from ops.scripts.core.executor_runtime import (
     ExecutorRuntimeExecutionError,
     _worker_source_digest_snapshot,
     run_executor_pipeline,
 )
-
 from tests.minimal_vault_runtime import seed_subagent_profiles
 from tests.test_executor_runtime import (
     _executor_subprocess_completed,

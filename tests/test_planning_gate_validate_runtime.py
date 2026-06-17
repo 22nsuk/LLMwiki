@@ -6,35 +6,36 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import ops.scripts.planning_gate_validate_runtime as planning_gate_validate_runtime
-from ops.scripts.finalize_run_runtime import finalize_run
-from ops.scripts.planning_gate_artifact_runtime import (
-    ArtifactLoadError,
-    load_artifact,
-    validate_artifact,
-)
-from ops.scripts.planning_gate_phase_checks_runtime import finalized_only_phase_checks
-from ops.scripts.planning_gate_phase_state_runtime import (
-    MechanismPhaseState,
-    classify_mechanism_phase,
-    load_completed_mechanism_inputs,
-)
-from ops.scripts.planning_gate_report_runtime import (
-    artifact_dir_report_path,
-    validate_run_dir,
-)
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+import ops.scripts.mechanism.planning_gate_validate_runtime as planning_gate_validate_runtime
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     PLANNING_GATE_VALIDATION_REPORT_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.starter_bundle_runtime import (
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.starter_bundle_runtime import (
     DEFAULT_STARTER_BUNDLE,
     StarterBundleDefinition,
     starter_bundle_path,
 )
-
+from ops.scripts.mechanism.finalize_run_runtime import finalize_run
+from ops.scripts.mechanism.planning_gate_artifact_runtime import (
+    ArtifactLoadError,
+    load_artifact,
+    validate_artifact,
+)
+from ops.scripts.mechanism.planning_gate_phase_checks_runtime import (
+    finalized_only_phase_checks,
+)
+from ops.scripts.mechanism.planning_gate_phase_state_runtime import (
+    MechanismPhaseState,
+    classify_mechanism_phase,
+    load_completed_mechanism_inputs,
+)
+from ops.scripts.mechanism.planning_gate_report_runtime import (
+    artifact_dir_report_path,
+    validate_run_dir,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault, seed_planning_artifacts
 from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
 

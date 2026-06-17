@@ -10,20 +10,20 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ops.scripts.command_log_summary_backfill import (
+
+from ops.scripts.core.command_log_summary_backfill import (
     DELETE_CONFIRMATION,
     build_report as build_backfill_report,
 )
-from ops.scripts.command_log_summary_runtime import (
+from ops.scripts.core.command_log_summary_runtime import (
     command_log_stream_text,
     usage_limit_flag_for_artifact,
 )
-from ops.scripts.generated_artifact_retention_clean import (
+from ops.scripts.core.generated_artifact_retention_clean import (
     build_report as build_retention_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

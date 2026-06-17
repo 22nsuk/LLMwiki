@@ -14,24 +14,26 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import (
+    from ops.scripts.core.command_runtime import (
         CommandHeartbeat,
         TimedProcessResult,
         run_with_timeout,
     )
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
-    from ops.scripts.source_revision_runtime import resolve_source_revision
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.source_revision_runtime import resolve_source_revision
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
     from ops.scripts.test.test_execution_command_runtime import (
@@ -89,24 +91,26 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         suite_scope_for_key as _suite_scope_for_key,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import (
+    from ops.scripts.core.command_runtime import (
         CommandHeartbeat,
         TimedProcessResult,
         run_with_timeout,
     )
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
-    from ops.scripts.source_revision_runtime import resolve_source_revision
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.source_revision_runtime import resolve_source_revision
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
     from ops.scripts.test.test_execution_command_runtime import (
@@ -567,8 +571,8 @@ def _render_test_execution_summary(inputs: TestExecutionRenderInputs) -> dict[st
             resolved_policy_path=inputs.resolved_policy_path,
             schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/test_execution_summary.py",
-                "ops/scripts/command_runtime.py",
+                "ops/scripts/test/test_execution_summary.py",
+                "ops/scripts/core/command_runtime.py",
             ],
             text_inputs=_test_execution_text_inputs(vault, request, observations),
             file_inputs=_test_execution_file_inputs(request),

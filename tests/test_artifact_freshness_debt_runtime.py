@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from ops.scripts.artifact_freshness_debt_runtime import (
+from ops.scripts.core.artifact_freshness_debt_runtime import (
     artifact_freshness_status,
     artifact_record_gate_effect,
     contract_issue_class,

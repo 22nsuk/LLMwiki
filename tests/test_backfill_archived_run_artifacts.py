@@ -7,18 +7,18 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from ops.scripts.artifact_freshness_runtime import (
+
+from ops.scripts.core.artifact_freshness_runtime import (
     EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
     build_report,
 )
-from ops.scripts.backfill_archived_run_artifacts import (
+from ops.scripts.core.backfill_archived_run_artifacts import (
     ARCHIVE_REASON,
     BACKFILL_PROVENANCE_PROPERTY,
     backfill_archived_run_artifacts,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

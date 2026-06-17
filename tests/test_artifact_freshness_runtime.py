@@ -11,30 +11,32 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 import pytest
-from ops.scripts.artifact_freshness_runtime import (
+
+from ops.scripts.core.artifact_freshness_runtime import (
     ArtifactFreshnessContext,
     build_canonical_report_envelope,
     build_report,
     write_report,
 )
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.external_report_action_matrix import (
-    build_report as build_external_report_action_matrix,
-    write_report as write_external_report_action_matrix,
-)
-from ops.scripts.generated_artifact_index import (
+from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.generated_artifact_index import (
     build_report as build_generated_artifact_index,
     write_report as write_generated_artifact_index,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-from ops.scripts.test_execution_summary import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
+from ops.scripts.release.external_report_action_matrix import (
+    build_report as build_external_report_action_matrix,
+    write_report as write_external_report_action_matrix,
+)
+from ops.scripts.test.test_execution_summary import (
     build_report as build_test_execution_summary,
     write_report as write_test_execution_summary,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

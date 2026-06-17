@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ops.scripts.wiki_doc_audit_runtime import (
+from ops.scripts.eval.wiki_doc_audit_runtime import (
     documentation_markdown_surfaces,
     external_report_reference_issues,
     router_summary_count_issues,

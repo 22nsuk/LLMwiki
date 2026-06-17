@@ -5,10 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mutation_proposal_runtime import build_report
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.mutation_proposal_runtime import build_report
 from tests.minimal_vault_runtime import (
     seed_minimal_vault as seed_minimal_raw_registry_vault,
 )
@@ -1869,7 +1868,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import (
+            from ops.scripts.registry.raw_registry_export import (
                 build_current_raw_registry_export,
             )
 
@@ -1951,7 +1950,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import (
+            from ops.scripts.registry.raw_registry_export import (
                 build_current_raw_registry_export,
             )
 
@@ -2035,7 +2034,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import (
+            from ops.scripts.registry.raw_registry_export import (
                 build_current_raw_registry_export,
             )
 
@@ -2112,7 +2111,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import (
+            from ops.scripts.registry.raw_registry_export import (
                 build_current_raw_registry_export,
             )
 
@@ -2179,7 +2178,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import (
+            from ops.scripts.registry.raw_registry_export import (
                 build_current_raw_registry_export,
             )
 
@@ -2252,7 +2251,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import (
+            from ops.scripts.registry.raw_registry_export import (
                 build_current_raw_registry_export,
             )
 

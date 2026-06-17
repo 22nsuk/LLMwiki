@@ -4,13 +4,13 @@ import json
 from pathlib import Path
 
 import pytest
-from ops.scripts.external_report_lifecycle_runtime import (
+
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.release.external_report_lifecycle_runtime import (
     active_reference_report_paths,
     active_report_paths,
     archived_report_paths,
 )
-from ops.scripts.policy_runtime import report_path
-
 from tests.minimal_vault_runtime import REPO_ROOT
 
 pytestmark = pytest.mark.report_contract

@@ -16,11 +16,12 @@ from unittest.mock import patch
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-from ops.scripts.command_runtime import CommandHeartbeat, TimedProcessResult
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.test_execution_summary import (
+
+from ops.scripts.core.command_runtime import CommandHeartbeat, TimedProcessResult
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.test.test_execution_summary import (
     REUSE_MISMATCH_COMMAND_IDENTITY,
     REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
     REUSE_MISMATCH_MISSING_SUMMARY,
@@ -40,7 +41,6 @@ from ops.scripts.test_execution_summary import (
     reuse_currentness_diagnostics_from_state,
     semantic_command,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.report_contract

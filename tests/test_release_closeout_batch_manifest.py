@@ -13,8 +13,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ops.scripts.release_audit_pack import build_audit_pack
-from ops.scripts.release_closeout_batch_manifest import (
+
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.wiki_manifest import release_manifest_excludes_path
+from ops.scripts.release.release_audit_pack import build_audit_pack
+from ops.scripts.release.release_closeout_batch_manifest import (
     ARCHIVE_SELF_DESCRIPTION_PATH,
     FINALITY_ATTESTATION_PATH,
     BatchArtifactInventory,
@@ -28,10 +32,6 @@ from ops.scripts.release_closeout_batch_manifest import (
     main,
     write_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.wiki_manifest import release_manifest_excludes_path
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.release_sealing]

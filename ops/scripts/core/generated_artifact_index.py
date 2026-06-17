@@ -786,9 +786,9 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/generated_artifact_index.py",
-                "ops/scripts/external_report_inventory_runtime.py",
-                "ops/scripts/external_report_lifecycle_runtime.py",
+                "ops/scripts/core/generated_artifact_index.py",
+                "ops/scripts/release/external_report_inventory_runtime.py",
+                "ops/scripts/release/external_report_lifecycle_runtime.py",
             ],
             path_group_inputs={
                 "run_promotion_reports": [

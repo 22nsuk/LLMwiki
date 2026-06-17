@@ -15,9 +15,9 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.source_revision_runtime import resolve_source_revision
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.source_revision_runtime import resolve_source_revision
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
 else:

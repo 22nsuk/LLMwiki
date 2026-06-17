@@ -7,20 +7,25 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.cyclonedx_sbom import build_bom, write_bom
-from ops.scripts.in_toto_statement import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.supply_chain.cyclonedx_sbom import build_bom, write_bom
+from ops.scripts.supply_chain.in_toto_statement import (
     build_in_toto_statement,
     write_in_toto_statement,
 )
-from ops.scripts.openvex_draft import build_openvex_draft, write_openvex_draft
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.sigstore_bundle import (
+from ops.scripts.supply_chain.openvex_draft import (
+    build_openvex_draft,
+    write_openvex_draft,
+)
+from ops.scripts.supply_chain.sigstore_bundle import (
     build_bundle_verification,
     write_bundle_verification,
 )
-from ops.scripts.spdx_sbom import build_spdx_sbom, write_spdx_sbom
-from ops.scripts.supply_chain_artifact_model import build_model, write_model
-
+from ops.scripts.supply_chain.spdx_sbom import build_spdx_sbom, write_spdx_sbom
+from ops.scripts.supply_chain.supply_chain_artifact_model import (
+    build_model,
+    write_model,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_artifact_model import seed_runtime_surface
 from tests.test_supply_chain_provenance import seed_dependency_inputs

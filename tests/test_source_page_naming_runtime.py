@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from ops.scripts.source_page_naming_runtime import (
+from ops.scripts.core.source_page_naming_runtime import (
     source_slug_validation_detail,
     source_stem_slug_and_date,
 )

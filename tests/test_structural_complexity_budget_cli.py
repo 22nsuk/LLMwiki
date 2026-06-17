@@ -7,8 +7,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.structural_complexity_budget import main
-
+from ops.scripts.eval.structural_complexity_budget import main
 from tests.test_mechanism_assess import seed_policy
 
 

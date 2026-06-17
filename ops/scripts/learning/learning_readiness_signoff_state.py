@@ -4,7 +4,7 @@ import datetime as dt
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.artifact_io_runtime import load_optional_json_object
 
 from .learning_readiness_vocabulary import LEARNING_REVIEW_REQUIRED_BLOCKER_ID
 

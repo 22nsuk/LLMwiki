@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from ops.scripts.wiki_manifest import (
+from ops.scripts.eval.wiki_manifest import (
     DEFAULT_EXCLUDED_FILES,
     DEFAULT_EXCLUDED_PREFIXES,
     DEFAULT_EXCLUDED_SEGMENTS,

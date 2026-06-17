@@ -3,19 +3,20 @@ from __future__ import annotations
 import json
 import unittest
 
-from ops.scripts.artifact_freshness_payload_runtime import (
+from ops.scripts.core.artifact_freshness_payload_runtime import (
     embed_artifact_envelope_metadata,
 )
-from ops.scripts.auto_improve_readiness_learning_runtime import (
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.auto_improve_readiness_learning_runtime import (
     learning_claim_blocker_payloads,
 )
-from ops.scripts.auto_improve_readiness_queue_runtime import (
+from ops.scripts.mechanism.auto_improve_readiness_queue_runtime import (
     OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER,
     readiness_execution_fields,
     readiness_queue_payloads,
     readiness_queue_state,
 )
-from ops.scripts.auto_improve_readiness_runtime import (
+from ops.scripts.mechanism.auto_improve_readiness_runtime import (
     assess_learning_readiness,
     build_readiness_report,
     load_readiness_inputs,
@@ -23,8 +24,6 @@ from ops.scripts.auto_improve_readiness_runtime import (
     readiness_exit_code,
     write_readiness_report,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.auto_improve_readiness_test_runtime import (
     ENVELOPE_SCHEMA_PATH,
     AutoImproveReadinessRuntimeFixture,

@@ -6,20 +6,20 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.archive_execution_manifest import (
+
+from ops.scripts.core.archive_execution_manifest import (
     APPLY_CONFIRMATION,
     ROLLBACK_CONFIRMATION,
     build_report,
     main,
     write_report,
 )
-from ops.scripts.generated_artifact_index import (
+from ops.scripts.core.generated_artifact_index import (
     build_report as build_index_report,
     write_report as write_index_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

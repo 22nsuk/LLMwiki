@@ -4,13 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mechanism_review_history_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.mechanism_review_history_runtime import (
     group_snapshots_by_targets,
     load_mechanism_run_snapshots,
     load_optional_json,
 )
-from ops.scripts.policy_runtime import load_policy
-
 from tests.mechanism_review_test_utils import (
     changed_files_manifest,
     eval_report,

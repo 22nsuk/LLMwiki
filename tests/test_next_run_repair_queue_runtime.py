@@ -5,14 +5,13 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.artifact_freshness_payload_runtime import (
+from ops.scripts.core.artifact_freshness_payload_runtime import (
     embed_artifact_envelope_metadata,
 )
-from ops.scripts.executor_noop_runtime import (
+from ops.scripts.core.executor_noop_runtime import (
     EXECUTOR_NOOP_MUTATION_FAILURE_MARKER,
     executor_noop_mutation_failure_message,
 )
-
 from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
     OPEN_DECISION_STATUS,

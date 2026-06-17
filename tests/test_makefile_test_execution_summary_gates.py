@@ -5,8 +5,11 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.test_lane_registry_runtime import load_registry, pack_summary_suite
 
+from ops.scripts.test.test_lane_registry_runtime import (
+    load_registry,
+    pack_summary_suite,
+)
 from tests.makefile_static_helpers import (
     _assert_assignment_exists,
     _assert_assignment_not_exists,

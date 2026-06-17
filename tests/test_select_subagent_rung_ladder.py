@@ -3,8 +3,8 @@ from __future__ import annotations
 import unittest
 
 import pytest
-from ops.scripts.policy_runtime import load_policy
 
+from ops.scripts.core.policy_runtime import load_policy
 from tests.minimal_vault_runtime import REPO_ROOT
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

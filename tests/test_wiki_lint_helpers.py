@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from ops.scripts.wiki_lint import add_issue
+from ops.scripts.eval.wiki_lint import add_issue
 
 
 class WikiLintHelperTests(unittest.TestCase):

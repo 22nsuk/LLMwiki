@@ -7,10 +7,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.cli_surface_inventory import build_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.cli_surface_inventory import build_report
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

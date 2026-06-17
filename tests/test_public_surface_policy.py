@@ -5,8 +5,13 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.export_public_repo import export_public_repo, should_export_public
-from ops.scripts.public_surface_policy import (
+
+from ops.scripts.eval.doc_graph_integrity import ROOT_DOCS
+from ops.scripts.public.export_public_repo import (
+    export_public_repo,
+    should_export_public,
+)
+from ops.scripts.public.public_surface_policy import (
     PUBLIC_EXCLUDED_SEGMENTS,
     PUBLIC_GITIGNORE_END,
     PUBLIC_GITIGNORE_START,
@@ -15,8 +20,6 @@ from ops.scripts.public_surface_policy import (
     PUBLIC_INCLUDED_REPORT_FILES,
     render_public_gitignore_block,
 )
-
-from ops.scripts.eval.doc_graph_integrity import ROOT_DOCS
 
 pytestmark = pytest.mark.public
 

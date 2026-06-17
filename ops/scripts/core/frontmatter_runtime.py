@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.raw_registry_runtime import (
+from ops.scripts.registry.raw_registry_runtime import (
     normalize_registry_locator,
     registry_entry_locators,
 )

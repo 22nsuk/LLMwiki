@@ -11,9 +11,15 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.release_closeout_summary import (
+
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_change_sample,
+)
+from ops.scripts.release.release_closeout_summary import (
     BASE_PROFILE,
     PROVENANCE_PROFILE,
     SBOM_PROFILE,
@@ -28,12 +34,6 @@ from ops.scripts.release_closeout_summary import (
     source_specs_for_profile,
     write_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import (
-    release_source_tree_change_sample,
-)
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

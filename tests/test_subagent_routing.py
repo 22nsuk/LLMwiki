@@ -5,12 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_payload_runtime import (
+from ops.scripts.core.artifact_freshness_payload_runtime import (
     ENVELOPE_REQUIRED_FIELDS,
     has_artifact_envelope,
 )
-from ops.scripts.schema_runtime import load_schema, validate_or_raise
-
+from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_main
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault, seed_subagent_profiles

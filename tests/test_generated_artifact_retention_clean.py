@@ -11,9 +11,12 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.generated_artifact_retention_clean import EMPTY_SHA256, build_report
 
 from ops.scripts.core import generated_artifact_retention_clean as retention_clean
+from ops.scripts.core.generated_artifact_retention_clean import (
+    EMPTY_SHA256,
+    build_report,
+)
 
 pytestmark = pytest.mark.report_contract
 

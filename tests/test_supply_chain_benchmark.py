@@ -7,9 +7,9 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.supply_chain_benchmark import build_report, write_report
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.supply_chain.supply_chain_benchmark import build_report, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_artifact_model import seed_runtime_surface
 from tests.test_supply_chain_provenance import seed_dependency_inputs

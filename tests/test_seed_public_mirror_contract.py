@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 
 pytestmark = pytest.mark.public
 

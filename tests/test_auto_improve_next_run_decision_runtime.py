@@ -3,7 +3,8 @@ from __future__ import annotations
 import datetime as dt
 import unittest
 
-from ops.scripts.auto_improve_next_run_decision_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
     CHOOSE_ALTERNATIVE_DECISION,
     IGNORE_RETRYABLE_DECISION,
@@ -14,9 +15,7 @@ from ops.scripts.auto_improve_next_run_decision_runtime import (
     NextRunDecisionRequest,
     build_next_run_decision,
 )
-from ops.scripts.auto_improve_outcome_runtime import ExecutionOutcome
-from ops.scripts.runtime_context import RuntimeContext
-
+from ops.scripts.mechanism.auto_improve_outcome_runtime import ExecutionOutcome
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
 )

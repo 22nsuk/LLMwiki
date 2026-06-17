@@ -6,8 +6,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.policy_runtime import report_path
 
 
 def sha256_file(path: Path) -> str:

@@ -4,7 +4,8 @@ import unittest
 from pathlib import Path
 
 import yaml
-from ops.scripts.yaml_runtime import WikiLoader, parse_simple_yaml
+
+from ops.scripts.core.yaml_runtime import WikiLoader, parse_simple_yaml
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 

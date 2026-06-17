@@ -5,7 +5,8 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from ops.scripts.auto_improve_loop import main as auto_improve_loop_main
+
+from ops.scripts.mechanism.auto_improve_loop import main as auto_improve_loop_main
 
 pytestmark = pytest.mark.public
 

@@ -9,7 +9,8 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.goal_runtime_lock import (
+
+from ops.scripts.mechanism.goal_runtime_lock import (
     GoalRuntimeWorkspaceLockActive,
     acquire_workspace_lock,
     inspect_workspace_lock,

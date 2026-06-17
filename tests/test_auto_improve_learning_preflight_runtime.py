@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import unittest
 
-from ops.scripts.goal_runtime_run_admission import (
+from ops.scripts.mechanism import (
+    auto_improve_learning_preflight_runtime,
+    auto_improve_runtime,
+)
+from ops.scripts.mechanism.goal_runtime_run_admission import (
     _contract_authorizes_learning_uncertain,
 )
-
-from ops.scripts import auto_improve_runtime
-from ops.scripts.mechanism import auto_improve_learning_preflight_runtime
 
 
 def _readiness_report(*, recommended_next_step: str = "review first") -> dict:

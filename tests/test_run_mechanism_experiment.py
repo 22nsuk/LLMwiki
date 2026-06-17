@@ -10,20 +10,20 @@ from typing import Any
 from unittest import mock
 
 import pytest
-from ops.scripts.post_mutation_generated_artifact_convergence_runtime import (
-    converge_post_mutation_generated_artifacts,
-)
-from ops.scripts.run_mechanism_experiment_runtime import (
-    RunMechanismExperimentUsageError,
-    run_mechanism_experiment,
-)
-from ops.scripts.runtime_context import RuntimeContext
 
 from ops.scripts.core import filesystem_runtime
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.mechanism import (
     mechanism_run_capture_runtime,
     mechanism_run_promotion_runtime,
     mechanism_run_workspace_runtime,
+)
+from ops.scripts.mechanism.post_mutation_generated_artifact_convergence_runtime import (
+    converge_post_mutation_generated_artifacts,
+)
+from ops.scripts.mechanism.run_mechanism_experiment_runtime import (
+    RunMechanismExperimentUsageError,
+    run_mechanism_experiment,
 )
 from tests.minimal_vault_runtime import set_policy_value
 from tests.run_mechanism_experiment_test_utils import (

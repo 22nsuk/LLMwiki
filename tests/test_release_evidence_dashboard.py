@@ -10,15 +10,21 @@ from typing import Any
 from unittest import mock
 
 import pytest
-from ops.scripts.release_evidence_dashboard import build_report, main, write_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
-from ops.scripts import release_evidence_dashboard as flat_release_evidence_dashboard
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release import (
     release_evidence_dashboard as canonical_release_evidence_dashboard,
+    release_evidence_dashboard as flat_release_evidence_dashboard,
     release_evidence_dashboard_render_runtime,
+)
+from ops.scripts.release.release_evidence_dashboard import (
+    build_report,
+    main,
+    write_report,
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 

@@ -121,7 +121,7 @@ def build_registry(
             ),
             resolved_policy_path=resolved_policy_path,
             schema_path=spec.schema_path,
-            source_paths=["ops/scripts/closure_registry_envelope.py"],
+            source_paths=["ops/scripts/core/closure_registry_envelope.py"],
             text_inputs={
                 "closure_payload_digest": _normalized_json_digest(closures),
                 "registry": spec.registry,

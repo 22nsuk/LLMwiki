@@ -4,13 +4,13 @@ from __future__ import annotations
 import unittest
 
 import pytest
-from ops.scripts.schema_constants_runtime import (
+
+from ops.scripts.core.schema_constants_runtime import (
     RELEASE_AUTHORITY_VOCABULARY_SCHEMA_PATH,
     RELEASE_AUTHORITY_VOCABULARY_SCHEMA_URI,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
-from ops.scripts import release_authority_vocabulary as vocabulary
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release import release_authority_vocabulary as vocabulary
 
 pytestmark = pytest.mark.public
 

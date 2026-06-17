@@ -13,32 +13,32 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     import sys
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         read_json_object,
         write_schema_validated_json,
     )
-    from ops.scripts.command_log_summary_runtime import write_command_log_summary
-    from ops.scripts.generated_artifact_retention_clean import (
+    from ops.scripts.core.command_log_summary_runtime import write_command_log_summary
+    from ops.scripts.core.generated_artifact_retention_clean import (
         build_report as build_retention_report,
     )
-    from ops.scripts.observability_artifacts_runtime import (
+    from ops.scripts.core.observability_artifacts_runtime import (
         write_run_artifact_fingerprint,
     )
-    from ops.scripts.output_runtime import (
+    from ops.scripts.core.output_runtime import (
         display_path,
         resolve_repo_output_path,
         write_output_text,
     )
-    from ops.scripts.policy_runtime import report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.policy_runtime import report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         COMMAND_LOG_SUMMARY_BACKFILL_SCHEMA_PATH,
         EXECUTOR_REPORT_SCHEMA_PATH,
         REWORK_CLOSURES_SCHEMA_PATH,
         RUN_LEDGER_SCHEMA_PATH,
         TIMEOUT_FAILURE_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import (
+    from ops.scripts.core.schema_runtime import (
         load_schema_with_vault_override,
         validate_with_schema,
     )

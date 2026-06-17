@@ -7,11 +7,15 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.codex_goal_client import set_goal
-from ops.scripts.codex_goal_prompt import build_prompt_text, build_report, write_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.codex_goal_client import set_goal
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.codex_goal_prompt import (
+    build_prompt_text,
+    build_report,
+    write_report,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 

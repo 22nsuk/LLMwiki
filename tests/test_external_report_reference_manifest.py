@@ -8,15 +8,14 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from ops.scripts.external_report_reference_manifest import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release.external_report_reference_manifest import (
     ExternalReportReferenceManifestRequest,
     ZipIdentityInput,
     build_report,
     main,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

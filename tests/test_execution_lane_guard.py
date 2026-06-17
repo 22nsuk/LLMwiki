@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.execution_lane_guard import build_result, main
 
+from ops.scripts.core.execution_lane_guard import build_result, main
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public

@@ -6,14 +6,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.cyclonedx_sbom import build_bom, write_bom
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     CYCLONEDX_16_SCHEMA_PATH,
     CYCLONEDX_16_SCHEMA_URI,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.supply_chain.cyclonedx_sbom import build_bom, write_bom
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_provenance import (
     LOCKED_CI_INSTALL_SNIPPET,

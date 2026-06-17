@@ -10,8 +10,8 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.filesystem_runtime import atomic_write_json
-    from ops.scripts.public_surface_policy import (
+    from ops.scripts.core.filesystem_runtime import atomic_write_json
+    from ops.scripts.public.public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
         PUBLIC_EXCLUDED_SEGMENTS,
@@ -21,7 +21,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         render_public_gitignore_block,
     )
 else:
-    from ops.scripts.filesystem_runtime import atomic_write_json
+    from ops.scripts.core.filesystem_runtime import atomic_write_json
 
     from .public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,

@@ -5,20 +5,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.raw_intake_promotion_runtime import (
+from ops.scripts.core.schema_constants_runtime import (
+    RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
+    RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.wiki_page_runtime import section_body
+from ops.scripts.registry.raw_intake_promotion_runtime import (
     render_family_pages,
     scaffold_profile_bundle,
     validate_profile_bundle,
 )
-from ops.scripts.raw_intake_promotion_shared_runtime import (
+from ops.scripts.registry.raw_intake_promotion_shared_runtime import (
     CONCEPT_ANALYSIS_SCAFFOLD_HEADINGS,
 )
-from ops.scripts.schema_constants_runtime import (
-    RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
-    RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
-)
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.wiki_page_runtime import section_body
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

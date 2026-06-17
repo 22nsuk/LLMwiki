@@ -10,8 +10,11 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from ops.scripts.codex_goal_client import GoalBackendUnavailableError, set_goal
-from ops.scripts.goal_run_status import (
+
+from ops.scripts.core.codex_goal_client import GoalBackendUnavailableError, set_goal
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.goal_run_status import (
     DEFAULT_STATUS_PATH,
     GoalRunStatusRequest,
     build_report,
@@ -19,17 +22,17 @@ from ops.scripts.goal_run_status import (
     write_report,
     write_run_artifacts,
 )
-from ops.scripts.goal_runtime_backoff import backoff_status, freshness_status
-from ops.scripts.goal_runtime_certificate import build_runtime_certificate
-from ops.scripts.goal_runtime_maintenance import (
+from ops.scripts.mechanism.goal_runtime_backoff import backoff_status, freshness_status
+from ops.scripts.mechanism.goal_runtime_certificate import build_runtime_certificate
+from ops.scripts.mechanism.goal_runtime_maintenance import (
     PERIODIC_CHECKPOINT_COMMAND_EVENT,
     append_checkpoint_command_event,
     build_periodic_evidence,
 )
-from ops.scripts.goal_runtime_resume import resume_metadata_from_report, resume_status
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.mechanism.goal_runtime_resume import (
+    resume_metadata_from_report,
+    resume_status,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 

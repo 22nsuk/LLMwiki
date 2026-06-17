@@ -8,7 +8,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.codex_goal_client import (
+
+from ops.scripts.core.codex_goal_client import (
     DEFAULT_CONTRACT_PATH,
     AutoImproveGoalContractOptions,
     FakeGoalBackend,
@@ -24,7 +25,6 @@ from ops.scripts.codex_goal_client import (
     set_goal,
     update_goal,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 

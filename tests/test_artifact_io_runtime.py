@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SEMANTIC_NOOP_ENVELOPE_FIELDS,
     ReportWriterKernelRequest,
     SchemaBackedReportWriteRequest,

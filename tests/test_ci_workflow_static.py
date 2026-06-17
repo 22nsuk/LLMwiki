@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 import yaml
-from ops.scripts.test_lane_registry_runtime import (
+
+from ops.scripts.test.test_lane_registry_runtime import (
     compatibility_names,
     load_registry,
 )
-
 from tests.workflow_static_helpers import (
     PINNED_CHECKOUT_ACTION,
     PINNED_DEPENDENCY_REVIEW_ACTION,
