@@ -550,12 +550,23 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `release-auto-promotion-ready` manifests under `build/release/`. Artifact
   freshness excludes this finality-owned diagnostic so a terminal finality write
   does not create freshness debt; validate it with
-  `make release-closeout-finality-verify`. After refreshing `artifact-freshness`,
-  `external-report-action-matrix`, `generated-artifact-index`,
-  `release-closeout-summary-report`, or another fixed-point tracked report,
-  rerun `make release-finality-resettle-current-or-refresh` so current finality
-  evidence is reused when possible, or the attestation is rewritten and verified
-  after the last tracked writer when needed. The refresh path hands off to
+  `make release-closeout-finality-verify`. When
+  `release-finality-resettle-current-check` fails, it runs the non-mutating
+  `release-finality-resettle-current-diagnose` helper so the verify JSON includes
+  `failure_classification.primary_class`, `recommended_lane`,
+  `recommended_targets`, and `recommended_fixed_point_initial_targets`. Use that
+  classification, plus the batch replay verifier's
+  `batch manifest replay mismatch classification` JSON when replay fails, to
+  distinguish batch-manifest source freshness/content drift,
+  freshness/index/cohort digest drift, sealed preflight drift, fixed-point
+  tracked-writer drift, and attestation-only digest drift before falling back to
+  a full resettle. After refreshing
+  `artifact-freshness`, `external-report-action-matrix`,
+  `generated-artifact-index`, `release-closeout-summary-report`, or another
+  fixed-point tracked report, rerun
+  `make release-finality-resettle-current-or-refresh` so current finality evidence
+  is reused when possible, or the attestation is rewritten and verified after the
+  last tracked writer when needed. The refresh path hands off to
   `make release-terminal-finality`, which runs the freshness/matrix/index
   finality suffix, fixed-point writer, strict post-check dry-run, and terminal
   finality verification in that order. The resettle lane refreshes
@@ -630,13 +641,24 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   choose the narrow owner lane for each stale artifact group before paying for
   broad release evidence convergence. If the stale set is only source
   revision/tree fingerprint drift, start with
-  `make freshness-source-identity-converge`; it refreshes freshness/index
-  identity evidence and then uses the finality current-or-refresh wrapper
-  without entering full-suite, release-run-ready, promotion authority, or goal
-  publish lanes. Treat this as source-identity/finality readback debt, not as
-  evidence payload freshness debt that automatically justifies broad release
-  convergence. The top-level resettle target remains the safe post-commit
-  fallback, while owner routes point to concrete Make targets such as
+  `make freshness-source-identity-converge`; it delegates to the owner-route
+  aware `make freshness-owner-route-converge`, which reads
+  `stale_routing.source_identity_owner_routes`, runs executable owner targets
+  before terminal finality, writes
+  `tmp/freshness-owner-route-converge-plan.json`, and only then refreshes
+  freshness/index identity evidence plus the finality current-or-refresh wrapper.
+  If the existing artifact freshness report is already `current` and its
+  `source_tree_fingerprint` matches the current source tree, the helper reuses it
+  as the route authority and records `initial_refresh: skipped` in the plan
+  instead of paying for a duplicate freshness refresh.
+  It does not enter full-suite, release-run-ready, promotion authority, or goal
+  publish lanes unless a concrete owner route names that lane. Placeholder
+  targets such as `GOAL_RUN_ID=<completed-run-id> ...` require the matching
+  environment input before the helper mutates any owner report. Treat this as
+  source-identity/finality readback debt, not as evidence payload freshness debt
+  that automatically justifies broad release convergence. The top-level
+  resettle target remains the safe post-commit fallback, while owner routes
+  point to concrete Make targets such as
   `external-report-reference-manifest-settle`,
   `test-execution-summary-full-current-or-refresh`,
   `release-finality-resettle-current-or-refresh`,

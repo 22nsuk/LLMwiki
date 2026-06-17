@@ -274,8 +274,16 @@
                   "type": "string",
                   "enum": [
                     "pass",
-                    "fail"
+                    "fail",
+                    "skipped"
                   ]
+                },
+                "skip_reason": {
+                  "type": "string"
+                },
+                "reuse_signature": {
+                  "type": "object",
+                  "additionalProperties": true
                 }
               }
             }

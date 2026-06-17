@@ -284,16 +284,31 @@ class CiWorkflowStaticTests(unittest.TestCase):
             authority_step.get("if"),
             "always() && matrix.tier == 'release-closeout-regression' && steps.release_closeout_regression.outcome != 'skipped'",
         )
+        self.assertEqual(authority_step.get("env", {}).get("CI_PYTHON_VERSION"), "${{ matrix.python-version }}")
         authority_run_text = _run_text(authority_step)
         authority_commands = {line.strip() for line in authority_run_text.splitlines() if line.strip()}
         self.assertIn("set +e", authority_commands)
+        self.assertIn("finality_status=0", authority_commands)
+        self.assertIn("sealed_preflight_status=0", authority_commands)
         self.assertIn("make release-closeout-finality-verify-ci-artifact", authority_commands)
         self.assertNotIn("make release-closeout-finality-verify", authority_commands)
         self.assertIn("make release-authority-sealed-preflight", authority_commands)
         self.assertIn("finality_status=$?", authority_commands)
         self.assertIn("sealed_preflight_status=$?", authority_commands)
-        self.assertIn('if [ "$finality_status" -ne 0 ]; then', authority_commands)
-        self.assertIn('exit "$sealed_preflight_status"', authority_commands)
+        self.assertIn(
+            'if [ "$finality_status" -ne 0 ] || [ "$sealed_preflight_status" -ne 0 ]; then',
+            authority_commands,
+        )
+        self.assertIn("exit 0", authority_commands)
+        self.assertNotIn('exit "$sealed_preflight_status"', authority_commands)
+        self.assertIn(
+            'echo "sealed_preflight_status=${sealed_preflight_status}"',
+            authority_commands,
+        )
+        self.assertIn(
+            '} > "tmp/release-authority-blocked-preflight-upload-diagnostics-${CI_PYTHON_VERSION}.txt"',
+            authority_commands,
+        )
 
         diagnostics = _step_by_name(job, "Materialize release closeout upload diagnostics")
         self.assertEqual(

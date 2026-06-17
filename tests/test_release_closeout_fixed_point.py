@@ -22,9 +22,11 @@ from ops.scripts.release.release_closeout_fixed_point import (
     ARTIFACT_FRESHNESS_REPORT_PATH,
     DEFAULT_OUT,
     DRY_RUN_SCHEMA_PATH,
+    _run_iteration,
     bootstrap_post_promote_freshness,
     build_dry_run_report,
     build_report,
+    fixed_point_writer_specs_from_policy,
     main as fixed_point_main,
     write_dry_run_plan,
     write_dry_run_recommended_targets,
@@ -553,6 +555,157 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(calls.count("artifact-freshness"), 2)
         self.assertEqual(calls.count("external-report-action-matrix"), 2)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_fixed_point_does_not_skip_feedback_targets_before_context_is_stable(
+        self,
+    ) -> None:
+        calls: list[str] = []
+        write_count = 0
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            nonlocal write_count
+            target = argv[1]
+            calls.append(target)
+            rel_path = TARGET_TO_TRACKED_PATH.get(target)
+            if rel_path:
+                write_count += 1
+                self._write_tracked_payload(
+                    rel_path,
+                    {
+                        "target": target,
+                        "stable_semantic_value": target,
+                        "generated_at": f"raw-only-{write_count}",
+                        "input_fingerprints": {"stable_input": target},
+                    },
+                )
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        report = build_report(
+            self.vault,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["iteration_count"], 3)
+        skipped_results = [
+            result
+            for result in report["iterations"][1]["command_results"]
+            if result["status"] == "skipped"
+        ]
+        self.assertEqual(skipped_results, [])
+        self.assertEqual(calls.count("generated-artifact-index-body"), 2)
+        self.assertEqual(calls.count("artifact-freshness"), 2)
+        self.assertEqual(calls.count("external-report-action-matrix"), 2)
+        generated_index_cost = next(
+            item
+            for item in report["duration_summary"]["writer_costs"]
+            if item["target"] == "generated-artifact-index-body"
+        )
+        self.assertEqual(generated_index_cost["run_count"], 2)
+        self.assertEqual(generated_index_cost["selected_iteration_count"], 2)
+        self.assertEqual(
+            report["duration_summary"]["command_run_count"],
+            len(calls),
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_fixed_point_skips_feedback_target_when_context_signature_repeats(
+        self,
+    ) -> None:
+        writers = fixed_point_writer_specs_from_policy(self.vault)
+        writer_by_target = {str(writer["target"]): writer for writer in writers}
+        tracked_paths = [
+            str(path) for writer in writers for path in writer.get("produces", [])
+        ]
+        for rel_path in tracked_paths:
+            self._write_tracked_payload(
+                rel_path,
+                {
+                    "target": rel_path,
+                    "stable_semantic_value": rel_path,
+                    "generated_at": "stable-context",
+                    "input_fingerprints": {"stable_input": rel_path},
+                },
+            )
+        calls: list[str] = []
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            target = argv[1]
+            calls.append(target)
+            self._write_tracked_payload(
+                TARGET_TO_TRACKED_PATH[target],
+                {
+                    "target": target,
+                    "stable_semantic_value": target,
+                    "generated_at": f"actual-run-{len(calls)}",
+                    "input_fingerprints": {"stable_input": target},
+                },
+            )
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        reuse_signatures: dict[str, dict[str, Any]] = {}
+        first_results, first_failed = _run_iteration(
+            self.vault,
+            targets=["generated-artifact-index-body"],
+            python_executable="python",
+            make_variables=(),
+            timeout_seconds=30,
+            command_runner=runner,
+            runtime_env={},
+            writer_by_target=writer_by_target,
+            semantic_reuse_signatures=reuse_signatures,
+            tracked_paths=tracked_paths,
+        )
+        second_results, second_failed = _run_iteration(
+            self.vault,
+            targets=["generated-artifact-index-body"],
+            python_executable="python",
+            make_variables=(),
+            timeout_seconds=30,
+            command_runner=runner,
+            runtime_env={},
+            writer_by_target=writer_by_target,
+            semantic_reuse_signatures=reuse_signatures,
+            tracked_paths=tracked_paths,
+        )
+
+        self.assertFalse(first_failed)
+        self.assertFalse(second_failed)
+        self.assertEqual(first_results[0]["status"], "pass")
+        self.assertEqual(second_results[0]["status"], "skipped")
+        self.assertEqual(
+            second_results[0]["skip_reason"],
+            "writer_input_fingerprints_and_output_semantic_digest_unchanged",
+        )
+        self.assertEqual(calls, ["generated-artifact-index-body"])
 
     def test_dry_run_reports_affected_paths_and_recommended_targets(self) -> None:
         self._seed_tracked_artifacts_with_fixed_point_baseline()

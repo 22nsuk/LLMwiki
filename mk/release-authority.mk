@@ -139,11 +139,14 @@ release-authority-post-ready-finality:
 	$(MAKE) release-closeout-finality-verify
 
 release-authority-post-ready-finality-current-check:
-	$(MAKE) tmp-json-clean
-	$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
-	$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required
-	$(MAKE) tmp-json-clean
-	$(MAKE) release-closeout-finality-verify
+	@status=0; diagnose_on_fail=1; \
+	$(MAKE) tmp-json-clean || status=$$?; \
+	if [ $$status -eq 0 ]; then $(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" || status=$$?; fi; \
+	if [ $$status -eq 0 ]; then $(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required || status=$$?; fi; \
+	if [ $$status -eq 0 ]; then $(MAKE) tmp-json-clean || status=$$?; fi; \
+	if [ $$status -eq 0 ]; then $(MAKE) release-closeout-finality-verify || { status=$$?; diagnose_on_fail=0; }; fi; \
+	if [ $$status -ne 0 ] && [ $$diagnose_on_fail -eq 1 ]; then $(MAKE) release-finality-resettle-current-diagnose || true; fi; \
+	exit $$status
 
 release-authority-post-ready-finality-current-or-refresh:
 	@if $(MAKE) release-authority-post-ready-finality-current-check; then \

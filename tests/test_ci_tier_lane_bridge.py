@@ -52,8 +52,11 @@ class CiTierLaneBridgeTests(unittest.TestCase):
             release_closeout_commands,
         )
         self.assertIn("set +e", release_closeout_commands)
+        self.assertIn("finality_status=0", release_closeout_commands)
+        self.assertIn("sealed_preflight_status=0", release_closeout_commands)
         self.assertIn("finality_status=$?", release_closeout_commands)
         self.assertIn("sealed_preflight_status=$?", release_closeout_commands)
+        self.assertIn("exit 0", release_closeout_commands)
         report_contract_run = by_tier["report-contract"]["workflow_run_text"]
         self.assertEqual(report_contract_run.strip(), "make ci-report-contract-tier")
         self.assertEqual(

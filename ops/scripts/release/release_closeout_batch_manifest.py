@@ -26,6 +26,7 @@ from ops.scripts.eval.wiki_manifest import (
     release_manifest_excludes_path,
 )
 
+from .finality_current_diagnostics import classify_batch_replay_digest_mismatches
 from .release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
     release_authority_vocabulary_payload,
@@ -1522,6 +1523,15 @@ def _check_manifest(
             print(f"- {item['path']}: mtime {item['mtime']}", file=sys.stderr)
         for rel_path in existing_source_freshness.get("missing_zip_members", []):
             print(f"- {rel_path}: missing from ZIP metadata", file=sys.stderr)
+    if digest_mismatches or not content_matches or not source_freshness_passes:
+        classification = classify_batch_replay_digest_mismatches(
+            vault,
+            digest_mismatches,
+            source_freshness=existing_source_freshness,
+            content_matches=content_matches,
+        )
+    else:
+        classification = {}
     if digest_mismatches:
         print("artifact digest mismatches:", file=sys.stderr)
         for item in digest_mismatches:
@@ -1531,6 +1541,18 @@ def _check_manifest(
                 f"- {item['path']}: expected {expected[:12]}..., actual {actual[:12]}...",
                 file=sys.stderr,
             )
+    if classification:
+        print(
+            "batch manifest replay mismatch classification:",
+            file=sys.stderr,
+        )
+        print(
+            json.dumps(
+                classification,
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
     return 1
 
 

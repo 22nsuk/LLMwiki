@@ -248,7 +248,21 @@ aligned.
 Within `release-closeout-fixed-point`, raw digests still prove convergence, but
 the next iteration's target list is selected from per-report semantic digest
 changes so envelope/currentness churn does not repeatedly schedule the expensive
-generated-artifact feedback suffix.
+generated-artifact feedback suffix. When
+`generated-artifact-index-body`, `artifact-freshness`, or
+`external-report-action-matrix` is selected again, the fixed-point engine also
+reuses the existing writer output and records a skipped command result if that
+writer's input fingerprint, output semantic digest, and tracked-context semantic
+digest have not changed.
+If the terminal finality current check still fails after this reuse path,
+`release-finality-resettle-current-check` emits a non-mutating diagnosis from
+`release-finality-resettle-current-diagnose`. Its
+`failure_classification`, together with the batch replay verifier's
+`batch manifest replay mismatch classification` JSON, separates batch-manifest
+source freshness/content drift, freshness/index/cohort digest drift, sealed
+preflight drift, fixed-point tracked-writer drift, and attestation-only digest
+drift so operators can rerun the narrow writer or seal lane before choosing full
+`release-finality-resettle`.
 The workflow planner now records the generated-artifact fan-out explicitly in
 each selected step's `fanout_targets` field so the repair suffix is inspectable
 rather than implicit in Make recipes alone.

@@ -1063,6 +1063,17 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
+      "path": "ops/scripts/release/freshness_owner_route_converge.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--plan-out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/release/github_governance_live_drift.py",
       "classification": "repo_artifact",
       "output_options": [

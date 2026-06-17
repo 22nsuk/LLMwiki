@@ -19,6 +19,7 @@ from ops.scripts.release.release_closeout_finality_attestation import (
     DEFAULT_OUT,
     EXTERNAL_REPORT_MANIFEST_PATH,
     FIXED_POINT_REPORT_PATH,
+    SEALED_PREFLIGHT_PATH,
     SELF_CHECK_PATH,
     build_report,
     main,
@@ -54,6 +55,7 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         (self.vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
         (self.vault / "external-reports").mkdir(parents=True, exist_ok=True)
         self._copy_support_file("ops/schemas/release-closeout-finality-attestation.schema.json")
+        self._copy_support_file("ops/policies/release-closeout-fixed-point.json")
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -120,6 +122,18 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
             },
         )
         return digest_map
+
+    def _rebind_fixed_point_to_current_batch_and_self_check(self) -> None:
+        fixed_point = json.loads((self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8"))
+        final_map = fixed_point.get("final_digest_map")
+        final_map = final_map if isinstance(final_map, dict) else {}
+        final_map[BATCH_MANIFEST_PATH] = _sha256(self.vault / BATCH_MANIFEST_PATH)
+        final_map[SELF_CHECK_PATH] = _sha256(self.vault / SELF_CHECK_PATH)
+        fixed_point["final_digest_map"] = final_map
+        fixed_point["tracked_artifacts"] = [
+            {"path": path} for path in sorted(final_map)
+        ]
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
 
     def test_finality_attestation_binds_fixed_point_batch_self_check_and_tracked_map(self) -> None:
         digest_map = self._seed_finality_inputs()
@@ -280,6 +294,186 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("tracked_digest_map_current_mismatch", failures)
         self.assertIn("fixed_point_digest_map_current_mismatch", failures)
+
+    def test_finality_verify_classifies_batch_freshness_index_cohort_digest_drift(
+        self,
+    ) -> None:
+        self._seed_finality_inputs()
+        freshness_path = "ops/reports/artifact-freshness-report.json"
+        self._write_json(
+            freshness_path,
+            {"artifact_kind": "artifact_freshness_report", "status": "old"},
+        )
+        batch_payload = json.loads((self.vault / BATCH_MANIFEST_PATH).read_text(encoding="utf-8"))
+        batch_payload["artifacts"] = [
+            {
+                "path": freshness_path,
+                "digest": _sha256(self.vault / freshness_path),
+                "role": "primary_evidence",
+            }
+        ]
+        self._write_json(BATCH_MANIFEST_PATH, batch_payload)
+        batch_digest = _sha256(self.vault / BATCH_MANIFEST_PATH)
+        self._write_json(
+            SELF_CHECK_PATH,
+            {
+                "status": {"result": "pass"},
+                "closeout_inputs": {"batch_manifest_fingerprint": batch_digest},
+            },
+        )
+        self._rebind_fixed_point_to_current_batch_and_self_check()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {
+                "artifact_kind": "generated_artifact_index",
+                "generated_at": "2026-05-09T12:01:00Z",
+                "input_fingerprints": {"clock": "changed"},
+                "status": "pass",
+            },
+        )
+        self._write_json(
+            freshness_path,
+            {"artifact_kind": "artifact_freshness_report", "status": "new"},
+        )
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "fail")
+        classification = diagnostics["failure_classification"]
+        self.assertEqual(
+            classification["primary_class"],
+            "batch_manifest_freshness_index_cohort_digest_mismatch",
+        )
+        self.assertNotIn("fixed_point_tracked_writer_mismatch", classification["classes"])
+        self.assertEqual(
+            classification["recommended_fixed_point_initial_targets"],
+            ["artifact-freshness"],
+        )
+        self.assertIn("release-closeout-fixed-point", classification["recommended_targets"])
+        self.assertIn(
+            "batch_manifest_artifact_digest_current_mismatch",
+            diagnostics["failures"],
+        )
+
+    def test_finality_verify_classifies_fixed_point_tracked_writer_drift(self) -> None:
+        self._seed_finality_inputs()
+        generated_path = "ops/reports/generated-artifact-index.json"
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        self._write_json(
+            generated_path,
+            {"artifact_kind": "generated_artifact_index", "status": "changed"},
+        )
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "fail")
+        classification = diagnostics["failure_classification"]
+        self.assertIn("fixed_point_tracked_writer_mismatch", classification["classes"])
+        self.assertIn(
+            {
+                "path": generated_path,
+                "fixed_point_digest": report["tracked_digest_map"][generated_path],
+                "current_digest": _sha256(self.vault / generated_path),
+                "writer_target": "generated-artifact-index-body",
+            },
+            classification["fixed_point_tracked_writer_mismatches"],
+        )
+        self.assertIn(
+            "generated-artifact-index-body",
+            classification["recommended_fixed_point_initial_targets"],
+        )
+
+    def test_finality_verify_classifies_sealed_preflight_artifact_mismatch(self) -> None:
+        self._seed_finality_inputs()
+        self._write_json(
+            SEALED_PREFLIGHT_PATH,
+            {
+                "artifact_kind": "release_closeout_sealed_rehearsal_check",
+                "status": "pass",
+                "preflight": {"preflight_status": "sealed_clean_pass"},
+                "currentness": {"status": "current"},
+            },
+        )
+        sealed_preflight_digest = _sha256(self.vault / SEALED_PREFLIGHT_PATH)
+        batch_payload = json.loads((self.vault / BATCH_MANIFEST_PATH).read_text(encoding="utf-8"))
+        batch_payload["artifacts"] = [
+            {
+                "path": SEALED_PREFLIGHT_PATH,
+                "digest": sealed_preflight_digest,
+                "role": "sealed_preflight",
+            }
+        ]
+        self._write_json(BATCH_MANIFEST_PATH, batch_payload)
+        batch_digest = _sha256(self.vault / BATCH_MANIFEST_PATH)
+        self._write_json(
+            SELF_CHECK_PATH,
+            {
+                "status": {"result": "pass"},
+                "closeout_inputs": {"batch_manifest_fingerprint": batch_digest},
+            },
+        )
+        self._rebind_fixed_point_to_current_batch_and_self_check()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+        self._write_json(
+            SEALED_PREFLIGHT_PATH,
+            {
+                "artifact_kind": "release_closeout_sealed_rehearsal_check",
+                "status": "pass",
+                "preflight": {"preflight_status": "sealed_clean_pass"},
+                "currentness": {"status": "current", "source_tree_fingerprint": "changed"},
+            },
+        )
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        classification = diagnostics["failure_classification"]
+        self.assertIn("sealed_preflight_artifact_mismatch", classification["classes"])
+        self.assertIn(
+            {
+                "path": SEALED_PREFLIGHT_PATH,
+                "role": "sealed_preflight",
+                "batch_manifest_digest": sealed_preflight_digest,
+                "current_digest": _sha256(self.vault / SEALED_PREFLIGHT_PATH),
+            },
+            classification["sealed_preflight_artifact_digest_mismatches"],
+        )
+        self.assertIn(
+            "release-authority-sealed-preflight",
+            classification["recommended_targets"],
+        )
+
+    def test_finality_verify_classifies_stale_sealed_preflight_report(self) -> None:
+        self._seed_finality_inputs()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+        self._write_json(
+            SEALED_PREFLIGHT_PATH,
+            {
+                "artifact_kind": "release_closeout_sealed_rehearsal_check",
+                "status": "fail",
+                "preflight": {"preflight_status": "binding_failed"},
+                "currentness": {"status": "current"},
+            },
+        )
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "fail")
+        self.assertIn("sealed_preflight_not_current", diagnostics["failures"])
+        classification = diagnostics["failure_classification"]
+        self.assertEqual(
+            classification["primary_class"],
+            "sealed_preflight_artifact_mismatch",
+        )
+        self.assertEqual(
+            classification["recommended_targets"],
+            ["release-authority-sealed-preflight", "release-closeout-finality-verify"],
+        )
 
     def test_verify_no_fail_writes_ci_diagnostic_for_missing_attestation(self) -> None:
         verify_out = "tmp/release-closeout-finality-verify-ci.json"

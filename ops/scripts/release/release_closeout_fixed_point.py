@@ -22,7 +22,11 @@ from ops.scripts.core.artifact_io_runtime import (
     write_schema_backed_report,
 )
 from ops.scripts.core.command_runtime import TimedProcessResult, run_with_timeout
-from ops.scripts.core.generated_artifact_semantic_digest import semantic_digest_maps
+from ops.scripts.core.generated_artifact_semantic_digest import (
+    canonical_digest,
+    semantic_digest_maps,
+    semantic_file_digest,
+)
 from ops.scripts.core.output_runtime import display_path, sanitize_report_text
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.source_tree_fingerprint_runtime import (
@@ -53,6 +57,13 @@ FIXED_POINT_FRESHNESS_DEBT_ISSUES = {
     "source_revision_unknown",
     "source_tree_fingerprint_unknown",
 }
+SEMANTIC_REUSE_FEEDBACK_TARGETS = frozenset(
+    {
+        "generated-artifact-index-body",
+        "artifact-freshness",
+        "external-report-action-matrix",
+    }
+)
 
 CommandRunner = Callable[[Sequence[str], Path, int, Mapping[str, str]], dict[str, Any]]
 ProgressSink = Callable[[str], None]
@@ -407,6 +418,75 @@ def _digest_map(
     return result
 
 
+def _writer_by_target(writers: Sequence[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {str(writer["target"]): dict(writer) for writer in writers}
+
+
+def _writer_output_reuse_signature(
+    vault: Path,
+    writer: dict[str, Any],
+    *,
+    tracked_paths: Sequence[str],
+) -> tuple[dict[str, Any] | None, str]:
+    outputs: list[dict[str, str]] = []
+    output_paths = {str(path) for path in writer.get("produces", [])}
+    for rel_path in sorted(output_paths):
+        path = vault / rel_path
+        if not path.is_file():
+            return None, f"{rel_path}:output_missing"
+        payload, load_status = _json_payload(path)
+        if load_status != "ok":
+            return None, f"{rel_path}:output_{load_status}"
+        input_fingerprints = payload.get("input_fingerprints")
+        if not isinstance(input_fingerprints, dict):
+            return None, f"{rel_path}:input_fingerprints_missing"
+        semantic_mode, semantic_digest = semantic_file_digest(path)
+        outputs.append(
+            {
+                "path": rel_path,
+                "input_fingerprint_digest": canonical_digest(input_fingerprints),
+                "semantic_digest": semantic_digest,
+                "semantic_digest_mode": semantic_mode,
+            }
+        )
+    if not outputs:
+        return None, "writer_outputs_missing"
+    context_paths = [path for path in tracked_paths if path not in output_paths]
+    context_semantic_digest_map, _context_modes = semantic_digest_maps(
+        vault, context_paths
+    )
+    return {
+        "outputs": outputs,
+        "tracked_context_semantic_digest": canonical_digest(
+            context_semantic_digest_map
+        ),
+    }, ""
+
+
+def _semantic_reuse_skip_result(
+    *,
+    vault: Path,
+    target: str,
+    command: Sequence[str],
+    timeout_seconds: int,
+    reuse_signature: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "target": target,
+        "command": [sanitize_report_text(vault, str(item)) for item in command],
+        "returncode": 0,
+        "timed_out": False,
+        "timeout_seconds": timeout_seconds,
+        "termination_reason": "semantic_reuse_skipped",
+        "duration_ms": 0,
+        "stdout_tail": "",
+        "stderr_tail": "",
+        "status": "skipped",
+        "skip_reason": "writer_input_fingerprints_and_output_semantic_digest_unchanged",
+        "reuse_signature": reuse_signature,
+    }
+
+
 def _changed_paths(
     previous: dict[str, str] | None, current: dict[str, str]
 ) -> list[str]:
@@ -477,6 +557,9 @@ def _run_iteration(
     runtime_env: Mapping[str, str],
     progress_sink: ProgressSink | None = None,
     progress_prefix: str = "release-closeout-fixed-point",
+    writer_by_target: Mapping[str, dict[str, Any]] | None = None,
+    semantic_reuse_signatures: dict[str, dict[str, Any]] | None = None,
+    tracked_paths: Sequence[str] = (),
 ) -> tuple[list[dict[str, Any]], bool]:
     command_results: list[dict[str, Any]] = []
     failed = False
@@ -487,6 +570,37 @@ def _run_iteration(
             python_executable=python_executable,
             make_variables=make_variables,
         )
+        writer = (writer_by_target or {}).get(target)
+        if (
+            writer is not None
+            and semantic_reuse_signatures is not None
+            and target in SEMANTIC_REUSE_FEEDBACK_TARGETS
+        ):
+            reuse_signature, _reuse_blocker = _writer_output_reuse_signature(
+                vault,
+                writer,
+                tracked_paths=tracked_paths,
+            )
+            if (
+                reuse_signature is not None
+                and semantic_reuse_signatures.get(target) == reuse_signature
+            ):
+                payload = _semantic_reuse_skip_result(
+                    vault=vault,
+                    target=target,
+                    command=command,
+                    timeout_seconds=timeout_seconds,
+                    reuse_signature=reuse_signature,
+                )
+                command_results.append(payload)
+                _emit_progress(
+                    progress_sink,
+                    (
+                        f"{progress_prefix}: skipped target={target} "
+                        "reason=semantic_reuse"
+                    ),
+                )
+                continue
         _emit_progress(
             progress_sink,
             f"{progress_prefix}: start target={target} timeout_seconds={timeout_seconds}",
@@ -522,6 +636,18 @@ def _run_iteration(
         if payload["status"] != "pass":
             failed = True
             break
+        if (
+            writer is not None
+            and semantic_reuse_signatures is not None
+            and target in SEMANTIC_REUSE_FEEDBACK_TARGETS
+        ):
+            reuse_signature, _reuse_blocker = _writer_output_reuse_signature(
+                vault,
+                writer,
+                tracked_paths=tracked_paths,
+            )
+            if reuse_signature is not None:
+                semantic_reuse_signatures[target] = reuse_signature
     return command_results, failed
 
 
@@ -587,6 +713,8 @@ def _duration_command_runs(
         iteration_index = int(iteration.get("iteration_index", 0) or 0)
         for result in iteration.get("command_results", []):
             if not isinstance(result, dict):
+                continue
+            if str(result.get("status", "")).strip() == "skipped":
                 continue
             command_runs.append(
                 {
@@ -1889,6 +2017,8 @@ def _fixed_point_iteration_state(
     converged = False
     converged_iteration = 0
     failed = False
+    writer_by_target = _writer_by_target(runtime.writers)
+    semantic_reuse_signatures: dict[str, dict[str, Any]] = {}
 
     for iteration_index in range(1, config.max_iterations + 1):
         _emit_progress(
@@ -1908,6 +2038,9 @@ def _fixed_point_iteration_state(
             command_runner=config.command_runner,
             runtime_env=config.runtime_env,
             progress_sink=config.progress_sink,
+            writer_by_target=writer_by_target,
+            semantic_reuse_signatures=semantic_reuse_signatures,
+            tracked_paths=runtime.tracked_paths,
         )
         snapshot = _fixed_point_iteration_snapshot(
             vault,

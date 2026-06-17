@@ -514,17 +514,18 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         phony = _target_block(text, ".PHONY")
         target_block = _target_block(text, "freshness-source-identity-converge")
+        owner_target_block = _target_block(text, "freshness-owner-route-converge")
 
+        self.assertIn("freshness-owner-route-converge", phony)
         self.assertIn("freshness-source-identity-converge", phony)
         self.assertEqual(
-            _recipe_lines(text, "freshness-source-identity-converge"),
+            _recipe_lines(text, "freshness-owner-route-converge"),
             [
-                "$(MAKE) artifact-freshness-refresh-check",
-                "$(MAKE) generated-artifact-index",
-                "$(MAKE) artifact-freshness-refresh-check",
-                "$(MAKE) release-finality-resettle-current-or-refresh",
+                '$(PYTHON) -m ops.scripts.release.freshness_owner_route_converge --vault "$(VAULT)" --make "$(MAKE)" --python "$(PYTHON)" --plan-out "$(FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT)"',
             ],
         )
+        self.assertEqual(_recipe_lines(text, "freshness-source-identity-converge"), [])
+        self.assertIn("freshness-owner-route-converge", target_block)
         for forbidden_target in (
             "$(MAKE) test-execution-summary-full-current-or-refresh",
             "$(MAKE) test-execution-summary-full-refresh",
@@ -538,6 +539,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(forbidden_target=forbidden_target):
                 self.assertNotIn(forbidden_target, target_block)
+                self.assertNotIn(forbidden_target, owner_target_block)
 
     def test_operator_evidence_closeout_stays_off_release_authority_lane(self) -> None:
         text = _makefile_text()
@@ -819,6 +821,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
 
         self.assertIn("release-finality-resettle", _target_block(text, ".PHONY"))
         self.assertIn("release-finality-resettle-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-finality-resettle-current-diagnose", _target_block(text, ".PHONY"))
         self.assertIn("release-finality-resettle-current-or-refresh", _target_block(text, ".PHONY"))
         self.assertIn("release-terminal-finality", _target_block(text, ".PHONY"))
         self.assertEqual(
@@ -841,14 +844,18 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-closeout-finality-verify",
             ],
         )
+        current_check_block = _target_block(
+            text,
+            "release-finality-resettle-current-check",
+        )
+        self.assertIn("$(MAKE) release-closeout-batch-manifest-replay-verify", current_check_block)
+        self.assertIn("$(MAKE) release-closeout-post-check-finalizer-dry-run", current_check_block)
+        self.assertIn("$(MAKE) release-closeout-finality-verify", current_check_block)
+        self.assertIn("$(MAKE) release-finality-resettle-current-diagnose", current_check_block)
         self.assertEqual(
-            _recipe_lines(text, "release-finality-resettle-current-check"),
+            _recipe_lines(text, "release-finality-resettle-current-diagnose"),
             [
-                "$(MAKE) tmp-json-clean",
-                "$(MAKE) release-closeout-batch-manifest-replay-verify",
-                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
-                "$(MAKE) tmp-json-clean",
-                "$(MAKE) release-closeout-finality-verify",
+                '$(PYTHON) -m ops.scripts.release.release_closeout_finality_attestation --vault "$(VAULT)" --attestation "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --verify --no-fail',
             ],
         )
         current_or_refresh_block = _target_block(

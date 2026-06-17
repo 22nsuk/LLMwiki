@@ -23,6 +23,7 @@ EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.j
 GITHUB_GOVERNANCE_LIVE_INPUT ?= build/release/github-governance-live-input.json
 GITHUB_GOVERNANCE_LIVE_DRIFT_OUT ?= ops/reports/github-governance-live-drift.json
 GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT ?= tmp/github-governance-live-drift-check.json
+FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT ?= tmp/freshness-owner-route-converge-plan.json
 RELEASE_SMOKE_OUT ?= ops/reports/release-smoke-report.json
 RELEASE_SMOKE_FAST_OUT ?= ops/reports/release-smoke-report-fast.json
 RELEASE_SMOKE_ARCHIVE_OUT ?= build/release/release-smoke.zip

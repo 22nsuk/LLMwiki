@@ -1,4 +1,4 @@
-.PHONY: collaboration-governance external-report-action-matrix external-report-lifecycle-refresh external-report-reference-manifest external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-reference-manifest-strict freshness-source-identity-converge github-governance-live-drift github-governance-live-drift-check operator-evidence-closeout-current-or-refresh operator-evidence-closeout-finality-resettle operator-release-summary release-audit-pack release-builder-full release-builder-full-lane-guard release-clean release-clean-blocker-ledger release-clean-lane-evidence-review release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-closeout-finality-attestation release-closeout-finality-verify release-closeout-fixed-point release-closeout-fixed-point-cost-trend release-closeout-post-check-finalizer-ci-artifact release-closeout-post-check-finalizer-dry-run release-closeout-summary release-closeout-summary-conditional release-closeout-summary-report release-conditional release-distribution-zip release-distribution-zip-lane-guard release-evidence-closeout release-evidence-closeout-lane-guard release-evidence-closeout-self-check release-evidence-cohort release-evidence-cohort-check release-evidence-cohort-preseal-refresh release-evidence-cohort-report release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-evidence-dashboard release-evidence-dashboard-report release-evidence-refresh-fast release-finality-resettle release-finality-resettle-current-check release-finality-resettle-current-or-refresh release-freshness-sensitive-evidence-refresh release-lane-summary release-post-seal-attestation release-provenance-clean release-sbom-clean release-sealed-verify release-smoke release-smoke-fast release-smoke-fast-current-check release-smoke-fast-refresh-check release-smoke-full release-smoke-full-current-check release-smoke-full-reuse release-smoke-lane-guard release-source-package-check release-terminal-finality release-verify-current review-archive review-archive-clean
+.PHONY: collaboration-governance external-report-action-matrix external-report-lifecycle-refresh external-report-reference-manifest external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-reference-manifest-strict freshness-owner-route-converge freshness-source-identity-converge github-governance-live-drift github-governance-live-drift-check operator-evidence-closeout-current-or-refresh operator-evidence-closeout-finality-resettle operator-release-summary release-audit-pack release-builder-full release-builder-full-lane-guard release-clean release-clean-blocker-ledger release-clean-lane-evidence-review release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-closeout-finality-attestation release-closeout-finality-verify release-closeout-fixed-point release-closeout-fixed-point-cost-trend release-closeout-post-check-finalizer-ci-artifact release-closeout-post-check-finalizer-dry-run release-closeout-summary release-closeout-summary-conditional release-closeout-summary-report release-conditional release-distribution-zip release-distribution-zip-lane-guard release-evidence-closeout release-evidence-closeout-lane-guard release-evidence-closeout-self-check release-evidence-cohort release-evidence-cohort-check release-evidence-cohort-preseal-refresh release-evidence-cohort-report release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-evidence-dashboard release-evidence-dashboard-report release-evidence-refresh-fast release-finality-resettle release-finality-resettle-current-check release-finality-resettle-current-diagnose release-finality-resettle-current-or-refresh release-freshness-sensitive-evidence-refresh release-lane-summary release-post-seal-attestation release-provenance-clean release-sbom-clean release-sealed-verify release-smoke release-smoke-fast release-smoke-fast-current-check release-smoke-fast-refresh-check release-smoke-full release-smoke-full-current-check release-smoke-full-reuse release-smoke-lane-guard release-source-package-check release-terminal-finality release-verify-current review-archive review-archive-clean
 
 release-evidence-converge: release-evidence-converge-phase-3
 
@@ -81,11 +81,17 @@ release-terminal-finality:
 	$(MAKE) release-closeout-finality-verify
 
 release-finality-resettle-current-check:
-	$(MAKE) tmp-json-clean
-	$(MAKE) release-closeout-batch-manifest-replay-verify
-	$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required
-	$(MAKE) tmp-json-clean
-	$(MAKE) release-closeout-finality-verify
+	@status=0; diagnose_on_fail=1; \
+	$(MAKE) tmp-json-clean || status=$$?; \
+	if [ $$status -eq 0 ]; then $(MAKE) release-closeout-batch-manifest-replay-verify || status=$$?; fi; \
+	if [ $$status -eq 0 ]; then $(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required || status=$$?; fi; \
+	if [ $$status -eq 0 ]; then $(MAKE) tmp-json-clean || status=$$?; fi; \
+	if [ $$status -eq 0 ]; then $(MAKE) release-closeout-finality-verify || { status=$$?; diagnose_on_fail=0; }; fi; \
+	if [ $$status -ne 0 ] && [ $$diagnose_on_fail -eq 1 ]; then $(MAKE) release-finality-resettle-current-diagnose || true; fi; \
+	exit $$status
+
+release-finality-resettle-current-diagnose:
+	$(PYTHON) -m ops.scripts.release.release_closeout_finality_attestation --vault "$(VAULT)" --attestation "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --verify --no-fail
 
 release-finality-resettle-current-or-refresh:
 	@if $(MAKE) release-finality-resettle-current-check; then \
@@ -111,11 +117,10 @@ operator-evidence-closeout-current-or-refresh:
 		$(MAKE) operator-evidence-closeout-finality-resettle; \
 	fi
 
-freshness-source-identity-converge:
-	$(MAKE) artifact-freshness-refresh-check
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness-refresh-check
-	$(MAKE) release-finality-resettle-current-or-refresh
+freshness-owner-route-converge:
+	$(PYTHON) -m ops.scripts.release.freshness_owner_route_converge --vault "$(VAULT)" --make "$(MAKE)" --python "$(PYTHON)" --plan-out "$(FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT)"
+
+freshness-source-identity-converge: freshness-owner-route-converge
 
 release-freshness-sensitive-evidence-refresh:
 	$(MAKE) supply-chain-artifacts-cached

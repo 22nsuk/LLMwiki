@@ -586,15 +586,23 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-closeout-finality-verify",
             ],
         )
-        self.assertEqual(
-            _recipe_lines(text, "release-authority-post-ready-finality-current-check"),
-            [
-                "$(MAKE) tmp-json-clean",
-                '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
-                "$(MAKE) tmp-json-clean",
-                "$(MAKE) release-closeout-finality-verify",
-            ],
+        post_ready_current_check = _target_block(
+            text,
+            "release-authority-post-ready-finality-current-check",
+        )
+        self.assertIn("$(MAKE) tmp-json-clean", post_ready_current_check)
+        self.assertIn(
+            '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            post_ready_current_check,
+        )
+        self.assertIn(
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+            post_ready_current_check,
+        )
+        self.assertIn("$(MAKE) release-closeout-finality-verify", post_ready_current_check)
+        self.assertIn(
+            "$(MAKE) release-finality-resettle-current-diagnose",
+            post_ready_current_check,
         )
         current_or_refresh_block = _target_block(
             text,
