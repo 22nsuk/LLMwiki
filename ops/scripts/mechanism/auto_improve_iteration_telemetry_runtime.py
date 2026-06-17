@@ -122,6 +122,26 @@ def _extract_checks(source: object) -> list[dict[str, Any]]:
     return []
 
 
+def _detail_bool_token_present(detail: str, key: str) -> bool:
+    return f"{key}=true" in detail.lower()
+
+
+def _equal_score_secondary_check_is_eligible(check: dict[str, Any]) -> bool:
+    status = str(check.get("status", "")).strip().upper()
+    if status:
+        return status == "PASS"
+    detail = str(check.get("detail", ""))
+    return all(
+        _detail_bool_token_present(detail, key)
+        for key in (
+            "allowed",
+            "score_equal",
+            "selected_non_regression",
+            "selected_any_improvement",
+        )
+    )
+
+
 def _infer_secondary_improvement_axes(
     result: dict[str, Any] | None,
     existing_report: dict[str, Any],
@@ -137,7 +157,7 @@ def _infer_secondary_improvement_axes(
                 continue
             detail = str(check.get("detail", ""))
             axes = _secondary_axes_from_text(detail)
-            if "selected_any_improvement=true" in detail and axes:
+            if _equal_score_secondary_check_is_eligible(check) and axes:
                 return axes
     return []
 
@@ -155,8 +175,7 @@ def _infer_strict_secondary_improvement_present(
         for check in _extract_checks(source):
             if check.get("id") != "equal_score_secondary_eligibility":
                 continue
-            detail = str(check.get("detail", ""))
-            if "selected_any_improvement=true" in detail:
+            if _equal_score_secondary_check_is_eligible(check):
                 return True
     return bool(axes)
 

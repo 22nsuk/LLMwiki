@@ -1215,6 +1215,72 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertFalse(payload["strict_secondary_improvement_present"])
             self.assertEqual(payload["secondary_improvement_axes"], [])
 
+    def test_write_iteration_telemetry_rejects_warn_equal_score_secondary_regression(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-same-eval-secondary-regression"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {"id": "eval_score_improves", "status": "WARN", "detail": "baseline=10, candidate=10"},
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "WARN",
+                                "detail": (
+                                    "allowed=true, score_equal=true, selected_axes=['lint'], "
+                                    "selected_non_regression=false, selected_any_improvement=true"
+                                ),
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={
+                        "decision": "PROMOTE",
+                        "promotion_report": promotion_rel,
+                        "same_eval_reason": "same eval promotion report has secondary regression",
+                        "same_eval": {
+                            "strict_secondary_improvement_present": True,
+                            "secondary_improvement_axes": ["tests"],
+                        },
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["same_eval_reason"],
+                "same eval promotion report has secondary regression",
+            )
+            self.assertFalse(payload["strict_secondary_improvement_present"])
+            self.assertEqual(payload["secondary_improvement_axes"], [])
+
     def test_write_iteration_telemetry_rejects_cross_run_same_eval_promotion_evidence(
         self,
     ) -> None:
