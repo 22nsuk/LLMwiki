@@ -146,6 +146,12 @@ def _seed_pre_backfill_mechanism_assessment_pair(vault: Path) -> None:
     for filename in MECHANISM_ASSESSMENT_FILENAMES:
         payload = _read_json(ARCHIVED_RUN_SOURCE / filename)
         payload.pop("metadata", None)
+        for key in ("structural_metrics", "total_structural_metrics"):
+            payload[key].pop("test_guardrail_count", None)
+        verification_cost = payload["complexity_profile"]["dimension_evidence"][
+            "verification_cost"
+        ]
+        verification_cost.pop("test_guardrail_count", None)
         _write_json(run_dir / filename, payload)
 
 
@@ -744,6 +750,14 @@ def test_backfill_archived_run_artifacts_supports_mechanism_assessment_pair() ->
             assert embedded_envelope.get("artifact_kind") == "mechanism_assessment_report"
             assert embedded_envelope.get("artifact_status") == "archived"
             assert embedded_envelope.get("retention_policy") == "archive"
+            assert payload["structural_metrics"]["test_guardrail_count"] == 0
+            assert payload["total_structural_metrics"]["test_guardrail_count"] == 0
+            assert (
+                payload["complexity_profile"]["dimension_evidence"]["verification_cost"][
+                    "test_guardrail_count"
+                ]
+                == 0
+            )
             assert record.get("safe_to_backfill") is True
             assert record.get("schema_validation_status") == "pass"
             assert record.get("has_artifact_envelope") is True

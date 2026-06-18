@@ -311,6 +311,60 @@ def _normalize_legacy_run_telemetry_payload(
     return normalized_payload
 
 
+def _copy_with_default_test_guardrail_count(value: object) -> tuple[object, bool]:
+    if not isinstance(value, dict) or "test_guardrail_count" in value:
+        return value, False
+    normalized = dict(value)
+    normalized["test_guardrail_count"] = 0
+    return normalized, True
+
+
+def _normalize_legacy_mechanism_assessment_payload(
+    rel_path: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    if Path(rel_path).name not in {
+        "baseline-mechanism-assessment.json",
+        "candidate-mechanism-assessment.json",
+    }:
+        return payload
+    normalized_payload = dict(payload)
+    changed = False
+    for key in ("structural_metrics", "total_structural_metrics"):
+        normalized, key_changed = _copy_with_default_test_guardrail_count(
+            normalized_payload.get(key)
+        )
+        if key_changed:
+            normalized_payload[key] = normalized
+            changed = True
+    complexity_profile = normalized_payload.get("complexity_profile")
+    if isinstance(complexity_profile, dict):
+        dimension_evidence = complexity_profile.get("dimension_evidence")
+        if isinstance(dimension_evidence, dict):
+            verification_cost, key_changed = _copy_with_default_test_guardrail_count(
+                dimension_evidence.get("verification_cost")
+            )
+            if key_changed:
+                normalized_dimension_evidence = dict(dimension_evidence)
+                normalized_dimension_evidence["verification_cost"] = verification_cost
+                normalized_complexity_profile = dict(complexity_profile)
+                normalized_complexity_profile["dimension_evidence"] = (
+                    normalized_dimension_evidence
+                )
+                normalized_payload["complexity_profile"] = normalized_complexity_profile
+                changed = True
+    return normalized_payload if changed else payload
+
+
+def _normalize_legacy_archived_run_payload(
+    vault: Path,
+    rel_path: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    normalized = _normalize_legacy_run_telemetry_payload(vault, rel_path, payload)
+    return _normalize_legacy_mechanism_assessment_payload(rel_path, normalized)
+
+
 def _date_suffix_timestamp(rel_path: str) -> tuple[str, str]:
     matches = re.findall(r"\d{4}-\d{2}-\d{2}", rel_path)
     if matches:
@@ -930,7 +984,7 @@ def backfill_archived_run_artifacts(
             raise ValueError(f"run artifact backfill only supports runs/ paths: {rel_path}")
         original_text = artifact_path.read_text(encoding="utf-8")
         original_payload = read_json_object(artifact_path, context=rel_path)
-        payload = _normalize_legacy_run_telemetry_payload(vault, rel_path, original_payload)
+        payload = _normalize_legacy_archived_run_payload(vault, rel_path, original_payload)
         _validate_existing_payload(vault, rel_path, payload, spec.schema_path)
         if _has_artifact_envelope(payload):
             if payload != original_payload:
