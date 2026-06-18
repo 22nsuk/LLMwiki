@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import sys
 import tempfile
 import unittest
@@ -45,7 +46,7 @@ class MechanismRunScaffoldResolutionRuntimeTests(unittest.TestCase):
             self.assertEqual(prepared.check.timeout_seconds, 42)
             self.assertEqual(prepared.mutation.argv[0], sys.executable)
 
-    def test_prepare_execution_commands_defaults_repo_health_to_focused_pytest(self) -> None:
+    def test_prepare_execution_commands_defaults_repo_health_to_full_make_check(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -60,17 +61,11 @@ class MechanismRunScaffoldResolutionRuntimeTests(unittest.TestCase):
             )
 
             self.assertEqual(
-                prepared.check.argv,
-                [
-                    sys.executable,
-                    "-B",
-                    "-m",
-                    "pytest",
-                    "-p",
-                    "no:cacheprovider",
-                    "tests/test_example.py",
-                ],
+                prepared.check.command,
+                f"make PYTHON={shlex.quote(sys.executable)} check",
             )
+            self.assertEqual(Path(prepared.check.argv[0]).name, "make")
+            self.assertEqual(prepared.check.argv[1:], [f"PYTHON={sys.executable}", "check"])
 
     def test_command_argv_preserves_relative_virtualenv_executable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

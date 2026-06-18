@@ -74,13 +74,11 @@ class _ResolutionContext:
 
 
 def default_check_command(test_files: list[str] | None = None) -> str:
-    selectors = [str(path).strip() for path in test_files or [] if str(path).strip()]
-    if selectors:
-        quoted_selectors = " ".join(shlex.quote(path) for path in selectors)
-        return (
-            f"{shlex.quote(sys.executable)} -B -m pytest "
-            f"-p no:cacheprovider {quoted_selectors}"
-        )
+    # Repo-health is the promotion-blocking regression gate. Keep the default
+    # selector-independent so mechanism runs cannot satisfy repo health with
+    # only a focused subset of tests; callers that intentionally want a
+    # narrower check must pass an explicit check_command.
+    _ = test_files
     return f"make PYTHON={shlex.quote(sys.executable)} check"
 
 
