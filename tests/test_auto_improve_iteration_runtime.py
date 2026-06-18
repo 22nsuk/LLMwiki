@@ -1027,20 +1027,36 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             run_id = "auto-session-run-same-eval-report-evidence"
             run_dir = vault / "runs" / run_id
             run_dir.mkdir(parents=True)
+            baseline_rel = f"runs/{run_id}/baseline-mechanism-assessment.json"
+            candidate_rel = f"runs/{run_id}/candidate-mechanism-assessment.json"
+            for rel, branch_count in ((baseline_rel, 6), (candidate_rel, 5)):
+                metrics = {
+                    "nonempty_line_count_total": 30,
+                    "python_function_count": 4,
+                    "python_branch_node_count": branch_count,
+                    "markdown_heading_count": 0,
+                    "test_file_count": 1,
+                    "test_case_count": 4,
+                }
+                (vault / rel).write_text(json.dumps({"structural_metrics": metrics, "total_structural_metrics": metrics}), encoding="utf-8")
             promotion_rel = f"runs/{run_id}/promotion-report.json"
             (vault / promotion_rel).write_text(
                 json.dumps(
                     {
                         "run_id": run_id,
                         "decision": "PROMOTE",
+                        "inputs": {
+                            "baseline_mechanism_report": baseline_rel,
+                            "candidate_mechanism_report": candidate_rel,
+                        },
                         "checks": [
+                            {"id": "eval_score_improves", "status": "WARN", "detail": "baseline=10, candidate=10"},
                             {
                                 "id": "equal_score_secondary_eligibility",
                                 "status": "PASS",
                                 "detail": (
                                     "allowed=true, score_equal=true, "
                                     "selected_axes=['lint', 'complexity', 'tests'], "
-                                    "improved_axes=['complexity'], "
                                     "selected_non_regression=true, selected_any_improvement=true"
                                 ),
                             }

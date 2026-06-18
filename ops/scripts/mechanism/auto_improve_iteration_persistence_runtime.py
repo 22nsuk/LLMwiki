@@ -103,6 +103,8 @@ DISCARD_NON_REGRESSION_CHECK_IDS = (
     "tests_non_regression",
 )
 PROMOTION_CHECK_STATUS_VALUES = frozenset({"PASS", "WARN", "FAIL"})
+SAME_EVAL_STRUCTURAL_METRIC_KEYS = ("nonempty_line_count_total", "python_function_count", "python_branch_node_count", "markdown_heading_count")
+SAME_EVAL_TEST_METRIC_KEYS = ("test_file_count", "test_case_count", "test_guardrail_count")
 
 
 @dataclass(frozen=True)
@@ -483,6 +485,94 @@ def _same_eval_detail_has_named_improved_axes(detail: str) -> bool:
     return any(item.strip().strip("'\"") for item in tail.split(","))
 
 
+def _same_eval_mechanism_secondary_axes(
+    vault: Path,
+    run_id: str,
+    promotion_report: LoadedPromotionReport,
+    statuses: dict[str, str],
+) -> list[str]:
+    inputs = promotion_report.payload.get("inputs")
+    inputs = inputs if isinstance(inputs, dict) else {}
+    baseline_path = _normalized_repo_relative_path(inputs.get("baseline_mechanism_report", run_rel(run_id, "baseline-mechanism-assessment.json")))
+    candidate_path = _normalized_repo_relative_path(inputs.get("candidate_mechanism_report", run_rel(run_id, "candidate-mechanism-assessment.json")))
+    run_prefix = run_rel(run_id, "")
+    eligible = (
+        str(promotion_report.payload.get("decision", "")).strip().upper() == "PROMOTE"
+        and statuses.get("equal_score_secondary_eligibility") == "PASS"
+    )
+    baseline = _load_repo_relative_json(vault, baseline_path) if eligible and baseline_path.startswith(run_prefix) else None
+    candidate = _load_repo_relative_json(vault, candidate_path) if eligible and candidate_path.startswith(run_prefix) else None
+    baseline_metrics = baseline.get("total_structural_metrics", baseline.get("structural_metrics")) if baseline is not None else None
+    candidate_metrics = candidate.get("total_structural_metrics", candidate.get("structural_metrics")) if candidate is not None else None
+    if not isinstance(baseline_metrics, dict) or not isinstance(candidate_metrics, dict):
+        return []
+    try:
+        baseline_values = [int(baseline_metrics.get(key, 0)) for key in SAME_EVAL_STRUCTURAL_METRIC_KEYS]
+        candidate_values = [int(candidate_metrics.get(key, 0)) for key in SAME_EVAL_STRUCTURAL_METRIC_KEYS]
+        baseline_tests = [int(baseline_metrics.get(key, 0)) for key in SAME_EVAL_TEST_METRIC_KEYS]
+        candidate_tests = [int(candidate_metrics.get(key, 0)) for key in SAME_EVAL_TEST_METRIC_KEYS]
+    except (TypeError, ValueError):
+        return []
+    complexity_improves = all(
+        candidate <= baseline
+        for baseline, candidate in zip(baseline_values[1:], candidate_values[1:], strict=True)
+    ) and any(candidate < baseline for baseline, candidate in zip(baseline_values, candidate_values, strict=True))
+    tests_improve = any(candidate > baseline for baseline, candidate in zip(baseline_tests, candidate_tests, strict=True))
+    return [axis for axis, improves in (("complexity", complexity_improves), ("tests", tests_improve)) if improves]
+
+
+def _add_same_eval_telemetry_fields(
+    payload: dict[str, Any],
+    request: IterationTelemetryRequest,
+    existing_report: dict[str, Any],
+    promotion_report: LoadedPromotionReport | None,
+    behavior_delta_digest: str,
+) -> None:
+    same_eval_promotion_detail = (
+        _promotion_check_detail(promotion_report.payload, "equal_score_secondary_eligibility")
+        if promotion_report is not None
+        else ""
+    )
+    promotion_statuses = _promotion_check_statuses(promotion_report.payload) if promotion_report is not None else {}
+    same_eval_is_current = promotion_report is not None and (
+        promotion_statuses.get("eval_score_improves") == "WARN"
+        or "score_equal=true" in same_eval_promotion_detail
+    )
+    current_report = cast(LoadedPromotionReport, promotion_report)
+    named_axes = same_eval_is_current and _same_eval_detail_has_named_improved_axes(same_eval_promotion_detail)
+    mechanism_axes = (
+        _same_eval_mechanism_secondary_axes(request.vault, request.run_id, current_report, promotion_statuses)
+        if same_eval_is_current and not named_axes
+        else []
+    )
+    same_eval_existing_report: dict[str, Any] = (
+        {"promotion_report": current_report.payload}
+        if named_axes
+        else {"same_eval": {"strict_secondary_improvement_present": True, "secondary_improvement_axes": mechanism_axes}}
+        if mechanism_axes
+        else existing_report if promotion_report is None else {}
+    )
+    same_eval_reason = iteration_same_eval_reason(request.result, same_eval_existing_report)
+    payload.update({"same_eval_reason": same_eval_reason} if same_eval_reason else {})
+    same_eval_contract = iteration_same_eval_contract(
+        (request.result, None)[same_eval_is_current],
+        same_eval_existing_report,
+        same_eval_reason=same_eval_reason,
+        behavior_delta_digest=behavior_delta_digest,
+    )
+    if any(
+        (
+            same_eval_reason,
+            same_eval_contract["same_eval_reason_code"] != "unknown",
+            same_eval_contract["strict_secondary_improvement_present"],
+            same_eval_contract["secondary_improvement_axes"],
+        )
+    ):
+        payload["same_eval_reason_code"] = same_eval_contract["same_eval_reason_code"]
+        payload["strict_secondary_improvement_present"] = same_eval_contract["strict_secondary_improvement_present"]
+        payload["secondary_improvement_axes"] = same_eval_contract["secondary_improvement_axes"]
+
+
 def _decision_record_reason_code(decision_record: dict[str, Any] | None) -> str:
     if not isinstance(decision_record, dict):
         return ""
@@ -772,43 +862,13 @@ def write_iteration_telemetry(
         behavior_delta_digest = iteration_behavior_delta_digest(request.vault, behavior_delta, existing_report)
         if behavior_delta_digest:
             payload["behavior_delta_digest"] = behavior_delta_digest
-    same_eval_promotion_detail = (
-        _promotion_check_detail(
-            promotion_report.payload,
-            "equal_score_secondary_eligibility",
-        )
-        if promotion_report is not None
-        else ""
+    _add_same_eval_telemetry_fields(
+        payload,
+        request,
+        existing_report,
+        promotion_report,
+        behavior_delta_digest,
     )
-    same_eval_is_current = promotion_report is not None and (
-        _promotion_check_statuses(promotion_report.payload).get("eval_score_improves") == "WARN"
-        or "score_equal=true" in same_eval_promotion_detail
-    )
-    same_eval_existing_report = (
-        {"promotion_report": cast(LoadedPromotionReport, promotion_report).payload}
-        if same_eval_is_current and _same_eval_detail_has_named_improved_axes(same_eval_promotion_detail)
-        else existing_report if promotion_report is None else {}
-    )
-    same_eval_reason = iteration_same_eval_reason(request.result, same_eval_existing_report)
-    if same_eval_reason:
-        payload["same_eval_reason"] = same_eval_reason
-    same_eval_contract = iteration_same_eval_contract(
-        (request.result, None)[same_eval_is_current],
-        same_eval_existing_report,
-        same_eval_reason=same_eval_reason,
-        behavior_delta_digest=behavior_delta_digest,
-    )
-    if any(
-        (
-            same_eval_reason,
-            same_eval_contract["same_eval_reason_code"] != "unknown",
-            same_eval_contract["strict_secondary_improvement_present"],
-            same_eval_contract["secondary_improvement_axes"],
-        )
-    ):
-        payload["same_eval_reason_code"] = same_eval_contract["same_eval_reason_code"]
-        payload["strict_secondary_improvement_present"] = same_eval_contract["strict_secondary_improvement_present"]
-        payload["secondary_improvement_axes"] = same_eval_contract["secondary_improvement_axes"]
     return write_run_telemetry(request.vault, request.run_id, payload)
 
 
