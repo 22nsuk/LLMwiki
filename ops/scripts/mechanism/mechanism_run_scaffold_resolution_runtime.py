@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.policy_runtime import (
+    report_path,
+    workspace_preparation_mode_from_policy,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_constants_runtime import MUTATION_PROPOSAL_SCHEMA_PATH
 from ops.scripts.core.schema_runtime import (
@@ -73,9 +76,14 @@ class _ResolutionContext:
     runtime_context: RuntimeContext
 
 
-def default_check_command(test_files: list[str] | None = None) -> str:
+def default_check_command(
+    test_files: list[str] | None = None,
+    *,
+    workspace_mode: str = "full_copy",
+) -> str:
+    """Return the default repo-health command for the prepared workspace shape."""
     selectors = [str(path).strip() for path in test_files or [] if str(path).strip()]
-    if selectors:
+    if workspace_mode == "sparse_manifest" and selectors:
         quoted_selectors = " ".join(shlex.quote(path) for path in selectors)
         return (
             f"{shlex.quote(sys.executable)} -B -m pytest "
@@ -150,9 +158,12 @@ def prepare_execution_commands(
     cwd: Path,
     timeout_seconds: int,
     test_files: list[str] | None = None,
+    workspace_mode: str = "full_copy",
 ) -> PreparedExecutionCommands:
     resolved_mutation_command = mutation_command.strip()
-    resolved_check_command = (check_command or default_check_command(test_files)).strip()
+    resolved_check_command = (
+        check_command or default_check_command(test_files, workspace_mode=workspace_mode)
+    ).strip()
     return PreparedExecutionCommands(
         mutation=CommandSpec(
             command=resolved_mutation_command,
@@ -325,6 +336,7 @@ def _prepared_commands(
         cwd=request.vault,
         timeout_seconds=policy["auto_improve_policy"]["defaults"]["wrapper_command_timeout_seconds"],
         test_files=resolved_test_files,
+        workspace_mode=workspace_preparation_mode_from_policy(policy),
     )
 
 

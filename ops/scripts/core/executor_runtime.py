@@ -32,7 +32,7 @@ from .artifact_io_runtime import write_vault_schema_validated_json
 from .codex_exec_executor import CodexExecError, execute_codex_exec_role
 from .executor_noop_runtime import executor_noop_mutation_failure_message
 from .experiment_telemetry_runtime import append_ledger_event
-from .policy_runtime import load_policy
+from .policy_runtime import load_policy, workspace_preparation_mode_from_policy
 from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH
@@ -385,12 +385,16 @@ def _run_worker_repo_health_preflight(
     workspace_root: Path,
     run_id: str,
     test_files: list[str],
+    workspace_mode: str,
     timeout_seconds: int,
     context: RuntimeContext,
 ) -> None:
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    command = command_argv(default_check_command(test_files), cwd=workspace_root)
+    command = command_argv(
+        default_check_command(test_files, workspace_mode=workspace_mode),
+        cwd=workspace_root,
+    )
     try:
         completed = subprocess.run(
             command,
@@ -492,6 +496,10 @@ def run_executor_pipeline(
     policy, _ = load_policy(artifact_root, policy_path)
     context = RuntimeContext.from_policy(policy, executor_id="codex_exec")
     timeout_seconds = policy["auto_improve_policy"]["defaults"]["executor_timeout_seconds"]
+    repo_health_timeout_seconds = policy["auto_improve_policy"]["defaults"][
+        "wrapper_command_timeout_seconds"
+    ]
+    workspace_mode = workspace_preparation_mode_from_policy(policy)
     report_by_role = {}
     routing_map = {
         Path(path).name.replace("subagent-routing.", "").replace(".json", ""): path
@@ -559,7 +567,8 @@ def run_executor_pipeline(
                     workspace_root=workspace_root,
                     run_id=run_id,
                     test_files=test_files,
-                    timeout_seconds=timeout_seconds,
+                    workspace_mode=workspace_mode,
+                    timeout_seconds=repo_health_timeout_seconds,
                     context=context,
                 )
 
