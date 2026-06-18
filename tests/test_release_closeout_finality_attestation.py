@@ -235,7 +235,7 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
             [generated_path],
         )
 
-    def test_finality_verify_allows_envelope_only_batch_manifest_digest_drift(self) -> None:
+    def test_finality_verify_fails_after_envelope_only_batch_manifest_digest_drift(self) -> None:
         self._seed_finality_inputs()
         report = build_report(self.vault, context=fixed_context())
         write_report(self.vault, report)
@@ -247,15 +247,19 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
 
         diagnostics = verify_attestation_report(self.vault)
 
-        self.assertEqual(diagnostics["status"], "pass")
-        self.assertEqual(diagnostics["failures"], [])
+        self.assertEqual(diagnostics["status"], "fail")
+        self.assertIn("batch_manifest_digest_mismatch", diagnostics["failures"])
         self.assertTrue(diagnostics["semantic_fallback_used"])
         self.assertEqual(
             [
                 (item["field"], item["path"])
-                for item in diagnostics["component_digest_mismatches_covered_by_semantic_digest"]
+                for item in diagnostics["component_digest_mismatches"]
             ],
             [("batch_manifest", BATCH_MANIFEST_PATH)],
+        )
+        self.assertEqual(
+            diagnostics["component_digest_mismatches_covered_by_semantic_digest"],
+            [],
         )
 
     def test_finality_verify_fails_after_batch_manifest_semantic_drift(self) -> None:

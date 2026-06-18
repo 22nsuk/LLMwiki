@@ -585,16 +585,7 @@ def _verify_attestation_diagnostics(
     )
     if fixed_point_digest_mismatches and not semantic_map_matches:
         failures.append("fixed_point_digest_map_current_mismatch")
-    semantic_covered_component_mismatches = _mismatches_covered_by_semantic_digest(
-        component_digest_mismatches,
-        recorded_semantic_map=recorded_semantic_map,
-        current_semantic_map=current_semantic_digest_map,
-    )
-    uncovered_component_digest_mismatches = _uncovered_mismatches(
-        component_digest_mismatches,
-        semantic_covered_component_mismatches,
-    )
-    failures.extend(f"{item['field']}_digest_mismatch" for item in uncovered_component_digest_mismatches)
+    failures.extend(f"{item['field']}_digest_mismatch" for item in component_digest_mismatches)
     batch_mismatches = _batch_manifest_artifact_digest_mismatches(vault)
     semantic_covered_batch_mismatches = _mismatches_covered_by_semantic_digest(
         batch_mismatches,
@@ -623,7 +614,6 @@ def _verify_attestation_diagnostics(
             batch_manifest_artifact_digest_mismatches=uncovered_batch_mismatches,
         ),
         "semantic_fallback_used": raw_mismatch_covered_by_semantic_digest
-        or bool(semantic_covered_component_mismatches)
         or bool(semantic_covered_batch_mismatches),
         "raw_digest_mismatches": raw_digest_mismatches,
         "raw_digest_mismatches_covered_by_semantic_digest": raw_digest_mismatches
@@ -631,7 +621,7 @@ def _verify_attestation_diagnostics(
         else [],
         "fixed_point_digest_mismatches": fixed_point_digest_mismatches,
         "component_digest_mismatches": component_digest_mismatches,
-        "component_digest_mismatches_covered_by_semantic_digest": semantic_covered_component_mismatches,
+        "component_digest_mismatches_covered_by_semantic_digest": [],
         "batch_manifest_artifact_digest_mismatches": batch_mismatches,
         "batch_manifest_artifact_digest_mismatches_covered_by_semantic_digest": semantic_covered_batch_mismatches,
     }
