@@ -435,14 +435,9 @@ def _feedback_targets_for_changed_paths(
     *,
     runtime: _FixedPointPolicyRuntime,
 ) -> list[str]:
-    feedback_target_set = set(runtime.feedback_targets)
     for path in changed_paths:
         producer = runtime.producer_by_path.get(path)
-        if (
-            producer
-            and producer not in feedback_target_set
-            and producer not in runtime.feedback_exempt_targets
-        ):
+        if producer and producer not in runtime.feedback_exempt_targets:
             return list(runtime.feedback_targets)
     return []
 

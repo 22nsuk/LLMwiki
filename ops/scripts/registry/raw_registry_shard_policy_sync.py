@@ -105,6 +105,10 @@ def discover_raw_registry_shards(vault: Path) -> list[dict[str, Any]]:
     return discovered
 
 
+def shard_root_exists(vault: Path) -> bool:
+    return (vault / RAW_REGISTRY_SHARD_ROOT).is_dir()
+
+
 def _raw_registry_special_page_paths(policy: dict[str, Any]) -> set[str]:
     special_pages = policy.get("frontmatter_contract", {}).get("special_pages", {})
     if not isinstance(special_pages, dict):
@@ -362,6 +366,10 @@ def synchronized_policy(policy: dict[str, Any], discovered: list[dict[str, Any]]
 def write_policy(vault: Path, policy_path: str) -> Path:
     resolved_policy_path = resolve_policy_path(vault, policy_path)
     policy, _ = load_policy(vault, policy_path)
+    if not shard_root_exists(vault):
+        raise FileNotFoundError(
+            f"raw registry shard root is absent: {RAW_REGISTRY_SHARD_ROOT}"
+        )
     discovered = discover_raw_registry_shards(vault)
     synced = synchronized_policy(policy, discovered)
     resolved_policy_path.write_text(
@@ -415,7 +423,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     if args.write:
-        write_policy(vault, args.policy)
+        try:
+            write_policy(vault, args.policy)
+        except FileNotFoundError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
     report = build_report(vault, policy_path=args.policy)
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))

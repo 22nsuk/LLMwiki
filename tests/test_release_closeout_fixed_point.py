@@ -23,6 +23,7 @@ from ops.scripts.release.release_closeout_fixed_point import (
     DEFAULT_OUT,
     DRY_RUN_SCHEMA_PATH,
     _IterationExecutionContext,
+    _next_iteration_targets,
     _policy_runtime,
     _run_iteration,
     bootstrap_post_promote_freshness,
@@ -440,6 +441,17 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "feedback_refresh_exempt_targets"):
             _policy_runtime(self.vault)
+
+    def test_feedback_writer_changes_preserve_feedback_refresh_cycle(self) -> None:
+        runtime = _policy_runtime(self.vault)
+
+        self.assertEqual(
+            _next_iteration_targets(
+                [TARGET_TO_TRACKED_PATH["artifact-freshness"]],
+                runtime=runtime,
+            )[: len(runtime.feedback_targets)],
+            runtime.feedback_targets,
+        )
 
     def test_fixed_point_reruns_feedback_targets_after_downstream_changes(self) -> None:
         calls: list[str] = []

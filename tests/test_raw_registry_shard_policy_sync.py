@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
+import io
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -147,3 +150,20 @@ class RawRegistryShardPolicySyncTests(unittest.TestCase):
             payload = json.loads(report_path.read_text(encoding="utf-8"))
             self.assertEqual(payload["$schema"], SCHEMA_PATH)
             self.assertEqual(payload["status"], "pass")
+
+    def test_cli_write_refuses_absent_shard_root_without_mutating_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
+            before = policy_path.read_text(encoding="utf-8")
+            shutil.rmtree(vault / "system" / "system-raw-registry")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                exit_code = sync_main(["--vault", str(vault), "--write"])
+
+            self.assertEqual(exit_code, 1)
+            self.assertIn("raw registry shard root is absent", stderr.getvalue())
+            self.assertEqual(policy_path.read_text(encoding="utf-8"), before)

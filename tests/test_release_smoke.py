@@ -789,6 +789,20 @@ class ReleaseSmokeTest(unittest.TestCase):
             self.assertIn("archive_file_sha256", tampered_archive_diagnostics["reason"])
             archive_path.write_text("zip-bytes", encoding="utf-8")
 
+            requested_archive_mismatch_diagnostics = release_smoke_reuse_diagnostics(
+                vault,
+                destination,
+                profile=FULL_PROFILE,
+                resolved_policy_path=policy_path,
+                context=context,
+                requested_archive_path=vault / "tmp" / "sealed-release.zip",
+            )
+            self.assertFalse(requested_archive_mismatch_diagnostics["reusable"])
+            self.assertIn(
+                "requested_archive_path",
+                requested_archive_mismatch_diagnostics["reason"],
+            )
+
             archive_mismatch_report = report | {"archive_path": "tmp/other-release.zip"}
             destination.write_text(
                 json.dumps(archive_mismatch_report, ensure_ascii=False, indent=2),
@@ -891,8 +905,75 @@ class ReleaseSmokeTest(unittest.TestCase):
                 context=context,
             )
 
-        self.assertFalse(diagnostics["reusable"])
-        self.assertIn("archive_file_path", diagnostics["reason"])
+            self.assertFalse(diagnostics["reusable"])
+            self.assertIn("archive_file_path", diagnostics["reason"])
+
+    def test_main_reuse_only_rejects_report_for_different_archive_out(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            schema_source = Path("ops/schemas/release-smoke-report.schema.json").read_text(encoding="utf-8")
+            (vault / "ops" / "schemas" / "release-smoke-report.schema.json").write_text(
+                schema_source,
+                encoding="utf-8",
+            )
+            (vault / "README.md").write_text("readme\n", encoding="utf-8")
+            archive_path = vault / "tmp" / "release.zip"
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_text("zip-bytes", encoding="utf-8")
+            context = RuntimeContext(
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
+            )
+            policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
+            report = build_report(
+                ReleaseSmokeReportRequest(
+                    vault=vault,
+                    archive_path=archive_path,
+                    extracted_vault=Path(temp_dir) / "unpacked" / "vault",
+                    source_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    extracted_manifest={"files": [{"path": "README.md", "sha256": "a", "size_bytes": 1}]},
+                    command_results=[],
+                    resolved_policy_path=policy_path,
+                    policy_version=4,
+                    profile=FULL_PROFILE,
+                    context=context,
+                )
+            )
+            destination = write_report(vault, report, None)
+            stdout = io.StringIO()
+
+            with contextlib.ExitStack() as stack:
+                stack.enter_context(
+                    mock.patch(
+                        "ops.scripts.release.release_smoke.parse_args",
+                        return_value=SimpleNamespace(
+                            vault=str(vault),
+                            python_bin="python-bin",
+                            profile=FULL_PROFILE,
+                            archive_out="tmp/sealed-release.zip",
+                            out="ops/reports/release-smoke-report.json",
+                            archive_root_name=None,
+                            reuse_if_current=True,
+                            reuse_from=str(destination),
+                            reuse_only=True,
+                        ),
+                    )
+                )
+                archive_builder = stack.enter_context(
+                    mock.patch("ops.scripts.release.release_smoke.build_release_archive")
+                )
+                stack.enter_context(contextlib.redirect_stdout(stdout))
+
+                with self.assertRaises(SystemExit) as raised:
+                    main()
+
+            self.assertEqual(raised.exception.code, 1)
+            archive_builder.assert_not_called()
+            rendered = stdout.getvalue()
+            self.assertIn('"summary_mode": "executed"', rendered)
+            self.assertIn("requested_archive_path", rendered)
 
     def test_run_smoke_commands_captures_returncodes_and_tails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

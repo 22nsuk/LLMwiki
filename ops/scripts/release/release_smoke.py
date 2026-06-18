@@ -1254,6 +1254,7 @@ def release_smoke_reuse_diagnostics(
     profile: str,
     resolved_policy_path: Path,
     context: RuntimeContext,
+    requested_archive_path: Path | None = None,
 ) -> dict:
     diagnostics = {
         "reusable": False,
@@ -1283,6 +1284,13 @@ def release_smoke_reuse_diagnostics(
     )
     archive_file = payload.get("archive_file")
     archive_path, archive_paths_match = _archive_path_from_report(vault, payload)
+    requested_archive_matches = (
+        requested_archive_path is None
+        or (
+            archive_path is not None
+            and archive_path.resolve() == requested_archive_path.resolve()
+        )
+    )
     archive_expected_sha256 = (
         str(archive_file.get("sha256", "")).strip()
         if isinstance(archive_file, dict)
@@ -1298,6 +1306,7 @@ def release_smoke_reuse_diagnostics(
         "archive_file": isinstance(archive_file, dict)
         and archive_file.get("exists") is True,
         "archive_path_match": archive_paths_match,
+        "requested_archive_path": requested_archive_matches,
         "archive_file_path": archive_path is not None,
         "archive_file_exists": bool(archive_path and archive_path.is_file()),
         "archive_file_sha256": bool(archive_expected_sha256)
@@ -1367,6 +1376,13 @@ def _maybe_exit_with_reused_report(
             profile=args.profile,
             resolved_policy_path=resolved_policy_path,
             context=context,
+            requested_archive_path=resolve_output_path(
+                vault,
+                args.archive_out,
+                default_relative_path=f"tmp/{args.profile}-release-smoke.zip",
+            )
+            if args.archive_out
+            else None,
         )
         if diagnostics["reusable"]:
             print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
