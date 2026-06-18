@@ -169,6 +169,32 @@ def _mismatches_covered_by_semantic_digest(
     return covered
 
 
+def _component_mismatches_covered_by_semantic_digest(
+    mismatches: list[dict[str, str]],
+    *,
+    recorded_digest_map: dict[str, str],
+    recorded_semantic_map: dict[str, str],
+    current_semantic_map: dict[str, str],
+) -> list[dict[str, str]]:
+    digest_consistent_mismatches: list[dict[str, str]] = []
+    for item in mismatches:
+        path = item["path"]
+        recorded_digest = recorded_digest_map.get(path, "")
+        if not recorded_digest or item["recorded_digest"] != recorded_digest:
+            continue
+        digest_consistent_mismatches.append(
+            {
+                **item,
+                "tracked_recorded_digest": recorded_digest,
+            }
+        )
+    return _mismatches_covered_by_semantic_digest(
+        digest_consistent_mismatches,
+        recorded_semantic_map=recorded_semantic_map,
+        current_semantic_map=current_semantic_map,
+    )
+
+
 def _uncovered_mismatches(
     mismatches: list[dict[str, str]],
     covered: list[dict[str, str]],
@@ -585,8 +611,9 @@ def _verify_attestation_diagnostics(
     )
     if fixed_point_digest_mismatches and not semantic_map_matches:
         failures.append("fixed_point_digest_map_current_mismatch")
-    semantic_covered_component_mismatches = _mismatches_covered_by_semantic_digest(
+    semantic_covered_component_mismatches = _component_mismatches_covered_by_semantic_digest(
         component_digest_mismatches,
+        recorded_digest_map=recorded_map,
         recorded_semantic_map=recorded_semantic_map,
         current_semantic_map=current_semantic_digest_map,
     )
