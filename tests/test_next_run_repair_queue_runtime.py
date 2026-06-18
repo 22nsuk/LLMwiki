@@ -447,6 +447,50 @@ def test_open_carry_forward_decisions_suppresses_contract_structural_after_sourc
         assert open_decisions == []
 
 
+def test_open_carry_forward_decisions_suppresses_worker_structural_preflight_when_current_budget_clean() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def persist():\n    return True\n", encoding="utf-8")
+        source_run_id = "run-worker-structural-preflight"
+        run_dir = vault / "runs" / source_run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "mutation-command.stderr.txt").write_text(
+            "worker structural complexity preflight blocked before reviewer/validator/auditor execution\n",
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="mutation_failed",
+                    proposal_family="contract_regression_signals",
+                    proposal_id=(
+                        "repeated_same_eval_after_promote__"
+                        "auto-improve-iteration-persistence-runtime"
+                    ),
+                    source_run_id=source_run_id,
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+                        "mutation-failed"
+                    ),
+                    evidence_paths=[
+                        f"runs/{source_run_id}/mutation-command.stderr.txt",
+                    ],
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
 def test_open_carry_forward_decisions_suppresses_contract_structural_after_source_session_report_change() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         vault = Path(temp_dir)
