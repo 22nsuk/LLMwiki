@@ -103,7 +103,7 @@ def _decision_id(
     failure_taxonomy: str,
 ) -> str:
     raw = "|".join([session_id, run_id, proposal_id, failure_taxonomy])
-    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
     return f"next-run-decision:{_slug(run_id)}:{digest}"
 
 
