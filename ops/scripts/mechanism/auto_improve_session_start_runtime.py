@@ -17,6 +17,7 @@ from .auto_improve_loop_decision_runtime import (
     _ensure_session_loop_state,
 )
 from .auto_improve_maintenance_decision_runtime import MAINTENANCE_ACTION_RUNNER_ACTION
+from .auto_improve_next_run_decision_runtime import normalize_next_run_decisions
 from .auto_improve_session_report_runtime import _load_session_report
 from .auto_improve_value_runtime import _int_value, _list_text, _mapping_value
 from .goal_contract_digest_runtime import semantic_goal_contract_digest
@@ -471,6 +472,21 @@ def _new_auto_improve_session(
     }
 
 
+def _carry_forward_next_run_decisions_from_previous_session(
+    vault: Path,
+    session: dict[str, Any],
+    *,
+    session_id: str,
+) -> None:
+    try:
+        previous_session = _load_session_report(vault, session_id)
+    except (OSError, ValueError, AutoImproveUsageError):
+        return
+    decisions = normalize_next_run_decisions(previous_session.get("next_run_decisions"))
+    if decisions:
+        session["next_run_decisions"] = decisions
+
+
 def _start_auto_improve_session(request: AutoImproveSessionRequest) -> AutoImproveSessionStart:
     policy, resolved_policy_path = load_policy(request.vault, request.policy_path)
     auto_policy = policy["auto_improve_policy"]
@@ -512,6 +528,11 @@ def _start_auto_improve_session(request: AutoImproveSessionRequest) -> AutoImpro
             max_consecutive_failures=request.max_consecutive_failures,
             requested_executor=requested_executor,
             context=base_context,
+        )
+        _carry_forward_next_run_decisions_from_previous_session(
+            request.vault,
+            session,
+            session_id=current_session_id,
         )
         goal_contract_path = request.goal_contract_path
 

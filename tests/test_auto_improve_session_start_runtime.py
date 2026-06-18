@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -116,6 +117,67 @@ class AutoImproveSessionStartRuntimeTests(unittest.TestCase):
                 start.session["goal_contract"]["promotion_blockers"],
                 contract["promotion_guard"]["promotion_blockers"],
             )
+
+    def test_start_auto_improve_session_carries_forward_next_run_decisions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            session_id = "auto-session-carry-forward"
+            previous_report = vault / "ops" / "reports" / "auto-improve-sessions" / f"{session_id}.json"
+            previous_report.parent.mkdir(parents=True, exist_ok=True)
+            previous_report.write_text(
+                json.dumps(
+                    {
+                        "session_id": session_id,
+                        "next_run_decisions": [
+                            {
+                                "decision_id": "next-run-decision:source-run:validation-blocked",
+                                "observed_at": "2026-04-15T00:00:00Z",
+                                "session_id": session_id,
+                                "iteration": 1,
+                                "source_run_id": "source-run",
+                                "proposal_id": "repeated_same_eval_after_promote__target",
+                                "target_proposal_id": "next_run_failure_repair__target__validation-blocked",
+                                "failure_taxonomy": "validation_blocked",
+                                "decision": "carry_forward",
+                                "next_run_action": "repair_failure",
+                                "status": "open",
+                                "primary_targets": ["ops/scripts/mechanism/target.py"],
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            request = auto_improve_session_start_runtime.AutoImproveSessionRequest(
+                vault=vault,
+                policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                session_id=session_id,
+                max_proposals=1,
+                max_minutes=30,
+                max_consecutive_failures=1,
+                executor_name="codex_exec",
+                context=RuntimeContext(
+                    display_timezone=dt.UTC,
+                    clock=lambda: dt.datetime(2026, 4, 15, 0, 1, tzinfo=dt.UTC),
+                    executor_id="codex_exec",
+                ),
+            )
+
+            start = auto_improve_session_start_runtime._start_auto_improve_session(request)
+
+            self.assertEqual(
+                [
+                    decision["target_proposal_id"]
+                    for decision in start.session["next_run_decisions"]
+                ],
+                ["next_run_failure_repair__target__validation-blocked"],
+            )
+            self.assertEqual(start.session["iterations"], [])
+            self.assertEqual(start.session["attempted_proposal_ids"], [])
 
 
 if __name__ == "__main__":  # pragma: no cover
