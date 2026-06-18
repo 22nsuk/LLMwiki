@@ -648,6 +648,16 @@
       "replacement": "make goal-runtime-local-evidence-refresh"
     },
     {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_latest_successful_run",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "path": "ops/scripts/mechanism/goal_runtime_latest_successful_run.py",
+      "rationale": "Make-orchestrated selector retained behind goal-runtime evidence targets, not public console exposure.",
+      "removal_ready": false,
+      "replacement": "make goal-runtime-latest-successful-run-id"
+    },
+    {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_lock",
       "console_scripts": [],
       "install_state": "not_installed",
