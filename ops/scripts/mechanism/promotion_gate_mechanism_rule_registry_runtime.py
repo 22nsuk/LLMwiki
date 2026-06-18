@@ -170,11 +170,25 @@ def _behavior_delta_presence_checks(ctx: _MechanismRuleRegistryContext) -> list[
 def _candidate_lint_pass_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
     state = ctx.state
     bundle = ctx.bundle
+    baseline_status = str(bundle.baseline_lint_report["status"])
+    candidate_status = str(bundle.candidate_lint_report["status"])
+    acceptance = (
+        "candidate_pass"
+        if state.candidate_lint_pass
+        else "baseline_fail_non_regression"
+        if state.candidate_lint_accepted
+        else "not_accepted"
+    )
     return [
         {
             "id": "candidate_lint_pass",
-            "status": "PASS" if state.candidate_lint_pass else "FAIL",
-            "detail": f"candidate lint status={bundle.candidate_lint_report['status']}",
+            "status": "PASS" if state.candidate_lint_accepted else "FAIL",
+            "detail": (
+                f"baseline lint status={baseline_status}, "
+                f"candidate lint status={candidate_status}, "
+                f"non_regression={str(state.lint_non_regression).lower()}, "
+                f"acceptance={acceptance}"
+            ),
         }
     ]
 
@@ -182,14 +196,27 @@ def _candidate_lint_pass_checks(ctx: _MechanismRuleRegistryContext) -> list[dict
 def _candidate_eval_pass_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
     state = ctx.state
     bundle = ctx.bundle
+    baseline_status = str(bundle.baseline_eval_report["status"])
+    candidate_status = str(bundle.candidate_eval_report["status"])
+    acceptance = (
+        "candidate_pass"
+        if state.candidate_eval_pass
+        else "baseline_fail_non_regression"
+        if state.candidate_eval_accepted
+        else "not_accepted"
+    )
     return [
         {
             "id": "candidate_eval_pass",
-            "status": "PASS" if state.candidate_eval_pass else "FAIL",
+            "status": "PASS" if state.candidate_eval_accepted else "FAIL",
             "detail": (
+                f"baseline eval status={baseline_status}, "
+                f"candidate eval status={candidate_status}, "
                 "candidate eval "
                 f"{bundle.candidate_eval_report['total_score']}/"
-                f"{bundle.candidate_eval_report['max_score']}"
+                f"{bundle.candidate_eval_report['max_score']}, "
+                f"baseline={state.baseline_score}, candidate={state.candidate_score}, "
+                f"acceptance={acceptance}"
             ),
         }
     ]
@@ -335,6 +362,8 @@ def _equal_score_secondary_eligibility_checks(ctx: _MechanismRuleRegistryContext
                 f"allowed={str(state.equal_score_allowed).lower()}, "
                 f"score_equal={str(state.score_equal).lower()}, "
                 f"selected_axes={state.selected_secondary_axes}, "
+                f"candidate_lint_accepted={str(state.candidate_lint_accepted).lower()}, "
+                f"candidate_eval_accepted={str(state.candidate_eval_accepted).lower()}, "
                 f"selected_non_regression={str(state.selected_non_regression).lower()}, "
                 f"selected_any_improvement={str(state.selected_any_improvement).lower()}"
             ),

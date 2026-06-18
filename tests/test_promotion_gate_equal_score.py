@@ -609,6 +609,120 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
                 report["decision_record"]["decision_id"],
             )
 
+    def test_same_eval_accepts_baseline_fail_non_regression_with_secondary_improvement(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 9, status="fail"),
+                candidate_eval=eval_report(vault, 9, status="fail"),
+                baseline_lint=lint_report(vault, status="fail", error_count=2),
+                candidate_lint=lint_report(vault, status="fail", error_count=2),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=12,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=2,
+                    complexity_score=25,
+                ),
+                include_behavior_delta=True,
+            )
+
+            report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
+
+            self.assertEqual(report["decision"], "PROMOTE")
+            checks = {check["id"]: check for check in report["checks"]}
+            self.assertEqual(checks["candidate_lint_pass"]["status"], "PASS")
+            self.assertIn(
+                "acceptance=baseline_fail_non_regression",
+                checks["candidate_lint_pass"]["detail"],
+            )
+            self.assertEqual(checks["candidate_eval_pass"]["status"], "PASS")
+            self.assertIn(
+                "acceptance=baseline_fail_non_regression",
+                checks["candidate_eval_pass"]["detail"],
+            )
+            self.assertEqual(checks["equal_score_secondary_eligibility"]["status"], "PASS")
+            self.assertIn(
+                "candidate_lint_accepted=true",
+                checks["equal_score_secondary_eligibility"]["detail"],
+            )
+            self.assertIn(
+                "candidate_eval_accepted=true",
+                checks["equal_score_secondary_eligibility"]["detail"],
+            )
+
+    def test_same_eval_rejects_baseline_fail_lint_regression(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 9, status="fail"),
+                candidate_eval=eval_report(vault, 9, status="fail"),
+                baseline_lint=lint_report(vault, status="fail", error_count=1),
+                candidate_lint=lint_report(vault, status="fail", error_count=2),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=12,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=2,
+                    complexity_score=25,
+                ),
+                include_behavior_delta=True,
+            )
+
+            report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
+
+            self.assertEqual(report["decision"], "DISCARD")
+            checks = {check["id"]: check for check in report["checks"]}
+            self.assertEqual(checks["candidate_lint_pass"]["status"], "FAIL")
+            self.assertIn("acceptance=not_accepted", checks["candidate_lint_pass"]["detail"])
+            self.assertEqual(checks["equal_score_secondary_eligibility"]["status"], "WARN")
+            self.assertIn(
+                "candidate_lint_accepted=false",
+                checks["equal_score_secondary_eligibility"]["detail"],
+            )
+            source_rules = {
+                proposal["source_rule"]
+                for proposal in report["decision_reduction"]["proposals"]
+                if proposal["decision"] == "DISCARD"
+            }
+            self.assertIn("candidate_lint_pass", source_rules)
+
     def test_same_eval_missing_behavior_delta_discards(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

@@ -53,8 +53,12 @@ class MechanismPromotionState:
     expected_policy_version: int | None
     invalid_targets: list[str]
     missing_targets: list[str]
+    baseline_lint_pass: bool
     candidate_lint_pass: bool
+    candidate_lint_accepted: bool
+    baseline_eval_pass: bool
     candidate_eval_pass: bool
+    candidate_eval_accepted: bool
     baseline_score: int
     candidate_score: int
     score_improves: bool
@@ -91,7 +95,7 @@ class TargetValidationState:
 
 @dataclass(frozen=True)
 class ScoreState:
-    candidate_lint_pass: bool
+    baseline_eval_pass: bool
     candidate_eval_pass: bool
     baseline_score: int
     candidate_score: int
@@ -102,6 +106,8 @@ class ScoreState:
 
 @dataclass(frozen=True)
 class LintState:
+    baseline_lint_pass: bool
+    candidate_lint_pass: bool
     non_regression: bool
     improves: bool
 
@@ -293,7 +299,7 @@ def _score_state(bundle: MechanismArtifactBundle) -> ScoreState:
     score_improves = candidate_score > baseline_score
     score_equal = candidate_score == baseline_score
     return ScoreState(
-        candidate_lint_pass=bundle.candidate_lint_report["status"] == "pass",
+        baseline_eval_pass=bundle.baseline_eval_report["status"] == "pass",
         candidate_eval_pass=bundle.candidate_eval_report["status"] == "pass",
         baseline_score=baseline_score,
         candidate_score=candidate_score,
@@ -307,8 +313,20 @@ def _lint_state(bundle: MechanismArtifactBundle) -> LintState:
     candidate_lint = lint_comparison_tuple(bundle.candidate_lint_report)
     baseline_lint = lint_comparison_tuple(bundle.baseline_lint_report)
     return LintState(
+        baseline_lint_pass=bundle.baseline_lint_report["status"] == "pass",
+        candidate_lint_pass=bundle.candidate_lint_report["status"] == "pass",
         non_regression=candidate_lint <= baseline_lint,
         improves=candidate_lint < baseline_lint,
+    )
+
+
+def _candidate_lint_accepted(lint: LintState) -> bool:
+    return lint.candidate_lint_pass or (not lint.baseline_lint_pass and lint.non_regression)
+
+
+def _candidate_eval_accepted(score: ScoreState) -> bool:
+    return score.candidate_eval_pass or (
+        not score.baseline_eval_pass and score.candidate_score >= score.baseline_score
     )
 
 
@@ -419,8 +437,8 @@ def _secondary_axis_state(
         equal_score_secondary_eligibility=(
             equal_score_allowed
             and score.score_equal
-            and score.candidate_lint_pass
-            and score.candidate_eval_pass
+            and _candidate_lint_accepted(lint)
+            and _candidate_eval_accepted(score)
             and selected_non_regression
             and selected_any_improvement
         ),
@@ -462,6 +480,8 @@ def build_mechanism_promotion_state(
     structural = _structural_state(bundle, equal_score_policy=equal_score_policy)
     tests = _test_coverage_state(structural)
     risk = _risk_state(bundle)
+    candidate_lint_accepted = _candidate_lint_accepted(lint)
+    candidate_eval_accepted = _candidate_eval_accepted(score)
     secondary = _secondary_axis_state(
         policy=policy,
         artifact_class=artifact_class,
@@ -479,8 +499,12 @@ def build_mechanism_promotion_state(
         expected_policy_version=expected_policy_version,
         invalid_targets=targets.invalid_targets,
         missing_targets=targets.missing_targets,
-        candidate_lint_pass=score.candidate_lint_pass,
+        baseline_lint_pass=lint.baseline_lint_pass,
+        candidate_lint_pass=lint.candidate_lint_pass,
+        candidate_lint_accepted=candidate_lint_accepted,
+        baseline_eval_pass=score.baseline_eval_pass,
         candidate_eval_pass=score.candidate_eval_pass,
+        candidate_eval_accepted=candidate_eval_accepted,
         baseline_score=score.baseline_score,
         candidate_score=score.candidate_score,
         score_improves=score.score_improves,
