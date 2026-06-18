@@ -93,15 +93,23 @@ def _infer_same_eval_reason_code(
 
 
 def _secondary_axes_from_text(value: str) -> list[str]:
-    if "selected_axes=" not in value:
-        return []
-    tail = value.split("selected_axes=", 1)[1].split(",", 1)[0].strip()
-    tail = tail.strip("[](){}")
-    return [
-        item.strip().strip("'\"")
-        for item in tail.split(",")
-        if item.strip().strip("'\"")
-    ]
+    for key in ("improved_axes", "selected_axes"):
+        marker = f"{key}="
+        if marker not in value:
+            continue
+        tail = value.split(marker, 1)[1].strip()
+        if tail.startswith("[") and "]" in tail:
+            tail = tail[1 : tail.index("]")]
+        else:
+            tail = tail.split(",", 1)[0].strip()
+        axes = [
+            item.strip().strip("'\"")
+            for item in tail.strip("[](){}").split(",")
+            if item.strip().strip("'\"")
+        ]
+        if axes:
+            return axes
+    return []
 
 
 def _string_list(value: object) -> list[str]:

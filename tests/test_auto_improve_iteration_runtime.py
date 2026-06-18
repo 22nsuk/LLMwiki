@@ -1035,7 +1035,9 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                                 "id": "equal_score_secondary_eligibility",
                                 "status": "PASS",
                                 "detail": (
-                                    "allowed=true, score_equal=true, selected_axes=['lint'], "
+                                    "allowed=true, score_equal=true, "
+                                    "selected_axes=['lint', 'complexity', 'tests'], "
+                                    "improved_axes=['complexity'], "
                                     "selected_non_regression=true, selected_any_improvement=true"
                                 ),
                             }
@@ -1066,7 +1068,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
             self.assertEqual(payload["same_eval_reason_code"], "unknown")
             self.assertTrue(payload["strict_secondary_improvement_present"])
-            self.assertEqual(payload["secondary_improvement_axes"], ["lint"])
+            self.assertEqual(payload["secondary_improvement_axes"], ["complexity"])
 
     def test_write_iteration_telemetry_does_not_carry_stale_same_eval_fields_for_improved_score(
         self,
