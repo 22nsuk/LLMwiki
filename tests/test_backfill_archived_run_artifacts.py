@@ -155,6 +155,20 @@ def _seed_pre_backfill_mechanism_assessment_pair(vault: Path) -> None:
         _write_json(run_dir / filename, payload)
 
 
+def _legacy_structural_complexity_budget_payload() -> dict:
+    payload = _read_json(REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json")[
+        "structural_complexity_budget"
+    ]
+    target = payload["targets"][0]
+    target["metrics"]["nonempty_line_count_total"] = 136
+    target["metrics"]["python_function_count"] = 10
+    target["budget_deltas"]["nonempty_line_count_total"] = -4
+    target["budget_deltas"]["python_function_count"] = 0
+    target.pop("no_headroom_metrics", None)
+    target.pop("low_headroom_metrics", None)
+    return payload
+
+
 def _seed_pre_backfill_raw_intake_run(vault: Path) -> list[str]:
     rel_paths = [
         RAW_INTAKE_RUN_REL / "absorption/raw-intake-absorption-matrix-2026-04-22.json",
@@ -698,6 +712,52 @@ def test_backfill_run_artifacts_supports_raw_intake_safe_backfill_tranche() -> N
             assert record.get("has_generated_at") is True
             assert record.get("has_artifact_envelope") is True
             assert record.get("currentness_status") == "current"
+            assert record.get("schema_validation_status") == "pass"
+            assert record.get("issues") == []
+
+
+def test_backfill_run_artifacts_restores_legacy_structural_complexity_headroom_fields() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        run_dir = vault / "runs" / "legacy-structural-budget-run"
+        run_dir.mkdir(parents=True)
+        rel_paths = [
+            "runs/legacy-structural-budget-run/structural-complexity-budget.json",
+            "runs/legacy-structural-budget-run/worker-structural-complexity-preflight.json",
+        ]
+        for rel_path in rel_paths:
+            _write_json(vault / rel_path, _legacy_structural_complexity_budget_payload())
+
+        written = backfill_archived_run_artifacts(
+            vault,
+            rel_paths=rel_paths,
+            context=fixed_context(),
+        )
+
+        assert written == rel_paths
+        freshness_report = build_report(vault, context=fixed_context())
+        for rel_path in rel_paths:
+            payload = _read_json(vault / rel_path)
+            target = payload["targets"][0]
+            record = next(
+                item
+                for item in freshness_report.get("artifact_records", [])
+                if item.get("path") == rel_path
+            )
+
+            assert target["no_headroom_metrics"] == ["python_function_count"]
+            assert target["low_headroom_metrics"] == ["nonempty_line_count_total"]
+            assert validate_with_schema(
+                payload,
+                load_schema(
+                    REPO_ROOT
+                    / "ops"
+                    / "schemas"
+                    / "structural-complexity-budget-report.schema.json"
+                ),
+            ) == []
             assert record.get("schema_validation_status") == "pass"
             assert record.get("issues") == []
 

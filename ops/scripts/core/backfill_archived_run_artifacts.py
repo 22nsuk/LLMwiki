@@ -49,6 +49,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SHADOW_APPLY_REPORT_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
+        STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
         TIMEOUT_FAILURE_SCHEMA_PATH,
     )
     from ops.scripts.core.schema_runtime import (
@@ -88,6 +89,7 @@ else:
         SHADOW_APPLY_REPORT_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
+        STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
         TIMEOUT_FAILURE_SCHEMA_PATH,
     )
     from .schema_runtime import load_schema_with_vault_override, validate_with_schema
@@ -98,6 +100,7 @@ SCRIPT_PATH = "ops/scripts/core/backfill_archived_run_artifacts.py"
 RUN_ARTIFACT_SCAN_ROOT = Path("runs")
 BACKFILL_PROVENANCE_PROPERTY = "urn:openai:archived-run-backfill"
 ARCHIVE_REASON = "run_artifact_embedded_envelope_backfill"
+STRUCTURAL_COMPLEXITY_LOW_HEADROOM_PERCENT = 5
 RUN_TELEMETRY_DISCARD_NON_REGRESSION_CHECK_IDS = (
     "candidate_eval_pass",
     "eval_score_improves",
@@ -356,13 +359,78 @@ def _normalize_legacy_mechanism_assessment_payload(
     return normalized_payload if changed else payload
 
 
+def _structural_budget_headroom_metrics(target: dict[str, Any]) -> tuple[list[str], list[str]]:
+    metrics = target.get("metrics")
+    budgets = target.get("budget")
+    budget_deltas = target.get("budget_deltas")
+    if not isinstance(metrics, dict) or not isinstance(budgets, dict) or not isinstance(budget_deltas, dict):
+        return [], []
+    no_headroom_metrics: list[str] = []
+    low_headroom_metrics: list[str] = []
+    for metric, budget_value in budgets.items():
+        try:
+            budget = int(budget_value)
+            measured = int(metrics[metric])
+            delta = int(budget_deltas[metric])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if delta == 0:
+            no_headroom_metrics.append(str(metric))
+        elif delta < 0 and measured * 100 >= budget * (100 - STRUCTURAL_COMPLEXITY_LOW_HEADROOM_PERCENT):
+            low_headroom_metrics.append(str(metric))
+    return no_headroom_metrics, low_headroom_metrics
+
+
+def _normalize_legacy_structural_complexity_budget_payload(
+    rel_path: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    if Path(rel_path).name not in {
+        "structural-complexity-budget.json",
+        "worker-structural-complexity-preflight.json",
+    }:
+        return payload
+    targets = payload.get("targets")
+    if not isinstance(targets, list):
+        return payload
+    normalized_targets: list[Any] = []
+    changed = False
+    for target in targets:
+        if not isinstance(target, dict):
+            normalized_targets.append(target)
+            continue
+        normalized_target = dict(target)
+        no_headroom_metrics, low_headroom_metrics = _structural_budget_headroom_metrics(target)
+        if "no_headroom_metrics" not in normalized_target:
+            normalized_target["no_headroom_metrics"] = no_headroom_metrics
+            changed = True
+        if "low_headroom_metrics" not in normalized_target:
+            normalized_target["low_headroom_metrics"] = low_headroom_metrics
+            changed = True
+        normalized_targets.append(normalized_target)
+    if not changed:
+        return payload
+    normalized_payload = dict(payload)
+    normalized_payload["targets"] = normalized_targets
+    return normalized_payload
+
+
 def _normalize_legacy_archived_run_payload(
     vault: Path,
     rel_path: str,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
     normalized = _normalize_legacy_run_telemetry_payload(vault, rel_path, payload)
-    return _normalize_legacy_mechanism_assessment_payload(rel_path, normalized)
+    normalized = _normalize_legacy_mechanism_assessment_payload(rel_path, normalized)
+    return _normalize_legacy_structural_complexity_budget_payload(rel_path, normalized)
+
+
+STRUCTURAL_COMPLEXITY_BUDGET_SOURCE_PATHS = (
+    SCRIPT_PATH,
+    "ops/scripts/eval/structural_complexity_budget_runtime.py",
+    "ops/scripts/mechanism/mechanism_run_repo_health_step_runtime.py",
+    "ops/scripts/core/executor_runtime.py",
+)
 
 
 def _date_suffix_timestamp(rel_path: str) -> tuple[str, str]:
@@ -620,6 +688,20 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         schema_path=MECHANISM_ASSESSMENT_SCHEMA_PATH,
         artifact_kind="mechanism_assessment_report",
         source_paths=(SCRIPT_PATH, "ops/scripts/mechanism/mechanism_assess.py"),
+        derive_generated_at=_payload_generated_at,
+    ),
+    "structural-complexity-budget.json": ArchivedRunArtifactSpec(
+        filename="structural-complexity-budget.json",
+        schema_path=STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
+        artifact_kind="structural_complexity_budget_report",
+        source_paths=STRUCTURAL_COMPLEXITY_BUDGET_SOURCE_PATHS,
+        derive_generated_at=_payload_generated_at,
+    ),
+    "worker-structural-complexity-preflight.json": ArchivedRunArtifactSpec(
+        filename="worker-structural-complexity-preflight.json",
+        schema_path=STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
+        artifact_kind="structural_complexity_budget_report",
+        source_paths=STRUCTURAL_COMPLEXITY_BUDGET_SOURCE_PATHS,
         derive_generated_at=_payload_generated_at,
     ),
     "raw-markdown-normalization-report.json": ArchivedRunArtifactSpec(
