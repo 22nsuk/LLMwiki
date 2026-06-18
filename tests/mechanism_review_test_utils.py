@@ -107,6 +107,7 @@ def mechanism_report(
             "markdown_heading_count": 0,
             "test_file_count": test_file_count,
             "test_case_count": test_case_count,
+            "test_guardrail_count": 0,
         },
         "total_structural_metrics": {
             "nonempty_line_count_total": nonempty,
@@ -115,6 +116,7 @@ def mechanism_report(
             "markdown_heading_count": 0,
             "test_file_count": test_file_count,
             "test_case_count": test_case_count,
+            "test_guardrail_count": 0,
         },
         "diagnostics": {
             "unreadable_targets": [],
@@ -173,6 +175,7 @@ def mechanism_report(
                     "target_count": len(all_targets),
                     "test_file_count": test_file_count,
                     "test_case_count": test_case_count,
+                    "test_guardrail_count": 0,
                     "verification_scope": "targeted_pytest",
                     "reasons": ["fixture"],
                     "selected_score": 2,

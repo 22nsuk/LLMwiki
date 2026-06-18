@@ -48,6 +48,8 @@ def collect_mechanism_gate_inputs(
     changed_files_manifest_path: str,
     run_ledger_path: str,
     behavior_delta_path: str | None = None,
+    baseline_mechanism_contract_eval_path: str | None = None,
+    candidate_mechanism_contract_eval_path: str | None = None,
 ) -> MechanismGateInputs:
     return _collect_mechanism_gate_inputs(
         vault,
@@ -60,6 +62,8 @@ def collect_mechanism_gate_inputs(
         changed_files_manifest_path,
         run_ledger_path,
         behavior_delta_path,
+        baseline_mechanism_contract_eval_path=baseline_mechanism_contract_eval_path,
+        candidate_mechanism_contract_eval_path=candidate_mechanism_contract_eval_path,
     )
 
 

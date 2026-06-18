@@ -199,6 +199,8 @@ PLANNING_GATE_OPTIONAL_ARTIFACT_SCHEMAS = {
     "rollback-rehearsal-report.json": ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     "behavior-delta.json": BEHAVIOR_DELTA_SCHEMA_PATH,
     "structural-complexity-budget.json": STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
+    "baseline-mechanism-contract-eval.json": EVAL_REPORT_SCHEMA_PATH,
+    "candidate-mechanism-contract-eval.json": EVAL_REPORT_SCHEMA_PATH,
 }
 
 PLANNING_GATE_COMPLETED_MECHANISM_INPUT_SCHEMAS = {
@@ -213,4 +215,6 @@ PLANNING_GATE_COMPLETED_MECHANISM_INPUT_SCHEMAS = {
 
 PLANNING_GATE_OPTIONAL_COMPLETED_MECHANISM_INPUT_SCHEMAS = {
     "behavior_delta": BEHAVIOR_DELTA_SCHEMA_PATH,
+    "baseline_mechanism_contract_eval_report": EVAL_REPORT_SCHEMA_PATH,
+    "candidate_mechanism_contract_eval_report": EVAL_REPORT_SCHEMA_PATH,
 }

@@ -53,6 +53,18 @@ GENERIC_PROMOTION_FAILURE_TAXONOMIES = frozenset({"discarded"})
 LEGACY_PROMOTION_REASON_CODES = frozenset(
     {"", "legacy_promotion_report", "unknown", "none"}
 )
+EQUAL_SCORE_SECONDARY_AXIS_BLOCKER_CHECK_IDS = frozenset(
+    {
+        "lint_non_regression",
+        "structural_complexity_non_regression",
+        "tests_non_regression",
+        "lint_improves",
+        "structural_complexity_improves",
+        "tests_increase",
+        "complexity_profile_score",
+        "risk_flags",
+    }
+)
 
 
 def is_retryable_failure_taxonomy(failure_taxonomy: str) -> bool:
@@ -189,7 +201,17 @@ def failure_taxonomy_from_iteration(
         if (
             reason_code
             and reason_code not in LEGACY_PROMOTION_REASON_CODES
-            and (not blocking_check_ids or reason_code in blocking_check_ids)
+            and (
+                not blocking_check_ids
+                or reason_code in blocking_check_ids
+                or (
+                    reason_code == "equal_score_secondary_eligibility"
+                    and all(
+                        check_id in EQUAL_SCORE_SECONDARY_AXIS_BLOCKER_CHECK_IDS
+                        for check_id in blocking_check_ids
+                    )
+                )
+            )
         ):
             return reason_code
     if blocking_check_ids:

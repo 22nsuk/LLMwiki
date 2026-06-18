@@ -172,7 +172,8 @@
         "python_branch_node_count",
         "markdown_heading_count",
         "test_file_count",
-        "test_case_count"
+        "test_case_count",
+        "test_guardrail_count"
       ],
       "properties": {
         "nonempty_line_count_total": {
@@ -191,6 +192,9 @@
           "type": "integer"
         },
         "test_case_count": {
+          "type": "integer"
+        },
+        "test_guardrail_count": {
           "type": "integer"
         }
       },
@@ -204,7 +208,8 @@
         "python_branch_node_count",
         "markdown_heading_count",
         "test_file_count",
-        "test_case_count"
+        "test_case_count",
+        "test_guardrail_count"
       ],
       "properties": {
         "nonempty_line_count_total": {
@@ -223,6 +228,9 @@
           "type": "integer"
         },
         "test_case_count": {
+          "type": "integer"
+        },
+        "test_guardrail_count": {
           "type": "integer"
         }
       },
@@ -486,6 +494,7 @@
                 "target_count",
                 "test_file_count",
                 "test_case_count",
+                "test_guardrail_count",
                 "verification_scope",
                 "reasons",
                 "selected_score"
@@ -498,6 +507,9 @@
                   "type": "integer"
                 },
                 "test_case_count": {
+                  "type": "integer"
+                },
+                "test_guardrail_count": {
                   "type": "integer"
                 },
                 "verification_scope": {

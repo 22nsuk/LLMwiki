@@ -579,8 +579,14 @@ class PlanningGateValidateTests(unittest.TestCase):
             vault.mkdir()
             seed_minimal_vault(vault)
             run_dir = seed_mechanism_run_artifacts(vault, "run-mechanism-no-tests")
-            write_json(run_dir / "baseline-mechanism-assessment.json", mechanism_report(vault, test_file_count=0))
-            write_json(run_dir / "candidate-mechanism-assessment.json", mechanism_report(vault, test_file_count=0))
+            write_json(
+                run_dir / "baseline-mechanism-assessment.json",
+                mechanism_report(vault, test_file_count=0, test_case_count=0),
+            )
+            write_json(
+                run_dir / "candidate-mechanism-assessment.json",
+                mechanism_report(vault, test_file_count=0, test_case_count=0),
+            )
 
             report = validate_run_dir(vault, run_dir)
 

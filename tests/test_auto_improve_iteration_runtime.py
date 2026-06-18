@@ -1536,9 +1536,9 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                     "tests_non_regression": "PASS",
                 },
             )
-            self.assertEqual(payload["failure_taxonomy"], "structural_complexity_non_regression")
+            self.assertEqual(payload["failure_taxonomy"], "equal_score_secondary_eligibility")
             self.assertEqual(
-                evidence["blocking_check_ids"], ["structural_complexity_non_regression"]
+                evidence["blocking_check_ids"], ["equal_score_secondary_eligibility"]
             )
             self.assertEqual(
                 evidence["decision_record_reason_code"],

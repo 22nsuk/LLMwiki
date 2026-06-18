@@ -56,6 +56,8 @@ RUN_FILE_SCHEMAS = {
     "generated-artifact-convergence.json": GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
     "baseline-eval.json": EVAL_REPORT_SCHEMA_PATH,
     "candidate-eval.json": EVAL_REPORT_SCHEMA_PATH,
+    "baseline-mechanism-contract-eval.json": EVAL_REPORT_SCHEMA_PATH,
+    "candidate-mechanism-contract-eval.json": EVAL_REPORT_SCHEMA_PATH,
     "baseline-lint.json": LINT_REPORT_SCHEMA_PATH,
     "candidate-lint.json": LINT_REPORT_SCHEMA_PATH,
     "baseline-mechanism-assessment.json": MECHANISM_ASSESSMENT_SCHEMA_PATH,

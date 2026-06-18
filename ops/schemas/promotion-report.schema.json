@@ -490,6 +490,12 @@
         "candidate_eval_report": {
           "type": "string"
         },
+        "baseline_mechanism_contract_eval_report": {
+          "type": "string"
+        },
+        "candidate_mechanism_contract_eval_report": {
+          "type": "string"
+        },
         "baseline_lint_report": {
           "type": "string"
         },
@@ -510,6 +516,343 @@
         },
         "run_ledger": {
           "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": [
+        "global_eval_delta",
+        "global_eval_failure_summary",
+        "global_eval_lane_summary",
+        "mechanism_contract_eval",
+        "mechanism_eval_applicability"
+      ],
+      "properties": {
+        "global_eval_delta": {
+          "type": "object",
+          "required": [
+            "baseline_status",
+            "candidate_status",
+            "baseline_total_score",
+            "candidate_total_score",
+            "total_score_delta",
+            "baseline_max_score",
+            "candidate_max_score",
+            "max_score_delta",
+            "score_regressed",
+            "status_regressed"
+          ],
+          "properties": {
+            "baseline_status": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "fail"
+              ]
+            },
+            "candidate_status": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "fail"
+              ]
+            },
+            "baseline_total_score": {
+              "type": "integer"
+            },
+            "candidate_total_score": {
+              "type": "integer"
+            },
+            "total_score_delta": {
+              "type": "integer"
+            },
+            "baseline_max_score": {
+              "type": "integer"
+            },
+            "candidate_max_score": {
+              "type": "integer"
+            },
+            "max_score_delta": {
+              "type": "integer"
+            },
+            "score_regressed": {
+              "type": "boolean"
+            },
+            "status_regressed": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "global_eval_failure_summary": {
+          "type": "object",
+          "required": [
+            "baseline_failed_check_count",
+            "candidate_failed_check_count",
+            "failed_check_delta",
+            "baseline_failed_page_count",
+            "candidate_failed_page_count",
+            "failed_page_delta",
+            "baseline_failures_by_eval",
+            "candidate_failures_by_eval",
+            "changed_failures_by_eval",
+            "candidate_new_failure_count",
+            "candidate_resolved_failure_count"
+          ],
+          "properties": {
+            "baseline_failed_check_count": {
+              "type": "integer"
+            },
+            "candidate_failed_check_count": {
+              "type": "integer"
+            },
+            "failed_check_delta": {
+              "type": "integer"
+            },
+            "baseline_failed_page_count": {
+              "type": "integer"
+            },
+            "candidate_failed_page_count": {
+              "type": "integer"
+            },
+            "failed_page_delta": {
+              "type": "integer"
+            },
+            "baseline_failures_by_eval": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "eval",
+                  "count"
+                ],
+                "properties": {
+                  "eval": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "candidate_failures_by_eval": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "eval",
+                  "count"
+                ],
+                "properties": {
+                  "eval": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "changed_failures_by_eval": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "eval",
+                  "baseline_count",
+                  "candidate_count",
+                  "delta"
+                ],
+                "properties": {
+                  "eval": {
+                    "type": "string"
+                  },
+                  "baseline_count": {
+                    "type": "integer"
+                  },
+                  "candidate_count": {
+                    "type": "integer"
+                  },
+                  "delta": {
+                    "type": "integer"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "candidate_new_failure_count": {
+              "type": "integer"
+            },
+            "candidate_resolved_failure_count": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "global_eval_lane_summary": {
+          "type": "object",
+          "required": [
+            "global_eval_role",
+            "content_corpus_eval_ids",
+            "candidate_content_corpus_backlog_count",
+            "content_corpus_backlog_delta",
+            "content_corpus_backlog_like",
+            "content_corpus_backlog_evals_present",
+            "mechanism_local_failure_count",
+            "mechanism_local_new_failure_count",
+            "recommended_lane"
+          ],
+          "properties": {
+            "global_eval_role": {
+              "type": "string",
+              "enum": [
+                "non_regression_guard"
+              ]
+            },
+            "content_corpus_eval_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "candidate_content_corpus_backlog_count": {
+              "type": "integer"
+            },
+            "content_corpus_backlog_delta": {
+              "type": "integer"
+            },
+            "content_corpus_backlog_like": {
+              "type": "boolean"
+            },
+            "content_corpus_backlog_evals_present": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "mechanism_local_failure_count": {
+              "type": "integer"
+            },
+            "mechanism_local_new_failure_count": {
+              "type": "integer"
+            },
+            "recommended_lane": {
+              "type": "string",
+              "enum": [
+                "content_corpus",
+                "mechanism_or_global_regression",
+                "none"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "mechanism_contract_eval": {
+          "type": "object",
+          "required": [
+            "source",
+            "score_source",
+            "baseline_report",
+            "candidate_report",
+            "baseline_status",
+            "candidate_status",
+            "baseline_total_score",
+            "candidate_total_score",
+            "total_score_delta",
+            "score_improves",
+            "score_equal"
+          ],
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "provided",
+                "missing"
+              ]
+            },
+            "score_source": {
+              "type": "string",
+              "enum": [
+                "mechanism_contract_eval",
+                "mechanism_contract_eval_missing"
+              ]
+            },
+            "baseline_report": {
+              "type": "string"
+            },
+            "candidate_report": {
+              "type": "string"
+            },
+            "baseline_status": {
+              "type": "string"
+            },
+            "candidate_status": {
+              "type": "string"
+            },
+            "baseline_total_score": {
+              "type": "integer"
+            },
+            "candidate_total_score": {
+              "type": "integer"
+            },
+            "total_score_delta": {
+              "type": "integer"
+            },
+            "score_improves": {
+              "type": "boolean"
+            },
+            "score_equal": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "mechanism_eval_applicability": {
+          "type": "object",
+          "required": [
+            "artifact_class",
+            "classification",
+            "candidate_failure_mode",
+            "candidate_regression",
+            "corpus_backlog_like",
+            "reason"
+          ],
+          "properties": {
+            "artifact_class": {
+              "type": "string"
+            },
+            "classification": {
+              "type": "string",
+              "enum": [
+                "mechanism_contract_eval",
+                "global_health_guard_only",
+                "direct_eval_signal"
+              ]
+            },
+            "candidate_failure_mode": {
+              "type": "string",
+              "enum": [
+                "candidate_clean",
+                "candidate_regression",
+                "baseline_backlog_non_regression"
+              ]
+            },
+            "candidate_regression": {
+              "type": "boolean"
+            },
+            "corpus_backlog_like": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

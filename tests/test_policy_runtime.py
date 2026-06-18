@@ -391,6 +391,35 @@ class PolicyRuntimeTest(unittest.TestCase):
             },
         )
         self.assertEqual(
+            mechanism_rule_metadata["candidate_eval_pass"]["artifact_dependencies"],
+            ["baseline_eval_report", "candidate_eval_report"],
+        )
+        self.assertEqual(
+            mechanism_rule_metadata["candidate_eval_pass"]["summary_template"],
+            "Global eval non-regression guard emitted {statuses}: {details}",
+        )
+        self.assertEqual(
+            mechanism_rule_metadata["eval_score_improves"],
+            {
+                "artifact_dependencies": [
+                    "baseline_mechanism_contract_eval_report",
+                    "candidate_mechanism_contract_eval_report",
+                ],
+                "reducer": "status_fail_discard",
+                "severity": "blocker",
+                "summary_template": (
+                    "Mechanism contract eval score comparison emitted {statuses}: {details}"
+                ),
+            },
+        )
+        self.assertEqual(
+            mechanism_rule_metadata["equal_score_secondary_eligibility"]["artifact_dependencies"][:2],
+            [
+                "baseline_mechanism_contract_eval_report",
+                "candidate_mechanism_contract_eval_report",
+            ],
+        )
+        self.assertEqual(
             mechanism_rule_metadata["lint_non_regression"]["reducer"],
             "none",
         )

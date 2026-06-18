@@ -14,6 +14,10 @@ from ops.scripts.core.promotion_decision_registry_runtime import decision_from_r
 from ops.scripts.core.run_id_runtime import reject_template_placeholder_run_id
 from ops.scripts.core.runtime_context import RuntimeContext
 
+from .mechanism_contract_eval_runtime import (
+    MechanismContractEvalRequest,
+    write_mechanism_contract_eval_pair,
+)
 from .mechanism_run_capture_runtime import (
     _capture_baseline_step,
     _capture_candidate_step,
@@ -385,6 +389,20 @@ def _promotion_workspace_phase_result(
     generated_artifact_convergence: dict[str, Any],
     repo_health: RepoHealthStepResult,
 ) -> _WorkspaceExperimentResult:
+    contract_eval_artifacts = _write_mechanism_contract_eval_artifacts(
+        vault,
+        request=request,
+        resolution=resolution,
+        repo_health=repo_health,
+    )
+    baseline_artifacts = {
+        **baseline_artifacts,
+        "mechanism_contract_eval": contract_eval_artifacts["baseline"],
+    }
+    candidate_artifacts = {
+        **candidate_artifacts,
+        "mechanism_contract_eval": contract_eval_artifacts["candidate"],
+    }
     promotion = _evaluate_promotion_step(
         vault,
         run_id=request.run_id,
@@ -451,6 +469,26 @@ def _promotion_workspace_phase_result(
         workspace_apply=workspace_apply,
         candidate_changed_files_snapshot=candidate_changed_files_snapshot,
     )
+
+
+def _write_mechanism_contract_eval_artifacts(
+    vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    resolution: Any,
+    repo_health: RepoHealthStepResult,
+) -> dict[str, str]:
+    contract_eval_request = MechanismContractEvalRequest(
+        vault=vault,
+        run_id=request.run_id,
+        policy=resolution.policy,
+        resolved_policy_path=resolution.resolved_policy_path,
+        policy_path_text=resolution.policy_path_text,
+        changed_files_manifest_path=repo_health.changed_files_manifest,
+        behavior_delta_path=repo_health.behavior_delta,
+        context=resolution.context,
+    )
+    return write_mechanism_contract_eval_pair(contract_eval_request)
 
 
 def _run_workspace_experiment_phase(

@@ -331,22 +331,81 @@ def _is_test_case_class(node: ast.ClassDef) -> bool:
     return False
 
 
+def _iter_test_case_nodes(tree: ast.AST) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+    test_nodes: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+    for node in getattr(tree, "body", []):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
+            test_nodes.append(node)
+        elif isinstance(node, ast.ClassDef) and _is_test_case_class(node):
+            test_nodes.extend(
+                child
+                for child in node.body
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and child.name.startswith("test_")
+            )
+    return test_nodes
+
+
 def python_test_case_count(state: MechanismAssessmentState, rel_path: str, path: Path) -> int:
+    tree = state.parse_python_tree(rel_path, path)
+    if tree is None:
+        return 0
+    return len(_iter_test_case_nodes(tree))
+
+
+def _qualified_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = _qualified_name(node.value)
+        return f"{base}.{node.attr}" if base else node.attr
+    return ""
+
+
+def _literal_collection_length(node: ast.AST) -> int | None:
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return len(node.elts)
+    return None
+
+
+def _parametrize_extra_case_count(decorator: ast.expr) -> int:
+    if not isinstance(decorator, ast.Call):
+        return 0
+    if _qualified_name(decorator.func) not in {"pytest.mark.parametrize", "mark.parametrize"}:
+        return 0
+    if len(decorator.args) < 2:
+        return 1
+    literal_count = _literal_collection_length(decorator.args[1])
+    if literal_count is None:
+        return 1
+    return max(0, literal_count - 1)
+
+
+def _is_subtest_context(expr: ast.expr) -> bool:
+    if not isinstance(expr, ast.Call):
+        return False
+    name = _qualified_name(expr.func)
+    return name == "subTest" or name.endswith(".subTest")
+
+
+def python_test_guardrail_count(state: MechanismAssessmentState, rel_path: str, path: Path) -> int:
     tree = state.parse_python_tree(rel_path, path)
     if tree is None:
         return 0
 
     count = 0
-    for node in getattr(tree, "body", []):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
-            count += 1
-        elif isinstance(node, ast.ClassDef) and _is_test_case_class(node):
-            count += sum(
-                1
-                for child in node.body
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
-                and child.name.startswith("test_")
-            )
+    for test_node in _iter_test_case_nodes(tree):
+        count += sum(
+            _parametrize_extra_case_count(decorator)
+            for decorator in test_node.decorator_list
+        )
+        for node in ast.walk(test_node):
+            if isinstance(node, ast.With):
+                count += sum(
+                    1
+                    for item in node.items
+                    if _is_subtest_context(item.context_expr)
+                )
     return count
 
 
@@ -391,6 +450,11 @@ def build_structural_metrics(
         for rel_path, path in test_files
         if path.suffix == ".py"
     )
+    test_guardrail_total = sum(
+        python_test_guardrail_count(state, rel_path, path)
+        for rel_path, path in test_files
+        if path.suffix == ".py"
+    )
 
     return {
         "nonempty_line_count_total": nonempty_line_count_total,
@@ -399,6 +463,7 @@ def build_structural_metrics(
         "markdown_heading_count": markdown_heading_total,
         "test_file_count": len(test_files),
         "test_case_count": test_case_total,
+        "test_guardrail_count": test_guardrail_total,
     }
 
 
@@ -614,12 +679,15 @@ def verification_cost_evidence(
     test_case_count: int,
     risk_flags: list[str],
     target_paths: list[str],
+    test_guardrail_count: int = 0,
 ) -> dict:
+    test_evidence_count = test_case_count + test_guardrail_count
     if target_count == 0 and test_file_count == 0 and not risk_flags:
         return {
             "target_count": target_count,
             "test_file_count": test_file_count,
             "test_case_count": test_case_count,
+            "test_guardrail_count": test_guardrail_count,
             "verification_scope": "empty_scope",
             "reasons": ["empty_scope"],
             "selected_score": 0,
@@ -628,18 +696,18 @@ def verification_cost_evidence(
         score = 1
         scope = "no_focused_tests_declared"
     elif test_file_count == 1:
-        if test_case_count <= 5:
+        if test_evidence_count <= 5:
             score = 2
             scope = "focused_single_file"
-        elif test_case_count <= 20:
+        elif test_evidence_count <= 20:
             score = 3
             scope = "dense_single_file"
         else:
             score = 4
             scope = "broad_single_file"
     elif test_file_count == 2:
-        score = 3 if test_case_count <= 30 else 4
-        scope = "focused_multi_file" if test_case_count <= 30 else "broad_multi_file"
+        score = 3 if test_evidence_count <= 30 else 4
+        scope = "focused_multi_file" if test_evidence_count <= 30 else "broad_multi_file"
     elif test_file_count == 3:
         score = 4
         scope = "multi_file_suite"
@@ -664,6 +732,7 @@ def verification_cost_evidence(
         "target_count": target_count,
         "test_file_count": test_file_count,
         "test_case_count": test_case_count,
+        "test_guardrail_count": test_guardrail_count,
         "verification_scope": scope,
         "reasons": reasons,
         "selected_score": min(score, 5),
@@ -676,6 +745,7 @@ def verification_cost_score(
     risk_flags: list[str],
     target_paths: list[str],
     test_case_count: int = 0,
+    test_guardrail_count: int = 0,
 ) -> int:
     return verification_cost_evidence(
         target_count,
@@ -683,6 +753,7 @@ def verification_cost_score(
         test_case_count,
         risk_flags,
         target_paths,
+        test_guardrail_count,
     )["selected_score"]
 
 
@@ -740,6 +811,7 @@ def complexity_dimension_evidence(
             structural_metrics["test_case_count"],
             risk_flags,
             all_target_paths,
+            structural_metrics.get("test_guardrail_count", 0),
         ),
     }
 

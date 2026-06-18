@@ -121,6 +121,8 @@ class MechanismClassReportRequest:
     run_ledger_path: str
     behavior_delta_path: str | None = None
     auto_improve_run: bool = False
+    baseline_mechanism_contract_eval_path: str | None = None
+    candidate_mechanism_contract_eval_path: str | None = None
 
 
 _MECHANISM_CLASS_REPORT_POSITIONAL_FIELDS = (
@@ -142,6 +144,8 @@ _MECHANISM_CLASS_REPORT_POSITIONAL_FIELDS = (
     "run_ledger_path",
     "behavior_delta_path",
     "auto_improve_run",
+    "baseline_mechanism_contract_eval_path",
+    "candidate_mechanism_contract_eval_path",
 )
 
 
@@ -209,6 +213,8 @@ def _mechanism_gate_inputs(request: MechanismClassReportRequest) -> MechanismGat
         request.changed_files_manifest_path,
         request.run_ledger_path,
         behavior_delta_path=request.behavior_delta_path,
+        baseline_mechanism_contract_eval_path=request.baseline_mechanism_contract_eval_path,
+        candidate_mechanism_contract_eval_path=request.candidate_mechanism_contract_eval_path,
     )
 
 
@@ -298,6 +304,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--candidate-lint-report")
     ap.add_argument("--baseline-mechanism-report")
     ap.add_argument("--candidate-mechanism-report")
+    ap.add_argument("--baseline-mechanism-contract-eval-report")
+    ap.add_argument("--candidate-mechanism-contract-eval-report")
     ap.add_argument("--changed-files-manifest")
     ap.add_argument("--behavior-delta")
     ap.add_argument("--auto-improve-run", action="store_true")
@@ -395,6 +403,8 @@ def _build_report(args: argparse.Namespace) -> tuple[Path, dict]:
         changed_files_manifest_path,
         run_ledger_path,
         behavior_delta_path=args.behavior_delta,
+        baseline_mechanism_contract_eval_path=args.baseline_mechanism_contract_eval_report,
+        candidate_mechanism_contract_eval_path=args.candidate_mechanism_contract_eval_report,
     )
     report = build_mechanism_class_report(
         request=MechanismPromotionReportRequest(

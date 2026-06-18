@@ -15,6 +15,10 @@ from ops.scripts.core.behavior_delta_runtime import (
     contract_touches_for_path,
 )
 from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.promotion_gate import (
+    MechanismClassReportRequest,
+    mechanism_class_report,
+)
 from tests.minimal_vault_runtime import (
     POLICY_PATH,
     REPO_ROOT,
@@ -66,12 +70,43 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def eval_report(vault: Path, score: int, max_score: int = 10, status: str = "pass") -> dict:
-    return {
+def eval_report(
+    vault: Path,
+    score: int,
+    max_score: int = 10,
+    status: str = "pass",
+    *,
+    failure_counts: dict[str, int] | None = None,
+    failure_pages: list[tuple[str, str]] | None = None,
+    artifact_kind: str = "wiki_eval_report",
+    phase: str | None = None,
+) -> dict:
+    if failure_pages is not None:
+        pages = [
+            {
+                "page": page,
+                "score": 0,
+                "max_score": 1,
+                "results": [{"eval": eval_id, "pass": False}],
+            }
+            for page, eval_id in failure_pages
+        ]
+    else:
+        pages = [
+            {
+                "page": f"wiki/{eval_id}-{index}.md",
+                "score": 0,
+                "max_score": 1,
+                "results": [{"eval": eval_id, "pass": False}],
+            }
+            for eval_id, count in sorted((failure_counts or {}).items())
+            for index in range(count)
+        ]
+    report = {
         "$schema": "ops/schemas/eval-report.schema.json",
         "vault": str(vault.resolve()),
         "generated_at": "2026-04-13T00:00:00Z",
-        "artifact_kind": "wiki_eval_report",
+        "artifact_kind": artifact_kind,
         "producer": "tests.test_promotion_gate_equal_score",
         "source_command": "pytest",
         "source_revision": "unknown",
@@ -96,8 +131,29 @@ def eval_report(vault: Path, score: int, max_score: int = 10, status: str = "pas
         "status": status,
         "max_score": max_score,
         "total_score": score,
-        "pages": [],
+        "pages": pages,
     }
+    if phase is not None:
+        report["phase"] = phase
+    return report
+
+
+def mechanism_contract_eval_report(
+    vault: Path,
+    score: int,
+    max_score: int = 4,
+    status: str = "pass",
+    *,
+    phase: str,
+) -> dict:
+    return eval_report(
+        vault,
+        score,
+        max_score=max_score,
+        status=status,
+        artifact_kind="mechanism_contract_eval_report",
+        phase=phase,
+    )
 
 
 def lint_report(
@@ -155,6 +211,7 @@ class MechanismReportOptions:
     headings: int = 0
     test_file_count: int = 0
     test_case_count: int = 0
+    test_guardrail_count: int = 0
     complexity_score: int = 0
     risk_flags: list[str] | None = None
     test_files: list[str] | None = None
@@ -201,6 +258,7 @@ def mechanism_report(
             "markdown_heading_count": options.headings,
             "test_file_count": options.test_file_count,
             "test_case_count": options.test_case_count,
+            "test_guardrail_count": options.test_guardrail_count,
         },
         "total_structural_metrics": {
             "nonempty_line_count_total": total_nonempty,
@@ -209,6 +267,7 @@ def mechanism_report(
             "markdown_heading_count": total_headings,
             "test_file_count": options.test_file_count,
             "test_case_count": options.test_case_count,
+            "test_guardrail_count": options.test_guardrail_count,
         },
         "complexity_profile": {
             "dimensions": {
@@ -265,6 +324,7 @@ def mechanism_report(
                     "target_count": len(all_targets),
                     "test_file_count": options.test_file_count,
                     "test_case_count": options.test_case_count,
+                    "test_guardrail_count": options.test_guardrail_count,
                     "verification_scope": "targeted_pytest",
                     "reasons": ["fixture"],
                     "selected_score": 2,
@@ -475,18 +535,22 @@ def behavior_delta_report(manifest: dict, *, run_id: str = "run-equal-score") ->
 
 
 class PromotionGateEqualScoreTest(unittest.TestCase):
-    def run_module(self, vault: Path, *args: str) -> dict:
+    def run_module_process(self, vault: Path, *args: str) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         pythonpath = env.get("PYTHONPATH")
         env["PYTHONPATH"] = str(REPO_ROOT) if not pythonpath else f"{REPO_ROOT}:{pythonpath}"
-        subprocess.run(
+        return subprocess.run(
             [sys.executable, "-m", "ops.scripts.promotion_gate", *args],
             cwd=vault,
             env=env,
             capture_output=True,
             text=True,
-            check=True,
+            check=False,
         )
+
+    def run_module(self, vault: Path, *args: str) -> dict:
+        completed = self.run_module_process(vault, *args)
+        completed.check_returncode()
         report_path = vault / "runs" / "run-equal-score" / "promotion-report.json"
         return json.loads(report_path.read_text(encoding="utf-8"))
 
@@ -500,6 +564,9 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
         candidate_lint: dict,
         baseline_mechanism: dict,
         candidate_mechanism: dict,
+        baseline_mechanism_contract_eval: dict | None = None,
+        candidate_mechanism_contract_eval: dict | None = None,
+        write_mechanism_contract_eval: bool = True,
         changed_manifest: dict | None = None,
         include_behavior_delta: bool = False,
     ) -> None:
@@ -510,6 +577,23 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
         write_json(artifacts_dir / "candidate-lint.json", candidate_lint)
         write_json(artifacts_dir / "baseline-mechanism.json", baseline_mechanism)
         write_json(artifacts_dir / "candidate-mechanism.json", candidate_mechanism)
+        if write_mechanism_contract_eval:
+            baseline_mechanism_contract_eval = (
+                baseline_mechanism_contract_eval
+                or mechanism_contract_eval_report(vault, 4, phase="baseline")
+            )
+            candidate_mechanism_contract_eval = (
+                candidate_mechanism_contract_eval
+                or mechanism_contract_eval_report(vault, 4, phase="candidate")
+            )
+            write_json(
+                artifacts_dir / "baseline-mechanism-contract-eval.json",
+                baseline_mechanism_contract_eval,
+            )
+            write_json(
+                artifacts_dir / "candidate-mechanism-contract-eval.json",
+                candidate_mechanism_contract_eval,
+            )
         candidate_primary_targets = candidate_mechanism.get("primary_targets", ["ops/scripts/example.py"])
         candidate_supporting_targets = candidate_mechanism.get("supporting_targets", [])
         candidate_test_files = candidate_mechanism.get("test_files", ["tests/test_example_0.py"])
@@ -529,6 +613,7 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
         *,
         behavior_delta: bool = False,
         auto_improve_run: bool = False,
+        mechanism_contract_eval: bool = True,
     ) -> list[str]:
         args = [
             "--vault",
@@ -560,6 +645,15 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
         ]
         if behavior_delta:
             args.extend(["--behavior-delta", "artifacts/behavior-delta.json"])
+        if mechanism_contract_eval:
+            args.extend(
+                [
+                    "--baseline-mechanism-contract-eval-report",
+                    "artifacts/baseline-mechanism-contract-eval.json",
+                    "--candidate-mechanism-contract-eval-report",
+                    "artifacts/candidate-mechanism-contract-eval.json",
+                ]
+            )
         if auto_improve_run:
             args.append("--auto-improve-run")
         return args
@@ -657,7 +751,11 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
             )
             self.assertEqual(checks["candidate_eval_pass"]["status"], "PASS")
             self.assertIn(
-                "acceptance=baseline_fail_non_regression",
+                "acceptance=global_non_regression",
+                checks["candidate_eval_pass"]["detail"],
+            )
+            self.assertIn(
+                "promotion_score_source=mechanism_contract_eval",
                 checks["candidate_eval_pass"]["detail"],
             )
             self.assertEqual(checks["equal_score_secondary_eligibility"]["status"], "PASS")
@@ -668,6 +766,625 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
             self.assertIn(
                 "candidate_eval_accepted=true",
                 checks["equal_score_secondary_eligibility"]["detail"],
+            )
+
+    def test_same_eval_uses_test_guardrail_growth_for_line_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10),
+                candidate_eval=eval_report(vault, 10),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    test_guardrail_count=0,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=11,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    test_guardrail_count=1,
+                    complexity_score=25,
+                ),
+                include_behavior_delta=True,
+            )
+
+            report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
+
+            self.assertEqual(report["decision"], "PROMOTE")
+            checks = {check["id"]: check for check in report["checks"]}
+            self.assertEqual(checks["structural_complexity_non_regression"]["status"], "PASS")
+            self.assertEqual(checks["tests_increase"]["status"], "PASS")
+            self.assertIn("guardrails=1", checks["tests_increase"]["detail"])
+            eligibility_detail = checks["equal_score_secondary_eligibility"]["detail"]
+            self.assertIn("failed_axes=[]", eligibility_detail)
+            self.assertIn("improved_axes=['tests']", eligibility_detail)
+            self.assertIn("nonempty_line_growth=1", eligibility_detail)
+            self.assertIn("added_test_functions=0", eligibility_detail)
+            self.assertIn("added_test_guardrails=1", eligibility_detail)
+            self.assertIn("allowed_line_growth=20", eligibility_detail)
+
+    def test_promotion_report_diagnostics_separate_global_eval_backlog(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(
+                    vault,
+                    8,
+                    status="fail",
+                    failure_counts={"source_page_substance": 2},
+                ),
+                candidate_eval=eval_report(
+                    vault,
+                    8,
+                    status="fail",
+                    failure_counts={"source_page_substance": 2},
+                ),
+                baseline_lint=lint_report(vault, review_candidate_count=1),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                include_behavior_delta=True,
+            )
+
+            report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
+
+            diagnostics = report["diagnostics"]
+            self.assertEqual(diagnostics["global_eval_delta"]["total_score_delta"], 0)
+            self.assertFalse(diagnostics["global_eval_delta"]["score_regressed"])
+            self.assertEqual(
+                diagnostics["global_eval_failure_summary"]["candidate_failures_by_eval"],
+                [{"eval": "source_page_substance", "count": 2}],
+            )
+            self.assertEqual(
+                diagnostics["global_eval_failure_summary"]["candidate_new_failure_count"],
+                0,
+            )
+            self.assertEqual(
+                diagnostics["mechanism_eval_applicability"]["classification"],
+                "mechanism_contract_eval",
+            )
+            self.assertEqual(
+                diagnostics["global_eval_lane_summary"]["recommended_lane"],
+                "content_corpus",
+            )
+            self.assertEqual(
+                diagnostics["global_eval_lane_summary"]["candidate_content_corpus_backlog_count"],
+                2,
+            )
+            self.assertTrue(
+                diagnostics["global_eval_lane_summary"]["content_corpus_backlog_like"]
+            )
+            self.assertEqual(
+                diagnostics["mechanism_eval_applicability"]["candidate_failure_mode"],
+                "baseline_backlog_non_regression",
+            )
+            self.assertTrue(
+                diagnostics["mechanism_eval_applicability"]["corpus_backlog_like"]
+            )
+
+    def test_promotion_report_diagnostics_detect_same_eval_count_new_page_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(
+                    vault,
+                    8,
+                    status="fail",
+                    failure_pages=[("wiki/source--old.md", "source_page_substance")],
+                ),
+                candidate_eval=eval_report(
+                    vault,
+                    8,
+                    status="fail",
+                    failure_pages=[("wiki/source--new.md", "source_page_substance")],
+                ),
+                baseline_lint=lint_report(vault, review_candidate_count=1),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                include_behavior_delta=True,
+            )
+
+            report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
+
+            diagnostics = report["diagnostics"]
+            self.assertEqual(
+                diagnostics["global_eval_failure_summary"]["candidate_new_failure_count"],
+                1,
+            )
+            self.assertEqual(
+                diagnostics["mechanism_eval_applicability"]["candidate_failure_mode"],
+                "candidate_regression",
+            )
+            self.assertEqual(
+                diagnostics["global_eval_lane_summary"]["recommended_lane"],
+                "mechanism_or_global_regression",
+            )
+
+    def test_mechanism_contract_eval_improvement_promotes_despite_global_backlog(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(
+                    vault,
+                    8,
+                    status="fail",
+                    failure_counts={"source_page_substance": 2},
+                ),
+                candidate_eval=eval_report(
+                    vault,
+                    8,
+                    status="fail",
+                    failure_counts={"source_page_substance": 2},
+                ),
+                baseline_mechanism_contract_eval=eval_report(
+                    vault,
+                    3,
+                    max_score=4,
+                    status="fail",
+                    artifact_kind="mechanism_contract_eval_report",
+                    phase="baseline",
+                ),
+                candidate_mechanism_contract_eval=eval_report(
+                    vault,
+                    4,
+                    max_score=4,
+                    status="pass",
+                    artifact_kind="mechanism_contract_eval_report",
+                    phase="candidate",
+                ),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+            )
+
+            report = self.run_module(
+                vault,
+                *self.base_args(vault, mechanism_contract_eval=True),
+            )
+
+            self.assertEqual(report["decision"], "PROMOTE")
+            checks = {check["id"]: check for check in report["checks"]}
+            self.assertEqual(checks["candidate_eval_pass"]["status"], "PASS")
+            self.assertIn(
+                "promotion_score_source=mechanism_contract_eval",
+                checks["candidate_eval_pass"]["detail"],
+            )
+            self.assertEqual(checks["eval_score_improves"]["status"], "PASS")
+            self.assertIn("source=mechanism_contract_eval", checks["eval_score_improves"]["detail"])
+            diagnostics = report["diagnostics"]
+            self.assertEqual(
+                diagnostics["mechanism_eval_applicability"]["classification"],
+                "mechanism_contract_eval",
+            )
+            self.assertEqual(
+                diagnostics["mechanism_contract_eval"]["total_score_delta"],
+                1,
+            )
+            self.assertEqual(
+                diagnostics["global_eval_lane_summary"]["recommended_lane"],
+                "content_corpus",
+            )
+            self.assertEqual(
+                report["inputs"]["baseline_mechanism_contract_eval_report"],
+                "artifacts/baseline-mechanism-contract-eval.json",
+            )
+
+    def test_mechanism_contract_eval_improvement_still_rejects_global_eval_regression(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10),
+                candidate_eval=eval_report(
+                    vault,
+                    9,
+                    status="fail",
+                    failure_pages=[("wiki/source--new.md", "source_page_substance")],
+                ),
+                baseline_mechanism_contract_eval=eval_report(
+                    vault,
+                    3,
+                    max_score=4,
+                    status="fail",
+                    artifact_kind="mechanism_contract_eval_report",
+                    phase="baseline",
+                ),
+                candidate_mechanism_contract_eval=eval_report(
+                    vault,
+                    4,
+                    max_score=4,
+                    status="pass",
+                    artifact_kind="mechanism_contract_eval_report",
+                    phase="candidate",
+                ),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+            )
+
+            report = self.run_module(
+                vault,
+                *self.base_args(vault, mechanism_contract_eval=True),
+            )
+
+            self.assertEqual(report["decision"], "DISCARD")
+            checks = {check["id"]: check for check in report["checks"]}
+            self.assertEqual(checks["candidate_eval_pass"]["status"], "FAIL")
+            self.assertIn("non_regression=false", checks["candidate_eval_pass"]["detail"])
+            self.assertEqual(checks["eval_score_improves"]["status"], "PASS")
+
+    def test_mechanism_contract_eval_must_be_contract_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10),
+                candidate_eval=eval_report(vault, 10),
+                baseline_mechanism_contract_eval=eval_report(vault, 2, max_score=4, status="fail"),
+                candidate_mechanism_contract_eval=eval_report(vault, 4, max_score=4),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+            )
+
+            completed = self.run_module_process(
+                vault,
+                *self.base_args(vault, mechanism_contract_eval=True),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "expected 'mechanism_contract_eval_report'",
+                completed.stderr,
+            )
+
+    def test_mechanism_contract_eval_improvement_requires_candidate_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10),
+                candidate_eval=eval_report(vault, 10),
+                baseline_mechanism_contract_eval=eval_report(
+                    vault,
+                    2,
+                    max_score=4,
+                    status="fail",
+                    artifact_kind="mechanism_contract_eval_report",
+                    phase="baseline",
+                ),
+                candidate_mechanism_contract_eval=eval_report(
+                    vault,
+                    3,
+                    max_score=4,
+                    status="fail",
+                    artifact_kind="mechanism_contract_eval_report",
+                    phase="candidate",
+                ),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+            )
+
+            report = self.run_module(
+                vault,
+                *self.base_args(vault, mechanism_contract_eval=True),
+            )
+
+            self.assertEqual(report["decision"], "DISCARD")
+            checks = {check["id"]: check for check in report["checks"]}
+            self.assertEqual(checks["candidate_eval_pass"]["status"], "PASS")
+            self.assertEqual(checks["eval_score_improves"]["status"], "FAIL")
+            self.assertIn("candidate_status=fail", checks["eval_score_improves"]["detail"])
+
+    def test_missing_mechanism_contract_eval_pair_discards_without_score_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10, max_score=11, status="fail"),
+                candidate_eval=eval_report(vault, 11),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                write_mechanism_contract_eval=False,
+            )
+
+            report = self.run_module(
+                vault,
+                *self.base_args(vault, mechanism_contract_eval=False),
+            )
+
+            self.assertEqual(report["decision"], "DISCARD")
+            checks = {check["id"]: check for check in report["checks"]}
+            self.assertEqual(checks["candidate_eval_pass"]["status"], "PASS")
+            self.assertIn(
+                "promotion_score_source=mechanism_contract_eval_missing",
+                checks["candidate_eval_pass"]["detail"],
+            )
+            self.assertEqual(checks["eval_score_improves"]["status"], "FAIL")
+            self.assertIn(
+                "source=mechanism_contract_eval_missing",
+                checks["eval_score_improves"]["detail"],
+            )
+            self.assertIn(
+                "baseline_report=missing_mechanism_contract_eval_report",
+                checks["eval_score_improves"]["detail"],
+            )
+            diagnostics = report["diagnostics"]
+            self.assertEqual(
+                diagnostics["mechanism_contract_eval"]["score_source"],
+                "mechanism_contract_eval_missing",
+            )
+            self.assertEqual(
+                diagnostics["mechanism_eval_applicability"]["classification"],
+                "global_health_guard_only",
+            )
+
+    def test_request_object_forwards_mechanism_contract_eval_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10, max_score=11, status="fail"),
+                candidate_eval=eval_report(vault, 11),
+                baseline_mechanism_contract_eval=mechanism_contract_eval_report(
+                    vault,
+                    3,
+                    status="fail",
+                    phase="baseline",
+                ),
+                candidate_mechanism_contract_eval=mechanism_contract_eval_report(
+                    vault,
+                    4,
+                    phase="candidate",
+                ),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=10,
+                    functions=2,
+                    branches=1,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=1,
+                    complexity_score=25,
+                ),
+                include_behavior_delta=True,
+            )
+            policy, resolved_policy_path = load_policy(vault)
+
+            report = mechanism_class_report(
+                MechanismClassReportRequest(
+                    vault=vault,
+                    run_id="run-equal-score",
+                    policy=policy,
+                    resolved_policy_path=resolved_policy_path,
+                    artifact_class="system_mechanism",
+                    primary_targets=["ops/scripts/example.py"],
+                    supporting_targets=[],
+                    signoff={"required": True, "status": "approved", "by": "", "ts": ""},
+                    log={
+                        "required": True,
+                        "page": "system/system-log.md",
+                        "summary": "request object contract eval regression",
+                        "status": "pending",
+                        "entry_ref": "",
+                    },
+                    baseline_eval_path="artifacts/baseline-eval.json",
+                    candidate_eval_path="artifacts/candidate-eval.json",
+                    baseline_lint_path="artifacts/baseline-lint.json",
+                    candidate_lint_path="artifacts/candidate-lint.json",
+                    baseline_mechanism_path="artifacts/baseline-mechanism.json",
+                    candidate_mechanism_path="artifacts/candidate-mechanism.json",
+                    changed_files_manifest_path="artifacts/changed-files-manifest.json",
+                    run_ledger_path="runs/run-equal-score/run-ledger.json",
+                    behavior_delta_path="artifacts/behavior-delta.json",
+                    baseline_mechanism_contract_eval_path=(
+                        "artifacts/baseline-mechanism-contract-eval.json"
+                    ),
+                    candidate_mechanism_contract_eval_path=(
+                        "artifacts/candidate-mechanism-contract-eval.json"
+                    ),
+                )
+            )
+
+            self.assertEqual(report["decision"], "PROMOTE")
+            self.assertEqual(
+                report["inputs"]["baseline_mechanism_contract_eval_report"],
+                "artifacts/baseline-mechanism-contract-eval.json",
+            )
+            checks = {check["id"]: check for check in report["checks"]}
+            self.assertIn(
+                "source=mechanism_contract_eval",
+                checks["eval_score_improves"]["detail"],
             )
 
     def test_same_eval_rejects_baseline_fail_lint_regression(self) -> None:
@@ -777,6 +1494,17 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
                 vault,
                 baseline_eval=eval_report(vault, 10, max_score=11, status="fail"),
                 candidate_eval=eval_report(vault, 11),
+                baseline_mechanism_contract_eval=mechanism_contract_eval_report(
+                    vault,
+                    3,
+                    status="fail",
+                    phase="baseline",
+                ),
+                candidate_mechanism_contract_eval=mechanism_contract_eval_report(
+                    vault,
+                    4,
+                    phase="candidate",
+                ),
                 baseline_lint=lint_report(vault),
                 candidate_lint=lint_report(vault),
                 baseline_mechanism=mechanism_report(
@@ -818,6 +1546,17 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
                 vault,
                 baseline_eval=eval_report(vault, 10, max_score=11, status="fail"),
                 candidate_eval=eval_report(vault, 11),
+                baseline_mechanism_contract_eval=mechanism_contract_eval_report(
+                    vault,
+                    3,
+                    status="fail",
+                    phase="baseline",
+                ),
+                candidate_mechanism_contract_eval=mechanism_contract_eval_report(
+                    vault,
+                    4,
+                    phase="candidate",
+                ),
                 baseline_lint=lint_report(vault),
                 candidate_lint=lint_report(vault),
                 baseline_mechanism=mechanism_report(
@@ -1051,6 +1790,14 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
             )
             self.assertEqual(complexity_check["status"], "FAIL")
             self.assertIn("baseline_total=", complexity_check["detail"])
+            eligibility_detail = next(
+                item for item in report["checks"] if item["id"] == "equal_score_secondary_eligibility"
+            )["detail"]
+            self.assertIn("failed_axes=['complexity']", eligibility_detail)
+            self.assertIn("nonempty_line_growth=8", eligibility_detail)
+            self.assertIn("added_test_functions=0", eligibility_detail)
+            self.assertIn("added_test_guardrails=0", eligibility_detail)
+            self.assertIn("allowed_line_growth=0", eligibility_detail)
 
     def test_same_eval_allows_test_backed_nonempty_growth_within_policy_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1094,6 +1841,14 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
                 item for item in report["checks"] if item["id"] == "structural_complexity_non_regression"
             )
             self.assertEqual(complexity_check["status"], "PASS")
+            eligibility_detail = next(
+                item for item in report["checks"] if item["id"] == "equal_score_secondary_eligibility"
+            )["detail"]
+            self.assertIn("failed_axes=[]", eligibility_detail)
+            self.assertIn("nonempty_line_growth=13", eligibility_detail)
+            self.assertIn("added_test_functions=1", eligibility_detail)
+            self.assertIn("added_test_guardrails=0", eligibility_detail)
+            self.assertIn("allowed_line_growth=20", eligibility_detail)
 
     def test_same_eval_discards_when_test_backed_nonempty_growth_exceeds_policy_budget(
         self,
@@ -1139,6 +1894,14 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
                 item for item in report["checks"] if item["id"] == "structural_complexity_non_regression"
             )
             self.assertEqual(complexity_check["status"], "FAIL")
+            eligibility_detail = next(
+                item for item in report["checks"] if item["id"] == "equal_score_secondary_eligibility"
+            )["detail"]
+            self.assertIn("failed_axes=['complexity']", eligibility_detail)
+            self.assertIn("nonempty_line_growth=21", eligibility_detail)
+            self.assertIn("added_test_functions=1", eligibility_detail)
+            self.assertIn("added_test_guardrails=0", eligibility_detail)
+            self.assertIn("allowed_line_growth=20", eligibility_detail)
 
     def test_same_eval_discards_when_semantic_complexity_grows_with_tests(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1182,6 +1945,14 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
                 item for item in report["checks"] if item["id"] == "structural_complexity_non_regression"
             )
             self.assertEqual(complexity_check["status"], "FAIL")
+            eligibility_detail = next(
+                item for item in report["checks"] if item["id"] == "equal_score_secondary_eligibility"
+            )["detail"]
+            self.assertIn("failed_axes=['complexity']", eligibility_detail)
+            self.assertIn("nonempty_line_growth=72", eligibility_detail)
+            self.assertIn("added_test_functions=1", eligibility_detail)
+            self.assertIn("added_test_guardrails=0", eligibility_detail)
+            self.assertIn("allowed_line_growth=20", eligibility_detail)
 
     def test_same_eval_without_secondary_improvement_discards(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -34,6 +34,8 @@ SUPPORTED_PROMOTION_RULE_SEVERITIES = {"info", "advisory", "warning", "blocker"}
 SUPPORTED_PROMOTION_RULE_ARTIFACT_DEPENDENCIES = {
     "baseline_eval_report",
     "candidate_eval_report",
+    "baseline_mechanism_contract_eval_report",
+    "candidate_mechanism_contract_eval_report",
     "baseline_lint_report",
     "candidate_lint_report",
     "baseline_mechanism_report",

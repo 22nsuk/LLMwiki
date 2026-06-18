@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from ops.scripts.core.filesystem_runtime import manifest_apply_guard_state
 from ops.scripts.core.path_runtime import normalize_repo_path_text
@@ -46,6 +47,8 @@ SUPPORTED_MECHANISM_PHASES = tuple(MECHANISM_EVENT_SEQUENCE_BY_PHASE)
 class MechanismArtifactBundle:
     baseline_eval_report: dict
     candidate_eval_report: dict
+    baseline_mechanism_contract_eval_report: dict | None
+    candidate_mechanism_contract_eval_report: dict | None
     baseline_lint_report: dict
     candidate_lint_report: dict
     baseline_mechanism_report: dict
@@ -89,9 +92,15 @@ _BUNDLE_FIELDS = (
     "changed_files_manifest_report",
     "run_ledger_report",
 )
+_OPTIONAL_BUNDLE_FIELDS = (
+    "baseline_mechanism_contract_eval_report",
+    "candidate_mechanism_contract_eval_report",
+)
 _POLICY_AND_VAULT_REPORTS = (
     ("baseline_eval", "baseline_eval_report"),
     ("candidate_eval", "candidate_eval_report"),
+    ("baseline_mechanism_contract_eval", "baseline_mechanism_contract_eval_report"),
+    ("candidate_mechanism_contract_eval", "candidate_mechanism_contract_eval_report"),
     ("baseline_lint", "baseline_lint_report"),
     ("candidate_lint", "candidate_lint_report"),
     ("baseline_mechanism", "baseline_mechanism_report"),
@@ -112,7 +121,7 @@ def mechanism_phase_check(check_id: str, passed: bool, detail: str) -> PhaseChec
 
 
 def normalize_mechanism_artifact_bundle(raw: Mapping[str, dict] | object) -> MechanismArtifactBundle:
-    payload: dict[str, dict] = {}
+    payload: dict[str, dict | None] = {}
     missing_fields: list[str] = []
     for field in _BUNDLE_FIELDS:
         value = raw.get(field) if isinstance(raw, Mapping) else getattr(raw, field, None)
@@ -120,11 +129,31 @@ def normalize_mechanism_artifact_bundle(raw: Mapping[str, dict] | object) -> Mec
             missing_fields.append(field)
             continue
         payload[field] = value
+    for field in _OPTIONAL_BUNDLE_FIELDS:
+        value = raw.get(field) if isinstance(raw, Mapping) else getattr(raw, field, None)
+        payload[field] = value if isinstance(value, dict) else None
     if missing_fields:
         raise ValueError(
             "missing mechanism artifact bundle fields: " + ", ".join(sorted(missing_fields))
         )
-    return MechanismArtifactBundle(**payload)
+    return MechanismArtifactBundle(
+        baseline_eval_report=cast(dict, payload["baseline_eval_report"]),
+        candidate_eval_report=cast(dict, payload["candidate_eval_report"]),
+        baseline_mechanism_contract_eval_report=cast(
+            dict | None,
+            payload["baseline_mechanism_contract_eval_report"],
+        ),
+        candidate_mechanism_contract_eval_report=cast(
+            dict | None,
+            payload["candidate_mechanism_contract_eval_report"],
+        ),
+        baseline_lint_report=cast(dict, payload["baseline_lint_report"]),
+        candidate_lint_report=cast(dict, payload["candidate_lint_report"]),
+        baseline_mechanism_report=cast(dict, payload["baseline_mechanism_report"]),
+        candidate_mechanism_report=cast(dict, payload["candidate_mechanism_report"]),
+        changed_files_manifest_report=cast(dict, payload["changed_files_manifest_report"]),
+        run_ledger_report=cast(dict, payload["run_ledger_report"]),
+    )
 
 
 def declared_target_matches(path: str, target: str) -> bool:
@@ -374,9 +403,14 @@ def build_report_consistency_checks(
 ) -> list[dict]:
     run_id_consistent = bundle.run_ledger_report.get("run_id") == run_id
     changed_files_run_id_consistent = bundle.changed_files_manifest_report.get("run_id") == run_id
+    available_policy_and_vault_reports = [
+        (name, field_name)
+        for name, field_name in _POLICY_AND_VAULT_REPORTS
+        if isinstance(getattr(bundle, field_name), dict)
+    ]
     report_policy_identities = {
         name: extract_policy_identity(getattr(bundle, field_name))
-        for name, field_name in _POLICY_AND_VAULT_REPORTS
+        for name, field_name in available_policy_and_vault_reports
     }
     policy_consistent = all(
         path == expected_policy_path and version == expected_policy_version
@@ -385,11 +419,11 @@ def build_report_consistency_checks(
     expected_vault = str(vault.resolve())
     report_vaults = {
         name: normalize_report_vault(vault, getattr(bundle, field_name).get("vault"))
-        for name, field_name in _POLICY_AND_VAULT_REPORTS
+        for name, field_name in available_policy_and_vault_reports
     }
     displayed_report_vaults = {
         name: display_report_vault(vault, getattr(bundle, field_name).get("vault"))
-        for name, field_name in _POLICY_AND_VAULT_REPORTS
+        for name, field_name in available_policy_and_vault_reports
     }
     vault_consistent = all(raw_vault == expected_vault for raw_vault in report_vaults.values())
     return [

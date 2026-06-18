@@ -198,24 +198,20 @@ def _candidate_eval_pass_checks(ctx: _MechanismRuleRegistryContext) -> list[dict
     bundle = ctx.bundle
     baseline_status = str(bundle.baseline_eval_report["status"])
     candidate_status = str(bundle.candidate_eval_report["status"])
-    acceptance = (
-        "candidate_pass"
-        if state.candidate_eval_pass
-        else "baseline_fail_non_regression"
-        if state.candidate_eval_accepted
-        else "not_accepted"
-    )
+    acceptance = "global_non_regression" if state.candidate_eval_accepted else "not_accepted"
     return [
         {
             "id": "candidate_eval_pass",
             "status": "PASS" if state.candidate_eval_accepted else "FAIL",
             "detail": (
-                f"baseline eval status={baseline_status}, "
-                f"candidate eval status={candidate_status}, "
-                "candidate eval "
-                f"{bundle.candidate_eval_report['total_score']}/"
-                f"{bundle.candidate_eval_report['max_score']}, "
-                f"baseline={state.baseline_score}, candidate={state.candidate_score}, "
+                "global wiki eval guard "
+                f"baseline status={baseline_status}, "
+                f"candidate status={candidate_status}, "
+                f"baseline={state.global_baseline_score}, "
+                f"candidate={state.global_candidate_score}, "
+                f"new_failures={state.global_eval_new_failure_count}, "
+                f"non_regression={str(state.global_eval_non_regression).lower()}, "
+                f"promotion_score_source={state.eval_score_source}, "
                 f"acceptance={acceptance}"
             ),
         }
@@ -228,7 +224,13 @@ def _eval_score_improves_checks(ctx: _MechanismRuleRegistryContext) -> list[dict
         {
             "id": "eval_score_improves",
             "status": state.improvement_check_status,
-            "detail": f"baseline={state.baseline_score}, candidate={state.candidate_score}",
+            "detail": (
+                f"source={state.eval_score_source}, "
+                f"baseline_report={state.baseline_score_report}, "
+                f"candidate_report={state.candidate_score_report}, "
+                f"baseline={state.baseline_score}, candidate={state.candidate_score}, "
+                f"candidate_status={'pass' if state.candidate_score_report_pass else 'fail'}"
+            ),
         }
     ]
 
@@ -302,8 +304,12 @@ def _tests_non_regression_checks(ctx: _MechanismRuleRegistryContext) -> list[dic
             "id": "tests_non_regression",
             "status": "PASS" if state.tests_non_regression else "FAIL",
             "detail": (
-                f"baseline=(files={state.baseline_test_file_count}, cases={state.baseline_test_case_count}), "
-                f"candidate=(files={state.candidate_test_file_count}, cases={state.candidate_test_case_count})"
+                f"baseline=(files={state.baseline_test_file_count}, "
+                f"cases={state.baseline_test_case_count}, "
+                f"guardrails={state.baseline_test_guardrail_count}), "
+                f"candidate=(files={state.candidate_test_file_count}, "
+                f"cases={state.candidate_test_case_count}, "
+                f"guardrails={state.candidate_test_guardrail_count})"
             ),
         }
     ]
@@ -316,8 +322,12 @@ def _tests_increase_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
             "id": "tests_increase",
             "status": "PASS" if state.tests_increase else "WARN",
             "detail": (
-                f"baseline=(files={state.baseline_test_file_count}, cases={state.baseline_test_case_count}), "
-                f"candidate=(files={state.candidate_test_file_count}, cases={state.candidate_test_case_count})"
+                f"baseline=(files={state.baseline_test_file_count}, "
+                f"cases={state.baseline_test_case_count}, "
+                f"guardrails={state.baseline_test_guardrail_count}), "
+                f"candidate=(files={state.candidate_test_file_count}, "
+                f"cases={state.candidate_test_case_count}, "
+                f"guardrails={state.candidate_test_guardrail_count})"
             ),
         }
     ]
@@ -361,11 +371,18 @@ def _equal_score_secondary_eligibility_checks(ctx: _MechanismRuleRegistryContext
             "detail": (
                 f"allowed={str(state.equal_score_allowed).lower()}, "
                 f"score_equal={str(state.score_equal).lower()}, "
+                f"score_source={state.eval_score_source}, "
                 f"selected_axes={state.selected_secondary_axes}, "
+                f"failed_axes={state.failed_secondary_axes}, "
+                f"improved_axes={state.improved_secondary_axes}, "
                 f"candidate_lint_accepted={str(state.candidate_lint_accepted).lower()}, "
                 f"candidate_eval_accepted={str(state.candidate_eval_accepted).lower()}, "
                 f"selected_non_regression={str(state.selected_non_regression).lower()}, "
-                f"selected_any_improvement={str(state.selected_any_improvement).lower()}"
+                f"selected_any_improvement={str(state.selected_any_improvement).lower()}, "
+                f"nonempty_line_growth={state.nonempty_line_growth}, "
+                f"added_test_functions={state.added_test_functions}, "
+                f"added_test_guardrails={state.added_test_guardrails}, "
+                f"allowed_line_growth={state.allowed_line_growth}"
             ),
         }
     ]

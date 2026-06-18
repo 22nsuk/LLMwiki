@@ -2169,17 +2169,18 @@ promotion_policy:
         summary_template: "Candidate lint gate emitted {statuses}: {details}"
       candidate_eval_pass:
         artifact_dependencies:
+          - baseline_eval_report
           - candidate_eval_report
         reducer: candidate_eval_status
         severity: blocker
-        summary_template: "Candidate eval gate emitted {statuses}: {details}"
+        summary_template: "Global eval non-regression guard emitted {statuses}: {details}"
       eval_score_improves:
         artifact_dependencies:
-          - baseline_eval_report
-          - candidate_eval_report
+          - baseline_mechanism_contract_eval_report
+          - candidate_mechanism_contract_eval_report
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Eval score comparison emitted {statuses}: {details}"
+        summary_template: "Mechanism contract eval score comparison emitted {statuses}: {details}"
       lint_non_regression:
         artifact_dependencies:
           - baseline_lint_report
@@ -2238,6 +2239,8 @@ promotion_policy:
         summary_template: "Risk-flag diagnostic emitted {statuses}: {details}"
       equal_score_secondary_eligibility:
         artifact_dependencies:
+          - baseline_mechanism_contract_eval_report
+          - candidate_mechanism_contract_eval_report
           - baseline_eval_report
           - candidate_eval_report
           - baseline_lint_report

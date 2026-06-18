@@ -101,6 +101,16 @@ def _promotion_gate_inputs(
     request: _MechanismRunPromotionReportRequest,
 ) -> MechanismGateInputs:
     run_id = request.run_id
+    baseline_contract_eval = run_rel(run_id, "baseline-mechanism-contract-eval.json")
+    candidate_contract_eval = run_rel(run_id, "candidate-mechanism-contract-eval.json")
+    contract_eval_kwargs = (
+        {
+            "baseline_mechanism_contract_eval_path": baseline_contract_eval,
+            "candidate_mechanism_contract_eval_path": candidate_contract_eval,
+        }
+        if (vault / baseline_contract_eval).is_file() or (vault / candidate_contract_eval).is_file()
+        else {}
+    )
     return collect_mechanism_gate_inputs(
         vault,
         run_rel(run_id, "baseline-eval.json"),
@@ -112,6 +122,7 @@ def _promotion_gate_inputs(
         request.changed_files_manifest_path,
         run_rel(run_id, "run-ledger.json"),
         behavior_delta_path=request.behavior_delta_path,
+        **contract_eval_kwargs,
     )
 
 

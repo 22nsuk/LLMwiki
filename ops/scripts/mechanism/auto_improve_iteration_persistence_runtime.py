@@ -26,7 +26,10 @@ from .auto_improve_next_run_decision_runtime import (
 from .auto_improve_outcome_runtime import role_report_path
 from .auto_improve_route_scaffold_runtime import RouteScaffoldPhaseResult
 from .auto_improve_session_runtime import load_optional_json
-from .failure_taxonomy_runtime import failure_taxonomy_from_iteration
+from .failure_taxonomy_runtime import (
+    EQUAL_SCORE_SECONDARY_AXIS_BLOCKER_CHECK_IDS,
+    failure_taxonomy_from_iteration,
+)
 
 ITERATION_TELEMETRY_WRITTEN_FIELDS = frozenset(
     {
@@ -468,12 +471,35 @@ def _equal_score_legacy_candidate_gate_detail(detail: str) -> bool:
     return True
 
 
-def _blocking_promotion_check_ids(
+def _decision_record_reason_code(decision_record: dict[str, Any] | None) -> str:
+    if not isinstance(decision_record, dict):
+        return ""
+    return str(decision_record.get("reason_code", "")).strip()
+
+
+def _equal_score_secondary_axis_failure(
     statuses: dict[str, str],
     decision_record: dict[str, Any] | None,
-    promotion_report: dict[str, Any] | None = None,
-) -> list[str]:
-    if (
+    failed_ids: list[str],
+) -> bool:
+    if _decision_record_reason_code(decision_record) != "equal_score_secondary_eligibility":
+        return False
+    if statuses.get("equal_score_secondary_eligibility") != "WARN":
+        return False
+    if statuses.get("eval_score_improves") != "WARN":
+        return False
+    if any(statuses.get(check_id) == "FAIL" for check_id in ("candidate_eval_pass", "candidate_lint_pass")):
+        return False
+    return bool(failed_ids) and all(
+        check_id in EQUAL_SCORE_SECONDARY_AXIS_BLOCKER_CHECK_IDS for check_id in failed_ids
+    )
+
+
+def _legacy_equal_score_candidate_gate_failure(
+    statuses: dict[str, str],
+    promotion_report: dict[str, Any] | None,
+) -> bool:
+    return (
         statuses.get("equal_score_secondary_eligibility") == "WARN"
         and statuses.get("eval_score_improves") == "WARN"
         and any(
@@ -483,9 +509,19 @@ def _blocking_promotion_check_ids(
         and _equal_score_legacy_candidate_gate_detail(
             _promotion_check_detail(promotion_report, "equal_score_secondary_eligibility")
         )
-    ):
+    )
+
+
+def _blocking_promotion_check_ids(
+    statuses: dict[str, str],
+    decision_record: dict[str, Any] | None,
+    promotion_report: dict[str, Any] | None = None,
+) -> list[str]:
+    if _legacy_equal_score_candidate_gate_failure(statuses, promotion_report):
         return ["equal_score_secondary_eligibility"]
     failed_ids = sorted(check_id for check_id, status in statuses.items() if status == "FAIL")
+    if _equal_score_secondary_axis_failure(statuses, decision_record, failed_ids):
+        return ["equal_score_secondary_eligibility"]
     if failed_ids:
         return failed_ids
     if isinstance(decision_record, dict):

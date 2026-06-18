@@ -78,6 +78,8 @@ def _full_promote_artifacts(vault: Path, run_dir: Path) -> dict[str, Any]:
         "structural_budget": _read_json(run_dir / "structural-complexity-budget.json"),
         "run_telemetry": _read_json(run_dir / "run-telemetry.json"),
         "baseline_eval": _read_json(run_dir / "baseline-eval.json"),
+        "baseline_contract_eval": _read_json(run_dir / "baseline-mechanism-contract-eval.json"),
+        "candidate_contract_eval": _read_json(run_dir / "candidate-mechanism-contract-eval.json"),
         "candidate_lint": _read_json(run_dir / "candidate-lint.json"),
         "candidate_mechanism": _read_json(run_dir / "candidate-mechanism-assessment.json"),
         "system_log": (vault / "system" / "system-log.md").read_text(encoding="utf-8"),
@@ -136,6 +138,16 @@ def _assert_full_promote_artifact_fingerprints(
             "ops/schemas/behavior-delta.schema.json",
         ),
         (
+            "runs/run-wrapper-promote/baseline-mechanism-contract-eval.json",
+            "baseline_mechanism_contract_eval",
+            "ops/schemas/eval-report.schema.json",
+        ),
+        (
+            "runs/run-wrapper-promote/candidate-mechanism-contract-eval.json",
+            "candidate_mechanism_contract_eval",
+            "ops/schemas/eval-report.schema.json",
+        ),
+        (
             "runs/run-wrapper-promote/shadow-apply-report.json",
             "shadow_apply_report",
             "ops/schemas/shadow-apply-report.schema.json",
@@ -182,12 +194,29 @@ def _assert_full_promote_ledger_and_telemetry(
     applied_event = next(event for event in run_ledger["events"] if event["type"] == "workspace_applied")
     case.assertIn("runs/run-wrapper-promote/shadow-apply-report.json", applied_event["artifacts"])
     case.assertIn("runs/run-wrapper-promote/rollback-rehearsal-report.json", applied_event["artifacts"])
+    promotion_event = next(event for event in run_ledger["events"] if event["type"] == "promotion_evaluated")
+    case.assertIn(
+        "runs/run-wrapper-promote/baseline-mechanism-contract-eval.json",
+        promotion_event["artifacts"],
+    )
+    case.assertIn(
+        "runs/run-wrapper-promote/candidate-mechanism-contract-eval.json",
+        promotion_event["artifacts"],
+    )
     finalized_event = next(event for event in run_ledger["events"] if event["type"] == "finalized")
     case.assertEqual(finalized_event["decision_event"]["decision"], "PROMOTE")
     case.assertEqual(artifacts["planning_validation"]["status"], "PASS")
     case.assertEqual(
         promotion_report["inputs"]["behavior_delta"],
         "runs/run-wrapper-promote/behavior-delta.json",
+    )
+    case.assertEqual(
+        promotion_report["inputs"]["baseline_mechanism_contract_eval_report"],
+        "runs/run-wrapper-promote/baseline-mechanism-contract-eval.json",
+    )
+    case.assertEqual(
+        promotion_report["inputs"]["candidate_mechanism_contract_eval_report"],
+        "runs/run-wrapper-promote/candidate-mechanism-contract-eval.json",
     )
     case.assertEqual(run_telemetry["behavior_delta"], "runs/run-wrapper-promote/behavior-delta.json")
     case.assertEqual(
@@ -239,6 +268,26 @@ def _assert_full_promote_output_artifacts(
         ["ops/scripts/example.py", "tests/test_example.py"],
     )
     case.assertTrue(artifacts["behavior_delta"]["summary"]["behavior_changed"])
+    case.assertEqual(
+        artifacts["baseline_contract_eval"]["artifact_kind"],
+        "mechanism_contract_eval_report",
+    )
+    case.assertEqual(
+        (
+            artifacts["baseline_contract_eval"]["total_score"],
+            artifacts["baseline_contract_eval"]["max_score"],
+            artifacts["baseline_contract_eval"]["status"],
+        ),
+        (2, 4, "fail"),
+    )
+    case.assertEqual(
+        (
+            artifacts["candidate_contract_eval"]["total_score"],
+            artifacts["candidate_contract_eval"]["max_score"],
+            artifacts["candidate_contract_eval"]["status"],
+        ),
+        (4, 4, "pass"),
+    )
     case.assertEqual(artifacts["structural_budget"]["artifact_kind"], "structural_complexity_budget_report")
     case.assertEqual(artifacts["structural_budget"]["status"], "pass")
     case.assertEqual(
@@ -248,6 +297,8 @@ def _assert_full_promote_output_artifacts(
     case.assertIn("Finalize mechanism run run-wrapper-promote (PROMOTE)", artifacts["system_log"])
     case.assertTrue((run_dir / "baseline-eval.json").exists())
     case.assertTrue((run_dir / "candidate-eval.json").exists())
+    case.assertTrue((run_dir / "baseline-mechanism-contract-eval.json").exists())
+    case.assertTrue((run_dir / "candidate-mechanism-contract-eval.json").exists())
     case.assertTrue((run_dir / "improvement-observations.json").exists())
     case.assertIn("return 1 if value > 0 else -1", artifacts["example_text"])
     case.assertIn("test_subject_zero", artifacts["test_text"])

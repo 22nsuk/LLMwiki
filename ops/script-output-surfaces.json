@@ -764,6 +764,15 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
+      "path": "ops/scripts/mechanism/mechanism_contract_eval.py",
+      "classification": "repo_artifact",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "writes fixed run artifacts without a configurable output path"
+    },
+    {
       "path": "ops/scripts/mechanism/mechanism_navigation_index.py",
       "classification": "repo_artifact",
       "output_options": [

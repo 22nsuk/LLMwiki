@@ -198,6 +198,7 @@ def _mechanism_complexity_profile(
                 "target_count": target_count,
                 "test_file_count": len(test_files),
                 "test_case_count": len(test_files),
+                "test_guardrail_count": 0,
                 "verification_scope": "targeted_pytest",
                 "reasons": ["fixture"],
                 "selected_score": 2,
@@ -218,6 +219,7 @@ def _mechanism_report_payload(
         "markdown_heading_count": 0,
         "test_file_count": len(test_files),
         "test_case_count": len(test_files),
+        "test_guardrail_count": 0,
     }
     return {
         "$schema": "ops/schemas/mechanism-assessment-report.schema.json",

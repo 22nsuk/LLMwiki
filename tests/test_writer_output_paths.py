@@ -364,6 +364,17 @@ class WriterOutputPathsTest(unittest.TestCase):
             if entry["output_options"]:
                 self.assertIn(entry["classification"], OUTPUT_WRITER_CLASSIFICATIONS)
 
+    def test_fixed_run_artifact_writer_is_classified(self) -> None:
+        entry = next(
+            item
+            for item in _script_output_surface_entries()
+            if item["path"] == "ops/scripts/mechanism/mechanism_contract_eval.py"
+        )
+
+        self.assertEqual(entry["classification"], "repo_artifact")
+        self.assertEqual(entry["output_options"], [])
+        self.assertIn("fixed run artifacts", entry["reason"])
+
     def test_status_flags_ending_in_out_are_explicitly_allowlisted(self) -> None:
         registry = build_script_output_surface_registry(REPO_ROOT)
         goal_status = next(

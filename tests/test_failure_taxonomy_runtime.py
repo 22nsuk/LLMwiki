@@ -17,7 +17,7 @@ from ops.scripts.mechanism.failure_taxonomy_runtime import (
 
 
 class FailureTaxonomyRuntimeTests(unittest.TestCase):
-    def test_iteration_discard_prefers_actual_blocking_check_over_reason_code(self) -> None:
+    def test_iteration_discard_keeps_equal_score_reason_for_secondary_axis_blocker(self) -> None:
         failure_taxonomy = failure_taxonomy_from_iteration(
             "discarded",
             decision_record={"reason_code": "equal_score_secondary_eligibility"},
@@ -26,7 +26,20 @@ class FailureTaxonomyRuntimeTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(failure_taxonomy, "structural_complexity_non_regression")
+        self.assertEqual(failure_taxonomy, "equal_score_secondary_eligibility")
+
+    def test_iteration_discard_prefers_non_secondary_blocking_check_over_equal_score_reason(
+        self,
+    ) -> None:
+        failure_taxonomy = failure_taxonomy_from_iteration(
+            "discarded",
+            decision_record={"reason_code": "equal_score_secondary_eligibility"},
+            discard_evidence={
+                "blocking_check_ids": ["changed_files_manifest_scope"],
+            },
+        )
+
+        self.assertEqual(failure_taxonomy, "changed_files_manifest_scope")
 
     def test_outcome_override_wins_before_generic_promotion_reason(self) -> None:
         failure_taxonomy = failure_taxonomy_from_outcome(
