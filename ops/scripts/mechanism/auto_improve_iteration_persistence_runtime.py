@@ -760,23 +760,22 @@ def write_iteration_telemetry(
         behavior_delta_digest = iteration_behavior_delta_digest(request.vault, behavior_delta, existing_report)
         if behavior_delta_digest:
             payload["behavior_delta_digest"] = behavior_delta_digest
-    same_eval_promotion = promotion_report
     same_eval_promotion_detail = (
         _promotion_check_detail(
-            same_eval_promotion.payload,
+            promotion_report.payload,
             "equal_score_secondary_eligibility",
         )
-        if same_eval_promotion is not None
+        if promotion_report is not None
         else ""
     )
-    same_eval_is_current = same_eval_promotion is not None and (
-        _promotion_check_statuses(same_eval_promotion.payload).get("eval_score_improves") == "WARN"
+    same_eval_is_current = promotion_report is not None and (
+        _promotion_check_statuses(promotion_report.payload).get("eval_score_improves") == "WARN"
         or "score_equal=true" in same_eval_promotion_detail
     )
     same_eval_existing_report = (
-        {"promotion_report": cast(LoadedPromotionReport, same_eval_promotion).payload}
+        {"promotion_report": cast(LoadedPromotionReport, promotion_report).payload}
         if same_eval_is_current
-        else existing_report if same_eval_promotion is None else {}
+        else existing_report if promotion_report is None else {}
     )
     same_eval_reason = iteration_same_eval_reason(request.result, same_eval_existing_report)
     if same_eval_reason:

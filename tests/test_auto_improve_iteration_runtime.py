@@ -1136,7 +1136,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertNotIn("strict_secondary_improvement_present", payload)
             self.assertNotIn("secondary_improvement_axes", payload)
 
-    def test_write_iteration_telemetry_uses_current_promotion_report_for_same_eval_secondary_evidence(
+    def test_write_iteration_telemetry_rejects_empty_improved_axes_from_current_promotion_report(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1171,10 +1171,11 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                             {"id": "eval_score_improves", "status": "WARN", "detail": "baseline=10, candidate=10"},
                             {
                                 "id": "equal_score_secondary_eligibility",
-                                "status": "WARN",
+                                "status": "PASS",
                                 "detail": (
                                     "allowed=true, score_equal=true, selected_axes=['lint'], "
-                                    "selected_non_regression=true, selected_any_improvement=false"
+                                    "improved_axes=[], selected_non_regression=true, "
+                                    "selected_any_improvement=true"
                                 ),
                             },
                         ],

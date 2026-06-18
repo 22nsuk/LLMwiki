@@ -102,13 +102,11 @@ def _secondary_axes_from_text(value: str) -> list[str]:
             tail = tail[1 : tail.index("]")]
         else:
             tail = tail.split(",", 1)[0].strip()
-        axes = [
+        return [
             item.strip().strip("'\"")
             for item in tail.strip("[](){}").split(",")
             if item.strip().strip("'\"")
         ]
-        if axes:
-            return axes
     return []
 
 
@@ -179,12 +177,6 @@ def _infer_strict_secondary_improvement_present(
     for source in (contract, result, existing_report):
         if isinstance(source, dict) and isinstance(source.get("strict_secondary_improvement_present"), bool):
             return bool(source["strict_secondary_improvement_present"])
-    for source in (result, existing_report):
-        for check in _extract_checks(source):
-            if check.get("id") != "equal_score_secondary_eligibility":
-                continue
-            if _equal_score_secondary_check_is_eligible(check):
-                return True
     return bool(axes)
 
 
