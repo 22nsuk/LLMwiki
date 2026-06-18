@@ -730,6 +730,16 @@
       "replacement": "python -m ops.scripts.mechanism.mechanism_assess"
     },
     {
+      "canonical_module": "ops.scripts.mechanism.mechanism_contract_eval",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/mechanism/mechanism_contract_eval.py",
+      "rationale": "Schema-backed mechanism-local contract eval report command retained behind Make/canonical module invocation rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make mechanism-contract-eval"
+    },
+    {
       "canonical_module": "ops.scripts.mechanism.mechanism_navigation_index",
       "console_scripts": [],
       "install_state": "not_installed",
