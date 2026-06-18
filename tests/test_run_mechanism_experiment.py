@@ -10,27 +10,35 @@ from typing import Any
 from unittest import mock
 
 import pytest
-from ops.scripts.post_mutation_generated_artifact_convergence_runtime import (
-    converge_post_mutation_generated_artifacts,
-)
-from ops.scripts.run_mechanism_experiment_runtime import (
-    RunMechanismExperimentUsageError,
-    run_mechanism_experiment,
-)
-from ops.scripts.runtime_context import RuntimeContext
 
 from ops.scripts.core import filesystem_runtime
+from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.mechanism import (
     mechanism_run_capture_runtime,
     mechanism_run_promotion_runtime,
     mechanism_run_workspace_runtime,
+)
+from ops.scripts.mechanism.post_mutation_generated_artifact_convergence_runtime import (
+    converge_post_mutation_generated_artifacts,
+)
+from ops.scripts.mechanism.run_mechanism_experiment_runtime import (
+    RunMechanismExperimentUsageError,
+    run_mechanism_experiment,
 )
 from tests.minimal_vault_runtime import set_policy_value
 from tests.run_mechanism_experiment_test_utils import (
     PENDING_SIGNOFF_DECISION_CONTRACT,
     ForcedPromotionReportPatch,
     PromotionReportCallExpectation,
+    assert_raw_registry_preflight_convergence,
+    assert_raw_registry_preflight_ignored_changes,
     forced_promotion_report_builder,
+    raw_registry_preflight_artifacts,
+    raw_registry_preflight_capture_reports,
+    raw_registry_preflight_promotion_report_builder,
+    raw_registry_preflight_run_command,
+    run_raw_registry_preflight_convergence,
+    seed_stale_raw_registry_preflight,
     seed_wrapper_vault,
     successful_command_result,
     write_stubbed_capture_artifacts,
@@ -70,6 +78,8 @@ def _full_promote_artifacts(vault: Path, run_dir: Path) -> dict[str, Any]:
         "structural_budget": _read_json(run_dir / "structural-complexity-budget.json"),
         "run_telemetry": _read_json(run_dir / "run-telemetry.json"),
         "baseline_eval": _read_json(run_dir / "baseline-eval.json"),
+        "baseline_contract_eval": _read_json(run_dir / "baseline-mechanism-contract-eval.json"),
+        "candidate_contract_eval": _read_json(run_dir / "candidate-mechanism-contract-eval.json"),
         "candidate_lint": _read_json(run_dir / "candidate-lint.json"),
         "candidate_mechanism": _read_json(run_dir / "candidate-mechanism-assessment.json"),
         "system_log": (vault / "system" / "system-log.md").read_text(encoding="utf-8"),
@@ -128,6 +138,16 @@ def _assert_full_promote_artifact_fingerprints(
             "ops/schemas/behavior-delta.schema.json",
         ),
         (
+            "runs/run-wrapper-promote/baseline-mechanism-contract-eval.json",
+            "baseline_mechanism_contract_eval",
+            "ops/schemas/eval-report.schema.json",
+        ),
+        (
+            "runs/run-wrapper-promote/candidate-mechanism-contract-eval.json",
+            "candidate_mechanism_contract_eval",
+            "ops/schemas/eval-report.schema.json",
+        ),
+        (
             "runs/run-wrapper-promote/shadow-apply-report.json",
             "shadow_apply_report",
             "ops/schemas/shadow-apply-report.schema.json",
@@ -159,7 +179,14 @@ def _assert_full_promote_ledger_and_telemetry(
     run_ledger = artifacts["run_ledger"]
     case.assertEqual(promotion_report["log"]["status"], "recorded")
     case.assertEqual(promotion_report["decision_record"]["decision"], "PROMOTE")
+    case.assertEqual(promotion_report["outcome"], "promoted")
     case.assertEqual(run_telemetry["decision_record"]["decision"], "PROMOTE")
+    case.assertEqual(run_telemetry["outcome"], "promoted")
+    case.assertEqual(run_telemetry["promotion_report"], "runs/run-wrapper-promote/promotion-report.json")
+    case.assertEqual(
+        run_telemetry["changed_files_manifest"],
+        "runs/run-wrapper-promote/changed-files-manifest.json",
+    )
     case.assertEqual(artifacts["promotion_decision_trends"]["decision_counts"], {"PROMOTE": 1})
     case.assertEqual(run_ledger["status"], "complete")
     rehearsed_event = next(event for event in run_ledger["events"] if event["type"] == "workspace_rollback_rehearsed")
@@ -167,12 +194,29 @@ def _assert_full_promote_ledger_and_telemetry(
     applied_event = next(event for event in run_ledger["events"] if event["type"] == "workspace_applied")
     case.assertIn("runs/run-wrapper-promote/shadow-apply-report.json", applied_event["artifacts"])
     case.assertIn("runs/run-wrapper-promote/rollback-rehearsal-report.json", applied_event["artifacts"])
+    promotion_event = next(event for event in run_ledger["events"] if event["type"] == "promotion_evaluated")
+    case.assertIn(
+        "runs/run-wrapper-promote/baseline-mechanism-contract-eval.json",
+        promotion_event["artifacts"],
+    )
+    case.assertIn(
+        "runs/run-wrapper-promote/candidate-mechanism-contract-eval.json",
+        promotion_event["artifacts"],
+    )
     finalized_event = next(event for event in run_ledger["events"] if event["type"] == "finalized")
     case.assertEqual(finalized_event["decision_event"]["decision"], "PROMOTE")
     case.assertEqual(artifacts["planning_validation"]["status"], "PASS")
     case.assertEqual(
         promotion_report["inputs"]["behavior_delta"],
         "runs/run-wrapper-promote/behavior-delta.json",
+    )
+    case.assertEqual(
+        promotion_report["inputs"]["baseline_mechanism_contract_eval_report"],
+        "runs/run-wrapper-promote/baseline-mechanism-contract-eval.json",
+    )
+    case.assertEqual(
+        promotion_report["inputs"]["candidate_mechanism_contract_eval_report"],
+        "runs/run-wrapper-promote/candidate-mechanism-contract-eval.json",
     )
     case.assertEqual(run_telemetry["behavior_delta"], "runs/run-wrapper-promote/behavior-delta.json")
     case.assertEqual(
@@ -224,6 +268,26 @@ def _assert_full_promote_output_artifacts(
         ["ops/scripts/example.py", "tests/test_example.py"],
     )
     case.assertTrue(artifacts["behavior_delta"]["summary"]["behavior_changed"])
+    case.assertEqual(
+        artifacts["baseline_contract_eval"]["artifact_kind"],
+        "mechanism_contract_eval_report",
+    )
+    case.assertEqual(
+        (
+            artifacts["baseline_contract_eval"]["total_score"],
+            artifacts["baseline_contract_eval"]["max_score"],
+            artifacts["baseline_contract_eval"]["status"],
+        ),
+        (2, 4, "fail"),
+    )
+    case.assertEqual(
+        (
+            artifacts["candidate_contract_eval"]["total_score"],
+            artifacts["candidate_contract_eval"]["max_score"],
+            artifacts["candidate_contract_eval"]["status"],
+        ),
+        (4, 4, "pass"),
+    )
     case.assertEqual(artifacts["structural_budget"]["artifact_kind"], "structural_complexity_budget_report")
     case.assertEqual(artifacts["structural_budget"]["status"], "pass")
     case.assertEqual(
@@ -233,6 +297,8 @@ def _assert_full_promote_output_artifacts(
     case.assertIn("Finalize mechanism run run-wrapper-promote (PROMOTE)", artifacts["system_log"])
     case.assertTrue((run_dir / "baseline-eval.json").exists())
     case.assertTrue((run_dir / "candidate-eval.json").exists())
+    case.assertTrue((run_dir / "baseline-mechanism-contract-eval.json").exists())
+    case.assertTrue((run_dir / "candidate-mechanism-contract-eval.json").exists())
     case.assertTrue((run_dir / "improvement-observations.json").exists())
     case.assertIn("return 1 if value > 0 else -1", artifacts["example_text"])
     case.assertIn("test_subject_zero", artifacts["test_text"])
@@ -653,6 +719,114 @@ class RunMechanismExperimentTests(unittest.TestCase):
             self.assertEqual(
                 snapshot_fingerprint["schema"],
                 "ops/schemas/candidate-changed-files-snapshot.schema.json",
+            )
+
+    def test_wrapper_repairs_parent_validation_failure_once_in_same_session(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            mutation_tool = vault / "tools" / "mutate_same_session_repair.py"
+            mutation_tool.write_text(
+                """
+from pathlib import Path
+repair_context = Path('runs/run-wrapper-same-session-repair/same-session-repair-context.json')
+target = Path('ops/scripts/example.py')
+if repair_context.exists():
+    target.write_text(
+        "def subject(value):\\n"
+        "    return 1 if value > 0 else 0\\n",
+        encoding='utf-8',
+    )
+else:
+    target.write_text(
+        '\\n'.join('VALUE_%d = %d' % (index, index) for index in range(901)) + '\\n',
+        encoding='utf-8',
+    )
+""",
+                encoding="utf-8",
+            )
+
+            result = run_mechanism_experiment(
+                vault,
+                run_id="run-wrapper-same-session-repair",
+                policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                primary_targets=["ops/scripts/example.py"],
+                supporting_targets=[],
+                test_files=["tests/test_example.py"],
+                log_summary="Wrapper-driven same-session repair",
+                mutation_command=f"{sys.executable} tools/mutate_same_session_repair.py",
+                check_command=f"{sys.executable} -c \"print('repo health ok')\"",
+                require_signoff=False,
+                signoff_status="approved",
+                signoff_by="human",
+                signoff_ts="2026-04-14T00:00:00Z",
+                apply_mode="canary_only",
+                finalize=True,
+                context=fixed_context(),
+            )
+
+            run_dir = vault / "runs" / "run-wrapper-same-session-repair"
+            repair_context = json.loads(
+                (run_dir / "same-session-repair-context.json").read_text(encoding="utf-8")
+            )
+            first_attempt_snapshot = json.loads(
+                (run_dir / "attempts" / "1" / "candidate-changed-files-snapshot.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            structural_budget = json.loads(
+                (run_dir / "structural-complexity-budget.json").read_text(encoding="utf-8")
+            )
+            run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
+            run_artifact_fingerprint = json.loads(
+                (run_dir / "run-artifact-fingerprint.json").read_text(encoding="utf-8")
+            )
+
+            self.assertNotEqual(result["decision"], "SKIPPED")
+            self.assertEqual(
+                result["promotion_report"],
+                "runs/run-wrapper-same-session-repair/promotion-report.json",
+            )
+            self.assertTrue(result["repo_health"]["passed"])
+            self.assertEqual(
+                result["repo_health"]["structural_complexity_budget_status"],
+                "pass",
+            )
+            self.assertEqual(repair_context["repair_model"], "same_session_bounded_full_chain")
+            self.assertEqual(repair_context["repair_attempt_index"], 1)
+            self.assertEqual(
+                repair_context["previous_attempt"]["artifacts"]["structural_complexity_budget"],
+                (
+                    "runs/run-wrapper-same-session-repair/attempts/1/"
+                    "structural-complexity-budget.json"
+                ),
+            )
+            self.assertIn(
+                "VALUE_900 = 900",
+                first_attempt_snapshot["files"][0]["candidate"]["content_utf8"],
+            )
+            self.assertEqual(structural_budget["status"], "pass")
+            event_types = [event["type"] for event in run_ledger["events"]]
+            self.assertIn("same_session_repair_attempt_scheduled", event_types)
+            repo_health_decisions = [
+                event["decision"]
+                for event in run_ledger["events"]
+                if event["type"] == "repo_health_checked"
+            ]
+            self.assertEqual(
+                repo_health_decisions,
+                ["structural_complexity_non_regression", "repo_health_pass"],
+            )
+            repair_fingerprint = next(
+                item
+                for item in run_artifact_fingerprint["artifacts"]
+                if item["path"]
+                == "runs/run-wrapper-same-session-repair/same-session-repair-context.json"
+            )
+            self.assertEqual(
+                repair_fingerprint["schema"],
+                "ops/schemas/same-session-repair-context.schema.json",
             )
 
     def test_wrapper_sparse_manifest_uses_copied_universe_diff_from_policy(self) -> None:
@@ -1451,226 +1625,27 @@ class RunMechanismExperimentTests(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             seed_wrapper_vault(vault)
-            preflight_path = vault / "ops" / "reports" / "raw-registry-preflight-report.json"
-            preflight_repro_path = (
-                vault / "ops" / "reports" / "raw-registry-preflight-reproducibility.json"
+            preflight_path, preflight_repro_path = seed_stale_raw_registry_preflight(vault)
+            result, capture_reports = run_raw_registry_preflight_convergence(
+                vault,
+                capture_reports=raw_registry_preflight_capture_reports(self, vault),
+                run_command=raw_registry_preflight_run_command(self, vault),
+                build_promotion_report=raw_registry_preflight_promotion_report_builder(),
+                context=fixed_context(),
             )
-            preflight_path.parent.mkdir(parents=True, exist_ok=True)
-            preflight_path.write_text('{"status": "stale"}\n', encoding="utf-8")
+            artifacts = raw_registry_preflight_artifacts(vault)
 
-            def fake_capture_reports(
-                source_vault: Path,
-                *,
-                run_id: str,
-                phase: str,
-                policy: dict,
-                policy_path_text: str,
-                primary_targets: list[str],
-                supporting_targets: list[str],
-                test_files: list[str],
-                artifact_vault: Path | None = None,
-                context: RuntimeContext | None = None,
-            ) -> dict:
-                self.assertEqual(run_id, "run-wrapper-preflight-converge")
-                self.assertTrue(policy)
-                if phase == "candidate":
-                    candidate_preflight = json.loads(
-                        (source_vault / "ops" / "reports" / "raw-registry-preflight-report.json").read_text(
-                            encoding="utf-8"
-                        )
-                    )
-                    candidate_reproducibility = json.loads(
-                        (
-                            source_vault
-                            / "ops"
-                            / "reports"
-                            / "raw-registry-preflight-reproducibility.json"
-                        ).read_text(encoding="utf-8")
-                    )
-                    self.assertEqual(
-                        candidate_preflight["artifact_kind"],
-                        "raw_registry_preflight_report",
-                    )
-                    self.assertEqual(candidate_preflight["generated_at"], "2026-04-15T03:45:00Z")
-                    self.assertEqual(
-                        candidate_reproducibility["artifact_kind"],
-                        "raw_registry_preflight_reproducibility",
-                    )
-                    self.assertEqual(candidate_reproducibility["diff_status"], "match")
-                    self.assertEqual(candidate_reproducibility["status"], "pass")
-                return write_stubbed_capture_artifacts(
-                    vault,
-                    run_id=run_id,
-                    phase=phase,
-                    primary_targets=primary_targets,
-                    supporting_targets=supporting_targets,
-                    test_files=test_files,
-                )
-
-            def fake_run_command(
-                command: str,
-                *,
-                cwd: Path,
-                timeout_seconds: int,
-                argv: list[str] | None = None,
-            ) -> dict:
-                self.assertNotEqual(cwd, vault.resolve())
-                if "repo health ok" in command:
-                    return successful_command_result(command, stdout="repo health ok\n")
-                (cwd / "ops" / "scripts" / "example.py").write_text(
-                    "def subject(value):\n"
-                    "    if value == 0:\n"
-                    "        return 0\n"
-                    "    return 1 if value > 0 else -1\n",
-                    encoding="utf-8",
-                )
-                test_path = cwd / "tests" / "test_example.py"
-                test_path.write_text(
-                    test_path.read_text(encoding="utf-8")
-                    + "\n\ndef test_subject_zero():\n    assert True\n",
-                    encoding="utf-8",
-                )
-                return successful_command_result(command, stdout="mutation applied\n")
-
-            fake_build_promotion_report = forced_promotion_report_builder(
-                PromotionReportCallExpectation(
-                    run_id="run-wrapper-preflight-converge",
-                    primary_targets=("ops/scripts/example.py",),
-                    supporting_targets=("ops/reports/raw-registry-preflight-report.json",),
-                    log_summary="Wrapper-driven raw registry preflight convergence",
-                    require_signoff=False,
-                    signoff_status="approved",
-                    signoff_by="human",
-                    signoff_ts="2026-04-15T00:00:00Z",
-                    changed_files_manifest_path=(
-                        "runs/run-wrapper-preflight-converge/changed-files-manifest.json"
-                    ),
-                    behavior_delta_path="runs/run-wrapper-preflight-converge/behavior-delta.json",
-                ),
-                ForcedPromotionReportPatch(
-                    decision="PROMOTE",
-                    checks=(
-                        {
-                            "id": "changed_files_manifest_scope",
-                            "status": "PASS",
-                            "detail": "fixture keeps the PASS decision visible to the caller",
-                        },
-                    ),
-                ),
+            assert_raw_registry_preflight_convergence(
+                self,
+                result=result,
+                artifacts=artifacts,
+                capture_reports=capture_reports,
+                preflight_path=preflight_path,
+                preflight_repro_path=preflight_repro_path,
             )
-
-            with (
-                mock.patch.object(
-                    mechanism_run_capture_runtime,
-                    "_capture_reports",
-                    side_effect=fake_capture_reports,
-                ) as capture_reports,
-                mock.patch.object(
-                    mechanism_run_workspace_runtime,
-                    "_run_command",
-                    side_effect=fake_run_command,
-                ),
-                mock.patch.object(
-                    mechanism_run_promotion_runtime,
-                    "_build_promotion_report",
-                    side_effect=fake_build_promotion_report,
-                ),
-                mock.patch.object(
-                    mechanism_run_promotion_runtime,
-                    "validate_run_dir",
-                    return_value={"phase": "mechanism_evaluated", "status": "pass"},
-                ),
-            ):
-                result = run_mechanism_experiment(
-                    vault,
-                    run_id="run-wrapper-preflight-converge",
-                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
-                    primary_targets=["ops/scripts/example.py"],
-                    supporting_targets=["ops/reports/raw-registry-preflight-report.json"],
-                    test_files=["tests/test_example.py"],
-                    log_summary="Wrapper-driven raw registry preflight convergence",
-                    mutation_command=f"{sys.executable} tools/mutate_success.py",
-                    check_command=f"{sys.executable} -c \"print('repo health ok')\"",
-                    require_signoff=False,
-                    signoff_status="approved",
-                    signoff_by="human",
-                    signoff_ts="2026-04-15T00:00:00Z",
-                    finalize=False,
-                    context=fixed_context(),
-                )
-
-            run_dir = vault / "runs" / "run-wrapper-preflight-converge"
-            changed_manifest = json.loads(
-                (run_dir / "changed-files-manifest.json").read_text(encoding="utf-8")
-            )
-            convergence = json.loads(
-                (run_dir / "generated-artifact-convergence.json").read_text(encoding="utf-8")
-            )
-            run_telemetry = json.loads(
-                (run_dir / "run-telemetry.json").read_text(encoding="utf-8")
-            )
-            run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
-            run_fingerprint = json.loads(
-                (run_dir / "run-artifact-fingerprint.json").read_text(encoding="utf-8")
-            )
-
-            self.assertEqual(result["decision"], "PROMOTE")
-            self.assertEqual(
-                result["post_mutation_generated_artifact_convergence"]["artifact"],
-                "runs/run-wrapper-preflight-converge/generated-artifact-convergence.json",
-            )
-            self.assertEqual(
-                result["post_mutation_generated_artifact_convergence"],
-                run_telemetry["post_mutation_generated_artifact_convergence"],
-            )
-            self.assertEqual(convergence["status"], "refreshed")
-            self.assertEqual(
-                convergence["refreshed_targets"],
-                [
-                    "ops/script-output-surfaces.json",
-                    "ops/reports/raw-registry-preflight-report.json",
-                ],
-            )
-            self.assertEqual(
-                convergence["artifacts"],
-                [
-                    "ops/script-output-surfaces.json",
-                    "ops/reports/raw-registry-preflight-report.json",
-                    "ops/reports/raw-registry-preflight-reproducibility.json",
-                ],
-            )
-            convergence_event = next(
-                event
-                for event in run_ledger["events"]
-                if event["type"] == "generated_artifact_convergence_checked"
-            )
-            self.assertEqual(convergence_event["decision"], "refreshed")
-            fingerprint_record = next(
-                item
-                for item in run_fingerprint["artifacts"]
-                if item["path"]
-                == "runs/run-wrapper-preflight-converge/generated-artifact-convergence.json"
-            )
-            self.assertEqual(
-                fingerprint_record["schema"],
-                "ops/schemas/generated-artifact-convergence.schema.json",
-            )
-            self.assertEqual(capture_reports.call_count, 2)
-            self.assertEqual(json.loads(preflight_path.read_text(encoding="utf-8")), {"status": "stale"})
-            self.assertFalse(preflight_repro_path.exists())
-            ignored_paths = {
-                item["path"]: item["reason"]
-                for item in changed_manifest["ignored_changes"]["files"]
-            }
-            self.assertEqual(
-                ignored_paths,
-                {
-                    "ops/script-output-surfaces.json": "generated_report_surface",
-                    "ops/reports/raw-registry-preflight-report.json": "generated_report_surface",
-                    "ops/reports/raw-registry-preflight-reproducibility.json": (
-                        "generated_report_surface"
-                    ),
-                },
+            assert_raw_registry_preflight_ignored_changes(
+                self,
+                artifacts["changed_manifest"],
             )
 
     def test_post_mutation_convergence_refreshes_script_output_surfaces_for_ops_script_target(

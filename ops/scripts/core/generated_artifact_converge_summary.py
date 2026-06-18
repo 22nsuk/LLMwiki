@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.generated_artifact_semantic_digest import (
+    JSON_TOP_LEVEL_ENVELOPE_MODE,
+    canonical_digest,
+    semantic_file_digest,
+    sha256_bytes,
+)
+
 DEFAULT_OUT = "tmp/generated-artifact-converge-summary.json"
 DEFAULT_BEFORE_OUT = "tmp/generated-artifact-converge-summary.before.json"
-SEMANTIC_VOLATILE_KEYS = {
-    "generated_at",
-    "source_revision",
-    "source_tree_fingerprint",
-    "input_fingerprints",
-    "currentness",
-    "producer_input_fingerprint",
-}
 TARGET_OUTPUT_PATHS = {
     "external-report-action-matrix": ("ops/reports/external-report-action-matrix.json",),
     "generated-artifact-index": (
@@ -31,45 +29,6 @@ TARGET_OUTPUT_PATHS = {
 }
 
 
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _canonical_digest(value: object) -> str:
-    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    return _sha256_bytes(encoded)
-
-
-def _strip_semantic_noise(value: object) -> object:
-    if isinstance(value, dict):
-        return {
-            str(key): _strip_semantic_noise(child)
-            for key, child in sorted(value.items())
-            if str(key) not in SEMANTIC_VOLATILE_KEYS
-        }
-    if isinstance(value, list):
-        return [_strip_semantic_noise(child) for child in value]
-    return value
-
-
-def _semantic_text_snapshot(path: Path, raw: bytes) -> tuple[str, str]:
-    if path.suffix != ".md":
-        return "raw_text", _sha256_bytes(raw)
-    try:
-        text = raw.decode("utf-8")
-    except UnicodeDecodeError:
-        return "raw_text_binary_or_non_utf8", _sha256_bytes(raw)
-    semantic_lines = [
-        line
-        for line in text.splitlines()
-        if not line.startswith("- Generated at:")
-    ]
-    semantic_text = "\n".join(semantic_lines) + ("\n" if text.endswith("\n") else "")
-    return "markdown_without_generated_at", _sha256_bytes(semantic_text.encode("utf-8"))
-
-
 def _path_snapshot(vault: Path, rel_path: str) -> dict[str, Any]:
     path = vault / rel_path
     if not path.exists():
@@ -81,16 +40,8 @@ def _path_snapshot(vault: Path, rel_path: str) -> dict[str, Any]:
             "semantic_mode": "missing",
         }
     raw = path.read_bytes()
-    raw_sha256 = _sha256_bytes(raw)
-    semantic_mode, semantic_sha256 = _semantic_text_snapshot(path, raw)
-    if path.suffix == ".json":
-        try:
-            payload = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            semantic_mode = "raw_text_json_unparseable"
-        else:
-            semantic_mode = "json_without_envelope_fingerprints_or_clock_fields"
-            semantic_sha256 = _canonical_digest(_strip_semantic_noise(payload))
+    raw_sha256 = sha256_bytes(raw)
+    semantic_mode, semantic_sha256 = semantic_file_digest(path)
     return {
         "path": rel_path,
         "exists": True,
@@ -101,7 +52,7 @@ def _path_snapshot(vault: Path, rel_path: str) -> dict[str, Any]:
 
 
 def _target_digest(path_snapshots: list[dict[str, Any]], field: str) -> str:
-    return _canonical_digest(
+    return canonical_digest(
         [
             {
                 "path": str(item["path"]),
@@ -227,7 +178,7 @@ def build_report(
             else "snapshot"
         ),
         "summary_path_policy": "tmp_only_noncanonical_observability",
-        "semantic_digest_mode": "json_without_envelope_fingerprints_or_clock_fields_and_markdown_generated_at",
+        "semantic_digest_mode": f"{JSON_TOP_LEVEL_ENVELOPE_MODE}_and_markdown_generated_at",
         "target_summaries": target_summaries,
     }
 

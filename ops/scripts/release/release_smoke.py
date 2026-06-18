@@ -19,61 +19,73 @@ from typing import Any, cast
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         describe_output_file,
         read_json_object,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import run_with_timeout
-    from ops.scripts.output_runtime import display_path, resolve_output_path
-    from ops.scripts.path_portability_runtime import (
+    from ops.scripts.core.command_runtime import run_with_timeout
+    from ops.scripts.core.output_runtime import display_path, resolve_output_path
+    from ops.scripts.core.path_portability_runtime import (
         INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT,
         infozip_c_locale_escape_byte_len,
         python_unicode_escape_byte_len,
         utf8_byte_len,
     )
-    from ops.scripts.policy_runtime import (
+    from ops.scripts.core.policy_runtime import (
         load_policy,
         release_archive_root_name_from_policy,
         zip_normalization_from_policy,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
-    from ops.scripts.schema_runtime import load_schema, validate_with_schema
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
+    from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
-    from ops.scripts.wiki_manifest import build_manifest, exclusion_policy, sha256_file
+    from ops.scripts.eval.wiki_manifest import (
+        build_manifest,
+        exclusion_policy,
+        sha256_file,
+    )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         describe_output_file,
         read_json_object,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import run_with_timeout
-    from ops.scripts.output_runtime import display_path, resolve_output_path
-    from ops.scripts.path_portability_runtime import (
+    from ops.scripts.core.command_runtime import run_with_timeout
+    from ops.scripts.core.output_runtime import display_path, resolve_output_path
+    from ops.scripts.core.path_portability_runtime import (
         INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT,
         infozip_c_locale_escape_byte_len,
         python_unicode_escape_byte_len,
         utf8_byte_len,
     )
-    from ops.scripts.policy_runtime import (
+    from ops.scripts.core.policy_runtime import (
         load_policy,
         release_archive_root_name_from_policy,
         zip_normalization_from_policy,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
-    from ops.scripts.schema_runtime import load_schema, validate_with_schema
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
+    from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
-    from ops.scripts.wiki_manifest import build_manifest, exclusion_policy, sha256_file
+    from ops.scripts.eval.wiki_manifest import (
+        build_manifest,
+        exclusion_policy,
+        sha256_file,
+    )
 
 
 RELEASE_SMOKE_SCHEMA = RELEASE_SMOKE_SCHEMA_PATH
@@ -1029,9 +1041,9 @@ def _render_release_smoke_report(request: ReleaseSmokeReportRequest) -> dict[str
             resolved_policy_path=request.resolved_policy_path,
             schema_path=RELEASE_SMOKE_SCHEMA,
             source_paths=[
-                "ops/scripts/release_smoke.py",
-                "ops/scripts/command_runtime.py",
-                "ops/scripts/wiki_manifest.py",
+                "ops/scripts/release/release_smoke.py",
+                "ops/scripts/core/command_runtime.py",
+                "ops/scripts/eval/wiki_manifest.py",
             ],
         ),
         "vault": display_path(request.vault, request.vault),
@@ -1129,9 +1141,9 @@ def _render_partial_release_smoke_report(
             resolved_policy_path=request.resolved_policy_path,
             schema_path=RELEASE_SMOKE_SCHEMA,
             source_paths=[
-                "ops/scripts/release_smoke.py",
-                "ops/scripts/command_runtime.py",
-                "ops/scripts/wiki_manifest.py",
+                "ops/scripts/release/release_smoke.py",
+                "ops/scripts/core/command_runtime.py",
+                "ops/scripts/eval/wiki_manifest.py",
             ],
         ),
         "vault": display_path(request.vault, request.vault),
@@ -1213,11 +1225,26 @@ def _expected_envelope(
         resolved_policy_path=resolved_policy_path,
         schema_path=RELEASE_SMOKE_SCHEMA,
         source_paths=[
-            "ops/scripts/release_smoke.py",
-            "ops/scripts/command_runtime.py",
-            "ops/scripts/wiki_manifest.py",
+            "ops/scripts/release/release_smoke.py",
+            "ops/scripts/core/command_runtime.py",
+            "ops/scripts/eval/wiki_manifest.py",
         ],
     )
+
+
+def _archive_path_from_report(vault: Path, payload: dict[str, Any]) -> tuple[Path | None, bool]:
+    archive_file = payload.get("archive_file")
+    archive_path = ""
+    if isinstance(archive_file, dict):
+        archive_path = str(archive_file.get("path") or "").strip()
+    report_archive_path = str(payload.get("archive_path") or "").strip()
+    paths_match = bool(archive_path and archive_path == report_archive_path)
+    if not archive_path and report_archive_path:
+        archive_path = report_archive_path
+        paths_match = True
+    if not archive_path or archive_path.startswith(EPHEMERAL_REPORT_PREFIX):
+        return None, paths_match
+    return resolve_output_path(vault, archive_path), paths_match
 
 
 def release_smoke_reuse_diagnostics(
@@ -1227,6 +1254,7 @@ def release_smoke_reuse_diagnostics(
     profile: str,
     resolved_policy_path: Path,
     context: RuntimeContext,
+    requested_archive_path: Path | None = None,
 ) -> dict:
     diagnostics = {
         "reusable": False,
@@ -1254,14 +1282,35 @@ def release_smoke_reuse_diagnostics(
         resolved_policy_path=resolved_policy_path,
         context=context,
     )
+    archive_file = payload.get("archive_file")
+    archive_path, archive_paths_match = _archive_path_from_report(vault, payload)
+    requested_archive_matches = (
+        requested_archive_path is None
+        or (
+            archive_path is not None
+            and archive_path.resolve() == requested_archive_path.resolve()
+        )
+    )
+    archive_expected_sha256 = (
+        str(archive_file.get("sha256", "")).strip()
+        if isinstance(archive_file, dict)
+        else ""
+    )
+    archive_actual_sha256 = sha256_file(archive_path) if archive_path and archive_path.is_file() else ""
     checks = {
         "artifact_kind": payload.get("artifact_kind") == "release_smoke_report",
         "producer": payload.get("producer") == PRODUCER,
         "source_command": payload.get("source_command") == _source_command(profile),
         "profile": payload.get("profile") == profile,
         "status": payload.get("status") == "pass",
-        "archive_file": isinstance(payload.get("archive_file"), dict)
-        and payload["archive_file"].get("exists") is True,
+        "archive_file": isinstance(archive_file, dict)
+        and archive_file.get("exists") is True,
+        "archive_path_match": archive_paths_match,
+        "requested_archive_path": requested_archive_matches,
+        "archive_file_path": archive_path is not None,
+        "archive_file_exists": bool(archive_path and archive_path.is_file()),
+        "archive_file_sha256": bool(archive_expected_sha256)
+        and archive_actual_sha256 == archive_expected_sha256,
         "currentness": isinstance(payload.get("currentness"), dict)
         and payload["currentness"].get("status") == "current",
         "source_revision": payload.get("source_revision") == expected.get("source_revision"),
@@ -1280,6 +1329,7 @@ def release_smoke_reuse_diagnostics(
             "reason": "current_passing_release_smoke_report",
             "generated_at": str(payload.get("generated_at", "")),
             "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
+            "archive_sha256": archive_actual_sha256,
             "command_count": len(payload.get("commands", [])) if isinstance(payload.get("commands"), list) else 0,
         }
     )
@@ -1326,6 +1376,13 @@ def _maybe_exit_with_reused_report(
             profile=args.profile,
             resolved_policy_path=resolved_policy_path,
             context=context,
+            requested_archive_path=resolve_output_path(
+                vault,
+                args.archive_out,
+                default_relative_path=f"tmp/{args.profile}-release-smoke.zip",
+            )
+            if args.archive_out
+            else None,
         )
         if diagnostics["reusable"]:
             print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))

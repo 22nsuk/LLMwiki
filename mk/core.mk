@@ -4,6 +4,7 @@ TOOLS_MIGRATION_PLAN_OUT ?= tmp/tools-migration-plan.json
 SUBAGENT_PROFILE_SCHEMA_OUT ?= tmp/subagent-profile-schema.json
 COMPATIBILITY_ALIAS_DEPRECATION_OUT ?= tmp/compatibility-alias-deprecation.json
 DEV_LOCKED_REQUIREMENTS ?= tmp/locked-requirements.dev.txt
+DEV_INSTALL_INDEX_URL ?= $(UV_CANONICAL_INDEX_URL)
 UV_EXPORT_DEV_REQUIREMENTS_FLAGS ?= --frozen --extra dev --format requirements-txt --no-hashes --no-emit-project
 STATUS_FLAGS ?=
 
@@ -19,6 +20,8 @@ help:
 		"  make bootstrap-preflight          write the environment preflight report" \
 		"" \
 		"Source checks:" \
+		"  make check                        default maintainer gate (static, lint, eval, unit tests)" \
+		"  make test                         run the default pytest lane" \
 		"  make static                       run Ruff and mypy base gates" \
 		"  make local-cache-clean            remove safe local Python caches" \
 		"  make local-tool-state-clean       remove ignored local tool state" \
@@ -26,6 +29,11 @@ help:
 		"  make ruff-strict-preview          run strict Ruff --preview candidate rules across ops/scripts tests tools" \
 		"  make mypy-strict-preview          run strict mypy preview across ops/scripts tests tools" \
 		"  make strict-preview-audit         audit strict Ruff --preview and mypy debt across ops/scripts tests tools" \
+		"" \
+		"Inventory and selectors:" \
+		"  make make-target-inventory        inventory Make targets and script surfaces" \
+		"  make test-selectors-sync          regenerate mk/test-selectors.generated.mk from the lane registry" \
+		"  make test-selectors-sync-check    fail if generated test selector Make variables are stale" \
 		"" \
 		"Report contracts:" \
 		"  make test-report-contract-core   run core report contract tests" \
@@ -44,6 +52,7 @@ help:
 		"" \
 		"Release:" \
 		"  make changed-path-minimum-plan    write advisory changed-path test plan" \
+		"  make release-evidence-converge    converge release evidence through closeout phases" \
 		"  make release-run-ready            converge and verify run-ready evidence" \
 		"  make release-post-commit-finalize check post-commit evidence readback" \
 		"  make release-sealed-run-ready     verify sealed release readiness" \
@@ -54,9 +63,9 @@ dev-install:
 		echo "Using uv to create/update $(VENV_DIR)"; \
 		$(UV) venv --allow-existing --python "$(BOOTSTRAP_PYTHON)" "$(VENV_DIR)"; \
 		mkdir -p "$(dir $(DEV_LOCKED_REQUIREMENTS))"; \
-		UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)" >/dev/null; \
-		UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"; \
-		UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .; \
+		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)" >/dev/null; \
+		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"; \
+		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .; \
 	else \
 		echo "uv not found; falling back to stdlib venv via $(BOOTSTRAP_PYTHON)"; \
 		"$(BOOTSTRAP_PYTHON)" -m venv "$(VENV_DIR)"; \

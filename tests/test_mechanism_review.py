@@ -6,12 +6,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.mechanism_review import main as mechanism_review_main
-from ops.scripts.mechanism_review_runtime import build_report
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
-from ops.scripts import mechanism_review_runtime
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism import mechanism_review_runtime
+from ops.scripts.mechanism.mechanism_review import main as mechanism_review_main
+from ops.scripts.mechanism.mechanism_review_runtime import build_report
 from tests.cli_test_runtime import invoke_cli_main
 from tests.mechanism_review_test_utils import (
     eval_report,

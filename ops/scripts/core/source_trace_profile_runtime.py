@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.wiki_manifest import release_manifest_excludes_path
+from ops.scripts.eval.wiki_manifest import release_manifest_excludes_path
 
 from .source_trace_runtime import (
     extract_source_trace_refs,

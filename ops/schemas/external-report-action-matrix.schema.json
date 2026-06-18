@@ -23,6 +23,7 @@
     "summary",
     "reference_manifest_alignment",
     "active_report_coverage",
+    "archived_report_action_basis",
     "action_items",
     "archive_policy"
   ],
@@ -72,6 +73,10 @@
         "partially_automated_count",
         "requires_release_run_verification_count",
         "planned_count",
+        "source_action_status_counts",
+        "verification_readiness_status_counts",
+        "unresolved_source_action_count",
+        "verification_readiness_pending_count",
         "gate_effect_action_counts",
         "blocking_scope_action_counts",
         "unmatched_active_report_count",
@@ -79,6 +84,7 @@
         "reference_manifest_missing_active_report_count",
         "reference_manifest_stale_reference_count",
         "sprint_backlog",
+        "active_action_resolution_summary",
         "lifecycle_counts",
         "currently_valid_action_count",
         "resolved_action_count",
@@ -95,6 +101,44 @@
         "partially_automated_count": { "type": "integer", "minimum": 0 },
         "requires_release_run_verification_count": { "type": "integer", "minimum": 0 },
         "planned_count": { "type": "integer", "minimum": 0 },
+        "source_action_status_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["implemented", "partially_automated", "planned"],
+          "properties": {
+            "implemented": { "type": "integer", "minimum": 0 },
+            "partially_automated": { "type": "integer", "minimum": 0 },
+            "planned": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "verification_readiness_status_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ready",
+            "release_run_pending",
+            "promotion_readiness_pending",
+            "operator_pending",
+            "certificate_pending",
+            "certificate_noncertifiable",
+            "artifact_freshness_pending",
+            "readback_pending",
+            "source_action_required"
+          ],
+          "properties": {
+            "ready": { "type": "integer", "minimum": 0 },
+            "release_run_pending": { "type": "integer", "minimum": 0 },
+            "promotion_readiness_pending": { "type": "integer", "minimum": 0 },
+            "operator_pending": { "type": "integer", "minimum": 0 },
+            "certificate_pending": { "type": "integer", "minimum": 0 },
+            "certificate_noncertifiable": { "type": "integer", "minimum": 0 },
+            "artifact_freshness_pending": { "type": "integer", "minimum": 0 },
+            "readback_pending": { "type": "integer", "minimum": 0 },
+            "source_action_required": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "unresolved_source_action_count": { "type": "integer", "minimum": 0 },
+        "verification_readiness_pending_count": { "type": "integer", "minimum": 0 },
         "gate_effect_action_counts": {
           "type": "object",
           "additionalProperties": { "type": "integer", "minimum": 0 }
@@ -118,6 +162,50 @@
             "P0": { "type": "integer", "minimum": 0 },
             "P1": { "type": "integer", "minimum": 0 },
             "P2": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "active_action_resolution_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "code_action_available",
+            "recommended_lane",
+            "recommended_targets",
+            "source_action_required_count",
+            "artifact_freshness_pending_count",
+            "release_or_operator_pending_count",
+            "active_action_ids_by_verification_readiness_status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "source_action_available",
+                "artifact_freshness_pending",
+                "release_or_operator_authority_required",
+                "no_active_blockers"
+              ]
+            },
+            "code_action_available": { "type": "boolean" },
+            "recommended_lane": {
+              "type": "string",
+              "minLength": 1
+            },
+            "recommended_targets": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "source_action_required_count": { "type": "integer", "minimum": 0 },
+            "artifact_freshness_pending_count": { "type": "integer", "minimum": 0 },
+            "release_or_operator_pending_count": { "type": "integer", "minimum": 0 },
+            "active_action_ids_by_verification_readiness_status": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
           }
         },
         "lifecycle_counts": { "$ref": "#/$defs/lifecycle_counts" },
@@ -176,6 +264,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/report_coverage" }
     },
+    "archived_report_action_basis": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/report_action_basis" }
+    },
     "action_items": {
       "type": "array",
       "items": { "$ref": "#/$defs/action_item" }
@@ -230,6 +322,67 @@
         "P0": { "type": "integer", "minimum": 0 },
         "P1": { "type": "integer", "minimum": 0 },
         "P2": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "report_action_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "report_type",
+        "content_sha256",
+        "matched_action_ids",
+        "matched_action_count",
+        "unresolved_action_ids",
+        "unresolved_action_count",
+        "unmatched_recommendation_count",
+        "operator_only_rationale",
+        "archive_decision_code"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "report_type": {
+          "type": "string",
+          "enum": ["narrative_report", "reference_manifest", "binary_report"]
+        },
+        "content_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "matched_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "matched_action_count": { "type": "integer", "minimum": 0 },
+        "unresolved_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unresolved_action_count": { "type": "integer", "minimum": 0 },
+        "unmatched_recommendation_count": { "type": "integer", "minimum": 0 },
+        "operator_only_rationale": {
+          "type": "string",
+          "enum": [
+            "",
+            "binary_report_requires_operator_review",
+            "reference_manifest_lifecycle_evidence",
+            "unreadable_narrative_report"
+          ]
+        },
+        "archive_decision_code": {
+          "type": "string",
+          "enum": [
+            "all_structured_actions_implemented",
+            "archive_sticky_without_structured_action_coverage",
+            "binary_report_requires_operator_review",
+            "explicit_archive_status",
+            "implemented_action_basis_without_archive_marker",
+            "reference_manifest_lifecycle_evidence",
+            "unmatched_recommendations_require_operator_review",
+            "unreadable_narrative_report",
+            "unresolved_actions_covered_by_broader_report",
+            "unresolved_actions_keep_report_active"
+          ]
+        }
       }
     },
     "report_coverage": {
@@ -304,6 +457,8 @@
         "priority",
         "theme",
         "current_status",
+        "source_action_status",
+        "verification_readiness_status",
         "status_reason_ids",
         "status_reason_details",
         "blocking_scopes",
@@ -327,6 +482,24 @@
             "partially_automated",
             "requires_release_run_verification",
             "planned"
+          ]
+        },
+        "source_action_status": {
+          "type": "string",
+          "enum": ["implemented", "partially_automated", "planned"]
+        },
+        "verification_readiness_status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "release_run_pending",
+            "promotion_readiness_pending",
+            "operator_pending",
+            "certificate_pending",
+            "certificate_noncertifiable",
+            "artifact_freshness_pending",
+            "readback_pending",
+            "source_action_required"
           ]
         },
         "status_reason_ids": {
@@ -455,7 +628,34 @@
         "operational_attention_artifact_count": { "$ref": "#/$defs/nullable_count" },
         "summary": { "type": "string", "minLength": 1 },
         "reason_id": { "type": "string", "minLength": 1 },
-        "owner_target": { "const": "artifact-freshness" }
+        "owner_target": { "const": "artifact-freshness" },
+        "stale_routing": { "$ref": "#/$defs/artifact_freshness_stale_routing" }
+      }
+    },
+    "artifact_freshness_stale_routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "recommended_lane",
+        "recommended_targets",
+        "reason_ids",
+        "summary"
+      ],
+      "properties": {
+        "classification": { "type": "string", "minLength": 1 },
+        "recommended_lane": { "type": "string", "minLength": 1 },
+        "recommended_targets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "reason_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "summary": { "type": "string", "minLength": 1 }
       }
     }
   }

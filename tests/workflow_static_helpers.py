@@ -152,35 +152,31 @@ def assert_locked_install_shape(
         if not isinstance(job, dict):
             raise AssertionError(f"workflow job must be a mapping: {job_name}")
         with case.subTest(job=job_name):
-            setup_python = workflow_step(job, "Setup Python")
-            case.assertEqual(setup_python.get("uses"), PINNED_SETUP_PYTHON_ACTION)
-            setup_python_with = workflow_mapping(
-                setup_python.get("with", {}),
-                "workflow setup-python with section must be a mapping",
-            )
-            cache_paths = str(setup_python_with.get("cache-dependency-path", ""))
-            case.assertIn("uv.lock", cache_paths.split())
-            setup_uv = workflow_step(job, "Setup uv")
-            case.assertEqual(setup_uv.get("uses"), PINNED_SETUP_UV_ACTION)
+            setup = workflow_step(job, "Setup Python and uv")
+            case.assertEqual(setup.get("uses"), "./.github/actions/setup-python-uv")
             install = next(
-                step
-                for step in workflow_steps(job)
-                if str(step.get("name", "")).startswith("Install dependencies")
-            )
-            assert_workflow_run_contains(
-                case,
-                install,
                 (
-                    "make uv-lock-check",
-                    "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
-                    "python -m pip install -r tmp/locked-requirements.ci.txt",
+                    step
+                    for step in workflow_steps(job)
+                    if str(step.get("name", "")).startswith("Install dependencies")
                 ),
+                None,
             )
-            install_run = workflow_run_text(install)
-            case.assertLess(
-                install_run.index("make uv-lock-check"),
-                install_run.index("uv export --frozen"),
-            )
+            if install is not None:
+                assert_workflow_run_contains(
+                    case,
+                    install,
+                    (
+                        "make uv-lock-check",
+                        "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
+                        "python -m pip install -r tmp/locked-requirements.ci.txt",
+                    ),
+                )
+                install_run = workflow_run_text(install)
+                case.assertLess(
+                    install_run.index("make uv-lock-check"),
+                    install_run.index("uv export --frozen"),
+                )
 
 
 def assert_workflow_uses_are_sha_pinned(

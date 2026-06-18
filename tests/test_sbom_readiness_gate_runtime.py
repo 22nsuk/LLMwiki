@@ -6,9 +6,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.sbom_readiness_gate_runtime import build_gate_report, write_gate_report
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.supply_chain.sbom_readiness_gate_runtime import (
+    build_gate_report,
+    write_gate_report,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

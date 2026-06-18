@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ops.scripts.wiki_doc_audit_runtime import (
+from ops.scripts.eval.wiki_doc_audit_runtime import (
     documentation_markdown_surfaces,
     external_report_reference_issues,
     router_summary_count_issues,
@@ -403,7 +403,7 @@ class WikiDocAuditRuntimeTests(unittest.TestCase):
             _write(vault / "runs" / "run-a" / "duplicate.md", "# Duplicate runs\n")
 
             with patch(
-                "ops.scripts.wiki_doc_audit_runtime.report_path",
+                "ops.scripts.eval.wiki_doc_audit_runtime.report_path",
                 side_effect=lambda _vault, path: path.name,
             ):
                 surfaces = documentation_markdown_surfaces(vault)

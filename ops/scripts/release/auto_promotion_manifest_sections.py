@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
+from ops.scripts.core.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
 
 
 @dataclass(frozen=True)

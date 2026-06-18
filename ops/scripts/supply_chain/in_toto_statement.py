@@ -9,34 +9,34 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.schema_constants_runtime import IN_TOTO_STATEMENT_SCHEMA_PATH
-    from ops.scripts.supply_chain_artifact_model import build_model
-    from ops.scripts.supply_chain_provenance import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.schema_constants_runtime import IN_TOTO_STATEMENT_SCHEMA_PATH
+    from ops.scripts.supply_chain.supply_chain_artifact_model import build_model
+    from ops.scripts.supply_chain.supply_chain_provenance import (
         build_report as build_supply_chain_provenance_report,
         sha256_file,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.schema_constants_runtime import IN_TOTO_STATEMENT_SCHEMA_PATH
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.schema_constants_runtime import IN_TOTO_STATEMENT_SCHEMA_PATH
 
     from .supply_chain_artifact_model import build_model
     from .supply_chain_provenance import (
@@ -158,9 +158,9 @@ def build_in_toto_statement(
         resolved_policy_path=resolved_policy_path,
         schema_path=IN_TOTO_STATEMENT_SCHEMA_PATH,
         source_paths=[
-            "ops/scripts/in_toto_statement.py",
-            "ops/scripts/supply_chain_artifact_model.py",
-            "ops/scripts/supply_chain_provenance.py",
+            "ops/scripts/supply_chain/in_toto_statement.py",
+            "ops/scripts/supply_chain/supply_chain_artifact_model.py",
+            "ops/scripts/supply_chain/supply_chain_provenance.py",
         ],
         text_inputs={
             "artifact_set_id": str(artifact_context["artifact_set_id"]),

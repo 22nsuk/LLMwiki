@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.schema_constants_runtime import TEST_DESELECTION_POLICY_SCHEMA_PATH
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.schema_constants_runtime import (
+    TEST_DESELECTION_POLICY_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
 )

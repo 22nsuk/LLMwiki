@@ -32,11 +32,20 @@ READINESS_REPORT_SOURCE_COMMAND = (
 )
 READINESS_SOURCE_PATHS = [
     "ops/scripts/mechanism/auto_improve_readiness_runtime.py",
+    "ops/scripts/mechanism/auto_improve_readiness_loader_runtime.py",
+    "ops/scripts/mechanism/auto_improve_readiness_payload_runtime.py",
+    "ops/scripts/core/payload_field_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
+    "ops/scripts/mechanism/auto_improve_readiness_next_run_repair_runtime.py",
+    "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+    "ops/scripts/mechanism/auto_improve_readiness_remediation_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py",
+    "ops/scripts/mechanism/mutation_proposal_loader_runtime.py",
+    "ops/scripts/mechanism/mutation_proposal_recent_log_overlap_runtime.py",
+    "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
 ]
 FALLBACK_PRIMARY_TARGETS = [
     "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"

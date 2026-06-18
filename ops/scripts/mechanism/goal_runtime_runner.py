@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.command_runtime import (
+from ops.scripts.core.command_runtime import (
     CommandHeartbeat,
     PosixProcessBackend,
     ProcessBackend,
@@ -22,13 +22,13 @@ from ops.scripts.command_runtime import (
     WindowsProcessBackend,
     run_with_timeout,
 )
-from ops.scripts.output_runtime import (
+from ops.scripts.core.output_runtime import (
     display_path,
     resolve_repo_output_path,
     write_output_text,
 )
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .goal_run_status import (
     DEFAULT_STATUS_PATH,

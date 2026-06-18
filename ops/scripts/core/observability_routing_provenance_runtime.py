@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
 
-from ops.scripts.auto_improve_session_runtime import (
+from ops.scripts.mechanism.auto_improve_session_runtime import (
     build_executor_rollup,
     build_routing_rollup,
     build_session_rollups,

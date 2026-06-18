@@ -9,11 +9,15 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_revision_runtime import SourceRevision
 
-from ops.scripts.release.release_evidence_planner import build_plan, write_plan
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_revision_runtime import SourceRevision
+from ops.scripts.release.release_evidence_planner import (
+    ReleaseEvidencePlanRequest,
+    build_plan,
+    write_plan,
+)
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -157,11 +161,31 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
             ),
         )
 
+    def _build_plan(self, *, stage: str, **path_overrides: str) -> dict[str, Any]:
+        return build_plan(
+            ReleaseEvidencePlanRequest(
+                vault=self.vault,
+                stage=stage,
+                context=fixed_context(),
+                **path_overrides,
+            )
+        )
+
+    def _write_custom_run_manifest(self) -> str:
+        custom_path = "tmp/custom-release-run-manifest.json"
+        custom_manifest = json.loads(
+            (self.vault / "build/release/release-run-manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self._write_json(custom_path, custom_manifest)
+        return custom_path
+
     def test_auto_promotion_plan_reuses_lower_authorities_without_cascade(self) -> None:
         self._write_authorities()
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "ready")
         self.assertEqual(plan["blockers"], [])
@@ -177,6 +201,65 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(plan, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_plan(self.vault, plan, "build/release/release-evidence-plan.json").exists())
 
+    def test_plan_request_preserves_custom_evidence_paths(self) -> None:
+        self._write_authorities()
+        custom_path = self._write_custom_run_manifest()
+
+        with self._patch_current_repo():
+            plan = self._build_plan(
+                stage="auto-promotion-ready",
+                run_manifest=custom_path,
+            )
+
+        self.assertEqual(plan["plan_status"], "ready")
+        self.assertEqual(plan["nodes"]["run_manifest"]["path"], custom_path)
+
+    def test_legacy_build_plan_facade_still_accepts_vault_keywords(self) -> None:
+        self._write_authorities()
+
+        with self._patch_current_repo():
+            plan = build_plan(
+                self.vault,
+                stage="auto-promotion-ready",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(plan["plan_status"], "ready")
+        self.assertTrue(plan["nodes"]["run_manifest"]["can_reuse"])
+
+    def test_legacy_build_plan_facade_preserves_custom_evidence_paths(self) -> None:
+        self._write_authorities()
+        custom_path = self._write_custom_run_manifest()
+
+        with self._patch_current_repo():
+            plan = build_plan(
+                self.vault,
+                stage="auto-promotion-ready",
+                context=fixed_context(),
+                run_manifest=custom_path,
+            )
+
+        self.assertEqual(plan["plan_status"], "ready")
+        self.assertEqual(plan["nodes"]["run_manifest"]["path"], custom_path)
+
+    def test_request_build_plan_rejects_legacy_keywords(self) -> None:
+        request = ReleaseEvidencePlanRequest(vault=self.vault, stage="auto-promotion-ready")
+
+        with self.assertRaisesRegex(TypeError, "cannot be combined"):
+            build_plan(request, stage="sealed-run-ready")
+
+    def test_legacy_build_plan_facade_rejects_unknown_path_overrides(self) -> None:
+        with self.assertRaisesRegex(
+            TypeError,
+            "unsupported release evidence path override",
+        ):
+            build_plan(
+                self.vault,
+                stage="auto-promotion-ready",
+                context=fixed_context(),
+                run_manifest_typo="tmp/run.json",
+            )
+
     def test_auto_promotion_plan_blocks_stale_sealed_authority_with_next_action(self) -> None:
         self._write_authorities()
         sealed = json.loads((self.vault / "build/release/release-sealed-run-manifest.json").read_text())
@@ -184,7 +267,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("build/release/release-sealed-run-manifest.json", sealed)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("sealed_run_manifest_not_reusable", plan["failures"])
@@ -198,7 +281,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("build/release/release-run-manifest.json", run)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("run_manifest_not_reusable", plan["failures"])
@@ -225,7 +308,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
             "ops.scripts.release.release_evidence_planner.release_source_tree_fingerprint",
             lambda _vault: "fp-current",
         ):
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "ready")
         self.assertTrue(plan["nodes"]["operator_summary"]["can_reuse"])
@@ -246,12 +329,15 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("ops/reports/goal-runtime-certificate.json", certificate)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("goal_runtime_certificate_not_reusable", plan["failures"])
         self.assertIn("not_verified", plan["nodes"]["goal_runtime_certificate"]["issues"])
-        self.assertIn("goal-runtime-certificate", plan["blockers"][-1]["recommended_next_step"])
+        self.assertIn(
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+            plan["blockers"][-1]["recommended_next_step"],
+        )
 
     def test_auto_promotion_plan_requires_preflight_before_run_ready(self) -> None:
         self._write_authorities()
@@ -264,7 +350,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("build/release/release-auto-promotion-preflight.json", preflight)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("auto_promotion_preflight_not_reusable", plan["failures"])
@@ -281,7 +367,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("build/release/release-auto-promotion-preseal.json", preseal)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("auto_promotion_preseal_not_reusable", plan["failures"])
@@ -299,7 +385,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("build/release/operator-release-summary.json", operator)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("operator_summary_not_reusable", plan["failures"])
@@ -321,13 +407,62 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("build/release/operator-release-summary.json", operator)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("operator_summary_release_attention_not_clean", plan["failures"])
         self.assertIn("release-auto-promotion-preseal", plan["blockers"][0]["recommended_next_step"])
         self.assertIn("release-sealed-run-ready", plan["blockers"][0]["recommended_next_step"])
-        self.assertIn("accepted_risk_count=2", plan["blockers"][0]["observed"])
+        self.assertIn("release_accepted_risk_count=2", plan["blockers"][0]["observed"])
+
+    def test_auto_promotion_plan_allows_advisory_only_attention_counts(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "accepted_risk_count": 1,
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 0,
+            "gate_attention_count": 1,
+            "advisory_lifecycle_family_count": 1,
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        self.assertEqual(plan["plan_status"], "ready")
+        self.assertNotIn("operator_summary_release_attention_not_clean", plan["failures"])
+
+    def test_auto_promotion_plan_blocks_clean_lane_accepted_risk_count(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "accepted_risk_count": 1,
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 1,
+            "gate_attention_count": 0,
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("operator_summary_release_attention_not_clean", plan["failures"])
+        self.assertIn(
+            "clean_lane_blocking_accepted_risk_family_count=1",
+            plan["blockers"][0]["observed"],
+        )
 
     def test_auto_promotion_plan_reports_pre_seal_diagnostic_refresh_without_cascade(self) -> None:
         self._write_authorities()
@@ -336,7 +471,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("ops/reports/auto-improve-readiness.json", auto)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+            plan = self._build_plan(stage="auto-promotion-ready")
 
         self.assertEqual(plan["plan_status"], "ready")
         planned_actions = {action["target"]: action for action in plan["planned_actions"]}
@@ -358,7 +493,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("build/release/release-run-manifest.json", run)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="sealed-run-ready", context=fixed_context())
+            plan = self._build_plan(stage="sealed-run-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("run_manifest_not_reusable", plan["failures"])
@@ -375,7 +510,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_json("build/release/release-auto-promotion-preseal.json", preseal)
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="sealed-run-ready", context=fixed_context())
+            plan = self._build_plan(stage="sealed-run-ready")
 
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("auto_promotion_preseal_not_reusable", plan["failures"])
@@ -386,7 +521,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self._write_authorities()
 
         with self._patch_current_repo():
-            plan = build_plan(self.vault, stage="sealed-run-ready", context=fixed_context())
+            plan = self._build_plan(stage="sealed-run-ready")
 
         planned_actions = {action["target"]: action for action in plan["planned_actions"]}
         self.assertIn("release-evidence-closeout-sealed-sidecars", planned_actions)

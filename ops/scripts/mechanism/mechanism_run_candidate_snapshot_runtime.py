@@ -4,9 +4,9 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     CANDIDATE_CHANGED_FILES_SNAPSHOT_SCHEMA_PATH,
 )
 

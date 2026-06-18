@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import json
 import os
 import platform
@@ -13,15 +12,22 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.raw_registry_preflight import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH,
+    )
+    from ops.scripts.registry.raw_registry_preflight import (
         ALIAS_POLICY_VERSION,
         EXTRACTION_TOOL,
         METRIC_SEMANTICS,
@@ -31,21 +37,20 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         environment_fingerprint,
         preflight,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
-        RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH,
-    )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH,
     )
 
@@ -466,8 +471,8 @@ def build_matrix_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/raw_registry_cross_environment_matrix.py",
-                "ops/scripts/raw_registry_preflight.py",
+                "ops/scripts/registry/raw_registry_cross_environment_matrix.py",
+                "ops/scripts/registry/raw_registry_preflight.py",
                 ".github/workflows/ci.yml",
             ],
             file_inputs={"stored_preflight_report": stored_report_path},
@@ -519,10 +524,10 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
         )
     )
     generated_at = str(report.get("generated_at", ""))
-    try:
-        timestamp = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00")).timestamp()
-    except ValueError:
+    generated_dt = parse_generated_at(generated_at)
+    if generated_dt is None:
         return destination
+    timestamp = generated_dt.timestamp()
     os.utime(destination, (timestamp, timestamp))
     return destination
 

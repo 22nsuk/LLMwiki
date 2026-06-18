@@ -8,16 +8,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
 )
-from ops.scripts.output_runtime import display_path
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.auto_promotion_learning_runtime import (
     ALLOWED_LEARNING_REVALIDATION_STATUSES,
     bool_value,
@@ -33,8 +37,6 @@ from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "build/release/release-auto-promotion-preflight.json"
 DEFAULT_AUTO_IMPROVE_READINESS = "ops/reports/auto-improve-readiness.json"

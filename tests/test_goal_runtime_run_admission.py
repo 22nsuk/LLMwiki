@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.goal_runtime_run_admission import (
+
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.goal_contract_digest_runtime import (
+    semantic_goal_contract_digest,
+)
+from ops.scripts.mechanism.goal_runtime_run_admission import (
     GoalRuntimeRunAdmissionRequest,
     build_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -27,11 +29,6 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 5, 21, 0, 0, tzinfo=dt.UTC),
     )
-
-
-def _canonical_json_digest(payload: dict) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 class GoalRuntimeRunAdmissionTests(unittest.TestCase):
@@ -166,7 +163,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             "runtime": {"certificate_status": "verified"},
             "promotion_guard": {"runtime_certificate_verified": True},
         }
-        contract_digest = _canonical_json_digest(contract)
+        contract_digest = semantic_goal_contract_digest(contract)
         self._write_json("ops/reports/codex-goal-contract.json", contract)
         self._write_json(
             "ops/reports/goal-run-status.json",
@@ -299,6 +296,67 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertEqual(check["observed"]["readiness_source_tree_fingerprint"], "stale-source")
         self.assertEqual(check["observed"]["mutation_selected_runnable_proposal_ids"], ["repair-current"])
         self.assertEqual(check["observed"]["readiness_runnable_proposal_ids"], ["repair-stale"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_matches_queue_runtime_when_standard_runnable_displaces_recent_overlap_unblock(
+        self,
+    ) -> None:
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [
+                    {
+                        "proposal_id": "standard-runtime",
+                        "priority": 10,
+                        "blocked_by": [],
+                    },
+                    {
+                        "proposal_id": "recent_log_overlap_queue_blocked__maintenance-decision-runtime",
+                        "priority": 99,
+                        "family": "queue_unblock",
+                        "failure_mode": "recent_log_overlap_queue_blocked",
+                        "blocked_by": ["recent_log_overlap"],
+                    },
+                ],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 1,
+                        "selected_runnable_count": 1,
+                        "blocked_available_count": 1,
+                        "blocked_reason_counts": [{"reason": "recent_log_overlap", "count": 1}],
+                    }
+                },
+            },
+        )
+        self._write_json(
+            "ops/reports/auto-improve-readiness.json",
+            {
+                "artifact_kind": "auto_improve_readiness_report",
+                "execution_readiness": {
+                    "can_run": True,
+                    "runnable_proposal_count": 1,
+                    "reasons": [],
+                },
+                "queue": {
+                    "runnable_proposal_ids": ["standard-runtime"],
+                },
+                "can_promote_result": False,
+                "promotion_blockers": [
+                    {"id": "promotion_blocked_by_goal_runtime_certificate_incomplete"}
+                ],
+            },
+        )
+
+        report = self._build_report()
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "start_readiness_mutation_proposal_current"
+        )
+        self.assertEqual(check["status"], "pass")
+        self.assertEqual(check["observed"]["mutation_selected_runnable_proposal_ids"], ["standard-runtime"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_build_report_blocks_start_for_over_budget_non_structural_proposal(self) -> None:
@@ -468,6 +526,66 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertEqual(
             check["observed"]["ignored_generated_canonical_targets"],
             ["ops/script-output-surfaces.json"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_ignores_supporting_fixture_target_for_structural_budget(
+        self,
+    ) -> None:
+        source_target = self.vault / "ops" / "scripts" / "mechanism" / "small_runtime.py"
+        source_target.parent.mkdir(parents=True, exist_ok=True)
+        source_target.write_text("def run() -> None:\n    return None\n", encoding="utf-8")
+        fixture_target = self.vault / "tests" / "fixtures" / "report_schema_samples.json"
+        fixture_target.parent.mkdir(parents=True, exist_ok=True)
+        fixture_target.write_text(
+            "\n".join(f'"sample_{index}": true' for index in range(1000)) + "\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [
+                    {
+                        "proposal_id": "small-runtime-change",
+                        "primary_targets": [
+                            "ops/scripts/mechanism/small_runtime.py",
+                        ],
+                        "supporting_targets": [
+                            "tests/fixtures/report_schema_samples.json",
+                        ],
+                    }
+                ],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 1,
+                        "selected_runnable_count": 1,
+                        "blocked_available_count": 0,
+                        "blocked_reason_counts": [],
+                    }
+                },
+            },
+        )
+
+        report = self._build_report()
+
+        self.assertNotEqual(report["start_status"], "fail")
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "start_structural_complexity_budget_clear"
+        )
+        self.assertEqual(check["status"], "pass")
+        self.assertEqual(
+            check["observed"]["target_paths"],
+            ["ops/scripts/mechanism/small_runtime.py"],
+        )
+        self.assertEqual(
+            check["observed"]["raw_target_paths"],
+            [
+                "ops/scripts/mechanism/small_runtime.py",
+                "tests/fixtures/report_schema_samples.json",
+            ],
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
@@ -700,6 +818,83 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertIn("recent_log_overlap", json.dumps(queue_check["observed"]))
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_build_report_excludes_resume_attempted_and_quarantined_proposals(self) -> None:
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["queue"] = {"runnable_proposal_ids": ["repair-runtime"]}
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        for field_name in ("attempted_proposal_ids", "quarantined_proposal_ids"):
+            with self.subTest(field_name=field_name):
+                self._write_json(
+                    "ops/reports/auto-improve-sessions/auto-session-repeat.json",
+                    {
+                        "artifact_kind": "auto_improve_session",
+                        "session_id": "auto-session-repeat",
+                        "status": "running",
+                        "stop_reason": "mutation_failed",
+                        "budget": {
+                            "max_proposals": 2,
+                            "max_minutes": 30,
+                            "max_consecutive_failures": 1,
+                        },
+                        "iterations": [
+                            {
+                                "proposal_id": "repair-runtime",
+                                "status": "failed",
+                                "decision": "REPAIR",
+                            }
+                        ],
+                        "attempted_proposal_ids": (
+                            ["repair-runtime"] if field_name == "attempted_proposal_ids" else []
+                        ),
+                        "quarantined_proposal_ids": (
+                            ["repair-runtime"] if field_name == "quarantined_proposal_ids" else []
+                        ),
+                        "maintenance": {"status": "not_started"},
+                    },
+                )
+
+                report = self._build_report(resume_session_id="auto-session-repeat")
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(report["start_status"], "fail")
+                self.assertFalse(report["decisions"]["can_start_goal_runtime"])
+                queue_check = next(
+                    check
+                    for check in report["checks"]
+                    if check["id"] == "start_runnable_proposal_queue"
+                )
+                currentness_check = next(
+                    check
+                    for check in report["checks"]
+                    if check["id"] == "start_readiness_mutation_proposal_current"
+                )
+                self.assertEqual(queue_check["status"], "fail")
+                self.assertEqual(
+                    queue_check["observed"]["effective_selected_runnable_proposal_ids"],
+                    [],
+                )
+                self.assertEqual(
+                    queue_check["observed"][field_name],
+                    ["repair-runtime"],
+                )
+                self.assertEqual(currentness_check["status"], "fail")
+                self.assertEqual(
+                    currentness_check["observed"][
+                        "mutation_selected_runnable_proposal_ids"
+                    ],
+                    [],
+                )
+                self.assertEqual(
+                    currentness_check["observed"]["readiness_runnable_proposal_ids"],
+                    ["repair-runtime"],
+                )
+                self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_allows_resume_completion_without_new_runnable_proposal(self) -> None:
         self._write_json(
             "ops/reports/mutation-proposals.json",
@@ -810,6 +1005,154 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             report["inputs"]["maintenance_action_plan"],
             "tmp/goal-runtime-maintenance-action.json",
         )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_accepts_recent_log_overlap_queue_unblock_maintenance_action_plan(
+        self,
+    ) -> None:
+        proposal_id = "recent_log_overlap_queue_blocked__maintenance-decision-runtime"
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [
+                    {
+                        "proposal_id": proposal_id,
+                        "family": "queue_unblock",
+                        "failure_mode": "recent_log_overlap_queue_blocked",
+                        "blocked_by": ["recent_log_overlap"],
+                    }
+                ],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 1,
+                        "selected_runnable_count": 1,
+                        "blocked_available_count": 1,
+                        "blocked_reason_counts": [{"reason": "recent_log_overlap", "count": 1}],
+                    }
+                },
+            },
+        )
+        self._write_json(
+            "tmp/goal-runtime-maintenance-action.json",
+            {
+                "artifact_kind": "goal_runtime_maintenance_action_plan",
+                "producer": "ops.scripts.auto_improve_runtime",
+                "session_id": "auto-session-resume",
+                "status": "pass",
+                "current_max_proposals": 1,
+                "current_iteration_count": 1,
+                "next_max_proposals": 2,
+                "queue_action": {
+                    "status": "action_required",
+                    "reason": "recent_log_overlap_queue_blocked",
+                    "proposal_ids": [proposal_id],
+                    "runner_action": "resume_session_with_additional_proposal_budget",
+                    "proposal_budget_increment": 1,
+                    "resume_target": "auto-improve-goal-maintenance-action",
+                },
+                "selected_proposal": {
+                    "proposal_id": proposal_id,
+                    "family": "queue_unblock",
+                    "failure_mode": "recent_log_overlap_queue_blocked",
+                },
+                "blockers": [],
+                "recommended_next_action": "Run make auto-improve-goal-maintenance-action.",
+                "decisions": {
+                    "can_resume": True,
+                    "requires_budget_increment": True,
+                },
+            },
+        )
+
+        report = self._build_report(
+            resume_session_id="auto-session-resume",
+            maintenance_action_plan_path="tmp/goal-runtime-maintenance-action.json",
+        )
+
+        plan_check = next(
+            check for check in report["checks"] if check["id"] == "start_maintenance_action_plan_current"
+        )
+        self.assertEqual(plan_check["status"], "pass")
+        self.assertTrue(plan_check["observed"]["selected_runnable"])
+        self.assertEqual(plan_check["observed"]["selected_blockers"], ["recent_log_overlap"])
+        self.assertEqual(plan_check["observed"]["selected_effective_blockers"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_blocks_recent_log_overlap_queue_unblock_when_standard_runnable_exists(
+        self,
+    ) -> None:
+        proposal_id = "recent_log_overlap_queue_blocked__maintenance-decision-runtime"
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [
+                    {
+                        "proposal_id": "standard-runtime",
+                        "blocked_by": [],
+                    },
+                    {
+                        "proposal_id": proposal_id,
+                        "family": "queue_unblock",
+                        "failure_mode": "recent_log_overlap_queue_blocked",
+                        "blocked_by": ["recent_log_overlap"],
+                    },
+                ],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 1,
+                        "selected_runnable_count": 1,
+                        "blocked_available_count": 1,
+                        "blocked_reason_counts": [{"reason": "recent_log_overlap", "count": 1}],
+                    }
+                },
+            },
+        )
+        self._write_json(
+            "tmp/goal-runtime-maintenance-action.json",
+            {
+                "artifact_kind": "goal_runtime_maintenance_action_plan",
+                "producer": "ops.scripts.auto_improve_runtime",
+                "session_id": "auto-session-resume",
+                "status": "pass",
+                "current_max_proposals": 1,
+                "current_iteration_count": 1,
+                "next_max_proposals": 2,
+                "queue_action": {
+                    "status": "action_required",
+                    "reason": "recent_log_overlap_queue_blocked",
+                    "proposal_ids": [proposal_id],
+                    "runner_action": "resume_session_with_additional_proposal_budget",
+                    "proposal_budget_increment": 1,
+                    "resume_target": "auto-improve-goal-maintenance-action",
+                },
+                "selected_proposal": {
+                    "proposal_id": proposal_id,
+                    "family": "queue_unblock",
+                    "failure_mode": "recent_log_overlap_queue_blocked",
+                },
+                "blockers": [],
+                "recommended_next_action": "Run make auto-improve-goal-maintenance-action.",
+                "decisions": {
+                    "can_resume": True,
+                    "requires_budget_increment": True,
+                },
+            },
+        )
+
+        report = self._build_report(
+            resume_session_id="auto-session-resume",
+            maintenance_action_plan_path="tmp/goal-runtime-maintenance-action.json",
+        )
+
+        plan_check = next(
+            check for check in report["checks"] if check["id"] == "start_maintenance_action_plan_current"
+        )
+        self.assertEqual(plan_check["status"], "fail")
+        self.assertFalse(plan_check["observed"]["selected_runnable"])
+        self.assertEqual(plan_check["observed"]["selected_blockers"], ["recent_log_overlap"])
+        self.assertEqual(plan_check["observed"]["selected_effective_blockers"], ["recent_log_overlap"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_build_report_blocks_stale_maintenance_action_plan_for_resume(self) -> None:

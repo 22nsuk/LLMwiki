@@ -4,17 +4,17 @@ import json
 from pathlib import Path
 from typing import Any, TypedDict
 
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.schema_constants_runtime import (
     PLANNING_GATE_COMPLETED_MECHANISM_INPUT_SCHEMAS,
     PLANNING_GATE_OPTIONAL_ARTIFACT_SCHEMAS,
     PLANNING_GATE_OPTIONAL_COMPLETED_MECHANISM_INPUT_SCHEMAS,
     PLANNING_GATE_REQUIRED_ARTIFACT_SCHEMAS,
 )
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
-from ops.scripts.yaml_runtime import parse_simple_yaml
+from ops.scripts.core.yaml_runtime import parse_simple_yaml
 
 ARTIFACT_SCHEMAS = PLANNING_GATE_REQUIRED_ARTIFACT_SCHEMAS
 OPTIONAL_ARTIFACT_SCHEMAS = PLANNING_GATE_OPTIONAL_ARTIFACT_SCHEMAS

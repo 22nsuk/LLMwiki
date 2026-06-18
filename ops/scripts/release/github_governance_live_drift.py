@@ -11,39 +11,43 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH,
     )
-    from ops.scripts.yaml_runtime import parse_simple_yaml
+    from ops.scripts.core.yaml_runtime import parse_simple_yaml
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH,
     )
-    from ops.scripts.yaml_runtime import parse_simple_yaml
+    from ops.scripts.core.yaml_runtime import parse_simple_yaml
 
 
 DEFAULT_OUT = "ops/reports/github-governance-live-drift.json"
-DEFAULT_LIVE_INPUT = "tmp/github-governance-live-input.json"
+DEFAULT_LIVE_INPUT = "build/release/github-governance-live-input.json"
 GOVERNANCE_CONTRACT_PATH = ".github/release-governance.yml"
 ARTIFACT_KIND = "github_governance_live_drift_verification"
 PRODUCER = "ops.scripts.github_governance_live_drift"
 SOURCE_COMMAND = (
     "python -m ops.scripts.release.github_governance_live_drift --vault . "
-    "--live-input tmp/github-governance-live-input.json "
+    "--live-input build/release/github-governance-live-input.json "
     "--out ops/reports/github-governance-live-drift.json"
 )
 BRANCH_PROTECTION_FIELDS = (
@@ -104,17 +108,49 @@ def _string_items(value: Any) -> list[str]:
     return []
 
 
+def _int_value(value: Any) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return 0
+    return 0
+
+
+def _ci_matrix_check_name(tier: str, version: str) -> str:
+    return f"{tier} / py{version.removeprefix('py')}"
+
+
+def _ci_matrix_excluded_checks(matrix: Mapping[str, Any]) -> set[str]:
+    excluded: set[str] = set()
+    for item in _as_list(matrix.get("exclude")):
+        item_mapping = _as_mapping(item)
+        tier = _normalized_string(item_mapping.get("tier"))
+        version = _normalized_string(
+            item_mapping.get("python-version", item_mapping.get("python_version"))
+        )
+        if tier and version:
+            excluded.add(_ci_matrix_check_name(tier, version))
+    return excluded
+
+
 def _expected_required_checks(governance: Mapping[str, Any]) -> list[str]:
     required = _as_mapping(governance.get("required_status_checks"))
     singleton_checks = _string_items(required.get("singleton_checks"))
     matrix = _as_mapping(required.get("ci_matrix"))
     versions = _string_items(matrix.get("python_versions"))
     tiers = _string_items(matrix.get("tiers"))
-    matrix_checks = [
-        f"{tier} / py{version.removeprefix('py')}"
-        for version in versions
-        for tier in tiers
-    ]
+    excluded_checks = _ci_matrix_excluded_checks(matrix)
+    matrix_checks: list[str] = []
+    for version in versions:
+        for tier in tiers:
+            check_name = _ci_matrix_check_name(tier, version)
+            if check_name not in excluded_checks:
+                matrix_checks.append(check_name)
     return _normalized_strings([*singleton_checks, *matrix_checks])
 
 
@@ -144,25 +180,146 @@ def _read_live_input(path: Path) -> tuple[dict[str, Any], list[str]]:
     return payload, []
 
 
+def _rule_items(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, Mapping):
+        nested_rules = _as_list(value.get("rules"))
+        if nested_rules:
+            return [_as_mapping(item) for item in nested_rules if isinstance(item, Mapping)]
+        if _normalized_string(value.get("type")):
+            return [dict(value)]
+        return []
+    if isinstance(value, list):
+        return [_as_mapping(item) for item in value if isinstance(item, Mapping)]
+    return []
+
+
+def _normalize_branch_ref(value: Any) -> str:
+    text = _normalized_string(value)
+    if not text:
+        return ""
+    if text == "~DEFAULT_BRANCH":
+        return "main"
+    if text.startswith("refs/heads/"):
+        return text.removeprefix("refs/heads/")
+    return text
+
+
+def _branch_refs_from_ruleset(item: Mapping[str, Any]) -> list[str]:
+    conditions = _as_mapping(item.get("conditions"))
+    ref_name = _as_mapping(conditions.get("ref_name"))
+    refs = [
+        _normalize_branch_ref(value)
+        for value in _string_items(ref_name.get("include"))
+    ]
+    refs = [ref for ref in refs if ref and "*" not in ref]
+    branch = _normalize_branch_ref(item.get("branch", item.get("pattern")))
+    if branch:
+        refs.append(branch)
+    return _normalized_strings(refs)
+
+
+def _fallback_rule_branches(live: Mapping[str, Any]) -> list[str]:
+    return _normalized_strings(_string_items(live.get("protected_branches"))) or ["main"]
+
+
+def _rules_by_branch(live: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    rules_by_branch: dict[str, list[dict[str, Any]]] = {}
+
+    def add_rules(branches: Iterable[str], rules: Iterable[Mapping[str, Any]]) -> None:
+        materialized = [dict(rule) for rule in rules if _normalized_string(rule.get("type"))]
+        if not materialized:
+            return
+        for branch in _normalized_strings(branches):
+            rules_by_branch.setdefault(branch, []).extend(materialized)
+
+    for key in ("rules", "branch_rules"):
+        value = live.get(key)
+        if isinstance(value, Mapping):
+            for branch, branch_value in value.items():
+                add_rules([_normalize_branch_ref(branch)], _rule_items(branch_value))
+        else:
+            add_rules(_fallback_rule_branches(live), _rule_items(value))
+
+    branches_payload = live.get("branches")
+    branch_items: list[Any]
+    if isinstance(branches_payload, Mapping):
+        branch_items = [
+            {"name": name, **_as_mapping(value)}
+            for name, value in branches_payload.items()
+        ]
+    else:
+        branch_items = _as_list(branches_payload)
+    for item in branch_items:
+        item_mapping = _as_mapping(item)
+        branch = _normalize_branch_ref(_branch_name_from_item(item_mapping))
+        add_rules([branch], _rule_items(item_mapping.get("rules")))
+
+    for item in _as_list(live.get("rulesets")):
+        ruleset = _as_mapping(item)
+        if _normalized_string(ruleset.get("target")) not in ("", "branch"):
+            continue
+        if _normalized_string(ruleset.get("enforcement")) not in ("", "active"):
+            continue
+        branches = _branch_refs_from_ruleset(ruleset) or _fallback_rule_branches(live)
+        add_rules(branches, _rule_items(ruleset))
+
+    return {
+        branch: rules
+        for branch, rules in rules_by_branch.items()
+        if branch and rules
+    }
+
+
+def _required_checks_from_rule(rule: Mapping[str, Any]) -> list[str]:
+    if _normalized_string(rule.get("type")) != "required_status_checks":
+        return []
+    parameters = _as_mapping(rule.get("parameters"))
+    checks: list[str] = []
+    for key in ("required_status_checks", "contexts", "checks", "required_checks"):
+        checks.extend(_string_items(parameters.get(key)))
+    return checks
+
+
+def _branch_protection_from_rules(rules: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+    observed: dict[str, Any] = {}
+    for rule in rules:
+        rule_type = _normalized_string(rule.get("type"))
+        parameters = _as_mapping(rule.get("parameters"))
+        if rule_type == "pull_request":
+            observed["require_pull_request"] = True
+            if _int_value(parameters.get("required_approving_review_count")) > 0:
+                observed["require_review_before_merge"] = True
+            observed["main_direct_push"] = "forbidden"
+        elif rule_type == "required_status_checks":
+            observed["require_required_status_checks"] = True
+            if "strict_required_status_checks_policy" in parameters:
+                observed["require_branches_up_to_date"] = bool(
+                    parameters.get("strict_required_status_checks_policy")
+                )
+        elif rule_type == "required_linear_history":
+            observed["require_linear_history"] = True
+        elif rule_type == "non_fast_forward":
+            observed["allow_force_pushes"] = False
+        elif rule_type == "deletion":
+            observed["allow_deletions"] = False
+    return observed
+
+
 def _observed_required_checks(live: Mapping[str, Any]) -> list[str]:
-    direct = _string_items(live.get("required_status_checks"))
-    if direct:
-        return _normalized_strings(direct)
-    checks = _string_items(live.get("required_checks"))
-    if checks:
-        return _normalized_strings(checks)
+    checks: list[str] = []
+    checks.extend(_string_items(live.get("required_status_checks")))
+    checks.extend(_string_items(live.get("required_checks")))
     required_status_checks = _as_mapping(live.get("required_status_checks"))
     for key in ("contexts", "checks", "required_checks"):
-        checks = _string_items(required_status_checks.get(key))
-        if checks:
-            return _normalized_strings(checks)
+        checks.extend(_string_items(required_status_checks.get(key)))
     branch_protection = _as_mapping(live.get("branch_protection"))
     nested_required = _as_mapping(branch_protection.get("required_status_checks"))
     for key in ("contexts", "checks", "required_checks"):
-        checks = _string_items(nested_required.get(key))
-        if checks:
-            return _normalized_strings(checks)
-    return []
+        checks.extend(_string_items(nested_required.get(key)))
+    for rules in _rules_by_branch(live).values():
+        for rule in rules:
+            checks.extend(_required_checks_from_rule(rule))
+    return _normalized_strings(checks)
 
 
 def _branch_name_from_item(item: Mapping[str, Any]) -> str:
@@ -220,6 +377,10 @@ def _observed_branch_protection(live: Mapping[str, Any]) -> dict[str, dict[str, 
         name = _branch_name_from_item(item_mapping)
         if name:
             observed[name] = _branch_protection_from_item(item_mapping)
+    for branch, rules in _rules_by_branch(live).items():
+        derived = _branch_protection_from_rules(rules)
+        if derived:
+            observed[branch] = {**derived, **observed.get(branch, {})}
     return observed
 
 
@@ -309,7 +470,7 @@ def build_report(
 
     if unavailable_reasons:
         status = "attention"
-    elif missing_checks or missing_branches or mismatched_branch_count:
+    elif missing_checks or unexpected_checks or missing_branches or mismatched_branch_count:
         status = "fail"
     else:
         status = "pass"
@@ -325,7 +486,7 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/github_governance_live_drift.py",
+                "ops/scripts/release/github_governance_live_drift.py",
                 GOVERNANCE_CONTRACT_PATH,
                 GITHUB_GOVERNANCE_LIVE_DRIFT_SCHEMA_PATH,
             ],
@@ -360,7 +521,7 @@ def build_report(
             "unavailable_reason_count": len(unavailable_reasons),
         },
         "required_status_checks": {
-            "status": "pass" if not missing_checks else "fail",
+            "status": "pass" if not missing_checks and not unexpected_checks else "fail",
             "expected": expected_checks,
             "observed": observed_checks,
             "missing": missing_checks,

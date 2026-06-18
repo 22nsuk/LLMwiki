@@ -4,12 +4,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.filesystem_runtime import manifest_apply_guard_state
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.proposal_scope_runtime import build_scope_freeze, write_scope_freeze
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.filesystem_runtime import manifest_apply_guard_state
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.proposal_scope_runtime import (
+    build_scope_freeze,
+    write_scope_freeze,
+)
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import set_policy_value
 from tests.run_mechanism_experiment_test_utils import seed_wrapper_vault
 

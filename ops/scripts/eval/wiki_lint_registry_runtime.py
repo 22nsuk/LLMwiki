@@ -3,13 +3,13 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
-from ops.scripts.registry_alignment_passes_runtime import (
+from ops.scripts.core.registry_alignment_passes_runtime import (
     _locator_raw_path_corpus_consistency_pass,
     _registry_frontmatter_alignment_pass,
     locator_raw_path_corpus_consistency_pass,
     registry_frontmatter_alignment_pass,
 )
-from ops.scripts.registry_diagnostics_runtime import (
+from ops.scripts.core.registry_diagnostics_runtime import (
     RegistryDiagnosticEmitter as RegistryLintEmitter,
     RegistryInventoryContext,
     RegistryPaths as RegistryLintPaths,
@@ -21,7 +21,7 @@ from ops.scripts.registry_diagnostics_runtime import (
     registry_source_target_page_naming_pass as _registry_source_target_page_naming_pass,
     registry_summary_consistency_pass as _registry_summary_consistency_pass,
 )
-from ops.scripts.registry_pass_support_runtime import (
+from ops.scripts.core.registry_pass_support_runtime import (
     _backlog_entry_age_days,
     _parse_registry_iso_date,
     registry_entry_line_span,
@@ -30,13 +30,13 @@ from ops.scripts.registry_pass_support_runtime import (
     registry_topic_family,
     registry_topic_subfamily,
 )
-from ops.scripts.registry_review_candidate_passes_runtime import (
+from ops.scripts.core.registry_review_candidate_passes_runtime import (
     _backlog_refactor_threshold_pass,
     _summary_shard_review_candidate_pass,
     backlog_refactor_threshold_pass,
     summary_shard_review_candidate_pass,
 )
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 
 def lint_registry_contract(

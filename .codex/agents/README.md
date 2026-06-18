@@ -65,6 +65,15 @@ repo-shared defaults는 아래 rung만 사용한다.
 - runtime executor는 non-worker role 뒤에 workspace integrity guard를 실행해, reviewer/validator/auditor가 source/control file을 바꾸면 blocking executor report로 전환한다.
 - mechanism workspace 준비는 live repo의 `.venv`를 temp workspace에 symlink로 연결해 network 없이도 동일 dependency set으로 worker/validator checks를 실행하게 한다. `.venv` 자체는 diff/apply universe에서 계속 제외된다.
 
+## Drift Checks
+
+When editing `.codex/agents/*.toml`, role intent, ladder policy, or routing
+contracts, run `make subagent-profile-schema` and inspect the generated
+diagnostic under `tmp/`. When changing script entrypoints, Make replacements,
+or migration guidance that affects agent prompts, run `make tools-migration-plan`
+as the companion drift check. These targets are diagnostic projections; do not
+hand-edit their `tmp/` outputs into public source.
+
 ### Manual Dispatch Contract
 
 수동으로 subagent를 고를 때도 `.toml`의 `model_reasoning_effort`를 그대로 최종 실행값으로 쓰지 않는다.

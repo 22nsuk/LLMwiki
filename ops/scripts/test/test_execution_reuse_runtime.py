@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from typing import Any
 
 REUSE_MISMATCH_SOURCE_TREE = "source_tree_mismatch"
@@ -16,6 +17,22 @@ REUSE_MISMATCH_CODES = {
     REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
     REUSE_MISMATCH_MISSING_SUMMARY,
 }
+
+
+@dataclass(frozen=True)
+class ReuseCurrentnessRequest:
+    existing: dict[str, Any]
+    suite: str
+    current_source_revision: str
+    current_source_tree_fingerprint: str
+    current_semantic_command: str
+    current_toolchain_fingerprint: str
+    current_display_command: str
+    current_target_fingerprints: list[dict[str, Any]]
+    current_deselected_tests: list[dict[str, Any]]
+    current_deselection_lifecycle: dict[str, Any]
+    collect_nodeids: bool
+    collect_nodeid_digest: dict[str, Any] | None
 
 
 def _toolchain_fingerprint(execution_environment: dict[str, Any]) -> str:
@@ -112,21 +129,57 @@ def _reuse_failure(
     }
 
 
-def reuse_currentness_diagnostics_from_state(
+def _coerce_reuse_currentness_request(
+    request: ReuseCurrentnessRequest | dict[str, Any] | None,
+    legacy_kwargs: dict[str, Any],
+) -> ReuseCurrentnessRequest:
+    if isinstance(request, ReuseCurrentnessRequest):
+        if legacy_kwargs:
+            names = ", ".join(sorted(legacy_kwargs))
+            raise TypeError(f"request cannot be combined with legacy keyword arguments: {names}")
+        return request
+    existing = request if isinstance(request, dict) else legacy_kwargs.pop("existing")
+    return ReuseCurrentnessRequest(existing=existing, **legacy_kwargs)
+
+
+def _command_identity_checks(
     existing: dict[str, Any],
-    *,
-    suite: str,
-    current_source_revision: str,
-    current_source_tree_fingerprint: str,
-    current_semantic_command: str,
-    current_toolchain_fingerprint: str,
-    current_display_command: str,
-    current_target_fingerprints: list[dict[str, Any]],
-    current_deselected_tests: list[dict[str, Any]],
-    current_deselection_lifecycle: dict[str, Any],
-    collect_nodeids: bool,
-    collect_nodeid_digest: dict[str, Any] | None,
+    request: ReuseCurrentnessRequest,
+) -> dict[str, bool]:
+    existing_lifecycle = existing.get("deselection_lifecycle")
+    if not isinstance(existing_lifecycle, dict):
+        existing_lifecycle = {}
+    return {
+        "suite": existing.get("suite") == request.suite,
+        "semantic_command": _existing_semantic_command(existing)
+        == request.current_semantic_command,
+        "existing_deselection_lifecycle": existing_lifecycle.get("status") == "pass",
+        "current_deselection_lifecycle": request.current_deselection_lifecycle.get("status")
+        == "pass",
+        "test_target_fingerprints": _test_target_fingerprints_match(
+            existing.get("test_target_fingerprints"),
+            request.current_target_fingerprints,
+        ),
+        "deselected_tests": _deselected_tests_match(
+            existing.get("deselected_tests"),
+            request.current_deselected_tests,
+        ),
+        "pytest_collect_nodeid_digest": _collect_nodeid_digest_matches(
+            existing,
+            request.collect_nodeid_digest,
+            collect_nodeids=request.collect_nodeids,
+        ),
+        "nodeid_outcome_consistency": (
+            not request.collect_nodeids
+            or existing.get("nodeid_outcome_consistency", {}).get("status") == "pass"
+        ),
+    }
+
+
+def _reuse_currentness_diagnostics_from_request(
+    request: ReuseCurrentnessRequest,
 ) -> dict[str, Any]:
+    existing = request.existing
     observed_source_revision = str(existing.get("source_revision", "")).strip()
     observed_source_tree_fingerprint = str(existing.get("source_tree_fingerprint", "")).strip()
     checks = {
@@ -136,76 +189,51 @@ def reuse_currentness_diagnostics_from_state(
     if not existing or not all(checks.values()):
         return _reuse_failure(
             reason=REUSE_MISMATCH_MISSING_SUMMARY,
-            current_source_revision=current_source_revision,
+            current_source_revision=request.current_source_revision,
             observed_source_revision=observed_source_revision,
-            current_source_tree_fingerprint=current_source_tree_fingerprint,
+            current_source_tree_fingerprint=request.current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
         )
 
     checks["source_tree_fingerprint"] = (
-        observed_source_tree_fingerprint == current_source_tree_fingerprint
+        observed_source_tree_fingerprint == request.current_source_tree_fingerprint
     )
     if not checks["source_tree_fingerprint"]:
         return _reuse_failure(
             reason=REUSE_MISMATCH_SOURCE_TREE,
-            current_source_revision=current_source_revision,
+            current_source_revision=request.current_source_revision,
             observed_source_revision=observed_source_revision,
-            current_source_tree_fingerprint=current_source_tree_fingerprint,
+            current_source_tree_fingerprint=request.current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
         )
 
-    checks["source_revision"] = observed_source_revision == current_source_revision
+    checks["source_revision"] = observed_source_revision == request.current_source_revision
 
-    existing_lifecycle = existing.get("deselection_lifecycle")
-    if not isinstance(existing_lifecycle, dict):
-        existing_lifecycle = {}
     existing_semantic_command = _existing_semantic_command(existing)
-    command_checks = {
-        "suite": existing.get("suite") == suite,
-        "semantic_command": existing_semantic_command == current_semantic_command,
-        "existing_deselection_lifecycle": existing_lifecycle.get("status") == "pass",
-        "current_deselection_lifecycle": current_deselection_lifecycle.get("status") == "pass",
-        "test_target_fingerprints": _test_target_fingerprints_match(
-            existing.get("test_target_fingerprints"),
-            current_target_fingerprints,
-        ),
-        "deselected_tests": _deselected_tests_match(
-            existing.get("deselected_tests"),
-            current_deselected_tests,
-        ),
-        "pytest_collect_nodeid_digest": _collect_nodeid_digest_matches(
-            existing,
-            collect_nodeid_digest,
-            collect_nodeids=collect_nodeids,
-        ),
-        "nodeid_outcome_consistency": (
-            not collect_nodeids
-            or existing.get("nodeid_outcome_consistency", {}).get("status") == "pass"
-        ),
-    }
+    command_checks = _command_identity_checks(existing, request)
     checks.update(command_checks)
     if not all(command_checks.values()):
         return _reuse_failure(
             reason=REUSE_MISMATCH_COMMAND_IDENTITY,
-            current_source_revision=current_source_revision,
+            current_source_revision=request.current_source_revision,
             observed_source_revision=observed_source_revision,
-            current_source_tree_fingerprint=current_source_tree_fingerprint,
+            current_source_tree_fingerprint=request.current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
         )
 
     existing_toolchain_fingerprint = _existing_toolchain_fingerprint(existing)
     checks["toolchain_fingerprint"] = (
-        existing_toolchain_fingerprint == current_toolchain_fingerprint
+        existing_toolchain_fingerprint == request.current_toolchain_fingerprint
     )
     if not checks["toolchain_fingerprint"]:
         return _reuse_failure(
             reason=REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
-            current_source_revision=current_source_revision,
+            current_source_revision=request.current_source_revision,
             observed_source_revision=observed_source_revision,
-            current_source_tree_fingerprint=current_source_tree_fingerprint,
+            current_source_tree_fingerprint=request.current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
         )
@@ -214,9 +242,9 @@ def reuse_currentness_diagnostics_from_state(
     if not checks["source_revision"]:
         return _reuse_failure(
             reason=REUSE_MISMATCH_SOURCE_REVISION,
-            current_source_revision=current_source_revision,
+            current_source_revision=request.current_source_revision,
             observed_source_revision=observed_source_revision,
-            current_source_tree_fingerprint=current_source_tree_fingerprint,
+            current_source_tree_fingerprint=request.current_source_tree_fingerprint,
             observed_source_tree_fingerprint=observed_source_tree_fingerprint,
             checks=checks,
         )
@@ -224,17 +252,26 @@ def reuse_currentness_diagnostics_from_state(
     existing_display_command = str(existing.get("command") or "").strip()
     executable_path_differs_only = (
         bool(existing_display_command)
-        and existing_display_command != current_display_command
-        and existing_semantic_command == current_semantic_command
+        and existing_display_command != request.current_display_command
+        and existing_semantic_command == request.current_semantic_command
     )
     return {
         "reusable": True,
         "result_reusable": True,
         "reason": None,
-        "current_source_revision": current_source_revision,
+        "current_source_revision": request.current_source_revision,
         "observed_source_revision": observed_source_revision,
-        "current_source_tree_fingerprint": current_source_tree_fingerprint,
+        "current_source_tree_fingerprint": request.current_source_tree_fingerprint,
         "observed_source_tree_fingerprint": observed_source_tree_fingerprint,
         "executable_path_differs_only": executable_path_differs_only,
         "checks": checks,
     }
+
+
+def reuse_currentness_diagnostics_from_state(
+    request: ReuseCurrentnessRequest | dict[str, Any] | None = None,
+    **legacy_kwargs: Any,
+) -> dict[str, Any]:
+    return _reuse_currentness_diagnostics_from_request(
+        _coerce_reuse_currentness_request(request, legacy_kwargs)
+    )

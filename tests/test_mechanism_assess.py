@@ -5,11 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mechanism_assess import build_report, normalize_targets
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.mechanism_assess import build_report, normalize_targets
 from tests.minimal_vault_runtime import POLICY_PATH, SCHEMA_PATHS, set_policy_value
 
 MECHANISM_SCHEMA_PATH = SCHEMA_PATHS["mechanism-assessment-report.schema.json"]
@@ -120,6 +119,7 @@ class MechanismAssessTest(unittest.TestCase):
                     "markdown_heading_count": 2,
                     "test_file_count": 1,
                     "test_case_count": 2,
+                    "test_guardrail_count": 0,
                 },
             )
             self.assertEqual(
@@ -131,6 +131,7 @@ class MechanismAssessTest(unittest.TestCase):
                     "markdown_heading_count": 2,
                     "test_file_count": 1,
                     "test_case_count": 2,
+                    "test_guardrail_count": 0,
                 },
             )
             self.assertEqual(
@@ -200,6 +201,7 @@ class MechanismAssessTest(unittest.TestCase):
                     "markdown_heading_count": 0,
                     "test_file_count": 1,
                     "test_case_count": 1,
+                    "test_guardrail_count": 0,
                 },
             )
             self.assertEqual(
@@ -211,8 +213,52 @@ class MechanismAssessTest(unittest.TestCase):
                     "markdown_heading_count": 0,
                     "test_file_count": 1,
                     "test_case_count": 1,
+                    "test_guardrail_count": 0,
                 },
             )
+
+    def test_structural_metrics_count_test_guardrails_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_policy(vault)
+
+            module_path = vault / "ops" / "scripts" / "sample.py"
+            test_path = vault / "tests" / "test_sample.py"
+            module_path.parent.mkdir(parents=True, exist_ok=True)
+            test_path.parent.mkdir(parents=True, exist_ok=True)
+            module_path.write_text("def subject():\n    return 1\n", encoding="utf-8")
+            test_path.write_text(
+                "import unittest\n"
+                "import pytest\n"
+                "\n"
+                "@pytest.mark.parametrize('value', [1, 2, 3])\n"
+                "def test_param(value):\n"
+                "    assert value\n"
+                "\n"
+                "class SampleTest(unittest.TestCase):\n"
+                "    def test_subcase(self):\n"
+                "        for value in [1, 2]:\n"
+                "            with self.subTest(value=value):\n"
+                "                self.assertTrue(value)\n",
+                encoding="utf-8",
+            )
+
+            policy, resolved_policy_path = load_policy(vault)
+            report = build_report(
+                vault,
+                policy,
+                resolved_policy_path,
+                normalize_targets(vault, ["ops/scripts/sample.py"]),
+                [],
+                normalize_targets(vault, ["tests/test_sample.py"]),
+                context=fixed_context(),
+            )
+
+            schema = load_schema(MECHANISM_SCHEMA_PATH)
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["structural_metrics"]["test_case_count"], 2)
+            self.assertEqual(report["structural_metrics"]["test_guardrail_count"], 3)
+            self.assertEqual(report["total_structural_metrics"]["test_guardrail_count"], 3)
 
     def test_risk_flags_follow_path_and_content_rules(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -449,6 +495,7 @@ class MechanismAssessTest(unittest.TestCase):
             evidence = report["complexity_profile"]["dimension_evidence"]["verification_cost"]
             self.assertEqual(evidence["test_file_count"], 1)
             self.assertEqual(evidence["test_case_count"], 25)
+            self.assertEqual(evidence["test_guardrail_count"], 0)
             self.assertEqual(evidence["verification_scope"], "broad_single_file")
             self.assertEqual(report["complexity_profile"]["dimensions"]["verification_cost"], 4)
 

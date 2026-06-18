@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.experiment_telemetry_runtime import run_rel
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.experiment_telemetry_runtime import run_rel
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .auto_improve_outcome_runtime import ExecutionOutcome
 from .run_mechanism_experiment_runtime import (
@@ -72,14 +72,20 @@ def _full_execution_mutation_command(request: ExecuteEvaluateRequest, *, policy_
     )
 
 
+def _scope_freeze_inputs(request: ExecuteEvaluateRequest) -> dict[str, Any]:
+    inputs = request.scope_freeze.get("inputs")
+    return inputs if isinstance(inputs, dict) else {}
+
+
 def run_full_experiment(request: ExecuteEvaluateRequest) -> dict[str, Any]:
     policy_path_text = report_path(request.vault, request.resolved_policy_path)
+    scope_inputs = _scope_freeze_inputs(request)
     return request.dependencies.run_mechanism_experiment(
         request.vault,
         run_id=request.run_id,
         policy_path=policy_path_text,
-        primary_targets=[],
-        supporting_targets=[],
+        primary_targets=list(scope_inputs.get("primary_targets", [])),
+        supporting_targets=list(scope_inputs.get("supporting_targets", [])),
         test_files=request.scope_freeze["resolution"]["test_files"],
         log_summary=None,
         mutation_command=_full_execution_mutation_command(request, policy_path_text=policy_path_text),

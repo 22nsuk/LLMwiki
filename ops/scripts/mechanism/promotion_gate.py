@@ -10,15 +10,15 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.promotion_decision_registry_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.promotion_decision_registry_runtime import (
         decision_record_from_report,
     )
-    from ops.scripts.promotion_gate_common_runtime import (
+    from ops.scripts.mechanism.promotion_gate_common_runtime import (
         PROMOTION_REPORT_SCHEMA,
         PromotionGateArtifactDecodeError,
         PromotionGateArtifactMissingError,
@@ -33,13 +33,14 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         ensure_log_args_consistent,
         repo_relative_path,
     )
-    from ops.scripts.promotion_gate_mechanism_runtime import (
+    from ops.scripts.mechanism.promotion_gate_mechanism_runtime import (
+        MechanismGateInputRequest,
         MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
         mechanism_class_report as build_mechanism_class_report,
     )
-    from ops.scripts.promotion_gate_page_runtime import (
+    from ops.scripts.mechanism.promotion_gate_page_runtime import (
         PageClassReportRequest,
         collect_page_gate_inputs,
         evaluate_stage2,
@@ -48,12 +49,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         page_class_report as build_page_class_report,
     )
 else:
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.promotion_decision_registry_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.promotion_decision_registry_runtime import (
         decision_record_from_report,
     )
 
@@ -73,6 +74,7 @@ else:
         repo_relative_path,
     )
     from .promotion_gate_mechanism_runtime import (
+        MechanismGateInputRequest,
         MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
@@ -121,6 +123,8 @@ class MechanismClassReportRequest:
     run_ledger_path: str
     behavior_delta_path: str | None = None
     auto_improve_run: bool = False
+    baseline_mechanism_contract_eval_path: str | None = None
+    candidate_mechanism_contract_eval_path: str | None = None
 
 
 _MECHANISM_CLASS_REPORT_POSITIONAL_FIELDS = (
@@ -142,6 +146,8 @@ _MECHANISM_CLASS_REPORT_POSITIONAL_FIELDS = (
     "run_ledger_path",
     "behavior_delta_path",
     "auto_improve_run",
+    "baseline_mechanism_contract_eval_path",
+    "candidate_mechanism_contract_eval_path",
 )
 
 
@@ -199,16 +205,20 @@ def _mechanism_class_report_request(
 
 def _mechanism_gate_inputs(request: MechanismClassReportRequest) -> MechanismGateInputs:
     return collect_mechanism_gate_inputs(
-        request.vault,
-        request.baseline_eval_path,
-        request.candidate_eval_path,
-        request.baseline_lint_path,
-        request.candidate_lint_path,
-        request.baseline_mechanism_path,
-        request.candidate_mechanism_path,
-        request.changed_files_manifest_path,
-        request.run_ledger_path,
-        behavior_delta_path=request.behavior_delta_path,
+        MechanismGateInputRequest(
+            vault=request.vault,
+            baseline_eval_path=request.baseline_eval_path,
+            candidate_eval_path=request.candidate_eval_path,
+            baseline_lint_path=request.baseline_lint_path,
+            candidate_lint_path=request.candidate_lint_path,
+            baseline_mechanism_path=request.baseline_mechanism_path,
+            candidate_mechanism_path=request.candidate_mechanism_path,
+            changed_files_manifest_path=request.changed_files_manifest_path,
+            run_ledger_path=request.run_ledger_path,
+            behavior_delta_path=request.behavior_delta_path,
+            baseline_mechanism_contract_eval_path=request.baseline_mechanism_contract_eval_path,
+            candidate_mechanism_contract_eval_path=request.candidate_mechanism_contract_eval_path,
+        )
     )
 
 
@@ -298,6 +308,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--candidate-lint-report")
     ap.add_argument("--baseline-mechanism-report")
     ap.add_argument("--candidate-mechanism-report")
+    ap.add_argument("--baseline-mechanism-contract-eval-report")
+    ap.add_argument("--candidate-mechanism-contract-eval-report")
     ap.add_argument("--changed-files-manifest")
     ap.add_argument("--behavior-delta")
     ap.add_argument("--auto-improve-run", action="store_true")
@@ -385,16 +397,20 @@ def _build_report(args: argparse.Namespace) -> tuple[Path, dict]:
     ) = _required_mechanism_args(args)
     run_ledger_path = args.run_ledger or f"runs/{args.run_id}/run-ledger.json"
     inputs = collect_mechanism_gate_inputs(
-        vault,
-        baseline_eval_path,
-        candidate_eval_path,
-        baseline_lint_path,
-        candidate_lint_path,
-        baseline_mechanism_path,
-        candidate_mechanism_path,
-        changed_files_manifest_path,
-        run_ledger_path,
-        behavior_delta_path=args.behavior_delta,
+        MechanismGateInputRequest(
+            vault=vault,
+            baseline_eval_path=baseline_eval_path,
+            candidate_eval_path=candidate_eval_path,
+            baseline_lint_path=baseline_lint_path,
+            candidate_lint_path=candidate_lint_path,
+            baseline_mechanism_path=baseline_mechanism_path,
+            candidate_mechanism_path=candidate_mechanism_path,
+            changed_files_manifest_path=changed_files_manifest_path,
+            run_ledger_path=run_ledger_path,
+            behavior_delta_path=args.behavior_delta,
+            baseline_mechanism_contract_eval_path=args.baseline_mechanism_contract_eval_report,
+            candidate_mechanism_contract_eval_path=args.candidate_mechanism_contract_eval_report,
+        )
     )
     report = build_mechanism_class_report(
         request=MechanismPromotionReportRequest(

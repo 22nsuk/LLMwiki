@@ -9,15 +9,17 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         MANUAL_MUTATE_DEFECT_REGISTRY_SCHEMA_PATH,
     )
 else:
@@ -36,7 +38,7 @@ DEFAULT_OUT = "ops/reports/manual-mutate-defect-registry.json"
 PRODUCER = "ops.scripts.manual_mutate_defect_registry"
 SOURCE_COMMAND = "python -m ops.scripts.manual_mutate_defect_registry"
 ARTIFACT_KIND = "manual_mutate_defect_registry"
-MANUAL_MUTATE_GLOB = "manual_mutate_*.py"
+ARCHIVED_SCRIPT_SHA256_PREFIX = "archived:"
 
 DEFECT_REGISTRY_INPUTS: dict[str, dict[str, Any]] = {
     "tools/manual_mutate_auto_improve_decision_record_fallback.py": {
@@ -111,11 +113,14 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _script_paths(vault: Path) -> list[Path]:
-    tools_dir = vault / "tools"
-    if not tools_dir.exists():
-        return []
-    return sorted(path for path in tools_dir.glob(MANUAL_MUTATE_GLOB) if path.is_file())
+def _script_sha256(vault: Path, rel_path: str, script_path: Path) -> str:
+    if script_path.is_file():
+        return _sha256(script_path)
+    return hashlib.sha256(f"{ARCHIVED_SCRIPT_SHA256_PREFIX}{rel_path}".encode()).hexdigest()
+
+
+def _registered_script_paths(vault: Path) -> list[Path]:
+    return sorted(vault / rel_path for rel_path in DEFECT_REGISTRY_INPUTS)
 
 
 def _markers_present(vault: Path, marker_map: dict[str, list[str]]) -> tuple[str, list[dict[str, Any]]]:
@@ -168,7 +173,7 @@ def _entry_for_script(vault: Path, script_path: Path) -> dict[str, Any]:
     rel_path = report_path(vault, script_path)
     metadata = DEFECT_REGISTRY_INPUTS.get(rel_path)
     if metadata is None:
-        script_hash = _sha256(script_path)
+        script_hash = _script_sha256(vault, rel_path, script_path)
         return {
             "defect_id": Path(rel_path).stem,
             "script_path": rel_path,
@@ -188,7 +193,7 @@ def _entry_for_script(vault: Path, script_path: Path) -> dict[str, Any]:
     return {
         "defect_id": str(metadata["defect_id"]),
         "script_path": rel_path,
-        "script_sha256": _sha256(script_path),
+        "script_sha256": _script_sha256(vault, rel_path, script_path),
         "defect_class": str(metadata["defect_class"]),
         "target_paths": list(metadata.get("target_paths", [])),
         "canonical_fix_status": fix_status,
@@ -208,7 +213,7 @@ def build_report(
 ) -> dict[str, Any]:
     policy, resolved_policy_path = load_policy(vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    script_paths = _script_paths(vault)
+    script_paths = _registered_script_paths(vault)
     entries = [_entry_for_script(vault, path) for path in script_paths]
     unresolved = [
         entry

@@ -10,16 +10,18 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         read_json_object,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         ARCHIVE_EXECUTION_MANIFEST_SCHEMA_PATH,
     )
 else:
@@ -377,7 +379,7 @@ def build_report(
             source_command=source_command,
             resolved_policy_path=resolved_policy_path,
             schema_path=ARCHIVE_EXECUTION_MANIFEST_SCHEMA_PATH,
-            source_paths=["ops/scripts/archive_execution_manifest.py"],
+            source_paths=["ops/scripts/core/archive_execution_manifest.py"],
             file_inputs=file_inputs,
             text_inputs={
                 "mode": mode,
@@ -428,6 +430,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mode", choices=["dry_run", "applied", "deferred", "rollback"], default="dry_run")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--operator-confirmation", default="")
+    parser.add_argument(
+        "--fail-on-attention",
+        action="store_true",
+        help="Exit non-zero when dry-run archive candidates remain.",
+    )
     return parser.parse_args(argv)
 
 
@@ -449,7 +456,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
-    return 1 if report["status"] == "fail" else 0
+    if report["status"] == "fail":
+        return 1
+    if args.fail_on_attention and report["status"] == "attention":
+        return 1
+    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover

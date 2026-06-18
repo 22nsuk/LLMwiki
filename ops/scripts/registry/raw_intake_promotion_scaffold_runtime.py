@@ -4,15 +4,18 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.schema_constants_runtime import (
     RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
 )
-from ops.scripts.wiki_page_runtime import section_body
+from ops.scripts.eval.wiki_page_runtime import section_body
 
 from .raw_intake_promotion_bridge_runtime import suggest_bridge_sources_for_family
 from .raw_intake_promotion_shared_runtime import (
+    CONCEPT_ANALYSIS_SCAFFOLD,
+    SYNTHESIS_ANALYSIS_SCAFFOLD,
     _frontmatter_value,
     _json_load_object,
+    _section_evidence_map_rows,
     _section_items,
     _section_links,
     _split_subheading_blocks,
@@ -66,6 +69,20 @@ def _extract_page_date_from_stem(stem: str) -> str:
     return matches[-1] if matches else ""
 
 
+def _empty_synthesis_analysis_blocks() -> list[dict]:
+    return [
+        {"heading": heading, "body": "", "purpose": purpose}
+        for heading, purpose in SYNTHESIS_ANALYSIS_SCAFFOLD
+    ]
+
+
+def _empty_concept_body_blocks() -> list[dict]:
+    return [
+        {"heading": heading, "body": "", "purpose": purpose}
+        for heading, purpose in CONCEPT_ANALYSIS_SCAFFOLD
+    ]
+
+
 def _default_refresh_profile(target_stem: str, items: list[dict]) -> dict:
     base_slug = target_stem.removeprefix("synthesis--")
     profile_date = _extract_page_date_from_stem(target_stem)
@@ -89,16 +106,14 @@ def _default_refresh_profile(target_stem: str, items: list[dict]) -> dict:
             "bridge_source_stems": [],
             "integration_note": "",
             "bridge_integration": {"kind": ""},
-            "analysis_blocks": [
-                {"heading": "", "body": "", "purpose": ""},
-                {"heading": "", "body": "", "purpose": ""},
-                {"heading": "", "body": "", "purpose": ""},
-            ],
+            "evidence_map": [],
+            "analysis_blocks": _empty_synthesis_analysis_blocks(),
             "what_this_synthesis_excludes": [],
             "tensions_and_contradictions": [],
             "implications_for_future_ingest": [],
             "decision_or_takeaway": "",
             "follow_up_questions": [],
+            "wiki_placement_note": [],
             "related_pages": [],
             "source_trace": [],
         },
@@ -124,12 +139,14 @@ def _scaffold_refresh_profile(vault: Path, target_stem: str, items: list[dict]) 
     synthesis["question"] = (section_body(text, "Question") or "").strip()
     synthesis["short_answer"] = (section_body(text, "Short answer") or "").strip()
     synthesis["bridge_source_stems"] = bridge_source_stems
+    synthesis["evidence_map"] = _section_evidence_map_rows(text) or _section_items(text, "Evidence map")
     synthesis["analysis_blocks"] = _split_subheading_blocks(section_body(text, "Analysis") or "")
     synthesis["what_this_synthesis_excludes"] = _section_items(text, "What this synthesis excludes")
     synthesis["tensions_and_contradictions"] = _section_items(text, "Tensions / contradictions")
     synthesis["implications_for_future_ingest"] = _section_items(text, "Implications for future ingest")
     synthesis["decision_or_takeaway"] = (section_body(text, "Decision / takeaway") or "").strip()
     synthesis["follow_up_questions"] = _section_items(text, "Follow-up questions")
+    synthesis["wiki_placement_note"] = _section_items(text, "Wiki placement note")
     synthesis["related_pages"] = _section_links(text, "Related pages")
     synthesis["source_trace"] = _section_items(text, "Source trace")
     return profile
@@ -196,16 +213,14 @@ def _new_family_profile(
             "bridge_source_stems": bridge_source_stems,
             "integration_note": "",
             "bridge_integration": {"kind": ""},
-            "analysis_blocks": [
-                {"heading": "", "body": "", "purpose": ""},
-                {"heading": "", "body": "", "purpose": ""},
-                {"heading": "", "body": "", "purpose": ""},
-            ],
+            "evidence_map": [],
+            "analysis_blocks": _empty_synthesis_analysis_blocks(),
             "what_this_synthesis_excludes": [],
             "tensions_and_contradictions": [],
             "implications_for_future_ingest": [],
             "decision_or_takeaway": "",
             "follow_up_questions": [],
+            "wiki_placement_note": [],
             "related_pages": [],
             "source_trace": [],
         },
@@ -215,14 +230,12 @@ def _new_family_profile(
             "created": profile_date,
             "summary": "",
             "why_it_matters_here": "",
-            "main_body_blocks": [
-                {"heading": "", "body": ""},
-                {"heading": "", "body": ""},
-                {"heading": "", "body": ""},
-            ],
+            "main_body_blocks": _empty_concept_body_blocks(),
             "scope_boundaries": [],
             "examples_and_non_examples": [],
             "how_to_reuse_this_concept": [],
+            "route_map_for_future_ingest": [],
+            "signals_for_future_ingest": [],
             "focus_source_stems": source_stems[:4],
             "bridge_source_stems": bridge_source_stems,
             "continuity_resolution": {"status": ""},
@@ -315,10 +328,13 @@ def scaffold_profile_bundle(
         },
         "instructions": (
             "Fill family and refresh profiles with mature analysis text. "
+            "Keep the synthesis body wiki-oriented: fill evidence_map rows with channel, sources, "
+            "what_they_show, caveat, and implication, then fill purpose-based analysis blocks "
+            "from Core model through Boundary with cross-source substance, not route justification. "
             "For new families, use synthesis.bridge_source_stems + synthesis.integration_note and "
             "concept.bridge_source_stems + carryover_decision to record source bridge review, but "
-            "write the bridge interpretation directly into concept.main_body_blocks rather than "
-            "adding a separate temporal continuity block. "
+            "write route or bridge interpretation in synthesis.wiki_placement_note and "
+            "concept.main_body_blocks rather than adding dated continuity blocks. "
             "For refreshes, rewrite the full synthesis so bridge and intake evidence are merged into one coherent page."
         ),
         "families": families,

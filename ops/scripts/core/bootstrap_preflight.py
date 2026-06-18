@@ -14,12 +14,14 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.source_revision_runtime import resolve_source_revision
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.source_revision_runtime import resolve_source_revision
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
 else:
+    from .artifact_freshness_mtime_runtime import parse_generated_at
     from .output_runtime import display_path, sanitize_report_text
     from .source_revision_runtime import resolve_source_revision
     from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
@@ -320,10 +322,7 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     generated_at = str(report.get("generated_at", "")).strip()
-    try:
-        generated_dt = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
-    except ValueError:
-        generated_dt = None
+    generated_dt = parse_generated_at(generated_at)
     if generated_dt is not None:
         os.utime(destination, (generated_dt.timestamp(), generated_dt.timestamp()))
     return destination

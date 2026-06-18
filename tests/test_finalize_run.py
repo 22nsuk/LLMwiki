@@ -8,15 +8,18 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.filesystem_runtime import FilesystemTransactionError
-from ops.scripts.finalize_run_runtime import (
+from ops.scripts.core.filesystem_runtime import FilesystemTransactionError
+from ops.scripts.core.promotion_decision_registry_runtime import (
+    attach_decision_contract,
+)
+from ops.scripts.mechanism.finalize_run_runtime import (
     FinalizeRunUsageError,
     FinalizeRunWriteError,
     finalize_run,
 )
-from ops.scripts.finalize_run_write_runtime import build_finalize_atomic_updates
-from ops.scripts.promotion_decision_registry_runtime import attach_decision_contract
-
+from ops.scripts.mechanism.finalize_run_write_runtime import (
+    build_finalize_atomic_updates,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
 
@@ -268,7 +271,7 @@ class FinalizeRunTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "ops.scripts.filesystem_runtime._replace_path",
+                    "ops.scripts.core.filesystem_runtime._replace_path",
                     side_effect=fail_on_planning,
                 ),
                 self.assertRaises(FinalizeRunWriteError),
@@ -331,7 +334,7 @@ class FinalizeRunTests(unittest.TestCase):
                 Path(src).replace(dst)
 
             with (
-                mock.patch("ops.scripts.filesystem_runtime._replace_path", side_effect=fail_on_log),
+                mock.patch("ops.scripts.core.filesystem_runtime._replace_path", side_effect=fail_on_log),
                 self.assertRaises(FinalizeRunWriteError),
             ):
                 finalize_run(vault, "run-atomic-log-fail")

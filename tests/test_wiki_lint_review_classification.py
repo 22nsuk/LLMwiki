@@ -5,12 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.wiki_lint_review_classification import (
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.wiki_lint_review_classification import (
     build_report,
     classify_review_candidates,
 )
-
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-lint-review-classification.schema.json"

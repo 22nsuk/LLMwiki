@@ -9,42 +9,46 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.cyclonedx_sbom import build_bom
-    from ops.scripts.openvex_draft import build_openvex_draft
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.sbom_export_mapping import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        SUPPLY_CHAIN_BENCHMARK_SCHEMA_PATH,
+    )
+    from ops.scripts.supply_chain.cyclonedx_sbom import build_bom
+    from ops.scripts.supply_chain.openvex_draft import build_openvex_draft
+    from ops.scripts.supply_chain.sbom_export_mapping import (
         build_report as build_sbom_export_mapping_report,
     )
-    from ops.scripts.sbom_readiness_gate_runtime import (
+    from ops.scripts.supply_chain.sbom_readiness_gate_runtime import (
         build_gate_report as build_sbom_readiness_gate_report,
     )
-    from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_BENCHMARK_SCHEMA_PATH
-    from ops.scripts.supply_chain_provenance import (
+    from ops.scripts.supply_chain.supply_chain_provenance import (
         build_report as build_supply_chain_provenance_report,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_BENCHMARK_SCHEMA_PATH
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        SUPPLY_CHAIN_BENCHMARK_SCHEMA_PATH,
+    )
 
     from .cyclonedx_sbom import build_bom
     from .openvex_draft import build_openvex_draft
@@ -149,12 +153,12 @@ def build_report(
         resolved_policy_path=resolved_policy_path,
         schema_path=SUPPLY_CHAIN_BENCHMARK_SCHEMA_PATH,
         source_paths=[
-            "ops/scripts/supply_chain_benchmark.py",
-            "ops/scripts/supply_chain_provenance.py",
-            "ops/scripts/sbom_export_mapping.py",
-            "ops/scripts/sbom_readiness_gate_runtime.py",
-            "ops/scripts/cyclonedx_sbom.py",
-            "ops/scripts/openvex_draft.py",
+            "ops/scripts/supply_chain/supply_chain_benchmark.py",
+            "ops/scripts/supply_chain/supply_chain_provenance.py",
+            "ops/scripts/supply_chain/sbom_export_mapping.py",
+            "ops/scripts/supply_chain/sbom_readiness_gate_runtime.py",
+            "ops/scripts/supply_chain/cyclonedx_sbom.py",
+            "ops/scripts/supply_chain/openvex_draft.py",
         ],
         text_inputs={
             "strict_elapsed": str(strict_elapsed),

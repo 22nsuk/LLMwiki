@@ -5,8 +5,13 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.executor_noop_runtime import EXECUTOR_NOOP_MUTATION_FAILURE_MARKER
-
+from ops.scripts.core.artifact_freshness_payload_runtime import (
+    embed_artifact_envelope_metadata,
+)
+from ops.scripts.core.executor_noop_runtime import (
+    EXECUTOR_NOOP_MUTATION_FAILURE_MARKER,
+    executor_noop_mutation_failure_message,
+)
 from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
     OPEN_DECISION_STATUS,
@@ -15,6 +20,7 @@ from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
 )
 from ops.scripts.mechanism.next_run_repair_queue_runtime import (
+    SOURCE_SESSION_REPORT_DECISION_KEY,
     open_carry_forward_decisions,
 )
 from tests.test_mechanism_assess import seed_policy
@@ -81,6 +87,180 @@ def test_open_carry_forward_decisions_suppresses_consumed_ids_only() -> None:
     ]
 
 
+def test_open_carry_forward_decisions_suppresses_all_missing_leaf_evidence() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    evidence_paths=[
+                        "runs/missing-run/run-telemetry.json",
+                        "runs/missing-run/reviewer-executor-report.json",
+                    ]
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_keeps_structural_missing_leaf_evidence_with_source_session_report() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        session_report = "ops/reports/auto-improve-sessions/session-a.json"
+        (vault / session_report).parent.mkdir(parents=True)
+        (vault / session_report).write_text('{"next_run_decisions": []}\n', encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    evidence_paths=[
+                        "runs/missing-run/run-telemetry.json",
+                        "runs/missing-run/promotion-report.json",
+                    ],
+                    **{SOURCE_SESSION_REPORT_DECISION_KEY: session_report},
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert [decision["decision_id"] for decision in open_decisions] == [
+            "next-run-decision:run-1"
+        ]
+
+
+def test_open_carry_forward_decisions_suppresses_source_after_noop_repair_attempt() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        primary_target = "ops/scripts/mechanism/auto_improve_loop.py"
+        source_run_id = "run-source"
+        source_evidence = vault / "runs" / source_run_id / "worker-executor-report.json"
+        source_evidence.parent.mkdir(parents=True, exist_ok=True)
+        source_evidence.write_text("{}", encoding="utf-8")
+        noop_run_id = "run-noop"
+        noop_run = vault / "runs" / noop_run_id
+        noop_run.mkdir(parents=True, exist_ok=True)
+        (noop_run / "mutation-command.stderr.txt").write_text(
+            executor_noop_mutation_failure_message("worker", [primary_target]),
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    decision_id="next-run-decision:source",
+                    observed_at="2026-01-01T00:00:00Z",
+                    proposal_family="queue_unblock",
+                    proposal_id="recent_log_overlap_queue_blocked__auto-improve-loop",
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-loop__repo-health-blocked"
+                    ),
+                    source_run_id=source_run_id,
+                    primary_targets=[primary_target],
+                    failure_taxonomy="repo_health_blocked",
+                    evidence_paths=[
+                        f"runs/{source_run_id}/worker-executor-report.json"
+                    ],
+                ),
+                _carry_forward_decision(
+                    decision_id="next-run-decision:noop",
+                    observed_at="2026-01-02T00:00:00Z",
+                    proposal_family="next_run_failure_repair",
+                    proposal_id=(
+                        "next_run_failure_repair__auto-improve-loop__repo-health-blocked"
+                    ),
+                    source_candidate_id="next-run-decision:source",
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-loop__mutation-failed"
+                    ),
+                    source_run_id=noop_run_id,
+                    primary_targets=[primary_target],
+                    failure_taxonomy="mutation_failed",
+                    evidence_paths=[
+                        f"runs/{noop_run_id}/mutation-command.stderr.txt"
+                    ],
+                ),
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_keeps_partially_present_leaf_evidence() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        evidence_path = vault / "runs" / "run-a" / "run-telemetry.json"
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text("{}", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    evidence_paths=[
+                        "runs/run-a/run-telemetry.json",
+                        "runs/run-a/reviewer-executor-report.json",
+                    ]
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert [decision["decision_id"] for decision in open_decisions] == [
+            "next-run-decision:run-1"
+        ]
+
+
+def test_open_carry_forward_decisions_keeps_latest_surviving_decision_per_target() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        target_proposal_id = "next_run_failure_repair__target__review-blocked"
+        older_evidence = vault / "runs" / "older-run" / "worker-executor-report.json"
+        older_evidence.parent.mkdir(parents=True, exist_ok=True)
+        older_evidence.write_text("{}", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    decision_id="next-run-decision:older",
+                    observed_at="2026-01-01T00:00:00Z",
+                    source_run_id="older-run",
+                    target_proposal_id=target_proposal_id,
+                    evidence_paths=[
+                        "runs/older-run/worker-executor-report.json",
+                    ],
+                ),
+                _carry_forward_decision(
+                    decision_id="next-run-decision:newer-missing-evidence",
+                    observed_at="2026-01-02T00:00:00Z",
+                    source_run_id="newer-run",
+                    target_proposal_id=target_proposal_id,
+                    evidence_paths=[
+                        "runs/newer-run/worker-executor-report.json",
+                    ],
+                ),
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert [decision["decision_id"] for decision in open_decisions] == [
+            "next-run-decision:older"
+        ]
+
+
 def test_open_carry_forward_decisions_suppresses_superseded_queue_rotation() -> None:
     open_decisions = open_carry_forward_decisions(
         [
@@ -88,6 +268,23 @@ def test_open_carry_forward_decisions_suppresses_superseded_queue_rotation() -> 
                 failure_taxonomy="mutation_failed",
                 proposal_family="queue_unblock",
                 proposal_id="recent_log_overlap_queue_blocked__old",
+            )
+        ],
+        current_proposal_ids={"recent_log_overlap_queue_blocked__current"},
+        recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+        recent_log_overlap_unblock_family="queue_unblock",
+    )
+
+    assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_superseded_queue_validation() -> None:
+    open_decisions = open_carry_forward_decisions(
+        [
+            _carry_forward_decision(
+                failure_taxonomy="validation_blocked",
+                proposal_family="queue_unblock",
+                proposal_id="recent_log_overlap_queue_blocked__retired",
             )
         ],
         current_proposal_ids={"recent_log_overlap_queue_blocked__current"},
@@ -139,9 +336,235 @@ def test_open_carry_forward_decisions_suppresses_resolved_structural_budget() ->
             [
                 _carry_forward_decision(
                     failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="next_run_failure_repair",
+                    proposal_id=(
+                        "next_run_failure_repair__auto-improve-readiness-runtime__"
+                        "repo-health-blocked"
+                    ),
                     primary_targets=[target],
                     target_proposal_id=(
                         "next_run_failure_repair__auto-improve-readiness-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_keeps_contract_structural_without_source_change_evidence() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def persist():\n    return True\n", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="contract_regression_signals",
+                    proposal_id=(
+                        "repeated_same_eval_after_promote__"
+                        "auto-improve-iteration-persistence-runtime"
+                    ),
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert [
+            decision["target_proposal_id"] for decision in open_decisions
+        ] == [
+            "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+            "structural-complexity-non-regression"
+        ]
+
+
+def test_open_carry_forward_decisions_suppresses_contract_structural_after_source_change() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def persist():\n    return True\n", encoding="utf-8")
+        source_run_id = "run-structural-contract-repair"
+        telemetry_path = vault / "runs" / source_run_id / "run-telemetry.json"
+        telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+        telemetry_path.write_text(
+            json.dumps(
+                embed_artifact_envelope_metadata(
+                    {"run_id": source_run_id},
+                    {
+                        "artifact_kind": "run_telemetry",
+                        "source_revision": "old",
+                        "source_tree_fingerprint": "old-tree",
+                    },
+                ),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="contract_regression_signals",
+                    proposal_id=(
+                        "repeated_same_eval_after_promote__"
+                        "auto-improve-iteration-persistence-runtime"
+                    ),
+                    source_run_id=source_run_id,
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                    evidence_paths=[f"runs/{source_run_id}/run-telemetry.json"],
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_worker_structural_preflight_when_current_budget_clean() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def persist():\n    return True\n", encoding="utf-8")
+        source_run_id = "run-worker-structural-preflight"
+        run_dir = vault / "runs" / source_run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "mutation-command.stderr.txt").write_text(
+            "worker structural complexity preflight blocked before reviewer/validator/auditor execution\n",
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="mutation_failed",
+                    proposal_family="contract_regression_signals",
+                    proposal_id=(
+                        "repeated_same_eval_after_promote__"
+                        "auto-improve-iteration-persistence-runtime"
+                    ),
+                    source_run_id=source_run_id,
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+                        "mutation-failed"
+                    ),
+                    evidence_paths=[
+                        f"runs/{source_run_id}/mutation-command.stderr.txt",
+                    ],
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_contract_structural_after_source_session_report_change() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def persist():\n    return True\n", encoding="utf-8")
+        session_report = "ops/reports/auto-improve-sessions/session-a.json"
+        session_report_path = vault / session_report
+        session_report_path.parent.mkdir(parents=True, exist_ok=True)
+        session_report_path.write_text(
+            json.dumps(
+                embed_artifact_envelope_metadata(
+                    {"session_id": "session-a", "next_run_decisions": []},
+                    {
+                        "artifact_kind": "auto_improve_session",
+                        "source_revision": "old",
+                        "source_tree_fingerprint": "old-tree",
+                    },
+                ),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="contract_regression_signals",
+                    proposal_id=(
+                        "repeated_same_eval_after_promote__"
+                        "auto-improve-iteration-persistence-runtime"
+                    ),
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__"
+                        "structural-complexity-non-regression"
+                    ),
+                    evidence_paths=[
+                        "runs/missing-run/run-telemetry.json",
+                        "runs/missing-run/promotion-report.json",
+                    ],
+                    **{SOURCE_SESSION_REPORT_DECISION_KEY: session_report},
+                )
+            ],
+            vault=vault,
+            recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+            recent_log_overlap_unblock_family="queue_unblock",
+        )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_clean_queue_unblock_structural() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        seed_policy(vault)
+        target = "ops/scripts/mechanism/auto_improve_execute_runtime.py"
+        target_path = vault / target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text("def execute():\n    return True\n", encoding="utf-8")
+
+        open_decisions = open_carry_forward_decisions(
+            [
+                _carry_forward_decision(
+                    failure_taxonomy="structural_complexity_non_regression",
+                    proposal_family="queue_unblock",
+                    proposal_id="recent_log_overlap_queue_blocked__auto-improve-execute-runtime",
+                    primary_targets=[target],
+                    target_proposal_id=(
+                        "next_run_failure_repair__auto-improve-execute-runtime__"
                         "structural-complexity-non-regression"
                     ),
                 )
@@ -236,6 +659,69 @@ def test_open_carry_forward_decisions_suppresses_resolved_repo_health_generated_
                         "path": "runs/old-run/command-log-summary.json",
                         "issues": ["missing_artifact_envelope", "unknown_currentness"],
                         "recommended_next_action": "backfill_artifact_envelope",
+                    }
+                ],
+            },
+        ):
+            open_decisions = open_carry_forward_decisions(
+                [
+                    _carry_forward_decision(
+                        failure_taxonomy="repo_health_blocked",
+                        proposal_family="next_run_failure_repair",
+                        proposal_id=(
+                            "next_run_failure_repair__target__"
+                            "repo-health-blocked"
+                        ),
+                        source_run_id=source_run_id,
+                    )
+                ],
+                vault=vault,
+                recent_log_overlap_unblock_failure_mode="recent_log_overlap_queue_blocked",
+                recent_log_overlap_unblock_family="queue_unblock",
+            )
+
+        assert open_decisions == []
+
+
+def test_open_carry_forward_decisions_suppresses_stale_run_artifact_schema_debt() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        source_run_id = "run-repo-health-run-artifact-schema-debt"
+        report_path = vault / "runs" / source_run_id / "repo-health-artifact-freshness-report-check.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(
+            json.dumps(
+                {
+                    "status": "fail",
+                    "source_tree_fingerprint": "candidate-workspace-fingerprint",
+                    "recommended_next_action": "regenerate_schema_invalid_artifacts",
+                    "top_debt_files": [
+                        {
+                            "path": "runs/old-run/run-telemetry.json",
+                            "issues": ["schema_validation_failed"],
+                            "recommended_next_action": "regenerate_canonical_report",
+                        },
+                        {
+                            "path": "runs/old-run/promotion-report.json",
+                            "issues": ["missing_artifact_envelope", "unknown_currentness"],
+                            "recommended_next_action": "backfill_artifact_envelope",
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with mock.patch(
+            "ops.scripts.mechanism.next_run_repair_queue_runtime."
+            "_current_artifact_freshness_report",
+            return_value={
+                "status": "attention",
+                "top_debt_files": [
+                    {
+                        "path": "ops/reports/generated-artifact-index.json",
+                        "issues": ["source_tree_fingerprint_mismatch"],
+                        "recommended_next_action": "regenerate_canonical_report",
                     }
                 ],
             },

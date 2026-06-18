@@ -5,11 +5,11 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any, TypedDict
 
-from ops.scripts.observability_artifacts_shared_runtime import (
+from ops.scripts.core.observability_artifacts_shared_runtime import (
     resolve_run_artifact_rel,
     run_artifact_glob_rels,
 )
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_outcome,
     decision_record_from_report,

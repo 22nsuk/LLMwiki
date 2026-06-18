@@ -4,15 +4,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy, required_sections_from_policy
-from ops.scripts.wiki_page_runtime import (
+from ops.scripts.core.policy_runtime import load_policy, required_sections_from_policy
+from ops.scripts.eval.wiki_page_runtime import (
     discover_pages,
     heading_body,
     open_question_severity_counts,
     required_sections_for_page,
     source_trace_item_count,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

@@ -10,23 +10,32 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     resolve_schema_backed_report_output_path,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.wiki_manifest import build_manifest, release_manifest_excludes_path
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.eval.wiki_manifest import (
+    build_manifest,
+    release_manifest_excludes_path,
+)
 
+from .finality_current_diagnostics import classify_batch_replay_digest_mismatches
 from .release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
     release_authority_vocabulary_payload,
+)
+from .release_closeout_batch_manifest_zip_runtime import (
+    DEFAULT_ZIP_TIMESTAMP_TIMEZONE,
+    zip_manifest,
+    zip_member_mtimes,
+    zip_member_timestamp_semantics,
 )
 from .release_status_v2 import (
     decide_legacy_strict_clean_sealed_status,
@@ -43,7 +52,6 @@ FINALITY_ATTESTATION_PATH = "ops/reports/release-closeout-finality-attestation.j
 SOURCE_EVIDENCE_PATH_LIMIT = 50
 FILESYSTEM_MTIME_BASIS = "filesystem_mtime"
 ZIP_MEMBER_TIMESTAMP_BASIS = "zip_member_timestamp"
-DEFAULT_ZIP_TIMESTAMP_TIMEZONE = "UTC"
 LOCAL_WORKSPACE_PROFILE = "local_workspace"
 SOURCE_CONTENT_PACKAGE_PROFILE = "source_content_package"
 AUDIT_PACK_TARGET = "release-audit-pack"
@@ -243,65 +251,6 @@ def _mtime_iso_z(path: Path) -> str:
     )
 
 
-def _timezone_for_zip_timestamps(name: str) -> dt.tzinfo:
-    value = str(name).strip() or DEFAULT_ZIP_TIMESTAMP_TIMEZONE
-    if value.upper() == "UTC":
-        return dt.UTC
-    try:
-        return ZoneInfo(value)
-    except ZoneInfoNotFoundError:
-        return dt.UTC
-
-
-def _zip_info_mtime_iso_z(info: zipfile.ZipInfo, *, timezone_assumption: str) -> str:
-    local_tz = _timezone_for_zip_timestamps(timezone_assumption)
-    timestamp = dt.datetime(*info.date_time, tzinfo=local_tz)
-    return (
-        timestamp.astimezone(dt.UTC)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
-
-
-def _normalize_zip_member_path(path: str) -> str:
-    normalized = path.replace("\\", "/").lstrip("/")
-    while normalized.startswith("./"):
-        normalized = normalized[2:]
-    return normalized
-
-
-def _zip_member_mtimes(
-    zip_metadata_path: Path, *, timezone_assumption: str
-) -> dict[str, str]:
-    mtimes: dict[str, str] = {}
-    with zipfile.ZipFile(zip_metadata_path) as archive:
-        for info in archive.infolist():
-            rel_path = _normalize_zip_member_path(info.filename)
-            if not rel_path or rel_path.endswith("/"):
-                continue
-            mtime = _zip_info_mtime_iso_z(
-                info,
-                timezone_assumption=timezone_assumption,
-            )
-            candidates = [rel_path]
-            if "/" in rel_path:
-                candidates.append(rel_path.split("/", 1)[1])
-            for candidate in candidates:
-                current = mtimes.get(candidate)
-                if current is None or mtime > current:
-                    mtimes[candidate] = mtime
-    return mtimes
-
-
-def _zip_member_timestamp_semantics(zip_metadata_path: Path) -> str:
-    with zipfile.ZipFile(zip_metadata_path) as archive:
-        timestamps = {
-            info.date_time for info in archive.infolist() if not info.is_dir()
-        }
-    return _zip_timestamp_semantics(timestamps)
-
-
 def _manifest_file_digest(manifest: dict[str, Any]) -> str:
     files = [
         {
@@ -314,74 +263,6 @@ def _manifest_file_digest(manifest: dict[str, Any]) -> str:
     ]
     files.sort(key=lambda item: str(item["path"]))
     return _sha256_json({"files": files})
-
-
-def _root_prefix_for_members(names: list[str]) -> str:
-    first_parts = {name.split("/", 1)[0] for name in names if name and "/" in name}
-    if len(first_parts) != 1:
-        return ""
-    prefix = next(iter(first_parts))
-    return prefix if all(name.startswith(f"{prefix}/") for name in names) else ""
-
-
-def _strip_zip_root_prefix(name: str, root_prefix: str) -> str:
-    if root_prefix and name.startswith(f"{root_prefix}/"):
-        return name.split("/", 1)[1]
-    return name
-
-
-def _zip_timestamp_text(value: tuple[int, int, int, int, int, int] | None) -> str:
-    if value is None:
-        return ""
-    year, month, day, hour, minute, second = value
-    return f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:{second:02d}"
-
-
-def _zip_timestamp_semantics(
-    timestamps: set[tuple[int, int, int, int, int, int]],
-) -> str:
-    if not timestamps:
-        return "not_applicable"
-    if timestamps == {(1980, 1, 1, 0, 0, 0)}:
-        return "normalized_archive_timestamp"
-    return "archive_member_timestamp"
-
-
-def _zip_manifest(zip_path: Path) -> dict[str, Any]:
-    with zipfile.ZipFile(zip_path) as archive:
-        infos = archive.infolist()
-        file_infos = [info for info in infos if not info.is_dir()]
-        normalized_names = [
-            _normalize_zip_member_path(info.filename) for info in file_infos
-        ]
-        root_prefix = _root_prefix_for_members(normalized_names)
-        files = []
-        timestamps = {info.date_time for info in file_infos}
-        for info, normalized_name in zip(file_infos, normalized_names, strict=True):
-            rel_path = _strip_zip_root_prefix(normalized_name, root_prefix)
-            content = archive.read(info.filename)
-            files.append(
-                {
-                    "path": rel_path,
-                    "sha256": hashlib.sha256(content).hexdigest(),
-                    "size_bytes": len(content),
-                }
-            )
-        files.sort(key=lambda item: str(item["path"]))
-        timestamp_min = min(timestamps) if timestamps else None
-        timestamp_max = max(timestamps) if timestamps else None
-        return {
-            "files": files,
-            "root_prefix": root_prefix,
-            "entry_count": len(infos),
-            "file_count": len(file_infos),
-            "directory_entry_count": len(infos) - len(file_infos),
-            "uncompressed_size_bytes": sum(info.file_size for info in file_infos),
-            "timestamp_unique_count": len(timestamps),
-            "timestamp_min": _zip_timestamp_text(timestamp_min),
-            "timestamp_max": _zip_timestamp_text(timestamp_max),
-            "timestamp_semantics": _zip_timestamp_semantics(timestamps),
-        }
 
 
 def _resolve_optional_zip_path(vault: Path, raw_path: Path | None) -> Path | None:
@@ -441,7 +322,7 @@ def _distribution_package(
         )
         return base
     try:
-        archive_manifest = _zip_manifest(resolved_zip_path)
+        archive_manifest = zip_manifest(resolved_zip_path)
     except (OSError, zipfile.BadZipFile):
         base.update(
             {
@@ -697,11 +578,11 @@ def _source_evidence_freshness(
         if not resolved_zip_metadata_path.is_absolute():
             resolved_zip_metadata_path = (vault / resolved_zip_metadata_path).resolve()
         try:
-            zip_mtimes = _zip_member_mtimes(
+            zip_mtimes = zip_member_mtimes(
                 resolved_zip_metadata_path,
                 timezone_assumption=zip_timestamp_timezone,
             )
-            timestamp_semantics = _zip_member_timestamp_semantics(
+            timestamp_semantics = zip_member_timestamp_semantics(
                 resolved_zip_metadata_path
             )
         except (OSError, zipfile.BadZipFile):
@@ -1642,6 +1523,15 @@ def _check_manifest(
             print(f"- {item['path']}: mtime {item['mtime']}", file=sys.stderr)
         for rel_path in existing_source_freshness.get("missing_zip_members", []):
             print(f"- {rel_path}: missing from ZIP metadata", file=sys.stderr)
+    if digest_mismatches or not content_matches or not source_freshness_passes:
+        classification = classify_batch_replay_digest_mismatches(
+            vault,
+            digest_mismatches,
+            source_freshness=existing_source_freshness,
+            content_matches=content_matches,
+        )
+    else:
+        classification = {}
     if digest_mismatches:
         print("artifact digest mismatches:", file=sys.stderr)
         for item in digest_mismatches:
@@ -1651,6 +1541,18 @@ def _check_manifest(
                 f"- {item['path']}: expected {expected[:12]}..., actual {actual[:12]}...",
                 file=sys.stderr,
             )
+    if classification:
+        print(
+            "batch manifest replay mismatch classification:",
+            file=sys.stderr,
+        )
+        print(
+            json.dumps(
+                classification,
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
     return 1
 
 

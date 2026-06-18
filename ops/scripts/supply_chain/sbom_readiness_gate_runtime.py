@@ -9,30 +9,34 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.sbom_export_mapping import (
-        build_report as build_sbom_export_mapping_report,
-    )
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         SBOM_READINESS_GATE_REPORT_SCHEMA_PATH,
     )
+    from ops.scripts.supply_chain.sbom_export_mapping import (
+        build_report as build_sbom_export_mapping_report,
+    )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         SBOM_READINESS_GATE_REPORT_SCHEMA_PATH,
     )
 
@@ -161,8 +165,8 @@ def build_gate_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=GATE_REPORT_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/sbom_readiness_gate_runtime.py",
-                "ops/scripts/sbom_export_mapping.py",
+                "ops/scripts/supply_chain/sbom_readiness_gate_runtime.py",
+                "ops/scripts/supply_chain/sbom_export_mapping.py",
             ],
             file_inputs={"sbom_mapping_report": SBOM_MAPPING_REPORT_REL_PATH},
             text_inputs={"refresh_mapping": str(refresh_mapping)},

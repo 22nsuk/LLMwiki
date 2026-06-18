@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.subagent_routing_runtime import score_band_name
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.subagent_routing_runtime import score_band_name
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LIVE_POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
@@ -354,6 +354,7 @@ class PolicyRuntimeTest(unittest.TestCase):
                 "lint_improves",
                 "structural_complexity_non_regression",
                 "structural_complexity_improves",
+                "structural_regression_debt",
                 "tests_non_regression",
                 "tests_increase",
                 "complexity_profile_score",
@@ -389,6 +390,35 @@ class PolicyRuntimeTest(unittest.TestCase):
                 "severity": "blocker",
                 "summary_template": "Behavior-delta presence gate emitted {statuses}: {details}",
             },
+        )
+        self.assertEqual(
+            mechanism_rule_metadata["candidate_eval_pass"]["artifact_dependencies"],
+            ["baseline_eval_report", "candidate_eval_report"],
+        )
+        self.assertEqual(
+            mechanism_rule_metadata["candidate_eval_pass"]["summary_template"],
+            "Global eval non-regression guard emitted {statuses}: {details}",
+        )
+        self.assertEqual(
+            mechanism_rule_metadata["eval_score_improves"],
+            {
+                "artifact_dependencies": [
+                    "baseline_mechanism_contract_eval_report",
+                    "candidate_mechanism_contract_eval_report",
+                ],
+                "reducer": "status_fail_discard",
+                "severity": "blocker",
+                "summary_template": (
+                    "Mechanism contract eval score comparison emitted {statuses}: {details}"
+                ),
+            },
+        )
+        self.assertEqual(
+            mechanism_rule_metadata["equal_score_secondary_eligibility"]["artifact_dependencies"][:2],
+            [
+                "baseline_mechanism_contract_eval_report",
+                "candidate_mechanism_contract_eval_report",
+            ],
         )
         self.assertEqual(
             mechanism_rule_metadata["lint_non_regression"]["reducer"],

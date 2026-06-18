@@ -71,6 +71,54 @@ class TimedProcessResult:
     observation_mode: str = "communicate"
 
 
+@dataclass(frozen=True)
+class RunWithTimeoutRequest:
+    argv: Sequence[str]
+    cwd: Path
+    timeout_seconds: int
+    input_text: str | None = None
+    backend: ProcessBackend | None = None
+    grace_seconds: float = TIMEOUT_GRACE_SECONDS
+    env: Mapping[str, str] | None = None
+    hermetic: bool = False
+    heartbeat_interval_seconds: int | None = None
+    heartbeat_callback: CommandHeartbeatCallback | None = None
+    monotonic_clock: Callable[[], float] | None = None
+
+
+@dataclass(frozen=True)
+class _CompletedProcessResultInputs:
+    argv_list: list[str]
+    process: ProcessHandle
+    stdout: object
+    stderr: object
+    timeout_seconds: int
+    timed_out: bool
+    termination_reason: str
+    signal_sent: str
+    final_state_observed: str
+    launch_latency_seconds: float = 0.0
+    heartbeat_count: int = 0
+    heartbeat_interval_seconds: int = 0
+    quiet_seconds: int = 0
+    last_stdout_at: str = ""
+    last_stderr_at: str = ""
+    last_artifact_touch_at: str = ""
+    observation_mode: str = "communicate"
+
+
+@dataclass(frozen=True)
+class _RunWithTimeoutState:
+    request: RunWithTimeoutRequest
+    argv_list: list[str]
+    process: ProcessHandle
+    active_backend: ProcessBackend
+    active_heartbeat_interval: int | None
+    heartbeat_state: _HeartbeatState
+    launch_latency_seconds: float
+    observation_mode: str
+
+
 class ProcessHandle(Protocol):
     pid: int
     returncode: int | None
@@ -320,51 +368,39 @@ def _python_minus_s_command(argv_list: list[str]) -> list[str]:
 
 
 def _result_from_completed_process(
-    *,
-    argv_list: list[str],
-    process: ProcessHandle,
-    stdout: object,
-    stderr: object,
-    timeout_seconds: int,
-    timed_out: bool,
-    termination_reason: str,
-    signal_sent: str,
-    final_state_observed: str,
-    launch_latency_seconds: float = 0.0,
-    heartbeat_count: int = 0,
-    heartbeat_interval_seconds: int = 0,
-    quiet_seconds: int = 0,
-    last_stdout_at: str = "",
-    last_stderr_at: str = "",
-    last_artifact_touch_at: str = "",
-    observation_mode: str = "communicate",
+    inputs: _CompletedProcessResultInputs,
 ) -> TimedProcessResult:
-    normalized_stdout = _normalize_output(stdout)
-    normalized_stderr = _normalize_output(stderr)
-    normalized_quiet_seconds = quiet_seconds
-    if normalized_quiet_seconds == 0 and timed_out and not normalized_stdout and not normalized_stderr:
-        normalized_quiet_seconds = timeout_seconds
+    normalized_stdout = _normalize_output(inputs.stdout)
+    normalized_stderr = _normalize_output(inputs.stderr)
+    normalized_quiet_seconds = inputs.quiet_seconds
+    if (
+        normalized_quiet_seconds == 0
+        and inputs.timed_out
+        and not normalized_stdout
+        and not normalized_stderr
+    ):
+        normalized_quiet_seconds = inputs.timeout_seconds
     return TimedProcessResult(
-        args=argv_list,
-        returncode=process.returncode if process.returncode is not None else -1,
+        args=inputs.argv_list,
+        returncode=inputs.process.returncode if inputs.process.returncode is not None else -1,
         stdout=normalized_stdout,
         stderr=normalized_stderr,
-        timed_out=timed_out,
-        timeout_seconds=timeout_seconds,
-        termination_reason=termination_reason,
+        timed_out=inputs.timed_out,
+        timeout_seconds=inputs.timeout_seconds,
+        termination_reason=inputs.termination_reason,
         launch_succeeded=True,
-        signal_sent=signal_sent,
-        final_state_observed=final_state_observed,
-        stdout_received=stdout is not None,
-        stderr_received=stderr is not None,
-        launch_latency_seconds=launch_latency_seconds,
-        heartbeat_count=heartbeat_count,
-        heartbeat_interval_seconds=heartbeat_interval_seconds,
+        signal_sent=inputs.signal_sent,
+        final_state_observed=inputs.final_state_observed,
+        stdout_received=inputs.stdout is not None,
+        stderr_received=inputs.stderr is not None,
+        launch_latency_seconds=inputs.launch_latency_seconds,
+        heartbeat_count=inputs.heartbeat_count,
+        heartbeat_interval_seconds=inputs.heartbeat_interval_seconds,
         quiet_seconds=normalized_quiet_seconds,
-        last_stdout_at=last_stdout_at,
-        last_stderr_at=last_stderr_at,
-        last_artifact_touch_at=last_artifact_touch_at,
-        observation_mode=observation_mode,
+        last_stdout_at=inputs.last_stdout_at,
+        last_stderr_at=inputs.last_stderr_at,
+        last_artifact_touch_at=inputs.last_artifact_touch_at,
+        observation_mode=inputs.observation_mode,
     )
 
 
@@ -544,19 +580,222 @@ def _install_parent_signal_cleanup(
     return restore
 
 
-def run_with_timeout(
-    argv: Sequence[str],
+def _coerce_run_with_timeout_request(
+    request: RunWithTimeoutRequest | Sequence[str] | None,
+    legacy_kwargs: dict[str, object],
+) -> RunWithTimeoutRequest:
+    if isinstance(request, RunWithTimeoutRequest):
+        if legacy_kwargs:
+            names = ", ".join(sorted(legacy_kwargs))
+            raise TypeError(f"request cannot be combined with legacy keyword arguments: {names}")
+        return request
+
+    argv = legacy_kwargs.pop("argv") if request is None and "argv" in legacy_kwargs else request
+    if argv is None:
+        raise TypeError("run_with_timeout() missing required argument: 'argv'")
+    if "cwd" not in legacy_kwargs:
+        raise TypeError("run_with_timeout() missing required keyword argument: 'cwd'")
+    if "timeout_seconds" not in legacy_kwargs:
+        raise TypeError("run_with_timeout() missing required keyword argument: 'timeout_seconds'")
+
+    cwd = legacy_kwargs.pop("cwd")
+    timeout_seconds = legacy_kwargs.pop("timeout_seconds")
+    request_kwargs = {
+        "input_text": legacy_kwargs.pop("input_text", None),
+        "backend": legacy_kwargs.pop("backend", None),
+        "grace_seconds": legacy_kwargs.pop("grace_seconds", TIMEOUT_GRACE_SECONDS),
+        "env": legacy_kwargs.pop("env", None),
+        "hermetic": legacy_kwargs.pop("hermetic", False),
+        "heartbeat_interval_seconds": legacy_kwargs.pop("heartbeat_interval_seconds", None),
+        "heartbeat_callback": legacy_kwargs.pop("heartbeat_callback", None),
+        "monotonic_clock": legacy_kwargs.pop("monotonic_clock", None),
+    }
+    if legacy_kwargs:
+        names = ", ".join(sorted(legacy_kwargs))
+        raise TypeError(f"run_with_timeout() got unexpected keyword argument(s): {names}")
+    return RunWithTimeoutRequest(
+        argv=cast(Sequence[str], argv),
+        cwd=cast(Path, cwd),
+        timeout_seconds=cast(int, timeout_seconds),
+        input_text=cast(str | None, request_kwargs["input_text"]),
+        backend=cast(ProcessBackend | None, request_kwargs["backend"]),
+        grace_seconds=cast(float, request_kwargs["grace_seconds"]),
+        env=cast(Mapping[str, str] | None, request_kwargs["env"]),
+        hermetic=cast(bool, request_kwargs["hermetic"]),
+        heartbeat_interval_seconds=cast(int | None, request_kwargs["heartbeat_interval_seconds"]),
+        heartbeat_callback=cast(CommandHeartbeatCallback | None, request_kwargs["heartbeat_callback"]),
+        monotonic_clock=cast(Callable[[], float] | None, request_kwargs["monotonic_clock"]),
+    )
+
+
+def _validate_run_with_timeout_request(request: RunWithTimeoutRequest) -> None:
+    if request.timeout_seconds < 1:
+        raise ValueError("timeout_seconds must be >= 1")
+    if request.heartbeat_interval_seconds is not None and request.heartbeat_interval_seconds < 1:
+        raise ValueError("heartbeat_interval_seconds must be >= 1")
+
+
+def _start_run_with_timeout(
+    request: RunWithTimeoutRequest,
+    monotonic: Callable[[], float],
+) -> _RunWithTimeoutState:
+    argv_list = [str(item) for item in request.argv]
+    observation_mode = "process_heartbeat" if request.heartbeat_callback is not None else "communicate"
+    active_heartbeat_interval = request.heartbeat_interval_seconds
+    if request.heartbeat_callback is not None and active_heartbeat_interval is None:
+        active_heartbeat_interval = request.timeout_seconds
+    subprocess_env: Mapping[str, str] | None = request.env
+    if request.hermetic:
+        argv_list = _python_minus_s_command(argv_list)
+        subprocess_env = _clean_subprocess_env(request.env)
+    active_backend = request.backend or _default_backend()
+    launch_start = monotonic()
+    process = active_backend.start(
+        argv_list,
+        cwd=request.cwd,
+        input_text=request.input_text,
+        env=subprocess_env,
+    )
+    return _RunWithTimeoutState(
+        request=request,
+        argv_list=argv_list,
+        process=process,
+        active_backend=active_backend,
+        active_heartbeat_interval=active_heartbeat_interval,
+        heartbeat_state=_HeartbeatState(),
+        launch_latency_seconds=monotonic() - launch_start,
+        observation_mode=observation_mode,
+    )
+
+
+def _result_inputs_from_state(
+    state: _RunWithTimeoutState,
     *,
-    cwd: Path,
-    timeout_seconds: int,
-    input_text: str | None = None,
-    backend: ProcessBackend | None = None,
-    grace_seconds: float = TIMEOUT_GRACE_SECONDS,
-    env: Mapping[str, str] | None = None,
-    hermetic: bool = False,
-    heartbeat_interval_seconds: int | None = None,
-    heartbeat_callback: CommandHeartbeatCallback | None = None,
-    monotonic_clock: Callable[[], float] | None = None,
+    stdout: object,
+    stderr: object,
+    timed_out: bool,
+    termination_reason: str,
+    signal_sent: str,
+    final_state_observed: str,
+) -> _CompletedProcessResultInputs:
+    return _CompletedProcessResultInputs(
+        argv_list=state.argv_list,
+        process=state.process,
+        stdout=stdout,
+        stderr=stderr,
+        timeout_seconds=state.request.timeout_seconds,
+        timed_out=timed_out,
+        termination_reason=termination_reason,
+        signal_sent=signal_sent,
+        final_state_observed=final_state_observed,
+        launch_latency_seconds=state.launch_latency_seconds,
+        heartbeat_count=state.heartbeat_state.heartbeat_count,
+        heartbeat_interval_seconds=state.active_heartbeat_interval or 0,
+        quiet_seconds=state.heartbeat_state.quiet_seconds,
+        observation_mode=state.observation_mode,
+    )
+
+
+def _completed_run_result(
+    state: _RunWithTimeoutState,
+    *,
+    stdout: object,
+    stderr: object,
+    final_state_observed: str,
+) -> TimedProcessResult:
+    return _result_from_completed_process(
+        _result_inputs_from_state(
+            state,
+            stdout=stdout,
+            stderr=stderr,
+            timed_out=False,
+            termination_reason="completed",
+            signal_sent="none",
+            final_state_observed=final_state_observed,
+        )
+    )
+
+
+def _timeout_expired_run_result(state: _RunWithTimeoutState) -> TimedProcessResult:
+    returncode = _poll_returncode(state.process)
+    if returncode is not None:
+        stdout, stderr = state.process.communicate()
+        return _completed_run_result(
+            state,
+            stdout=stdout,
+            stderr=stderr,
+            final_state_observed="poll_before_signal",
+        )
+    stdout, stderr, signal_sent, final_state_observed = _finalize_timed_out_process(
+        state.process,
+        backend=state.active_backend,
+        grace_seconds=state.request.grace_seconds,
+    )
+    timed_out = final_state_observed not in TIMEOUT_RECOVERY_STATES
+    termination_reason = _timeout_termination_reason(
+        timed_out=timed_out,
+        final_state_observed=final_state_observed,
+        stdout=stdout,
+        stderr=stderr,
+        launch_latency_seconds=state.launch_latency_seconds,
+        timeout_seconds=state.request.timeout_seconds,
+    )
+    return _result_from_completed_process(
+        _result_inputs_from_state(
+            state,
+            stdout=stdout,
+            stderr=stderr,
+            timed_out=timed_out,
+            termination_reason=termination_reason,
+            signal_sent=signal_sent,
+            final_state_observed=final_state_observed,
+        )
+    )
+
+
+def _communicate_run_with_timeout(
+    state: _RunWithTimeoutState,
+    monotonic: Callable[[], float],
+) -> TimedProcessResult:
+    try:
+        stdout, stderr = _communicate_with_optional_heartbeats(
+            process=state.process,
+            argv_list=state.argv_list,
+            input_text=state.request.input_text,
+            timeout_seconds=state.request.timeout_seconds,
+            heartbeat_interval_seconds=state.active_heartbeat_interval,
+            heartbeat_callback=state.request.heartbeat_callback,
+            monotonic=monotonic,
+            heartbeat_state=state.heartbeat_state,
+        )
+        return _completed_run_result(
+            state,
+            stdout=stdout,
+            stderr=stderr,
+            final_state_observed="communicate",
+        )
+    except subprocess.TimeoutExpired:
+        return _timeout_expired_run_result(state)
+
+
+def _run_with_timeout_request(request: RunWithTimeoutRequest) -> TimedProcessResult:
+    _validate_run_with_timeout_request(request)
+    monotonic = request.monotonic_clock or time.perf_counter
+    state = _start_run_with_timeout(request, monotonic)
+    restore_signal_handlers = _install_parent_signal_cleanup(
+        process=state.process,
+        backend=state.active_backend,
+        grace_seconds=request.grace_seconds,
+    )
+    try:
+        return _communicate_run_with_timeout(state, monotonic)
+    finally:
+        restore_signal_handlers()
+
+
+def run_with_timeout(
+    request: RunWithTimeoutRequest | Sequence[str] | None = None,
+    **legacy_kwargs: object,
 ) -> TimedProcessResult:
     """Run a command with a timeout, measuring launch latency separately.
 
@@ -566,114 +805,6 @@ def run_with_timeout(
     not yet implemented; instrumentation must show an anomaly before
     changing the timeout logic itself.
     """
-    if timeout_seconds < 1:
-        raise ValueError("timeout_seconds must be >= 1")
-    if heartbeat_interval_seconds is not None and heartbeat_interval_seconds < 1:
-        raise ValueError("heartbeat_interval_seconds must be >= 1")
-
-    argv_list = [str(item) for item in argv]
-    observation_mode = "process_heartbeat" if heartbeat_callback is not None else "communicate"
-    active_heartbeat_interval = heartbeat_interval_seconds
-    if heartbeat_callback is not None and active_heartbeat_interval is None:
-        active_heartbeat_interval = timeout_seconds
-    heartbeat_state = _HeartbeatState()
-    monotonic = monotonic_clock or time.perf_counter
-    subprocess_env: Mapping[str, str] | None
-    if hermetic:
-        argv_list = _python_minus_s_command(argv_list)
-        subprocess_env = _clean_subprocess_env(env)
-    else:
-        subprocess_env = env
-    active_backend = backend or _default_backend()
-    launch_start = monotonic()
-    process = active_backend.start(
-        argv_list,
-        cwd=cwd,
-        input_text=input_text,
-        env=subprocess_env,
+    return _run_with_timeout_request(
+        _coerce_run_with_timeout_request(request, legacy_kwargs)
     )
-    launch_latency_seconds = monotonic() - launch_start
-    restore_signal_handlers = _install_parent_signal_cleanup(
-        process=process,
-        backend=active_backend,
-        grace_seconds=grace_seconds,
-    )
-    try:
-        stdout, stderr = _communicate_with_optional_heartbeats(
-            process=process,
-            argv_list=argv_list,
-            input_text=input_text,
-            timeout_seconds=timeout_seconds,
-            heartbeat_interval_seconds=active_heartbeat_interval,
-            heartbeat_callback=heartbeat_callback,
-            monotonic=monotonic,
-            heartbeat_state=heartbeat_state,
-        )
-        return _result_from_completed_process(
-            argv_list=argv_list,
-            process=process,
-            stdout=stdout,
-            stderr=stderr,
-            timeout_seconds=timeout_seconds,
-            timed_out=False,
-            termination_reason="completed",
-            signal_sent="none",
-            final_state_observed="communicate",
-            launch_latency_seconds=launch_latency_seconds,
-            heartbeat_count=heartbeat_state.heartbeat_count,
-            heartbeat_interval_seconds=active_heartbeat_interval or 0,
-            quiet_seconds=heartbeat_state.quiet_seconds,
-            observation_mode=observation_mode,
-        )
-    except subprocess.TimeoutExpired:
-        returncode = _poll_returncode(process)
-        if returncode is not None:
-            stdout, stderr = process.communicate()
-            return _result_from_completed_process(
-                argv_list=argv_list,
-                process=process,
-                stdout=stdout,
-                stderr=stderr,
-                timeout_seconds=timeout_seconds,
-                timed_out=False,
-                termination_reason="completed",
-                signal_sent="none",
-                final_state_observed="poll_before_signal",
-                launch_latency_seconds=launch_latency_seconds,
-                heartbeat_count=heartbeat_state.heartbeat_count,
-                heartbeat_interval_seconds=active_heartbeat_interval or 0,
-                quiet_seconds=heartbeat_state.quiet_seconds,
-                observation_mode=observation_mode,
-            )
-        stdout, stderr, signal_sent, final_state_observed = _finalize_timed_out_process(
-            process,
-            backend=active_backend,
-            grace_seconds=grace_seconds,
-        )
-        timed_out = final_state_observed not in TIMEOUT_RECOVERY_STATES
-        termination_reason = _timeout_termination_reason(
-            timed_out=timed_out,
-            final_state_observed=final_state_observed,
-            stdout=stdout,
-            stderr=stderr,
-            launch_latency_seconds=launch_latency_seconds,
-            timeout_seconds=timeout_seconds,
-        )
-        return _result_from_completed_process(
-            argv_list=argv_list,
-            process=process,
-            stdout=stdout,
-            stderr=stderr,
-            timeout_seconds=timeout_seconds,
-            timed_out=timed_out,
-            termination_reason=termination_reason,
-            signal_sent=signal_sent,
-            final_state_observed=final_state_observed,
-            launch_latency_seconds=launch_latency_seconds,
-            heartbeat_count=heartbeat_state.heartbeat_count,
-            heartbeat_interval_seconds=active_heartbeat_interval or 0,
-            quiet_seconds=heartbeat_state.quiet_seconds,
-            observation_mode=observation_mode,
-        )
-    finally:
-        restore_signal_handlers()

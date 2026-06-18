@@ -11,13 +11,21 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import run_with_timeout
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.command_runtime import run_with_timeout
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_with_schema,
+    )
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
     from ops.scripts.release.release_run_manifest import (
         _file_identity,
         _resolve,
@@ -28,23 +36,23 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         remote_sync,
         run_manifest_alignment,
         write_manifest,
-    )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_runtime import (
-        load_schema_with_vault_override,
-        validate_with_schema,
-    )
-    from ops.scripts.source_tree_fingerprint_runtime import (
-        release_source_tree_fingerprint,
     )
 else:
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import run_with_timeout
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.command_runtime import run_with_timeout
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_with_schema,
+    )
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
     from ops.scripts.release.release_run_manifest import (
         _file_identity,
         _resolve,
@@ -55,14 +63,6 @@ else:
         remote_sync,
         run_manifest_alignment,
         write_manifest,
-    )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_runtime import (
-        load_schema_with_vault_override,
-        validate_with_schema,
-    )
-    from ops.scripts.source_tree_fingerprint_runtime import (
-        release_source_tree_fingerprint,
     )
 
 

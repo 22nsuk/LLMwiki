@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
 import json
 from collections.abc import Mapping
 from copy import deepcopy
@@ -11,24 +10,25 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.codex_goal_client import (
+from ops.scripts.core.codex_goal_client import (
     DEFAULT_CONTRACT_PATH,
     DEFAULT_WORKTREE_GUARD_REPORT_PATH,
     FileGoalBackend,
 )
-from ops.scripts.observability_artifacts_shared_runtime import (
+from ops.scripts.core.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel_from_status,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
 
+from .goal_contract_digest_runtime import semantic_goal_contract_digest
 from .goal_runtime_certificate import (
     RUNTIME_MODES,
     evidence_statuses,
@@ -48,6 +48,7 @@ SOURCE_PATHS = (
     "ops/scripts/mechanism/goal_runtime_certificate_report.py",
     "ops/scripts/mechanism/goal_runtime_certificate.py",
     "ops/scripts/mechanism/goal_run_status.py",
+    "ops/scripts/mechanism/goal_contract_digest_runtime.py",
     "ops/scripts/core/codex_goal_client.py",
     "ops/schemas/goal-runtime-certificate.schema.json",
     "ops/schemas/codex-goal-contract.schema.json",
@@ -66,6 +67,36 @@ class GoalRuntimeCertificateRequest:
     out_path: str | None = None
     policy_path: str | None = None
     context: RuntimeContext | None = None
+
+
+@dataclass(frozen=True)
+class _CertificateUpdateState:
+    apply_allowed: bool
+    patch: dict[str, Any]
+    applied: bool
+    certificate_status_before: str
+    certificate_status_after: str
+    runtime_certificate_verified_before: bool
+    runtime_certificate_verified_after: bool
+    contract_sha256_before: str
+    contract_sha256_after: str
+
+
+@dataclass(frozen=True)
+class _CertificateReportState:
+    target_runtime_mode: str
+    verification_status: str
+    blockers: list[str]
+    status_report: Mapping[str, Any]
+    run: Mapping[str, Any]
+    run_artifacts: Mapping[str, Any]
+    session_evidence: Mapping[str, Any]
+    command_observability: dict[str, Any]
+    evidence_paths: list[dict[str, Any]]
+    max_runtime_seconds: int
+    observed_elapsed_seconds: int
+    already_verified: bool
+    update: _CertificateUpdateState
 
 
 @dataclass(frozen=True)
@@ -105,11 +136,6 @@ def _integer_value(value: object) -> int:
 
 def _bool_value(value: object) -> bool:
     return value if isinstance(value, bool) else False
-
-
-def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 def _parse_iso_z(value: object) -> dt.datetime | None:
@@ -513,7 +539,11 @@ def _command_observability_blockers(
     if summary.get("mode") != "process_heartbeat":
         blockers.append("goal run command observation mode is not process_heartbeat")
     if not _bool_value(summary.get("runner_audit_current")):
-        blockers.append("goal run command audit was not written by goal runtime runner")
+        blockers.append(
+            "goal run command audit was not written by goal runtime runner for the "
+            "selected completed run; rerun with GOAL_RUN_ID=<completed-run-id> "
+            "through goal-runtime runner before certifying"
+        )
     if _integer_value(summary.get("heartbeat_count")) < _integer_value(
         summary.get("expected_min_heartbeat_count")
     ):
@@ -567,6 +597,15 @@ def _diagnosis(
     run_status = str(run.get("status", run.get("run_status", ""))).strip()
     runtime_mode = str(run.get("runtime_mode", run.get("run_runtime_mode", ""))).strip()
     certifiable = not blockers
+    session_status = str(session_evidence.get("session_status", "")).strip()
+    stop_reason = str(session_evidence.get("stop_reason", "")).strip()
+    certificate_failure_class = (
+        "certifiable"
+        if certifiable
+        else "noncertifiable_closed_failure"
+        if session_status == "complete" and stop_reason == "failure_budget_exhausted"
+        else "pending_evidence"
+    )
     return {
         "claim_type": "sustained_self_improvement_loop_certificate",
         "certificate_claim_status": (
@@ -580,6 +619,7 @@ def _diagnosis(
             if blockers
             else "status=pass means current evidence is eligible to verify the runtime certificate."
         ),
+        "certificate_failure_class": certificate_failure_class,
         "current_scope": {
             "status_report_path": status_report_path,
             "run_id": str(run.get("run_id", "")).strip(),
@@ -899,7 +939,11 @@ def _session_evidence_blockers(session_evidence: Mapping[str, Any]) -> list[str]
         blockers.append("auto-improve session did not complete")
     accepted_stop_reasons = _list_text(session_evidence.get("accepted_stop_reasons"))
     if session_evidence.get("stop_reason") not in accepted_stop_reasons:
-        if accepted_stop_reasons == ["time_budget_exhausted"]:
+        if session_evidence.get("stop_reason") == "failure_budget_exhausted":
+            blockers.append(
+                "auto-improve session closed as noncertifiable failure after failure budget exhausted"
+            )
+        elif accepted_stop_reasons == ["time_budget_exhausted"]:
             blockers.append("auto-improve session did not run until time budget")
         else:
             blockers.append("auto-improve session stop reason is not accepted for runtime certificate")
@@ -1072,61 +1116,58 @@ def _contract_patch_for_verified_certificate(
     }
 
 
-def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
-    vault = request.vault.resolve()
-    policy, resolved_policy_path = load_policy(vault, request.policy_path)
-    runtime_context = request.context or RuntimeContext.from_policy(policy)
-    generated_at = runtime_context.isoformat_z()
-    backend = FileGoalBackend(vault=vault, contract_path=request.goal_contract_path)
-    contract = backend.get_goal()
-    contract_sha256_before = _canonical_json_digest(contract)
-    runtime = _mapping_value(contract, "runtime")
-    target_runtime_mode = request.runtime_mode.strip() or contract_runtime_mode(contract)
-    certificate_status_before = str(runtime.get("certificate_status", "unverified")).strip() or "unverified"
-    already_verified = certificate_status_before == "verified"
-    status_report = load_optional_json_object(vault / request.status_report_path)
-    run_artifacts = _run_artifacts(vault, status_report) if status_report else {
-        "status": "missing",
-        "checks": [],
-        "audit_event_count": 0,
-        "runner_command_audit_current": False,
-    }
-    session_evidence = (
-        _session_evidence(vault, status_report, contract)
-        if status_report
-        else _empty_session_evidence(status="missing", path="", contract=contract)
-    )
-    blockers: list[str] = []
+def _verification_status_and_blockers(
+    *,
+    vault: Path,
+    contract: Mapping[str, Any],
+    status_report: Mapping[str, Any],
+    target_runtime_mode: str,
+    run_artifacts: Mapping[str, Any],
+    session_evidence: Mapping[str, Any],
+    already_verified: bool,
+) -> tuple[str, list[str]]:
     if already_verified:
-        verification_status = "already_verified"
-    else:
-        blockers = _verification_blockers(
-            vault=vault,
-            contract=contract,
-            status_report=status_report,
-            runtime_mode=target_runtime_mode,
-            run_artifacts=run_artifacts,
-            session_evidence=session_evidence,
-        )
-        verification_status = "eligible" if not blockers else "blocked"
+        return "already_verified", []
+    blockers = _verification_blockers(
+        vault=vault,
+        contract=contract,
+        status_report=status_report,
+        runtime_mode=target_runtime_mode,
+        run_artifacts=run_artifacts,
+        session_evidence=session_evidence,
+    )
+    return ("eligible" if not blockers else "blocked"), blockers
 
+
+def _certificate_update_state(
+    *,
+    request: GoalRuntimeCertificateRequest,
+    backend: FileGoalBackend,
+    contract: Mapping[str, Any],
+    generated_at: str,
+    verification_status: str,
+    contract_sha256_before: str,
+) -> _CertificateUpdateState:
     apply_allowed = verification_status == "eligible"
     patch = (
         _contract_patch_for_verified_certificate(contract, verified_at=generated_at)
         if apply_allowed
         else {}
     )
-    certificate_status_after = certificate_status_before
+    certificate_status_before = str(
+        _mapping_value(contract, "runtime").get("certificate_status", "unverified")
+    ).strip() or "unverified"
     runtime_certificate_verified_before = bool(
         _mapping_value(contract, "promotion_guard").get("runtime_certificate_verified", False)
     )
+    certificate_status_after = certificate_status_before
     runtime_certificate_verified_after = runtime_certificate_verified_before
     applied = False
     contract_sha256_after = contract_sha256_before
     if request.apply_update and apply_allowed:
         updated = backend.update_goal(patch)
         applied = True
-        contract_sha256_after = _canonical_json_digest(updated)
+        contract_sha256_after = semantic_goal_contract_digest(updated)
         certificate_status_after = str(
             _mapping_value(updated, "runtime").get("certificate_status", "unverified")
         )
@@ -1142,10 +1183,25 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
         runtime_certificate_verified_after = bool(
             patched_guard.get("runtime_certificate_verified", runtime_certificate_verified_after)
         )
+    return _CertificateUpdateState(
+        apply_allowed=apply_allowed,
+        patch=patch,
+        applied=applied,
+        certificate_status_before=certificate_status_before,
+        certificate_status_after=certificate_status_after,
+        runtime_certificate_verified_before=runtime_certificate_verified_before,
+        runtime_certificate_verified_after=runtime_certificate_verified_after,
+        contract_sha256_before=contract_sha256_before,
+        contract_sha256_after=contract_sha256_after,
+    )
 
-    run = _mapping_value(status_report, "run")
-    max_runtime_seconds = runtime_duration_seconds(contract)
-    observed_elapsed_seconds = _elapsed_seconds(run.get("started_at"), run.get("completed_at"))
+
+def _command_observability_for_report(
+    *,
+    status_report: Mapping[str, Any],
+    run_artifacts: Mapping[str, Any],
+    observed_elapsed_seconds: int,
+) -> dict[str, Any]:
     command_observability = _command_observability_summary(
         status_report=status_report,
         observed_elapsed_seconds=observed_elapsed_seconds,
@@ -1159,7 +1215,15 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
         )
         else "incomplete"
     )
-    evidence_paths = evidence_statuses(vault, contract)
+    return command_observability
+
+
+def _certificate_file_inputs(
+    request: GoalRuntimeCertificateRequest,
+    *,
+    run_artifacts: Mapping[str, Any],
+    session_evidence: Mapping[str, Any],
+) -> dict[str, str]:
     file_inputs = {
         "goal_contract": request.goal_contract_path,
         "goal_run_status": request.status_report_path,
@@ -1168,7 +1232,17 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
     session_evidence_path = str(session_evidence.get("path", "")).strip()
     if session_evidence_path:
         file_inputs["auto_improve_session"] = session_evidence_path
-    envelope = build_canonical_report_envelope(
+    return file_inputs
+
+
+def _certificate_envelope(
+    *,
+    vault: Path,
+    generated_at: str,
+    resolved_policy_path: Path,
+    file_inputs: Mapping[str, str],
+) -> dict[str, Any]:
+    return build_canonical_report_envelope(
         vault,
         generated_at=generated_at,
         artifact_kind="goal_runtime_certificate",
@@ -1179,6 +1253,130 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
         source_paths=SOURCE_PATHS,
         file_inputs=file_inputs,
         source_tree_excluded_files=(DEFAULT_OUT,),
+    )
+
+
+def _render_certificate_report(
+    *,
+    request: GoalRuntimeCertificateRequest,
+    vault: Path,
+    envelope: Mapping[str, Any],
+    contract: Mapping[str, Any],
+    state: _CertificateReportState,
+) -> dict[str, Any]:
+    return {
+        **envelope,
+        "vault": display_path(vault, vault),
+        "goal": {
+            "contract_path": request.goal_contract_path,
+            "contract_id": str(contract.get("contract_id", "")).strip(),
+            "contract_sha256_before": state.update.contract_sha256_before,
+            "contract_sha256_after": state.update.contract_sha256_after,
+        },
+        "certificate": {
+            "target_runtime_mode": state.target_runtime_mode,
+            "verification_status": state.verification_status,
+            "max_runtime_seconds": state.max_runtime_seconds,
+            "observed_elapsed_seconds": state.observed_elapsed_seconds,
+            "already_verified": state.already_verified,
+            "eligible": state.update.apply_allowed
+            or state.verification_status in {"already_verified", "already_complete"},
+        },
+        "run": {
+            "status_report_path": request.status_report_path,
+            "run_id": str(state.run.get("run_id", "")).strip(),
+            "run_status": str(state.run.get("status", "")).strip(),
+            "run_runtime_mode": str(state.run.get("runtime_mode", "")).strip(),
+            "started_at": str(state.run.get("started_at", "")).strip(),
+            "completed_at": str(state.run.get("completed_at", "")).strip(),
+        },
+        "run_artifacts": state.run_artifacts,
+        "session_evidence": state.session_evidence,
+        "command_observability": state.command_observability,
+        "evidence_paths": state.evidence_paths,
+        "diagnosis": _diagnosis(
+            verification_status=state.verification_status,
+            blockers=state.blockers,
+            status_report_path=request.status_report_path,
+            status_report=state.status_report,
+            session_evidence=state.session_evidence,
+        ),
+        "contract_update": {
+            "apply_requested": request.apply_update,
+            "apply_allowed": state.update.apply_allowed,
+            "applied": state.update.applied,
+            "certificate_status_before": state.update.certificate_status_before,
+            "certificate_status_after": state.update.certificate_status_after,
+            "runtime_certificate_verified_before": state.update.runtime_certificate_verified_before,
+            "runtime_certificate_verified_after": state.update.runtime_certificate_verified_after,
+        },
+        "blockers": state.blockers,
+        "status": "attention" if state.blockers else "pass",
+    }
+
+
+def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
+    vault = request.vault.resolve()
+    policy, resolved_policy_path = load_policy(vault, request.policy_path)
+    runtime_context = request.context or RuntimeContext.from_policy(policy)
+    generated_at = runtime_context.isoformat_z()
+    backend = FileGoalBackend(vault=vault, contract_path=request.goal_contract_path)
+    contract = backend.get_goal()
+    contract_sha256_before = semantic_goal_contract_digest(contract)
+    target_runtime_mode = request.runtime_mode.strip() or contract_runtime_mode(contract)
+    certificate_status_before = (
+        str(_mapping_value(contract, "runtime").get("certificate_status", "unverified")).strip()
+        or "unverified"
+    )
+    already_verified = certificate_status_before == "verified"
+    status_report = load_optional_json_object(vault / request.status_report_path)
+    run_artifacts = _run_artifacts(vault, status_report) if status_report else {
+        "status": "missing",
+        "checks": [],
+        "audit_event_count": 0,
+        "runner_command_audit_current": False,
+    }
+    session_evidence = (
+        _session_evidence(vault, status_report, contract)
+        if status_report
+        else _empty_session_evidence(status="missing", path="", contract=contract)
+    )
+    verification_status, blockers = _verification_status_and_blockers(
+        vault=vault,
+        contract=contract,
+        status_report=status_report,
+        target_runtime_mode=target_runtime_mode,
+        run_artifacts=run_artifacts,
+        session_evidence=session_evidence,
+        already_verified=already_verified,
+    )
+    update_state = _certificate_update_state(
+        request=request,
+        backend=backend,
+        contract=contract,
+        generated_at=generated_at,
+        verification_status=verification_status,
+        contract_sha256_before=contract_sha256_before,
+    )
+
+    run = _mapping_value(status_report, "run")
+    max_runtime_seconds = runtime_duration_seconds(contract)
+    observed_elapsed_seconds = _elapsed_seconds(run.get("started_at"), run.get("completed_at"))
+    command_observability = _command_observability_for_report(
+        status_report=status_report,
+        observed_elapsed_seconds=observed_elapsed_seconds,
+        run_artifacts=run_artifacts,
+    )
+    evidence_paths = evidence_statuses(vault, contract)
+    envelope = _certificate_envelope(
+        vault=vault,
+        generated_at=generated_at,
+        resolved_policy_path=resolved_policy_path,
+        file_inputs=_certificate_file_inputs(
+            request,
+            run_artifacts=run_artifacts,
+            session_evidence=session_evidence,
+        ),
     )
     if blockers:
         existing_report = load_optional_json_object(vault / request.existing_report_path)
@@ -1193,54 +1391,28 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
             return _preserved_verified_report(
                 existing_report=existing_report,
             )
-    return {
-        **envelope,
-        "vault": display_path(vault, vault),
-        "goal": {
-            "contract_path": request.goal_contract_path,
-            "contract_id": str(contract.get("contract_id", "")).strip(),
-            "contract_sha256_before": contract_sha256_before,
-            "contract_sha256_after": contract_sha256_after,
-        },
-        "certificate": {
-            "target_runtime_mode": target_runtime_mode,
-            "verification_status": verification_status,
-            "max_runtime_seconds": max_runtime_seconds,
-            "observed_elapsed_seconds": observed_elapsed_seconds,
-            "already_verified": already_verified,
-            "eligible": apply_allowed or verification_status in {"already_verified", "already_complete"},
-        },
-        "run": {
-            "status_report_path": request.status_report_path,
-            "run_id": str(run.get("run_id", "")).strip(),
-            "run_status": str(run.get("status", "")).strip(),
-            "run_runtime_mode": str(run.get("runtime_mode", "")).strip(),
-            "started_at": str(run.get("started_at", "")).strip(),
-            "completed_at": str(run.get("completed_at", "")).strip(),
-        },
-        "run_artifacts": run_artifacts,
-            "session_evidence": session_evidence,
-            "command_observability": command_observability,
-            "evidence_paths": evidence_paths,
-            "diagnosis": _diagnosis(
-                verification_status=verification_status,
-                blockers=blockers,
-                status_report_path=request.status_report_path,
-                status_report=status_report,
-                session_evidence=session_evidence,
-            ),
-            "contract_update": {
-                "apply_requested": request.apply_update,
-                "apply_allowed": apply_allowed,
-            "applied": applied,
-            "certificate_status_before": certificate_status_before,
-            "certificate_status_after": certificate_status_after,
-            "runtime_certificate_verified_before": runtime_certificate_verified_before,
-            "runtime_certificate_verified_after": runtime_certificate_verified_after,
-        },
-        "blockers": blockers,
-        "status": "attention" if blockers else "pass",
-    }
+    state = _CertificateReportState(
+        target_runtime_mode=target_runtime_mode,
+        verification_status=verification_status,
+        blockers=blockers,
+        status_report=status_report,
+        run=run,
+        run_artifacts=run_artifacts,
+        session_evidence=session_evidence,
+        command_observability=command_observability,
+        evidence_paths=evidence_paths,
+        max_runtime_seconds=max_runtime_seconds,
+        observed_elapsed_seconds=observed_elapsed_seconds,
+        already_verified=already_verified,
+        update=update_state,
+    )
+    return _render_certificate_report(
+        request=request,
+        vault=vault,
+        envelope=envelope,
+        contract=contract,
+        state=state,
+    )
 
 
 def write_report(vault: Path, report: Mapping[str, Any], out_path: str | None = None) -> Path:

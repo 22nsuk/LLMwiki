@@ -13,18 +13,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     promote_schema_validated_json,
     resolve_repo_artifact_path,
     write_schema_backed_report,
 )
-from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
-from ops.scripts.output_runtime import display_path, sanitize_report_text
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.command_runtime import TimedProcessResult, run_with_timeout
+from ops.scripts.core.generated_artifact_semantic_digest import (
+    canonical_digest,
+    semantic_digest_maps,
+    semantic_file_digest,
+)
+from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 
 DEFAULT_OUT = "ops/reports/release-closeout-fixed-point.json"
 DEFAULT_DRY_RUN_OUT = "tmp/release-closeout-post-check-finalizer.json"
@@ -50,8 +57,16 @@ FIXED_POINT_FRESHNESS_DEBT_ISSUES = {
     "source_revision_unknown",
     "source_tree_fingerprint_unknown",
 }
+SEMANTIC_REUSE_FEEDBACK_TARGETS = frozenset(
+    {
+        "generated-artifact-index-body",
+        "artifact-freshness",
+        "external-report-action-matrix",
+    }
+)
 
 CommandRunner = Callable[[Sequence[str], Path, int, Mapping[str, str]], dict[str, Any]]
+ProgressSink = Callable[[str], None]
 
 
 @dataclass(frozen=True)
@@ -62,6 +77,7 @@ class _FixedPointPolicyRuntime:
     tracked_paths: list[str]
     writer_targets: list[str]
     feedback_targets: list[str]
+    feedback_exempt_targets: set[str]
     producer_by_path: dict[str, str]
     downstream_by_target: dict[str, set[str]]
 
@@ -75,6 +91,43 @@ class _FixedPointIterationState:
     reason: str
     converged: bool
     converged_iteration: int
+
+
+@dataclass(frozen=True)
+class _FixedPointIterationConfig:
+    initial_targets: Sequence[str]
+    baseline_before_first_iteration: bool
+    max_iterations: int
+    timeout_seconds: int
+    python_executable: str
+    make_variables: Sequence[str]
+    runtime_env: Mapping[str, str]
+    command_runner: CommandRunner
+    progress_sink: ProgressSink | None = None
+
+
+@dataclass
+class _IterationExecutionContext:
+    vault: Path
+    python_executable: str
+    make_variables: Sequence[str]
+    timeout_seconds: int
+    command_runner: CommandRunner
+    runtime_env: Mapping[str, str]
+    progress_sink: ProgressSink | None = None
+    progress_prefix: str = "release-closeout-fixed-point"
+    writer_by_target: Mapping[str, dict[str, Any]] | None = None
+    semantic_reuse_signatures: dict[str, dict[str, Any]] | None = None
+    tracked_paths: Sequence[str] = ()
+
+
+@dataclass(frozen=True)
+class _FixedPointIterationSnapshot:
+    record: dict[str, Any]
+    digest_map: dict[str, str]
+    semantic_digest_map: dict[str, str]
+    changed_paths: list[str]
+    semantic_changed_paths: list[str]
 
 
 def _sha256_file(path: Path) -> str:
@@ -91,6 +144,15 @@ def _tail(text: str, *, limit: int = 4000) -> str:
     return text[-limit:]
 
 
+def _emit_progress(progress_sink: ProgressSink | None, message: str) -> None:
+    if progress_sink is not None:
+        progress_sink(message)
+
+
+def _stderr_progress(message: str) -> None:
+    print(message, file=sys.stderr, flush=True)
+
+
 def _load_finalizer_policy(vault: Path) -> dict[str, Any]:
     path = vault / POLICY_PATH
     return json.loads(path.read_text(encoding="utf-8"))
@@ -103,6 +165,7 @@ def _policy_runtime(vault: Path) -> _FixedPointPolicyRuntime:
     tracked_paths = [item["path"] for item in tracked_artifacts]
     writer_targets = [str(writer["target"]) for writer in writers]
     feedback_targets = _feedback_targets(policy, writers)
+    feedback_exempt_targets = _feedback_exempt_targets(policy, writers)
     return _FixedPointPolicyRuntime(
         policy=policy,
         writers=writers,
@@ -110,6 +173,7 @@ def _policy_runtime(vault: Path) -> _FixedPointPolicyRuntime:
         tracked_paths=tracked_paths,
         writer_targets=writer_targets,
         feedback_targets=feedback_targets,
+        feedback_exempt_targets=feedback_exempt_targets,
         producer_by_path=_producer_by_path(writers),
         downstream_by_target=_downstream_by_target(writers),
     )
@@ -185,7 +249,9 @@ def _tracked_artifacts(
     ]
 
 
-def _feedback_targets(policy: dict[str, Any], writers: list[dict[str, Any]]) -> list[str]:
+def _feedback_targets(
+    policy: dict[str, Any], writers: list[dict[str, Any]]
+) -> list[str]:
     raw_targets = policy.get("feedback_refresh_targets", [])
     targets = (
         [str(target).strip() for target in raw_targets if str(target).strip()]
@@ -199,6 +265,24 @@ def _feedback_targets(policy: dict[str, Any], writers: list[dict[str, Any]]) -> 
             f"{POLICY_PATH} feedback_refresh_targets contain unknown targets: {unknown}"
         )
     return _dedupe_preserve_order(targets)
+
+
+def _feedback_exempt_targets(
+    policy: dict[str, Any], writers: list[dict[str, Any]]
+) -> set[str]:
+    raw_targets = policy.get("feedback_refresh_exempt_targets", [])
+    targets = (
+        {str(target).strip() for target in raw_targets if str(target).strip()}
+        if isinstance(raw_targets, list)
+        else set()
+    )
+    known = {str(writer["target"]) for writer in writers}
+    unknown = sorted(targets - known)
+    if unknown:
+        raise ValueError(
+            f"{POLICY_PATH} feedback_refresh_exempt_targets contain unknown targets: {unknown}"
+        )
+    return targets
 
 
 def _producer_by_path(writers: list[dict[str, Any]]) -> dict[str, str]:
@@ -249,6 +333,31 @@ def _initial_iteration_targets(writers: list[dict[str, Any]]) -> list[str]:
         ]
     )
     return [*prerequisites, *[str(writer["target"]) for writer in writers]]
+
+
+def _validated_initial_targets(
+    targets: Sequence[str] | None,
+    *,
+    runtime: _FixedPointPolicyRuntime,
+) -> list[str]:
+    if targets is None:
+        return _initial_iteration_targets(runtime.writers)
+    requested = _dedupe_preserve_order(
+        [str(target).strip() for target in targets if str(target).strip()]
+    )
+    if not requested:
+        raise ValueError("initial_targets must include at least one target")
+    known = {
+        str(writer["target"]) for writer in runtime.writers
+    } | {
+        str(target)
+        for writer in runtime.writers
+        for target in writer["expensive_prerequisites_once"]
+    }
+    unknown = sorted(set(requested) - known)
+    if unknown:
+        raise ValueError(f"unknown initial target(s): {unknown}")
+    return requested
 
 
 def fixed_point_initial_targets_from_policy(vault: Path) -> list[str]:
@@ -308,15 +417,29 @@ def _next_iteration_targets(
 ) -> list[str]:
     if not changed_paths:
         return []
+    feedback_targets = _feedback_targets_for_changed_paths(
+        changed_paths,
+        runtime=runtime,
+    )
     downstream_targets = _downstream_targets_for_changed_paths(
         changed_paths,
         writers=runtime.writers,
         producer_by_path=runtime.producer_by_path,
         downstream_by_target=runtime.downstream_by_target,
     )
-    return _dedupe_preserve_order(
-        [*runtime.feedback_targets, *downstream_targets]
-    )
+    return _dedupe_preserve_order([*feedback_targets, *downstream_targets])
+
+
+def _feedback_targets_for_changed_paths(
+    changed_paths: Sequence[str],
+    *,
+    runtime: _FixedPointPolicyRuntime,
+) -> list[str]:
+    for path in changed_paths:
+        producer = runtime.producer_by_path.get(path)
+        if producer and producer not in runtime.feedback_exempt_targets:
+            return list(runtime.feedback_targets)
+    return []
 
 
 def _digest_map(
@@ -328,6 +451,75 @@ def _digest_map(
         path = vault / rel_path
         result[rel_path] = _sha256_file(path) if path.is_file() else "missing"
     return result
+
+
+def _writer_by_target(writers: Sequence[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {str(writer["target"]): dict(writer) for writer in writers}
+
+
+def _writer_output_reuse_signature(
+    vault: Path,
+    writer: dict[str, Any],
+    *,
+    tracked_paths: Sequence[str],
+) -> tuple[dict[str, Any] | None, str]:
+    outputs: list[dict[str, str]] = []
+    output_paths = {str(path) for path in writer.get("produces", [])}
+    for rel_path in sorted(output_paths):
+        path = vault / rel_path
+        if not path.is_file():
+            return None, f"{rel_path}:output_missing"
+        payload, load_status = _json_payload(path)
+        if load_status != "ok":
+            return None, f"{rel_path}:output_{load_status}"
+        input_fingerprints = payload.get("input_fingerprints")
+        if not isinstance(input_fingerprints, dict):
+            return None, f"{rel_path}:input_fingerprints_missing"
+        semantic_mode, semantic_digest = semantic_file_digest(path)
+        outputs.append(
+            {
+                "path": rel_path,
+                "input_fingerprint_digest": canonical_digest(input_fingerprints),
+                "semantic_digest": semantic_digest,
+                "semantic_digest_mode": semantic_mode,
+            }
+        )
+    if not outputs:
+        return None, "writer_outputs_missing"
+    context_paths = [path for path in tracked_paths if path not in output_paths]
+    context_semantic_digest_map, _context_modes = semantic_digest_maps(
+        vault, context_paths
+    )
+    return {
+        "outputs": outputs,
+        "tracked_context_semantic_digest": canonical_digest(
+            context_semantic_digest_map
+        ),
+    }, ""
+
+
+def _semantic_reuse_skip_result(
+    *,
+    vault: Path,
+    target: str,
+    command: Sequence[str],
+    timeout_seconds: int,
+    reuse_signature: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "target": target,
+        "command": [sanitize_report_text(vault, str(item)) for item in command],
+        "returncode": 0,
+        "timed_out": False,
+        "timeout_seconds": timeout_seconds,
+        "termination_reason": "semantic_reuse_skipped",
+        "duration_ms": 0,
+        "stdout_tail": "",
+        "stderr_tail": "",
+        "status": "skipped",
+        "skip_reason": "writer_input_fingerprints_and_output_semantic_digest_unchanged",
+        "reuse_signature": reuse_signature,
+    }
 
 
 def _changed_paths(
@@ -358,7 +550,9 @@ def _default_runner(
     return payload
 
 
-def _command_result_payload(result: TimedProcessResult, *, vault: Path) -> dict[str, Any]:
+def _command_result_payload(
+    result: TimedProcessResult, *, vault: Path
+) -> dict[str, Any]:
     return {
         "command": [sanitize_report_text(vault, str(item)) for item in result.args],
         "returncode": result.returncode,
@@ -388,45 +582,148 @@ def _make_command(
 
 
 def _run_iteration(
-    vault: Path,
     *,
     targets: Sequence[str],
-    python_executable: str,
-    make_variables: Sequence[str],
-    timeout_seconds: int,
-    command_runner: CommandRunner,
-    runtime_env: Mapping[str, str],
+    context: _IterationExecutionContext,
 ) -> tuple[list[dict[str, Any]], bool]:
     command_results: list[dict[str, Any]] = []
     failed = False
     for target in targets:
         command = _make_command(
             target,
-            vault=vault,
-            python_executable=python_executable,
-            make_variables=make_variables,
+            vault=context.vault,
+            python_executable=context.python_executable,
+            make_variables=context.make_variables,
         )
-        result = command_runner(command, vault, timeout_seconds, runtime_env)
+        writer = (context.writer_by_target or {}).get(target)
+        if (
+            writer is not None
+            and context.semantic_reuse_signatures is not None
+            and target in SEMANTIC_REUSE_FEEDBACK_TARGETS
+        ):
+            reuse_signature, _reuse_blocker = _writer_output_reuse_signature(
+                context.vault,
+                writer,
+                tracked_paths=context.tracked_paths,
+            )
+            if (
+                reuse_signature is not None
+                and context.semantic_reuse_signatures.get(target) == reuse_signature
+            ):
+                payload = _semantic_reuse_skip_result(
+                    vault=context.vault,
+                    target=target,
+                    command=command,
+                    timeout_seconds=context.timeout_seconds,
+                    reuse_signature=reuse_signature,
+                )
+                command_results.append(payload)
+                _emit_progress(
+                    context.progress_sink,
+                    (
+                        f"{context.progress_prefix}: skipped target={target} "
+                        "reason=semantic_reuse"
+                    ),
+                )
+                continue
+        _emit_progress(
+            context.progress_sink,
+            (
+                f"{context.progress_prefix}: start target={target} "
+                f"timeout_seconds={context.timeout_seconds}"
+            ),
+        )
+        result = context.command_runner(
+            command,
+            context.vault,
+            context.timeout_seconds,
+            context.runtime_env,
+        )
         payload = {
             "target": target,
             "command": [
-                sanitize_report_text(vault, str(item))
+                sanitize_report_text(context.vault, str(item))
                 for item in result.get("command", command)
             ],
             "returncode": int(result.get("returncode", 1)),
             "timed_out": bool(result.get("timed_out", False)),
-            "timeout_seconds": int(result.get("timeout_seconds", timeout_seconds)),
+            "timeout_seconds": int(
+                result.get("timeout_seconds", context.timeout_seconds)
+            ),
             "termination_reason": str(result.get("termination_reason", "")),
             "duration_ms": int(result.get("duration_ms", 0) or 0),
-            "stdout_tail": sanitize_report_text(vault, str(result.get("stdout_tail", ""))),
-            "stderr_tail": sanitize_report_text(vault, str(result.get("stderr_tail", ""))),
+            "stdout_tail": sanitize_report_text(
+                context.vault, str(result.get("stdout_tail", ""))
+            ),
+            "stderr_tail": sanitize_report_text(
+                context.vault, str(result.get("stderr_tail", ""))
+            ),
             "status": str(result.get("status", "fail")),
         }
         command_results.append(payload)
+        _emit_progress(
+            context.progress_sink,
+            (
+                f"{context.progress_prefix}: done target={target} "
+                f"status={payload['status']} duration_ms={payload['duration_ms']}"
+            ),
+        )
         if payload["status"] != "pass":
             failed = True
             break
+        if (
+            writer is not None
+            and context.semantic_reuse_signatures is not None
+            and target in SEMANTIC_REUSE_FEEDBACK_TARGETS
+        ):
+            reuse_signature, _reuse_blocker = _writer_output_reuse_signature(
+                context.vault,
+                writer,
+                tracked_paths=context.tracked_paths,
+            )
+            if reuse_signature is not None:
+                context.semantic_reuse_signatures[target] = reuse_signature
     return command_results, failed
+
+
+def _fixed_point_iteration_snapshot(
+    vault: Path,
+    *,
+    runtime: _FixedPointPolicyRuntime,
+    iteration_index: int,
+    selected_targets: Sequence[str],
+    command_results: Sequence[dict[str, Any]],
+    command_failed: bool,
+    previous_digest_map: dict[str, str] | None,
+    previous_semantic_digest_map: dict[str, str] | None,
+) -> _FixedPointIterationSnapshot:
+    current_digest_map = _digest_map(vault, runtime.tracked_artifacts)
+    current_semantic_digest_map, current_semantic_digest_modes = semantic_digest_maps(
+        vault, runtime.tracked_paths
+    )
+    changed_paths = _changed_paths(previous_digest_map, current_digest_map)
+    semantic_changed_paths = _changed_paths(
+        previous_semantic_digest_map,
+        current_semantic_digest_map,
+    )
+    return _FixedPointIterationSnapshot(
+        record={
+            "iteration_index": iteration_index,
+            "status": "fail" if command_failed else "pass",
+            "selected_targets": list(selected_targets),
+            "command_results": list(command_results),
+            "digest_map": current_digest_map,
+            "digest_changed": previous_digest_map is None or bool(changed_paths),
+            "changed_paths": changed_paths,
+            "semantic_digest_map": current_semantic_digest_map,
+            "semantic_digest_modes": current_semantic_digest_modes,
+            "semantic_changed_paths": semantic_changed_paths,
+        },
+        digest_map=current_digest_map,
+        semantic_digest_map=current_semantic_digest_map,
+        changed_paths=changed_paths,
+        semantic_changed_paths=semantic_changed_paths,
+    )
 
 
 def _selected_targets_by_iteration(
@@ -443,12 +740,16 @@ def _selected_targets_by_iteration(
     }
 
 
-def _duration_command_runs(iterations: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+def _duration_command_runs(
+    iterations: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
     command_runs: list[dict[str, Any]] = []
     for iteration in iterations:
         iteration_index = int(iteration.get("iteration_index", 0) or 0)
         for result in iteration.get("command_results", []):
             if not isinstance(result, dict):
+                continue
+            if str(result.get("status", "")).strip() == "skipped":
                 continue
             command_runs.append(
                 {
@@ -490,9 +791,7 @@ def _writer_cost_rows(
                 "run_count": run_count,
                 "selected_iteration_count": len(selected_iterations),
                 "total_duration_ms": total,
-                "average_duration_ms": round(total / run_count)
-                if run_count
-                else 0,
+                "average_duration_ms": round(total / run_count) if run_count else 0,
                 "max_duration_ms": max(durations) if durations else 0,
                 "first_iteration": min(run_iterations) if run_iterations else 0,
                 "last_iteration": max(run_iterations) if run_iterations else 0,
@@ -620,15 +919,21 @@ def _run_target(
     timeout_seconds: int,
     command_runner: CommandRunner,
     runtime_env: Mapping[str, str],
+    progress_sink: ProgressSink | None = None,
+    progress_prefix: str = "release-closeout-fixed-point",
 ) -> dict[str, Any]:
     command_results, _failed = _run_iteration(
-        vault,
         targets=[target],
-        python_executable=python_executable,
-        make_variables=make_variables,
-        timeout_seconds=timeout_seconds,
-        command_runner=command_runner,
-        runtime_env=runtime_env,
+        context=_IterationExecutionContext(
+            vault=vault,
+            python_executable=python_executable,
+            make_variables=make_variables,
+            timeout_seconds=timeout_seconds,
+            command_runner=command_runner,
+            runtime_env=runtime_env,
+            progress_sink=progress_sink,
+            progress_prefix=progress_prefix,
+        ),
     )
     return command_results[0]
 
@@ -702,11 +1007,32 @@ def _fixed_point_freshness_debt_record(vault: Path) -> dict[str, Any]:
     }
 
 
-def _load_fixed_point_digest_map(vault: Path) -> tuple[dict[str, str], dict[str, Any]]:
-    payload, diagnostics = load_optional_json_object_with_diagnostics(vault / DEFAULT_OUT)
+def _semantic_digest_map_from_fixed_point(payload: dict[str, Any]) -> dict[str, str]:
+    raw_iterations = payload.get("iterations")
+    if not isinstance(raw_iterations, list):
+        return {}
+    for iteration in reversed(raw_iterations):
+        if not isinstance(iteration, dict):
+            continue
+        raw_semantic_map = iteration.get("semantic_digest_map")
+        if isinstance(raw_semantic_map, dict):
+            return {
+                str(path): str(digest)
+                for path, digest in raw_semantic_map.items()
+                if isinstance(path, str) and isinstance(digest, str)
+            }
+    return {}
+
+
+def _load_fixed_point_digest_maps(
+    vault: Path,
+) -> tuple[dict[str, str], dict[str, str], dict[str, Any]]:
+    payload, diagnostics = load_optional_json_object_with_diagnostics(
+        vault / DEFAULT_OUT
+    )
     status = str(diagnostics.get("status", "unknown"))
     if status != "ok":
-        return {}, {
+        return {}, {}, {
             "path": DEFAULT_OUT,
             "load_status": status,
             "status": "missing",
@@ -714,13 +1040,18 @@ def _load_fixed_point_digest_map(vault: Path) -> tuple[dict[str, str], dict[str,
             "summary": "fixed-point report is unavailable; run release-closeout-fixed-point",
         }
     raw_digest_map = payload.get("final_digest_map")
-    digest_map = {
-        str(path): str(digest)
-        for path, digest in raw_digest_map.items()
-        if isinstance(path, str) and isinstance(digest, str)
-    } if isinstance(raw_digest_map, dict) else {}
+    digest_map = (
+        {
+            str(path): str(digest)
+            for path, digest in raw_digest_map.items()
+            if isinstance(path, str) and isinstance(digest, str)
+        }
+        if isinstance(raw_digest_map, dict)
+        else {}
+    )
+    semantic_digest_map = _semantic_digest_map_from_fixed_point(payload)
     report_status = str(payload.get("status", "unknown")).strip() or "unknown"
-    return digest_map, {
+    return digest_map, semantic_digest_map, {
         "path": DEFAULT_OUT,
         "load_status": "ok",
         "status": report_status,
@@ -729,7 +1060,9 @@ def _load_fixed_point_digest_map(vault: Path) -> tuple[dict[str, str], dict[str,
     }
 
 
-def _artifact_freshness_records(vault: Path) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+def _artifact_freshness_records(
+    vault: Path,
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
     payload, diagnostics = load_optional_json_object_with_diagnostics(
         vault / ARTIFACT_FRESHNESS_REPORT_PATH
     )
@@ -786,7 +1119,9 @@ def _source_tree_status(
 
 def _freshness_signal(freshness_record: dict[str, Any]) -> tuple[str, list[str]]:
     raw_issues = freshness_record.get("issues")
-    issues = [str(issue) for issue in raw_issues] if isinstance(raw_issues, list) else []
+    issues = (
+        [str(issue) for issue in raw_issues] if isinstance(raw_issues, list) else []
+    )
     schema_validation_status = str(
         freshness_record.get("schema_validation_status", "")
     ).strip()
@@ -798,7 +1133,9 @@ def _dry_run_tracked_artifact_record(
     item: dict[str, str],
     *,
     baseline_digest_map: dict[str, str],
+    baseline_semantic_digest_map: dict[str, str],
     current_digest_map: dict[str, str],
+    current_semantic_digest_map: dict[str, str],
     freshness_records: dict[str, dict[str, Any]],
     current_source_tree_fingerprint: str,
     producer_by_path: dict[str, str],
@@ -814,12 +1151,27 @@ def _dry_run_tracked_artifact_record(
     baseline_digest = baseline_digest_map.get(rel_path, "missing")
     current_digest = current_digest_map.get(rel_path, "missing")
     digest_status = "current" if baseline_digest == current_digest else "changed"
+    baseline_semantic_digest = baseline_semantic_digest_map.get(rel_path, "unknown")
+    current_semantic_digest = current_semantic_digest_map.get(rel_path, "unknown")
+    semantic_digest_status = (
+        "unknown"
+        if "unknown" in {baseline_semantic_digest, current_semantic_digest}
+        else "current"
+        if baseline_semantic_digest == current_semantic_digest
+        else "changed"
+    )
     freshness_record = freshness_records.get(rel_path, {})
     schema_validation_status, issues = _freshness_signal(freshness_record)
-    freshness_status = "attention" if issues or schema_validation_status == "fail" else "pass"
+    freshness_status = (
+        "attention" if issues or schema_validation_status == "fail" else "pass"
+    )
+    digest_refresh_required = (
+        semantic_digest_status == "changed"
+        or (semantic_digest_status == "unknown" and digest_status != "current")
+    )
     refresh_needed = (
         load_status != "ok"
-        or digest_status != "current"
+        or digest_refresh_required
         or source_tree_status != "current"
         or freshness_status != "pass"
     )
@@ -831,6 +1183,9 @@ def _dry_run_tracked_artifact_record(
         "baseline_digest": baseline_digest,
         "current_digest": current_digest,
         "digest_status": digest_status,
+        "baseline_semantic_digest": baseline_semantic_digest,
+        "current_semantic_digest": current_semantic_digest,
+        "semantic_digest_status": semantic_digest_status,
         "source_tree_fingerprint": source_tree_fingerprint,
         "source_tree_status": source_tree_status,
         "schema_validation_status": schema_validation_status or "unknown",
@@ -845,7 +1200,9 @@ def _dry_run_tracked_records(
     runtime: _FixedPointPolicyRuntime,
     *,
     baseline_digest_map: dict[str, str],
+    baseline_semantic_digest_map: dict[str, str],
     current_digest_map: dict[str, str],
+    current_semantic_digest_map: dict[str, str],
     freshness_records: dict[str, dict[str, Any]],
     current_source_tree_fingerprint: str,
 ) -> tuple[list[dict[str, Any]], list[str]]:
@@ -854,7 +1211,9 @@ def _dry_run_tracked_records(
             vault,
             item,
             baseline_digest_map=baseline_digest_map,
+            baseline_semantic_digest_map=baseline_semantic_digest_map,
             current_digest_map=current_digest_map,
+            current_semantic_digest_map=current_semantic_digest_map,
             freshness_records=freshness_records,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
             producer_by_path=runtime.producer_by_path,
@@ -905,7 +1264,9 @@ def _dry_run_evidence_gap_reasons(
         if record["current_digest"] == "missing":
             reasons.append(f"{path}:current_digest_missing")
         if record["source_tree_status"] in {"missing", "unreadable"}:
-            reasons.append(f"{path}:source_tree_fingerprint_{record['source_tree_status']}")
+            reasons.append(
+                f"{path}:source_tree_fingerprint_{record['source_tree_status']}"
+            )
     return _dedupe_preserve_order(reasons)
 
 
@@ -919,6 +1280,8 @@ def _dry_run_drift_reasons(tracked_records: Sequence[dict[str, Any]]) -> list[st
             and record["current_digest"] != "missing"
         ):
             reasons.append(f"{path}:digest_changed")
+        if record["semantic_digest_status"] == "changed":
+            reasons.append(f"{path}:semantic_digest_changed")
         if record["source_tree_status"] == "stale":
             reasons.append(f"{path}:source_tree_stale")
         if record["freshness_status"] == "attention":
@@ -985,15 +1348,19 @@ def _target_why(
         for path in direct_paths:
             record = tracked_by_path.get(path, {})
             path_reasons = []
-            if record.get("digest_status") != "current":
-                path_reasons.append("digest drift")
+            if record.get("semantic_digest_status") == "changed":
+                path_reasons.append("semantic digest drift")
+            elif record.get("digest_status") != "current":
+                path_reasons.append("raw digest drift")
             if record.get("source_tree_status") != "current":
                 path_reasons.append(f"source tree {record.get('source_tree_status')}")
             if record.get("freshness_status") != "pass":
                 path_reasons.append("freshness attention")
             if record.get("load_status") != "ok":
                 path_reasons.append(f"load {record.get('load_status')}")
-            reason_parts.append(f"{path} ({', '.join(path_reasons) or 'refresh needed'})")
+            reason_parts.append(
+                f"{path} ({', '.join(path_reasons) or 'refresh needed'})"
+            )
         return "refreshes affected artifact(s): " + "; ".join(reason_parts)
     upstream_paths: list[str] = []
     for path in affected_paths:
@@ -1069,15 +1436,24 @@ def build_dry_run_report(
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     runtime = _policy_runtime(vault)
-    baseline_digest_map, fixed_point_summary = _load_fixed_point_digest_map(vault)
+    (
+        baseline_digest_map,
+        baseline_semantic_digest_map,
+        fixed_point_summary,
+    ) = _load_fixed_point_digest_maps(vault)
     current_digest_map = _digest_map(vault, runtime.tracked_artifacts)
+    current_semantic_digest_map, _current_semantic_digest_modes = semantic_digest_maps(
+        vault, runtime.tracked_paths
+    )
     freshness_records, freshness_summary = _artifact_freshness_records(vault)
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     tracked_records, affected_paths = _dry_run_tracked_records(
         vault,
         runtime,
         baseline_digest_map=baseline_digest_map,
+        baseline_semantic_digest_map=baseline_semantic_digest_map,
         current_digest_map=current_digest_map,
+        current_semantic_digest_map=current_semantic_digest_map,
         freshness_records=freshness_records,
         current_source_tree_fingerprint=current_source_tree_fingerprint,
     )
@@ -1118,7 +1494,7 @@ def build_dry_run_report(
         source_command=DRY_RUN_SOURCE_COMMAND,
         resolved_policy_path=vault / POLICY_PATH,
         schema_path=DRY_RUN_SCHEMA_PATH,
-        source_paths=["ops/scripts/release_closeout_fixed_point.py"],
+        source_paths=["ops/scripts/release/release_closeout_fixed_point.py"],
         path_group_inputs={
             "tracked_artifacts": runtime.tracked_paths,
         },
@@ -1175,167 +1551,52 @@ def _promote_fixed_point_candidate(vault: Path, candidate_path: Path) -> Path:
     )
 
 
-def bootstrap_post_promote_freshness(
-    vault: Path,
+def _bootstrap_freshness_result(
     *,
-    max_bootstrap_passes: int = 2,
-    max_iterations: int = DEFAULT_MAX_ITERATIONS,
-    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
-    python_executable: str | None = None,
-    make_variables: Sequence[str] = (),
-    candidate_prefix: str = DEFAULT_BOOTSTRAP_CANDIDATE_PREFIX,
-    context: RuntimeContext | None = None,
-    command_runner: CommandRunner = _default_runner,
+    status: str,
+    bootstrap_required: bool,
+    generated_at: str,
+    max_bootstrap_passes: int,
+    passes: list[dict[str, Any]],
+    initial_debt: dict[str, Any],
+    final_debt: dict[str, Any],
+    reason: str = "",
 ) -> dict[str, Any]:
-    if max_bootstrap_passes < 1:
-        raise ValueError("max_bootstrap_passes must be >= 1")
-    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
-    generated_at = runtime_context.isoformat_z()
-    active_python = python_executable or sys.executable
-    runtime_env = {**os.environ, "LLMWIKI_RUNTIME_UTC_NOW": generated_at}
-    initial_debt = _fixed_point_freshness_debt_record(vault)
-    passes: list[dict[str, Any]] = []
-
-    if not initial_debt["has_freshness_debt"]:
-        return {
-            "status": "pass",
-            "bootstrap_required": False,
-            "generated_at": generated_at,
-            "max_bootstrap_passes": max_bootstrap_passes,
-            "passes": passes,
-            "initial_fixed_point_freshness_debt": initial_debt,
-            "final_fixed_point_freshness_debt": initial_debt,
-        }
-
-    final_debt = initial_debt
-    for pass_index in range(1, max_bootstrap_passes + 1):
-        artifact_freshness_result = _run_target(
-            vault,
-            target="artifact-freshness",
-            python_executable=active_python,
-            make_variables=make_variables,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-            runtime_env=runtime_env,
-        )
-        pass_record: dict[str, Any] = {
-            "pass_index": pass_index,
-            "artifact_freshness_result": artifact_freshness_result,
-            "fixed_point_candidate_path": "",
-            "fixed_point_promoted_path": "",
-            "fixed_point_status": "not_run",
-            "post_pass_fixed_point_freshness_debt": final_debt,
-        }
-        if artifact_freshness_result["status"] != "pass":
-            passes.append(pass_record)
-            return {
-                "status": "fail",
-                "bootstrap_required": True,
-                "generated_at": generated_at,
-                "max_bootstrap_passes": max_bootstrap_passes,
-                "passes": passes,
-                "initial_fixed_point_freshness_debt": initial_debt,
-                "final_fixed_point_freshness_debt": final_debt,
-                "reason": "artifact_freshness_refresh_failed",
-            }
-
-        report = build_report(
-            vault,
-            max_iterations=max_iterations,
-            timeout_seconds=timeout_seconds,
-            python_executable=active_python,
-            make_variables=make_variables,
-            context=runtime_context,
-            command_runner=command_runner,
-        )
-        candidate_path = write_report(
-            vault, report, f"{candidate_prefix}-{pass_index}.json"
-        )
-        promoted_path = _promote_fixed_point_candidate(vault, candidate_path)
-        final_debt = _fixed_point_freshness_debt_record(vault)
-        pass_record.update(
-            {
-                "fixed_point_candidate_path": display_path(vault, candidate_path),
-                "fixed_point_promoted_path": display_path(vault, promoted_path),
-                "fixed_point_status": str(report.get("status", "unknown")),
-                "post_pass_fixed_point_freshness_debt": final_debt,
-            }
-        )
-        passes.append(pass_record)
-        if not final_debt["has_freshness_debt"]:
-            return {
-                "status": "pass",
-                "bootstrap_required": True,
-                "generated_at": generated_at,
-                "max_bootstrap_passes": max_bootstrap_passes,
-                "passes": passes,
-                "initial_fixed_point_freshness_debt": initial_debt,
-                "final_fixed_point_freshness_debt": final_debt,
-            }
-
-    return {
-        "status": "fail",
-        "bootstrap_required": True,
+    result = {
+        "status": status,
+        "bootstrap_required": bootstrap_required,
         "generated_at": generated_at,
         "max_bootstrap_passes": max_bootstrap_passes,
         "passes": passes,
         "initial_fixed_point_freshness_debt": initial_debt,
         "final_fixed_point_freshness_debt": final_debt,
-        "reason": "fixed_point_freshness_debt_persisted",
     }
+    if reason:
+        result["reason"] = reason
+    return result
 
 
-def _fixed_point_iteration_state(
+def _initial_iteration_digest_maps(
     vault: Path,
-    *,
     runtime: _FixedPointPolicyRuntime,
-    max_iterations: int,
-    timeout_seconds: int,
-    python_executable: str,
-    make_variables: Sequence[str],
-    runtime_env: Mapping[str, str],
-    command_runner: CommandRunner,
+    *,
+    baseline_before_first_iteration: bool,
+) -> tuple[dict[str, str] | None, dict[str, str] | None]:
+    if not baseline_before_first_iteration:
+        return None, None
+    semantic_digest_map, _ = semantic_digest_maps(vault, runtime.tracked_paths)
+    return _digest_map(vault, runtime.tracked_artifacts), semantic_digest_map
+
+
+def _fixed_point_iteration_result(
+    vault: Path,
+    runtime: _FixedPointPolicyRuntime,
+    *,
+    iterations: list[dict[str, Any]],
+    failed: bool,
+    converged: bool,
+    converged_iteration: int,
 ) -> _FixedPointIterationState:
-    next_targets = _initial_iteration_targets(runtime.writers)
-    iterations: list[dict[str, Any]] = []
-    previous_digest_map: dict[str, str] | None = None
-    converged = False
-    converged_iteration = 0
-    failed = False
-
-    for iteration_index in range(1, max_iterations + 1):
-        command_results, command_failed = _run_iteration(
-            vault,
-            targets=next_targets,
-            python_executable=python_executable,
-            make_variables=make_variables,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-            runtime_env=runtime_env,
-        )
-        current_digest_map = _digest_map(vault, runtime.tracked_artifacts)
-        changed_paths = _changed_paths(previous_digest_map, current_digest_map)
-        iterations.append(
-            {
-                "iteration_index": iteration_index,
-                "status": "fail" if command_failed else "pass",
-                "selected_targets": list(next_targets),
-                "command_results": command_results,
-                "digest_map": current_digest_map,
-                "digest_changed": previous_digest_map is None or bool(changed_paths),
-                "changed_paths": changed_paths,
-            }
-        )
-        if command_failed:
-            failed = True
-            break
-        if previous_digest_map is not None and current_digest_map == previous_digest_map:
-            converged = True
-            converged_iteration = iteration_index
-            break
-        next_targets = _next_iteration_targets(changed_paths, runtime=runtime)
-        previous_digest_map = current_digest_map
-
     final_digest_map = (
         iterations[-1]["digest_map"]
         if iterations
@@ -1364,11 +1625,532 @@ def _fixed_point_iteration_state(
     )
 
 
+def _bootstrap_pass_record(
+    pass_index: int,
+    *,
+    artifact_freshness_result: dict[str, Any],
+    post_pass_debt: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "pass_index": pass_index,
+        "artifact_freshness_result": artifact_freshness_result,
+        "fixed_point_candidate_path": "",
+        "fixed_point_promoted_path": "",
+        "fixed_point_status": "not_run",
+        "post_pass_fixed_point_freshness_debt": post_pass_debt,
+    }
+
+
+def _refresh_bootstrap_artifact_freshness(
+    vault: Path,
+    *,
+    pass_index: int,
+    max_bootstrap_passes: int,
+    active_python: str,
+    make_variables: Sequence[str],
+    timeout_seconds: int,
+    runtime_env: Mapping[str, str],
+    command_runner: CommandRunner,
+    progress_sink: ProgressSink | None,
+) -> dict[str, Any]:
+    _emit_progress(
+        progress_sink,
+        (
+            "release-closeout-fixed-point: "
+            f"bootstrap-post-promote pass={pass_index}/{max_bootstrap_passes} "
+            "refresh=artifact-freshness"
+        ),
+    )
+    return _run_target(
+        vault,
+        target="artifact-freshness",
+        python_executable=active_python,
+        make_variables=make_variables,
+        timeout_seconds=timeout_seconds,
+        command_runner=command_runner,
+        runtime_env=runtime_env,
+        progress_sink=progress_sink,
+        progress_prefix="release-closeout-fixed-point bootstrap-post-promote",
+    )
+
+
+def _rebuild_bootstrap_fixed_point_candidate(
+    vault: Path,
+    *,
+    pass_index: int,
+    max_iterations: int,
+    timeout_seconds: int,
+    active_python: str,
+    make_variables: Sequence[str],
+    candidate_prefix: str,
+    runtime_context: RuntimeContext,
+    command_runner: CommandRunner,
+    progress_sink: ProgressSink | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    report, rebuild_mode, rebase_reason = _bootstrap_fixed_point_candidate_report(
+        vault,
+        pass_index=pass_index,
+        max_iterations=max_iterations,
+        timeout_seconds=timeout_seconds,
+        active_python=active_python,
+        make_variables=make_variables,
+        runtime_context=runtime_context,
+        command_runner=command_runner,
+        progress_sink=progress_sink,
+    )
+    candidate_path = write_report(
+        vault, report, f"{candidate_prefix}-{pass_index}.json"
+    )
+    promoted_path = _promote_fixed_point_candidate(vault, candidate_path)
+    _emit_progress(
+        progress_sink,
+        (
+            "release-closeout-fixed-point: "
+            f"bootstrap-post-promote pass={pass_index} promoted={display_path(vault, promoted_path)}"
+        ),
+    )
+    final_debt = _fixed_point_freshness_debt_record(vault)
+    pass_record_updates = {
+        "fixed_point_candidate_path": display_path(vault, candidate_path),
+        "fixed_point_promoted_path": display_path(vault, promoted_path),
+        "fixed_point_status": str(report.get("status", "unknown")),
+        "fixed_point_rebuild_mode": rebuild_mode,
+        "fixed_point_rebase_reason": rebase_reason,
+        "post_pass_fixed_point_freshness_debt": final_debt,
+    }
+    return pass_record_updates, final_debt
+
+
+def _bootstrap_fixed_point_candidate_report(
+    vault: Path,
+    *,
+    pass_index: int,
+    max_iterations: int,
+    timeout_seconds: int,
+    active_python: str,
+    make_variables: Sequence[str],
+    runtime_context: RuntimeContext,
+    command_runner: CommandRunner,
+    progress_sink: ProgressSink | None,
+) -> tuple[dict[str, Any], str, str]:
+    rebase_report, rebase_reason = _rebased_bootstrap_fixed_point_report(
+        vault,
+        max_iterations=max_iterations,
+        timeout_seconds=timeout_seconds,
+        make_variables=make_variables,
+        runtime_context=runtime_context,
+    )
+    if rebase_report is not None:
+        _emit_progress(
+            progress_sink,
+            (
+                "release-closeout-fixed-point: "
+                f"bootstrap-post-promote pass={pass_index} "
+                f"rebase=fixed-point-candidate reason={rebase_reason}"
+            ),
+        )
+        return rebase_report, "rebase_existing_converged_report", rebase_reason
+
+    _emit_progress(
+        progress_sink,
+        (
+            "release-closeout-fixed-point: "
+            f"bootstrap-post-promote pass={pass_index} "
+            f"rebase=skipped reason={rebase_reason} rebuild=fixed-point-candidate"
+        ),
+    )
+    report = build_report(
+        vault,
+        max_iterations=max_iterations,
+        timeout_seconds=timeout_seconds,
+        python_executable=active_python,
+        make_variables=make_variables,
+        context=runtime_context,
+        command_runner=command_runner,
+        progress_sink=progress_sink,
+    )
+    return report, "full_fixed_point_rebuild", rebase_reason
+
+
+def _rebased_bootstrap_fixed_point_report(
+    vault: Path,
+    *,
+    max_iterations: int,
+    timeout_seconds: int,
+    make_variables: Sequence[str],
+    runtime_context: RuntimeContext,
+) -> tuple[dict[str, Any] | None, str]:
+    existing, diagnostics = load_optional_json_object_with_diagnostics(
+        vault / DEFAULT_OUT
+    )
+    load_status = str(diagnostics.get("status", "unknown"))
+    if load_status != "ok":
+        return None, f"existing_fixed_point_report_{load_status}"
+    runtime = _policy_runtime(vault)
+    blocker = _bootstrap_rebase_blocker(
+        vault,
+        existing,
+        runtime=runtime,
+        max_iterations=max_iterations,
+    )
+    if blocker:
+        return None, blocker
+    generated_at = runtime_context.isoformat_z()
+    current_digest_map = _digest_map(vault, runtime.tracked_artifacts)
+    previous_digest_map = {
+        str(path): str(digest)
+        for path, digest in existing.get("final_digest_map", {}).items()
+        if isinstance(path, str) and isinstance(digest, str)
+    }
+    changed_paths = _changed_paths(previous_digest_map, current_digest_map)
+    iteration_count = int(existing.get("iteration_count", 0) or 0)
+    envelope = _fixed_point_envelope(
+        vault,
+        runtime=runtime,
+        generated_at=generated_at,
+        initial_targets=_initial_iteration_targets(runtime.writers),
+        baseline_before_first_iteration=False,
+        max_iterations=max_iterations,
+        timeout_seconds=timeout_seconds,
+        make_variables=make_variables,
+    )
+    report = {
+        **envelope,
+        "vault": display_path(vault, vault),
+        "policy": {
+            "path": POLICY_PATH,
+            "version": int(runtime.policy.get("version", 1) or 1),
+        },
+        "status": "pass",
+        "max_iterations": max_iterations,
+        "iteration_count": iteration_count,
+        "converged": True,
+        "converged_iteration": int(existing.get("converged_iteration", 0) or 0),
+        "tracked_artifacts": runtime.tracked_artifacts,
+        "command_sequence": runtime.writer_targets,
+        "iterations": existing["iterations"],
+        "final_digest_map": current_digest_map,
+        "duration_summary": existing["duration_summary"],
+        "convergence_summary": {
+            "reason": "bootstrap_post_promote_rebased_after_artifact_freshness",
+            "changed_path_count": len(changed_paths),
+            "changed_paths": changed_paths,
+            "previous_iteration": iteration_count,
+            "current_iteration": iteration_count,
+        },
+        "bootstrap_post_promote_rebase": {
+            "status": "applied",
+            "reason": "artifact_freshness_refreshed_after_canonical_promotion",
+            "source_report_generated_at": str(existing.get("generated_at", "")),
+            "source_report_iteration_count": iteration_count,
+            "updated_digest_path_count": len(changed_paths),
+            "updated_digest_paths": changed_paths,
+            "summary": (
+                "Reused an already converged fixed-point writer run after the "
+                "post-promote artifact-freshness refresh; only the envelope and "
+                "final digest map were rewritten."
+            ),
+        },
+    }
+    return report, "existing_converged_report_rebased"
+
+
+def _bootstrap_rebase_blocker(
+    vault: Path,
+    existing: dict[str, Any],
+    *,
+    runtime: _FixedPointPolicyRuntime,
+    max_iterations: int,
+) -> str:
+    if str(existing.get("artifact_kind", "")) != "release_closeout_fixed_point_report":
+        return "existing_fixed_point_artifact_kind_mismatch"
+    if str(existing.get("producer", "")) != PRODUCER:
+        return "existing_fixed_point_producer_mismatch"
+    if str(existing.get("status", "")) != "pass":
+        return "existing_fixed_point_not_pass"
+    if not bool(existing.get("converged", False)):
+        return "existing_fixed_point_not_converged"
+    if int(existing.get("max_iterations", 0) or 0) != max_iterations:
+        return "existing_fixed_point_max_iterations_mismatch"
+    if int(existing.get("iteration_count", 0) or 0) < 1:
+        return "existing_fixed_point_iteration_count_missing"
+    if not isinstance(existing.get("iterations"), list):
+        return "existing_fixed_point_iterations_missing"
+    if not isinstance(existing.get("duration_summary"), dict):
+        return "existing_fixed_point_duration_summary_missing"
+    existing_command_sequence = [
+        str(target) for target in existing.get("command_sequence", [])
+    ]
+    if existing_command_sequence != runtime.writer_targets:
+        return "existing_fixed_point_command_sequence_mismatch"
+    existing_paths = [
+        str(item.get("path", ""))
+        for item in existing.get("tracked_artifacts", [])
+        if isinstance(item, dict)
+    ]
+    if existing_paths != runtime.tracked_paths:
+        return "existing_fixed_point_tracked_artifacts_mismatch"
+    current_source_tree = release_source_tree_fingerprint(
+        vault,
+        extra_excluded_files=(DEFAULT_OUT,),
+    )
+    if str(existing.get("source_tree_fingerprint", "")) != current_source_tree:
+        return "existing_fixed_point_source_tree_stale"
+    return ""
+
+
+def _bootstrap_no_freshness_debt_result(
+    *,
+    generated_at: str,
+    max_bootstrap_passes: int,
+    initial_debt: dict[str, Any],
+    progress_sink: ProgressSink | None,
+) -> dict[str, Any]:
+    _emit_progress(
+        progress_sink,
+        "release-closeout-fixed-point: bootstrap-post-promote skipped fixed_point_freshness_debt=false",
+    )
+    return _bootstrap_freshness_result(
+        status="pass",
+        bootstrap_required=False,
+        generated_at=generated_at,
+        max_bootstrap_passes=max_bootstrap_passes,
+        passes=[],
+        initial_debt=initial_debt,
+        final_debt=initial_debt,
+    )
+
+
+def bootstrap_post_promote_freshness(
+    vault: Path,
+    *,
+    max_bootstrap_passes: int = 2,
+    max_iterations: int = DEFAULT_MAX_ITERATIONS,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    python_executable: str | None = None,
+    make_variables: Sequence[str] = (),
+    candidate_prefix: str = DEFAULT_BOOTSTRAP_CANDIDATE_PREFIX,
+    context: RuntimeContext | None = None,
+    command_runner: CommandRunner = _default_runner,
+    progress_sink: ProgressSink | None = None,
+) -> dict[str, Any]:
+    if max_bootstrap_passes < 1:
+        raise ValueError("max_bootstrap_passes must be >= 1")
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
+    generated_at = runtime_context.isoformat_z()
+    active_python = python_executable or sys.executable
+    runtime_env = {**os.environ, "LLMWIKI_RUNTIME_UTC_NOW": generated_at}
+    initial_debt = _fixed_point_freshness_debt_record(vault)
+    passes: list[dict[str, Any]] = []
+
+    if not initial_debt["has_freshness_debt"]:
+        return _bootstrap_no_freshness_debt_result(
+            generated_at=generated_at,
+            max_bootstrap_passes=max_bootstrap_passes,
+            initial_debt=initial_debt,
+            progress_sink=progress_sink,
+        )
+
+    final_debt = initial_debt
+    for pass_index in range(1, max_bootstrap_passes + 1):
+        artifact_freshness_result = _refresh_bootstrap_artifact_freshness(
+            vault,
+            pass_index=pass_index,
+            max_bootstrap_passes=max_bootstrap_passes,
+            active_python=active_python,
+            make_variables=make_variables,
+            timeout_seconds=timeout_seconds,
+            runtime_env=runtime_env,
+            command_runner=command_runner,
+            progress_sink=progress_sink,
+        )
+        pass_record = _bootstrap_pass_record(
+            pass_index,
+            artifact_freshness_result=artifact_freshness_result,
+            post_pass_debt=final_debt,
+        )
+        if artifact_freshness_result["status"] != "pass":
+            _emit_progress(
+                progress_sink,
+                (
+                    "release-closeout-fixed-point: "
+                    f"bootstrap-post-promote pass={pass_index} status=fail "
+                    "reason=artifact_freshness_refresh_failed"
+                ),
+            )
+            passes.append(pass_record)
+            return _bootstrap_freshness_result(
+                status="fail",
+                bootstrap_required=True,
+                generated_at=generated_at,
+                max_bootstrap_passes=max_bootstrap_passes,
+                passes=passes,
+                initial_debt=initial_debt,
+                final_debt=final_debt,
+                reason="artifact_freshness_refresh_failed",
+            )
+
+        pass_record_updates, final_debt = _rebuild_bootstrap_fixed_point_candidate(
+            vault,
+            pass_index=pass_index,
+            max_iterations=max_iterations,
+            timeout_seconds=timeout_seconds,
+            active_python=active_python,
+            make_variables=make_variables,
+            candidate_prefix=candidate_prefix,
+            runtime_context=runtime_context,
+            command_runner=command_runner,
+            progress_sink=progress_sink,
+        )
+        pass_record.update(pass_record_updates)
+        passes.append(pass_record)
+        if not final_debt["has_freshness_debt"]:
+            _emit_progress(
+                progress_sink,
+                (
+                    "release-closeout-fixed-point: "
+                    f"bootstrap-post-promote pass={pass_index} status=pass fixed_point_freshness_debt=false"
+                ),
+            )
+            return _bootstrap_freshness_result(
+                status="pass",
+                bootstrap_required=True,
+                generated_at=generated_at,
+                max_bootstrap_passes=max_bootstrap_passes,
+                passes=passes,
+                initial_debt=initial_debt,
+                final_debt=final_debt,
+            )
+
+    _emit_progress(
+        progress_sink,
+        "release-closeout-fixed-point: bootstrap-post-promote status=fail reason=fixed_point_freshness_debt_persisted",
+    )
+    return _bootstrap_freshness_result(
+        status="fail",
+        bootstrap_required=True,
+        generated_at=generated_at,
+        max_bootstrap_passes=max_bootstrap_passes,
+        passes=passes,
+        initial_debt=initial_debt,
+        final_debt=final_debt,
+        reason="fixed_point_freshness_debt_persisted",
+    )
+
+
+def _fixed_point_iteration_state(
+    vault: Path,
+    *,
+    runtime: _FixedPointPolicyRuntime,
+    config: _FixedPointIterationConfig,
+) -> _FixedPointIterationState:
+    next_targets = list(config.initial_targets)
+    iterations: list[dict[str, Any]] = []
+    previous_digest_map, previous_semantic_digest_map = _initial_iteration_digest_maps(
+        vault,
+        runtime,
+        baseline_before_first_iteration=config.baseline_before_first_iteration,
+    )
+    converged = False
+    converged_iteration = 0
+    failed = False
+    writer_by_target = _writer_by_target(runtime.writers)
+    semantic_reuse_signatures: dict[str, dict[str, Any]] = {}
+
+    for iteration_index in range(1, config.max_iterations + 1):
+        _emit_progress(
+            config.progress_sink,
+            (
+                "release-closeout-fixed-point: "
+                f"iteration={iteration_index}/{config.max_iterations} "
+                f"targets={','.join(next_targets)}"
+            ),
+        )
+        command_results, command_failed = _run_iteration(
+            targets=next_targets,
+            context=_IterationExecutionContext(
+                vault=vault,
+                python_executable=config.python_executable,
+                make_variables=config.make_variables,
+                timeout_seconds=config.timeout_seconds,
+                command_runner=config.command_runner,
+                runtime_env=config.runtime_env,
+                progress_sink=config.progress_sink,
+                writer_by_target=writer_by_target,
+                semantic_reuse_signatures=semantic_reuse_signatures,
+                tracked_paths=runtime.tracked_paths,
+            ),
+        )
+        snapshot = _fixed_point_iteration_snapshot(
+            vault,
+            runtime=runtime,
+            iteration_index=iteration_index,
+            selected_targets=next_targets,
+            command_results=command_results,
+            command_failed=command_failed,
+            previous_digest_map=previous_digest_map,
+            previous_semantic_digest_map=previous_semantic_digest_map,
+        )
+        iterations.append(snapshot.record)
+        if command_failed:
+            failed = True
+            _emit_progress(
+                config.progress_sink,
+                (
+                    "release-closeout-fixed-point: "
+                    f"iteration={iteration_index} status=fail "
+                    f"changed_path_count={len(snapshot.changed_paths)}"
+                ),
+            )
+            break
+        if (
+            previous_digest_map is not None
+            and snapshot.digest_map == previous_digest_map
+        ):
+            converged = True
+            converged_iteration = iteration_index
+            _emit_progress(
+                config.progress_sink,
+                (
+                    "release-closeout-fixed-point: "
+                    f"iteration={iteration_index} status=converged changed_path_count=0"
+                ),
+            )
+            break
+        next_targets = _next_iteration_targets(
+            snapshot.semantic_changed_paths,
+            runtime=runtime,
+        )
+        _emit_progress(
+            config.progress_sink,
+            (
+                "release-closeout-fixed-point: "
+                f"iteration={iteration_index} status=changed "
+                f"changed_path_count={len(snapshot.changed_paths)} "
+                f"semantic_changed_path_count={len(snapshot.semantic_changed_paths)} "
+                f"next_target_count={len(next_targets)}"
+            ),
+        )
+        previous_digest_map = snapshot.digest_map
+        previous_semantic_digest_map = snapshot.semantic_digest_map
+
+    return _fixed_point_iteration_result(
+        vault,
+        runtime,
+        iterations=iterations,
+        failed=failed,
+        converged=converged,
+        converged_iteration=converged_iteration,
+    )
+
+
 def _fixed_point_envelope(
     vault: Path,
     *,
     runtime: _FixedPointPolicyRuntime,
     generated_at: str,
+    initial_targets: Sequence[str],
+    baseline_before_first_iteration: bool,
     max_iterations: int,
     timeout_seconds: int,
     make_variables: Sequence[str],
@@ -1381,7 +2163,10 @@ def _fixed_point_envelope(
         source_command=SOURCE_COMMAND,
         resolved_policy_path=vault / POLICY_PATH,
         schema_path=SCHEMA_PATH,
-        source_paths=["ops/scripts/release_closeout_fixed_point.py"],
+        source_paths=[
+            "ops/scripts/release/release_closeout_fixed_point.py",
+            "ops/scripts/core/generated_artifact_semantic_digest.py",
+        ],
         path_group_inputs={"tracked_artifacts": runtime.tracked_paths},
         text_inputs={
             "policy_version": str(runtime.policy.get("version", "")),
@@ -1389,9 +2174,10 @@ def _fixed_point_envelope(
             "timeout_seconds": str(timeout_seconds),
             "writer_targets": "\n".join(runtime.writer_targets),
             "feedback_targets": "\n".join(runtime.feedback_targets),
-            "initial_iteration_targets": "\n".join(
-                _initial_iteration_targets(runtime.writers)
-            ),
+            "initial_iteration_targets": "\n".join(initial_targets),
+            "baseline_before_first_iteration": str(
+                baseline_before_first_iteration
+            ).lower(),
             "make_variables": "\n".join(
                 sanitize_report_text(vault, item) for item in make_variables
             ),
@@ -1407,8 +2193,11 @@ def build_report(
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     python_executable: str | None = None,
     make_variables: Sequence[str] = (),
+    initial_targets: Sequence[str] | None = None,
+    baseline_before_first_iteration: bool = False,
     context: RuntimeContext | None = None,
     command_runner: CommandRunner = _default_runner,
+    progress_sink: ProgressSink | None = None,
 ) -> dict[str, Any]:
     if max_iterations < 1:
         raise ValueError("max_iterations must be >= 1")
@@ -1416,16 +2205,25 @@ def build_report(
     generated_at = runtime_context.isoformat_z()
     active_python = python_executable or sys.executable
     runtime = _policy_runtime(vault)
+    selected_initial_targets = _validated_initial_targets(
+        initial_targets,
+        runtime=runtime,
+    )
     runtime_env = {**os.environ, "LLMWIKI_RUNTIME_UTC_NOW": generated_at}
     iteration_state = _fixed_point_iteration_state(
         vault,
         runtime=runtime,
-        max_iterations=max_iterations,
-        timeout_seconds=timeout_seconds,
-        python_executable=active_python,
-        make_variables=make_variables,
-        runtime_env=runtime_env,
-        command_runner=command_runner,
+        config=_FixedPointIterationConfig(
+            initial_targets=selected_initial_targets,
+            baseline_before_first_iteration=baseline_before_first_iteration,
+            max_iterations=max_iterations,
+            timeout_seconds=timeout_seconds,
+            python_executable=active_python,
+            make_variables=make_variables,
+            runtime_env=runtime_env,
+            command_runner=command_runner,
+            progress_sink=progress_sink,
+        ),
     )
     duration_summary = _duration_summary(
         iteration_state.iterations,
@@ -1435,6 +2233,8 @@ def build_report(
         vault,
         runtime=runtime,
         generated_at=generated_at,
+        initial_targets=selected_initial_targets,
+        baseline_before_first_iteration=baseline_before_first_iteration,
         max_iterations=max_iterations,
         timeout_seconds=timeout_seconds,
         make_variables=make_variables,
@@ -1514,7 +2314,9 @@ def write_dry_run_recommended_targets(
     )
     destination.parent.mkdir(parents=True, exist_ok=True)
     raw_targets = report.get("recommended_targets")
-    targets = [str(target) for target in raw_targets] if isinstance(raw_targets, list) else []
+    targets = (
+        [str(target) for target in raw_targets] if isinstance(raw_targets, list) else []
+    )
     contents = "\n".join(targets) if targets else "no recommended targets"
     destination.write_text(f"{contents}\n", encoding="utf-8")
     return destination
@@ -1585,6 +2387,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         help="Additional KEY=VALUE assignment forwarded to every nested make invocation.",
     )
+    parser.add_argument(
+        "--initial-target",
+        action="append",
+        default=[],
+        help=(
+            "Restrict the first fixed-point iteration to this writer target. "
+            "May be repeated; later iterations still follow policy dependencies."
+        ),
+    )
+    parser.add_argument(
+        "--baseline-before-first-iteration",
+        action="store_true",
+        help=(
+            "Capture digest baselines before the first iteration so narrow initial "
+            "target slices expand only from artifacts that actually changed."
+        ),
+    )
     parser.add_argument("--no-fail", action="store_true")
     return parser.parse_args(argv)
 
@@ -1601,6 +2420,7 @@ def main(argv: list[str] | None = None) -> int:
             python_executable=args.python,
             make_variables=tuple(args.make_variable),
             candidate_prefix=args.bootstrap_candidate_prefix,
+            progress_sink=_stderr_progress,
         )
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
         if args.no_fail:
@@ -1620,7 +2440,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.plan_out:
             plan_path = write_dry_run_plan(vault, report, args.plan_out)
             print(display_path(vault, plan_path))
-        if args.fail_on_refresh_required and report["refresh_required"] and not args.no_fail:
+        if (
+            args.fail_on_refresh_required
+            and report["refresh_required"]
+            and not args.no_fail
+        ):
             return 1
         return 0
     report = build_report(
@@ -1629,6 +2453,9 @@ def main(argv: list[str] | None = None) -> int:
         timeout_seconds=args.timeout_seconds,
         python_executable=args.python,
         make_variables=tuple(args.make_variable),
+        initial_targets=tuple(args.initial_target) or None,
+        baseline_before_first_iteration=args.baseline_before_first_iteration,
+        progress_sink=_stderr_progress,
     )
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))

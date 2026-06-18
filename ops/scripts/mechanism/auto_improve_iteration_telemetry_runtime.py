@@ -93,15 +93,21 @@ def _infer_same_eval_reason_code(
 
 
 def _secondary_axes_from_text(value: str) -> list[str]:
-    if "selected_axes=" not in value:
-        return []
-    tail = value.split("selected_axes=", 1)[1].split(",", 1)[0].strip()
-    tail = tail.strip("[](){}")
-    return [
-        item.strip().strip("'\"")
-        for item in tail.split(",")
-        if item.strip().strip("'\"")
-    ]
+    for key in ("improved_axes", "selected_axes"):
+        marker = f"{key}="
+        if marker not in value:
+            continue
+        tail = value.split(marker, 1)[1].strip()
+        if tail.startswith("[") and "]" in tail:
+            tail = tail[1 : tail.index("]")]
+        else:
+            tail = tail.split(",", 1)[0].strip()
+        return [
+            item.strip().strip("'\"")
+            for item in tail.strip("[](){}").split(",")
+            if item.strip().strip("'\"")
+        ]
+    return []
 
 
 def _string_list(value: object) -> list[str]:
@@ -122,6 +128,26 @@ def _extract_checks(source: object) -> list[dict[str, Any]]:
     return []
 
 
+def _detail_bool_token_present(detail: str, key: str) -> bool:
+    return f"{key}=true" in detail.lower()
+
+
+def _equal_score_secondary_check_is_eligible(check: dict[str, Any]) -> bool:
+    status = str(check.get("status", "")).strip().upper()
+    if status:
+        return status == "PASS"
+    detail = str(check.get("detail", ""))
+    return all(
+        _detail_bool_token_present(detail, key)
+        for key in (
+            "allowed",
+            "score_equal",
+            "selected_non_regression",
+            "selected_any_improvement",
+        )
+    )
+
+
 def _infer_secondary_improvement_axes(
     result: dict[str, Any] | None,
     existing_report: dict[str, Any],
@@ -137,7 +163,7 @@ def _infer_secondary_improvement_axes(
                 continue
             detail = str(check.get("detail", ""))
             axes = _secondary_axes_from_text(detail)
-            if "selected_any_improvement=true" in detail and axes:
+            if _equal_score_secondary_check_is_eligible(check) and axes:
                 return axes
     return []
 
@@ -151,13 +177,6 @@ def _infer_strict_secondary_improvement_present(
     for source in (contract, result, existing_report):
         if isinstance(source, dict) and isinstance(source.get("strict_secondary_improvement_present"), bool):
             return bool(source["strict_secondary_improvement_present"])
-    for source in (result, existing_report):
-        for check in _extract_checks(source):
-            if check.get("id") != "equal_score_secondary_eligibility":
-                continue
-            detail = str(check.get("detail", ""))
-            if "selected_any_improvement=true" in detail:
-                return True
     return bool(axes)
 
 

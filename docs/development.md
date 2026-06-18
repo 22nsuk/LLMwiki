@@ -17,6 +17,9 @@ report-contract, public mirror, mechanism, and release entrypoints.
 export omits the project itself, then installs the local project separately as
 editable with `--no-deps`, so local setup and CI both replay the same frozen
 third-party dependency authority without losing editable source behavior.
+Local install replay uses `DEV_INSTALL_INDEX_URL`, which defaults to
+`UV_CANONICAL_INDEX_URL` but can be overridden for a local package mirror
+without changing the canonical lock-check policy.
 Root `requirements.txt` and `requirements-dev.txt` are retired from the public
 source surface. Historical or sample reports may still classify those paths as
 optional compatibility evidence, but their absence must not be treated as a
@@ -50,7 +53,7 @@ When a request says "full pytest", choose the lane by intent:
 | --- | --- | --- |
 | Developer full regression | `make test-all` | Runs all current pytest tests with the default parallel/cache policy and does not write canonical release evidence. |
 | Exact serial reproduction or xdist isolation debugging | `make test-all-serial` or focused `.venv/bin/python -m pytest tests/...` | Use only when the serial behavior itself is the thing being investigated. |
-| Release-grade full-suite evidence | `make test-execution-summary-full-current-or-refresh` | Runs current-check, then aggregate metadata reuse from current shards, then `test-execution-summary-full-refresh-no-converge` only when evidence really needs to be regenerated. |
+| Release-grade full-suite evidence | `make test-execution-summary-full` | Runs the full-suite summary lane and records canonical release evidence. |
 | Runnable release authority | `make release-run-ready` | Owns the runnable release stage, including full-suite evidence plus release smoke, public-check, package, and manifest authority. |
 
 The registry-backed test lane inventory is recorded in
@@ -70,22 +73,24 @@ inside the run should use the repository virtualenv. Document and diagnose
 Codex CLI shadowing or missing `python`/`pytest`/`jsonschema` as local
 environment setup issues before treating a mechanism proposal as failed.
 
-`make fast-smoke`는 Subagent/developer precheck 전용 curated pytest slice다.
-It is intentionally smaller than lint/eval, integration-heavy generator smoke,
-and full release smoke.
+`make fast-smoke` is the curated Subagent/developer precheck pytest slice. It is
+intentionally smaller than lint/eval, integration-heavy generator smoke, and
+full release smoke. `make runtime-hotspot-smoke` is the focused runtime
+decomposition check for hotspot façade refactors before a broader batch gate.
 
 ## Cost-Aware Test Use
 
 Use the smallest authoritative lane that proves the change under review.
-`make fast-smoke` and focused `.venv/bin/python -m pytest ...` commands are
-the default tight-loop checks. `make test` / `make test-fast` are broader batch
-checks for ordinary Python changes. `make test-all` is the non-release full
-regression lane and should be treated as checkpoint-grade work.
+`make fast-smoke`, `make runtime-hotspot-smoke`, and focused
+`.venv/bin/python -m pytest ...` commands are the default tight-loop checks.
+`make test` / `make test-fast` are broader batch checks for ordinary Python
+changes. `make test-all` is the non-release full regression lane and should be
+treated as checkpoint-grade work.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.
-`make test-report-contract-all` intentionally sweeps
-every `report_contract` marker and is a checkpoint/CI or final contract proof,
-not the default for every vertical slice. Report-contract, release-sealing, and
+`make test-report-contract-all` intentionally sweeps every `report_contract`
+marker and is a checkpoint, release-style, or final contract proof, not the
+default for every vertical slice. Report-contract, release-sealing, and
 full-suite Make lanes use their own pytest flag variables so isolation fixes can
 be applied without changing every recipe. Override those variables to
 `$(PYTEST_SERIAL_FLAGS)` only when investigating a parallel-isolation failure.
@@ -97,7 +102,7 @@ Before spending release-grade runtime, prefer the check/plan targets:
 `make release-sealed-run-ready-plan`, and
 `make release-auto-promotion-ready-plan`. Run the corresponding refresh target
 only when the check/plan shows stale authority that is relevant to the change.
-`test-execution-summary-full-body`, and therefore `release-run-ready`, uses
+`test-execution-summary-full`, and therefore `release-run-ready`, uses
 `TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS` which defaults to the parallel
 `PYTEST_FLAGS`; set it to `$(PYTEST_SERIAL_FLAGS)` only when debugging a
 known parallel-isolation failure.
@@ -110,7 +115,7 @@ generator, policy, and schema edits first; then run the stabilizers that can
 mutate or prove generated surfaces, such as `make report-schema-samples-check`,
 `make script-output-surfaces-check`, `make script-output-surfaces` when the check
 reports a stale material output/fallback registry, targeted generated-artifact
-converge targets, and `make static`. `test-execution-summary-full-body` runs
+converge targets, and `make static`. `test-execution-summary-full` runs
 `make full-pytest-generated-preflight` before the expensive full suite, so stale
 schema samples, script output surfaces, and runtime hotspot golden digests fail
 early with the owning repair target. After that point, do not edit source or
@@ -119,6 +124,13 @@ docs unless restarting this sequence. Refresh
 `make test-execution-summary-full-current-or-refresh` for
 explicit full-proof lanes such as `make release-run-ready` or
 `make release-source-ready-prepare`. Use
+`test-execution-summary-full-refresh-no-converge` only as the explicit fallback
+when current full-suite evidence cannot be reused and generated-artifact
+convergence must be deferred to a later release lane. The full-suite shard
+wrapper emits an outer heartbeat by default (`suite`, shard label, elapsed
+seconds, quiet seconds, timeout, and execution log path), so a quiet raw pytest
+period should be treated as observable progress unless the heartbeat itself
+stops. Use
 `make release-converge-preflight` before committing, which refreshes
 `generated-artifact-script-output` before report-contract evidence, then refresh
 summaries last. This keeps
@@ -167,6 +179,10 @@ CI splits registry-backed lanes into parallel jobs; see
 `.github/workflows/ci.yml` and `ops/test-lane-registry.json` for the executable
 shape. Docs should point to registry-backed Make targets rather than
 hand-maintained pytest marker expressions.
+The `report-contract` CI tier uses `make test-report-contract-core` on pull
+requests to keep review latency bounded; the full `make test-report-contract-all`
+sweep remains a checkpoint-grade lane and is run by the release workflow before
+release artifacts are built.
 
 Dependabot branches are checked through the `pull_request` event; the CI
 `push` trigger ignores `dependabot/**` so one dependency PR SHA does not spend
@@ -182,15 +198,16 @@ rebase produces jobs that reach checkout.
 | --- | --- | --- |
 | Docs only | `make test-public` | `make sync-public-policy-check` if public boundaries changed |
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
+| CLI output/path surface | `make script-output-surfaces-check` | Run `make script-output-surfaces` only when the check reports a stale material output/fallback registry, then rerun the check before committing |
 | Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | proves planner recommendations and changed-path minimums |
 | Registry/Make/CI lane-contract proof | `make test-report-contract-core` | proves registry/Make/CI lane-contract parity after lane selector, CI routing, or report-contract semantics changed |
-| Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | `make complexity-budget-touched-check CHANGED_FILES_MANIFEST=<manifest>` or `STRUCTURAL_COMPLEXITY_BUDGET_TARGETS=...`; without touched inputs the target skips and the ratchet stays inactive |
+| Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | Before and after structural edits, prefer `make function-budget-edit-check STRUCTURAL_COMPLEXITY_BUDGET_TARGETS="path/to/file.py"` (or `CHANGED_FILES_MANIFEST=<manifest>`); it refreshes function-budget proposals and then runs the touched complexity ratchet. Without touched inputs, `complexity-budget-touched-check` skips and the ratchet stays inactive |
 | Dependency input | `make uv-lock-check` | `make static` after any intentional lock refresh |
 | Schema/report contract | `make test-report-contract-core` | regenerate artifacts, then rerun the focused schema/report tests |
 | Public export policy | `make sync-public-policy` | `make public-check` |
 | Release evidence | `make changed-path-minimum-plan`, then `make release-run-ready-plan-check` and `make release-run-ready-check` | Run `make release-evidence-converge` when generated report payloads are stale; run `make release-run-ready` from the committed tree before release; after a source-ready commit run `make release-post-commit-finalize` for check-only HEAD readback, or `make release-authority-settle` when staged authority manifests should be rewritten for unattended promotion |
 | Sealed release evidence | `make release-sealed-run-ready-check` | `make release-sealed-run-ready`; its planner requires current passing run-ready and auto-promotion preseal evidence and reports the minimal next action |
-| Auto-promotion evidence | `make release-auto-promotion-ready-check` | Run with `GOAL_RUN_ID=<goal-run-id>` when a run id is known or let `make release-auto-promotion-goal-run-id-guard` infer it from matching current verified `goal-run-status` and `goal-runtime-certificate` evidence; after stale generated evidence is converged, prefer `make release-authority-settle` to rewrite staged authority for unattended promotion, or run `make release-auto-promotion-preflight`, `make release-run-ready`, `make release-auto-promotion-preseal`, `make release-sealed-run-ready`, then `make release-auto-promotion-ready` when stepping through failures manually; preflight/preseal keep missing verified runtime evidence as final promotion blockers instead of creating runtime-trial evidence, preseal includes `make release-auto-promotion-safe-cleanup`, and Stage 3 directly verifies the goal-runtime certificate while reusing the sealed operator summary generated by the sealed stage |
+| Auto-promotion evidence | `make release-auto-promotion-ready-check` | Run with `GOAL_RUN_ID=<goal-run-id>` when a run id is known or let `make release-auto-promotion-goal-run-id-guard` infer it from matching current verified `goal-run-status` and `goal-runtime-certificate` evidence; after stale generated evidence is converged, prefer `make release-authority-settle` to rewrite staged authority for unattended promotion, or run `make release-auto-promotion-preflight`, `make release-run-ready`, `make release-auto-promotion-preseal`, `make release-sealed-run-ready`, then `make release-auto-promotion-ready` when stepping through failures manually; preflight/preseal keep missing verified runtime evidence as final promotion blockers instead of creating runtime-trial evidence, preseal uses `make release-auto-promotion-safe-cleanup-cleanup-only`, and Stage 3 directly verifies the goal-runtime certificate while reusing the sealed operator summary generated by the sealed stage |
 | Supply chain | `make supply-chain-check` | `make sbom-readiness-check` for SBOM readiness |
 
 ## Editing Discipline

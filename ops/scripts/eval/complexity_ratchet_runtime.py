@@ -24,9 +24,18 @@ def _normalized_path(value: object) -> str:
 
 def _is_warn_target(target: dict[str, Any]) -> bool:
     over_budget_metrics = target.get("over_budget_metrics")
+    no_headroom_metrics = target.get("no_headroom_metrics")
+    low_headroom_metrics = target.get("low_headroom_metrics")
     function_budget_candidate_count = target.get("function_budget_candidate_count", 0)
     has_over_budget_metrics = isinstance(over_budget_metrics, list) and bool(over_budget_metrics)
-    return has_over_budget_metrics or int(function_budget_candidate_count) >= 1
+    has_no_headroom_metrics = isinstance(no_headroom_metrics, list) and bool(no_headroom_metrics)
+    has_low_headroom_metrics = isinstance(low_headroom_metrics, list) and bool(low_headroom_metrics)
+    return (
+        has_over_budget_metrics
+        or has_no_headroom_metrics
+        or has_low_headroom_metrics
+        or int(function_budget_candidate_count) >= 1
+    )
 
 
 def current_warn_targets(report: dict[str, Any]) -> frozenset[str]:

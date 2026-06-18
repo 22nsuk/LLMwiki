@@ -47,6 +47,7 @@ your change type.
   policy public CLIs.
 - Do not copy private corpus content, raw inventory, live run artifacts, or external report bodies into public surfaces.
 - Run `make sync-public-policy` when adding a public file, public prefix, or durable generated report exception.
+- Update [CHANGELOG.md](./CHANGELOG.md) when a user-visible runtime, release, or public-export contract changes.
 - Review `.codex/agents/` changes together with role intent, rung selection, and routing contracts.
 - Record third-party material and license obligations in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) when needed.
 
@@ -71,3 +72,15 @@ together unless the split is explicitly justified in the PR.
 
 Do not file public issues for sensitive security reports. Follow
 [SECURITY.md](./SECURITY.md).
+
+## Full-vault run retention
+
+`runs/` is operator-local evidence. Promoted or stale runs should not grow
+without review:
+
+1. Refresh `ops/reports/generated-artifact-index.json` with `make generated-artifact-index`.
+2. Review advisory archive candidates in the generated-artifact-index report.
+3. Move confirmed promoted history into `runs/archive/` only after operator
+   confirmation; see [docs/release.md](./docs/release.md) for the
+   `command-log-summary-backfill` workflow.
+4. Do not copy run artifacts into public surfaces (`ops/`, `docs/`, `tests/`).

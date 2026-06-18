@@ -8,9 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_gate import main as promotion_gate_main
-
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.promotion_gate import main as promotion_gate_main
 from tests.cli_test_runtime import CliInvocationResult, invoke_cli_main
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -145,6 +144,7 @@ def mechanism_report(
     headings: int = 0,
     test_file_count: int = 1,
     test_case_count: int = 1,
+    test_guardrail_count: int = 0,
     complexity_score: int = 25,
 ) -> dict:
     test_files = [f"tests/test_example_{idx}.py" for idx in range(test_file_count)]
@@ -167,6 +167,7 @@ def mechanism_report(
             "markdown_heading_count": headings,
             "test_file_count": test_file_count,
             "test_case_count": test_case_count,
+            "test_guardrail_count": test_guardrail_count,
         },
         "total_structural_metrics": {
             "nonempty_line_count_total": nonempty,
@@ -175,6 +176,7 @@ def mechanism_report(
             "markdown_heading_count": headings,
             "test_file_count": test_file_count,
             "test_case_count": test_case_count,
+            "test_guardrail_count": test_guardrail_count,
         },
         "complexity_profile": {
             "dimensions": {
@@ -222,6 +224,7 @@ def mechanism_report(
                     "target_count": len(all_targets),
                     "test_file_count": test_file_count,
                     "test_case_count": test_case_count,
+                    "test_guardrail_count": test_guardrail_count,
                     "verification_scope": "targeted_pytest",
                     "reasons": ["fixture"],
                     "selected_score": 2,
@@ -408,6 +411,25 @@ class PromotionGateExitCodeTest(unittest.TestCase):
             completed = self.run_main(vault, *self.base_args(vault))
             self.assertEqual(completed.exit_code, 6)
             self.assertIn("schema validation failed", completed.stderr)
+
+    def test_partial_mechanism_contract_eval_pair_returns_2(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_valid_artifacts(vault)
+
+            completed = self.run_main(
+                vault,
+                *self.base_args(vault),
+                "--baseline-mechanism-contract-eval-report",
+                "artifacts/baseline-mechanism-contract-eval.json",
+            )
+
+            self.assertEqual(completed.exit_code, 2)
+            self.assertIn(
+                "mechanism contract eval requires both baseline and candidate reports",
+                completed.stderr,
+            )
 
     def test_invalid_output_schema_returns_7(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

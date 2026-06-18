@@ -7,14 +7,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
+    load_json_object_from_path,
+)
 
 DEFAULT_OUT = "tmp/goal-runtime-clean-transient.json"
 DEFAULT_STATUS_REPORT = "ops/reports/goal-run-status.json"
@@ -53,14 +56,6 @@ class GoalRuntimeCleanTransientRequest:
     status_report_path: str = DEFAULT_STATUS_REPORT
     policy_path: str | None = None
     context: RuntimeContext | None = None
-
-
-def _load_json_object(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
 
 
 def _repo_path(vault: Path, rel_path: str) -> Path:
@@ -102,7 +97,7 @@ def _path_kind(path: Path) -> str:
 
 def _status_report(vault: Path, rel_path: str) -> dict[str, Any]:
     path = _repo_path_or_none(vault, rel_path)
-    return _load_json_object(path) if path is not None else {}
+    return load_json_object_from_path(path) if path is not None else {}
 
 
 def _string_values(payload: dict[str, Any]) -> list[str]:

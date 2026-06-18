@@ -79,6 +79,21 @@ def test_empty_queue_blockers_classifies_evidence_gap_when_no_specific_blocker()
     ]
 
 
+def test_empty_queue_blockers_names_recent_log_overlap_only_empty_selection() -> None:
+    blockers = empty_queue_blockers(
+        mutation_enabled=True,
+        mechanism_review_report={},
+        available_proposals=[{"proposal_id": "p-1", "blocked_by": ["recent_log_overlap"]}],
+        proposals=[],
+        skipped_candidates=[],
+        evidence_gaps=[],
+    )
+
+    assert blockers[0]["reason"] == "recent_log_overlap_queue_blocked"
+    assert blockers[0]["source"] == "queue_selection"
+    assert reported_blocked_proposal_count([], blockers) == 1
+
+
 def test_report_status_and_blocked_count_are_pure_gate_rules() -> None:
     assert report_status(enabled=False, proposals=[{"blocked_by": []}]) == "attention"
     assert report_status(enabled=True, proposals=[]) == "attention"

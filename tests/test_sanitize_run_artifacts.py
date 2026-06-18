@@ -4,7 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.sanitize_run_artifacts import sanitize_run_artifacts, sanitize_run_text
+from ops.scripts.core.sanitize_run_artifacts import (
+    sanitize_run_artifacts,
+    sanitize_run_text,
+)
 
 
 class SanitizeRunArtifactsTests(unittest.TestCase):

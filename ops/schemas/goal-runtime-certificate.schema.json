@@ -219,6 +219,7 @@
         "claim_type",
         "certificate_claim_status",
         "report_status_meaning",
+        "certificate_failure_class",
         "current_scope",
         "mechanism_promote_evidence_policy",
         "primary_blocker_categories",
@@ -234,6 +235,10 @@
           "enum": ["eligible", "already_verified", "not_yet_certifiable"]
         },
         "report_status_meaning": { "type": "string", "minLength": 1 },
+        "certificate_failure_class": {
+          "type": "string",
+          "enum": ["certifiable", "pending_evidence", "noncertifiable_closed_failure"]
+        },
         "current_scope": {
           "type": "object",
           "additionalProperties": false,

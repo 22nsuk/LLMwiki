@@ -8,34 +8,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.mechanism_run_promotion_runtime import _finalize_step
-from ops.scripts.mechanism_run_repo_health_step_runtime import (
-    StructuralComplexityBudgetStepResult,
+from ops.scripts.core import filesystem_runtime
+from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.promotion_decision_registry_runtime import (
+    attach_decision_contract,
 )
-from ops.scripts.mechanism_run_scaffold_resolution_runtime import (
-    ExperimentInputRequest,
-    _resolve_experiment_inputs,
-)
-from ops.scripts.mechanism_run_workspace_runtime import (
-    _apply_or_discard_workspace_changes,
-    _execute_mutation_step,
-    _prepare_workspace_copy,
-    _repo_health_step,
-    _run_command,
-    _snapshot_repo_file_digests,
-    _write_changed_files_manifest,
-)
-from ops.scripts.promotion_decision_registry_runtime import attach_decision_contract
-from ops.scripts.run_mechanism_experiment_runtime import (
-    RunMechanismExperimentMutationError,
-    RunMechanismExperimentUsageError,
-    _mechanism_temp_dir_parent,
-)
-from ops.scripts.runtime_context import RuntimeContext
-
-from ops.scripts import (
-    filesystem_runtime,
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism import (
     mechanism_run_promotion_runtime,
     mechanism_run_workspace_runtime,
 )
@@ -44,6 +23,28 @@ from ops.scripts.mechanism.failure_taxonomy_runtime import (
 )
 from ops.scripts.mechanism.mechanism_run_candidate_snapshot_runtime import (
     write_candidate_changed_files_snapshot,
+)
+from ops.scripts.mechanism.mechanism_run_promotion_runtime import _finalize_step
+from ops.scripts.mechanism.mechanism_run_repo_health_step_runtime import (
+    StructuralComplexityBudgetStepResult,
+)
+from ops.scripts.mechanism.mechanism_run_scaffold_resolution_runtime import (
+    ExperimentInputRequest,
+    _resolve_experiment_inputs,
+)
+from ops.scripts.mechanism.mechanism_run_workspace_runtime import (
+    _apply_or_discard_workspace_changes,
+    _execute_mutation_step,
+    _prepare_workspace_copy,
+    _repo_health_step,
+    _run_command,
+    _snapshot_repo_file_digests,
+    _write_changed_files_manifest,
+)
+from ops.scripts.mechanism.run_mechanism_experiment_runtime import (
+    RunMechanismExperimentMutationError,
+    RunMechanismExperimentUsageError,
+    _mechanism_temp_dir_parent,
 )
 from tests.run_mechanism_experiment_test_utils import seed_wrapper_vault
 
@@ -80,14 +81,14 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
         self,
     ) -> None:
         with mock.patch(
-            "ops.scripts.run_mechanism_experiment_runtime.tempfile.gettempdir",
+            "ops.scripts.mechanism.run_mechanism_experiment_runtime.tempfile.gettempdir",
             return_value="/mnt/c/Users/ADMINI~1/AppData/Local/Temp",
         ):
             self.assertEqual(_mechanism_temp_dir_parent(), "/tmp")
 
     def test_mechanism_temp_dir_parent_keeps_native_linux_tempdir(self) -> None:
         with mock.patch(
-            "ops.scripts.run_mechanism_experiment_runtime.tempfile.gettempdir",
+            "ops.scripts.mechanism.run_mechanism_experiment_runtime.tempfile.gettempdir",
             return_value="/tmp",
         ):
             self.assertIsNone(_mechanism_temp_dir_parent())
@@ -241,7 +242,7 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                 )
 
             with mock.patch(
-                "ops.scripts.mechanism_run_workspace_runtime.run_with_timeout",
+                "ops.scripts.mechanism.mechanism_run_workspace_runtime.run_with_timeout",
                 side_effect=fake_run_with_timeout,
             ):
                 result = _run_command(

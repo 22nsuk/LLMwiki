@@ -5,8 +5,8 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.policy_validation_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.policy_validation_runtime import (
     POLICY_SAFETY_INVARIANT_RULES,
     display_timezone_from_policy,
     release_archive_root_name_from_policy,

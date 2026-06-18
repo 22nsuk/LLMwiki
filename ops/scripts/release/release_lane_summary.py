@@ -16,48 +16,52 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.release.release_authority_vocabulary import (
-        REASON_MACHINE_RELEASE_NOT_ALLOWED,
-    )
-    from ops.scripts.release.release_status_v2 import (
-        release_status_v2_view_with_readiness_fallback,
-    )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         RELEASE_LANE_SUMMARY_SCHEMA_PATH,
     )
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
-else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
-        SchemaBackedReportWriteRequest,
-        load_optional_json_object_with_diagnostics,
-        write_schema_backed_report,
-    )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.release.release_authority_vocabulary import (
         REASON_MACHINE_RELEASE_NOT_ALLOWED,
     )
     from ops.scripts.release.release_status_v2 import (
         release_status_v2_view_with_readiness_fallback,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import RELEASE_LANE_SUMMARY_SCHEMA_PATH
-    from ops.scripts.source_tree_fingerprint_runtime import (
+else:
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        load_optional_json_object_with_diagnostics,
+        write_schema_backed_report,
+    )
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        RELEASE_LANE_SUMMARY_SCHEMA_PATH,
+    )
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
+    )
+    from ops.scripts.release.release_authority_vocabulary import (
+        REASON_MACHINE_RELEASE_NOT_ALLOWED,
+    )
+    from ops.scripts.release.release_status_v2 import (
+        release_status_v2_view_with_readiness_fallback,
     )
 
 

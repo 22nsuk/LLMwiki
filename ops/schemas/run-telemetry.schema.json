@@ -49,6 +49,12 @@
     "proposal_snapshot": {
       "type": "string"
     },
+    "promotion_report": {
+      "type": "string"
+    },
+    "changed_files_manifest": {
+      "type": "string"
+    },
     "scope_freeze": {
       "type": "string"
     },
@@ -193,6 +199,9 @@
         "DISCARD",
         "SKIPPED"
       ]
+    },
+    "outcome": {
+      "type": "string"
     },
     "decision_record": {
       "$ref": "#/$defs/decision_record"

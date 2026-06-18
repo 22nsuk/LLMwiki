@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.policy_runtime import report_path
 
 
 def current_repo_target_path(vault: Path, path: str) -> str | None:

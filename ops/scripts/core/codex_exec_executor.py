@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -13,6 +12,16 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 from .artifact_io_runtime import write_schema_validated_json
+from .codex_exec_integrity_runtime import (
+    _apply_non_worker_integrity_guard,
+    _workspace_integrity_digests,
+)
+from .codex_exec_sanitize_runtime import (
+    _display_command_argv,
+    _sanitize_argv,
+    _sanitize_json_strings,
+    _sanitize_path_text,
+)
 from .command_log_summary_runtime import (
     command_log_summary_rel,
     command_log_trace_rel,
@@ -33,21 +42,6 @@ from .schema_runtime import load_schema
 
 EXECUTOR_REPORT_SCHEMA = EXECUTOR_REPORT_SCHEMA_PATH
 DEFAULT_CODEX_EXEC_TIMEOUT_SECONDS = 1800
-NON_WORKER_INTEGRITY_IGNORE_NAMES = {
-    "__pycache__",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".ruff_cache",
-    ".hypothesis",
-    ".coverage",
-    ".DS_Store",
-    ".git",
-    ".obsidian",
-    ".venv",
-    ".idea",
-    ".vscode",
-}
-NON_WORKER_INTEGRITY_IGNORE_SUFFIXES = {".pyc", ".pyo"}
 NON_WORKER_PROJECT_CHECK_MODULES = (
     ("pytest", "pytest"),
     ("jsonschema", "jsonschema"),
@@ -237,6 +231,8 @@ class _ExecutionRequest:
     routing_report_rel: str
     scope_freeze_rel: str
     proposal_snapshot_rel: str
+    repair_context_rel: str
+    repair_context: dict[str, Any] | None
     artifacts: _ExecutorArtifacts
     argv: list[str]
     sanitized_argv: list[str]
@@ -257,6 +253,8 @@ class PromptMaterializationRequest:
     proposal_snapshot_rel: str
     scope_freeze_rel: str
     routing_report_rel: str
+    repair_context_rel: str
+    repair_context: dict[str, Any] | None
     artifacts: _ExecutorArtifacts
     command_argv: list[str]
     timeout_seconds: int
@@ -375,146 +373,10 @@ def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
     return payload
 
 
-def _sanitize_root_strings(*roots: Path) -> list[str]:
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for root in roots:
-        variants: list[str] = []
-        for candidate in (root, root.absolute()):
-            candidate_text = candidate.as_posix().rstrip("/")
-            if candidate_text:
-                variants.append(candidate_text)
-        try:
-            resolved_text = root.resolve().as_posix().rstrip("/")
-        except OSError:
-            resolved_text = ""
-        if resolved_text:
-            variants.append(resolved_text)
-        for root_text in variants:
-            key = root_text.lower()
-            if not root_text or key in seen:
-                continue
-            seen.add(key)
-            normalized.append(root_text)
-    normalized.sort(key=len, reverse=True)
-    return normalized
-
-
-def _sanitize_path_text(text: str, *, roots: list[Path]) -> str:
-    sanitized = text.replace("\\", "/")
-    for root_text in _sanitize_root_strings(*roots):
-        sanitized = re.sub(re.escape(f"{root_text}/"), "", sanitized, flags=re.IGNORECASE)
-        sanitized = re.sub(re.escape(root_text), ".", sanitized, flags=re.IGNORECASE)
-    return sanitized
-
-
-def _sanitize_argv(argv: list[str], *, roots: list[Path]) -> list[str]:
-    return [_sanitize_path_text(item, roots=roots) for item in argv]
-
-
-def _sanitize_json_strings(value: Any, *, roots: list[Path]) -> Any:
-    if isinstance(value, str):
-        return _sanitize_path_text(value, roots=roots)
-    if isinstance(value, list):
-        return [_sanitize_json_strings(item, roots=roots) for item in value]
-    if isinstance(value, dict):
-        return {
-            _sanitize_path_text(key, roots=roots) if isinstance(key, str) else key: _sanitize_json_strings(
-                item,
-                roots=roots,
-            )
-            for key, item in value.items()
-        }
-    return value
-
-
-def _display_command_argv(argv: list[str]) -> list[str]:
-    if not argv:
-        return []
-    executable_name = Path(argv[0]).name.lower()
-    if executable_name in {"codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.js"}:
-        return ["codex", *argv[1:]]
-    return list(argv)
-
-
-def _is_non_worker_integrity_ignored(rel_path: str, *, run_id: str) -> bool:
-    normalized = rel_path.replace("\\", "/")
-    if normalized == f"runs/{run_id}" or normalized.startswith(f"runs/{run_id}/"):
-        return True
-    if normalized == "tmp" or normalized.startswith("tmp/"):
-        return True
-    parts = [part for part in Path(normalized).parts if part not in {".", ""}]
-    return any(part in NON_WORKER_INTEGRITY_IGNORE_NAMES for part in parts)
-
-
-def _file_digest(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _workspace_integrity_digests(workspace_root: Path, *, run_id: str) -> dict[str, str]:
-    digests: dict[str, str] = {}
-    for path in workspace_root.rglob("*"):
-        if not path.is_file():
-            continue
-        rel_path = path.relative_to(workspace_root).as_posix()
-        if _is_non_worker_integrity_ignored(rel_path, run_id=run_id):
-            continue
-        if path.suffix in NON_WORKER_INTEGRITY_IGNORE_SUFFIXES:
-            continue
-        digests[rel_path] = _file_digest(path)
-    return digests
-
-
-def _non_worker_integrity_issues(before: dict[str, str], after: dict[str, str]) -> list[str]:
-    before_paths = set(before)
-    after_paths = set(after)
-    issues: list[str] = []
-    for label, paths in (
-        ("added", sorted(after_paths - before_paths)),
-        ("removed", sorted(before_paths - after_paths)),
-        (
-            "modified",
-            sorted(path for path in before_paths & after_paths if before[path] != after[path]),
-        ),
-    ):
-        if not paths:
-            continue
-        preview = ", ".join(paths[:10])
-        suffix = "" if len(paths) <= 10 else f", ... (+{len(paths) - 10} more)"
-        issues.append(f"{label}: {preview}{suffix}")
-    return issues
-
-
-def _apply_non_worker_integrity_guard(
-    summary: _ExecutionSummary,
-    *,
-    role: str,
-    before: dict[str, str] | None,
-    after: dict[str, str] | None,
-) -> _ExecutionSummary:
-    if role == "worker" or before is None or after is None:
-        return summary
-    issues = _non_worker_integrity_issues(before, after)
-    if not issues:
-        return summary
-    return _ExecutionSummary(
-        status="fail",
-        decision="blocked",
-        notes=[
-            *summary.notes,
-            (
-                f"non-worker workspace mutation guard blocked {role}: "
-                + "; ".join(issues)
-            ),
-        ],
-        timed_out=summary.timed_out,
-        timeout_seconds=summary.timeout_seconds,
-        termination_reason=summary.termination_reason,
-    )
+def _load_optional_json_object(path: Path, *, label: str) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    return _load_json_object(path, label=label)
 
 
 def _dependency_module_payloads(
@@ -661,6 +523,54 @@ def _executor_report_template(
     }
 
 
+def _worker_structural_budget_guardrails(role: str) -> str:
+    if role != "worker":
+        return ""
+    return (
+        "Worker structural budget guardrails:\n"
+        "- The parent run creates `changed-files-manifest.json` and "
+        "`structural-complexity-budget.json` after worker execution; do not "
+        "generate or require those artifacts inside the worker phase.\n"
+        "- Repo-health re-checks structural budget using the actual changed "
+        "source and `tests/**` files, and a non-pass result can skip "
+        "promotion even when executor roles report pass.\n"
+        "- Before editing, inspect the primary target's current shape and "
+        "choose a patch that keeps touched files at or below their existing "
+        "line, function, and branch footprint when possible.\n"
+        "- Keep touched structure bounded: prefer reusing existing helpers, "
+        "simplifying adjacent code, and focused assertions over broad "
+        "branches, copied fixtures, or large new test blocks.\n"
+        "- For structural-complexity repairs, make the first patch a "
+        "measured simplification or decomposition slice; for non-structural "
+        "fixes, do not add compatibility aliases, broad fallback branches, "
+        "or large fixtures unless the proposal explicitly needs them.\n"
+        "- If the smallest correct fix must add substantial structure, "
+        "explain why in `diagnostics.notes` and include the focused "
+        "validation that covers the added behavior.\n"
+        "\n"
+    )
+
+
+def _same_session_repair_context_block(
+    request: PromptMaterializationRequest,
+    *,
+    sanitize_roots: list[Path],
+) -> str:
+    if not request.repair_context:
+        return ""
+    repair_context = _sanitize_json_strings(request.repair_context, roots=sanitize_roots)
+    return (
+        "Same-session repair context:\n"
+        "- The parent wrapper scheduled this run after a prior parent validation failure.\n"
+        "- Treat this as a bounded same-session repair attempt: re-evaluate the candidate "
+        "from the supplied evidence and run the full role responsibility, not a worker-only retry.\n"
+        f"- repair_context: `{request.repair_context_rel}`\n"
+        "```json\n"
+        f"{json.dumps(repair_context, ensure_ascii=False, indent=2)}\n"
+        "```\n\n"
+    )
+
+
 def _executor_prompt_text(
     request: PromptMaterializationRequest,
     *,
@@ -694,24 +604,11 @@ def _executor_prompt_text(
             "Treat the role sandbox_mode above as the write contract, and rely on the "
             "parent apply guardrails for live-repo mutation.\n"
         )
-    structural_budget_guardrails = ""
-    if request.role == "worker":
-        structural_budget_guardrails = (
-            "Worker structural budget guardrails:\n"
-            "- The parent run creates `changed-files-manifest.json` and "
-            "`structural-complexity-budget.json` after worker execution; do not "
-            "generate or require those artifacts inside the worker phase.\n"
-            "- Repo-health re-checks structural budget using the actual changed "
-            "source and `tests/**` files, and a non-pass result can skip "
-            "promotion even when executor roles report pass.\n"
-            "- Keep touched structure bounded: prefer reusing existing helpers, "
-            "simplifying adjacent code, and focused assertions over broad "
-            "branches, copied fixtures, or large new test blocks.\n"
-            "- If the smallest correct fix must add substantial structure, "
-            "explain why in `diagnostics.notes` and include the focused "
-            "validation that covers the added behavior.\n"
-            "\n"
-        )
+    structural_budget_guardrails = _worker_structural_budget_guardrails(request.role)
+    same_session_repair_context = _same_session_repair_context_block(
+        request,
+        sanitize_roots=sanitize_roots,
+    )
     return f"""You are executing the `{request.role}` role for LLM Wiki vNext.
 
 Role profile:
@@ -748,11 +645,12 @@ Repository-required local skills:
 - If the required local skill body is absent or unreadable, report the exact missing skill path surface as a blocker.
 
 Executor phase boundary:
-- Executor roles run before repo-health capture, candidate artifacts, changed-files manifest, behavior delta, final promotion report, and workspace apply.
+- Worker mutations are checked by a post-worker repo-health preflight before reviewer, validator, or auditor execution.
+- Executor roles still run before final repo-health capture, candidate artifacts, changed-files manifest, behavior delta, final promotion report, and workspace apply.
 - Validator/reviewer/auditor roles should not fail only because post-executor artifacts such as `candidate-mechanism-assessment.json`, `candidate-eval.json`, `candidate-lint.json`, `changed-files-manifest.json`, or finalized `promotion-report.json` are not available yet.
 - Treat those post-executor artifacts as highest-value next checks unless the current prompt explicitly asks you to validate a completed run directory.
 
-Scope freeze summary:
+{same_session_repair_context}Scope freeze summary:
 ```json
 {json.dumps(scope_freeze, ensure_ascii=False, indent=2)}
 ```
@@ -1153,6 +1051,7 @@ def build_execution_request(
     routing_report_rel: str,
     scope_freeze_rel: str,
     proposal_snapshot_rel: str,
+    repair_context_rel: str = "",
     context: RuntimeContext,
     timeout_seconds: int,
 ) -> _ExecutionRequest:
@@ -1163,6 +1062,14 @@ def build_execution_request(
         routing_report_rel=routing_report_rel,
         scope_freeze_rel=scope_freeze_rel,
         proposal_snapshot_rel=proposal_snapshot_rel,
+    )
+    repair_context = (
+        _load_optional_json_object(
+            artifact_root / repair_context_rel,
+            label=repair_context_rel,
+        )
+        if repair_context_rel
+        else None
     )
     argv = _codex_exec_argv(
         workspace_root=workspace_root,
@@ -1186,6 +1093,8 @@ def build_execution_request(
             proposal_snapshot_rel=proposal_snapshot_rel,
             scope_freeze_rel=scope_freeze_rel,
             routing_report_rel=routing_report_rel,
+            repair_context_rel=repair_context_rel,
+            repair_context=repair_context,
             artifacts=artifacts,
             command_argv=argv,
             timeout_seconds=timeout_seconds,
@@ -1203,6 +1112,8 @@ def build_execution_request(
         routing_report_rel=routing_report_rel,
         scope_freeze_rel=scope_freeze_rel,
         proposal_snapshot_rel=proposal_snapshot_rel,
+        repair_context_rel=repair_context_rel,
+        repair_context=repair_context,
         artifacts=artifacts,
         argv=argv,
         sanitized_argv=sanitized_argv,
@@ -1636,6 +1547,7 @@ def execute_codex_exec_role(
     routing_report_rel: str,
     scope_freeze_rel: str,
     proposal_snapshot_rel: str,
+    repair_context_rel: str = "",
     context: RuntimeContext,
     timeout_seconds: int = DEFAULT_CODEX_EXEC_TIMEOUT_SECONDS,
 ) -> ExecutorReportPayload:
@@ -1648,6 +1560,7 @@ def execute_codex_exec_role(
         routing_report_rel=routing_report_rel,
         scope_freeze_rel=scope_freeze_rel,
         proposal_snapshot_rel=proposal_snapshot_rel,
+        repair_context_rel=repair_context_rel,
         context=context,
         timeout_seconds=timeout_seconds,
     )

@@ -11,22 +11,34 @@ import sys
 import unittest
 from pathlib import Path
 
-from ops.scripts.auto_improve_readiness_constants_runtime import READINESS_SOURCE_PATHS
-from ops.scripts.auto_improve_readiness_runtime import (
+import pytest
+
+from ops.scripts.mechanism.auto_improve_readiness import main as readiness_cli_main
+from ops.scripts.mechanism.auto_improve_readiness_constants_runtime import (
+    READINESS_SOURCE_PATHS,
+)
+from ops.scripts.mechanism.auto_improve_readiness_learning_runtime import (
+    learning_claim_blocker_payloads,
+)
+from ops.scripts.mechanism.auto_improve_readiness_remediation_runtime import (
+    remediation_backlog_summary,
+)
+from ops.scripts.mechanism.auto_improve_readiness_runtime import (
+    assess_learning_readiness,
     build_readiness_report,
     load_readiness_inputs,
     readiness_can_run,
     readiness_exit_code,
     write_readiness_report,
 )
-
-from ops.scripts.mechanism.auto_improve_readiness import main as readiness_cli_main
 from tests.auto_improve_readiness_test_runtime import (
     REPO_ROOT,
     AutoImproveReadinessRuntimeFixture,
     _canonical_jsonable,
     fixed_context,
 )
+
+pytestmark = pytest.mark.slow
 
 
 class _BlockFlatReadinessAlias(importlib.abc.MetaPathFinder):
@@ -49,11 +61,20 @@ class AutoImproveReadinessRuntimeTests(
             READINESS_SOURCE_PATHS,
             [
                 "ops/scripts/mechanism/auto_improve_readiness_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_loader_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_payload_runtime.py",
+                "ops/scripts/core/payload_field_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_next_run_repair_runtime.py",
+                "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_remediation_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_loader_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_recent_log_overlap_runtime.py",
+                "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
             ],
         )
         for rel_path in READINESS_SOURCE_PATHS:
@@ -256,7 +277,7 @@ class AutoImproveReadinessRuntimeTests(
         report = build_readiness_report(self.vault, context=fixed_context())
 
         self.assertTrue(inputs.reports_present)
-        self.assertEqual(inputs.outcome_summary["attempts_considered"], 7)
+        self.assertEqual(inputs.queue_state.outcome_summary["attempts_considered"], 7)
         self.assertEqual(report["queue"]["attempts_considered"], 7)
         self.assertEqual(
             report["learning_readiness"]["metrics"]["attempts_considered"], 7
@@ -276,10 +297,12 @@ class AutoImproveReadinessRuntimeTests(
         assert isinstance(first_payload, dict)
         assert isinstance(second_payload, dict)
         runtime_context = first_payload["runtime_context"]
-        outcome_summary = first_payload["outcome_summary"]
-        proposal_summary = first_payload["proposal_summary"]
-        runnable_proposal_ids = first_payload["runnable_proposal_ids"]
+        queue_state = first_payload["queue_state"]
         assert isinstance(runtime_context, dict)
+        assert isinstance(queue_state, dict)
+        outcome_summary = queue_state["outcome_summary"]
+        proposal_summary = queue_state["proposal_summary"]
+        runnable_proposal_ids = queue_state["runnable_proposal_ids"]
         assert isinstance(outcome_summary, dict)
         assert isinstance(proposal_summary, dict)
         assert isinstance(runnable_proposal_ids, list)
@@ -295,7 +318,7 @@ class AutoImproveReadinessRuntimeTests(
         self.assertEqual(runnable_proposal_ids, ["proposal-ready"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "f1abb759eace8c1c2230668eda1ec300d9254707c2662ebe4c39db71a9fa7078",
+            "1a776cbf651fa55ac8301f479770aecb7ee37edfcad9eb28a4debe73e24ec1e5",
         )
 
     def test_open_remediation_backlog_blocks_promotion_not_trial(self) -> None:
@@ -367,6 +390,137 @@ class AutoImproveReadinessRuntimeTests(
             report["diagnostics"]["remediation_backlog_summary"]["release_blocking"]
         )
         self.assertIn("Trial only; do not promote.", report["next_action"])
+
+    def test_remediation_backlog_summary_uses_schema_summary_when_items_drift(self) -> None:
+        summary = remediation_backlog_summary(
+            {
+                "status": "attention",
+                "artifact_kind": "remediation_backlog",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 1,
+                    "open_total_count": 1,
+                    "open_promotion_count": 1,
+                    "open_repeat_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close promotion blockers.",
+                },
+                "items": [],
+                "currentness": {"status": "current"},
+            },
+            remediation_backlog_path="ops/reports/remediation-backlog.json",
+        )
+
+        self.assertEqual(summary["status"], "fail")
+        self.assertTrue(summary["release_blocking"])
+        self.assertEqual(summary["open_total_count"], 1)
+        self.assertEqual(summary["open_promotion_count"], 1)
+        self.assertEqual(summary["active_blocker_count"], 1)
+        self.assertEqual(summary["signal_ids"], ["remediation_backlog_open"])
+
+    def test_deferred_active_backlog_count_does_not_block_promotion(self) -> None:
+        summary = remediation_backlog_summary(
+            {
+                "status": "pass",
+                "artifact_kind": "remediation_backlog",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 1,
+                    "open_total_count": 0,
+                    "open_promotion_count": 0,
+                    "open_repeat_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "No remediation backlog items detected.",
+                },
+                "items": [
+                    {
+                        "blocker_id": "goal_status_self_improvement_loop_certificate_incomplete",
+                        "item_type": "active_blocker",
+                        "status": "deferred",
+                        "severity": "blocks_promotion",
+                    }
+                ],
+                "currentness": {"status": "current"},
+            },
+            remediation_backlog_path="ops/reports/remediation-backlog.json",
+        )
+
+        self.assertEqual(summary["status"], "pass")
+        self.assertFalse(summary["release_blocking"])
+        self.assertEqual(summary["open_promotion_count"], 0)
+        self.assertEqual(summary["active_blocker_count"], 1)
+        self.assertEqual(summary["signal_ids"], [])
+
+    def test_remediation_backlog_summary_item_counts_can_raise_summary_floor(self) -> None:
+        summary = remediation_backlog_summary(
+            {
+                "status": "attention",
+                "artifact_kind": "remediation_backlog",
+                "summary": {
+                    "backlog_item_count": 0,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 0,
+                    "open_total_count": 0,
+                    "open_promotion_count": 0,
+                    "open_repeat_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close promotion blockers.",
+                },
+                "items": [
+                    {
+                        "blocker_id": "item_only_promotion_blocker",
+                        "status": "open",
+                        "severity": "blocks_promotion",
+                    }
+                ],
+            },
+            remediation_backlog_path="ops/reports/remediation-backlog.json",
+        )
+
+        self.assertEqual(summary["status"], "fail")
+        self.assertTrue(summary["release_blocking"])
+        self.assertEqual(summary["open_total_count"], 1)
+        self.assertEqual(summary["open_promotion_count"], 1)
+        self.assertEqual(summary["active_blocker_count"], 1)
+        self.assertEqual(summary["signal_ids"], ["item_only_promotion_blocker"])
+
+    def test_remediation_backlog_summary_drift_blocks_promotion_not_trial(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/remediation-backlog.json",
+            {
+                "status": "attention",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 1,
+                    "open_total_count": 1,
+                    "open_promotion_count": 1,
+                    "open_repeat_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close promotion blockers.",
+                },
+                "items": [],
+                "inputs": {},
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["can_execute_trial"])
+        self.assertFalse(report["can_promote_result"])
+        blockers = {item["id"]: item for item in report["promotion_blockers"]}
+        blocker = blockers["promotion_blocked_by_remediation_backlog_open"]
+        self.assertEqual(blocker["signal_ids"], ["remediation_backlog_open"])
+        self.assertIn("open_promotion_count=1", blocker["reason"])
+        self.assertEqual(
+            report["diagnostics"]["remediation_backlog_summary"]["status"], "fail"
+        )
+        self.assertTrue(
+            report["diagnostics"]["remediation_backlog_summary"]["release_blocking"]
+        )
 
     def test_run_local_remediation_backlog_override_controls_promotion_blocker(
         self,
@@ -1431,6 +1585,14 @@ class AutoImproveReadinessRuntimeTests(
         )
 
         report = build_readiness_report(self.vault, context=fixed_context())
+        inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        learning = assess_learning_readiness(inputs)
+        learning_claim_blockers, learning_promotion_blockers = (
+            learning_claim_blocker_payloads(
+                learning,
+                signoff_active=bool(inputs.learning_signoff_summary.get("active")),
+            )
+        )
 
         self.assertEqual(report["execution_readiness"]["status"], "pass")
         self.assertTrue(report["queue"]["ready"])
@@ -1496,6 +1658,8 @@ class AutoImproveReadinessRuntimeTests(
             attempt_history_signal["required_evidence"][0],
         )
         self.assertEqual(len(report["learning_claim_blockers"]), 1)
+        self.assertEqual(report["learning_claim_blockers"], learning_claim_blockers)
+        self.assertEqual(report["promotion_blockers"], learning_promotion_blockers)
         self.assertEqual(
             report["promotion_blockers"], report["learning_claim_blockers"]
         )
@@ -1590,6 +1754,14 @@ class AutoImproveReadinessRuntimeTests(
         )
 
         report = build_readiness_report(self.vault, context=fixed_context())
+        inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        learning = assess_learning_readiness(inputs)
+        learning_claim_blockers, learning_promotion_blockers = (
+            learning_claim_blocker_payloads(
+                learning,
+                signoff_active=bool(inputs.learning_signoff_summary.get("active")),
+            )
+        )
 
         self.assertTrue(report["can_execute_trial"])
         self.assertTrue(report["can_promote_result"])
@@ -1601,6 +1773,8 @@ class AutoImproveReadinessRuntimeTests(
             [item["id"] for item in report["learning_claim_blockers"]],
             ["learning_blocked_by_review_required"],
         )
+        self.assertEqual(report["learning_claim_blockers"], learning_claim_blockers)
+        self.assertEqual(learning_promotion_blockers, [])
         self.assertEqual(report["promotion_blockers"], [])
         self.assertEqual(
             report["diagnostics"]["learning_signoff_summary"]["signoff_status"],

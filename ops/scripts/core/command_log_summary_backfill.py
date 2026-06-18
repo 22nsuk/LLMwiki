@@ -5,7 +5,7 @@ import argparse
 import datetime as dt
 import json
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -13,32 +13,32 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     import sys
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         read_json_object,
         write_schema_validated_json,
     )
-    from ops.scripts.command_log_summary_runtime import write_command_log_summary
-    from ops.scripts.generated_artifact_retention_clean import (
+    from ops.scripts.core.command_log_summary_runtime import write_command_log_summary
+    from ops.scripts.core.generated_artifact_retention_clean import (
         build_report as build_retention_report,
     )
-    from ops.scripts.observability_artifacts_runtime import (
+    from ops.scripts.core.observability_artifacts_runtime import (
         write_run_artifact_fingerprint,
     )
-    from ops.scripts.output_runtime import (
+    from ops.scripts.core.output_runtime import (
         display_path,
         resolve_repo_output_path,
         write_output_text,
     )
-    from ops.scripts.policy_runtime import report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.policy_runtime import report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         COMMAND_LOG_SUMMARY_BACKFILL_SCHEMA_PATH,
         EXECUTOR_REPORT_SCHEMA_PATH,
         REWORK_CLOSURES_SCHEMA_PATH,
         RUN_LEDGER_SCHEMA_PATH,
         TIMEOUT_FAILURE_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import (
+    from ops.scripts.core.schema_runtime import (
         load_schema_with_vault_override,
         validate_with_schema,
     )
@@ -95,12 +95,19 @@ class LogGroup:
     raw_paths: dict[str, str]
 
 
-def _utc_now() -> dt.datetime:
-    return dt.datetime.now(dt.UTC).replace(microsecond=0)
+@dataclass
+class _BackfillState:
+    records: list[dict[str, Any]] = field(default_factory=list)
+    touched_raw_paths: set[str] = field(default_factory=set)
+    touched_runs: set[str] = field(default_factory=set)
+    summary_paths: set[str] = field(default_factory=set)
+    evidence_refs_by_run: dict[str, set[str]] = field(default_factory=dict)
+    backfilled_raw_by_run: dict[str, set[str]] = field(default_factory=dict)
+    reference_needles_by_run: dict[str, set[str]] = field(default_factory=dict)
 
 
 def _context(clock: dt.datetime | None = None) -> RuntimeContext:
-    instant = clock or _utc_now()
+    instant = clock or RuntimeContext(display_timezone=dt.UTC).utcnow().replace(microsecond=0)
     return RuntimeContext(display_timezone=dt.UTC, clock=lambda: instant)
 
 
@@ -639,6 +646,260 @@ def _delete_paths(vault: Path, records: list[dict[str, Any]], *, apply: bool) ->
     return deleted
 
 
+def _selected_groups(vault: Path, selected_run_ids: set[str], *, all_runs: bool) -> list[LogGroup]:
+    groups = _candidate_groups(vault, selected_run_ids)
+    if not all_runs and not selected_run_ids:
+        return []
+    return groups
+
+
+def _collect_backfill_records(
+    vault: Path,
+    groups: list[LogGroup],
+    before_reasons: Mapping[str, str],
+    *,
+    include_run_commands: bool,
+    apply: bool,
+    context: RuntimeContext,
+) -> _BackfillState:
+    state = _BackfillState()
+    for group in groups:
+        record, updated_report, metadata = _build_group_record(
+            vault,
+            group,
+            include_run_commands=include_run_commands,
+        )
+        record["pre_retention_reasons"] = {
+            path: before_reasons.get(path, "") for path in record["raw_paths"]
+        }
+        if metadata:
+            _apply_group_metadata(
+                vault,
+                group,
+                record,
+                updated_report,
+                metadata,
+                apply=apply,
+                context=context,
+                state=state,
+            )
+        state.records.append(record)
+    return state
+
+
+def _apply_group_metadata(
+    vault: Path,
+    group: LogGroup,
+    record: dict[str, Any],
+    updated_report: dict[str, Any] | None,
+    metadata: dict[str, Any],
+    *,
+    apply: bool,
+    context: RuntimeContext,
+    state: _BackfillState,
+) -> None:
+    replacements = _group_replacements(group)
+    reference_updates = []
+    if group.kind == "executor":
+        report_rel = f"{group.owning_run}/{group.prefix}-executor-report.json"
+        reference_updates.append({"path": report_rel, "status": "updated", "updated": True})
+        if apply and updated_report is not None:
+            _write_json(vault / report_rel, updated_report)
+            state.evidence_refs_by_run.setdefault(group.owning_run, set()).add(report_rel)
+    for rel_path in _reference_file_rels(vault, group.owning_run):
+        if group.kind == "executor" and rel_path == f"{group.owning_run}/{group.prefix}-executor-report.json":
+            continue
+        update = _update_same_run_reference_file(
+            vault,
+            rel_path,
+            replacements,
+            apply=apply,
+        )
+        if update.get("updated"):
+            state.evidence_refs_by_run.setdefault(group.owning_run, set()).add(rel_path)
+        reference_updates.append(update)
+    record["reference_updates"] = reference_updates
+    record["status"] = "applied" if apply else "eligible"
+    if not apply:
+        return
+    summary_rel = _write_summary_for_group(
+        vault,
+        group,
+        result=metadata["result"],
+        argv=metadata["argv"],
+        context=context,
+    )
+    state.summary_paths.add(summary_rel)
+    state.evidence_refs_by_run.setdefault(group.owning_run, set()).add(summary_rel)
+    state.touched_runs.add(group.owning_run)
+    state.touched_raw_paths.update(group.raw_paths.values())
+    state.backfilled_raw_by_run.setdefault(group.owning_run, set()).update(group.raw_paths.values())
+    state.reference_needles_by_run.setdefault(group.owning_run, set()).update(
+        _raw_reference_needles(group)
+    )
+
+
+def _repair_existing_summary_reference_files(
+    vault: Path,
+    selected_run_ids: set[str],
+    *,
+    all_runs: bool,
+    apply: bool,
+    state: _BackfillState,
+) -> list[dict[str, Any]]:
+    if not apply:
+        return []
+    updates: list[dict[str, Any]] = []
+    summary_repair_roots = set(state.touched_runs)
+    summary_repair_roots.update(
+        _summary_run_roots(
+            vault,
+            selected_run_ids,
+            all_runs=all_runs,
+        )
+    )
+    for owning_run in sorted(summary_repair_roots):
+        replacements = _summary_replacements(vault, owning_run)
+        if replacements:
+            state.reference_needles_by_run.setdefault(owning_run, set()).update(replacements.keys())
+        repaired = _repair_summary_references(
+            vault,
+            owning_run,
+            apply=apply,
+        )
+        if not repaired:
+            continue
+        updates.extend({"owning_run": owning_run, **item} for item in repaired)
+        state.touched_runs.add(owning_run)
+        for item in repaired:
+            if item.get("updated"):
+                state.evidence_refs_by_run.setdefault(owning_run, set()).add(str(item["path"]))
+    return updates
+
+
+def _stale_same_run_references_before_delete(
+    vault: Path,
+    state: _BackfillState,
+    *,
+    apply: bool,
+    delete_raw: bool,
+) -> list[dict[str, str]]:
+    if not (apply and delete_raw):
+        return []
+    references: list[dict[str, str]] = []
+    for owning_run, backfilled_paths in sorted(state.reference_needles_by_run.items()):
+        references.extend(_same_run_raw_references(vault, owning_run, backfilled_paths))
+    return references
+
+
+def _closable_promoted_runs(
+    vault: Path,
+    state: _BackfillState,
+    before_reasons: Mapping[str, str],
+    *,
+    apply: bool,
+    close_promoted_unreferenced: bool,
+) -> tuple[list[str], list[str]]:
+    if not (apply and close_promoted_unreferenced):
+        return [], []
+    closable_run_ids: list[str] = []
+    closable_owning_runs: list[str] = []
+    for owning_run, backfilled_paths in sorted(state.backfilled_raw_by_run.items()):
+        if not _is_promoted_finalized(vault, owning_run):
+            continue
+        all_raw_paths = _all_nonempty_raw_logs_for_run(vault, owning_run)
+        if all_raw_paths != backfilled_paths:
+            continue
+        references = _same_run_raw_references(vault, owning_run, all_raw_paths)
+        if references:
+            continue
+        reasons = {before_reasons.get(path, "") for path in all_raw_paths}
+        if reasons == {"run is not archived or closed by rework-closures evidence"}:
+            closable_run_ids.append(_run_id_from_owning_run(owning_run))
+            closable_owning_runs.append(owning_run)
+    return closable_run_ids, closable_owning_runs
+
+
+def _closure_evidence_refs(
+    state: _BackfillState,
+    closable_owning_runs: list[str],
+) -> list[str]:
+    return sorted(
+        {
+            evidence_ref
+            for owning_run in closable_owning_runs
+            for evidence_ref in state.evidence_refs_by_run.get(owning_run, set())
+        }
+    )
+
+
+def _refresh_run_fingerprints(
+    vault: Path,
+    owning_runs: Iterable[str],
+    *,
+    context: RuntimeContext,
+) -> list[str]:
+    return [
+        write_run_artifact_fingerprint(
+            vault,
+            _run_id_from_owning_run(owning_run),
+            context=context,
+            run_root_rel=owning_run,
+        )
+        for owning_run in sorted(set(owning_runs))
+    ]
+
+
+def _delete_raw_backfill_artifacts(
+    vault: Path,
+    state: _BackfillState,
+    after_retention: dict[str, Any],
+    stale_same_run_references: list[dict[str, str]],
+    *,
+    apply: bool,
+    delete_raw: bool,
+    context: RuntimeContext,
+) -> tuple[list[dict[str, Any]], list[str], list[str], dict[str, Any]]:
+    delete_records = (
+        _raw_delete_records(after_retention, state.touched_raw_paths)
+        if apply and delete_raw and not stale_same_run_references
+        else []
+    )
+    deleted_raw_paths = _delete_paths(vault, delete_records, apply=apply)
+    if not (apply and deleted_raw_paths):
+        return delete_records, deleted_raw_paths, [], after_retention
+    deleted_runs = {_owning_run_path(vault, rel_path) for rel_path in deleted_raw_paths}
+    fingerprints = _refresh_run_fingerprints(vault, deleted_runs, context=context)
+    return delete_records, deleted_raw_paths, fingerprints, build_retention_report(vault)
+
+
+def _backfill_summary(
+    *,
+    groups: list[LogGroup],
+    state: _BackfillState,
+    fingerprints: list[str],
+    summary_reference_updates: list[dict[str, Any]],
+    closure: Mapping[str, Any],
+    delete_records: list[dict[str, Any]],
+    deleted_raw_paths: list[str],
+    stale_same_run_references: list[dict[str, str]],
+) -> dict[str, int]:
+    return {
+        "candidate_group_count": len(groups),
+        "eligible_group_count": sum(
+            1 for record in state.records if record["status"] in {"eligible", "applied"}
+        ),
+        "applied_group_count": sum(1 for record in state.records if record["status"] == "applied"),
+        "summary_path_count": len(state.summary_paths),
+        "fingerprint_refresh_count": len(fingerprints),
+        "reference_repair_count": sum(1 for item in summary_reference_updates if item.get("updated")),
+        "closed_run_count": len(closure.get("closed_run_ids", [])),
+        "raw_delete_candidate_count": len(delete_records),
+        "deleted_raw_count": len(deleted_raw_paths),
+        "stale_same_run_reference_count": len(stale_same_run_references),
+    }
+
+
 def build_report(
     vault: Path,
     *,
@@ -659,132 +920,39 @@ def build_report(
     runtime_context = context or _context()
     generated_at = runtime_context.isoformat_z()
     selected_run_ids = run_ids or set()
-    groups = _candidate_groups(resolved_vault, selected_run_ids)
-    if not all_runs and not selected_run_ids:
-        groups = []
+    groups = _selected_groups(resolved_vault, selected_run_ids, all_runs=all_runs)
 
     before_retention = build_retention_report(resolved_vault)
     before_reasons = _raw_retention_reason_by_path(before_retention)
-    records: list[dict[str, Any]] = []
-    touched_raw_paths: set[str] = set()
-    touched_runs: set[str] = set()
-    summary_paths: set[str] = set()
-    applied_reference_paths: set[str] = set()
-    evidence_refs_by_run: dict[str, set[str]] = {}
-    backfilled_raw_by_run: dict[str, set[str]] = {}
-    reference_needles_by_run: dict[str, set[str]] = {}
-
-    for group in groups:
-        record, updated_report, metadata = _build_group_record(
-            resolved_vault,
-            group,
-            include_run_commands=include_run_commands,
-        )
-        record["pre_retention_reasons"] = {
-            path: before_reasons.get(path, "") for path in record["raw_paths"]
-        }
-        if metadata:
-            replacements = _group_replacements(group)
-            reference_updates = []
-            if group.kind == "executor":
-                report_rel = f"{group.owning_run}/{group.prefix}-executor-report.json"
-                reference_updates.append(
-                    {"path": report_rel, "status": "updated", "updated": True}
-                )
-                if apply and updated_report is not None:
-                    _write_json(resolved_vault / report_rel, updated_report)
-                    applied_reference_paths.add(report_rel)
-                    evidence_refs_by_run.setdefault(group.owning_run, set()).add(report_rel)
-            for rel_path in _reference_file_rels(resolved_vault, group.owning_run):
-                if group.kind == "executor" and rel_path == f"{group.owning_run}/{group.prefix}-executor-report.json":
-                    continue
-                update = _update_same_run_reference_file(
-                    resolved_vault,
-                    rel_path,
-                    replacements,
-                    apply=apply,
-                )
-                if update.get("updated"):
-                    applied_reference_paths.add(rel_path)
-                    evidence_refs_by_run.setdefault(group.owning_run, set()).add(rel_path)
-                reference_updates.append(update)
-            record["reference_updates"] = reference_updates
-            record["status"] = "applied" if apply else "eligible"
-            if apply:
-                summary_rel = _write_summary_for_group(
-                    resolved_vault,
-                    group,
-                    result=metadata["result"],
-                    argv=metadata["argv"],
-                    context=runtime_context,
-                )
-                summary_paths.add(summary_rel)
-                evidence_refs_by_run.setdefault(group.owning_run, set()).add(summary_rel)
-                touched_runs.add(group.owning_run)
-                touched_raw_paths.update(group.raw_paths.values())
-                backfilled_raw_by_run.setdefault(group.owning_run, set()).update(group.raw_paths.values())
-                reference_needles_by_run.setdefault(group.owning_run, set()).update(
-                    _raw_reference_needles(group)
-                )
-        records.append(record)
-
-    summary_reference_updates: list[dict[str, Any]] = []
-    if apply:
-        summary_repair_roots = set(touched_runs)
-        summary_repair_roots.update(
-            _summary_run_roots(
-                resolved_vault,
-                selected_run_ids,
-                all_runs=all_runs,
-            )
-        )
-        for owning_run in sorted(summary_repair_roots):
-            replacements = _summary_replacements(resolved_vault, owning_run)
-            if replacements:
-                reference_needles_by_run.setdefault(owning_run, set()).update(replacements.keys())
-            updates = _repair_summary_references(
-                resolved_vault,
-                owning_run,
-                apply=apply,
-            )
-            if not updates:
-                continue
-            summary_reference_updates.extend({"owning_run": owning_run, **item} for item in updates)
-            touched_runs.add(owning_run)
-            for item in updates:
-                if item.get("updated"):
-                    applied_reference_paths.add(str(item["path"]))
-                    evidence_refs_by_run.setdefault(owning_run, set()).add(str(item["path"]))
-
-    stale_same_run_references: list[dict[str, str]] = []
-    closable_run_ids: list[str] = []
-    closable_owning_runs: list[str] = []
-    if apply and delete_raw:
-        for owning_run, backfilled_paths in sorted(reference_needles_by_run.items()):
-            stale_same_run_references.extend(
-                _same_run_raw_references(resolved_vault, owning_run, backfilled_paths)
-            )
-    if apply and close_promoted_unreferenced:
-        for owning_run, backfilled_paths in sorted(backfilled_raw_by_run.items()):
-            if not _is_promoted_finalized(resolved_vault, owning_run):
-                continue
-            all_raw_paths = _all_nonempty_raw_logs_for_run(resolved_vault, owning_run)
-            if all_raw_paths != backfilled_paths:
-                continue
-            references = _same_run_raw_references(resolved_vault, owning_run, all_raw_paths)
-            if references:
-                continue
-            reasons = {before_reasons.get(path, "") for path in all_raw_paths}
-            if reasons == {"run is not archived or closed by rework-closures evidence"}:
-                closable_run_ids.append(_run_id_from_owning_run(owning_run))
-                closable_owning_runs.append(owning_run)
-    closure_evidence_refs = sorted(
-        {
-            evidence_ref
-            for owning_run in closable_owning_runs
-            for evidence_ref in evidence_refs_by_run.get(owning_run, set())
-        }
+    state = _collect_backfill_records(
+        resolved_vault,
+        groups,
+        before_reasons,
+        include_run_commands=include_run_commands,
+        apply=apply,
+        context=runtime_context,
     )
+    summary_reference_updates = _repair_existing_summary_reference_files(
+        resolved_vault,
+        selected_run_ids,
+        all_runs=all_runs,
+        apply=apply,
+        state=state,
+    )
+    stale_same_run_references = _stale_same_run_references_before_delete(
+        resolved_vault,
+        state,
+        apply=apply,
+        delete_raw=delete_raw,
+    )
+    closable_run_ids, closable_owning_runs = _closable_promoted_runs(
+        resolved_vault,
+        state,
+        before_reasons,
+        apply=apply,
+        close_promoted_unreferenced=close_promoted_unreferenced,
+    )
+    closure_evidence_refs = _closure_evidence_refs(state, closable_owning_runs)
 
     closure = (
         _append_rework_closure(
@@ -798,39 +966,25 @@ def build_report(
         else {"status": "not_requested", "closed_run_ids": []}
     )
 
-    fingerprints: list[str] = []
-    if apply:
-        for owning_run in sorted(touched_runs):
-            fingerprints.append(
-                write_run_artifact_fingerprint(
-                    resolved_vault,
-                    _run_id_from_owning_run(owning_run),
-                    context=runtime_context,
-                    run_root_rel=owning_run,
-                )
-            )
-
-    after_retention = build_retention_report(resolved_vault)
-    delete_records = (
-        _raw_delete_records(after_retention, touched_raw_paths)
-        if apply and delete_raw and not stale_same_run_references
+    fingerprints = (
+        _refresh_run_fingerprints(resolved_vault, state.touched_runs, context=runtime_context)
+        if apply
         else []
     )
-    deleted_raw_paths = _delete_paths(resolved_vault, delete_records, apply=apply)
-    if apply and deleted_raw_paths:
-        deleted_runs = {
-            _owning_run_path(resolved_vault, rel_path) for rel_path in deleted_raw_paths
-        }
-        for owning_run in sorted(deleted_runs):
-            fingerprints.append(
-                write_run_artifact_fingerprint(
-                    resolved_vault,
-                    _run_id_from_owning_run(owning_run),
-                    context=runtime_context,
-                    run_root_rel=owning_run,
-                )
-            )
-        after_retention = build_retention_report(resolved_vault)
+
+    after_retention = build_retention_report(resolved_vault)
+    delete_records, deleted_raw_paths, delete_fingerprints, after_retention = (
+        _delete_raw_backfill_artifacts(
+            resolved_vault,
+            state,
+            after_retention,
+            stale_same_run_references,
+            apply=apply,
+            delete_raw=delete_raw,
+            context=runtime_context,
+        )
+    )
+    fingerprints.extend(delete_fingerprints)
 
     status = "fail" if stale_same_run_references else "pass"
     return {
@@ -844,21 +998,17 @@ def build_report(
         "close_promoted_unreferenced": close_promoted_unreferenced,
         "delete_raw": delete_raw,
         "status": status,
-        "summary": {
-            "candidate_group_count": len(groups),
-            "eligible_group_count": sum(1 for record in records if record["status"] in {"eligible", "applied"}),
-            "applied_group_count": sum(1 for record in records if record["status"] == "applied"),
-            "summary_path_count": len(summary_paths),
-            "fingerprint_refresh_count": len(fingerprints),
-            "reference_repair_count": sum(
-                1 for item in summary_reference_updates if item.get("updated")
-            ),
-            "closed_run_count": len(closure.get("closed_run_ids", [])),
-            "raw_delete_candidate_count": len(delete_records),
-            "deleted_raw_count": len(deleted_raw_paths),
-            "stale_same_run_reference_count": len(stale_same_run_references),
-        },
-        "records": records,
+        "summary": _backfill_summary(
+            groups=groups,
+            state=state,
+            fingerprints=fingerprints,
+            summary_reference_updates=summary_reference_updates,
+            closure=closure,
+            delete_records=delete_records,
+            deleted_raw_paths=deleted_raw_paths,
+            stale_same_run_references=stale_same_run_references,
+        ),
+        "records": state.records,
         "closure": closure,
         "fingerprints": sorted(set(fingerprints)),
         "deleted_raw_paths": deleted_raw_paths,

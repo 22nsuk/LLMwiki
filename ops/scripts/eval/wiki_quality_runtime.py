@@ -3,13 +3,13 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from ops.scripts.source_trace_profile_runtime import (
+from ops.scripts.core.source_trace_profile_runtime import (
     RELEASE_ARCHIVE_PROFILE,
     STRICT_PROFILE,
     blocking_source_trace_targets_for_profile,
     classify_source_trace_targets,
 )
-from ops.scripts.source_trace_runtime import missing_source_trace_targets
+from ops.scripts.core.source_trace_runtime import missing_source_trace_targets
 
 from .wiki_manifest import release_manifest_excludes_path
 from .wiki_page_runtime import open_question_severity_counts, section_exists

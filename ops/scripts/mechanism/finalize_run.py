@@ -8,7 +8,7 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.finalize_run_runtime import (
+    from ops.scripts.mechanism.finalize_run_runtime import (
         FinalizeRunArtifactDecodeError,
         FinalizeRunArtifactMissingError,
         FinalizeRunArtifactSchemaError,

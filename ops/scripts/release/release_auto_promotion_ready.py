@@ -8,17 +8,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
 )
-from ops.scripts.output_runtime import display_path
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.auto_promotion_learning_runtime import (
     ALLOWED_LEARNING_REVALIDATION_STATUSES,
     unaccepted_learning_claim_blockers,
@@ -40,9 +45,6 @@ from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "build/release/release-auto-promotion-ready-manifest.json"
 SCHEMA_PATH = "ops/schemas/release-auto-promotion-ready-manifest.schema.json"
@@ -54,10 +56,14 @@ DEFAULT_AUTO_PROMOTION_PREFLIGHT = "build/release/release-auto-promotion-preflig
 DEFAULT_AUTO_PROMOTION_PRESEAL = "build/release/release-auto-promotion-preseal.json"
 DEFAULT_GOAL_RUN_STATUS = "ops/reports/goal-run-status.json"
 DEFAULT_GOAL_RUNTIME_CERTIFICATE = "ops/reports/goal-runtime-certificate.json"
-STRICT_ZERO_ACCEPTED_RISK_FIELDS = (
+ACCEPTED_RISK_DIAGNOSTIC_FIELDS = (
     "accepted_risk_count",
     "release_accepted_risk_count",
     "accepted_learning_risk_count",
+    "clean_lane_blocking_accepted_risk_family_count",
+)
+STRICT_ZERO_ACCEPTED_RISK_FIELDS = (
+    "release_accepted_risk_count",
     "clean_lane_blocking_accepted_risk_family_count",
 )
 STRICT_ZERO_GATE_ATTENTION_FIELDS = (
@@ -81,6 +87,21 @@ class _ReadyRequirementInputs:
     goal_run_status: dict[str, Any]
     goal_runtime_certificate: dict[str, Any]
     fingerprint: str
+
+
+@dataclass(frozen=True)
+class _ReadyCheckInputs:
+    inputs: dict[str, dict[str, Any]]
+    run_payload: dict[str, Any]
+    sealed_payload: dict[str, Any]
+    operator: dict[str, Any]
+    auto_improve: dict[str, Any]
+    preflight: dict[str, Any]
+    preseal: dict[str, Any]
+    goal_run_status: dict[str, Any]
+    goal_runtime_certificate: dict[str, Any]
+    fingerprint: str
+    revision: str
 
 
 def _dict(payload: Any) -> dict[str, Any]:
@@ -150,6 +171,13 @@ def _operator_count_group(operator_summary: dict[str, Any], fields: tuple[str, .
     return {field: _int_value(accepted_risk.get(field, 0)) for field in fields}
 
 
+def _blocking_gate_attention(operator_summary: dict[str, Any]) -> dict[str, int]:
+    accepted_risk = _dict(operator_summary.get("accepted_risk"))
+    raw_attention = _int_value(accepted_risk.get("gate_attention_count", 0))
+    advisory_attention = _int_value(accepted_risk.get("advisory_lifecycle_family_count", 0))
+    return {"gate_attention_count": max(0, raw_attention - advisory_attention)}
+
+
 def _release_gate_diagnostic_blockers(blockers: list[Any]) -> list[dict[str, Any]]:
     return [
         blocker
@@ -177,8 +205,8 @@ def _operator_diagnostics(operator_summary: dict[str, Any]) -> dict[str, Any]:
         "batch_verify_status": str(_dict(operator_summary.get("batch_verify")).get("status", "")).strip(),
         "full_suite_status": str(test_evidence.get("full_suite_status", "")).strip(),
         "learning_revalidation_status": str(learning_readiness.get("revalidation_status", "")).strip(),
-        "accepted_risk": _operator_count_group(operator_summary, STRICT_ZERO_ACCEPTED_RISK_FIELDS),
-        "gate_attention": _operator_count_group(operator_summary, STRICT_ZERO_GATE_ATTENTION_FIELDS),
+        "accepted_risk": _operator_count_group(operator_summary, ACCEPTED_RISK_DIAGNOSTIC_FIELDS),
+        "gate_attention": _blocking_gate_attention(operator_summary),
         "learning_claim": _operator_count_group(operator_summary, STRICT_ZERO_LEARNING_CLAIM_FIELDS),
     }
 
@@ -568,7 +596,13 @@ def _operator_zero_count_requirements(operator: dict[str, Any]) -> list[Requirem
             if group == "gate_attention"
             else GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
         )
-        for field, count in operator[group].items():
+        fields = (
+            STRICT_ZERO_ACCEPTED_RISK_FIELDS
+            if group == "accepted_risk"
+            else tuple(operator[group].keys())
+        )
+        for field in fields:
+            count = int(operator[group].get(field, 0))
             requirements.append(
                 RequirementSpec(
                     count == 0,
@@ -674,118 +708,115 @@ def _auto_improve_requirements(
     ]
 
 
-def _ready_checks(
+def _phase_ready_checks(
     inputs: dict[str, dict[str, Any]],
+    diagnostics: dict[str, Any],
     *,
-    run_payload: dict[str, Any],
-    sealed_payload: dict[str, Any],
-    operator: dict[str, Any],
-    auto_improve: dict[str, Any],
-    preflight: dict[str, Any],
-    preseal: dict[str, Any],
-    goal_run_status: dict[str, Any],
-    goal_runtime_certificate: dict[str, Any],
+    input_key: str,
+    expected_phase: str,
     fingerprint: str,
     revision: str,
 ) -> dict[str, bool]:
-    preflight_goal_identity = _dict(preflight.get("goal_run_identity"))
-    preseal_goal_identity = _dict(preseal.get("goal_run_identity"))
-    preflight_goal_run_id = str(preflight_goal_identity.get("effective_run_id", "")).strip()
-    preseal_goal_run_id = str(preseal_goal_identity.get("effective_run_id", "")).strip()
-    selected_goal_run_id = _selected_goal_run_id(preflight, preseal)
+    goal_identity = _dict(diagnostics.get("goal_run_identity"))
+    goal_run_id = str(goal_identity.get("effective_run_id", "")).strip()
     return {
-        "auto_promotion_preflight_load_ok": inputs["auto_promotion_preflight"]["load_status"] == "ok",
-        "auto_promotion_preflight_artifact_kind_ok": (
-            inputs["auto_promotion_preflight"]["artifact_kind"] == "release_auto_promotion_preflight"
+        f"{input_key}_load_ok": inputs[input_key]["load_status"] == "ok",
+        f"{input_key}_artifact_kind_ok": (
+            inputs[input_key]["artifact_kind"] == "release_auto_promotion_preflight"
         ),
-        "auto_promotion_preflight_current": (
-            inputs["auto_promotion_preflight"]["source_tree_fingerprint"] == fingerprint
-            and inputs["auto_promotion_preflight"]["source_revision"] == revision
+        f"{input_key}_current": (
+            inputs[input_key]["source_tree_fingerprint"] == fingerprint
+            and inputs[input_key]["source_revision"] == revision
         ),
-        "auto_promotion_preflight_phase_ok": preflight["phase"] == "preflight",
-        "auto_promotion_preflight_pass": preflight["status"] == "pass",
-        "auto_promotion_preflight_goal_run_identity_present": bool(preflight_goal_run_id),
-        "auto_promotion_preflight_goal_run_identity_pass": (
-            preflight_goal_identity.get("status") == "pass"
-            and _int_value(preflight_goal_identity.get("failure_count", 0)) == 0
+        f"{input_key}_phase_ok": diagnostics["phase"] == expected_phase,
+        f"{input_key}_pass": diagnostics["status"] == "pass",
+        f"{input_key}_goal_run_identity_present": bool(goal_run_id),
+        f"{input_key}_goal_run_identity_pass": (
+            goal_identity.get("status") == "pass"
+            and _int_value(goal_identity.get("failure_count", 0)) == 0
         ),
-        "auto_promotion_preseal_load_ok": inputs["auto_promotion_preseal"]["load_status"] == "ok",
-        "auto_promotion_preseal_artifact_kind_ok": (
-            inputs["auto_promotion_preseal"]["artifact_kind"] == "release_auto_promotion_preflight"
-        ),
-        "auto_promotion_preseal_current": (
-            inputs["auto_promotion_preseal"]["source_tree_fingerprint"] == fingerprint
-            and inputs["auto_promotion_preseal"]["source_revision"] == revision
-        ),
-        "auto_promotion_preseal_phase_ok": preseal["phase"] == "preseal",
-        "auto_promotion_preseal_pass": preseal["status"] == "pass",
-        "auto_promotion_preseal_goal_run_identity_present": bool(preseal_goal_run_id),
-        "auto_promotion_preseal_goal_run_identity_pass": (
-            preseal_goal_identity.get("status") == "pass"
-            and _int_value(preseal_goal_identity.get("failure_count", 0)) == 0
-        ),
-        "auto_promotion_goal_run_identity_match": (
-            bool(preflight_goal_run_id)
-            and bool(preseal_goal_run_id)
-            and preflight_goal_run_id == preseal_goal_run_id
-        ),
-        "goal_run_status_load_ok": inputs["goal_run_status"]["load_status"] == "ok",
+    }
+
+
+def _goal_runtime_ready_checks(request: _ReadyCheckInputs) -> dict[str, bool]:
+    selected_goal_run_id = _selected_goal_run_id(request.preflight, request.preseal)
+    return {
+        "goal_run_status_load_ok": request.inputs["goal_run_status"]["load_status"] == "ok",
         "goal_run_status_artifact_kind_ok": (
-            inputs["goal_run_status"]["artifact_kind"] == "goal_run_status"
+            request.inputs["goal_run_status"]["artifact_kind"] == "goal_run_status"
         ),
         "goal_run_status_current": (
-            inputs["goal_run_status"]["source_tree_fingerprint"] == fingerprint
-            and inputs["goal_run_status"]["source_revision"] == revision
+            request.inputs["goal_run_status"]["source_tree_fingerprint"] == request.fingerprint
+            and request.inputs["goal_run_status"]["source_revision"] == request.revision
         ),
         "goal_run_status_run_id_match": (
             bool(selected_goal_run_id)
-            and goal_run_status["run_id"] == selected_goal_run_id
+            and request.goal_run_status["run_id"] == selected_goal_run_id
         ),
-        "goal_run_status_completed": goal_run_status["run_status"] == "completed",
-        "goal_run_status_report_accepted": goal_run_status["status"] in {"pass", "attention"},
+        "goal_run_status_completed": request.goal_run_status["run_status"] == "completed",
+        "goal_run_status_report_accepted": request.goal_run_status["status"] in {"pass", "attention"},
         "goal_runtime_certificate_load_ok": (
-            inputs["goal_runtime_certificate"]["load_status"] == "ok"
+            request.inputs["goal_runtime_certificate"]["load_status"] == "ok"
         ),
         "goal_runtime_certificate_artifact_kind_ok": (
-            inputs["goal_runtime_certificate"]["artifact_kind"] == "goal_runtime_certificate"
+            request.inputs["goal_runtime_certificate"]["artifact_kind"] == "goal_runtime_certificate"
         ),
         "goal_runtime_certificate_current": (
-            inputs["goal_runtime_certificate"]["source_tree_fingerprint"] == fingerprint
-            and inputs["goal_runtime_certificate"]["source_revision"] == revision
+            request.inputs["goal_runtime_certificate"]["source_tree_fingerprint"] == request.fingerprint
+            and request.inputs["goal_runtime_certificate"]["source_revision"] == request.revision
         ),
         "goal_runtime_certificate_run_id_match": (
             bool(selected_goal_run_id)
-            and goal_runtime_certificate["run_id"] == selected_goal_run_id
+            and request.goal_runtime_certificate["run_id"] == selected_goal_run_id
         ),
         "goal_runtime_certificate_completed": (
-            goal_runtime_certificate["run_status"] == "completed"
+            request.goal_runtime_certificate["run_status"] == "completed"
         ),
         "goal_runtime_certificate_verified": (
-            goal_runtime_certificate["status"] == "pass"
-            and goal_runtime_certificate["verification_status"] in {"eligible", "already_verified"}
-            and bool(goal_runtime_certificate["eligible"])
+            request.goal_runtime_certificate["status"] == "pass"
+            and request.goal_runtime_certificate["verification_status"] in {"eligible", "already_verified"}
+            and bool(request.goal_runtime_certificate["eligible"])
         ),
-        "run_manifest_load_ok": inputs["run_manifest"]["load_status"] == "ok",
-        "run_manifest_artifact_kind_ok": inputs["run_manifest"]["artifact_kind"] == "release_run_manifest",
+    }
+
+
+def _manifest_authority_ready_checks(request: _ReadyCheckInputs) -> dict[str, bool]:
+    return {
+        "run_manifest_load_ok": request.inputs["run_manifest"]["load_status"] == "ok",
+        "run_manifest_artifact_kind_ok": (
+            request.inputs["run_manifest"]["artifact_kind"] == "release_run_manifest"
+        ),
         "run_manifest_current": (
-            inputs["run_manifest"]["source_tree_fingerprint"] == fingerprint
-            and inputs["run_manifest"]["source_revision"] == revision
+            request.inputs["run_manifest"]["source_tree_fingerprint"] == request.fingerprint
+            and request.inputs["run_manifest"]["source_revision"] == request.revision
         ),
-        "run_manifest_pass": _run_manifest_authority_pass(run_payload),
-        "sealed_run_manifest_load_ok": inputs["sealed_run_manifest"]["load_status"] == "ok",
+        "run_manifest_pass": _run_manifest_authority_pass(request.run_payload),
+        "sealed_run_manifest_load_ok": (
+            request.inputs["sealed_run_manifest"]["load_status"] == "ok"
+        ),
         "sealed_run_manifest_artifact_kind_ok": (
-            inputs["sealed_run_manifest"]["artifact_kind"] == "release_sealed_run_manifest"
+            request.inputs["sealed_run_manifest"]["artifact_kind"] == "release_sealed_run_manifest"
         ),
         "sealed_run_manifest_current": (
-            inputs["sealed_run_manifest"]["source_tree_fingerprint"] == fingerprint
-            and inputs["sealed_run_manifest"]["source_revision"] == revision
+            request.inputs["sealed_run_manifest"]["source_tree_fingerprint"] == request.fingerprint
+            and request.inputs["sealed_run_manifest"]["source_revision"] == request.revision
         ),
-        "sealed_run_manifest_pass": _sealed_manifest_authority_pass(sealed_payload),
-        "operator_summary_load_ok": inputs["operator_summary"]["load_status"] == "ok",
-        "operator_summary_artifact_kind_ok": inputs["operator_summary"]["artifact_kind"] == "operator_release_summary",
-        "operator_summary_current": str(inputs["operator_summary"]["source_tree_fingerprint"]).strip()
-        == fingerprint
-        and inputs["operator_summary"]["source_revision"] == revision,
+        "sealed_run_manifest_pass": _sealed_manifest_authority_pass(request.sealed_payload),
+    }
+
+
+def _operator_ready_checks(request: _ReadyCheckInputs) -> dict[str, bool]:
+    operator = request.operator
+    return {
+        "operator_summary_load_ok": request.inputs["operator_summary"]["load_status"] == "ok",
+        "operator_summary_artifact_kind_ok": (
+            request.inputs["operator_summary"]["artifact_kind"] == "operator_release_summary"
+        ),
+        "operator_summary_current": (
+            str(request.inputs["operator_summary"]["source_tree_fingerprint"]).strip()
+            == request.fingerprint
+            and request.inputs["operator_summary"]["source_revision"] == request.revision
+        ),
         "operator_summary_pass": operator["status"] == "pass",
         "source_zip_policy_match": operator["source_zip_policy_status"] == "match",
         "tmp_json_clean": operator["tmp_json_policy_status"] == "clean",
@@ -794,16 +825,28 @@ def _ready_checks(
         "full_suite_pass": operator["full_suite_status"] == "pass",
         "learning_revalidation_current": str(operator["learning_revalidation_status"])
         in ALLOWED_LEARNING_REVALIDATION_STATUSES,
-        "accepted_risk_clean": all(count == 0 for count in operator["accepted_risk"].values()),
+        "accepted_risk_clean": all(
+            operator["accepted_risk"].get(field, 0) == 0
+            for field in STRICT_ZERO_ACCEPTED_RISK_FIELDS
+        ),
         "gate_attention_clean": all(count == 0 for count in operator["gate_attention"].values()),
         "learning_claim_clean": all(count == 0 for count in operator["learning_claim"].values()),
-        "auto_improve_readiness_load_ok": inputs["auto_improve_readiness"]["load_status"] == "ok",
+    }
+
+
+def _auto_improve_ready_checks(request: _ReadyCheckInputs) -> dict[str, bool]:
+    auto_improve = request.auto_improve
+    return {
+        "auto_improve_readiness_load_ok": (
+            request.inputs["auto_improve_readiness"]["load_status"] == "ok"
+        ),
         "auto_improve_readiness_artifact_kind_ok": (
-            inputs["auto_improve_readiness"]["artifact_kind"] == "auto_improve_readiness_report"
+            request.inputs["auto_improve_readiness"]["artifact_kind"]
+            == "auto_improve_readiness_report"
         ),
         "auto_improve_current": (
             auto_improve["currentness_status"] == "current"
-            and inputs["auto_improve_readiness"]["source_revision"] == revision
+            and request.inputs["auto_improve_readiness"]["source_revision"] == request.revision
         ),
         "auto_improve_can_execute_trial": bool(auto_improve["can_execute_trial"]),
         "auto_improve_can_promote_result": bool(auto_improve["stage3_can_promote_result"]),
@@ -812,6 +855,42 @@ def _ready_checks(
             and int(auto_improve["stage3_blocking_promotion_blocker_count"]) == 0
             and int(auto_improve["clean_release_blocker_count"]) == 0
         ),
+    }
+
+
+def _ready_checks(request: _ReadyCheckInputs) -> dict[str, bool]:
+    preflight = _phase_ready_checks(
+        request.inputs,
+        request.preflight,
+        input_key="auto_promotion_preflight",
+        expected_phase="preflight",
+        fingerprint=request.fingerprint,
+        revision=request.revision,
+    )
+    preseal = _phase_ready_checks(
+        request.inputs,
+        request.preseal,
+        input_key="auto_promotion_preseal",
+        expected_phase="preseal",
+        fingerprint=request.fingerprint,
+        revision=request.revision,
+    )
+    preflight_goal_identity = _dict(request.preflight.get("goal_run_identity"))
+    preseal_goal_identity = _dict(request.preseal.get("goal_run_identity"))
+    preflight_goal_run_id = str(preflight_goal_identity.get("effective_run_id", "")).strip()
+    preseal_goal_run_id = str(preseal_goal_identity.get("effective_run_id", "")).strip()
+    return {
+        **preflight,
+        **preseal,
+        "auto_promotion_goal_run_identity_match": (
+            bool(preflight_goal_run_id)
+            and bool(preseal_goal_run_id)
+            and preflight_goal_run_id == preseal_goal_run_id
+        ),
+        **_goal_runtime_ready_checks(request),
+        **_manifest_authority_ready_checks(request),
+        **_operator_ready_checks(request),
+        **_auto_improve_ready_checks(request),
     }
 
 
@@ -970,17 +1049,19 @@ def build_manifest(
     goal_status = _goal_run_status_diagnostics(goal_run_status_payload)
     goal_certificate = _goal_runtime_certificate_diagnostics(goal_runtime_certificate_payload)
     checks = _ready_checks(
-        inputs,
-        run_payload=run_payload,
-        sealed_payload=sealed_payload,
-        operator=operator,
-        auto_improve=auto_improve,
-        preflight=preflight,
-        preseal=preseal,
-        goal_run_status=goal_status,
-        goal_runtime_certificate=goal_certificate,
-        fingerprint=fingerprint,
-        revision=commit,
+        _ReadyCheckInputs(
+            inputs=inputs,
+            run_payload=run_payload,
+            sealed_payload=sealed_payload,
+            operator=operator,
+            auto_improve=auto_improve,
+            preflight=preflight,
+            preseal=preseal,
+            goal_run_status=goal_status,
+            goal_runtime_certificate=goal_certificate,
+            fingerprint=fingerprint,
+            revision=commit,
+        )
     )
     requirements = _ready_requirements(
         _ReadyRequirementInputs(

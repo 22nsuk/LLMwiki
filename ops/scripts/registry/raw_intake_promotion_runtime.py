@@ -3,8 +3,10 @@ from __future__ import annotations
 from .raw_intake_promotion_bridge_runtime import suggest_bridge_sources_for_family
 from .raw_intake_promotion_scaffold_runtime import scaffold_profile_bundle
 from .raw_intake_promotion_shared_runtime import (
+    EVIDENCE_MAP_COLUMNS,
     _combined_source_stems,
     _dedupe,
+    _evidence_map_rows,
     _quote,
     _string_list,
 )
@@ -41,6 +43,45 @@ def render_family_pages(payload: dict) -> dict[str, str]:
         synthesis = refresh["synthesis"]
         rendered[f"wiki/{synthesis['stem']}.md"] = render_refresh_synthesis_page(refresh)
     return rendered
+
+
+def _table_cell(value: str) -> str:
+    return value.replace("\n", "<br>").replace("|", "\\|")
+
+
+def _append_evidence_map(lines: list[str], synthesis: dict) -> None:
+    rows = _evidence_map_rows(synthesis.get("evidence_map"))
+    legacy_items = _string_list(synthesis.get("evidence_map"))
+    if not rows and not legacy_items:
+        return
+
+    lines.extend(["", "## Evidence map"])
+    if rows:
+        labels = [label for _key, label in EVIDENCE_MAP_COLUMNS]
+        keys = [key for key, _label in EVIDENCE_MAP_COLUMNS]
+        lines.append("| " + " | ".join(labels) + " |")
+        lines.append("| " + " | ".join("---" for _ in labels) + " |")
+        for row in rows:
+            lines.append("| " + " | ".join(_table_cell(row.get(key, "")) for key in keys) + " |")
+        return
+
+    for item in legacy_items:
+        lines.append(f"- {item}")
+
+
+def _append_optional_frontmatter_string(lines: list[str], concept: dict, field: str) -> None:
+    value = concept.get(field)
+    if isinstance(value, str) and value.strip():
+        lines.append(f"{field}: {_quote(value.strip())}")
+
+
+def _append_optional_frontmatter_string_list(lines: list[str], concept: dict, field: str) -> None:
+    values = _string_list(concept.get(field))
+    if not values:
+        return
+    lines.append(f"{field}:")
+    for value in values:
+        lines.append(f"  - {_quote(value)}")
 
 
 def render_synthesis_page(family: dict) -> str:
@@ -84,10 +125,8 @@ def render_synthesis_page(family: dict) -> str:
     ]
     for source_stem in combined_sources:
         lines.append(f"- [[{source_stem}]]")
+    _append_evidence_map(lines, synthesis)
     lines.extend(["", "## Analysis"])
-    integration_note = synthesis.get("integration_note")
-    if isinstance(integration_note, str) and integration_note.strip():
-        lines.extend([integration_note.strip(), ""])
     for block in analysis_blocks:
         lines.extend(
             [
@@ -115,6 +154,16 @@ def render_synthesis_page(family: dict) -> str:
     )
     for question in _string_list(synthesis.get("follow_up_questions")):
         lines.append(f"- {question}")
+    placement_notes = _string_list(synthesis.get("wiki_placement_note"))
+    integration_note = synthesis.get("integration_note")
+    if isinstance(integration_note, str) and integration_note.strip():
+        stripped_note = integration_note.strip()
+        if stripped_note not in placement_notes:
+            placement_notes.append(stripped_note)
+    if placement_notes:
+        lines.extend(["", "## Wiki placement note"])
+        for paragraph in placement_notes:
+            lines.extend([paragraph, ""])
     lines.extend(["", "## Related pages"])
     for page in related_pages:
         if page and page != "__placeholder__":
@@ -161,23 +210,30 @@ def render_concept_page(family: dict) -> str:
         'corpus: "wiki"',
         "canonical: true",
         f"created: {_quote(concept['created'])}",
-        "aliases:",
-        f"  - {_quote(stem)}",
-        "tags:",
-        '  - "corpus/wiki"',
-        '  - "type/concept"',
-        "---",
-        "",
-        f"# {stem}",
-        "",
-        "## Summary",
-        concept["summary"].strip(),
-        "",
-        "## Why it matters here",
-        concept["why_it_matters_here"].strip(),
-        "",
-        "## Main body",
     ]
+    for field in ("topic_area", "topic_subarea", "primary_lens", "concept_role"):
+        _append_optional_frontmatter_string(lines, concept, field)
+    _append_optional_frontmatter_string_list(lines, concept, "jurisdiction_scope")
+    lines.extend(
+        [
+            "aliases:",
+            f"  - {_quote(stem)}",
+            "tags:",
+            '  - "corpus/wiki"',
+            '  - "type/concept"',
+            "---",
+            "",
+            f"# {stem}",
+            "",
+            "## Summary",
+            concept["summary"].strip(),
+            "",
+            "## Why it matters here",
+            concept["why_it_matters_here"].strip(),
+            "",
+            "## Main body",
+        ]
+    )
     for block in concept.get("main_body_blocks", []):
         lines.extend(
             [
@@ -195,6 +251,16 @@ def render_concept_page(family: dict) -> str:
     lines.append("## How to reuse this concept")
     for paragraph in _string_list(concept.get("how_to_reuse_this_concept")):
         lines.extend([paragraph, ""])
+    route_map = _string_list(concept.get("route_map_for_future_ingest"))
+    if route_map:
+        lines.append("## Route map for future ingest")
+        for paragraph in route_map:
+            lines.extend([paragraph, ""])
+    signals = _string_list(concept.get("signals_for_future_ingest"))
+    if signals:
+        lines.append("## Signals for future ingest")
+        for paragraph in signals:
+            lines.extend([paragraph, ""])
     lines.extend(["## Related pages"])
     for page in related_pages:
         lines.append(f"- [[{page}]]")

@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.test_lane_registry_runtime import load_registry, pack_summary_suite
 
+from ops.scripts.test.test_lane_registry_runtime import (
+    load_registry,
+    pack_summary_suite,
+)
 from tests.makefile_static_helpers import (
     _assert_assignment_exists,
     _assert_assignment_not_exists,
     _assert_recipe_contains_tokens,
-    _assert_target_depends_on,
     _makefile_text,
     _target_block,
 )
@@ -20,134 +23,157 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+TEST_EXECUTION_SUMMARY_PHONY_TARGETS = (
+    "test-execution-summary-fast",
+    "test-execution-summary-report-contract",
+    "test-execution-summary-full",
+)
+
+COMPATIBILITY_TEST_EXECUTION_SUMMARY_TARGETS = {
+    "test-execution-summary": "test-execution-summary-report-contract",
+    "test-execution-summary-report-contract-refresh": (
+        "test-execution-summary-report-contract "
+        "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=bootstrap-refresh"
+    ),
+    "test-execution-summary-report-contract-refresh-no-smoke": (
+        "test-execution-summary-report-contract "
+        "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=bootstrap-refresh-no-smoke"
+    ),
+    "test-execution-summary-current-check": (
+        "test-execution-summary-report-contract "
+        "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=current-check"
+    ),
+    "test-execution-summary-current-or-refresh": (
+        "test-execution-summary-report-contract "
+        "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=current-or-refresh"
+    ),
+    "test-execution-summary-reuse": (
+        "test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=reuse"
+    ),
+    "test-execution-summary-full-body": (
+        "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=body"
+    ),
+    "test-execution-summary-full-refresh": (
+        "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=refresh"
+    ),
+    "test-execution-summary-full-refresh-no-converge": (
+        "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=refresh-no-converge"
+    ),
+    "test-execution-summary-full-aggregate-reuse": (
+        "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=aggregate-reuse"
+    ),
+    "test-execution-summary-full-current-check": (
+        "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=current-check"
+    ),
+    "test-execution-summary-full-current-or-refresh": (
+        "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=current-or-refresh"
+    ),
+}
+
+REMOVED_TEST_EXECUTION_SUMMARY_TARGETS = ("test-execution-summary-public",)
+
+TEST_EXECUTION_SUMMARY_ASSIGNMENTS = (
+    ("TEST_EXECUTION_SUMMARY_OUT", "ops/reports/test-execution-summary.json"),
+    ("TEST_EXECUTION_SUMMARY_CANDIDATE_OUT", "tmp/test-execution-summary.candidate.json"),
+    ("TEST_EXECUTION_SUMMARY_CHECK_OUT", "tmp/test-execution-summary-check.json"),
+    ("TEST_EXECUTION_SUMMARY_FAST_OUT", "ops/reports/test-execution-summary-fast.json"),
+    (
+        "TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT",
+        "tmp/test-execution-summary-fast.candidate.json",
+    ),
+    ("TEST_EXECUTION_SUMMARY_FULL_OUT", "ops/reports/test-execution-summary-full.json"),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT",
+        "tmp/test-execution-summary-full.candidate.json",
+    ),
+    ("TEST_EXECUTION_SUMMARY_FULL_CHECK_OUT", "tmp/test-execution-summary-full-check.json"),
+    ("TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE", "run"),
+    ("TEST_EXECUTION_SUMMARY_FULL_MODE", "run"),
+    ("RELEASE_AUDIT_PAYLOAD_STAGING_DIR", "build/release-payloads"),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT",
+        "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.junit.xml",
+    ),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_LOG_OUT",
+        "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.log",
+    ),
+    ("TEST_EXECUTION_SUMMARY_REUSE_FROM", "$(TEST_EXECUTION_SUMMARY_OUT)"),
+    ("TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM", "$(TEST_EXECUTION_SUMMARY_FULL_OUT)"),
+    ("TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS", "$(PYTEST_FLAGS)"),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR",
+        "ops/reports/test-execution-summary-full-shards",
+    ),
+    ("TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS", "30"),
+)
+
+TEST_EXECUTION_SUMMARY_ABSENT_ASSIGNMENTS = (
+    "TEST_EXECUTION_SUMMARY_PUBLIC_OUT",
+    "TEST_EXECUTION_SUMMARY_PUBLIC_CANDIDATE_OUT",
+    "TEST_EXECUTION_SUMMARY_PUBLIC_SUITE",
+    "TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT",
+    "TEST_EXECUTION_SUMMARY_SHARD_DIR",
+)
+
+
 def _test_lane_registry() -> dict[str, object]:
     return load_registry(REPO_ROOT)
 
 
+def _assert_phony_targets(testcase: unittest.TestCase, text: str) -> None:
+    phony = _target_block(text, ".PHONY")
+    for target in TEST_EXECUTION_SUMMARY_PHONY_TARGETS:
+        testcase.assertRegex(
+            phony,
+            rf"(?<![A-Za-z0-9_.-]){re.escape(target)}(?![A-Za-z0-9_.-])",
+        )
+    for target in COMPATIBILITY_TEST_EXECUTION_SUMMARY_TARGETS:
+        testcase.assertRegex(
+            phony,
+            rf"(?<![A-Za-z0-9_.-]){re.escape(target)}(?![A-Za-z0-9_.-])",
+        )
+    for target in REMOVED_TEST_EXECUTION_SUMMARY_TARGETS:
+        testcase.assertNotRegex(
+            phony,
+            rf"(?<![A-Za-z0-9_.-]){re.escape(target)}(?![A-Za-z0-9_.-])",
+        )
+
+
+def _assert_assignments(testcase: unittest.TestCase, text: str) -> None:
+    for name, value in TEST_EXECUTION_SUMMARY_ASSIGNMENTS:
+        _assert_assignment_exists(testcase, text, name, value)
+    for name in TEST_EXECUTION_SUMMARY_ABSENT_ASSIGNMENTS:
+        _assert_assignment_not_exists(testcase, text, name)
+
+
+def _mode_block(text: str, variable: str, mode: str) -> str:
+    first_marker = f"ifeq ($({variable}),{mode})"
+    later_marker = f"else ifeq ($({variable}),{mode})"
+    marker = first_marker if first_marker in text else later_marker
+    if marker not in text:
+        raise AssertionError(f"missing mode branch: {variable}={mode}")
+    start = text.index(marker)
+    next_positions = [
+        position
+        for position in (
+            text.find(f"\nelse ifeq ($({variable}),", start + 1),
+            text.find("\nelse\n", start + 1),
+            text.find("\nendif", start + 1),
+        )
+        if position != -1
+    ]
+    end = min(next_positions) if next_positions else len(text)
+    return text[start:end]
+
+
 class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
-    def test_test_execution_summary_target_wraps_report_contracts(self) -> None:
+    def test_test_execution_summary_declares_three_developer_facing_targets(self) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
 
-        for target in (
-            "test-execution-summary",
-            "test-execution-summary-fast",
-            "test-execution-summary-public",
-            "test-execution-summary-report-contract",
-            "test-execution-summary-report-contract-refresh",
-            "test-execution-summary-report-contract-refresh-no-smoke",
-            "test-execution-summary-current-check",
-            "test-execution-summary-current-or-refresh",
-            "test-execution-summary-full-body",
-            "test-execution-summary-full",
-            "test-execution-summary-full-refresh",
-            "test-execution-summary-full-refresh-no-converge",
-            "test-execution-summary-full-aggregate-reuse",
-            "test-execution-summary-full-current-check",
-            "test-execution-summary-full-current-or-refresh",
-            "test-execution-summary-reuse",
-        ):
-            self.assertIn(target, _target_block(text, ".PHONY"))
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_OUT",
-            "ops/reports/test-execution-summary.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_CANDIDATE_OUT",
-            "tmp/test-execution-summary.candidate.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_CHECK_OUT",
-            "tmp/test-execution-summary-check.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FAST_OUT",
-            "ops/reports/test-execution-summary-fast.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT",
-            "tmp/test-execution-summary-fast.candidate.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_PUBLIC_OUT",
-            "ops/reports/test-execution-summary-public.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_PUBLIC_CANDIDATE_OUT",
-            "tmp/test-execution-summary-public.candidate.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_OUT",
-            "ops/reports/test-execution-summary-full.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT",
-            "tmp/test-execution-summary-full.candidate.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_CHECK_OUT",
-            "tmp/test-execution-summary-full-check.json",
-        )
-        _assert_assignment_not_exists(
-            self, text, "TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT"
-        )
-        _assert_assignment_exists(
-            self, text, "RELEASE_AUDIT_PAYLOAD_STAGING_DIR", "build/release-payloads"
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT",
-            "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.junit.xml",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_LOG_OUT",
-            "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.log",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_REUSE_FROM",
-            "$(TEST_EXECUTION_SUMMARY_OUT)",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM",
-            "$(TEST_EXECUTION_SUMMARY_FULL_OUT)",
-        )
-        _assert_assignment_exists(
-            self, text, "TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS", "$(PYTEST_FLAGS)"
-        )
-        _assert_assignment_not_exists(self, text, "TEST_EXECUTION_SUMMARY_SHARD_DIR")
-        _assert_assignment_exists(
-            self,
-            text,
-            "TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR",
-            "ops/reports/test-execution-summary-full-shards",
-        )
+        _assert_phony_targets(self, text)
+        _assert_assignments(self, text)
         _assert_assignment_exists(
             self,
             text,
@@ -155,20 +181,19 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
             pack_summary_suite(registry, "fast")["suite_id"],
         )
         _assert_assignment_exists(
-            self, text, "TEST_EXECUTION_SUMMARY_PUBLIC_SUITE", "public"
-        )
-        _assert_assignment_exists(
             self,
             text,
             "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE",
             pack_summary_suite(registry, "report_contract_core")["suite_id"],
         )
-        _assert_assignment_exists(
-            self, text, "TEST_EXECUTION_SUMMARY_FULL_SUITE", "full"
-        )
+        _assert_assignment_exists(self, text, "TEST_EXECUTION_SUMMARY_FULL_SUITE", "full")
         _assert_assignment_exists(
             self, text, "TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE", "full-shard-1"
         )
+
+    def test_fast_public_and_report_contract_summary_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -180,27 +205,15 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote",
             ),
         )
+        public_block = _target_block(text, "test-public")
+        self.assertIn('$(PYTHON) -m pytest -m "$(PYTEST_PUBLIC_MARK_EXPR)"', public_block)
+        self.assertNotIn("test-execution-summary-public", public_block)
+        self.assertIn('$(PYTEST_SERIAL_FLAGS)', _target_block(text, "test-public-serial"))
+
+        run_block = _mode_block(text, "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE", "run")
         _assert_recipe_contains_tokens(
             self,
-            text,
-            "test-execution-summary-public",
-            (
-                "ops.scripts.test_execution_summary",
-                "--collect-nodeids",
-                '$(PYTHON) -m pytest -m "$(PYTEST_PUBLIC_MARK_EXPR)"',
-                "ops.scripts.canonical_artifact_promote",
-            ),
-        )
-        _assert_target_depends_on(
-            self, text, "test-public", "test-execution-summary-public"
-        )
-        self.assertIn(
-            '$(MAKE) test-execution-summary-public PYTEST_FLAGS="$(PYTEST_SERIAL_FLAGS)"',
-            _target_block(text, "test-public-serial"),
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
+            run_block,
             "test-execution-summary-report-contract",
             (
                 "ops.scripts.test_execution_summary",
@@ -210,117 +223,62 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote",
             ),
         )
-        refresh_block = _target_block(
-            text, "test-execution-summary-report-contract-refresh"
+    def test_report_contract_modes_preserve_refresh_and_reuse_paths(self) -> None:
+        text = _makefile_text()
+
+        refresh_block = _mode_block(
+            text, "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE", "bootstrap-refresh"
         )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "test-execution-summary-report-contract-refresh",
-            (
-                "ops.scripts.test_execution_summary",
-                "ops.scripts.canonical_artifact_promote",
-                "$(MAKE) auto-improve-readiness-report",
-                "$(MAKE) release-smoke-full-reuse",
-                "$(MAKE) generated-artifact-converge",
-            ),
-        )
-        self.assertNotIn("$(MAKE) release-smoke-full\n", refresh_block)
+        self.assertIn("$(MAKE) auto-improve-readiness-report", refresh_block)
+        self.assertIn("$(MAKE) release-smoke-full-reuse", refresh_block)
         self.assertEqual(refresh_block.count("$(MAKE) generated-artifact-converge"), 2)
-        self.assertEqual(
-            refresh_block.count("$(MAKE) archive-execution-manifest-report"), 0
-        )
-        self.assertNotIn("$(MAKE) artifact-freshness", refresh_block)
-        self.assertNotIn("$(MAKE) generated-artifact-index", refresh_block)
-        self.assertIn(
-            "strict test-execution-summary will rerun later in closeout", refresh_block
-        )
-        no_smoke_refresh_block = _target_block(
-            text, "test-execution-summary-report-contract-refresh-no-smoke"
-        )
-        self.assertIn("$(MAKE) auto-improve-readiness-report", no_smoke_refresh_block)
-        self.assertEqual(
-            no_smoke_refresh_block.count("$(MAKE) generated-artifact-converge"), 2
-        )
-        self.assertNotIn("$(MAKE) release-smoke-full-reuse", no_smoke_refresh_block)
-        self.assertNotIn("$(MAKE) generated-artifact-index", no_smoke_refresh_block)
-        self.assertNotIn("$(MAKE) artifact-freshness", no_smoke_refresh_block)
-        self.assertIn(
-            "test-execution-summary-report-contract-refresh-no-smoke promoted a non-pass bootstrap summary",
-            no_smoke_refresh_block,
-        )
-        self.assertIn(
-            "test-execution-summary: test-execution-summary-report-contract", text
-        )
-        _assert_recipe_contains_tokens(
-            self,
+        self.assertIn("bootstrap refresh promoted a non-pass summary", refresh_block)
+
+        no_smoke_block = _mode_block(
             text,
-            "test-execution-summary-current-check",
-            (
-                "ops.scripts.test_execution_summary",
-                '--out "$(TEST_EXECUTION_SUMMARY_CHECK_OUT)"',
-                "--collect-nodeids",
-                "--reuse-if-current",
-                "--reuse-only",
-                '--reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)"',
-                '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
-            ),
+            "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE",
+            "bootstrap-refresh-no-smoke",
         )
-        current_or_refresh_block = _target_block(
-            text, "test-execution-summary-current-or-refresh"
+        self.assertIn("$(MAKE) auto-improve-readiness-report", no_smoke_block)
+        self.assertNotIn("$(MAKE) release-smoke-full-reuse", no_smoke_block)
+        self.assertEqual(no_smoke_block.count("$(MAKE) generated-artifact-converge"), 2)
+
+        current_or_refresh_block = _mode_block(
+            text, "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE", "current-or-refresh"
         )
         self.assertIn(
-            "$(MAKE) test-execution-summary-current-check",
+            "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=current-check",
             current_or_refresh_block,
         )
         self.assertIn(
-            "$(MAKE) test-execution-summary-reuse",
+            "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=reuse",
             current_or_refresh_block,
         )
-        self.assertIn(
-            "test execution summary is current; reused $(TEST_EXECUTION_SUMMARY_REUSE_FROM)",
-            current_or_refresh_block,
-        )
-        runtime_hotspot_block = _target_block(text, "runtime-hotspot-goldens-check")
-        self.assertIn("runtime-hotspot-goldens-check", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "tests/test_runtime_hotspot_facade_golden_outputs.py",
-            runtime_hotspot_block,
-        )
-        self.assertIn("$(PYTEST_CACHE_ISOLATION_FLAGS)", runtime_hotspot_block)
-        self.assertIn("$(PYTEST_SERIAL_FLAGS)", runtime_hotspot_block)
-        generated_preflight_block = _target_block(text, "full-pytest-generated-preflight")
-        self.assertIn("full-pytest-generated-preflight", _target_block(text, ".PHONY"))
+        reuse_block = _mode_block(text, "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE", "reuse")
+        self.assertIn("--reuse-if-current", reuse_block)
+        self.assertIn("--refresh-revision-if-same-tree", reuse_block)
+
+    def test_full_summary_modes_preserve_body_refresh_and_reuse_paths(self) -> None:
+        text = _makefile_text()
+
+        run_block = _mode_block(text, "TEST_EXECUTION_SUMMARY_FULL_MODE", "run")
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=body", run_block)
+        self.assertIn("$(MAKE) generated-artifact-converge", run_block)
+
+        body_block = _mode_block(text, "TEST_EXECUTION_SUMMARY_FULL_MODE", "body")
         _assert_recipe_contains_tokens(
             self,
-            text,
-            "full-pytest-generated-preflight",
-            (
-                "$(MAKE) report-schema-samples-check",
-                "$(MAKE) script-output-surfaces-check",
-                "$(MAKE) runtime-hotspot-goldens-check",
-            ),
-        )
-        self.assertNotIn(
-            "ops.scripts.canonical_artifact_promote", generated_preflight_block
-        )
-        full_body_block = _target_block(text, "test-execution-summary-full-body")
-        self.assertNotIn("$(MAKE) refresh-generated-core", full_body_block)
-        self.assertNotIn("$(MAKE) auto-improve-readiness-report-body", full_body_block)
-        self.assertNotIn("$(MAKE) release-smoke-full", full_body_block)
-        self.assertIn("$(TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS)", full_body_block)
-        self.assertNotIn("$(PYTEST_SERIAL_FLAGS)", full_body_block)
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "test-execution-summary-full-body",
+            body_block,
+            "test-execution-summary-full",
             (
                 "$(MAKE) full-pytest-generated-preflight",
                 'rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
                 'mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
-                '"$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)"',
-                "ops.scripts.test_execution_summary",
-                "--collect-nodeids",
+                "test-execution-summary-full: suite=$(TEST_EXECUTION_SUMMARY_FULL_SUITE) shard=full-suite-shard-1",
+                "heartbeat_interval_seconds=$(TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS)",
+                "log=$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)",
+                '--heartbeat-interval-seconds "$(TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS)"',
+                '--heartbeat-label "full-suite-shard-1"',
                 "--junit-xml-path",
                 "--execution-log-out",
                 "--failed-nodeids-out",
@@ -329,105 +287,43 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote",
             ),
         )
-        self.assertLess(
-            full_body_block.index("$(MAKE) full-pytest-generated-preflight"),
-            full_body_block.index('rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"'),
+        self.assertNotIn("$(MAKE) generated-artifact-converge", body_block)
+
+        refresh_no_converge_block = _mode_block(
+            text, "TEST_EXECUTION_SUMMARY_FULL_MODE", "refresh-no-converge"
         )
-        self.assertNotIn("$(MAKE) generated-artifact-converge", full_body_block)
-        self.assertNotIn(
-            "$(MAKE) test-execution-summary-report-contract-refresh", full_body_block
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=body", refresh_no_converge_block)
+        self.assertNotIn("$(MAKE) generated-artifact-converge", refresh_no_converge_block)
+
+        current_or_refresh_block = _mode_block(
+            text, "TEST_EXECUTION_SUMMARY_FULL_MODE", "current-or-refresh"
         )
-        full_block = _target_block(text, "test-execution-summary-full")
-        _assert_target_depends_on(
-            self, text, "test-execution-summary-full", "test-execution-summary-full-body"
-        )
-        self.assertEqual(full_block.count("$(MAKE) generated-artifact-converge"), 1)
-        self.assertNotIn("$(PYTHON) -m pytest", full_block)
-        self.assertGreater(
-            full_block.rindex("$(MAKE) generated-artifact-converge"),
-            full_block.index("test-execution-summary-full-body"),
-        )
-        full_refresh_block = _target_block(text, "test-execution-summary-full-refresh")
-        _assert_target_depends_on(
-            self,
-            text,
-            "test-execution-summary-full-refresh",
-            "test-execution-summary-full",
-        )
-        self.assertIn(
-            "full-suite evidence refreshed; collect-only nodeid digest and count recorded in $(TEST_EXECUTION_SUMMARY_FULL_OUT)",
-            full_refresh_block,
-        )
-        self.assertNotIn("node count $$actual does not match expected", full_refresh_block)
-        no_converge_full_refresh_block = _target_block(
-            text, "test-execution-summary-full-refresh-no-converge"
-        )
-        _assert_target_depends_on(
-            self,
-            text,
-            "test-execution-summary-full-refresh-no-converge",
-            "test-execution-summary-full-body",
-        )
-        self.assertNotIn(
-            "$(MAKE) generated-artifact-converge", no_converge_full_refresh_block
-        )
-        self.assertIn(
-            "full-suite evidence refreshed without generated artifact convergence",
-            no_converge_full_refresh_block,
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "test-execution-summary-full-aggregate-reuse",
-            (
-                "ops.scripts.test_execution_summary",
-                "--aggregate",
-                "--aggregate-dir",
-                "--reuse-if-current",
-                "--refresh-revision-if-same-tree",
-                '--reuse-from "$(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"',
-                "ops.scripts.canonical_artifact_promote",
-            ),
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "test-execution-summary-full-current-check",
-            (
-                "ops.scripts.test_execution_summary",
-                '--out "$(TEST_EXECUTION_SUMMARY_FULL_CHECK_OUT)"',
-                "--aggregate",
-                "--reuse-if-current",
-                "--reuse-only",
-                '--reuse-from "$(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"',
-            ),
-        )
-        full_current_or_refresh_block = _target_block(
-            text, "test-execution-summary-full-current-or-refresh"
-        )
-        self.assertIn(
-            "$(MAKE) test-execution-summary-full-current-check",
-            full_current_or_refresh_block,
-        )
-        self.assertIn(
-            "$(MAKE) test-execution-summary-full-aggregate-reuse",
-            full_current_or_refresh_block,
-        )
-        self.assertIn(
-            "$(MAKE) test-execution-summary-full-refresh-no-converge",
-            full_current_or_refresh_block,
-        )
-        self.assertIn("full-suite evidence is current", full_current_or_refresh_block)
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "test-execution-summary-reuse",
-            (
-                "ops.scripts.test_execution_summary",
-                "--reuse-if-current",
-                "--refresh-revision-if-same-tree",
-                '--reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)"',
-                '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
-                "ops.scripts.canonical_artifact_promote",
-            ),
-        )
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=current-check", current_or_refresh_block)
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=aggregate-reuse", current_or_refresh_block)
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=refresh-no-converge", current_or_refresh_block)
+
+    def test_compatibility_summary_targets_delegate_to_mode_targets(self) -> None:
+        text = _makefile_text()
+
+        for target, expected in COMPATIBILITY_TEST_EXECUTION_SUMMARY_TARGETS.items():
+            with self.subTest(target=target):
+                block = _target_block(text, target)
+                if target == "test-execution-summary":
+                    self.assertEqual(
+                        block.splitlines()[0],
+                        "test-execution-summary: test-execution-summary-report-contract",
+                    )
+                    continue
+                self.assertIn(f"$(MAKE) {expected}", block)
+
+    def test_report_contract_closeout_uses_generated_artifact_orchestrator(self) -> None:
+        text = _makefile_text()
+        closeout_block = _target_block(text, "report-contract-closeout")
+        orchestrator_block = _target_block(text, "report-contract-closeout-generated-artifacts")
+
+        self.assertIn("$(MAKE) report-contract-closeout-generated-artifacts", closeout_block)
+        self.assertNotIn("$(MAKE) generated-artifact-converge", closeout_block)
+        self.assertIn("$(MAKE) release-closeout-summary-report", orchestrator_block)
+        self.assertIn("$(MAKE) release-evidence-cohort", orchestrator_block)
+        self.assertIn("$(MAKE) auto-improve-readiness-report-body", orchestrator_block)
+        self.assertEqual(orchestrator_block.count("$(MAKE) generated-artifact-converge"), 2)

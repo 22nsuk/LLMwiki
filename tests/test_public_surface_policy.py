@@ -5,12 +5,18 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.export_public_repo import export_public_repo, should_export_public
-from ops.scripts.public_surface_policy import (
+
+from ops.scripts.eval.doc_graph_integrity import ROOT_DOCS
+from ops.scripts.public.export_public_repo import (
+    export_public_repo,
+    should_export_public,
+)
+from ops.scripts.public.public_surface_policy import (
     PUBLIC_EXCLUDED_SEGMENTS,
     PUBLIC_GITIGNORE_END,
     PUBLIC_GITIGNORE_START,
     PUBLIC_GITIGNORE_TEMPLATE,
+    PUBLIC_INCLUDE_FILES,
     PUBLIC_INCLUDED_REPORT_FILES,
     render_public_gitignore_block,
 )
@@ -19,6 +25,10 @@ pytestmark = pytest.mark.public
 
 
 class PublicSurfacePolicyTests(unittest.TestCase):
+    def test_root_docs_are_included_in_public_export_allowlist(self) -> None:
+        missing = sorted(set(ROOT_DOCS) - set(PUBLIC_INCLUDE_FILES))
+        self.assertEqual(missing, [], msg=f"ROOT_DOCS missing from PUBLIC_INCLUDE_FILES: {missing}")
+
     def test_public_mirror_gitignore_template_matches_policy(self) -> None:
         gitignore_text = Path(PUBLIC_GITIGNORE_TEMPLATE).read_text(encoding="utf-8")
         start = gitignore_text.index(PUBLIC_GITIGNORE_START)
@@ -50,6 +60,7 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 "AGENTS.md": "# Agents\n",
                 "AGENTS.local.md": "# Local Agents\n",
                 "ARCHITECTURE.md": "# Architecture\n",
+                "CHANGELOG.md": "# Changelog\n",
                 "CONTRIBUTING.md": "# Contributing\n",
                 "LICENSE": "Apache License\n",
                 "README.md": "# Readme\n",

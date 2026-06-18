@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.policy_runtime import report_path
 
 from .wiki_page_runtime import heading_body, load_text, section_body
 from .wiki_quality_runtime import resolved_wikilink_targets

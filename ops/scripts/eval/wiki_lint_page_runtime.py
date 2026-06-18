@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.frontmatter_runtime import (
+from ops.scripts.core.frontmatter_runtime import (
     parse_frontmatter,
     validate_frontmatter,
     validate_frontmatter_metadata,
     validate_frontmatter_pending_required_fields,
 )
-from ops.scripts.source_trace_runtime import extract_source_trace_refs
+from ops.scripts.core.source_trace_runtime import extract_source_trace_refs
 
 from .wiki_lint_review_runtime import review_candidates_for
 from .wiki_page_runtime import (

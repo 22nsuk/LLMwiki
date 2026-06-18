@@ -5,8 +5,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_gate import build_log, build_signoff, page_class_report
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.promotion_gate import (
+    build_log,
+    build_signoff,
+    page_class_report,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
@@ -180,11 +184,11 @@ class PromotionGatePageClassStage2Test(unittest.TestCase):
             signoff = build_signoff(policy, "wiki_source", _Args())
             log = build_log(policy, _Args())
 
-            with patch("ops.scripts.promotion_gate.lint_wiki", return_value=lint_report()), patch(
-                "ops.scripts.promotion_gate.evaluate_wiki",
+            with patch("ops.scripts.mechanism.promotion_gate.lint_wiki", return_value=lint_report()), patch(
+                "ops.scripts.mechanism.promotion_gate.evaluate_wiki",
                 return_value=eval_report("wiki/source--seed.md"),
             ), patch(
-                "ops.scripts.promotion_gate.evaluate_stage2",
+                "ops.scripts.mechanism.promotion_gate.evaluate_stage2",
                 return_value=stage2_report("wiki/source--seed.md", score=0, max_score=1, status="fail"),
             ):
                 report = page_class_report(
@@ -225,11 +229,11 @@ class PromotionGatePageClassStage2Test(unittest.TestCase):
             signoff = build_signoff(policy, "wiki_concept", _Args())
             log = build_log(policy, _Args())
 
-            with patch("ops.scripts.promotion_gate.lint_wiki", return_value=lint_report()), patch(
-                "ops.scripts.promotion_gate.evaluate_wiki",
+            with patch("ops.scripts.mechanism.promotion_gate.lint_wiki", return_value=lint_report()), patch(
+                "ops.scripts.mechanism.promotion_gate.evaluate_wiki",
                 return_value=eval_report("wiki/concept--plain.md"),
             ), patch(
-                "ops.scripts.promotion_gate.evaluate_stage2",
+                "ops.scripts.mechanism.promotion_gate.evaluate_stage2",
                 return_value=stage2_report("wiki/concept--plain.md", score=0, max_score=0, status="pass"),
             ):
                 report = page_class_report(

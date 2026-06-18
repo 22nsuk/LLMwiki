@@ -7,26 +7,33 @@ import os
 import shlex
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.command_runtime import (
+        CommandHeartbeat,
+        TimedProcessResult,
+        run_with_timeout,
+    )
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
-    from ops.scripts.source_revision_runtime import resolve_source_revision
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.source_revision_runtime import resolve_source_revision
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
     from ops.scripts.test.test_execution_command_runtime import (
@@ -65,6 +72,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         REUSE_MISMATCH_MISSING_SUMMARY,
         REUSE_MISMATCH_SOURCE_REVISION,
         REUSE_MISMATCH_SOURCE_TREE,
+        ReuseCurrentnessRequest,
         reuse_currentness_diagnostics_from_state,
     )
     from ops.scripts.test.test_execution_selection_runtime import (
@@ -83,20 +91,26 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         suite_scope_for_key as _suite_scope_for_key,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.command_runtime import (
+        CommandHeartbeat,
+        TimedProcessResult,
+        run_with_timeout,
+    )
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
-    from ops.scripts.source_revision_runtime import resolve_source_revision
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.source_revision_runtime import resolve_source_revision
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
     from ops.scripts.test.test_execution_command_runtime import (
@@ -135,6 +149,7 @@ else:
         REUSE_MISMATCH_MISSING_SUMMARY,
         REUSE_MISMATCH_SOURCE_REVISION,
         REUSE_MISMATCH_SOURCE_TREE,
+        ReuseCurrentnessRequest,
         reuse_currentness_diagnostics_from_state,
     )
     from ops.scripts.test.test_execution_selection_runtime import (
@@ -556,8 +571,8 @@ def _render_test_execution_summary(inputs: TestExecutionRenderInputs) -> dict[st
             resolved_policy_path=inputs.resolved_policy_path,
             schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/test_execution_summary.py",
-                "ops/scripts/command_runtime.py",
+                "ops/scripts/test/test_execution_summary.py",
+                "ops/scripts/core/command_runtime.py",
             ],
             text_inputs=_test_execution_text_inputs(vault, request, observations),
             file_inputs=_test_execution_file_inputs(request),
@@ -712,18 +727,20 @@ def reuse_currentness_diagnostics(
     )
     current_execution_environment = build_execution_environment(vault, command)
     return reuse_currentness_diagnostics_from_state(
-        existing,
-        suite=suite,
-        current_source_revision=resolve_source_revision(vault).revision,
-        current_source_tree_fingerprint=release_source_tree_fingerprint(vault),
-        current_semantic_command=_semantic_command_text(vault, command),
-        current_toolchain_fingerprint=_toolchain_fingerprint(current_execution_environment),
-        current_display_command=_display_command(vault, command),
-        current_target_fingerprints=current_target_fingerprints,
-        current_deselected_tests=current_deselected_tests,
-        current_deselection_lifecycle=current_lifecycle,
-        collect_nodeids=collect_nodeids,
-        collect_nodeid_digest=collect_nodeid_digest,
+        ReuseCurrentnessRequest(
+            existing=existing,
+            suite=suite,
+            current_source_revision=resolve_source_revision(vault).revision,
+            current_source_tree_fingerprint=release_source_tree_fingerprint(vault),
+            current_semantic_command=_semantic_command_text(vault, command),
+            current_toolchain_fingerprint=_toolchain_fingerprint(current_execution_environment),
+            current_display_command=_display_command(vault, command),
+            current_target_fingerprints=current_target_fingerprints,
+            current_deselected_tests=current_deselected_tests,
+            current_deselection_lifecycle=current_lifecycle,
+            collect_nodeids=collect_nodeids,
+            collect_nodeid_digest=collect_nodeid_digest,
+        )
     )
 
 
@@ -913,6 +930,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--suite", default="pytest")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument(
+        "--heartbeat-interval-seconds",
+        type=int,
+        default=0,
+        help="Emit stderr progress heartbeats while the wrapped test command is quiet; 0 disables.",
+    )
+    parser.add_argument(
+        "--heartbeat-label",
+        default="",
+        help="Optional shard or lane label included in heartbeat lines.",
+    )
     parser.add_argument("--collect-nodeids", action="store_true")
     parser.add_argument("--collect-timeout-seconds", type=int, default=300)
     parser.add_argument("--junit-xml-path")
@@ -941,6 +969,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.command and args.command[0] == "--":
         args.command = args.command[1:]
+    if args.heartbeat_interval_seconds < 0:
+        parser.error("--heartbeat-interval-seconds must be >= 0")
     if not args.command and not args.aggregate and not args.aggregate_from:
         parser.error("test command required for non-aggregate summaries; pass -- <command>")
     return args
@@ -1083,6 +1113,38 @@ def _evidence_artifacts_for_args(
     return evidence_artifacts
 
 
+def _execution_heartbeat_callback(
+    vault: Path,
+    args: argparse.Namespace,
+) -> Callable[[CommandHeartbeat], None] | None:
+    if int(args.heartbeat_interval_seconds or 0) <= 0:
+        return None
+    heartbeat_label = str(args.heartbeat_label or "").strip()
+    execution_log_out = str(args.execution_log_out or "").strip()
+    display_log_path = (
+        display_path(vault, vault / execution_log_out)
+        if execution_log_out
+        else ""
+    )
+
+    def emit_heartbeat(heartbeat: CommandHeartbeat) -> None:
+        fields = [
+            "test-execution-summary-heartbeat",
+            f"suite={args.suite}",
+            f"heartbeat={heartbeat.heartbeat_index}",
+            f"elapsed_seconds={heartbeat.elapsed_seconds:.1f}",
+            f"quiet_seconds={heartbeat.quiet_seconds}",
+            f"timeout_seconds={heartbeat.timeout_seconds}",
+        ]
+        if heartbeat_label:
+            fields.insert(2, f"shard={heartbeat_label}")
+        if display_log_path:
+            fields.append(f"log={display_log_path}")
+        print(" ".join(fields), file=sys.stderr, flush=True)
+
+    return emit_heartbeat
+
+
 def _executed_report_for_args(
     vault: Path,
     args: argparse.Namespace,
@@ -1091,11 +1153,21 @@ def _executed_report_for_args(
 ) -> tuple[dict[str, Any], int]:
     started_at = time.monotonic()
     try:
-        result = run_with_timeout(
-            args.command,
-            cwd=vault,
-            timeout_seconds=args.timeout_seconds,
-        )
+        heartbeat_callback = _execution_heartbeat_callback(vault, args)
+        if heartbeat_callback is None:
+            result = run_with_timeout(
+                args.command,
+                cwd=vault,
+                timeout_seconds=args.timeout_seconds,
+            )
+        else:
+            result = run_with_timeout(
+                args.command,
+                cwd=vault,
+                timeout_seconds=args.timeout_seconds,
+                heartbeat_interval_seconds=args.heartbeat_interval_seconds,
+                heartbeat_callback=heartbeat_callback,
+            )
     except KeyboardInterrupt:
         return (
             _interrupted_report(

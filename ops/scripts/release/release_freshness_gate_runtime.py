@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_PROMOTION,
     GATE_EFFECT_NONE,

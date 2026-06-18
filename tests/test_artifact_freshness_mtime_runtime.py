@@ -21,6 +21,13 @@ def test_parse_and_format_generated_at_round_trip_without_microseconds() -> None
     assert format_mtime(parsed) == "2026-04-24T12:00:00Z"
 
 
+def test_parse_generated_at_normalizes_offsets_and_treats_naive_as_utc() -> None:
+    assert parse_generated_at("2026-04-24T21:00:00+09:00") == dt.datetime(2026, 4, 24, 12, 0, tzinfo=dt.UTC)
+    assert parse_generated_at("2026-04-24T12:00:00") == dt.datetime(2026, 4, 24, 12, 0, tzinfo=dt.UTC)
+    assert parse_generated_at("") is None
+    assert parse_generated_at("not-a-timestamp") is None
+
+
 def test_zip_info_mtimes_normalize_members_and_keep_latest(tmp_path: Path) -> None:
     archive_path = tmp_path / "release.zip"
     with zipfile.ZipFile(archive_path, "w") as archive:

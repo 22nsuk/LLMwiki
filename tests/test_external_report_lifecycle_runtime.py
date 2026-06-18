@@ -5,9 +5,11 @@ from pathlib import Path
 
 import hypothesis.strategies as st
 from hypothesis import given
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.external_report_lifecycle_runtime import (
     ACTION_LIFECYCLE_CURRENTLY_VALID,
     ACTION_LIFECYCLE_HISTORICALLY_TRUE,

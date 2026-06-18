@@ -26,6 +26,11 @@ def test_schema_contract_distinguishes_schema_backed_and_pending_ops_reports() -
         schema_validation_status="pass",
     )["classification"] == "schema_backed"
     assert schema_contract(
+        "ops/reports/review-archive-report.json",
+        has_schema=True,
+        schema_validation_status="pass",
+    )["classification"] == "schema_backed"
+    assert schema_contract(
         "ops/reports/example.json",
         has_schema=False,
         schema_validation_status="not_applicable",

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.auto_improve_session_runtime import (
+from ops.scripts.mechanism.auto_improve_session_runtime import (
     build_learning_summary,
     build_outcome_metrics_rollup,
     build_session_rollups,

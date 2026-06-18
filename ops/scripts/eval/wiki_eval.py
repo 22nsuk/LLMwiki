@@ -11,21 +11,25 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.frontmatter_runtime import validate_frontmatter
-    from ops.scripts.policy_runtime import (
+    from ops.scripts.core.frontmatter_runtime import validate_frontmatter
+    from ops.scripts.core.policy_runtime import (
         load_policy,
         report_path,
         required_sections_from_policy,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
-    from ops.scripts.source_trace_profile_runtime import source_trace_profile_summary
-    from ops.scripts.wiki_page_runtime import (
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
+    from ops.scripts.core.source_trace_profile_runtime import (
+        source_trace_profile_summary,
+    )
+    from ops.scripts.eval.wiki_page_runtime import (
         INDEXISH_PAGES,
         SPECIAL_PAGES,
         page_prefix,
@@ -34,32 +38,36 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         section_exists,
         source_trace_item_count,
     )
-    from ops.scripts.wiki_quality_runtime import (
+    from ops.scripts.eval.wiki_quality_runtime import (
         broken_wikilinks,
         has_placeholder,
         open_question_budget_status,
         source_trace_targets_blocking_profile,
         source_trace_targets_for_profile,
     )
-    from ops.scripts.wiki_snapshot_runtime import (
+    from ops.scripts.eval.wiki_snapshot_runtime import (
         WikiRuntimeSnapshot,
         build_wiki_runtime_snapshot,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.frontmatter_runtime import validate_frontmatter
-    from ops.scripts.policy_runtime import (
+    from ops.scripts.core.frontmatter_runtime import validate_frontmatter
+    from ops.scripts.core.policy_runtime import (
         load_policy,
         report_path,
         required_sections_from_policy,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
-    from ops.scripts.source_trace_profile_runtime import source_trace_profile_summary
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
+    from ops.scripts.core.source_trace_profile_runtime import (
+        source_trace_profile_summary,
+    )
 
     from .wiki_page_runtime import (
         INDEXISH_PAGES,
@@ -152,10 +160,10 @@ def _base_report(vault: Path, inputs: EvalInputs) -> dict[str, Any]:
             resolved_policy_path=inputs.resolved_policy_path,
             schema_path=EVAL_REPORT_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/wiki_eval.py",
-                "ops/scripts/wiki_quality_runtime.py",
-                "ops/scripts/source_trace_profile_runtime.py",
-                "ops/scripts/source_trace_runtime.py",
+                "ops/scripts/eval/wiki_eval.py",
+                "ops/scripts/eval/wiki_quality_runtime.py",
+                "ops/scripts/core/source_trace_profile_runtime.py",
+                "ops/scripts/core/source_trace_runtime.py",
             ],
             path_group_inputs={
                 "pages": sorted(

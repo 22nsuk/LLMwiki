@@ -7,68 +7,68 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.cyclonedx_sbom import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.supply_chain.cyclonedx_sbom import (
         DEFAULT_OUT as CYCLONEDX_DEFAULT_OUT,
         build_bom,
         write_bom,
     )
-    from ops.scripts.in_toto_statement import (
+    from ops.scripts.supply_chain.in_toto_statement import (
         DEFAULT_OUT as IN_TOTO_DEFAULT_OUT,
         build_in_toto_statement,
         write_in_toto_statement,
     )
-    from ops.scripts.openvex_draft import (
+    from ops.scripts.supply_chain.openvex_draft import (
         DEFAULT_OUT as OPENVEX_DEFAULT_OUT,
         build_openvex_draft,
         write_openvex_draft,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.sbom_export_mapping import (
+    from ops.scripts.supply_chain.sbom_export_mapping import (
         DEFAULT_OUT as MAPPING_DEFAULT_OUT,
         build_report as build_sbom_export_mapping_report,
         write_report as write_sbom_export_mapping_report,
     )
-    from ops.scripts.sbom_readiness_gate_runtime import (
+    from ops.scripts.supply_chain.sbom_readiness_gate_runtime import (
         GATE_REPORT_REL_PATH as SBOM_READINESS_GATE_DEFAULT_OUT,
         build_gate_report as build_sbom_readiness_gate_report,
         write_gate_report as write_sbom_readiness_gate_report,
     )
-    from ops.scripts.security_advisories import (
+    from ops.scripts.supply_chain.security_advisories import (
         DEFAULT_OUT as SECURITY_ADVISORIES_DEFAULT_OUT,
         build_report as build_security_advisories_report,
         write_report as write_security_advisories_report,
     )
-    from ops.scripts.sigstore_bundle import (
+    from ops.scripts.supply_chain.sigstore_bundle import (
         DEFAULT_OUT as SIGSTORE_BUNDLE_DEFAULT_OUT,
         build_bundle_verification,
         write_bundle_verification,
     )
-    from ops.scripts.spdx_sbom import (
+    from ops.scripts.supply_chain.spdx_sbom import (
         DEFAULT_OUT as SPDX_DEFAULT_OUT,
         build_spdx_sbom,
         write_spdx_sbom,
     )
-    from ops.scripts.supply_chain_artifact_model import (
+    from ops.scripts.supply_chain.supply_chain_artifact_model import (
         DEFAULT_OUT as MODEL_DEFAULT_OUT,
         build_model,
         write_model,
     )
-    from ops.scripts.supply_chain_gate_runtime import (
+    from ops.scripts.supply_chain.supply_chain_gate_runtime import (
         GATE_REPORT_REL_PATH as SUPPLY_CHAIN_GATE_DEFAULT_OUT,
         build_gate_report as build_supply_chain_gate_report,
         write_gate_report as write_supply_chain_gate_report,
     )
-    from ops.scripts.supply_chain_provenance import (
+    from ops.scripts.supply_chain.supply_chain_provenance import (
         DEFAULT_OUT as PROVENANCE_DEFAULT_OUT,
         build_report as build_supply_chain_provenance_report,
         write_report as write_supply_chain_provenance_report,
     )
 else:
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
 
     from .cyclonedx_sbom import (
         DEFAULT_OUT as CYCLONEDX_DEFAULT_OUT,

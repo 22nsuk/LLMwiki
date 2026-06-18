@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ops.scripts.rule_registry_runtime import (
+from ops.scripts.core.rule_registry_runtime import (
     RuleSpec,
     collapse_rule_decision_contract,
     configured_rule_ids,

@@ -4,18 +4,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.executor_noop_runtime import (
+from ops.scripts.core.executor_noop_runtime import (
     EXECUTOR_NOOP_MUTATION_FAILURE_MARKER,
     executor_noop_mutation_failure_message,
     text_has_executor_noop_mutation_failure,
 )
-from ops.scripts.experiment_telemetry_runtime import write_command_logs
-from ops.scripts.noop_repair_classifier_runtime import (
+from ops.scripts.core.experiment_telemetry_runtime import write_command_logs
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.noop_repair_classifier_runtime import (
     repair_decision_ended_as_noop_mutation_failure,
     run_has_noop_mutation_failure,
 )
-from ops.scripts.runtime_context import RuntimeContext
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

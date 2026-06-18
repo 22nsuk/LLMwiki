@@ -9,8 +9,8 @@ import shlex
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.output_runtime import sanitize_report_text
+from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.output_runtime import sanitize_report_text
 
 TAIL_LINE_COUNT = 80
 RELEASE_BUILDER_ENVIRONMENT = ".venv clean release-builder"

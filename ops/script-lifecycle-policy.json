@@ -598,6 +598,16 @@
       "replacement": "make goal-runtime-certificate"
     },
     {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_certificate_run_id_guard",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/mechanism/goal_runtime_certificate_run_id_guard.py",
+      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make goal-runtime-certificate-run-id-guard"
+    },
+    {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_clean_transient",
       "console_scripts": [],
       "install_state": "not_installed",
@@ -636,6 +646,16 @@
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-local-evidence-refresh"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_latest_successful_run",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "path": "ops/scripts/mechanism/goal_runtime_latest_successful_run.py",
+      "rationale": "Make-orchestrated selector retained behind goal-runtime evidence targets, not public console exposure.",
+      "removal_ready": false,
+      "replacement": "make goal-runtime-latest-successful-run-id"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_lock",
@@ -718,6 +738,16 @@
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.mechanism_assess"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_contract_eval",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/mechanism/mechanism_contract_eval.py",
+      "rationale": "Schema-backed mechanism-local contract eval report command retained behind Make/canonical module invocation rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make mechanism-contract-eval"
     },
     {
       "canonical_module": "ops.scripts.mechanism.mechanism_navigation_index",
@@ -964,6 +994,16 @@
       "replacement": "make registry-preflight"
     },
     {
+      "canonical_module": "ops.scripts.registry.raw_registry_shard_policy_sync",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "path": "ops/scripts/registry/raw_registry_shard_policy_sync.py",
+      "rationale": "Registry shard policy sync is a repository maintenance helper retained behind explicit Make check/write targets rather than public CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make raw-registry-shard-policy-sync-check"
+    },
+    {
       "canonical_module": "ops.scripts.release.external_report_action_matrix",
       "console_scripts": [],
       "install_state": "not_installed",
@@ -972,6 +1012,16 @@
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make external-report-action-matrix"
+    },
+    {
+      "canonical_module": "ops.scripts.release.freshness_owner_route_converge",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "path": "ops/scripts/release/freshness_owner_route_converge.py",
+      "rationale": "Source-identity freshness convergence helper is retained behind the explicit Make owner lane rather than public CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make freshness-owner-route-converge"
     },
     {
       "canonical_module": "ops.scripts.release.external_report_reference_manifest",
@@ -1474,6 +1524,16 @@
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.test.ci_tier_lane_bridge"
+    },
+    {
+      "canonical_module": "ops.scripts.test.generate_test_mk_selectors",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "test_only",
+      "path": "ops/scripts/test/generate_test_mk_selectors.py",
+      "rationale": "Registry-backed selector generator retained behind Make sync rather than installed CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make test-selectors-sync"
     },
     {
       "canonical_module": "ops.scripts.test.test_execution_summary",

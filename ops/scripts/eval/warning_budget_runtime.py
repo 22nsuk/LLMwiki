@@ -4,11 +4,11 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.raw_registry_preflight import preflight
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import WARNING_BUDGET_REPORT_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema, validate_or_raise
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import WARNING_BUDGET_REPORT_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
+from ops.scripts.registry.raw_registry_preflight import preflight
 
 from .wiki_lint import lint
 from .wiki_snapshot_runtime import WikiRuntimeSnapshot

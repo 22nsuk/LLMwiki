@@ -5,23 +5,22 @@ from pathlib import Path
 
 import pytest
 import yaml
-from ops.scripts.test_lane_registry_runtime import (
+
+from ops.scripts.test.test_lane_registry_runtime import (
     compatibility_names,
     load_registry,
 )
-
 from tests.workflow_static_helpers import (
     PINNED_CHECKOUT_ACTION,
     PINNED_DEPENDENCY_REVIEW_ACTION,
     PINNED_DOWNLOAD_ARTIFACT_ACTION,
-    PINNED_SETUP_PYTHON_ACTION,
-    PINNED_SETUP_UV_ACTION,
     PINNED_UPLOAD_ARTIFACT_ACTION,
     assert_workflow_uses_are_sha_pinned,
     load_workflow,
     workflow_job as _job,
     workflow_jobs as _jobs,
     workflow_mapping,
+    workflow_matrix,
     workflow_matrix_include,
     workflow_matrix_values,
     workflow_on,
@@ -45,39 +44,34 @@ def _workflow() -> dict[str, object]:
 
 
 def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, object]) -> None:
-    setup_python = _step_by_name(job, "Setup Python")
-    setup_uv = _step_by_name(job, "Setup uv")
+    setup = _step_by_name(job, "Setup Python and uv")
     install_steps = [
         step
         for step in _steps(job)
         if str(step.get("name", "")).startswith("Install dependencies")
     ]
 
-    case.assertEqual(setup_python.get("uses"), PINNED_SETUP_PYTHON_ACTION)
+    case.assertEqual(setup.get("uses"), "./.github/actions/setup-python-uv")
     with_config = workflow_mapping(
-        setup_python.get("with", {}),
-        "setup-python with section must be a mapping",
+        setup.get("with", {}),
+        "setup-python-uv with section must be a mapping",
     )
-    case.assertIn("uv.lock", str(with_config.get("cache-dependency-path", "")))
-    case.assertNotIn("requirements.txt", str(with_config.get("cache-dependency-path", "")))
-    case.assertNotIn("requirements-dev.txt", str(with_config.get("cache-dependency-path", "")))
-    case.assertEqual(
-        setup_uv.get("uses"),
-        PINNED_SETUP_UV_ACTION,
-    )
-    case.assertEqual(len(install_steps), 1)
-    run_text = _run_text(install_steps[0])
-    case.assertIn("make uv-lock-check", run_text)
-    case.assertIn(
-        "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
-        run_text,
-    )
-    case.assertIn("python -m pip install -r tmp/locked-requirements.ci.txt", run_text)
-    case.assertLess(
-        run_text.index("make uv-lock-check"),
-        run_text.index("uv export --frozen"),
-    )
-    case.assertNotIn("python -m pip install -r requirements-dev.txt build", run_text)
+    python_version = with_config.get("python-version")
+    if python_version is not None:
+        case.assertIsInstance(python_version, str)
+    if install_steps:
+        run_text = _run_text(install_steps[0])
+        case.assertIn("make uv-lock-check", run_text)
+        case.assertIn(
+            "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
+            run_text,
+        )
+        case.assertIn("python -m pip install -r tmp/locked-requirements.ci.txt", run_text)
+        case.assertLess(
+            run_text.index("make uv-lock-check"),
+            run_text.index("uv export --frozen"),
+        )
+        case.assertNotIn("python -m pip install -r requirements-dev.txt build", run_text)
 
 
 class CiWorkflowStaticTests(unittest.TestCase):
@@ -168,6 +162,29 @@ class CiWorkflowStaticTests(unittest.TestCase):
             ("3.12", "3.13", "3.14"),
         )
 
+    def test_ci_matrix_keeps_multi_python_coverage_only_on_fast_tier(self) -> None:
+        test_tier_job = _job(_workflow(), "test-tier")
+        matrix = workflow_matrix(test_tier_job)
+        tiers = workflow_matrix_values(test_tier_job, "tier")
+        versions = workflow_matrix_values(test_tier_job, "python-version")
+        exclude = matrix.get("exclude", [])
+        self.assertIsInstance(exclude, list)
+        excluded_pairs = {
+            (str(item.get("tier")), str(item.get("python-version")))
+            for item in exclude
+            if isinstance(item, dict)
+        }
+        expected_excluded_pairs = {
+            (tier, version)
+            for tier in tiers
+            if tier != "fast"
+            for version in versions
+            if version != "3.12"
+        }
+
+        self.assertEqual(excluded_pairs, expected_excluded_pairs)
+        self.assertEqual(len(tiers) * len(versions) - len(excluded_pairs), 11)
+
     def test_ci_dependency_cache_tracks_canonical_lockfile(self) -> None:
         workflow = _workflow()
 
@@ -178,22 +195,20 @@ class CiWorkflowStaticTests(unittest.TestCase):
     def test_ci_workflow_has_windows_release_smoke_job(self) -> None:
         workflow = _workflow()
         job = _job(workflow, "windows-release-smoke")
-        steps = _steps(job)
-        step_names = {str(step.get("name", "")) for step in steps}
 
         self.assertEqual(job.get("name"), "windows-release-smoke / py3.12")
         self.assertEqual(job.get("runs-on"), "windows-latest")
         env = workflow_mapping(job.get("env", {}), "windows release smoke env must be a mapping")
         self.assertEqual(env.get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"), "1")
-        setup_python_with = workflow_mapping(
-            _step_by_name(job, "Setup Python").get("with", {}),
-            "windows setup-python with section must be a mapping",
+        setup_with = workflow_mapping(
+            _step_by_name(job, "Setup Python and uv").get("with", {}),
+            "windows setup-python-uv with section must be a mapping",
         )
         self.assertEqual(
-            setup_python_with.get("python-version"),
+            setup_with.get("python-version"),
             "3.12",
         )
-        self.assertIn("Install dependencies from lock", step_names)
+        _assert_locked_dependency_steps(self, job)
         self.assertIn(
             "python -m ops.scripts.release.release_smoke --vault . --profile full --out ops/reports/release-smoke-report-windows.json",
             _run_text(_step_by_name(job, "Run Windows release smoke")),
@@ -234,8 +249,16 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "if [ -f system/system-index.md ] && [ -f wiki/index.md ] && [ -d raw ]; then",
             text,
         )
+        self.assertIn("          make test-selectors-sync-check", text)
         self.assertIn("            make check-finalized", text)
         self.assertIn("            make release-smoke-fast", text)
+
+    def test_report_contract_tier_delegates_selection_to_make(self) -> None:
+        job = _job(_workflow(), "test-tier")
+        step = _step_by_name(job, "Run report-contract tier")
+
+        self.assertEqual(step.get("if"), "matrix.tier == 'report-contract'")
+        self.assertEqual(_run_text(step), "make ci-report-contract-tier")
 
     def test_release_closeout_regression_tier_uploads_diagnostics_without_masking_root_failure(
         self,
@@ -261,10 +284,31 @@ class CiWorkflowStaticTests(unittest.TestCase):
             authority_step.get("if"),
             "always() && matrix.tier == 'release-closeout-regression' && steps.release_closeout_regression.outcome != 'skipped'",
         )
+        self.assertEqual(authority_step.get("env", {}).get("CI_PYTHON_VERSION"), "${{ matrix.python-version }}")
         authority_run_text = _run_text(authority_step)
-        self.assertIn("make release-closeout-finality-verify-ci-artifact", authority_run_text)
-        self.assertIn("make release-closeout-finality-verify", authority_run_text)
-        self.assertIn("make release-authority-sealed-preflight", authority_run_text)
+        authority_commands = {line.strip() for line in authority_run_text.splitlines() if line.strip()}
+        self.assertIn("set +e", authority_commands)
+        self.assertIn("finality_status=0", authority_commands)
+        self.assertIn("sealed_preflight_status=0", authority_commands)
+        self.assertIn("make release-closeout-finality-verify-ci-artifact", authority_commands)
+        self.assertNotIn("make release-closeout-finality-verify", authority_commands)
+        self.assertIn("make release-authority-sealed-preflight", authority_commands)
+        self.assertIn("finality_status=$?", authority_commands)
+        self.assertIn("sealed_preflight_status=$?", authority_commands)
+        self.assertIn(
+            'if [ "$finality_status" -ne 0 ] || [ "$sealed_preflight_status" -ne 0 ]; then',
+            authority_commands,
+        )
+        self.assertIn("exit 0", authority_commands)
+        self.assertNotIn('exit "$sealed_preflight_status"', authority_commands)
+        self.assertIn(
+            'echo "sealed_preflight_status=${sealed_preflight_status}"',
+            authority_commands,
+        )
+        self.assertIn(
+            '} > "tmp/release-authority-blocked-preflight-upload-diagnostics-${CI_PYTHON_VERSION}.txt"',
+            authority_commands,
+        )
 
         diagnostics = _step_by_name(job, "Materialize release closeout upload diagnostics")
         self.assertEqual(
@@ -323,7 +367,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
 
         public_run = _step_by_name(job, "Run public mirror tier")
         self.assertEqual(public_run.get("if"), "matrix.tier == 'public'")
-        self.assertEqual(_run_text(public_run), "make public-check")
+        self.assertEqual(_run_text(public_run), "make ci-public-tier")
 
         upload = _step_by_name(job, "Upload public check summary diagnostics")
         self.assertEqual(upload.get("if"), "always() && matrix.tier == 'public'")

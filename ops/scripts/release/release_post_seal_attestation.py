@@ -8,21 +8,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     read_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.release.release_status_v2 import release_status_v2_view
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
 )
+from ops.scripts.release.release_status_v2 import release_status_v2_view
 
 PRODUCER = "ops.scripts.release_post_seal_attestation"
 SCHEMA_PATH = "ops/schemas/release-post-seal-attestation.schema.json"

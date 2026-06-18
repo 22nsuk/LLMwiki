@@ -9,12 +9,18 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from ops.scripts.path_portability_runtime import infozip_c_locale_escape_path
-from ops.scripts.raw_registry_export import (
+from ops.scripts.core.path_portability_runtime import infozip_c_locale_escape_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    RAW_REGISTRY_PREFLIGHT_REPORT_SCHEMA_PATH,
+    RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.registry.raw_registry_export import (
     build_current_raw_registry_export,
     raw_registry_export_check,
 )
-from ops.scripts.raw_registry_preflight import (
+from ops.scripts.registry.raw_registry_preflight import (
     ALIAS_POLICY_VERSION,
     PATH_ALIAS_RESOLUTION_MODE,
     build_reproducibility_report,
@@ -23,13 +29,6 @@ from ops.scripts.raw_registry_preflight import (
     write_report,
     write_reproducibility_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
-    RAW_REGISTRY_PREFLIGHT_REPORT_SCHEMA_PATH,
-    RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_SCHEMA_PATH,
-)
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import (
     add_registry_entry_scalar_field,
     live_registry_shard_pages,

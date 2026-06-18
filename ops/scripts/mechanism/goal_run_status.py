@@ -1,29 +1,28 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
-from ops.scripts.observability_artifacts_shared_runtime import (
+from ops.scripts.core.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
+from ops.scripts.core.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel,
     resolve_auto_improve_session_report_rel,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .auto_improve_session_completion_runtime import completion_class_for_session
+from .goal_contract_digest_runtime import semantic_goal_contract_digest
 from .goal_run_status_artifacts_runtime import (
     build_status_markdown as _build_status_markdown,
     write_run_artifacts as _write_run_artifacts,
@@ -47,6 +46,11 @@ SESSION_SYNOPSIS_PATH = "ops/reports/session-synopsis.json"
 PRODUCER = "ops.scripts.goal_run_status"
 SCHEMA_PATH = "ops/schemas/goal-run-status.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_run_status --vault ."
+BOUNDED_SUCCESS_COMPLETION_CLASS = "bounded_success_after_promotion"
+NARROW_MECHANISM_CONTRACT_PROMOTION_LANE = "narrow_mechanism_contract_promotion"
+NARROW_MECHANISM_CONTRACT_PROMOTION_LABEL = "narrow mechanism-contract promotion"
+BOUNDED_PROMOTION_LANE = "bounded_promotion"
+BOUNDED_PROMOTION_LABEL = "bounded promotion"
 TERMINAL_RUN_STATUSES = {"completed", "failed", "stopped"}
 STATUS_REFRESH_RUN_STATUSES = {"running", "blocked"}
 PRIOR_CLOCK_RUN_STATUSES = {"running", "paused", "blocked", *TERMINAL_RUN_STATUSES}
@@ -122,11 +126,6 @@ class _MergedObservability:
     resume_command: str
 
 
-def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
-
-
 def goal_run_artifact_paths(run_id: str, *, status_report_path: str = DEFAULT_STATUS_PATH) -> GoalRunArtifactPaths:
     run_root = DEFAULT_RUN_ROOT_TEMPLATE.format(run_id=run_id)
     status_path = PurePosixPath(status_report_path)
@@ -147,6 +146,10 @@ def goal_run_artifact_paths(run_id: str, *, status_report_path: str = DEFAULT_ST
         resume_metadata_path=f"{run_root}/resume-metadata.json",
         checkpoint_command_log_path=f"{run_root}/checkpoint-command-events.jsonl",
     )
+
+
+def _run_local_state_status_report_path(run_id: str) -> str:
+    return f"{DEFAULT_RUN_ROOT_TEMPLATE.format(run_id=run_id)}/state/goal-run-status.json"
 
 
 def _status_from_blockers(run_status: str, blockers: list[str]) -> str:
@@ -198,16 +201,72 @@ def _session_synopsis_link(vault: Path) -> dict[str, Any]:
 def _promoted_iteration_count(iterations: object) -> int:
     if not isinstance(iterations, list):
         return 0
-    return sum(
-        1
-        for item in iterations
-        if isinstance(item, Mapping)
-        and (
-            str(item.get("decision", "")).strip() == "PROMOTE"
-            or str(item.get("outcome", "")).strip() == "promoted"
-            or str(item.get("status", "")).strip() == "promoted"
-        )
+    return sum(1 for item in iterations if _iteration_was_promoted(item))
+
+
+def _iteration_was_promoted(iteration: object) -> bool:
+    return isinstance(iteration, Mapping) and (
+        str(iteration.get("decision", "")).strip() == "PROMOTE"
+        or str(iteration.get("outcome", "")).strip() == "promoted"
+        or str(iteration.get("status", "")).strip() == "promoted"
     )
+
+
+def _last_promoted_iteration(iterations: object) -> Mapping[str, Any]:
+    if not isinstance(iterations, list):
+        return {}
+    for iteration in reversed(iterations):
+        if _iteration_was_promoted(iteration):
+            return iteration
+    return {}
+
+
+def _uses_mechanism_contract_eval_score(report: Mapping[str, Any]) -> bool:
+    diagnostics = report.get("diagnostics")
+    diagnostics = diagnostics if isinstance(diagnostics, Mapping) else {}
+    mechanism_contract_eval = diagnostics.get("mechanism_contract_eval")
+    mechanism_contract_eval = (
+        mechanism_contract_eval if isinstance(mechanism_contract_eval, Mapping) else {}
+    )
+    mechanism_eval_applicability = diagnostics.get("mechanism_eval_applicability")
+    mechanism_eval_applicability = (
+        mechanism_eval_applicability if isinstance(mechanism_eval_applicability, Mapping) else {}
+    )
+    return (
+        str(report.get("artifact_class", "")).strip() == "system_mechanism"
+        and str(report.get("decision", "")).strip() == "PROMOTE"
+        and str(mechanism_contract_eval.get("score_source", "")).strip()
+        == "mechanism_contract_eval"
+        and str(mechanism_eval_applicability.get("classification", "")).strip()
+        == "mechanism_contract_eval"
+    )
+
+
+def _promotion_report_for_iteration(vault: Path, iteration: Mapping[str, Any]) -> Mapping[str, Any]:
+    rel_path = str(iteration.get("promotion_report", "")).strip()
+    if not rel_path:
+        return {}
+    return load_optional_json_object(vault / rel_path)
+
+
+def _completion_promotion_lane(
+    vault: Path,
+    *,
+    completion_class: str,
+    iterations: object,
+) -> tuple[str, str]:
+    if completion_class != BOUNDED_SUCCESS_COMPLETION_CLASS:
+        return "", ""
+    promoted_iteration = _last_promoted_iteration(iterations)
+    if not promoted_iteration:
+        return "", ""
+    promotion_report = _promotion_report_for_iteration(vault, promoted_iteration)
+    if _uses_mechanism_contract_eval_score(promotion_report):
+        return (
+            NARROW_MECHANISM_CONTRACT_PROMOTION_LANE,
+            NARROW_MECHANISM_CONTRACT_PROMOTION_LABEL,
+        )
+    return BOUNDED_PROMOTION_LANE, BOUNDED_PROMOTION_LABEL
 
 
 def _auto_improve_session_report_path(run_id: str) -> str:
@@ -236,6 +295,8 @@ def _auto_improve_session_link(vault: Path, run_id: str) -> dict[str, Any]:
             "generated_at": "",
             "stop_reason": "",
             "completion_class": "",
+            "promotion_lane": "",
+            "promotion_lane_label": "",
             "iteration_count": 0,
             "promoted_iteration_count": 0,
         }
@@ -248,31 +309,114 @@ def _auto_improve_session_link(vault: Path, run_id: str) -> dict[str, Any]:
             "generated_at": "",
             "stop_reason": "",
             "completion_class": "",
+            "promotion_lane": "",
+            "promotion_lane_label": "",
             "iteration_count": 0,
             "promoted_iteration_count": 0,
         }
     iterations = session.get("iterations")
     iteration_count = len(iterations) if isinstance(iterations, list) else 0
+    completion_class = _auto_improve_session_completion_class(session)
+    promotion_lane, promotion_lane_label = _completion_promotion_lane(
+        vault,
+        completion_class=completion_class,
+        iterations=iterations,
+    )
     return {
         "link_status": "linked",
         "report_path": report_path,
         "status": str(session.get("status", "")).strip(),
         "generated_at": str(session.get("generated_at", "")).strip(),
         "stop_reason": str(session.get("stop_reason", "")).strip(),
-        "completion_class": _auto_improve_session_completion_class(session),
+        "completion_class": completion_class,
+        "promotion_lane": promotion_lane,
+        "promotion_lane_label": promotion_lane_label,
         "iteration_count": iteration_count,
         "promoted_iteration_count": _promoted_iteration_count(iterations),
     }
 
 
+def _completion_summary(auto_improve_session: Mapping[str, Any]) -> dict[str, str]:
+    completion_class = str(auto_improve_session.get("completion_class", "")).strip()
+    stop_reason = str(auto_improve_session.get("stop_reason", "")).strip()
+    promotion_lane = str(auto_improve_session.get("promotion_lane", "")).strip()
+    promotion_lane_label = str(auto_improve_session.get("promotion_lane_label", "")).strip()
+    if completion_class == BOUNDED_SUCCESS_COMPLETION_CLASS:
+        label = promotion_lane_label or BOUNDED_PROMOTION_LABEL
+        return {
+            "completion_class": completion_class,
+            "stop_reason": stop_reason,
+            "completion_status": "bounded_success",
+            "promotion_lane": promotion_lane or BOUNDED_PROMOTION_LANE,
+            "promotion_lane_label": label,
+            "headline": f"{completion_class}: {label}",
+        }
+    if completion_class:
+        return {
+            "completion_class": completion_class,
+            "stop_reason": stop_reason,
+            "completion_status": "stopped",
+            "promotion_lane": promotion_lane,
+            "promotion_lane_label": promotion_lane_label,
+            "headline": completion_class,
+        }
+    return {
+        "completion_class": "",
+        "stop_reason": stop_reason,
+        "completion_status": "not_available",
+        "promotion_lane": "",
+        "promotion_lane_label": "",
+        "headline": "auto-improve session completion not available",
+    }
+
+
+def _prior_status_candidate_paths(request: GoalRunStatusRequest) -> list[str]:
+    paths = [request.status_report_path]
+    run_local_status_path = _run_local_state_status_report_path(request.run_id)
+    if request.status_report_path == DEFAULT_STATUS_PATH:
+        paths.insert(0, run_local_status_path)
+    return list(dict.fromkeys(paths))
+
+
 def _prior_status_for_run(vault: Path, request: GoalRunStatusRequest) -> Mapping[str, Any]:
-    prior_report = load_optional_json_object(vault / request.status_report_path)
-    prior_run = mapping_field(prior_report, "run")
-    prior_status = str(prior_run.get("status", "")).strip()
-    same_run = str(prior_run.get("run_id", "")).strip() == request.run_id
-    if same_run and prior_status in PRIOR_CLOCK_RUN_STATUSES:
-        return prior_report
+    for prior_status_path in _prior_status_candidate_paths(request):
+        prior_report = load_optional_json_object(vault / prior_status_path)
+        prior_run = mapping_field(prior_report, "run")
+        prior_status = str(prior_run.get("status", "")).strip()
+        same_run = str(prior_run.get("run_id", "")).strip() == request.run_id
+        if same_run and prior_status in PRIOR_CLOCK_RUN_STATUSES:
+            return prior_report
     return {}
+
+
+def _prior_artifact_paths(prior_report: Mapping[str, Any]) -> GoalRunArtifactPaths | None:
+    artifacts = mapping_field(prior_report, "artifacts")
+    values = {
+        key: str(artifacts.get(key, "")).strip()
+        for key in (
+            "status_report_path",
+            "status_markdown_path",
+            "audit_log_path",
+            "resume_metadata_path",
+            "checkpoint_command_log_path",
+        )
+    }
+    if not all(values.values()):
+        return None
+    return GoalRunArtifactPaths(**values)
+
+
+def _goal_run_artifact_paths(
+    request: GoalRunStatusRequest,
+    prior_report: Mapping[str, Any],
+) -> GoalRunArtifactPaths:
+    prior_paths = _prior_artifact_paths(prior_report)
+    if prior_paths is not None:
+        return prior_paths
+    return goal_run_artifact_paths(
+        request.run_id,
+        status_report_path=request.status_report_path,
+    )
 
 
 def _should_preserve_terminal_run_status(
@@ -282,7 +426,7 @@ def _should_preserve_terminal_run_status(
     prior_status = _prior_text_field(prior_report, "run", "status")
     if prior_status not in TERMINAL_RUN_STATUSES:
         return False
-    if request.status not in STATUS_REFRESH_RUN_STATUSES:
+    if request.status not in STATUS_REFRESH_RUN_STATUSES and request.status != prior_status:
         return False
     return not bool(request.started_at or request.completed_at)
 
@@ -353,6 +497,8 @@ def _merged_run_state(
             else ""
         )
     )
+    if not completed_at and status in TERMINAL_RUN_STATUSES:
+        completed_at = generated_at
     started_at = request.started_at or _prior_text_field(prior_report, "run", "started_at") or generated_at
     return _MergedRunState(
         status=status,
@@ -465,6 +611,7 @@ def _goal_status_source_paths() -> list[str]:
         "ops/scripts/mechanism/goal_runtime_backoff.py",
         "ops/scripts/mechanism/goal_runtime_maintenance.py",
         "ops/scripts/mechanism/goal_runtime_certificate.py",
+        "ops/scripts/mechanism/goal_contract_digest_runtime.py",
         "ops/scripts/mechanism/goal_runtime_resume.py",
         "ops/scripts/mechanism/auto_improve_session_completion_runtime.py",
         "ops/scripts/core/codex_goal_client.py",
@@ -492,7 +639,7 @@ def _goal_payload(
 ) -> dict[str, Any]:
     return {
         "contract_path": request.goal_contract_path,
-        "contract_sha256": _canonical_json_digest(contract),
+        "contract_sha256": semantic_goal_contract_digest(contract),
         "contract_status": "loaded",
         "contract_id": str(contract.get("contract_id", "")).strip(),
         "objective": str(contract.get("objective", "")).strip(),
@@ -632,10 +779,7 @@ def build_report(request: GoalRunStatusRequest) -> dict[str, Any]:
         resume_from_checkpoint=observability.resume_from_checkpoint,
         resume_command=observability.resume_command,
     )
-    paths = goal_run_artifact_paths(
-        request.run_id,
-        status_report_path=request.status_report_path,
-    )
+    paths = _goal_run_artifact_paths(request, prior_report)
     periodic_generated_at = (
         run_state.completed_at
         if run_state.status in TERMINAL_RUN_STATUSES and run_state.completed_at
@@ -671,6 +815,7 @@ def build_report(request: GoalRunStatusRequest) -> dict[str, Any]:
             request=request,
             auto_improve_session=auto_improve_session,
         ),
+        "completion_summary": _completion_summary(auto_improve_session),
         "goal": _goal_payload(
             request=request,
             contract=contract,
@@ -725,6 +870,15 @@ def write_run_artifacts(
     return _write_run_artifacts(vault, report, writer=writer)
 
 
+def _parse_bool(value: str) -> bool:
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise argparse.ArgumentTypeError("expected one of: true, false, 1, 0, yes, no")
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
@@ -740,6 +894,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--last-heartbeat-at", default="")
     parser.add_argument("--last-checkpoint-at", default="")
     parser.add_argument("--last-command-heartbeat-at", default="")
+    parser.add_argument("--command-observation-mode", default="")
+    parser.add_argument("--command-heartbeat-count", type=int, default=None)
+    parser.add_argument("--command-timeout-seconds", type=int, default=None)
+    parser.add_argument("--last-stdout-at", default="")
+    parser.add_argument("--last-stderr-at", default="")
+    parser.add_argument("--last-artifact-touch-at", default="")
+    parser.add_argument("--last-command-returncode", type=int, default=None)
+    parser.add_argument("--last-command-timed-out", type=_parse_bool, default=None)
+    parser.add_argument("--last-command-termination-reason", default="")
     parser.add_argument("--quiet-seconds", type=int, default=0)
     parser.add_argument("--last-backoff-until", default="")
     parser.add_argument("--backoff-reason", default="")
@@ -768,6 +931,15 @@ def main(argv: list[str] | None = None) -> int:
             last_heartbeat_at=args.last_heartbeat_at,
             last_checkpoint_at=args.last_checkpoint_at,
             last_command_heartbeat_at=args.last_command_heartbeat_at,
+            command_observation_mode=args.command_observation_mode,
+            command_heartbeat_count=args.command_heartbeat_count,
+            command_timeout_seconds=args.command_timeout_seconds,
+            last_stdout_at=args.last_stdout_at,
+            last_stderr_at=args.last_stderr_at,
+            last_artifact_touch_at=args.last_artifact_touch_at,
+            last_command_returncode=args.last_command_returncode,
+            last_command_timed_out=args.last_command_timed_out,
+            last_command_termination_reason=args.last_command_termination_reason,
             quiet_seconds=args.quiet_seconds,
             last_backoff_until=args.last_backoff_until,
             backoff_reason=args.backoff_reason,

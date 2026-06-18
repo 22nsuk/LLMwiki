@@ -9,9 +9,9 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.release_auto_promotion_preflight import (
     build_manifest,
     write_manifest,
@@ -350,7 +350,8 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "gate_effect": "blocks_promotion",
                 "summary": "The selected goal run does not have verified certificate evidence.",
                 "recommended_next_step": (
-                    "Run make goal-runtime-certificate after the promoted run is complete."
+                    "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate "
+                    "after the promoted run is complete."
                 ),
             }
         ]

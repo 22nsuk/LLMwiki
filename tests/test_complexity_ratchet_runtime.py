@@ -4,7 +4,8 @@ from copy import deepcopy
 
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from ops.scripts.complexity_ratchet_runtime import (
+
+from ops.scripts.eval.complexity_ratchet_runtime import (
     RatchetCeiling,
     current_warn_targets,
     judge_ratchet,

@@ -11,37 +11,51 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         describe_output_file,
         write_schema_backed_report,
     )
-    from ops.scripts.export_public_repo import iter_public_files
-    from ops.scripts.output_runtime import display_path, resolve_output_path
-    from ops.scripts.policy_runtime import load_policy, zip_normalization_from_policy
-    from ops.scripts.public_surface_policy import (
+    from ops.scripts.core.output_runtime import display_path, resolve_output_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        zip_normalization_from_policy,
+    )
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        REVIEW_ARCHIVE_REPORT_SCHEMA_PATH,
+    )
+    from ops.scripts.public.export_public_repo import iter_public_files
+    from ops.scripts.public.public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import REVIEW_ARCHIVE_REPORT_SCHEMA_PATH
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         describe_output_file,
         write_schema_backed_report,
     )
-    from ops.scripts.export_public_repo import iter_public_files
-    from ops.scripts.output_runtime import display_path, resolve_output_path
-    from ops.scripts.policy_runtime import load_policy, zip_normalization_from_policy
-    from ops.scripts.public_surface_policy import (
+    from ops.scripts.core.output_runtime import display_path, resolve_output_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        zip_normalization_from_policy,
+    )
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        REVIEW_ARCHIVE_REPORT_SCHEMA_PATH,
+    )
+    from ops.scripts.public.export_public_repo import iter_public_files
+    from ops.scripts.public.public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import REVIEW_ARCHIVE_REPORT_SCHEMA_PATH
 
 
 DEFAULT_REVIEW_ARCHIVE_OUT = "build/review/llm-wiki-vnext-review.zip"
@@ -145,6 +159,42 @@ def _archive_manifest(archive_path: Path, *, root_prefix: str) -> dict:
     return {"files": files}
 
 
+def _zip_datetime_utc(value: tuple[int, int, int, int, int, int]) -> str:
+    timestamp = dt.datetime(*value, tzinfo=dt.UTC)
+    return timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _archive_timestamp_normalization(
+    archive_path: Path,
+    *,
+    expected_timestamp_utc: dt.datetime,
+) -> dict:
+    expected = expected_timestamp_utc.astimezone(dt.UTC).replace(microsecond=0)
+    expected_tuple = expected.timetuple()[:6]
+    expected_text = expected.strftime("%Y-%m-%dT%H:%M:%SZ")
+    member_timestamps: dict[str, str] = {}
+    mismatches: list[str] = []
+    with zipfile.ZipFile(archive_path) as archive:
+        for info in sorted(archive.infolist(), key=lambda item: item.filename):
+            if info.is_dir():
+                continue
+            observed = _zip_datetime_utc(info.date_time)
+            member_timestamps[info.filename] = observed
+            if info.date_time != expected_tuple:
+                mismatches.append(info.filename)
+    unique_timestamps = sorted(set(member_timestamps.values()))
+    return {
+        "status": "pass" if not mismatches else "fail",
+        "timestamp_semantics": "normalized_archive_timestamp",
+        "expected_timestamp_utc": expected_text,
+        "observed_timestamp_count": len(unique_timestamps),
+        "observed_min_timestamp_utc": unique_timestamps[0] if unique_timestamps else "",
+        "observed_max_timestamp_utc": unique_timestamps[-1] if unique_timestamps else "",
+        "mismatch_count": len(mismatches),
+        "mismatch_paths": mismatches,
+    }
+
+
 def _public_surface_roots(vault: Path) -> list[Path]:
     roots = []
     for rel_prefix in ("ops", "tests", "tools", ".codex", ".github"):
@@ -231,6 +281,10 @@ def build_review_archive(
                 file_path.read_bytes(),
             )
     archive_manifest = _archive_manifest(archive_path, root_prefix=vault.name)
+    archive_timestamp_normalization = _archive_timestamp_normalization(
+        archive_path,
+        expected_timestamp_utc=zip_normalization["timestamp_utc"],
+    )
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     archive_display_path = display_path(vault, archive_path)
@@ -247,9 +301,9 @@ def build_review_archive(
             resolved_policy_path=resolved_policy_path,
             schema_path=REVIEW_ARCHIVE_REPORT_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/review_archive.py",
-                "ops/scripts/export_public_repo.py",
-                "ops/scripts/public_surface_policy.py",
+                "ops/scripts/release/review_archive.py",
+                "ops/scripts/public/export_public_repo.py",
+                "ops/scripts/public/public_surface_policy.py",
             ],
         ),
         "vault": display_path(vault, vault),
@@ -270,6 +324,7 @@ def build_review_archive(
         "manifest_digest": manifest_digest,
         "archive_manifest": archive_manifest,
         "archive_manifest_digest": archive_manifest_digest,
+        "archive_timestamp_normalization": archive_timestamp_normalization,
         "current_snapshot_representativeness": {
             "status": "representative" if representative else "drift",
             "representative_of_current_tree": representative,

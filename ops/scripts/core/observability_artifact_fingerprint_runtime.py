@@ -31,6 +31,7 @@ from .schema_constants_runtime import (
     RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH,
     RUN_LEDGER_SCHEMA_PATH,
     RUN_TELEMETRY_SCHEMA_PATH,
+    SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH,
     SEED_SCHEMA_PATH,
     SHADOW_APPLY_REPORT_SCHEMA_PATH,
     STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
@@ -56,12 +57,15 @@ RUN_FILE_SCHEMAS = {
     "generated-artifact-convergence.json": GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH,
     "baseline-eval.json": EVAL_REPORT_SCHEMA_PATH,
     "candidate-eval.json": EVAL_REPORT_SCHEMA_PATH,
+    "baseline-mechanism-contract-eval.json": EVAL_REPORT_SCHEMA_PATH,
+    "candidate-mechanism-contract-eval.json": EVAL_REPORT_SCHEMA_PATH,
     "baseline-lint.json": LINT_REPORT_SCHEMA_PATH,
     "candidate-lint.json": LINT_REPORT_SCHEMA_PATH,
     "baseline-mechanism-assessment.json": MECHANISM_ASSESSMENT_SCHEMA_PATH,
     "candidate-mechanism-assessment.json": MECHANISM_ASSESSMENT_SCHEMA_PATH,
     "scope-freeze.json": PROPOSAL_SCOPE_SCHEMA_PATH,
     "run-telemetry.json": RUN_TELEMETRY_SCHEMA_PATH,
+    "same-session-repair-context.json": SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH,
     "command-log-summary.json": COMMAND_LOG_SUMMARY_SCHEMA_PATH,
 }
 

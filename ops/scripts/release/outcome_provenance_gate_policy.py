@@ -9,29 +9,31 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     )
 
@@ -236,10 +238,10 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/outcome_provenance_gate_policy.py",
-                "ops/scripts/outcome_metrics.py",
-                "ops/scripts/observability_routing_provenance_runtime.py",
-                "ops/scripts/supply_chain_gate_runtime.py",
+                "ops/scripts/release/outcome_provenance_gate_policy.py",
+                "ops/scripts/mechanism/outcome_metrics.py",
+                "ops/scripts/core/observability_routing_provenance_runtime.py",
+                "ops/scripts/supply_chain/supply_chain_gate_runtime.py",
                 ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
             ],
             file_inputs={

@@ -4,13 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mechanism_review_history_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.mechanism_review_history_runtime import (
     group_snapshots_by_targets,
     load_mechanism_run_snapshots,
     load_optional_json,
 )
-from ops.scripts.policy_runtime import load_policy
-
 from tests.mechanism_review_test_utils import (
     changed_files_manifest,
     eval_report,
@@ -22,6 +21,72 @@ from tests.mechanism_review_test_utils import (
 
 
 class MechanismReviewHistoryRuntimeTests(unittest.TestCase):
+    def test_load_mechanism_run_snapshots_accepts_legacy_guardrail_count_gap(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_review_vault(vault)
+            policy, _ = load_policy(vault)
+            run_id = "run-20260414-legacy-guardrails"
+            primary_targets = ["ops/scripts/promotion_gate.py"]
+            baseline_eval = f"runs/{run_id}/baseline-eval.json"
+            candidate_eval = f"runs/{run_id}/candidate-eval.json"
+            baseline_mechanism = f"runs/{run_id}/baseline-mechanism-assessment.json"
+            candidate_mechanism = f"runs/{run_id}/candidate-mechanism-assessment.json"
+
+            def legacy_mechanism_report(nonempty: int) -> dict:
+                report = mechanism_report(
+                    vault,
+                    primary_targets=primary_targets,
+                    nonempty=nonempty,
+                    functions=2,
+                    branches=4,
+                    test_file_count=1,
+                    test_case_count=2,
+                    complexity_score=10,
+                )
+                report["structural_metrics"].pop("test_guardrail_count")
+                report["total_structural_metrics"].pop("test_guardrail_count")
+                verification_cost = report["complexity_profile"]["dimension_evidence"][
+                    "verification_cost"
+                ]
+                verification_cost.pop("test_guardrail_count")
+                return report
+
+            write_json(vault / baseline_eval, eval_report(vault, 8))
+            write_json(vault / candidate_eval, eval_report(vault, 8))
+            write_json(vault / baseline_mechanism, legacy_mechanism_report(20))
+            write_json(vault / candidate_mechanism, legacy_mechanism_report(22))
+            write_json(
+                vault / "runs" / run_id / "promotion-report.json",
+                promotion_report(
+                    run_id,
+                    primary_targets=primary_targets,
+                    decision="DISCARD",
+                    baseline_eval_path=baseline_eval,
+                    candidate_eval_path=candidate_eval,
+                    baseline_mechanism_path=baseline_mechanism,
+                    candidate_mechanism_path=candidate_mechanism,
+                ),
+            )
+
+            snapshots, skipped_runs, excluded_runs, discovered = load_mechanism_run_snapshots(
+                vault,
+                policy,
+                max_runs=10,
+            )
+
+            self.assertEqual(discovered, 1)
+            self.assertEqual(skipped_runs, [])
+            self.assertEqual(excluded_runs, [])
+            self.assertEqual([snapshot.run_id for snapshot in snapshots], [run_id])
+            self.assertEqual(snapshots[0].baseline_mechanism["structural_metrics"]["test_guardrail_count"], 0)
+            self.assertEqual(
+                snapshots[0].candidate_mechanism["complexity_profile"]["dimension_evidence"][
+                    "verification_cost"
+                ]["test_guardrail_count"],
+                0,
+            )
+
     def test_load_mechanism_run_snapshots_splits_valid_skipped_and_excluded_runs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

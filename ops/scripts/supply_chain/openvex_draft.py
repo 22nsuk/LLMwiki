@@ -10,38 +10,45 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.cyclonedx_sbom import build_bom, normalize_requirement_name
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         CYCLONEDX_16_SCHEMA_PATH,
         OPENVEX_DRAFT_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import load_schema, validate_or_raise
-    from ops.scripts.security_advisories import (
+    from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
+    from ops.scripts.supply_chain.cyclonedx_sbom import (
+        build_bom,
+        normalize_requirement_name,
+    )
+    from ops.scripts.supply_chain.security_advisories import (
         build_report as build_security_advisories_report,
     )
-    from ops.scripts.supply_chain_artifact_model import build_model
+    from ops.scripts.supply_chain.supply_chain_artifact_model import build_model
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         CYCLONEDX_16_SCHEMA_PATH,
         OPENVEX_DRAFT_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import load_schema, validate_or_raise
+    from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 
     from .cyclonedx_sbom import build_bom, normalize_requirement_name
     from .security_advisories import build_report as build_security_advisories_report
@@ -230,7 +237,7 @@ def build_openvex_draft(
         source_command=SOURCE_COMMAND,
         resolved_policy_path=resolved_policy_path,
         schema_path=OPENVEX_SCHEMA_PATH,
-        source_paths=["ops/scripts/openvex_draft.py"],
+        source_paths=["ops/scripts/supply_chain/openvex_draft.py"],
         file_inputs=_envelope_file_inputs(
             vault,
             cyclonedx_bom_ref=cyclonedx_bom_ref,

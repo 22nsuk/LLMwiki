@@ -5,9 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.wiki_eval import evaluate
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.eval.wiki_eval import evaluate
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

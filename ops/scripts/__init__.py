@@ -10,17 +10,7 @@ from pathlib import Path
 from types import CodeType, ModuleType
 from typing import Any
 
-_SUBPACKAGES = [
-    "core",
-    "test",
-    "eval",
-    "release",
-    "public",
-    "supply_chain",
-    "registry",
-    "mechanism",
-    "learning",
-]
+from ._compatibility_alias_policy import discover_flat_reexport_targets
 
 
 class _ProxyLoader(Loader):
@@ -44,8 +34,10 @@ class _ProxyLoader(Loader):
         return str(self._target_path)
 
     def get_code(self, fullname: str) -> CodeType:
-        with self._target_path.open("r", encoding="utf-8") as f:
-            source = f.read()
+        source = (
+            "from runpy import run_module\n"
+            f"run_module({self._target_name!r}, run_name='__main__', alter_sys=True)\n"
+        )
         return compile(source, str(self._target_path), "exec")
 
 
@@ -57,11 +49,8 @@ class _ReexportFinder(MetaPathFinder):
     def __init__(self) -> None:
         self._mapping: dict[str, tuple[str, Path]] = {}
         here = Path(__file__).parent
-        for pkg in _SUBPACKAGES:
-            for py_file in (here / pkg).glob("*.py"):
-                if py_file.name.startswith("_"):
-                    continue
-                self._mapping[py_file.stem] = (pkg, py_file)
+        for name, target in discover_flat_reexport_targets(here).items():
+            self._mapping[name] = (target.canonical_module, target.path)
 
     def find_spec(
         self,
@@ -78,8 +67,7 @@ class _ReexportFinder(MetaPathFinder):
         mapped_target = self._mapping.get(name)
         if mapped_target is None:
             return None
-        pkg, target_path = mapped_target
-        target_name = f"ops.scripts.{pkg}.{name}"
+        target_name, target_path = mapped_target
         loader = _ProxyLoader(target_name, target_path)
         return spec_from_loader(fullname, loader, origin=str(target_path))
 

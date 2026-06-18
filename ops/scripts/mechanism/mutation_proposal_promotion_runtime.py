@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+MAX_PROPOSALS_SELECTED_ZERO_DETAIL = "available proposals exist but report selection emitted none"
+MAX_PROPOSALS_SELECTED_ZERO_REASON = "max_proposals_selected_zero"
+RECENT_LOG_OVERLAP_BLOCKER = "recent_log_overlap"
+RECENT_LOG_OVERLAP_QUEUE_BLOCKED_DETAIL = (
+    "available proposals are blocked only by recent_log_overlap; emit a non-overlapping "
+    "queue_unblock rotation before reporting an empty queue"
+)
+RECENT_LOG_OVERLAP_QUEUE_BLOCKED_REASON = "recent_log_overlap_queue_blocked"
+
 
 def source_evidence_gaps(mechanism_review_report: dict, proposals: list[dict]) -> list[str]:
     evidence_gaps: list[str] = []
@@ -63,6 +72,29 @@ def _empty_queue_blocker(
     if primary_targets:
         item["primary_targets"] = primary_targets
     return item
+
+
+def _queue_selection_blocker(available_proposals: list[dict]) -> dict[str, object]:
+    recent_only = all(
+        proposal.get("blocked_by") == [RECENT_LOG_OVERLAP_BLOCKER]
+        for proposal in available_proposals
+    )
+    selection_reason = (
+        RECENT_LOG_OVERLAP_QUEUE_BLOCKED_REASON
+        if recent_only
+        else MAX_PROPOSALS_SELECTED_ZERO_REASON
+    )
+    selection_detail = (
+        RECENT_LOG_OVERLAP_QUEUE_BLOCKED_DETAIL
+        if recent_only
+        else MAX_PROPOSALS_SELECTED_ZERO_DETAIL
+    )
+    return _empty_queue_blocker(
+        blocker_type="selection",
+        reason=selection_reason,
+        detail=selection_detail,
+        source="queue_selection",
+    )
 
 
 def empty_queue_blockers(
@@ -132,14 +164,7 @@ def empty_queue_blockers(
         )
 
     if available_proposals and not proposals:
-        blockers.append(
-            _empty_queue_blocker(
-                blocker_type="selection",
-                reason="max_proposals_selected_zero",
-                detail="available proposals exist but report selection emitted none",
-                source="queue_selection",
-            )
-        )
+        blockers.append(_queue_selection_blocker(available_proposals))
 
     if not blockers:
         for gap in evidence_gaps:

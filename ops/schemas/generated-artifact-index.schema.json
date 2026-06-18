@@ -27,7 +27,9 @@
     "why_blocked",
     "summary",
     "canonical_reports",
-    "archive_candidates"
+    "archive_candidates",
+    "external_report_action_matrix_basis",
+    "archived_external_report_basis"
   ],
   "properties": {
     "$schema": {
@@ -183,6 +185,15 @@
       "items": {
         "$ref": "#/$defs/archive_candidate"
       }
+    },
+    "external_report_action_matrix_basis": {
+      "$ref": "#/$defs/action_matrix_basis"
+    },
+    "archived_external_report_basis": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/external_report_action_basis"
+      }
     }
   },
   "$defs": {
@@ -246,6 +257,108 @@
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "external_report_action_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "report_type",
+        "content_sha256",
+        "matched_action_ids",
+        "matched_action_count",
+        "unresolved_action_ids",
+        "unresolved_action_count",
+        "unmatched_recommendation_count",
+        "operator_only_rationale",
+        "archive_decision_code"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "report_type": {
+          "type": "string",
+          "enum": ["narrative_report", "reference_manifest", "binary_report"]
+        },
+        "content_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "matched_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "matched_action_count": { "type": "integer", "minimum": 0 },
+        "unresolved_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unresolved_action_count": { "type": "integer", "minimum": 0 },
+        "unmatched_recommendation_count": { "type": "integer", "minimum": 0 },
+        "operator_only_rationale": {
+          "type": "string",
+          "enum": [
+            "",
+            "binary_report_requires_operator_review",
+            "reference_manifest_lifecycle_evidence",
+            "unreadable_narrative_report"
+          ]
+        },
+        "archive_decision_code": {
+          "type": "string",
+          "enum": [
+            "all_structured_actions_implemented",
+            "archive_sticky_without_structured_action_coverage",
+            "binary_report_requires_operator_review",
+            "explicit_archive_status",
+            "implemented_action_basis_without_archive_marker",
+            "reference_manifest_lifecycle_evidence",
+            "unmatched_recommendations_require_operator_review",
+            "unreadable_narrative_report",
+            "unresolved_actions_covered_by_broader_report",
+            "unresolved_actions_keep_report_active"
+          ]
+        }
+      }
+    },
+    "action_matrix_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "status",
+        "reason_id",
+        "source_revision",
+        "source_tree_fingerprint",
+        "current_source_revision",
+        "current_source_tree_fingerprint",
+        "input_fingerprint_mismatch_keys"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "const": "ops/reports/external-report-action-matrix.json"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "missing",
+            "unreadable",
+            "invalid",
+            "stale",
+            "source_identity_mismatch"
+          ]
+        },
+        "reason_id": { "type": "string", "minLength": 1 },
+        "source_revision": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" },
+        "current_source_revision": { "type": "string", "minLength": 1 },
+        "current_source_tree_fingerprint": { "type": "string", "minLength": 1 },
+        "input_fingerprint_mismatch_keys": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
       }
     },
     "canonical_report": {

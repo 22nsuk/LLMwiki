@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 import hashlib
 import json
 import os
@@ -9,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .artifact_freshness_mtime_runtime import parse_generated_at
 from .output_runtime import display_path, resolve_repo_output_path, write_output_text
 from .schema_runtime import load_schema_with_vault_override, validate_or_raise
 
@@ -186,15 +186,10 @@ def _sync_generated_at_mtime(path: Path, payload: Any) -> None:
     if not isinstance(payload, dict):
         return
     generated_at = str(payload.get("generated_at", "")).strip()
-    if not generated_at:
+    generated_dt = parse_generated_at(generated_at)
+    if generated_dt is None:
         return
-    try:
-        generated_dt = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
-    except ValueError:
-        return
-    if generated_dt.tzinfo is None:
-        generated_dt = generated_dt.replace(tzinfo=dt.UTC)
-    timestamp = generated_dt.astimezone(dt.UTC).timestamp()
+    timestamp = generated_dt.timestamp()
     os.utime(path, (timestamp, timestamp))
 
 

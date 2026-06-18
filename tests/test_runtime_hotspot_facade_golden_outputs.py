@@ -3,26 +3,27 @@ from __future__ import annotations
 import copy
 import datetime as dt
 import hashlib
-import json
 import tempfile
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from unittest import mock
 
 import pytest
-from ops.scripts.auto_improve_runtime import run_auto_improve_session
-from ops.scripts.mutation_proposal_runtime import (
-    build_report as build_mutation_proposal_report,
-)
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.release_closeout_summary import build_report as build_closeout_report
-from ops.scripts.release_evidence_dashboard import (
-    build_report as build_dashboard_report,
-)
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 import tests.test_release_closeout_summary as closeout_fixture
 import tests.test_release_evidence_dashboard as dashboard_fixture
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.auto_improve_runtime import run_auto_improve_session
+from ops.scripts.mechanism.mutation_proposal_runtime import (
+    build_report as build_mutation_proposal_report,
+)
+from ops.scripts.release.release_closeout_summary import (
+    build_report as build_closeout_report,
+)
+from ops.scripts.release.release_evidence_dashboard import (
+    build_report as build_dashboard_report,
+)
 from tests.auto_improve_test_utils import (
     _fake_successful_mechanism_experiment,
     _incrementing_runtime_context,
@@ -40,6 +41,13 @@ from tests.run_mechanism_experiment_test_utils import (
     mutation_proposal_report as auto_improve_mutation_proposal_report,
     seed_wrapper_vault,
 )
+from tests.runtime_hotspot_golden_contract import (
+    STRUCTURAL_GOLDEN_DIGESTS,
+    assert_structural_contract,
+    canonical_bytes,
+    strip_volatile_fields,
+    structural_digest,
+)
 from tests.test_release_closeout_summary import (
     BASE_PROFILE,
     ENVELOPE_SCHEMA_PATH as CLOSEOUT_ENVELOPE_SCHEMA_PATH,
@@ -56,17 +64,11 @@ pytestmark = pytest.mark.slow
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json"
 
-GOLDEN_DIGESTS = {
-    "mutation_proposal": "02866271a5c6d7bdf59845a542243125236b5b3a656b4414086165a048926071",
-    "release_evidence_dashboard": "7bbdf86515a19590779307666d43b13189dc5a225c0563ce271bb4052a0949dd",
-    "release_closeout_summary": "a1f2a9892df8bb1ca7b19818f6ad95d5b3725e19909ae63b62bc87ae8d013201",
-    "auto_improve_session_bundle": "c3e49d1cdf2ce42635807887687966f0fe483f06199f00f7d871766464836fa9",
-}
 GOLDEN_CHECK_COMMAND = "make runtime-hotspot-goldens-check"
 
 
 def _canonical_bytes(payload: object) -> bytes:
-    return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+    return canonical_bytes(payload)
 
 
 def _assert_schema_valid(payload: dict[str, object], schema_path: Path) -> None:
@@ -100,10 +102,10 @@ def _assert_no_local_path_leak(payload: object) -> None:
 
 def _golden_digest_failure_message(facade_name: str, *, expected: str, actual: str) -> str:
     return (
-        f"runtime hotspot golden digest drift for {facade_name}: "
+        f"runtime hotspot structural golden digest drift for {facade_name}: "
         f"expected={expected} actual={actual}. "
-        f"Run `{GOLDEN_CHECK_COMMAND}` to reproduce; update GOLDEN_DIGESTS only after "
-        "reviewing the canonical payload change."
+        f"Run `{GOLDEN_CHECK_COMMAND}` to reproduce; update STRUCTURAL_GOLDEN_DIGESTS only after "
+        "reviewing the semantic payload change."
     )
 
 
@@ -180,14 +182,14 @@ def _auto_improve_bundle() -> dict[str, object]:
         )
         with (
             mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_reports",
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                 side_effect=fake_refresh_reports,
             ),
             mock.patch(
-                "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                 side_effect=_fake_successful_mechanism_experiment,
             ),
-            mock.patch("ops.scripts.auto_improve_runtime.time.monotonic", return_value=0.0),
+            mock.patch("ops.scripts.mechanism.auto_improve_runtime.time.monotonic", return_value=0.0),
         ):
             result = run_auto_improve_session(
                 vault,
@@ -244,8 +246,9 @@ def test_runtime_hotspot_facade_golden_output_is_byte_stable(facade_name: str) -
         f"run `{GOLDEN_CHECK_COMMAND}` and inspect injected clocks, paths, and ordering."
     )
     _assert_no_local_path_leak(first_payload)
-    actual_digest = hashlib.sha256(first_bytes).hexdigest()
-    expected_digest = GOLDEN_DIGESTS[facade_name]
+    assert_structural_contract(facade_name, first_payload)
+    actual_digest = structural_digest(first_payload)
+    expected_digest = STRUCTURAL_GOLDEN_DIGESTS[facade_name]
     assert actual_digest == expected_digest, _golden_digest_failure_message(
         facade_name,
         expected=expected_digest,
@@ -264,3 +267,35 @@ def test_runtime_hotspot_golden_digest_failure_message_names_recovery_target() -
     assert "expected=expected" in message
     assert "actual=actual" in message
     assert GOLDEN_CHECK_COMMAND in message
+
+
+def test_runtime_hotspot_structural_digest_keeps_fingerprint_shape_not_values() -> None:
+    baseline = {
+        "input_fingerprints": {
+            "policy": "old-policy-digest",
+            "schema": "old-schema-digest",
+        },
+        "producer_input_fingerprint": "old-producer-digest",
+        "source_revision": "old-revision",
+        "source_tree_fingerprint": "old-tree-digest",
+    }
+    refreshed = {
+        "input_fingerprints": {
+            "policy": "new-policy-digest",
+            "schema": "new-schema-digest",
+        },
+        "producer_input_fingerprint": "new-producer-digest",
+        "source_revision": "new-revision",
+        "source_tree_fingerprint": "new-tree-digest",
+    }
+    changed_shape = {
+        **refreshed,
+        "input_fingerprints": {
+            **refreshed["input_fingerprints"],
+            "new_axis": "new-axis-digest",
+        },
+    }
+
+    assert strip_volatile_fields(baseline) == strip_volatile_fields(refreshed)
+    assert structural_digest(baseline) == structural_digest(refreshed)
+    assert structural_digest(refreshed) != structural_digest(changed_shape)

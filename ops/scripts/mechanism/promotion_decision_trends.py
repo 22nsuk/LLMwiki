@@ -7,19 +7,19 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.observability_artifacts_runtime import (
+    from ops.scripts.core.observability_artifacts_runtime import (
         write_promotion_decision_trends,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
 else:
-    from ops.scripts.observability_artifacts_runtime import (
+    from ops.scripts.core.observability_artifacts_runtime import (
         write_promotion_decision_trends,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.runtime_context import RuntimeContext
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

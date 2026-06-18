@@ -7,27 +7,29 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts.auto_improve_execute_runtime import (
+import pytest
+
+from ops.scripts.core.codex_goal_client import set_goal
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism import auto_improve_runtime
+from ops.scripts.mechanism.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluateRequest,
+    run_full_experiment,
 )
-from ops.scripts.auto_improve_runtime import (
+from ops.scripts.mechanism.auto_improve_runtime import (
     AutoImproveLearningReviewRequiredError,
     AutoImproveUsageError,
     refresh_auto_improve_session_report,
     run_auto_improve_session,
 )
-from ops.scripts.codex_goal_client import set_goal
-from ops.scripts.run_mechanism_experiment_runtime import (
-    RunMechanismExperimentError,
-    RunMechanismExperimentMutationError,
-)
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
-from ops.scripts import auto_improve_runtime
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
+from ops.scripts.mechanism.run_mechanism_experiment_runtime import (
+    RunMechanismExperimentError,
+    RunMechanismExperimentMutationError,
 )
 from tests.auto_improve_test_utils import (
     _expected_timeout_summary,
@@ -48,6 +50,7 @@ from tests.run_mechanism_experiment_test_utils import (
 from tests.test_codex_goal_contract import sample_goal_contract
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+pytestmark = pytest.mark.slow
 
 
 def _count_routing_decision_field(routing_reports: list[dict], field: str) -> dict[str, int]:
@@ -194,6 +197,59 @@ def _assert_successful_runtime_events_and_learning(case: unittest.TestCase, arti
 
 
 class AutoImproveRuntimeTests(unittest.TestCase):
+    def test_build_run_id_includes_proposal_identity_to_prevent_snapshot_collision(self) -> None:
+        proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+        repair_proposal = {
+            **proposal,
+            "proposal_id": "next_run_failure_repair__example__validation_blocked",
+        }
+
+        first = auto_improve_runtime._build_run_id("auto-session", 1, proposal)
+        second = auto_improve_runtime._build_run_id("auto-session", 1, repair_proposal)
+
+        self.assertNotEqual(first, second)
+        self.assertRegex(
+            first,
+            r"^auto-session-run-01-example-[a-z0-9-]+-[0-9a-f]{10}$",
+        )
+        self.assertRegex(
+            second,
+            r"^auto-session-run-01-example-[a-z0-9-]+-[0-9a-f]{10}$",
+        )
+
+    def test_maintenance_action_plan_schema_requires_canonical_envelope(self) -> None:
+        plan_schema = load_schema(REPO_ROOT / "ops/schemas/goal-runtime-maintenance-action-plan.schema.json")
+        bare_business_plan = {
+            "artifact_kind": "goal_runtime_maintenance_action_plan",
+            "producer": "ops.scripts.auto_improve_runtime",
+            "session_id": "auto-session-maintenance-action",
+            "status": "pass",
+            "current_max_proposals": 1,
+            "current_iteration_count": 1,
+            "next_max_proposals": 2,
+            "queue_action": {
+                "status": "action_required",
+                "reason": "stable_runnable_queue",
+                "proposal_ids": ["proposal-b"],
+                "runner_action": "resume_session_with_additional_proposal_budget",
+                "proposal_budget_increment": 1,
+                "resume_target": "auto-improve-goal-maintenance-action",
+            },
+            "selected_proposal": {
+                "proposal_id": "proposal-b",
+                "family": "runtime",
+                "failure_mode": "stable_runnable_queue",
+            },
+            "blockers": [],
+            "recommended_next_action": "Run make auto-improve-goal-maintenance-action.",
+            "decisions": {
+                "can_resume": True,
+                "requires_budget_increment": True,
+            },
+        }
+
+        self.assertNotEqual(validate_with_schema(bare_business_plan, plan_schema), [])
+
     def test_mutation_error_classifies_codex_usage_limit_as_retryable_capacity(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -227,75 +283,6 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(outcome.next_consecutive_failures, 2)
             self.assertFalse(outcome.quarantine_proposal)
 
-    def test_write_session_report_generated_at_covers_next_run_decision_observed_at(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault = Path(temp_dir) / "vault"
-            vault.mkdir()
-            seed_wrapper_vault(vault)
-            policy, resolved_policy_path = auto_improve_runtime.load_policy(vault)
-            context = RuntimeContext(
-                display_timezone=dt.UTC,
-                clock=lambda: dt.datetime(2026, 4, 15, 0, 0, 1, tzinfo=dt.UTC),
-            )
-            session = auto_improve_runtime._new_auto_improve_session(
-                vault,
-                policy["auto_improve_policy"],
-                policy,
-                resolved_policy_path,
-                session_id="auto-session-clock-skew",
-                max_proposals=1,
-                max_minutes=90,
-                max_consecutive_failures=1,
-                requested_executor="codex_exec",
-                context=context,
-            )
-            session["next_run_decisions"] = [
-                {
-                    "decision_id": "next-run-decision:run-a:clock-skew",
-                    "observed_at": "2026-04-15T00:00:02Z",
-                    "session_id": "auto-session-clock-skew",
-                    "iteration": 1,
-                    "source_run_id": "run-a",
-                    "proposal_id": "proposal-a",
-                    "source_candidate_id": "candidate-a",
-                    "target_proposal_id": "next_run_failure_repair__example__review-blocked",
-                    "proposal_family": "contract_regression_signals",
-                    "proposal_tier": "supporting",
-                    "failure_taxonomy": "review_blocked",
-                    "blocking_role": "reviewer",
-                    "decision": "carry_forward",
-                    "next_run_action": "repair_failure",
-                    "status": "open",
-                    "reason": "clock-skew regression fixture",
-                    "quarantined_source_proposal": True,
-                    "primary_targets": ["ops/scripts/example.py"],
-                    "supporting_targets": [],
-                    "must_change_tests": ["tests/test_example.py"],
-                    "evidence_paths": ["runs/run-a/run-telemetry.json"],
-                }
-            ]
-
-            destination = auto_improve_runtime._write_session_report(
-                vault,
-                session,
-                context=context,
-            )
-
-            persisted = json.loads(destination.read_text(encoding="utf-8"))
-            embedded_envelope = json.loads(
-                next(
-                    item["value"]
-                    for item in persisted["metadata"]["properties"]
-                    if item["name"] == "urn:openai:artifact-envelope"
-                )
-            )
-            self.assertEqual(persisted["generated_at"], "2026-04-15T00:00:02Z")
-            self.assertEqual(embedded_envelope["generated_at"], "2026-04-15T00:00:02Z")
-            self.assertEqual(
-                embedded_envelope["currentness"]["checked_at"],
-                "2026-04-15T00:00:02Z",
-            )
-
     def test_refresh_select_phase_returns_selected_proposal_and_queue_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -309,10 +296,10 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return mechanism_review, proposals_report
 
             with mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_reports",
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                 side_effect=fake_refresh_reports,
             ), mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_readiness_report"
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_readiness_report"
             ) as refresh_readiness:
                 result = auto_improve_runtime._refresh_select_phase(
                     vault,
@@ -347,10 +334,10 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return mechanism_review, proposals_report
 
             with mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_reports",
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                 side_effect=fake_refresh_reports,
             ), mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_readiness_report"
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_readiness_report"
             ) as refresh_readiness:
                 result = auto_improve_runtime._refresh_select_phase(
                     vault,
@@ -384,7 +371,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             }
 
             with mock.patch(
-                "ops.scripts.auto_improve_runtime.run_mechanism_experiment"
+                "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment"
             ) as experiment:
                 result = auto_improve_runtime._execute_evaluate_phase(
                     ExecuteEvaluateRequest(
@@ -419,6 +406,53 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(result.outcome.next_consecutive_failures, 3)
             self.assertEqual(set(result.phase_durations), {"experiment"})
 
+            run_experiment = mock.Mock(return_value={"decision": "HOLD"})
+            mutation_command = mock.Mock(return_value="mutation command")
+            runnable_request = ExecuteEvaluateRequest(
+                vault=vault,
+                resolved_policy_path=Path("ops/policies/wiki-maintainer-policy.yaml"),
+                run_id="auto-session-run-01-example",
+                proposal=proposal,
+                scope_freeze={
+                    "status": "runnable",
+                    "inputs": {
+                        "primary_targets": ["ops/scripts/frozen.py"],
+                        "supporting_targets": ["tests/test_frozen.py"],
+                    },
+                    "resolution": {"test_files": ["tests/test_frozen.py"]},
+                },
+                scope_freeze_rel="runs/auto-session-run-01-example/scope-freeze.json",
+                roles=["worker"],
+                routing_report_rels=[
+                    "runs/auto-session-run-01-example/subagent-routing.worker.json"
+                ],
+                consecutive_failures=0,
+                pre_promotion_failure_outcomes=set(),
+                proposal_report_path="ops/reports/mutation-proposals.json",
+                context=context,
+                dependencies=ExecuteEvaluateDependencies(
+                    mutation_command=mutation_command,
+                    run_mechanism_experiment=run_experiment,
+                    role_report_path=auto_improve_runtime._role_report_path,
+                    evaluate_scope_blocked=auto_improve_runtime.evaluate_scope_blocked,
+                    evaluate_experiment_result=auto_improve_runtime.evaluate_experiment_result,
+                    evaluate_mutation_error=auto_improve_runtime.evaluate_mutation_error,
+                    evaluate_experiment_error=auto_improve_runtime.evaluate_experiment_error,
+                ),
+            )
+
+            run_full_experiment(runnable_request)
+
+            run_experiment.assert_called_once()
+            self.assertEqual(
+                run_experiment.call_args.kwargs["primary_targets"],
+                ["ops/scripts/frozen.py"],
+            )
+            self.assertEqual(
+                run_experiment.call_args.kwargs["supporting_targets"],
+                ["tests/test_frozen.py"],
+            )
+
     def test_run_auto_improve_session_writes_successful_session_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -431,9 +465,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return {}, {"proposals": [proposal]}
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -482,13 +516,13 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 monotonic["now"] += seconds
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports) as refresh,
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports) as refresh,
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
-                mock.patch("ops.scripts.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
-                mock.patch("ops.scripts.auto_improve_runtime.time.sleep", side_effect=fake_sleep) as sleep,
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.time.sleep", side_effect=fake_sleep) as sleep,
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -519,18 +553,16 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(maintenance["meaningful_cycle_count"], 1)
             self.assertEqual(maintenance["stable_queue_snapshot_count"], 2)
             self.assertEqual(maintenance["last_cycle_elapsed_seconds"], 300)
-            self.assertEqual(maintenance["queue_action"]["status"], "action_required")
-            self.assertEqual(maintenance["queue_action"]["reason"], "stable_runnable_queue")
-            self.assertEqual(
-                maintenance["queue_action"]["runner_action"],
-                "resume_session_with_additional_proposal_budget",
-            )
-            self.assertEqual(maintenance["queue_action"]["proposal_budget_increment"], 1)
-            self.assertEqual(
-                maintenance["queue_action"]["resume_target"],
-                "auto-improve-goal-maintenance-action",
-            )
+            self.assertEqual(maintenance["queue_action"]["status"], "none")
+            self.assertEqual(maintenance["queue_action"]["reason"], "queue_empty")
+            self.assertEqual(maintenance["queue_action"]["runner_action"], "none")
+            self.assertEqual(maintenance["queue_action"]["proposal_budget_increment"], 0)
+            self.assertEqual(maintenance["queue_action"]["resume_target"], "")
             self.assertTrue(all(cycle["status"] == "pass" for cycle in maintenance["cycles"]))
+            self.assertTrue(all(cycle["queue_snapshot"] == [] for cycle in maintenance["cycles"]))
+            self.assertTrue(
+                all(cycle["runnable_proposal_count"] == 0 for cycle in maintenance["cycles"])
+            )
             self.assertTrue(maintenance["cycles"][0]["meaningful"])
             self.assertFalse(maintenance["cycles"][1]["meaningful"])
             self.assertTrue(
@@ -575,9 +607,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return {}, report
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -606,14 +638,30 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             plan_schema = load_schema(REPO_ROOT / "ops/schemas/goal-runtime-maintenance-action-plan.schema.json")
             written_plan = json.loads(plan_path.read_text(encoding="utf-8"))
             self.assertEqual(validate_with_schema(written_plan, plan_schema), [])
+            self.assertEqual(
+                written_plan["$schema"],
+                "ops/schemas/goal-runtime-maintenance-action-plan.schema.json",
+            )
+            self.assertEqual(written_plan["artifact_status"], "current")
+            self.assertEqual(written_plan["retention_policy"], "run_local_state")
+            self.assertEqual(written_plan["encoding"], "utf-8")
+            self.assertEqual(written_plan["currentness"]["status"], "current")
+            self.assertEqual(
+                written_plan["currentness"]["checked_at"],
+                written_plan["generated_at"],
+            )
+            self.assertIn(
+                "maintenance_action_plan_payload",
+                written_plan["input_fingerprints"],
+            )
 
             extended_contract = sample_goal_contract()
             extended_contract["budgets"]["max_proposals"] = 2
             set_goal(extended_contract, vault=vault)
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -655,9 +703,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return {}, report
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -795,9 +843,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return {}, report
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -857,13 +905,13 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 monotonic["now"] += seconds
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports) as refresh,
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports) as refresh,
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_discarded_mechanism_experiment,
                 ),
-                mock.patch("ops.scripts.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
-                mock.patch("ops.scripts.auto_improve_runtime.time.sleep", side_effect=fake_sleep) as sleep,
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.time.sleep", side_effect=fake_sleep) as sleep,
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -897,68 +945,6 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(refresh.call_count, 2)
             sleep.assert_not_called()
 
-    def test_reconstructed_loop_state_counts_specific_failure_taxonomy(self) -> None:
-        session = {
-            "iterations": [
-                {
-                    "run_id": "run-discard-specific",
-                    "outcome": "discarded",
-                    "decision": "DISCARD",
-                    "failure_taxonomy": "changed_files_manifest_scope",
-                }
-            ]
-        }
-
-        loop_state = auto_improve_runtime._reconstructed_loop_state(
-            session,
-            context=_incrementing_runtime_context(),
-        )
-
-        self.assertEqual(loop_state["last_outcome"], "discarded")
-        self.assertEqual(loop_state["last_blocking_reason"], "changed_files_manifest_scope")
-        self.assertEqual(
-            loop_state["blocking_reason_counts"],
-            {"changed_files_manifest_scope": 1},
-        )
-
-    def test_normalize_loop_state_replaces_stale_generic_discard_reason(self) -> None:
-        session = {
-            "iterations": [
-                {
-                    "run_id": "run-discard-specific",
-                    "outcome": "discarded",
-                    "decision": "DISCARD",
-                    "failure_taxonomy": "changed_files_manifest_scope",
-                }
-            ],
-            "loop_state": {
-                "consecutive_failures": 1,
-                "last_outcome": "discarded",
-                "last_decision": "DISCARD",
-                "last_run_id": "run-discard-specific",
-                "last_blocking_reason": "discarded",
-                "blocking_reason_counts": {"discarded": 1},
-                "repeated_blocker_stop": True,
-                "repeated_blocker_reason": "discarded",
-                "remediation_backlog_path": "ops/reports/remediation-backlog.json",
-                "updated_at": "2026-04-15T00:00:00Z",
-            },
-        }
-
-        loop_state = auto_improve_runtime._normalize_loop_state(
-            session,
-            context=_incrementing_runtime_context(),
-        )
-
-        self.assertEqual(loop_state["last_outcome"], "discarded")
-        self.assertEqual(loop_state["last_blocking_reason"], "changed_files_manifest_scope")
-        self.assertEqual(
-            loop_state["blocking_reason_counts"],
-            {"changed_files_manifest_scope": 1},
-        )
-        self.assertTrue(loop_state["repeated_blocker_stop"])
-        self.assertEqual(loop_state["repeated_blocker_reason"], "changed_files_manifest_scope")
-
     def test_run_auto_improve_session_blocks_learning_uncertain_without_flag(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -968,15 +954,15 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._refresh_reports",
+                    "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                     return_value=({}, {"proposals": []}),
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.build_readiness_report",
+                    "ops.scripts.mechanism.auto_improve_runtime.build_readiness_report",
                     return_value=_learning_review_required_report(),
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.write_readiness_report",
+                    "ops.scripts.mechanism.auto_improve_runtime.write_readiness_report",
                     return_value=readiness_path,
                 ),self.assertRaisesRegex(
                 AutoImproveLearningReviewRequiredError,
@@ -1054,23 +1040,23 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._refresh_reports",
+                    "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                     return_value=({}, {"proposals": []}),
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.build_readiness_report",
+                    "ops.scripts.mechanism.auto_improve_runtime.build_readiness_report",
                     return_value=_learning_review_required_report(),
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.write_readiness_report",
+                    "ops.scripts.mechanism.auto_improve_runtime.write_readiness_report",
                     return_value=readiness_path,
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._run_auto_improve_iteration",
+                    "ops.scripts.mechanism.auto_improve_runtime._run_auto_improve_iteration",
                     return_value=False,
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._complete_auto_improve_session",
+                    "ops.scripts.mechanism.auto_improve_runtime._complete_auto_improve_session",
                     side_effect=fake_complete,
                 ),
             ):
@@ -1135,23 +1121,23 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._refresh_reports",
+                    "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                     return_value=({}, {"proposals": []}),
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.build_readiness_report",
+                    "ops.scripts.mechanism.auto_improve_runtime.build_readiness_report",
                     return_value=_learning_review_required_report(),
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.write_readiness_report",
+                    "ops.scripts.mechanism.auto_improve_runtime.write_readiness_report",
                     return_value=readiness_path,
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._run_auto_improve_iteration",
+                    "ops.scripts.mechanism.auto_improve_runtime._run_auto_improve_iteration",
                     return_value=False,
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._complete_auto_improve_session",
+                    "ops.scripts.mechanism.auto_improve_runtime._complete_auto_improve_session",
                     side_effect=fake_complete,
                 ),
             ):
@@ -1262,9 +1248,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return {}, {"proposals": [proposal]}
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -1285,7 +1271,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(first["stop_reason"], "proposal_budget_exhausted")
 
             with mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_reports",
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                 side_effect=AssertionError("proposal-budget resume should not refresh proposals"),
             ):
                 resumed = run_auto_improve_session(
@@ -1319,9 +1305,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return {}, {"proposals": [proposal]}
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -1350,7 +1336,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             set_goal(refreshed_contract, vault=vault)
 
             with mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_reports",
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                 side_effect=AssertionError("proposal-budget resume should not refresh proposals"),
             ):
                 resumed = run_auto_improve_session(
@@ -1385,9 +1371,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return {}, {"proposals": [proposal]}
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -1412,9 +1398,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 monotonic["now"] += seconds
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
-                mock.patch("ops.scripts.auto_improve_runtime.time.sleep", side_effect=fake_sleep),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.time.sleep", side_effect=fake_sleep),
             ):
                 resumed = run_auto_improve_session(
                     vault,
@@ -1469,8 +1455,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 }
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 first = run_auto_improve_session(
                     vault,
@@ -1490,7 +1476,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(first_session["loop_state"]["last_blocking_reason"], "hold")
 
             with mock.patch(
-                "ops.scripts.auto_improve_runtime._refresh_reports",
+                "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                 side_effect=AssertionError("resume should stop before refreshing proposals"),
             ):
                 resumed = run_auto_improve_session(
@@ -1608,8 +1594,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 raise RunMechanismExperimentMutationError("validator blocked")
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -1758,11 +1744,11 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 return {}
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.build_scope_freeze", side_effect=fake_build_scope_freeze),
-                mock.patch("ops.scripts.auto_improve_runtime.write_scope_freeze", side_effect=fake_write_scope_freeze),
-                mock.patch("ops.scripts.auto_improve_runtime.run_selector", side_effect=fake_run_selector),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.build_scope_freeze", side_effect=fake_build_scope_freeze),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.write_scope_freeze", side_effect=fake_write_scope_freeze),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_selector", side_effect=fake_run_selector),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -1809,8 +1795,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 raise RunMechanismExperimentError("repo health command failed")
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -1861,8 +1847,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 }
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -1915,8 +1901,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 }
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -1974,8 +1960,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 }
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -2031,8 +2017,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 }
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -2117,11 +2103,11 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._refresh_reports",
+                    "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                     side_effect=fake_refresh_reports,
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=fake_run_mechanism_experiment,
                 ),
             ):
@@ -2188,8 +2174,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             )
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._preflight_learning_gate") as preflight,
-                mock.patch("ops.scripts.auto_improve_runtime._run_auto_improve_iteration") as iteration,
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._preflight_learning_gate") as preflight,
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._run_auto_improve_iteration") as iteration,
             ):
                 result = run_auto_improve_session(
                     vault,
@@ -2270,11 +2256,11 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime._refresh_reports",
+                    "ops.scripts.mechanism.auto_improve_runtime._refresh_reports",
                     side_effect=fake_refresh_reports,
                 ),
                 mock.patch(
-                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    "ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment",
                     side_effect=_fake_successful_mechanism_experiment,
                 ),
             ):
@@ -2335,8 +2321,8 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 }
 
             with (
-                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
-                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.mechanism.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
             ):
                 result = run_auto_improve_session(
                     vault,

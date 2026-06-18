@@ -1,103 +1,49 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.artifact_freshness_payload_runtime import (
+    embedded_artifact_envelope,
+)
+from ops.scripts.core.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_NONE,
+)
+from ops.scripts.core.payload_field_runtime import dict_field
 
 from .auto_improve_queue_runtime import build_proposal_queue
 from .auto_improve_readiness_constants_runtime import (
     AUTO_IMPROVE_GOAL_RUN_COMMAND,
     FALLBACK_PRIMARY_TARGETS,
-    LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH,
+    FALLBACK_SUPPORTING_TARGETS,
+    FALLBACK_TEST_FILES,
     READINESS_TARGET,
     RECENT_LOG_OVERLAP_REMEDIATION,
     RECENT_OUTCOME_REWORK_REMEDIATION,
-    SAME_EVAL_PROPOSAL_FAILURE_MODES,
 )
 from .auto_improve_readiness_learning_runtime import _build_loop_health_summary
-from .auto_improve_readiness_release_authority_runtime import _dict_field
+from .auto_improve_readiness_next_run_repair_runtime import (
+    OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER,
+    open_repair_quarantined_source_proposal_ids,
+)
+from .auto_improve_readiness_queue_models_runtime import (
+    ReadinessExecutionFields,
+    ReadinessQueue,
+    ReadinessQueuePayloads,
+    ReadinessQueueState,
+    ReadinessRemediation,
+)
+from .auto_improve_readiness_queue_telemetry_runtime import (
+    fallback_history_requirement,
+    matching_fallback_seed_runs,
+    same_eval_telemetry_summary,
+)
 
-
-@dataclass(frozen=True)
-class ReadinessRemediation:
-    blocker: str
-    remediation_code: str
-    blocker_kind: str
-    unblock_action_type: str
-    minimum_evidence: list[str]
-    retry_condition: str
-    affected_proposal_count: int
-    proposal_ids: list[str]
-
-    def to_wire(self) -> dict[str, Any]:
-        return {
-            "blocker": self.blocker,
-            "remediation_code": self.remediation_code,
-            "blocker_kind": self.blocker_kind,
-            "unblock_action_type": self.unblock_action_type,
-            "minimum_evidence": self.minimum_evidence,
-            "retry_condition": self.retry_condition,
-            "affected_proposal_count": self.affected_proposal_count,
-            "proposal_ids": self.proposal_ids,
-        }
-
-
-@dataclass(frozen=True)
-class ReadinessQueue:
-    ready: bool
-    proposals_emitted: int
-    runnable_proposal_count: int
-    runnable_proposal_ids: list[str]
-    blocked_proposal_count: int
-    blocked_reason_counts: list[dict[str, Any]]
-    source_candidates_read: int
-    candidates_emitted: int
-    attempts_considered: int
-    session_reports_considered: int
-    queue_pressure_summary: str
-    review_bootstrap_summary: str
-    evidence_gaps: list[str]
-
-    def to_wire(self) -> dict[str, Any]:
-        return {
-            "ready": self.ready,
-            "proposals_emitted": self.proposals_emitted,
-            "runnable_proposal_count": self.runnable_proposal_count,
-            "runnable_proposal_ids": self.runnable_proposal_ids,
-            "blocked_proposal_count": self.blocked_proposal_count,
-            "blocked_reason_counts": self.blocked_reason_counts,
-            "source_candidates_read": self.source_candidates_read,
-            "candidates_emitted": self.candidates_emitted,
-            "attempts_considered": self.attempts_considered,
-            "session_reports_considered": self.session_reports_considered,
-            "queue_pressure_summary": self.queue_pressure_summary,
-            "review_bootstrap_summary": self.review_bootstrap_summary,
-            "evidence_gaps": self.evidence_gaps,
-        }
-
-
-@dataclass(frozen=True)
-class ReadinessQueueState:
-    outcome_summary: dict[str, Any]
-    review_summary: dict[str, Any]
-    proposal_summary: dict[str, Any]
-    proposal_diagnostics: dict[str, Any]
-    loop_health_summary: dict[str, Any]
-    same_eval_telemetry_summary: dict[str, Any]
-    queue_evidence_gaps: list[str]
-    proposals_emitted: int
-    runnable_proposal_ids: list[str]
-    blocked_proposal_count: int
-    blocked_reason_counts: dict[str, int]
-    blocked_proposal_ids: dict[str, list[str]]
-    blocked_reasons: list[str]
-    queue_ready: bool
-    seed_runs: list[str]
-    history_requirement: int
-    additional_runs_needed: int
+AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
+LATEST_SESSION_ATTEMPTED_BLOCKER = "latest_session_attempted"
+LATEST_SESSION_QUARANTINED_BLOCKER = "latest_session_quarantined"
 
 
 def _string_list(value: object) -> list[str]:
@@ -152,15 +98,85 @@ def _upstream_attention_summaries(
     return summaries
 
 
-def _runnable_proposal_ids(mutation_proposal_report: dict[str, Any]) -> list[str]:
+def _latest_auto_improve_session(vault: Path) -> dict[str, Any]:
+    sessions_dir = vault / AUTO_IMPROVE_SESSIONS_DIR
+    if not sessions_dir.is_dir():
+        return {}
+    latest_key = ("", "")
+    latest_session: dict[str, Any] = {}
+    for path in sorted(sessions_dir.glob("*.json")):
+        session = load_optional_json_object(path)
+        if not isinstance(session, dict):
+            continue
+        generated_at = str(session.get("generated_at", "")).strip()
+        candidate_key = (generated_at, path.relative_to(vault).as_posix())
+        if candidate_key >= latest_key:
+            latest_key = candidate_key
+            latest_session = session
+    return latest_session
+
+
+def _source_tree_fingerprint(payload: dict[str, Any]) -> str:
+    for source in (payload, embedded_artifact_envelope(payload)):
+        fingerprint = str(source.get("source_tree_fingerprint", "")).strip()
+        if fingerprint:
+            return fingerprint
+    return ""
+
+
+def _latest_session_source_changed(
+    latest_session: dict[str, Any],
+    mutation_proposal_report: dict[str, Any],
+) -> bool:
+    latest_fingerprint = _source_tree_fingerprint(latest_session)
+    current_fingerprint = _source_tree_fingerprint(mutation_proposal_report)
+    return bool(latest_fingerprint and current_fingerprint) and latest_fingerprint != current_fingerprint
+
+
+def _latest_session_attempted(
+    latest_session: dict[str, Any],
+    mutation_proposal_report: dict[str, Any],
+) -> set[str]:
+    if _latest_session_source_changed(
+        latest_session,
+        mutation_proposal_report,
+    ) or _latest_session_quarantine_resolved(mutation_proposal_report):
+        return set()
+    return set(_string_list(latest_session.get("attempted_proposal_ids")))
+
+
+def _latest_session_quarantine_resolved(mutation_proposal_report: dict[str, Any]) -> bool:
+    diagnostics = mutation_proposal_report.get("diagnostics")
+    queue = diagnostics.get("next_run_decision_queue") if isinstance(diagnostics, dict) else {}
+    queue = queue if isinstance(queue, dict) else {}
+    decision_counts = queue.get("decision_counts") if isinstance(queue, dict) else {}
+    decision_counts = decision_counts if isinstance(decision_counts, dict) else {}
+    return (
+        _int_value(decision_counts.get("carry_forward")) > 0
+        and _int_value(queue.get("open_carry_forward_decisions")) == 0
+        and _int_value(queue.get("repair_proposals_emitted")) == 0
+    )
+
+
+def _runnable_proposal_ids(
+    vault: Path,
+    mutation_proposal_report: dict[str, Any],
+) -> list[str]:
     proposals = mutation_proposal_report.get("proposals")
     if not isinstance(proposals, list):
         return []
+    latest_session = _latest_auto_improve_session(vault)
+    quarantined = set() if _latest_session_quarantine_resolved(mutation_proposal_report) else set(
+        _string_list(latest_session.get("quarantined_proposal_ids"))
+    )
+    quarantined.update(
+        open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)
+    )
     try:
         runnable = build_proposal_queue(
             mutation_proposal_report,
-            attempted=set(),
-            quarantined=set(),
+            attempted=_latest_session_attempted(latest_session, mutation_proposal_report),
+            quarantined=quarantined,
         )
     except (KeyError, TypeError):
         return []
@@ -169,6 +185,76 @@ def _runnable_proposal_ids(mutation_proposal_report: dict[str, Any]) -> list[str
         for proposal in runnable
         if proposal
     ]
+
+
+def _latest_session_exclusion_blockers(
+    vault: Path,
+    mutation_proposal_report: dict[str, Any],
+) -> tuple[dict[str, int], dict[str, list[str]]]:
+    proposals = mutation_proposal_report.get("proposals")
+    if not isinstance(proposals, list):
+        return {}, {}
+    latest_session = _latest_auto_improve_session(vault)
+    attempted = _latest_session_attempted(latest_session, mutation_proposal_report)
+    quarantined = set() if _latest_session_quarantine_resolved(mutation_proposal_report) else set(
+        _string_list(latest_session.get("quarantined_proposal_ids"))
+    )
+    open_repair_quarantined = set(
+        open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)
+    )
+    proposal_ids_by_reason: dict[str, list[str]] = {}
+    for proposal in proposals:
+        if not isinstance(proposal, dict):
+            continue
+        proposal_id = str(proposal.get("proposal_id", "")).strip()
+        if not proposal_id:
+            continue
+        if proposal_id in open_repair_quarantined:
+            proposal_ids_by_reason.setdefault(
+                OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER,
+                [],
+            )
+            proposal_ids_by_reason[OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER].append(
+                proposal_id
+            )
+        elif proposal_id in quarantined:
+            proposal_ids_by_reason.setdefault(LATEST_SESSION_QUARANTINED_BLOCKER, [])
+            proposal_ids_by_reason[LATEST_SESSION_QUARANTINED_BLOCKER].append(
+                proposal_id
+            )
+        elif proposal_id in attempted:
+            proposal_ids_by_reason.setdefault(LATEST_SESSION_ATTEMPTED_BLOCKER, [])
+            proposal_ids_by_reason[LATEST_SESSION_ATTEMPTED_BLOCKER].append(proposal_id)
+    return (
+        {
+            reason: len(proposal_ids)
+            for reason, proposal_ids in proposal_ids_by_reason.items()
+        },
+        proposal_ids_by_reason,
+    )
+
+
+def _merge_blocked_reason_counts(
+    left: dict[str, int],
+    right: dict[str, int],
+) -> dict[str, int]:
+    merged = dict(left)
+    for reason, count in right.items():
+        merged[reason] = max(merged.get(reason, 0), count)
+    return merged
+
+
+def _merge_blocked_proposal_ids(
+    left: dict[str, list[str]],
+    right: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    merged = {reason: list(proposal_ids) for reason, proposal_ids in left.items()}
+    for reason, proposal_ids in right.items():
+        bucket = merged.setdefault(reason, [])
+        for proposal_id in proposal_ids:
+            if proposal_id not in bucket:
+                bucket.append(proposal_id)
+    return merged
 
 
 def _blocked_reason_counts(mutation_proposal_report: dict[str, Any]) -> dict[str, int]:
@@ -302,6 +388,51 @@ def _proposal_blocker_remediation(
         payload = dict(RECENT_LOG_OVERLAP_REMEDIATION)
     elif reason == "recent_outcome_rework":
         payload = dict(RECENT_OUTCOME_REWORK_REMEDIATION)
+    elif reason == LATEST_SESSION_QUARANTINED_BLOCKER:
+        payload = {
+            "remediation_code": "repair_quarantined_proposal_before_retry",
+            "blocker_kind": "runtime_history",
+            "unblock_action_type": "repair_quarantined_proposal",
+            "minimum_evidence": [
+                "The refreshed mutation proposal queue selects a different runnable "
+                "proposal or repairs the latest quarantined proposal.",
+                "goal-runtime-run-admission reports no selected quarantined proposal.",
+            ],
+            "retry_condition": (
+                "Do not rerun the same quarantined proposal until a repair proposal "
+                "or fresh mutation proposal supersedes it."
+            ),
+        }
+    elif reason == LATEST_SESSION_ATTEMPTED_BLOCKER:
+        payload = {
+            "remediation_code": "select_unattempted_proposal_or_repair_previous_session",
+            "blocker_kind": "runtime_history",
+            "unblock_action_type": "queue_rotation_or_repair",
+            "minimum_evidence": [
+                "The refreshed mutation proposal queue contains a runnable proposal "
+                "not attempted by the latest auto-improve session.",
+                "goal-runtime-run-admission reports no selected attempted proposal repeat.",
+            ],
+            "retry_condition": (
+                "Do not rerun the same attempted proposal in a fresh session unless "
+                "a repair-only plan explicitly supersedes the previous attempt."
+            ),
+        }
+    elif reason == OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER:
+        payload = {
+            "remediation_code": "finish_open_next_run_repair_before_retry",
+            "blocker_kind": "runtime_history",
+            "unblock_action_type": "open_next_run_repair_resolution",
+            "minimum_evidence": [
+                "The open next-run repair decision is resolved or superseded.",
+                "The refreshed mutation proposal queue selects the repair proposal "
+                "or a different runnable proposal.",
+            ],
+            "retry_condition": (
+                "Do not rerun the quarantined source proposal while its open "
+                "next-run repair decision remains unresolved."
+            ),
+        }
     else:
         blocker_source = (
             "blocked_by for every emitted proposal"
@@ -453,235 +584,115 @@ def _readiness_remediations(
     return remediations
 
 
-def _matching_fallback_seed_runs(vault: Path) -> list[str]:
-    runs_dir = vault / "runs"
-    if not runs_dir.exists():
-        return []
-
-    matched: list[str] = []
-    for path in sorted(runs_dir.glob("*/run-telemetry.json")):
-        payload = load_optional_json_object(path)
-        if not payload or not bool(payload.get("finalized")):
-            continue
-        primary_targets = _string_list(payload.get("primary_targets"))
-        if primary_targets == FALLBACK_PRIMARY_TARGETS:
-            matched.append(path.parent.name)
-    return matched
-
-
-def _telemetry_path_for_run(vault: Path, run_id: str) -> Path | None:
-    candidates = [
-        vault / "runs" / run_id / "run-telemetry.json",
-        vault / "runs" / "archive" / run_id / "run-telemetry.json",
-    ]
-    for path in candidates:
-        if path.is_file():
-            return path
-    matches = sorted((vault / "runs").glob(f"**/{run_id}/run-telemetry.json"))
-    return matches[0] if matches else None
-
-
-def _same_eval_proposal_run_ids(mutation_proposal_report: dict[str, Any]) -> list[str]:
-    run_ids: list[str] = []
-    proposals = mutation_proposal_report.get("proposals")
-    if not isinstance(proposals, list):
-        return run_ids
-    for proposal in proposals:
-        if (
-            not isinstance(proposal, dict)
-            or _string_list(proposal.get("blocked_by"))
-            or str(proposal.get("failure_mode", "")).strip()
-            not in SAME_EVAL_PROPOSAL_FAILURE_MODES
-        ):
-            continue
-        for run_id in proposal.get("run_ids", []):
-            value = str(run_id).strip()
-            if value and value not in run_ids:
-                run_ids.append(value)
-    return run_ids
-
-
-def _coverage_ratio(numerator: int, denominator: int) -> float:
-    if denominator <= 0:
-        return 0.0
-    return round(numerator / denominator, 4)
-
-
-def _legacy_reconstruction_by_run(vault: Path) -> dict[str, dict[str, Any]]:
-    report = load_optional_json_object(
-        vault / LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH
-    )
-    rows = report.get("run_reconstructions")
-    if not isinstance(rows, list):
-        return {}
-    by_run: dict[str, dict[str, Any]] = {}
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        run_id = str(row.get("run_id", "")).strip()
-        status = str(row.get("reconstruction_status", "")).strip()
-        if run_id and status in {"not_needed", "reconstructed"}:
-            by_run[run_id] = row
-    return by_run
-
-
-def _legacy_secondary_axes_present(row: dict[str, Any]) -> bool:
-    return bool(row.get("parsed_strict_secondary_improvement_present")) and bool(
-        _string_list(row.get("parsed_secondary_axes"))
-    )
-
-
-def _legacy_behavior_delta_digest_present(row: dict[str, Any]) -> bool:
-    digest = str(row.get("telemetry_behavior_delta_digest", "")).strip()
-    artifact_sha = str(row.get("behavior_delta_artifact_sha256", "")).strip()
-    return bool(digest or artifact_sha)
-
-
-def _legacy_decision_reason_code_present(
-    telemetry: dict[str, Any],
-    row: dict[str, Any],
-) -> bool:
-    decision = telemetry.get("decision_record")
-    if not isinstance(decision, dict):
-        return False
-    reason_code = str(decision.get("reason_code", "")).strip()
-    source_rule = str(decision.get("source_rule", "")).strip()
-    if reason_code != "equal_score_secondary_eligibility" and source_rule != (
-        "equal_score_secondary_eligibility"
-    ):
-        return False
-    return _legacy_secondary_axes_present(row)
-
-
-def _same_eval_telemetry_summary(
-    vault: Path, mutation_proposal_report: dict[str, Any]
+def _readiness_fallback_payload(
+    queue_state: ReadinessQueueState,
+    fallback_status: str,
 ) -> dict[str, Any]:
-    run_ids = _same_eval_proposal_run_ids(mutation_proposal_report)
-    legacy_rows = _legacy_reconstruction_by_run(vault)
-    runs: list[dict[str, Any]] = []
-    for run_id in run_ids:
-        telemetry_path = _telemetry_path_for_run(vault, run_id)
-        telemetry = load_optional_json_object(telemetry_path) if telemetry_path else {}
-        legacy_row = legacy_rows.get(run_id, {})
-        reason_code = str(telemetry.get("same_eval_reason_code", "")).strip()
-        axes = _string_list(telemetry.get("secondary_improvement_axes"))
-        legacy_axes_present = _legacy_secondary_axes_present(legacy_row)
-        runs.append(
-            {
-                "run_id": run_id,
-                "telemetry_path": report_path(vault, telemetry_path)
-                if telemetry_path
-                else "",
-                "telemetry_present": bool(telemetry),
-                "same_eval_reason_code_present": bool(
-                    reason_code and reason_code != "unknown"
-                )
-                or _legacy_decision_reason_code_present(telemetry, legacy_row),
-                "strict_secondary_improvement_present": bool(
-                    telemetry.get("strict_secondary_improvement_present", False)
-                )
-                or legacy_axes_present,
-                "secondary_improvement_axes_present": bool(axes) or legacy_axes_present,
-                "behavior_delta_digest_present": bool(
-                    str(telemetry.get("behavior_delta_digest", "")).strip()
-                )
-                or _legacy_behavior_delta_digest_present(legacy_row),
-            }
-        )
-    run_count = len(runs)
-    reason_code_count = sum(1 for item in runs if item["same_eval_reason_code_present"])
-    strict_secondary_count = sum(
-        1
-        for item in runs
-        if item["strict_secondary_improvement_present"]
-        and item["secondary_improvement_axes_present"]
-    )
-    digest_count = sum(1 for item in runs if item["behavior_delta_digest_present"])
-    complete_count = sum(
-        1
-        for item in runs
-        if item["same_eval_reason_code_present"]
-        and item["strict_secondary_improvement_present"]
-        and item["secondary_improvement_axes_present"]
-        and item["behavior_delta_digest_present"]
-    )
-    complete = run_count in (0, complete_count)
     return {
-        "status": "not_applicable"
-        if run_count == 0
-        else ("pass" if complete else "blocked"),
-        "proposal_family": "repeated_same_eval_or_discard",
-        "proposal_failure_modes": sorted(SAME_EVAL_PROPOSAL_FAILURE_MODES),
-        "run_count": run_count,
-        "runs_with_complete_typed_evidence": complete_count,
-        "same_eval_reason_code_coverage_ratio": _coverage_ratio(
-            reason_code_count, run_count
-        ),
-        "strict_secondary_improvement_coverage_ratio": _coverage_ratio(
-            strict_secondary_count, run_count
-        ),
-        "behavior_delta_digest_coverage_ratio": _coverage_ratio(
-            digest_count, run_count
-        ),
-        "runs": runs,
+        "status": fallback_status,
+        "primary_targets": FALLBACK_PRIMARY_TARGETS,
+        "supporting_targets": FALLBACK_SUPPORTING_TARGETS,
+        "test_files": FALLBACK_TEST_FILES,
+        "seed_run_count": len(queue_state.seed_runs),
+        "seed_runs": queue_state.seed_runs,
+        "history_requirement": queue_state.history_requirement,
+        "additional_runs_needed": queue_state.additional_runs_needed,
+        "queue_recheck_target": READINESS_TARGET,
+        "auto_improve_command": AUTO_IMPROVE_GOAL_RUN_COMMAND,
     }
 
 
-def _fallback_history_requirement(
+def readiness_queue_payloads(
+    *,
+    queue_state: ReadinessQueueState,
+    reports_present: bool,
     mechanism_review_report: dict[str, Any],
-) -> tuple[int, int]:
-    bootstrap = mechanism_review_report.get("diagnostics", {}).get("bootstrap", {})
-    if not isinstance(bootstrap, dict):
-        return 0, 0
-    target_groups = bootstrap.get("target_groups_under_min_history", [])
-    if not isinstance(target_groups, list):
-        return 0, 0
-
-    for item in target_groups:
-        if not isinstance(item, dict):
-            continue
-        if _string_list(item.get("primary_targets")) != FALLBACK_PRIMARY_TARGETS:
-            continue
-        blocked = item.get("blocked_candidate_types", [])
-        if not isinstance(blocked, list):
-            return 0, 0
-        required_runs = [
-            int(entry["required_runs"])
-            for entry in blocked
-            if isinstance(entry, dict) and isinstance(entry.get("required_runs"), int)
-        ]
-        additional_runs_needed = [
-            int(entry["additional_runs_needed"])
-            for entry in blocked
-            if isinstance(entry, dict)
-            and isinstance(entry.get("additional_runs_needed"), int)
-        ]
-        return (
-            max(required_runs, default=0),
-            max(additional_runs_needed, default=0),
-        )
-    return 0, 0
+) -> ReadinessQueuePayloads:
+    checks = _checks(
+        reports_present=reports_present,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_proposal_count=queue_state.blocked_proposal_count,
+        blocked_reason_counts=queue_state.blocked_reason_counts,
+        session_reports_considered=int(
+            queue_state.outcome_summary.get("session_reports_considered", 0) or 0
+        ),
+        seed_runs=queue_state.seed_runs,
+        history_requirement=queue_state.history_requirement,
+    )
+    remediations = _readiness_remediations(
+        reports_present=reports_present,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_reason_counts=queue_state.blocked_reason_counts,
+        blocked_proposal_ids=queue_state.blocked_proposal_ids,
+        seed_runs=queue_state.seed_runs,
+        history_requirement=queue_state.history_requirement,
+    )
+    queue = _readiness_queue(
+        queue_ready=queue_state.queue_ready,
+        proposals_emitted=queue_state.proposals_emitted,
+        runnable_proposal_ids=queue_state.runnable_proposal_ids,
+        blocked_proposal_count=queue_state.blocked_proposal_count,
+        blocked_reason_counts=queue_state.blocked_reason_counts,
+        proposal_summary=queue_state.proposal_summary,
+        review_summary=queue_state.review_summary,
+        outcome_summary=queue_state.outcome_summary,
+        mechanism_review_report=mechanism_review_report,
+        evidence_gaps=queue_state.queue_evidence_gaps,
+    )
+    fallback_status = _fallback_status(
+        queue_state.queue_ready,
+        queue_state.proposals_emitted,
+        queue_state.blocked_proposal_count,
+        queue_state.seed_runs,
+    )
+    return ReadinessQueuePayloads(
+        queue=queue,
+        fallback=_readiness_fallback_payload(queue_state, fallback_status),
+        checks=checks,
+        remediations=remediations,
+    )
 
 
 def readiness_queue_state(
     vault: Path,
     reports: dict[str, dict[str, Any]],
 ) -> ReadinessQueueState:
-    outcome_summary = _dict_field(reports["outcome_metrics"], "summary")
-    review_summary = _dict_field(reports["mechanism_review"], "summary")
-    proposal_summary = _dict_field(reports["mutation_proposal"], "summary")
-    proposal_diagnostics = _dict_field(reports["mutation_proposal"], "diagnostics")
+    outcome_summary = dict_field(reports["outcome_metrics"], "summary")
+    review_summary = dict_field(reports["mechanism_review"], "summary")
+    proposal_summary = dict_field(reports["mutation_proposal"], "summary")
+    proposal_diagnostics = dict_field(reports["mutation_proposal"], "diagnostics")
     loop_health_summary = _build_loop_health_summary(vault)
-    same_eval_telemetry_summary = _same_eval_telemetry_summary(
+    same_eval_summary = same_eval_telemetry_summary(
         vault, reports["mutation_proposal"]
     )
     proposals_emitted = int(proposal_summary.get("proposals_emitted", 0) or 0)
-    runnable_proposal_ids = _runnable_proposal_ids(reports["mutation_proposal"])
-    blocked_proposal_count = _blocked_proposal_count(
-        proposal_summary, proposal_diagnostics
+    runnable_proposal_ids = _runnable_proposal_ids(vault, reports["mutation_proposal"])
+    session_blocked_reason_counts, session_blocked_proposal_ids = (
+        _latest_session_exclusion_blockers(vault, reports["mutation_proposal"])
     )
-    blocked_reason_counts = _blocked_reason_counts(reports["mutation_proposal"])
-    blocked_proposal_ids = _blocked_proposal_ids_by_reason(reports["mutation_proposal"])
+    blocked_reason_counts = _merge_blocked_reason_counts(
+        _blocked_reason_counts(reports["mutation_proposal"]),
+        session_blocked_reason_counts,
+    )
+    blocked_proposal_ids = _merge_blocked_proposal_ids(
+        _blocked_proposal_ids_by_reason(reports["mutation_proposal"]),
+        session_blocked_proposal_ids,
+    )
+    blocked_proposal_count = max(
+        _blocked_proposal_count(
+            proposal_summary,
+            proposal_diagnostics,
+        ),
+        len(
+            {
+                proposal_id
+                for proposal_ids in blocked_proposal_ids.values()
+                for proposal_id in proposal_ids
+            }
+        ),
+    )
     blocked_reasons = list(blocked_reason_counts)
     queue_ready = bool(runnable_proposal_ids)
     queue_evidence_gaps = _queue_evidence_gaps(
@@ -694,8 +705,8 @@ def readiness_queue_state(
         queue_ready=queue_ready,
         blocked_reasons=blocked_reasons,
     )
-    seed_runs = _matching_fallback_seed_runs(vault)
-    history_requirement, additional_runs_needed = _fallback_history_requirement(
+    seed_runs = matching_fallback_seed_runs(vault)
+    history_requirement, additional_runs_needed = fallback_history_requirement(
         reports["mechanism_review"]
     )
     return ReadinessQueueState(
@@ -704,7 +715,7 @@ def readiness_queue_state(
         proposal_summary=proposal_summary,
         proposal_diagnostics=proposal_diagnostics,
         loop_health_summary=loop_health_summary,
-        same_eval_telemetry_summary=same_eval_telemetry_summary,
+        same_eval_telemetry_summary=same_eval_summary,
         queue_evidence_gaps=queue_evidence_gaps,
         proposals_emitted=proposals_emitted,
         runnable_proposal_ids=runnable_proposal_ids,
@@ -861,6 +872,57 @@ def _readiness_next_action(
         "add another comparable narrow run for `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py` "
         "or review mechanism_review history thresholds, then rerun "
         f"`{READINESS_TARGET}`."
+    )
+
+
+def readiness_execution_fields(
+    queue_state: ReadinessQueueState,
+) -> ReadinessExecutionFields:
+    reasons = [
+        "runnable proposal queue is non-empty"
+        if queue_state.queue_ready
+        else "no runnable proposal is available"
+    ]
+    reasons.extend(
+        gap
+        for gap in queue_state.queue_evidence_gaps
+        if gap.startswith(
+            (
+                "mechanism_review.status=attention",
+                "mutation_proposal.status=attention",
+            )
+        )
+    )
+    if queue_state.proposals_emitted > 0 and not queue_state.queue_ready:
+        if queue_state.blocked_reasons:
+            reasons.append(
+                f"proposal blockers active: {', '.join(queue_state.blocked_reasons)}"
+            )
+        else:
+            reasons.append(
+                "generated proposals exist, but every emitted proposal is currently blocked"
+            )
+    elif queue_state.proposals_emitted == 0 and not queue_state.queue_ready:
+        reasons.append("mutation proposal generation emitted zero runnable proposals")
+
+    return ReadinessExecutionFields(
+        status="pass" if queue_state.queue_ready else "warn",
+        gate_effect=(
+            GATE_EFFECT_NONE
+            if queue_state.queue_ready
+            else GATE_EFFECT_BLOCKS_EXECUTION
+        ),
+        can_run=queue_state.queue_ready,
+        reasons=reasons,
+        runnable_proposal_count=len(queue_state.runnable_proposal_ids),
+        blocked_proposal_count=queue_state.blocked_proposal_count,
+        recommended_next_step=_readiness_next_action(
+            queue_ready=queue_state.queue_ready,
+            proposals_emitted=queue_state.proposals_emitted,
+            blocked_reasons=queue_state.blocked_reasons,
+            runnable_proposal_ids=queue_state.runnable_proposal_ids,
+            seed_runs=queue_state.seed_runs,
+        ),
     )
 
 

@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
-
+from ops.scripts.core.policy_runtime import report_path
 from ops.scripts.release.external_report_inventory_runtime import (
     REFERENCE_MANIFEST,
     active_reference_report_paths,
     active_report_paths,
+    archived_report_count,
+    archived_report_paths,
     coverage_markers,
     matched_actions,
     reference_manifest_alignment,
@@ -31,6 +32,10 @@ def test_active_report_paths_exclude_reference_manifest_and_archive(tmp_path: Pa
     assert [report_path(tmp_path, path) for path in active_reference_report_paths(tmp_path)] == [
         "external-reports/review.md"
     ]
+    assert [report_path(tmp_path, path) for path in archived_report_paths(tmp_path)] == [
+        "external-reports/archive/old.md"
+    ]
+    assert archived_report_count(tmp_path) == 1
 
 
 def test_reference_manifest_alignment_reports_current_and_drift(tmp_path: Path) -> None:

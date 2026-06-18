@@ -5,14 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.finalize_run_runtime import finalize_run
-from ops.scripts.planning_gate_validate import validate_run_dir
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.promotion_decision_registry_runtime import (
     attach_decision_contract,
     decision_event_from_record,
 )
-from ops.scripts.set_mechanism_run_history import set_mechanism_run_history
-
+from ops.scripts.mechanism.finalize_run_runtime import finalize_run
+from ops.scripts.mechanism.planning_gate_validate import validate_run_dir
+from ops.scripts.mechanism.set_mechanism_run_history import set_mechanism_run_history
 from tests.minimal_vault_runtime import seed_minimal_vault, seed_planning_artifacts
 from tests.test_promotion_gate_exit_codes import (
     changed_files_manifest,
@@ -580,8 +579,14 @@ class PlanningGateValidateTests(unittest.TestCase):
             vault.mkdir()
             seed_minimal_vault(vault)
             run_dir = seed_mechanism_run_artifacts(vault, "run-mechanism-no-tests")
-            write_json(run_dir / "baseline-mechanism-assessment.json", mechanism_report(vault, test_file_count=0))
-            write_json(run_dir / "candidate-mechanism-assessment.json", mechanism_report(vault, test_file_count=0))
+            write_json(
+                run_dir / "baseline-mechanism-assessment.json",
+                mechanism_report(vault, test_file_count=0, test_case_count=0),
+            )
+            write_json(
+                run_dir / "candidate-mechanism-assessment.json",
+                mechanism_report(vault, test_file_count=0, test_case_count=0),
+            )
 
             report = validate_run_dir(vault, run_dir)
 

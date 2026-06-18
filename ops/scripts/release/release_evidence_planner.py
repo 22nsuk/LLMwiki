@@ -4,16 +4,22 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    producer_input_fingerprint,
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
     _resolve,
@@ -22,12 +28,6 @@ from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_OUT as DEFAULT_SEALED_RUN_MANIFEST,
     _json_identity,
     _unique_failures,
-)
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import (
-    producer_input_fingerprint,
-    release_source_tree_fingerprint,
 )
 
 DEFAULT_OUT = "build/release/release-evidence-plan.json"
@@ -55,6 +55,33 @@ class NodeSpec:
     refresh_target: str
     require_pass: bool
     expected_phase: str = ""
+
+
+@dataclass(frozen=True)
+class ReleaseEvidencePlanRequest:
+    vault: Path
+    stage: str
+    run_manifest: str = DEFAULT_RUN_MANIFEST
+    sealed_run_manifest: str = DEFAULT_SEALED_RUN_MANIFEST
+    operator_summary: str = DEFAULT_OPERATOR_SUMMARY
+    auto_improve_readiness: str = DEFAULT_AUTO_IMPROVE_READINESS
+    auto_promotion_preflight: str = DEFAULT_AUTO_PROMOTION_PREFLIGHT
+    auto_promotion_preseal: str = DEFAULT_AUTO_PROMOTION_PRESEAL
+    goal_run_status: str = DEFAULT_GOAL_RUN_STATUS
+    goal_runtime_certificate: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE
+    context: RuntimeContext | None = None
+
+    def paths(self) -> dict[str, str]:
+        return {
+            "run_manifest": self.run_manifest,
+            "sealed_run_manifest": self.sealed_run_manifest,
+            "operator_summary": self.operator_summary,
+            "auto_improve_readiness": self.auto_improve_readiness,
+            "auto_promotion_preflight": self.auto_promotion_preflight,
+            "auto_promotion_preseal": self.auto_promotion_preseal,
+            "goal_run_status": self.goal_run_status,
+            "goal_runtime_certificate": self.goal_runtime_certificate,
+        }
 
 
 def _node(
@@ -174,12 +201,17 @@ def _operator_attention_counts(vault: Path, path: str) -> dict[str, int]:
     accepted_risk = payload.get("accepted_risk")
     if not isinstance(accepted_risk, dict):
         return {}
-    fields = (
-        "accepted_risk_count",
-        "release_accepted_risk_count",
-        "gate_attention_count",
-    )
-    return {field: _int_value(accepted_risk.get(field)) for field in fields}
+    raw_gate_attention = _int_value(accepted_risk.get("gate_attention_count"))
+    advisory_attention = _int_value(accepted_risk.get("advisory_lifecycle_family_count"))
+    return {
+        "release_accepted_risk_count": _int_value(
+            accepted_risk.get("release_accepted_risk_count")
+        ),
+        "clean_lane_blocking_accepted_risk_family_count": _int_value(
+            accepted_risk.get("clean_lane_blocking_accepted_risk_family_count")
+        ),
+        "gate_attention_count": max(0, raw_gate_attention - advisory_attention),
+    }
 
 
 def _operator_attention_blocker(
@@ -193,7 +225,8 @@ def _operator_attention_blocker(
         "node": str(node["name"]),
         "observed": observed,
         "expected": (
-            "accepted_risk_count=0; release_accepted_risk_count=0; gate_attention_count=0"
+            "release_accepted_risk_count=0; "
+            "clean_lane_blocking_accepted_risk_family_count=0; gate_attention_count=0"
         ),
         "summary": (
             "Sealed operator diagnostics still report accepted risk or gate attention, so "
@@ -222,7 +255,7 @@ def _goal_run_status_node(
             "release-auto-promotion-ready",
             "cheap",
             "release-auto-promotion-ready-check",
-            "auto-improve-goal-status",
+            "goal-runtime-status-finalize",
             False,
         ),
         current_fingerprint=current_fingerprint,
@@ -493,7 +526,7 @@ def _auto_promotion_ready_blockers(
             "goal_run_status_not_reusable",
             "Completed goal-run status evidence is missing, stale, invalid, or not completed.",
             (
-                "Publish current completed goal-run status evidence for the selected run id, "
+                "Run make goal-runtime-status-finalize for the selected run id, "
                 "then rerun the planner."
             ),
         ),
@@ -502,7 +535,8 @@ def _auto_promotion_ready_blockers(
             "goal_runtime_certificate_not_reusable",
             "Verified goal-runtime certificate evidence is missing, stale, invalid, or not verified.",
             (
-                "Run make goal-runtime-certificate for the selected completed run, "
+                "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate "
+                "for the selected completed run, "
                 "then rerun the planner."
             ),
         ),
@@ -557,44 +591,26 @@ def _plan_payload(
     }
 
 
-def build_plan(
-    vault: Path,
-    *,
-    stage: str,
-    run_manifest: str = DEFAULT_RUN_MANIFEST,
-    sealed_run_manifest: str = DEFAULT_SEALED_RUN_MANIFEST,
-    operator_summary: str = DEFAULT_OPERATOR_SUMMARY,
-    auto_improve_readiness: str = DEFAULT_AUTO_IMPROVE_READINESS,
-    auto_promotion_preflight: str = DEFAULT_AUTO_PROMOTION_PREFLIGHT,
-    auto_promotion_preseal: str = DEFAULT_AUTO_PROMOTION_PRESEAL,
-    goal_run_status: str = DEFAULT_GOAL_RUN_STATUS,
-    goal_runtime_certificate: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
-    context: RuntimeContext | None = None,
-) -> dict[str, Any]:
-    if stage not in STAGES:
-        raise ValueError(f"unsupported release evidence planning stage: {stage}")
-    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
+def _build_plan_from_request(request: ReleaseEvidencePlanRequest) -> dict[str, Any]:
+    if request.stage not in STAGES:
+        raise ValueError(f"unsupported release evidence planning stage: {request.stage}")
+    runtime_context = request.context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
-    fingerprint = release_source_tree_fingerprint(vault)
-    commit = resolve_source_revision(vault).revision
-    paths = {
-        "run_manifest": run_manifest,
-        "sealed_run_manifest": sealed_run_manifest,
-        "operator_summary": operator_summary,
-        "auto_improve_readiness": auto_improve_readiness,
-        "auto_promotion_preflight": auto_promotion_preflight,
-        "auto_promotion_preseal": auto_promotion_preseal,
-        "goal_run_status": goal_run_status,
-        "goal_runtime_certificate": goal_runtime_certificate,
-    }
-    nodes = _plan_nodes(vault, paths, fingerprint=fingerprint, revision=commit)
-    if stage == "sealed-run-ready":
+    fingerprint = release_source_tree_fingerprint(request.vault)
+    commit = resolve_source_revision(request.vault).revision
+    nodes = _plan_nodes(
+        request.vault,
+        request.paths(),
+        fingerprint=fingerprint,
+        revision=commit,
+    )
+    if request.stage == "sealed-run-ready":
         blockers, planned_actions = _sealed_run_ready_findings(nodes)
     else:
         blockers, planned_actions = _auto_promotion_ready_findings(
-            vault,
+            request.vault,
             nodes,
-            operator_summary=operator_summary,
+            operator_summary=request.operator_summary,
         )
     metadata = {
         "generated_at": generated_at,
@@ -603,11 +619,51 @@ def build_plan(
     }
     return _plan_payload(
         metadata,
-        stage=stage,
+        stage=request.stage,
         nodes=nodes,
         planned_actions=planned_actions,
         blockers=blockers,
     )
+
+
+def _legacy_build_plan_request(
+    vault: Path | str,
+    *,
+    stage: str | None,
+    context: RuntimeContext | None,
+    path_overrides: dict[str, str],
+) -> ReleaseEvidencePlanRequest:
+    if stage is None:
+        raise TypeError("build_plan() missing required keyword-only argument: 'stage'")
+    request = ReleaseEvidencePlanRequest(vault=Path(vault), stage=stage, context=context)
+    unsupported = sorted(set(path_overrides) - set(request.paths()))
+    if unsupported:
+        fields = ", ".join(unsupported)
+        raise TypeError(f"unsupported release evidence path override(s): {fields}")
+    replacement_fields: dict[str, Any] = dict(path_overrides)
+    return replace(request, **replacement_fields)
+
+
+def build_plan(
+    request_or_vault: ReleaseEvidencePlanRequest | Path | str,
+    *,
+    stage: str | None = None,
+    context: RuntimeContext | None = None,
+    **path_overrides: str,
+) -> dict[str, Any]:
+    if isinstance(request_or_vault, ReleaseEvidencePlanRequest):
+        if stage is not None or context is not None or path_overrides:
+            raise TypeError(
+                "ReleaseEvidencePlanRequest cannot be combined with legacy build_plan keywords"
+            )
+        return _build_plan_from_request(request_or_vault)
+    request = _legacy_build_plan_request(
+        request_or_vault,
+        stage=stage,
+        context=context,
+        path_overrides=path_overrides,
+    )
+    return _build_plan_from_request(request)
 
 
 def write_plan(vault: Path, plan: dict[str, Any], out_path: str | None) -> Path:
@@ -644,16 +700,18 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     plan = build_plan(
-        vault,
-        stage=args.stage,
-        run_manifest=args.run_manifest,
-        sealed_run_manifest=args.sealed_run_manifest,
-        operator_summary=args.operator_summary,
-        auto_improve_readiness=args.auto_improve_readiness,
-        auto_promotion_preflight=args.auto_promotion_preflight,
-        auto_promotion_preseal=args.auto_promotion_preseal,
-        goal_run_status=args.goal_run_status,
-        goal_runtime_certificate=args.goal_runtime_certificate,
+        ReleaseEvidencePlanRequest(
+            vault=vault,
+            stage=args.stage,
+            run_manifest=args.run_manifest,
+            sealed_run_manifest=args.sealed_run_manifest,
+            operator_summary=args.operator_summary,
+            auto_improve_readiness=args.auto_improve_readiness,
+            auto_promotion_preflight=args.auto_promotion_preflight,
+            auto_promotion_preseal=args.auto_promotion_preseal,
+            goal_run_status=args.goal_run_status,
+            goal_runtime_certificate=args.goal_runtime_certificate,
+        )
     )
     path = write_plan(vault, plan, args.out)
     print(display_path(vault, path))

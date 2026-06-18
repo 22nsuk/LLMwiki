@@ -12,17 +12,17 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.command_runtime import CommandHeartbeat, TimedProcessResult
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_package_clean_extract import (
+
+from ops.scripts.core.command_runtime import CommandHeartbeat, TimedProcessResult
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_package_clean_extract import (
     SourcePackageCleanExtractRequest,
     build_report,
     main,
     reusable_report_diagnostics,
     write_report,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -150,7 +150,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 observation_mode="process_heartbeat",
             )
 
-        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+        with patch("ops.scripts.core.source_package_clean_extract.run_with_timeout", fake_run):
             report = build_report(
                 self.vault,
                 source_zip=source_zip,
@@ -230,7 +230,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 observation_mode="process_heartbeat",
             )
 
-        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+        with patch("ops.scripts.core.source_package_clean_extract.run_with_timeout", fake_run):
             report = build_report(
                 SourcePackageCleanExtractRequest(
                     vault=self.vault,
@@ -305,7 +305,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 observation_mode="process_heartbeat",
             )
 
-        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+        with patch("ops.scripts.core.source_package_clean_extract.run_with_timeout", fake_run):
             report = build_report(
                 SourcePackageCleanExtractRequest(
                     vault=self.vault,
@@ -385,7 +385,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 observation_mode="process_heartbeat",
             )
 
-        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+        with patch("ops.scripts.core.source_package_clean_extract.run_with_timeout", fake_run):
             report = build_report(
                 SourcePackageCleanExtractRequest(
                     vault=self.vault,

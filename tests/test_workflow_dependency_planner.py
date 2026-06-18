@@ -7,10 +7,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.workflow_dependency_planner import build_report, write_report
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.workflow_dependency_planner import build_report, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -30,6 +30,7 @@ FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_release_workflow_static.py",
 )
+RUNTIME_HOTSPOT_SMOKE_COMMAND = "make runtime-hotspot-smoke"
 
 
 def fixed_context() -> RuntimeContext:
@@ -56,9 +57,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         (self.vault / "Makefile").write_text(
             ".PHONY: static ruff typecheck release-evidence-converge release-smoke-full "
             "release-evidence-closeout "
-            "test-execution-summary generated-artifact-converge generated-artifact-script-output "
+            "test-execution-summary-report-contract generated-artifact-converge generated-artifact-script-output "
             "generated-artifact-finality-suffix script-output-surfaces "
-            "external-report-action-matrix generated-artifact-index artifact-freshness "
+            "external-report-action-matrix generated-artifact-index generated-artifact-index-body artifact-freshness "
             "release-closeout-summary-report release-closeout-fixed-point "
             "tmp-json-clean release-closeout-finality-verify "
             "operator-release-summary report-contract-closeout workflow-dependency-planner\n"
@@ -71,12 +72,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "release-evidence-converge:\n"
             "\t$(MAKE) static\n"
             "\t$(MAKE) release-smoke-full\n"
-            "\t$(MAKE) test-execution-summary\n"
+            "\t$(MAKE) test-execution-summary-report-contract\n"
             "release-evidence-closeout: release-evidence-converge\n"
             "\t@echo compatibility alias\n"
             "release-smoke-full:\n"
             "\t@echo smoke\n"
-            "test-execution-summary:\n"
+            "test-execution-summary-report-contract:\n"
             "\t@echo tests\n"
             "generated-artifact-converge:\n"
             "\t$(MAKE) generated-artifact-finality-suffix\n"
@@ -86,12 +87,18 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "\t$(MAKE) artifact-freshness\n"
             "\t$(MAKE) external-report-action-matrix\n"
             "\t$(MAKE) generated-artifact-index\n"
+            "\t$(MAKE) artifact-freshness\n"
+            "\t$(MAKE) external-report-action-matrix\n"
+            "\t$(MAKE) generated-artifact-index-body\n"
+            "\t$(MAKE) artifact-freshness\n"
             "script-output-surfaces:\n"
             "\t@echo surfaces\n"
             "external-report-action-matrix:\n"
             "\t@echo matrix\n"
             "generated-artifact-index:\n"
             "\t@echo index\n"
+            "generated-artifact-index-body:\n"
+            "\t@echo index body\n"
             "artifact-freshness:\n"
             "\t@echo freshness\n"
             "operator-release-summary:\n"
@@ -107,7 +114,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "workflow-dependency-planner:\n"
             "\t@echo planner\n"
             "report-contract-closeout:\n"
-            "\t$(MAKE) test-execution-summary\n"
+            "\t$(MAKE) test-execution-summary-report-contract\n"
             "\t$(MAKE) generated-artifact-converge\n",
             encoding="utf-8",
         )
@@ -289,20 +296,23 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [step["target"] for step in workflow["steps"]],
             [
                 "workflow-dependency-planner",
+                "release-authority-sealed-preflight",
+                "release-terminal-finality",
+            ],
+        )
+        self.assertEqual(
+            workflow["steps"][2]["fanout_targets"],
+            [
                 "generated-artifact-finality-suffix",
                 "release-closeout-summary-report",
                 "release-closeout-fixed-point",
-                "tmp-json-clean",
+                "release-closeout-post-check-finalizer-dry-run",
                 "release-closeout-finality-verify",
             ],
         )
         self.assertEqual(
-            workflow["steps"][1]["fanout_targets"],
-            [
-                "artifact-freshness",
-                "external-report-action-matrix",
-                "generated-artifact-index",
-            ],
+            workflow["steps"][2]["primary_report"],
+            "ops/reports/release-closeout-finality-attestation.json",
         )
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
 
@@ -318,12 +328,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             (
                 "ops/reports/generated-artifact-index.json",
                 "canonical_report_finalization",
-                "generated-artifact-finality-suffix",
+                "release-terminal-finality",
                 "canonical_report_finality_suffix_changed",
                 [
-                    "artifact-freshness",
-                    "external-report-action-matrix",
-                    "generated-artifact-index",
+                    "generated-artifact-finality-suffix",
+                    "release-closeout-summary-report",
+                    "release-closeout-fixed-point",
+                    "release-closeout-post-check-finalizer-dry-run",
+                    "release-closeout-finality-verify",
                 ],
             ),
             (
@@ -369,10 +381,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(workflow["recommended_lane"], "release-finality-resettle")
         self.assertEqual(
             [step["target"] for step in workflow["steps"][:2]],
-            ["workflow-dependency-planner", "generated-artifact-finality-suffix"],
+            ["workflow-dependency-planner", "release-authority-sealed-preflight"],
         )
-        self.assertIn("release-closeout-fixed-point", [step["target"] for step in workflow["steps"]])
-        self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-closeout-finality-verify")
+        self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-terminal-finality")
 
     def test_planner_closeout_steps_are_derived_from_fixed_point_policy(self) -> None:
         self._write_fixed_point_policy()
@@ -583,6 +594,50 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             ["make release-run-ready"],
         )
         self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_plan_routes_runtime_hotspot_to_hotspot_smoke(
+        self,
+    ) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[
+                "ops/scripts/mechanism/auto_improve_runtime.py",
+                "ops/scripts/mechanism/auto_improve_maintenance_decision_runtime.py",
+                "ops/scripts/mechanism/mutation_proposal_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_payload_runtime.py",
+                "ops/scripts/release/release_evidence_dashboard_closeout_runtime.py",
+                "ops/scripts/release/release_evidence_dashboard_learning_delta_runtime.py",
+            ],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "runtime_hotspot")
+        self.assertEqual(plan["unknown_paths"], [])
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                RUNTIME_HOTSPOT_SMOKE_COMMAND,
+            ],
+        )
+        self.assertEqual(
+            plan["command_duration_seconds"],
+            {
+                "make static": 60,
+                RUNTIME_HOTSPOT_SMOKE_COMMAND: 240,
+            },
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 300)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(
+            {item["matched_rule_id"] for item in plan["path_recommendations"]},
+            {"runtime_hotspot_source"},
+        )
+        self.assertNotIn("make test-fast", plan["selected_commands"])
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_path_minimum_plan_routes_release_workflow_to_focused_static_test(

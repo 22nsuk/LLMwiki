@@ -9,11 +9,12 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.release_goal_run_identity_guard import (
     build_report,
+    main,
     write_report,
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -148,6 +149,47 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["effective_run_id"], "promote-run")
+
+    def test_require_verified_fails_identity_pass_without_verified_certificate(self) -> None:
+        self._write_identity_inputs()
+        certificate = json.loads(
+            (self.vault / "ops/reports/goal-runtime-certificate.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        certificate["status"] = "attention"
+        certificate["certificate"] = {
+            "verification_status": "blocked",
+            "eligible": False,
+            "already_verified": False,
+        }
+        self._write_json("ops/reports/goal-runtime-certificate.json", certificate)
+
+        with self._patch_current_repo():
+            exit_code = main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--out",
+                    "build/release/release-auto-promotion-goal-run-identity.json",
+                    "--goal-run-id",
+                    "promote-run",
+                    "--goal-run-id-origin",
+                    "command line",
+                    "--check",
+                    "--require-verified",
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        report = json.loads(
+            (
+                self.vault
+                / "build/release/release-auto-promotion-goal-run-identity.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["verification_status"], "blocked")
         self.assertEqual(report["blockers"], [])
 
     def test_failed_goal_status_cannot_select_run(self) -> None:

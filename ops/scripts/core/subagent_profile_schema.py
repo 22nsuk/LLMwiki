@@ -11,9 +11,12 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, subagent_ladder_model_effort
-    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        subagent_ladder_model_effort,
+    )
+    from ops.scripts.core.runtime_context import RuntimeContext
 else:
     from .output_runtime import display_path
     from .policy_runtime import load_policy, subagent_ladder_model_effort

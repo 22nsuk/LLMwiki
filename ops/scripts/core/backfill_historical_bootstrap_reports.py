@@ -12,20 +12,22 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     import sys
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         read_json_object,
         write_schema_validated_json,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         BUNDLE_MANIFEST_SCHEMA_PATH,
         EVAL_REPORT_SCHEMA_PATH,
         LINT_REPORT_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import load_schema_with_vault_override
+    from ops.scripts.core.schema_runtime import load_schema_with_vault_override
 else:
     from .artifact_freshness_runtime import build_canonical_report_envelope
     from .artifact_io_runtime import read_json_object, write_schema_validated_json
@@ -210,21 +212,21 @@ BOOTSTRAP_REPORT_SPECS = {
         rel_path="ops/reports/eval-initial-2026-04-12.json",
         schema_path=EVAL_REPORT_SCHEMA_PATH,
         artifact_kind="wiki_eval_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/wiki_eval.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/eval/wiki_eval.py"),
         normalize_payload=_normalize_eval_payload,
     ),
     "ops/reports/lint-initial-2026-04-12.json": BootstrapReportSpec(
         rel_path="ops/reports/lint-initial-2026-04-12.json",
         schema_path=LINT_REPORT_SCHEMA_PATH,
         artifact_kind="wiki_lint_report",
-        source_paths=(SCRIPT_PATH, "ops/scripts/wiki_lint.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/eval/wiki_lint.py"),
         normalize_payload=_normalize_lint_payload,
     ),
     "ops/reports/manifest-2026-04-12.json": BootstrapReportSpec(
         rel_path="ops/reports/manifest-2026-04-12.json",
         schema_path=BUNDLE_MANIFEST_SCHEMA_PATH,
         artifact_kind="bundle_manifest",
-        source_paths=(SCRIPT_PATH, "ops/scripts/wiki_manifest.py"),
+        source_paths=(SCRIPT_PATH, "ops/scripts/eval/wiki_manifest.py"),
         normalize_payload=_normalize_manifest_payload,
     ),
 }

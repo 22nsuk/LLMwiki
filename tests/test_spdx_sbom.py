@@ -6,10 +6,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.spdx_sbom import build_spdx_sbom, write_spdx_sbom
-from ops.scripts.supply_chain_artifact_model import build_model
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.supply_chain.spdx_sbom import build_spdx_sbom, write_spdx_sbom
+from ops.scripts.supply_chain.supply_chain_artifact_model import build_model
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_artifact_model import seed_runtime_surface
 from tests.test_supply_chain_provenance import seed_dependency_inputs

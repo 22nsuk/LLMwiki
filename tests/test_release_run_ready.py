@@ -8,10 +8,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.release_run_ready import (
     PLAN_SPECS,
     _command_step,
@@ -135,9 +135,9 @@ def _test_execution_summary_payload(
         "suite": suite,
         "suite_scope": suite_scope,
         "represents_full_suite": represents_full_suite,
-        "not_full_suite_reason": ""
-        if represents_full_suite
-        else "report-contract fixture",
+        "not_full_suite_reason": (
+            "" if represents_full_suite else "report-contract fixture"
+        ),
         "full_suite_evidence": {
             "status": full_suite_status,
             "required_command": "make test-execution-summary-full-current-or-refresh",

@@ -2,14 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
+from ops.scripts.core.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECTS,
+)
+from ops.scripts.core.payload_field_runtime import dict_field
 from ops.scripts.core.release_authority_state_runtime import (
     clean_required_preflight_passes,
     machine_release_allowed_from_status_view,
     release_status_v2_view,
     release_status_v2_view_with_readiness_fallback,
 )
-from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
-from ops.scripts.release_authority_vocabulary import (
+from ops.scripts.release.release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
     REASON_RELEASE_AUTHORITY_NOT_CLEAN_PASS,
     REASON_SEALED_RELEASE_NOT_CLEAN_PASS,
@@ -56,11 +60,6 @@ def _int_value(value: object, default: int = 0) -> int:
         except (TypeError, ValueError):
             return default
     return default
-
-
-def _dict_field(payload: dict[str, Any], key: str) -> dict[str, Any]:
-    value = payload.get(key, {})
-    return value if isinstance(value, dict) else {}
 
 
 def _release_gate_summaries(reports: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -370,8 +369,8 @@ def _release_evidence_cohort_summary(payload: dict[str, Any]) -> dict[str, Any]:
     if summary["status"] == "not_run" or summary["source_status"] == "kind_mismatch":
         return summary
     source_status = str(payload.get("status", "")).strip() or "unknown"
-    cohort = _dict_field(payload, "cohort")
-    release_summary = _dict_field(payload, "summary")
+    cohort = dict_field(payload, "cohort")
+    release_summary = dict_field(payload, "summary")
     strict_same_fingerprint = bool(cohort.get("strict_same_fingerprint", False))
     component_fingerprint_count = _int_value(cohort.get("component_fingerprint_count"))
     clean_lane_contract_status = (
@@ -779,6 +778,41 @@ def _release_authority_preflight_promotion_blockers(
             ),
         }
     ]
+
+
+def promotion_status(promotion_blockers: list[dict[str, Any]]) -> str:
+    return "blocked" if promotion_blockers else "pass"
+
+
+def promotion_readiness_payload(
+    promotion_blockers: list[dict[str, Any]],
+) -> dict[str, Any]:
+    gate_effects = {
+        str(blocker.get("gate_effect", "")).strip()
+        for blocker in promotion_blockers
+        if str(blocker.get("gate_effect", "")).strip()
+    }
+    ordered_effects = [effect for effect in GATE_EFFECTS if effect in gate_effects]
+    scopes = sorted(
+        {
+            str(blocker.get("scope", "")).strip()
+            for blocker in promotion_blockers
+            if str(blocker.get("scope", "")).strip()
+        }
+    )
+    blocker_ids = [
+        str(blocker.get("id", "")).strip()
+        for blocker in promotion_blockers
+        if str(blocker.get("id", "")).strip()
+    ]
+    return {
+        "status": promotion_status(promotion_blockers),
+        "can_promote_result": not promotion_blockers,
+        "blocker_count": len(promotion_blockers),
+        "blocker_ids": blocker_ids,
+        "blocking_scopes": scopes,
+        "gate_effects": ordered_effects,
+    }
 
 
 def _artifact_contract_promotion_blockers(

@@ -55,7 +55,8 @@
         "unregistered_open_observations",
         "stale_registry_entries",
         "duplicate_registry_entries",
-        "unavailable_registry_entries"
+        "unavailable_registry_entries",
+        "terminal_status_issues"
       ],
       "properties": {
         "$schema": { "type": "string", "const": "ops/schemas/observation-closeout-registry.schema.json" },
@@ -73,7 +74,8 @@
             "unregistered_open_count",
             "stale_registry_entry_count",
             "duplicate_registry_key_count",
-            "unavailable_registry_entry_count"
+            "unavailable_registry_entry_count",
+            "terminal_status_issue_count"
           ],
           "properties": {
             "open_observation_count": { "type": "integer", "minimum": 0 },
@@ -81,14 +83,16 @@
             "unregistered_open_count": { "type": "integer", "minimum": 0 },
             "stale_registry_entry_count": { "type": "integer", "minimum": 0 },
             "duplicate_registry_key_count": { "type": "integer", "minimum": 0 },
-            "unavailable_registry_entry_count": { "type": "integer", "minimum": 0 }
+            "unavailable_registry_entry_count": { "type": "integer", "minimum": 0 },
+            "terminal_status_issue_count": { "type": "integer", "minimum": 0 }
           }
         },
         "open_observations": { "type": "array", "items": { "$ref": "#/$defs/observation_ref" } },
         "unregistered_open_observations": { "type": "array", "items": { "$ref": "#/$defs/observation_ref" } },
         "stale_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/stale_registry_entry" } },
         "duplicate_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/duplicate_registry_entry" } },
-        "unavailable_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/unavailable_registry_entry" } }
+        "unavailable_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/unavailable_registry_entry" } },
+        "terminal_status_issues": { "type": "array", "items": { "$ref": "#/$defs/terminal_status_issue" } }
       }
     },
     "observation_ref": {
@@ -131,6 +135,17 @@
         "observation_id": { "type": "string", "minLength": 1 },
         "root": { "type": "string", "minLength": 1 },
         "reason": { "type": "string", "enum": ["observation_root_absent"] }
+      }
+    },
+    "terminal_status_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "observation_id", "status", "reason"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "observation_id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["wontfix"] },
+        "reason": { "type": "string", "enum": ["terminal_status_missing_resolution_evidence"] }
       }
     }
   }

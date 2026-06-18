@@ -5,19 +5,21 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.observability_artifacts_shared_runtime import (
+from ops.scripts.core.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel_from_status,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 
 DEFAULT_OUT = "ops/reports/session-synopsis.json"
 PRODUCER = "ops.scripts.session_synopsis"
@@ -31,7 +33,7 @@ INPUT_PATHS = {
     "learning_delta_scoreboard": "ops/reports/learning-delta-scoreboard.json",
     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
     "source_package_clean_extract": "ops/reports/source-package-clean-extract.json",
-    "task_observations": "ops/reports/task-improvement-observations/task-20260515-reconciled-improvement-plan/improvement-observations.json",
+    "task_observations": "ops/reports/task-improvement-observations/task-20260611-active-report-long-term-plan/improvement-observations.json",
 }
 INPUT_PATH_ARG_NAMES = {
     "auto_improve_readiness": "--auto-improve-readiness",
@@ -141,7 +143,16 @@ def _goal_runtime_certificate(status_report: dict[str, Any]) -> dict[str, Any]:
 
 def _goal_status_repair_target(blocker: str) -> str:
     if blocker == "self-improvement loop certificate incomplete":
-        return "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
+        return (
+            "Run the bounded self-improvement loop and full gates, then finalize "
+            "goal-runtime status and run GOAL_RUN_ID=<completed-run-id> make "
+            "goal-runtime-certificate."
+        )
+    if blocker == "self-improvement loop release evidence incomplete":
+        return (
+            "Refresh missing release evidence paths, then finalize goal-runtime status "
+            "and rerun GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate."
+        )
     if "sealed authority" in blocker:
         return "Refresh sealed authority preflight evidence before promotion."
     if blocker in {"heartbeat stale", "checkpoint stale"}:
@@ -532,14 +543,14 @@ def _next_session_entrypoint(
         ),
         "recommended_next_action": next_action,
         "first_commands": [
-            "make auto-improve-goal-status",
+            "make goal-runtime-status-finalize",
             "make session-synopsis",
             "make remediation-backlog",
             "make static",
             "make test-public",
             "make auto-improve-goal-preflight",
             "make auto-improve-goal-run",
-            "make goal-runtime-certificate",
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
         ],
         "stop_conditions": [
             "Do not promote while promotion_allowed is false.",

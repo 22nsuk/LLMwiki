@@ -7,10 +7,9 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.session_synopsis import build_report, write_report
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.learning.session_synopsis import build_report, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -225,10 +224,13 @@ class SessionSynopsisTests(unittest.TestCase):
                 "pending",
             )
             self.assertFalse(report["next_session_entrypoint"]["runtime_certificate_full_gate_clean"])
-            self.assertIn("make auto-improve-goal-status", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn("make goal-runtime-status-finalize", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make auto-improve-goal-preflight", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make auto-improve-goal-run", report["next_session_entrypoint"]["first_commands"])
-            self.assertIn("make goal-runtime-certificate", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn(
+                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+                report["next_session_entrypoint"]["first_commands"],
+            )
             self.assertIn("make session-synopsis", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make remediation-backlog", report["next_session_entrypoint"]["first_commands"])
             self.assertTrue(
@@ -266,6 +268,7 @@ class SessionSynopsisTests(unittest.TestCase):
                         "checkpoint stale",
                         "periodic evidence checkpoint missing",
                         "git_worktree_dirty",
+                        "self-improvement loop release evidence incomplete",
                         "custom runtime drift",
                     ],
                     "runtime_certificate": {"status": "pending"},
@@ -289,6 +292,12 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertIn(
                 "dirty-worktree blocker",
                 blocker_repairs["goal_status_git_worktree_dirty"],
+            )
+            self.assertIn(
+                "missing release evidence",
+                blocker_repairs[
+                    "goal_status_self_improvement_loop_release_evidence_incomplete"
+                ],
             )
             self.assertIn(
                 "runner-backed evidence",

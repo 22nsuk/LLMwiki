@@ -6,13 +6,25 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     read_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.mechanism_assess import (
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.python_function_budget_runtime import (
+    python_function_budget_candidates,
+)
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_or_raise,
+)
+from ops.scripts.mechanism.mechanism_assess import (
     MechanismAssessmentState,
     count_nonempty_lines,
     markdown_heading_count,
@@ -20,20 +32,11 @@ from ops.scripts.mechanism_assess import (
     python_function_count,
     python_test_case_count,
 )
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.python_function_budget_runtime import python_function_budget_candidates
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
-    STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
-)
-from ops.scripts.schema_runtime import (
-    load_schema_with_vault_override,
-    validate_or_raise,
-)
 
 STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA = STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH
 DEFAULT_REPORT = "ops/reports/structural-complexity-budget.json"
 FUNCTION_BUDGET_TOP_N = 10
+LOW_HEADROOM_PERCENT = 5
 PRODUCER = "ops.scripts.structural_complexity_budget_runtime"
 SOURCE_COMMAND = (
     "python -m ops.scripts.structural_complexity_budget "
@@ -50,9 +53,11 @@ DEFAULT_TARGET_PROFILES: dict[str, dict[str, Any]] = {
             "ops/scripts/mechanism/mutation_proposal_runtime.py",
             "ops/scripts/mechanism/mechanism_review_candidate_runtime.py",
             "ops/scripts/mechanism/mechanism_review_outcome_metrics_calibration_runtime.py",
+            "ops/scripts/mechanism/goal_runtime_run_admission.py",
             "ops/scripts/core/codex_exec_executor.py",
             "ops/scripts/core/filesystem_runtime.py",
             "ops/scripts/core/policy_runtime.py",
+            "ops/scripts/release/release_smoke.py",
         ],
         "budgets": {
             "nonempty_line_count_total": 900,
@@ -73,6 +78,7 @@ DEFAULT_TARGET_PROFILES: dict[str, dict[str, Any]] = {
             "ops/scripts/eval/wiki_eval.py",
             "ops/scripts/core/observability_artifacts_runtime.py",
             "ops/scripts/core/policy_validation_runtime.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
             "ops/scripts/eval/structural_complexity_budget_runtime.py",
             "tests/minimal_vault_seed_core.py",
             "tests/minimal_vault_seed_smoke.py",
@@ -107,6 +113,9 @@ DEFAULT_TARGET_PROFILES: dict[str, dict[str, Any]] = {
             "ops/scripts/release/release_closeout_batch_manifest.py",
             "ops/scripts/release/release_evidence_dashboard.py",
             "ops/scripts/release/release_closeout_summary.py",
+            "ops/scripts/release/external_report_lifecycle_runtime.py",
+            "ops/scripts/release/release_closeout_fixed_point.py",
+            "ops/scripts/release/release_post_seal_attestation.py",
             "ops/scripts/test/test_execution_summary.py",
         ],
         "budgets": {
@@ -171,14 +180,6 @@ class TargetReportSummary:
     failure_count: int
 
 
-def _budget_metrics(metrics: dict[str, Any]) -> dict[str, int]:
-    return {
-        "nonempty_line_count_total": int(metrics["nonempty_line_count_total"]),
-        "python_function_count": int(metrics["python_function_count"]),
-        "python_branch_node_count": int(metrics["python_branch_node_count"]),
-    }
-
-
 def _measured_metrics(state: MechanismAssessmentState, rel_path: str, path: Path) -> dict[str, int]:
     test_case_count = 0
     if rel_path.startswith("tests/") and path.suffix == ".py":
@@ -208,7 +209,14 @@ def _budget_deltas(metrics: dict[str, int], budgets: dict[str, int]) -> dict[str
 def _normalize_target_profiles(configured: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     profiles: dict[str, dict[str, Any]] = {}
     for profile_name, profile in configured.items():
-        budgets = _budget_metrics(profile["budgets"])
+        budgets = {
+            metric: int(profile["budgets"][metric])
+            for metric in (
+                "nonempty_line_count_total",
+                "python_function_count",
+                "python_branch_node_count",
+            )
+        }
         targets = [str(path) for path in profile["targets"]]
         profiles[profile_name] = {
             "targets": targets,
@@ -228,10 +236,6 @@ def _dedupe_paths(paths: list[str]) -> list[str]:
         seen.add(normalized)
         deduped.append(normalized)
     return deduped
-
-
-def _is_python_test_target(path: str) -> bool:
-    return path.startswith("tests/") and path.endswith(".py")
 
 
 def target_paths_from_changed_files_manifest(vault: Path, manifest_path: str) -> list[str]:
@@ -279,7 +283,9 @@ def touched_target_profiles(
         }
 
     unmatched = [path for path in _dedupe_paths(target_paths) if path not in matched]
-    unmatched_tests = [path for path in unmatched if _is_python_test_target(path)]
+    unmatched_tests = [
+        path for path in unmatched if path.startswith("tests/") and path.endswith(".py")
+    ]
     unmatched_tests_set = set(unmatched_tests)
     unmatched_runtime_or_other = [path for path in unmatched if path not in unmatched_tests_set]
     if unmatched_runtime_or_other:
@@ -398,14 +404,6 @@ def _function_budget_monitoring(
     }
 
 
-def _monitored_targets(profiles: dict[str, dict[str, Any]]) -> set[str]:
-    return {
-        rel_path
-        for profile in profiles.values()
-        for rel_path in profile["targets"]
-    }
-
-
 def _monitored_function_candidates(
     function_candidates: list[dict[str, Any]],
     monitored_targets: set[str],
@@ -429,7 +427,9 @@ def _load_report_inputs(
     profiles = _normalize_target_profiles(target_profiles or DEFAULT_TARGET_PROFILES)
     function_config = function_budget_config or policy["system_refactor_policy"]["python_function_review"]
     function_candidates = python_function_budget_candidates(vault, function_config)
-    monitored_targets = _monitored_targets(profiles)
+    monitored_targets = {
+        rel_path for profile in profiles.values() for rel_path in profile["targets"]
+    }
     monitored_candidates = _monitored_function_candidates(function_candidates, monitored_targets)
     return StructuralComplexityBudgetInputs(
         policy=policy,
@@ -467,6 +467,8 @@ def _missing_target_report(
             "python_branch_node_count": -int(budgets["python_branch_node_count"]),
         },
         "over_budget_metrics": [],
+        "no_headroom_metrics": [],
+        "low_headroom_metrics": [],
         "function_budget_candidate_count": 0,
     }
 
@@ -494,8 +496,16 @@ def _target_report(
     metrics = _measured_metrics(inputs.state, rel_path, path)
     budget_deltas = _budget_deltas(metrics, budgets)
     over_budget_metrics = [metric for metric, value in budget_deltas.items() if value > 0]
+    no_headroom_metrics = [metric for metric, value in budget_deltas.items() if value == 0]
+    low_headroom_metrics = [
+        metric
+        for metric, budget in budgets.items()
+        if budget_deltas[metric] < 0
+        and int(metrics[metric]) * 100 >= int(budget) * (100 - LOW_HEADROOM_PERCENT)
+    ]
     candidate_count = len(inputs.candidate_by_page.get(rel_path, []))
-    status = "warn" if over_budget_metrics or candidate_count else "pass"
+    headroom_metrics = no_headroom_metrics or low_headroom_metrics
+    status = "warn" if over_budget_metrics or headroom_metrics or candidate_count else "pass"
     return TargetReportResult(
         report={
             "path": rel_path,
@@ -505,6 +515,8 @@ def _target_report(
             "budget": budgets,
             "budget_deltas": budget_deltas,
             "over_budget_metrics": over_budget_metrics,
+            "no_headroom_metrics": no_headroom_metrics,
+            "low_headroom_metrics": low_headroom_metrics,
             "function_budget_candidate_count": candidate_count,
         },
         status=status,

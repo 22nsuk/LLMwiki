@@ -6,10 +6,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.artifact_io_runtime import write_vault_schema_validated_json
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.artifact_io_runtime import write_vault_schema_validated_json
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.run_artifact_envelope_runtime import (
+    maybe_embed_run_artifact_envelope,
+)
+from ops.scripts.core.runtime_context import RuntimeContext
 
 
 class RunMechanismExperimentError(Exception):

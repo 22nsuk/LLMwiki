@@ -12,9 +12,9 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.release_remote_sync_governance import (
     remote_sync_governance_record,
     workflow_attachment_result,

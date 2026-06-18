@@ -11,11 +11,11 @@ from unittest import mock
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given, settings
-from ops.scripts.lint_uplift_plan import build_report as build_lint_uplift_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.type_uplift_plan import build_report as build_type_uplift_report
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.lint_uplift_plan import build_report as build_lint_uplift_report
+from ops.scripts.eval.type_uplift_plan import build_report as build_type_uplift_report
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

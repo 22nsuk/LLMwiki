@@ -10,39 +10,48 @@ from typing import Any
 from unittest import mock
 
 import pytest
-from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
-from ops.scripts.auto_improve_execute_runtime import (
+
+from ops.scripts.core.artifact_freshness_runtime import (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+)
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.promotion_decision_registry_runtime import (
+    reduce_decision_proposals,
+)
+from ops.scripts.core.python_function_budget_runtime import (
+    python_function_budget_candidates,
+)
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema
+from ops.scripts.mechanism import (
+    auto_improve_iteration_persistence_runtime,
+    auto_improve_iteration_runtime,
+)
+from ops.scripts.mechanism.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluatePhaseResult,
     ExecuteEvaluateRequest,
 )
-from ops.scripts.auto_improve_iteration_persistence_runtime import (
+from ops.scripts.mechanism.auto_improve_iteration_persistence_runtime import (
     IterationTelemetryRequest,
     PersistIterationDependencies,
     PersistIterationPhaseResult,
     persist_iteration_phase,
     write_iteration_telemetry,
 )
-from ops.scripts.auto_improve_iteration_runtime import (
+from ops.scripts.mechanism.auto_improve_iteration_runtime import (
     AutoImproveIterationDependencies,
     AutoImproveIterationRequest,
     execute_evaluate_iteration_phase,
     run_auto_improve_iteration,
 )
-from ops.scripts.auto_improve_outcome_runtime import ExecutionOutcome
-from ops.scripts.mechanism_run_scaffold_templates_runtime import (
-    initial_run_ledger,
-    placeholder_promotion_report,
-)
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
-from ops.scripts.python_function_budget_runtime import python_function_budget_candidates
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema
-
-from ops.scripts import auto_improve_iteration_persistence_runtime
+from ops.scripts.mechanism.auto_improve_outcome_runtime import ExecutionOutcome
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
+)
+from ops.scripts.mechanism.mechanism_run_scaffold_templates_runtime import (
+    initial_run_ledger,
+    placeholder_promotion_report,
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 
@@ -114,27 +123,26 @@ def _write_iteration_executor_report(
     *,
     role: str,
     status: str,
+    include_role: bool = True,
 ) -> str:
     report_rel = f"runs/{run_id}/{role}-executor-report.json"
     report_path = vault / report_rel
     report_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "$schema": "ops/schemas/executor-report.schema.json",
+        "run_id": run_id,
+        "generated_at": "2026-05-20T12:00:00Z",
+        "executor": {"name": "unit-test", "sandbox_mode": "workspace-write"},
+        "status": status,
+        "command": {"argv": ["unit-test"]},
+        "artifacts": {},
+        "result": {"returncode": 0, "timed_out": False},
+        "diagnostics": {},
+    }
+    if include_role:
+        payload["role"] = role
     report_path.write_text(
-        json.dumps(
-            {
-                "$schema": "ops/schemas/executor-report.schema.json",
-                "run_id": run_id,
-                "role": role,
-                "generated_at": "2026-05-20T12:00:00Z",
-                "executor": {"name": "unit-test", "sandbox_mode": "workspace-write"},
-                "status": status,
-                "command": {"argv": ["unit-test"]},
-                "artifacts": {},
-                "result": {"returncode": 0, "timed_out": False},
-                "diagnostics": {},
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
+        json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     return report_rel
@@ -222,6 +230,8 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             run_id = "auto-session-run-01"
             run_dir = vault / "runs" / run_id
             run_dir.mkdir(parents=True)
+            (run_dir / "promotion-report.json").write_text("{}\n", encoding="utf-8")
+            (run_dir / "changed-files-manifest.json").write_text("{}\n", encoding="utf-8")
             existing_workspace_preparation = {
                 "mode": "full_copy",
                 "baseline_file_count": 10,
@@ -244,6 +254,8 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                         "generated_at": "2026-04-15T00:00:00Z",
                         "metadata": existing_metadata,
                         "proposal_snapshot": f"runs/{run_id}/proposal-snapshot.json",
+                        "promotion_report": f"runs/{run_id}/promotion-report.json",
+                        "changed_files_manifest": f"runs/{run_id}/changed-files-manifest.json",
                         "scope_freeze": f"runs/{run_id}/scope-freeze.json",
                         "routing_reports": [],
                         "executor_reports": [],
@@ -297,6 +309,12 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
 
             payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
             self.assertEqual(payload["source_candidate_id"], "candidate-1")
+            self.assertEqual(payload["outcome"], "promoted")
+            self.assertEqual(payload["promotion_report"], f"runs/{run_id}/promotion-report.json")
+            self.assertEqual(
+                payload["changed_files_manifest"],
+                f"runs/{run_id}/changed-files-manifest.json",
+            )
             metadata_properties = payload["metadata"]["properties"]
             embedded_envelopes = [
                 json.loads(item["value"])
@@ -588,6 +606,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 run_id,
                 role="provenance-auditor",
                 status="fail",
+                include_role=False,
             )
             session: dict[str, Any] = {
                 "iterations": [],
@@ -998,6 +1017,347 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertTrue(payload["strict_secondary_improvement_present"])
             self.assertEqual(payload["secondary_improvement_axes"], ["lint"])
 
+    def test_write_iteration_telemetry_records_same_eval_secondary_evidence_from_promotion_path(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-same-eval-report-evidence"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            baseline_rel = f"runs/{run_id}/baseline-mechanism-assessment.json"
+            candidate_rel = f"runs/{run_id}/candidate-mechanism-assessment.json"
+            for rel, branch_count in ((baseline_rel, 6), (candidate_rel, 5)):
+                metrics = {
+                    "nonempty_line_count_total": 30,
+                    "python_function_count": 4,
+                    "python_branch_node_count": branch_count,
+                    "markdown_heading_count": 0,
+                    "test_file_count": 1,
+                    "test_case_count": 4,
+                }
+                (vault / rel).write_text(json.dumps({"structural_metrics": metrics, "total_structural_metrics": metrics}), encoding="utf-8")
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "decision": "PROMOTE",
+                        "inputs": {
+                            "baseline_mechanism_report": baseline_rel,
+                            "candidate_mechanism_report": candidate_rel,
+                        },
+                        "checks": [
+                            {"id": "eval_score_improves", "status": "WARN", "detail": "baseline=10, candidate=10"},
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "PASS",
+                                "detail": (
+                                    "allowed=true, score_equal=true, "
+                                    "selected_axes=['lint', 'complexity', 'tests'], "
+                                    "selected_non_regression=true, selected_any_improvement=true"
+                                ),
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={"decision": "PROMOTE", "promotion_report": promotion_rel},
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["same_eval_reason_code"], "unknown")
+            self.assertTrue(payload["strict_secondary_improvement_present"])
+            self.assertEqual(payload["secondary_improvement_axes"], ["complexity"])
+
+    def test_write_iteration_telemetry_does_not_carry_stale_same_eval_fields_for_improved_score(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-improved-score"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (run_dir / "run-telemetry.json").write_text(
+                json.dumps(
+                    {
+                        "same_eval_reason": "previous equal-score lint improvement",
+                        "same_eval_reason_code": "telemetry_discoverability_improved",
+                        "strict_secondary_improvement_present": True,
+                        "secondary_improvement_axes": ["lint"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {"id": "eval_score_improves", "status": "PASS", "detail": "baseline=10, candidate=11"},
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "WARN",
+                                "detail": "allowed=true, score_equal=false, selected_axes=['lint']",
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={"decision": "PROMOTE", "promotion_report": promotion_rel},
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertNotIn("same_eval_reason", payload)
+            self.assertNotIn("same_eval_reason_code", payload)
+            self.assertNotIn("strict_secondary_improvement_present", payload)
+            self.assertNotIn("secondary_improvement_axes", payload)
+
+    def test_write_iteration_telemetry_rejects_unnamed_improved_axes_from_current_promotion_report(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-same-eval-current-report-authority"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (run_dir / "run-telemetry.json").write_text(
+                json.dumps(
+                    {
+                        "same_eval": {
+                            "strict_secondary_improvement_present": True,
+                            "secondary_improvement_axes": ["lint"],
+                        },
+                        "strict_secondary_improvement_present": True,
+                        "secondary_improvement_axes": ["lint"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {"id": "eval_score_improves", "status": "WARN", "detail": "baseline=10, candidate=10"},
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "PASS",
+                                "detail": (
+                                    "allowed=true, score_equal=true, selected_axes=['lint'], "
+                                    "selected_non_regression=true, selected_any_improvement=true"
+                                ),
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={
+                        "decision": "PROMOTE",
+                        "promotion_report": promotion_rel,
+                        "same_eval_reason": "same eval promotion report lacks secondary improvement",
+                        "same_eval": {
+                            "strict_secondary_improvement_present": True,
+                            "secondary_improvement_axes": ["tests"],
+                        },
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["same_eval_reason"],
+                "same eval promotion report lacks secondary improvement",
+            )
+            self.assertFalse(payload["strict_secondary_improvement_present"])
+            self.assertEqual(payload["secondary_improvement_axes"], [])
+
+    def test_write_iteration_telemetry_rejects_warn_equal_score_secondary_regression(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-same-eval-secondary-regression"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {"id": "eval_score_improves", "status": "WARN", "detail": "baseline=10, candidate=10"},
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "WARN",
+                                "detail": (
+                                    "allowed=true, score_equal=true, selected_axes=['lint'], "
+                                    "selected_non_regression=false, selected_any_improvement=true"
+                                ),
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={
+                        "decision": "PROMOTE",
+                        "promotion_report": promotion_rel,
+                        "same_eval_reason": "same eval promotion report has secondary regression",
+                        "same_eval": {
+                            "strict_secondary_improvement_present": True,
+                            "secondary_improvement_axes": ["tests"],
+                        },
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["same_eval_reason"],
+                "same eval promotion report has secondary regression",
+            )
+            self.assertFalse(payload["strict_secondary_improvement_present"])
+            self.assertEqual(payload["secondary_improvement_axes"], [])
+
+    def test_write_iteration_telemetry_rejects_cross_run_same_eval_promotion_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-same-eval-current"
+            other_run_id = "auto-session-run-same-eval-other"
+            (vault / "runs" / run_id).mkdir(parents=True)
+            other_run_dir = vault / "runs" / other_run_id
+            other_run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{other_run_id}/promotion-report.json"
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": other_run_id,
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {
+                                "id": "equal_score_secondary_eligibility",
+                                "status": "PASS",
+                                "detail": (
+                                    "allowed=true, score_equal=true, selected_axes=['lint'], "
+                                    "selected_non_regression=true, selected_any_improvement=true"
+                                ),
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={"decision": "PROMOTE", "promotion_report": promotion_rel},
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertNotIn("same_eval_reason_code", payload)
+            self.assertNotIn("strict_secondary_improvement_present", payload)
+            self.assertNotIn("secondary_improvement_axes", payload)
+
     def test_write_iteration_telemetry_recovers_decision_record_from_promotion_report_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -1197,9 +1557,9 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                     "tests_non_regression": "PASS",
                 },
             )
-            self.assertEqual(payload["failure_taxonomy"], "structural_complexity_non_regression")
+            self.assertEqual(payload["failure_taxonomy"], "equal_score_secondary_eligibility")
             self.assertEqual(
-                evidence["blocking_check_ids"], ["structural_complexity_non_regression"]
+                evidence["blocking_check_ids"], ["equal_score_secondary_eligibility"]
             )
             self.assertEqual(
                 evidence["decision_record_reason_code"],
@@ -1319,6 +1679,105 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertEqual(payload["failure_taxonomy"], "equal_score_secondary_eligibility")
             self.assertEqual(evidence["blocking_check_ids"], ["equal_score_secondary_eligibility"])
             self.assertEqual(evidence["non_regression_check_statuses"]["eval_score_improves"], "WARN")
+
+    def test_write_iteration_telemetry_reclassifies_only_legacy_candidate_gate_detail(
+        self,
+    ) -> None:
+        cases = [
+            (
+                "legacy",
+                "allowed=true, score_equal=true, selected_non_regression=true, "
+                "selected_any_improvement=true",
+                "equal_score_secondary_eligibility",
+                ["equal_score_secondary_eligibility"],
+            ),
+            (
+                "current-rejected",
+                "allowed=true, score_equal=true, selected_non_regression=true, "
+                "selected_any_improvement=true, candidate_eval_accepted=false",
+                "candidate_eval_pass",
+                ["candidate_eval_pass"],
+            ),
+        ]
+        for label, detail, expected_taxonomy, expected_blockers in cases:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                vault = Path(temp_dir) / "vault"
+                vault.mkdir()
+                seed_minimal_vault(vault)
+                run_id = f"auto-session-run-discard-evidence-{label}"
+                run_dir = vault / "runs" / run_id
+                run_dir.mkdir(parents=True)
+                promotion_rel = f"runs/{run_id}/promotion-report.json"
+                contract = reduce_decision_proposals(
+                    [
+                        {
+                            "rule_id": "candidate_eval_pass",
+                            "decision": "DISCARD",
+                            "evidence_refs": ["candidate_eval_pass"],
+                        }
+                    ],
+                    subject_id=run_id,
+                    subject_kind="system_mechanism",
+                    policy_version=1,
+                    source_pass="system_mechanism",
+                    signoff={"required": False, "status": "not_required"},
+                )
+                (vault / promotion_rel).write_text(
+                    json.dumps(
+                        {
+                            "run_id": run_id,
+                            "decision": "DISCARD",
+                            "checks": [
+                                {"id": "candidate_lint_pass", "status": "PASS"},
+                                {"id": "candidate_eval_pass", "status": "FAIL"},
+                                {"id": "eval_score_improves", "status": "WARN"},
+                                {"id": "lint_non_regression", "status": "PASS"},
+                                {"id": "structural_complexity_non_regression", "status": "PASS"},
+                                {"id": "tests_non_regression", "status": "PASS"},
+                                {
+                                    "id": "equal_score_secondary_eligibility",
+                                    "status": "WARN",
+                                    "detail": detail,
+                                },
+                            ],
+                            "decision_record": contract["decision_record"],
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
+
+                rel_path = write_iteration_telemetry(
+                    request=IterationTelemetryRequest(
+                        vault=vault,
+                        run_id=run_id,
+                        session_id="auto-session",
+                        proposal={"proposal_id": "proposal-1"},
+                        scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                        routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                        roles=["worker"],
+                        phase_durations={"routing": 0.1, "experiment": 0.2},
+                        outcome="discarded",
+                        result={
+                            "decision": "DISCARD",
+                            "promotion_report": promotion_rel,
+                            "finalized": True,
+                            "finalize_result": {"run_id": run_id},
+                        },
+                        context=_context(),
+                    )
+                )
+
+                payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+                evidence = payload["discard_non_regression_evidence"]
+                self.assertEqual(payload["failure_taxonomy"], expected_taxonomy)
+                self.assertEqual(evidence["blocking_check_ids"], expected_blockers)
+                self.assertEqual(evidence["decision_record_reason_code"], "candidate_eval_pass")
+                self.assertEqual(
+                    evidence["non_regression_check_statuses"]["candidate_eval_pass"],
+                    "FAIL",
+                )
 
     def test_write_iteration_telemetry_ignores_discard_evidence_when_outcome_is_not_discarded(
         self,
@@ -1718,12 +2177,21 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             captured["request"] = request
             return expected
 
+        scope_freeze = {
+            "status": "ready",
+            "resolution": {"test_files": ["tests/test_example.py"]},
+            "inputs": {
+                "primary_targets": ["ops/scripts/example.py"],
+                "supporting_targets": ["tests/test_example.py"],
+            },
+        }
+
         result = execute_evaluate_iteration_phase(
             Path("/tmp/vault"),
             Path("ops/policies/wiki-maintainer-policy.yaml"),
             run_id="auto-session-run-01",
             proposal={"proposal_id": "proposal-1"},
-            scope_freeze={"status": "ready", "resolution": {"test_files": ["tests/test_example.py"]}},
+            scope_freeze=scope_freeze,
             scope_freeze_rel="runs/auto-session-run-01/scope-freeze.json",
             roles=["worker", "validator"],
             routing_report_rels=[
@@ -1742,6 +2210,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
         request = captured["request"]
         self.assertEqual(request.run_id, "auto-session-run-01")
         self.assertEqual(request.proposal["proposal_id"], "proposal-1")
+        self.assertEqual(request.scope_freeze, scope_freeze)
         self.assertEqual(request.proposal_report_path, "ops/reports/mutation-proposals.json")
         self.assertEqual(request.roles, ["worker", "validator"])
         self.assertEqual(
@@ -1888,6 +2357,27 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 candidate_id="",
                 decision_reason="scope_freeze_status",
             )
+
+    def test_record_selected_proposal_uses_attempt_suffix_when_run_dir_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "runs" / "auto-session-run-01").mkdir(parents=True)
+            session = {"attempted_proposal_ids": [], "run_ids": []}
+            attempted: set[str] = set()
+
+            run_id = auto_improve_iteration_runtime._record_selected_proposal(
+                vault,
+                session,
+                attempted,
+                session_id="auto-session",
+                iteration=1,
+                proposal={"proposal_id": "proposal-1"},
+                build_run_id=lambda *_args: "auto-session-run-01",
+            )
+
+        self.assertEqual(run_id, "auto-session-run-01-attempt-02")
+        self.assertEqual(session["run_ids"], ["auto-session-run-01-attempt-02"])
+        self.assertEqual(session["attempted_proposal_ids"], ["proposal-1"])
 
     def test_run_auto_improve_iteration_stops_on_retryable_executor_usage_limit(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

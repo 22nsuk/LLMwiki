@@ -11,26 +11,32 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 import pytest
-from ops.scripts.artifact_freshness_runtime import (
+
+from ops.scripts.core.artifact_freshness_runtime import (
     ArtifactFreshnessContext,
     build_canonical_report_envelope,
     build_report,
     write_report,
 )
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.generated_artifact_index import (
+from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.generated_artifact_index import (
     build_report as build_generated_artifact_index,
     write_report as write_generated_artifact_index,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-from ops.scripts.test_execution_summary import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
+from ops.scripts.release.external_report_action_matrix import (
+    build_report as build_external_report_action_matrix,
+    write_report as write_external_report_action_matrix,
+)
+from ops.scripts.test.test_execution_summary import (
     build_report as build_test_execution_summary,
     write_report as write_test_execution_summary,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -174,9 +180,10 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertTrue(any(event["phase"] == "json_schema_validation" for event in progress_events))
             self.assertTrue(report["phase_timings"])
             self.assertTrue(any(item["phase"] == "json_schema_validation" for item in report["phase_timings"]))
+            self.assertTrue(any(item["elapsed_seconds"] > 0 for item in report["phase_timings"]))
             self.assertEqual(validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)), [])
 
-    def test_phase_timings_do_not_make_canonical_report_nondeterministic(self) -> None:
+    def test_default_phase_timings_do_not_make_canonical_report_nondeterministic(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -185,6 +192,41 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             first = build_report(vault, context=fixed_context())
             second = build_report(vault, context=fixed_context())
 
+            self.assertEqual(first, second)
+            self.assertTrue(first["phase_timings"])
+            self.assertTrue(
+                all(item["elapsed_seconds"] == 0.0 for item in first["phase_timings"])
+            )
+            self.assertEqual(validate_with_schema(first, load_schema(REPORT_SCHEMA_PATH)), [])
+
+    def test_stable_jsonl_progress_emits_heartbeat_without_timing_churn(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                first = build_report(
+                    vault,
+                    context=fixed_context(),
+                    progress="jsonl-stable",
+                )
+                second = build_report(
+                    vault,
+                    context=fixed_context(),
+                    progress="jsonl-stable",
+                )
+
+            progress_events = [
+                json.loads(line)
+                for line in stderr.getvalue().splitlines()
+                if line.strip()
+            ]
+            self.assertTrue(progress_events)
+            self.assertTrue(
+                any(event["phase"] == "json_schema_validation" for event in progress_events)
+            )
             self.assertEqual(first, second)
             self.assertTrue(first["phase_timings"])
             self.assertTrue(
@@ -315,6 +357,95 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["summary"]["stale_artifact_count"], 0)
             self.assertEqual(report["summary"]["mtime_sensitive_artifact_count"], 1)
             self.assertEqual(report["summary"]["mtime_sensitive_attention_artifact_count"], 1)
+
+    def test_source_current_producer_input_fingerprint_drift_is_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            action_matrix = build_external_report_action_matrix(
+                vault,
+                context=fixed_context(),
+            )
+            action_matrix_path = write_external_report_action_matrix(vault, action_matrix)
+            action_matrix["input_fingerprints"] = {
+                **action_matrix["input_fingerprints"],
+                "action_catalog": "stale-fingerprint",
+            }
+            action_matrix_path.write_text(
+                json.dumps(action_matrix, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            generated_index = build_generated_artifact_index(vault, context=fixed_context())
+            generated_index_path = write_generated_artifact_index(vault, generated_index)
+            generated_index["input_fingerprints"] = {
+                **generated_index["input_fingerprints"],
+                "external_report_action_matrix_statuses": "stale-fingerprint",
+            }
+            generated_index_path.write_text(
+                json.dumps(generated_index, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            report = build_report(
+                vault,
+                context=fixed_context(),
+                mtime_source="embedded_currentness",
+            )
+            schema = load_schema(REPORT_SCHEMA_PATH)
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "attention")
+            self.assertEqual(report["gate_effect"], "claim_blocker")
+            self.assertGreaterEqual(report["summary"]["stale_artifact_count"], 2)
+            self.assertGreaterEqual(
+                report["summary"]["operational_attention_artifact_count"],
+                2,
+            )
+
+            records = {
+                record["path"]: record
+                for record in report["artifact_records"]
+                if record["path"]
+                in {
+                    "ops/reports/external-report-action-matrix.json",
+                    "ops/reports/generated-artifact-index.json",
+                }
+            }
+            expected = {
+                "ops/reports/external-report-action-matrix.json": "action_catalog",
+                "ops/reports/generated-artifact-index.json": (
+                    "external_report_action_matrix_statuses"
+                ),
+            }
+            self.assertEqual(set(records), set(expected))
+            for path, expected_key in expected.items():
+                with self.subTest(path=path):
+                    record = records[path]
+                    self.assertEqual(record["source_revision_status"], "current")
+                    self.assertEqual(record["source_tree_fingerprint_status"], "current")
+                    self.assertEqual(record["input_fingerprint_status"], "stale")
+                    self.assertEqual(
+                        record["input_fingerprint_mismatch_keys"],
+                        [expected_key],
+                    )
+                    self.assertEqual(record["currentness_status"], "stale")
+                    self.assertIn(
+                        f"input_fingerprint_mismatch:{expected_key}",
+                        record["issues"],
+                    )
+                    self.assertEqual(
+                        record["contract_issue_class"],
+                        "operational_attention",
+                    )
+                    self.assertEqual(record["gate_effect"], "claim_blocker")
+                    self.assertEqual(
+                        record["recommended_next_action"],
+                        "regenerate_canonical_report",
+                    )
+                    self.assertFalse(record["safe_to_backfill"])
 
     def test_zip_info_mtime_source_uses_archive_metadata_instead_of_filesystem_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -787,6 +918,25 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["gate_effect"], "claim_blocker")
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
+            self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
+            self.assertEqual(
+                report["stale_routing"]["recommended_lane"],
+                "freshness-source-identity-converge",
+            )
+            self.assertEqual(
+                report["stale_routing"]["recommended_targets"],
+                ["freshness-source-identity-converge"],
+            )
+            self.assertEqual(report["stale_routing"]["source_identity_only_artifact_count"], 1)
+            self.assertEqual(report["stale_routing"]["execution_blocking_artifact_count"], 0)
+            self.assertEqual(
+                report["stale_routing"]["source_identity_owner_routes"][0]["recommended_lane"],
+                "public-check-summary-current-or-refresh",
+            )
+            self.assertEqual(
+                report["stale_routing"]["source_identity_owner_routes"][0]["artifact_kinds"],
+                ["public_check_summary"],
+            )
 
     def test_canonical_report_source_revision_mismatch_overrides_self_declared_currentness(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -849,6 +999,17 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["gate_effect"], "claim_blocker")
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
+            self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
+            self.assertEqual(
+                report["stale_routing"]["recommended_lane"],
+                "freshness-source-identity-converge",
+            )
+            self.assertEqual(report["stale_routing"]["source_identity_only_artifact_count"], 1)
+            self.assertEqual(report["stale_routing"]["source_identity_only_issue_count"], 1)
+            self.assertEqual(
+                report["stale_routing"]["source_identity_owner_routes"][0]["recommended_targets"],
+                ["public-check-summary-current-or-refresh"],
+            )
 
     def test_learning_readiness_signoff_source_identity_drift_points_to_refresh_owner(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -906,6 +1067,53 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertIn("source_tree_fingerprint_mismatch", record["issues"])
             self.assertIn("source_revision_mismatch", record["issues"])
             self.assertEqual(record["recommended_next_action"], "refresh_learning_readiness_signoff")
+            self.assertEqual(report["stale_routing"]["classification"], "source_identity_only")
+            self.assertEqual(
+                report["stale_routing"]["recommended_lane"],
+                "freshness-source-identity-converge",
+            )
+
+    def test_finality_attestation_is_finality_owned_not_freshness_debt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            finality_path = vault / "ops" / "reports" / "release-closeout-finality-attestation.json"
+            finality_path.parent.mkdir(parents=True, exist_ok=True)
+            finality_path.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/release-closeout-finality-attestation.schema.json",
+                        "artifact_kind": "release_closeout_finality_attestation",
+                        "generated_at": "2000-01-01T00:00:00Z",
+                        "producer": "ops.scripts.release_closeout_finality_attestation",
+                        "source_command": "python -m ops.scripts.release_closeout_finality_attestation --vault .",
+                        "source_revision": "old-revision",
+                        "source_tree_fingerprint": "old-source-tree",
+                        "input_fingerprints": {},
+                        "schema_version": 1,
+                        "artifact_status": "current",
+                        "retention_policy": "canonical_report",
+                        "encoding": "utf-8",
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2000-01-01T00:00:00Z",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+            schema = load_schema(REPORT_SCHEMA_PATH)
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["stale_routing"]["classification"], "clean")
+            self.assertNotIn(
+                "ops/reports/release-closeout-finality-attestation.json",
+                {record["path"] for record in report["artifact_records"]},
+            )
 
     def test_active_run_auxiliary_json_is_not_canonical_release_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

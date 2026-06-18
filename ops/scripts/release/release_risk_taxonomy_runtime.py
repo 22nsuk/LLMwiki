@@ -3,8 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagnostics
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
+    load_optional_json_object_with_diagnostics,
+)
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
 )

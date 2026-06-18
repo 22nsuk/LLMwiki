@@ -30,7 +30,17 @@ USER_EXPORT_OUTPUT_OPTION_OVERRIDES = frozenset(
         "ops/scripts/public/export_public_repo.py",
     }
 )
+FIXED_REPO_ARTIFACT_WRITER_OVERRIDES = frozenset(
+    {
+        "ops/scripts/mechanism/mechanism_contract_eval.py",
+    }
+)
 SOURCE_TREE_INCLUDED_PREFIXES = ("ops/scripts",)
+NON_PATH_STATUS_OUTPUT_OPTIONS = frozenset(
+    {
+        "--last-command-timed-out",
+    }
+)
 
 
 def _script_files(vault: Path) -> list[Path]:
@@ -89,6 +99,8 @@ def _output_option_names(tree: ast.AST) -> list[str]:
         for arg in node.args:
             if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
                 continue
+            if arg.value in NON_PATH_STATUS_OUTPUT_OPTIONS:
+                continue
             if arg.value == "--out" or arg.value.endswith("-out"):
                 options.add(arg.value)
     return sorted(options)
@@ -107,6 +119,8 @@ def _classification(
         return "user_export", "uses permissive user export resolver"
     if references_resolve_repo_output_path:
         return "repo_artifact", "uses repo artifact resolver"
+    if rel_path in FIXED_REPO_ARTIFACT_WRITER_OVERRIDES:
+        return "repo_artifact", "writes fixed run artifacts without a configurable output path"
     if output_options:
         if rel_path in USER_EXPORT_OUTPUT_OPTION_OVERRIDES:
             return "user_export", "output option is an intentional user export surface"

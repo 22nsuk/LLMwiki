@@ -120,6 +120,10 @@
       "type": "string",
       "pattern": "^(unknown|[0-9a-f]{64})$"
     },
+    "semanticDigest": {
+      "type": "string",
+      "pattern": "^(unknown|missing|[0-9a-f]{64})$"
+    },
     "inputReport": {
       "type": "object",
       "additionalProperties": false,
@@ -143,6 +147,9 @@
         "baseline_digest",
         "current_digest",
         "digest_status",
+        "baseline_semantic_digest",
+        "current_semantic_digest",
+        "semantic_digest_status",
         "source_tree_fingerprint",
         "source_tree_status",
         "schema_validation_status",
@@ -169,6 +176,16 @@
         "digest_status": {
           "type": "string",
           "enum": ["current", "changed"]
+        },
+        "baseline_semantic_digest": {
+          "$ref": "#/$defs/semanticDigest"
+        },
+        "current_semantic_digest": {
+          "$ref": "#/$defs/semanticDigest"
+        },
+        "semantic_digest_status": {
+          "type": "string",
+          "enum": ["current", "changed", "unknown"]
         },
         "source_tree_fingerprint": { "type": "string" },
         "source_tree_status": {

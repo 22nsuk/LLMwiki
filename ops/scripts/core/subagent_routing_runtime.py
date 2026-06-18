@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.mechanism_assess import (
+from ops.scripts.mechanism.mechanism_assess import (
     MechanismAssessmentState,
     build_structural_metrics,
     complexity_dimension_evidence,

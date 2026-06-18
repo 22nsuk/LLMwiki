@@ -5,12 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
-from ops.scripts.behavior_delta_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+)
+from ops.scripts.core.behavior_delta_runtime import (
+    BehaviorDeltaRequest,
     build_behavior_delta_report,
     write_behavior_delta_report,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 
@@ -19,7 +21,68 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _minimal_behavior_delta_request(root: Path) -> BehaviorDeltaRequest:
+    run_id = "run-behavior-request"
+    input_artifacts = {
+        "baseline_eval_report": f"runs/{run_id}/baseline-eval.json",
+        "candidate_eval_report": f"runs/{run_id}/candidate-eval.json",
+        "baseline_lint_report": f"runs/{run_id}/baseline-lint.json",
+        "candidate_lint_report": f"runs/{run_id}/candidate-lint.json",
+        "baseline_mechanism_report": f"runs/{run_id}/baseline-mechanism-assessment.json",
+        "candidate_mechanism_report": f"runs/{run_id}/candidate-mechanism-assessment.json",
+        "changed_files_manifest": f"runs/{run_id}/changed-files-manifest.json",
+    }
+    return BehaviorDeltaRequest(
+        baseline_root=root / "vault",
+        candidate_root=root / "workspace",
+        run_id=run_id,
+        generated_at="2026-04-16T00:00:00Z",
+        policy_path="ops/policies/wiki-maintainer-policy.yaml",
+        policy={"version": 1},
+        primary_targets=[],
+        supporting_targets=[],
+        test_files=[],
+        input_artifacts=input_artifacts,
+        changed_files_manifest={
+            "$schema": "ops/schemas/changed-files-manifest.schema.json",
+            "run_id": run_id,
+            "generated_at": "2026-04-16T00:00:00Z",
+            "declared_targets": {
+                "primary_targets": [],
+                "supporting_targets": [],
+                "test_files": [],
+            },
+            "summary": {
+                "total_changed_files": 0,
+                "added": 0,
+                "modified": 0,
+                "deleted": 0,
+            },
+            "files": [],
+        },
+    )
+
+
 class BehaviorDeltaRuntimeTest(unittest.TestCase):
+    def test_build_behavior_delta_report_accepts_request_object(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            request = _minimal_behavior_delta_request(Path(tmp))
+
+            report = build_behavior_delta_report(request)
+
+            self.assertEqual(report["run_id"], "run-behavior-request")
+            self.assertEqual(report["summary"]["changed_file_count"], 0)
+
+    def test_build_behavior_delta_report_rejects_mixed_request_and_legacy_kwargs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            request = _minimal_behavior_delta_request(Path(tmp))
+
+            with self.assertRaisesRegex(
+                TypeError,
+                "request cannot be combined with legacy keyword arguments: run_id",
+            ):
+                build_behavior_delta_report(request, run_id="override")
+
     def test_builds_deterministic_symbol_delta_and_writes_schema_valid_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

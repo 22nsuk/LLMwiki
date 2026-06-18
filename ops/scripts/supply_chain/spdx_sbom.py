@@ -9,30 +9,30 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.schema_constants_runtime import SPDX_SBOM_DRAFT_SCHEMA_PATH
-    from ops.scripts.supply_chain_artifact_model import build_model
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.schema_constants_runtime import SPDX_SBOM_DRAFT_SCHEMA_PATH
+    from ops.scripts.supply_chain.supply_chain_artifact_model import build_model
 else:
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.schema_constants_runtime import SPDX_SBOM_DRAFT_SCHEMA_PATH
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy
+    from ops.scripts.core.schema_constants_runtime import SPDX_SBOM_DRAFT_SCHEMA_PATH
 
     from .supply_chain_artifact_model import build_model
 
@@ -159,9 +159,9 @@ def build_spdx_sbom(
         resolved_policy_path=resolved_policy_path,
         schema_path=SPDX_SBOM_DRAFT_SCHEMA_PATH,
         source_paths=[
-            "ops/scripts/spdx_sbom.py",
-            "ops/scripts/supply_chain_artifact_model.py",
-            "ops/scripts/artifact_freshness_runtime.py",
+            "ops/scripts/supply_chain/spdx_sbom.py",
+            "ops/scripts/supply_chain/supply_chain_artifact_model.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
         ],
         text_inputs={
             "artifact_model_generated_at": str(model.get("generated_at", "")),

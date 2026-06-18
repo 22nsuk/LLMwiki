@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ops.scripts.learning_claim_unlock_review import (
+from ops.scripts.learning.learning_claim_unlock_review import (
     AutoPolicyThresholds,
     _auto_policy_metric_predicates,
     _auto_policy_readiness_predicates,

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import (
     build_canonical_report_envelope,
     canonical_artifact_payload,
     canonical_report_loading_issue,
@@ -14,27 +14,29 @@ from ops.scripts.artifact_freshness_runtime import (
     load_zip_info_mtimes,
     mtime_for_artifact_source,
 )
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.core.gate_effect_vocabulary import (
+    GATE_EFFECT_ADVISORY,
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    canonical_gate_effect,
+)
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.release_currentness_state_runtime import (
     CURRENTNESS_DOMAIN_MODE_REUSABLE,
     currentness_classification_record,
     currentness_field,
 )
-from ops.scripts.gate_effect_vocabulary import (
-    GATE_EFFECT_ADVISORY,
-    GATE_EFFECT_BLOCKS_PROMOTION,
-    canonical_gate_effect,
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    RELEASE_EVIDENCE_COHORT_SCHEMA_PATH,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import RELEASE_EVIDENCE_COHORT_SCHEMA_PATH
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import (
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
     producer_input_fingerprint,
     release_source_tree_divergence_diagnostics,
     release_source_tree_fingerprint,

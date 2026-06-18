@@ -7,9 +7,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.compatibility_alias_deprecation import build_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
+from ops.scripts.core.compatibility_alias_deprecation import build_report
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -27,6 +28,9 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
             vault = Path(temp_dir)
             (vault / "mk").mkdir()
             (vault / "ops" / "scripts").mkdir(parents=True)
+            (vault / "ops" / "scripts" / "core").mkdir()
+            (vault / "ops" / "scripts" / "test").mkdir()
+            (vault / "tests").mkdir()
             (vault / "ops").mkdir(exist_ok=True)
             (vault / "Makefile").write_text("include mk/test.mk\n", encoding="utf-8")
             (vault / "mk" / "test.mk").write_text(
@@ -36,6 +40,23 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
             )
             (vault / "ops" / "scripts" / "__init__.py").write_text(
                 "class _ReexportFinder: pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "core" / "legacy_runtime.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "test" / "lane_runtime.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "core" / "unclassified_runtime.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_flat_caller.py").write_text(
+                "from ops.scripts.legacy_runtime import main\n"
+                "from ops.scripts.test.lane_runtime import main as canonical_main\n",
                 encoding="utf-8",
             )
             (vault / "ops" / "script-module-surfaces.json").write_text(
@@ -52,13 +73,88 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
+            (vault / "ops" / "script-lifecycle-policy.json").write_text(
+                json.dumps(
+                    {
+                        "modules": [
+                            {
+                                "canonical_module": "ops.scripts.test.lane_runtime",
+                                "path": "ops/scripts/test/lane_runtime.py",
+                                "lifecycle": "test_only",
+                                "install_state": "not_installed",
+                                "console_scripts": [],
+                                "replacement": "python -m ops.scripts.test.lane_runtime",
+                                "removal_ready": False,
+                                "rationale": "fixture lifecycle contract",
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
 
             report = build_report(vault, context=fixed_context())
 
         aliases = {(item["alias_type"], item["name"]) for item in report["aliases"]}
         self.assertIn(("make_target", "old-target"), aliases)
-        self.assertIn(("flat_import_reexport", "ops.scripts.<name>"), aliases)
+        self.assertIn(("flat_import_reexport", "ops.scripts.legacy_runtime"), aliases)
+        self.assertIn(("flat_import_reexport", "ops.scripts.lane_runtime"), aliases)
+        self.assertNotIn(("flat_import_reexport", "ops.scripts.unclassified_runtime"), aliases)
         self.assertIn(("stable_import_surface", "legacy_runtime"), aliases)
+        replacements = {
+            item["name"]: item["preferred_replacement"]
+            for item in report["aliases"]
+            if item["alias_type"] == "flat_import_reexport"
+        }
+        self.assertEqual(
+            replacements,
+            {
+                "ops.scripts.legacy_runtime": "ops.scripts.core.legacy_runtime",
+                "ops.scripts.lane_runtime": "ops.scripts.test.lane_runtime",
+            },
+        )
+        actual_caller_counts = {
+            item["name"]: item.get("actual_caller_count")
+            for item in report["aliases"]
+            if item["alias_type"] == "flat_import_reexport"
+        }
+        self.assertEqual(
+            actual_caller_counts,
+            {
+                "ops.scripts.legacy_runtime": 1,
+                "ops.scripts.lane_runtime": 0,
+            },
+        )
+        retained_reasons = {
+            item["name"]: item["retained_reason"]
+            for item in report["aliases"]
+            if item["alias_type"] == "flat_import_reexport"
+        }
+        self.assertEqual(
+            retained_reasons,
+            {
+                "ops.scripts.legacy_runtime": "declared_stable_compatibility_facade",
+                "ops.scripts.lane_runtime": "test_only_legacy_module_compatibility",
+            },
+        )
+        self.assertEqual(
+            report["flat_import_actual_callers"],
+            [
+                {
+                    "alias": "ops.scripts.legacy_runtime",
+                    "preferred_replacement": "ops.scripts.core.legacy_runtime",
+                    "path": "tests/test_flat_caller.py",
+                    "line": 1,
+                    "usage_kind": "from_import",
+                }
+            ],
+        )
+        self.assertEqual(report["summary"]["flat_import_reexport_count"], 2)
+        self.assertEqual(report["summary"]["flat_import_actual_caller_count"], 1)
+        self.assertEqual(report["summary"]["flat_import_actual_alias_count"], 1)
+        self.assertEqual(report["summary"]["stable_import_surface_count"], 1)
+        self.assertEqual(report["summary"]["make_alias_count"], 1)
         self.assertEqual(report["summary"]["removal_ready_count"], 0)
         self.assertEqual(
             validate_with_schema(report, load_schema("ops/schemas/compatibility-alias-deprecation.schema.json")),

@@ -26,8 +26,57 @@ Useful targets:
 - `make auto-improve-goal-finalize`
 - `make goal-runtime-pre-run-cleanup`
 - `make goal-runtime-between-run-settle`
+- `make goal-runtime-status-finalize`
+- `make goal-runtime-certificate-report`
 - `make goal-runtime-certificate`
 - `make goal-runtime-closeout`
+
+`goal-runtime-status-finalize` is the explicit mutating status writer for the
+certificate lane. It runs `auto-improve-goal-status`, then promotes the
+run-local `goal-run-status` snapshot to `ops/reports/goal-run-status.json`. The
+status generator preserves an existing terminal status and `completed_at` for
+the same run when no explicit replacement clock is provided, but operators
+should still bind `GOAL_RUN_ID` to the intended completed run and use
+`make auto-improve-goal-finalize` with `GOAL_FINAL_STATUS=completed` and
+`GOAL_COMPLETED_AT=<timestamp>` first when creating completion evidence.
+
+`goal-runtime-certificate-report` is the read-only certificate renderer with
+respect to goal runtime inputs: it reads the existing run-local goal contract
+and status report, then writes only the certificate candidate.
+`goal-runtime-certificate` promotes that certificate candidate to
+`ops/reports/goal-runtime-certificate.json`; it does not run
+`auto-improve-goal-status` and does not promote `goal-run-status`. For
+readback-only release checks, use the release auto-promotion check targets that
+read the current status and certificate instead of invoking status finalization.
+
+The status finalization and certificate publish targets share the same guard.
+They run a run-id guard before mutating evidence: if Make's default
+`GOAL_RUN_ID=auto-improve-trial` would overwrite canonical status or
+certificate evidence for another run, it fails and asks for an explicit
+`GOAL_RUN_ID=<completed-run-id>`.
+The canonical publish targets, including `goal-runtime-publish-snapshot` and
+`goal-runtime-publish-local-evidence`, use the same guard. Release freshness
+refreshes intentionally do not publish goal status snapshots or rewrite
+canonical goal prompt/contract surfaces; refresh the goal runtime lane with the
+intended explicit run ID when canonical status or certificate evidence needs to
+move.
+
+When artifact freshness reports the goal-runtime owner route with
+`GOAL_RUN_ID=<completed-run-id>`, select the completed goal session id, not the
+inner mechanism iteration run id. Use:
+
+```bash
+make goal-runtime-latest-successful-run-id
+make goal-runtime-publish-latest-successful-evidence
+```
+
+The selector only accepts a completed auto-improve session that contains a
+non-quarantined `PROMOTE` iteration with a matching `PROMOTE` promotion report
+and finalized `PROMOTE` run telemetry. The publish target resolves that session
+id and passes it as an explicit `GOAL_RUN_ID` to
+`goal-runtime-status-finalize`, `goal-runtime-publish-local-evidence`, and
+`goal-runtime-certificate`, so other operators do not need to hand-copy the
+placeholder command from artifact freshness.
 
 Default goal runs do not spend the remaining wall-clock budget after one
 promotion. `GOAL_POST_PROMOTE_MAINTENANCE_CYCLES ?= 1` keeps a single
@@ -193,12 +242,44 @@ surfaces or direct-script fallback entrypoints, and no longer carries
 generated-at, source-revision, source-tree-fingerprint, or currentness envelope
 fields in the tracked fixture.
 
-`release-finality-resettle` uses the generated-artifact finality suffix
-(`artifact-freshness -> external-report-action-matrix ->
-generated-artifact-index`), refreshes `release-closeout-summary-report`, then
-runs `release-closeout-fixed-point` and finality verify. Treat the finality
-verify as terminal: if any tracked report writer runs afterward, rerun
-`make release-finality-resettle` instead of hand-patching the attestation.
+`release-finality-resettle-current-or-refresh` first replay-checks current
+finality and reuses it when possible. When a refresh is needed,
+`release-finality-resettle` refreshes the sealed rehearsal authority with
+`release-authority-sealed-preflight`, then uses the generated-artifact finality
+suffix (`artifact-freshness -> external-report-action-matrix ->
+generated-artifact-index`), refreshes `release-closeout-summary-report`, runs
+`release-closeout-fixed-point`, and verifies finality. `release-closeout-fixed-point`
+owns the last action-matrix refresh before it writes the finality attestation:
+after the post-promote artifact-freshness bootstrap, it refreshes the action
+matrix readback and only then writes the attestation. No canonical report writer
+should run between that attestation and `release-closeout-finality-verify`. Treat
+the finality verify as terminal: if any finality-tracked report writer runs afterward, rerun
+`make release-finality-resettle-current-or-refresh` instead of hand-patching the attestation.
+Observation registry edits that change tracked source, including
+`ops/observation-closeout-registry.json`, must happen before this terminal seal.
+Open or planned observations remain registry-owned even when their artifact is
+generated/local-only; after finality, either keep only closed observations with
+resolution evidence in generated artifacts, or update the registry and restart
+the resettle lane so the source-tree fingerprint and finality evidence stay
+aligned.
+Within `release-closeout-fixed-point`, raw digests still prove convergence, but
+the next iteration's target list is selected from per-report semantic digest
+changes so envelope/currentness churn does not repeatedly schedule the expensive
+generated-artifact feedback suffix. When
+`generated-artifact-index-body`, `artifact-freshness`, or
+`external-report-action-matrix` is selected again, the fixed-point engine also
+reuses the existing writer output and records a skipped command result if that
+writer's input fingerprint, output semantic digest, and tracked-context semantic
+digest have not changed.
+If the terminal finality current check still fails after this reuse path,
+`release-finality-resettle-current-check` emits a non-mutating diagnosis from
+`release-finality-resettle-current-diagnose`. Its
+`failure_classification`, together with the batch replay verifier's
+`batch manifest replay mismatch classification` JSON, separates batch-manifest
+source freshness/content drift, freshness/index/cohort digest drift, sealed
+preflight drift, fixed-point tracked-writer drift, and attestation-only digest
+drift so operators can rerun the narrow writer or seal lane before choosing full
+`release-finality-resettle`.
 The workflow planner now records the generated-artifact fan-out explicitly in
 each selected step's `fanout_targets` field so the repair suffix is inspectable
 rather than implicit in Make recipes alone.

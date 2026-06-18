@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ops.scripts.validation_check_types_runtime import (
+from ops.scripts.core.validation_check_types_runtime import (
     ValidationCheckResult,
     validation_check,
 )

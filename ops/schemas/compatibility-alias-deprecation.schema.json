@@ -3,7 +3,7 @@
   "title": "Compatibility Alias Deprecation",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "aliases", "removal_ready_aliases"],
+  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "aliases", "flat_import_actual_callers", "removal_ready_aliases"],
   "properties": {
     "$schema": { "type": "string", "const": "ops/schemas/compatibility-alias-deprecation.schema.json" },
     "artifact_kind": { "type": "string", "const": "compatibility_alias_deprecation" },
@@ -13,14 +13,27 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["alias_count", "make_alias_count", "removal_ready_count"],
+      "required": [
+        "alias_count",
+        "make_alias_count",
+        "stable_import_surface_count",
+        "flat_import_reexport_count",
+        "flat_import_actual_caller_count",
+        "flat_import_actual_alias_count",
+        "removal_ready_count"
+      ],
       "properties": {
         "alias_count": { "type": "integer", "minimum": 0 },
         "make_alias_count": { "type": "integer", "minimum": 0 },
+        "stable_import_surface_count": { "type": "integer", "minimum": 0 },
+        "flat_import_reexport_count": { "type": "integer", "minimum": 0 },
+        "flat_import_actual_caller_count": { "type": "integer", "minimum": 0 },
+        "flat_import_actual_alias_count": { "type": "integer", "minimum": 0 },
         "removal_ready_count": { "type": "integer", "minimum": 0 }
       }
     },
     "aliases": { "type": "array", "items": { "$ref": "#/$defs/alias" } },
+    "flat_import_actual_callers": { "type": "array", "items": { "$ref": "#/$defs/flatImportCaller" } },
     "removal_ready_aliases": { "type": "array", "items": { "$ref": "#/$defs/alias" } }
   },
   "$defs": {
@@ -34,7 +47,20 @@
         "path": { "type": "string", "minLength": 1 },
         "preferred_replacement": { "type": "string" },
         "removal_ready": { "type": "boolean" },
-        "retained_reason": { "type": "string", "minLength": 1 }
+        "retained_reason": { "type": "string", "minLength": 1 },
+        "actual_caller_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "flatImportCaller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alias", "preferred_replacement", "path", "line", "usage_kind"],
+      "properties": {
+        "alias": { "type": "string", "minLength": 1 },
+        "preferred_replacement": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "line": { "type": "integer", "minimum": 1 },
+        "usage_kind": { "type": "string", "enum": ["import", "from_import", "from_package_import"] }
       }
     }
   }

@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.rule_registry_runtime import (
+from ops.scripts.core.rule_registry_runtime import (
     RuleMetadata,
     RuleSpec,
     configured_rule_metadata,
@@ -170,11 +170,25 @@ def _behavior_delta_presence_checks(ctx: _MechanismRuleRegistryContext) -> list[
 def _candidate_lint_pass_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
     state = ctx.state
     bundle = ctx.bundle
+    baseline_status = str(bundle.baseline_lint_report["status"])
+    candidate_status = str(bundle.candidate_lint_report["status"])
+    acceptance = (
+        "candidate_pass"
+        if state.candidate_lint_pass
+        else "baseline_fail_non_regression"
+        if state.candidate_lint_accepted
+        else "not_accepted"
+    )
     return [
         {
             "id": "candidate_lint_pass",
-            "status": "PASS" if state.candidate_lint_pass else "FAIL",
-            "detail": f"candidate lint status={bundle.candidate_lint_report['status']}",
+            "status": "PASS" if state.candidate_lint_accepted else "FAIL",
+            "detail": (
+                f"baseline lint status={baseline_status}, "
+                f"candidate lint status={candidate_status}, "
+                f"non_regression={str(state.lint_non_regression).lower()}, "
+                f"acceptance={acceptance}"
+            ),
         }
     ]
 
@@ -182,14 +196,23 @@ def _candidate_lint_pass_checks(ctx: _MechanismRuleRegistryContext) -> list[dict
 def _candidate_eval_pass_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
     state = ctx.state
     bundle = ctx.bundle
+    baseline_status = str(bundle.baseline_eval_report["status"])
+    candidate_status = str(bundle.candidate_eval_report["status"])
+    acceptance = "global_non_regression" if state.candidate_eval_accepted else "not_accepted"
     return [
         {
             "id": "candidate_eval_pass",
-            "status": "PASS" if state.candidate_eval_pass else "FAIL",
+            "status": "PASS" if state.candidate_eval_accepted else "FAIL",
             "detail": (
-                "candidate eval "
-                f"{bundle.candidate_eval_report['total_score']}/"
-                f"{bundle.candidate_eval_report['max_score']}"
+                "global wiki eval guard "
+                f"baseline status={baseline_status}, "
+                f"candidate status={candidate_status}, "
+                f"baseline={state.global_baseline_score}, "
+                f"candidate={state.global_candidate_score}, "
+                f"new_failures={state.global_eval_new_failure_count}, "
+                f"non_regression={str(state.global_eval_non_regression).lower()}, "
+                f"promotion_score_source={state.eval_score_source}, "
+                f"acceptance={acceptance}"
             ),
         }
     ]
@@ -201,7 +224,13 @@ def _eval_score_improves_checks(ctx: _MechanismRuleRegistryContext) -> list[dict
         {
             "id": "eval_score_improves",
             "status": state.improvement_check_status,
-            "detail": f"baseline={state.baseline_score}, candidate={state.candidate_score}",
+            "detail": (
+                f"source={state.eval_score_source}, "
+                f"baseline_report={state.baseline_score_report}, "
+                f"candidate_report={state.candidate_score_report}, "
+                f"baseline={state.baseline_score}, candidate={state.candidate_score}, "
+                f"candidate_status={'pass' if state.candidate_score_report_pass else 'fail'}"
+            ),
         }
     ]
 
@@ -268,6 +297,28 @@ def _structural_complexity_improves_checks(ctx: _MechanismRuleRegistryContext) -
     ]
 
 
+def _structural_regression_debt_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
+    state = ctx.state
+    debt_required = (
+        state.score_improves
+        and not state.structural_non_regression
+        and not state.tests_increase
+    )
+    return [
+        {
+            "id": "structural_regression_debt",
+            "status": "WARN" if debt_required else "PASS",
+            "detail": (
+                f"score_improves={str(state.score_improves).lower()}, "
+                f"structural_non_regression={str(state.structural_non_regression).lower()}, "
+                f"tests_increase={str(state.tests_increase).lower()}, "
+                f"failed_axes={state.failed_secondary_axes}, "
+                f"debt_observation_required={str(debt_required).lower()}"
+            ),
+        }
+    ]
+
+
 def _tests_non_regression_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
     state = ctx.state
     return [
@@ -275,8 +326,12 @@ def _tests_non_regression_checks(ctx: _MechanismRuleRegistryContext) -> list[dic
             "id": "tests_non_regression",
             "status": "PASS" if state.tests_non_regression else "FAIL",
             "detail": (
-                f"baseline=(files={state.baseline_test_file_count}, cases={state.baseline_test_case_count}), "
-                f"candidate=(files={state.candidate_test_file_count}, cases={state.candidate_test_case_count})"
+                f"baseline=(files={state.baseline_test_file_count}, "
+                f"cases={state.baseline_test_case_count}, "
+                f"guardrails={state.baseline_test_guardrail_count}), "
+                f"candidate=(files={state.candidate_test_file_count}, "
+                f"cases={state.candidate_test_case_count}, "
+                f"guardrails={state.candidate_test_guardrail_count})"
             ),
         }
     ]
@@ -289,8 +344,12 @@ def _tests_increase_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
             "id": "tests_increase",
             "status": "PASS" if state.tests_increase else "WARN",
             "detail": (
-                f"baseline=(files={state.baseline_test_file_count}, cases={state.baseline_test_case_count}), "
-                f"candidate=(files={state.candidate_test_file_count}, cases={state.candidate_test_case_count})"
+                f"baseline=(files={state.baseline_test_file_count}, "
+                f"cases={state.baseline_test_case_count}, "
+                f"guardrails={state.baseline_test_guardrail_count}), "
+                f"candidate=(files={state.candidate_test_file_count}, "
+                f"cases={state.candidate_test_case_count}, "
+                f"guardrails={state.candidate_test_guardrail_count})"
             ),
         }
     ]
@@ -334,9 +393,18 @@ def _equal_score_secondary_eligibility_checks(ctx: _MechanismRuleRegistryContext
             "detail": (
                 f"allowed={str(state.equal_score_allowed).lower()}, "
                 f"score_equal={str(state.score_equal).lower()}, "
+                f"score_source={state.eval_score_source}, "
                 f"selected_axes={state.selected_secondary_axes}, "
+                f"failed_axes={state.failed_secondary_axes}, "
+                f"improved_axes={state.improved_secondary_axes}, "
+                f"candidate_lint_accepted={str(state.candidate_lint_accepted).lower()}, "
+                f"candidate_eval_accepted={str(state.candidate_eval_accepted).lower()}, "
                 f"selected_non_regression={str(state.selected_non_regression).lower()}, "
-                f"selected_any_improvement={str(state.selected_any_improvement).lower()}"
+                f"selected_any_improvement={str(state.selected_any_improvement).lower()}, "
+                f"nonempty_line_growth={state.nonempty_line_growth}, "
+                f"added_test_functions={state.added_test_functions}, "
+                f"added_test_guardrails={state.added_test_guardrails}, "
+                f"allowed_line_growth={state.allowed_line_growth}"
             ),
         }
     ]
@@ -372,6 +440,7 @@ MECHANISM_RULE_EVALUATORS: dict[str, MechanismRuleEvaluator] = {
     "lint_improves": _lint_improves_checks,
     "structural_complexity_non_regression": _structural_complexity_non_regression_checks,
     "structural_complexity_improves": _structural_complexity_improves_checks,
+    "structural_regression_debt": _structural_regression_debt_checks,
     "tests_non_regression": _tests_non_regression_checks,
     "tests_increase": _tests_increase_checks,
     "complexity_profile_score": _complexity_profile_score_checks,

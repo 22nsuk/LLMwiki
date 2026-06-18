@@ -1,9 +1,14 @@
 {
-  "version": 5,
+  "version": 7,
   "max_iterations": 10,
   "feedback_refresh_targets": [
     "generated-artifact-index-body",
-    "artifact-freshness"
+    "artifact-freshness",
+    "external-report-action-matrix"
+  ],
+  "feedback_refresh_exempt_targets": [
+    "release-closeout-batch-manifest-promote",
+    "release-evidence-closeout-self-check"
   ],
   "cost_trend": {
     "retained_run_count": 10,
@@ -42,6 +47,13 @@
       "target": "artifact-freshness",
       "produces": ["ops/reports/artifact-freshness-report.json"],
       "depends_on": ["generated-artifact-index-body"],
+      "expensive_prerequisites_once": []
+    },
+    {
+      "name": "external-report-action-matrix",
+      "target": "external-report-action-matrix",
+      "produces": ["ops/reports/external-report-action-matrix.json"],
+      "depends_on": ["artifact-freshness"],
       "expensive_prerequisites_once": []
     },
     {

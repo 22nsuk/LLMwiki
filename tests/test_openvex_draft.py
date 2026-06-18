@@ -6,11 +6,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.cyclonedx_sbom import build_bom
-from ops.scripts.openvex_draft import build_openvex_draft, write_openvex_draft
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.supply_chain_artifact_model import build_model
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.supply_chain.cyclonedx_sbom import build_bom
+from ops.scripts.supply_chain.openvex_draft import (
+    build_openvex_draft,
+    write_openvex_draft,
+)
+from ops.scripts.supply_chain.supply_chain_artifact_model import build_model
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_provenance import (
     LOCKED_CI_INSTALL_SNIPPET,

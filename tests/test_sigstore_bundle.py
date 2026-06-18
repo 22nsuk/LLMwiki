@@ -7,20 +7,25 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.cyclonedx_sbom import build_bom, write_bom
-from ops.scripts.in_toto_statement import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.supply_chain.cyclonedx_sbom import build_bom, write_bom
+from ops.scripts.supply_chain.in_toto_statement import (
     build_in_toto_statement,
     write_in_toto_statement,
 )
-from ops.scripts.openvex_draft import build_openvex_draft, write_openvex_draft
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.sigstore_bundle import (
+from ops.scripts.supply_chain.openvex_draft import (
+    build_openvex_draft,
+    write_openvex_draft,
+)
+from ops.scripts.supply_chain.sigstore_bundle import (
     build_bundle_verification,
     write_bundle_verification,
 )
-from ops.scripts.spdx_sbom import build_spdx_sbom, write_spdx_sbom
-from ops.scripts.supply_chain_artifact_model import build_model, write_model
-
+from ops.scripts.supply_chain.spdx_sbom import build_spdx_sbom, write_spdx_sbom
+from ops.scripts.supply_chain.supply_chain_artifact_model import (
+    build_model,
+    write_model,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_artifact_model import seed_runtime_surface
 from tests.test_supply_chain_provenance import seed_dependency_inputs
@@ -31,6 +36,20 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.UTC),
     )
+
+
+def valid_sigstore_bundle_payload() -> dict[str, Any]:
+    return {
+        "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.3",
+        "verificationMaterial": {
+            "certificate": {"rawBytes": "ZmFrZS1jZXJ0"},
+            "tlogEntries": [],
+        },
+        "messageSignature": {
+            "messageDigest": {"algorithm": "SHA2_256", "digest": "ZmFrZS1kaWdlc3Q="},
+            "signature": "ZmFrZS1zaWduYXR1cmU=",
+        },
+    }
 
 
 class SigstoreBundleTests(unittest.TestCase):
@@ -80,7 +99,7 @@ class SigstoreBundleTests(unittest.TestCase):
             )
             self.assertTrue(any(item["path"] == "ops/reports/openvex-draft.json" for item in persisted["subjects"]))
 
-    def test_build_bundle_verification_requires_external_bundle_for_verified_status(self) -> None:
+    def test_build_bundle_verification_rejects_placeholder_bundle_ref(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -93,8 +112,85 @@ class SigstoreBundleTests(unittest.TestCase):
             destination = write_bundle_verification(vault, report, "ops/reports/sigstore-bundle-verification.json")
             persisted = json.loads(destination.read_text(encoding="utf-8"))
 
+            self.assertEqual(persisted["status"], "external-bundle-verification-failed")
+            self.assertEqual(persisted["bundle_ref"], "tmp/sigstore.bundle")
+            self.assertTrue(
+                next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "external_bundle_observed")
+            )
+            self.assertFalse(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "external_bundle_json_parseable"
+                )
+            )
+            self.assertFalse(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "external_bundle_has_sigstore_shape"
+                )
+            )
+
+    def test_build_bundle_verification_requires_sigstore_bundle_shape_for_verified_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            model = self._seed_supply_chain_reports(vault)
+            bundle = vault / "tmp" / "sigstore.bundle"
+            bundle.parent.mkdir(parents=True, exist_ok=True)
+            bundle.write_text(json.dumps(valid_sigstore_bundle_payload()), encoding="utf-8")
+
+            report = build_bundle_verification(vault, artifact_model=model, bundle_ref="tmp/sigstore.bundle")
+            destination = write_bundle_verification(vault, report, "ops/reports/sigstore-bundle-verification.json")
+            persisted = json.loads(destination.read_text(encoding="utf-8"))
+
             self.assertEqual(persisted["status"], "verified-external-bundle")
             self.assertEqual(persisted["bundle_ref"], "tmp/sigstore.bundle")
+            self.assertTrue(
+                next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "external_bundle_observed")
+            )
+            self.assertTrue(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "external_bundle_has_sigstore_shape"
+                )
+            )
+
+    def test_build_bundle_verification_rejects_omitted_in_toto_subject(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            model = self._seed_supply_chain_reports(vault)
+            statement_path = vault / "ops/reports/in-toto-statement.json"
+            statement = json.loads(statement_path.read_text(encoding="utf-8"))
+            statement["subject"] = [
+                item
+                for item in statement["subject"]
+                if item["name"] != "ops/reports/openvex-draft.json"
+            ]
+            statement_path.write_text(json.dumps(statement), encoding="utf-8")
+            bundle = vault / "tmp" / "sigstore.bundle"
+            bundle.parent.mkdir(parents=True, exist_ok=True)
+            bundle.write_text(json.dumps(valid_sigstore_bundle_payload()), encoding="utf-8")
+
+            report = build_bundle_verification(vault, artifact_model=model, bundle_ref="tmp/sigstore.bundle")
+            destination = write_bundle_verification(
+                vault,
+                report,
+                "ops/reports/sigstore-bundle-verification.json",
+            )
+            persisted = json.loads(destination.read_text(encoding="utf-8"))
+
+            self.assertEqual(persisted["status"], "external-bundle-verification-failed")
+            self.assertFalse(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "in_toto_subject_digests_match"
+                )
+            )
             self.assertTrue(
                 next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "external_bundle_observed")
             )
@@ -106,7 +202,7 @@ class SigstoreBundleTests(unittest.TestCase):
             model = self._seed_supply_chain_reports(vault)
             bundle = vault / "tmp" / "sigstore.bundle"
             bundle.parent.mkdir(parents=True, exist_ok=True)
-            bundle.write_text("placeholder external bundle reference\n", encoding="utf-8")
+            bundle.write_text(json.dumps(valid_sigstore_bundle_payload()), encoding="utf-8")
             (vault / "ops/reports/spdx-sbom.json").unlink()
 
             report = build_bundle_verification(vault, artifact_model=model, bundle_ref="tmp/sigstore.bundle")
@@ -120,6 +216,41 @@ class SigstoreBundleTests(unittest.TestCase):
             )
             self.assertTrue(
                 next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "external_bundle_observed")
+            )
+
+    def test_build_bundle_verification_preserves_partial_subjects_when_in_toto_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            model = self._seed_supply_chain_reports(vault)
+            (vault / "ops/reports/in-toto-statement.json").unlink()
+
+            report = build_bundle_verification(vault, artifact_model=model)
+            destination = write_bundle_verification(
+                vault,
+                report,
+                "ops/reports/sigstore-bundle-verification.json",
+            )
+            persisted = json.loads(destination.read_text(encoding="utf-8"))
+
+            self.assertEqual(persisted["status"], "local-integrity-only")
+            self.assertEqual(
+                {item["path"] for item in persisted["subjects"]},
+                {
+                    "ops/reports/cyclonedx-bom.json",
+                    "ops/reports/openvex-draft.json",
+                    "ops/reports/spdx-sbom.json",
+                },
+            )
+            self.assertFalse(
+                next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "subject_files_exist")
+            )
+            self.assertFalse(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "in_toto_subject_digests_match"
+                )
             )
 
 

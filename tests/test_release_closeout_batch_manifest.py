@@ -13,8 +13,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ops.scripts.release_audit_pack import build_audit_pack
-from ops.scripts.release_closeout_batch_manifest import (
+
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.wiki_manifest import release_manifest_excludes_path
+from ops.scripts.release.release_audit_pack import build_audit_pack
+from ops.scripts.release.release_closeout_batch_manifest import (
     ARCHIVE_SELF_DESCRIPTION_PATH,
     FINALITY_ATTESTATION_PATH,
     BatchArtifactInventory,
@@ -28,10 +32,6 @@ from ops.scripts.release_closeout_batch_manifest import (
     main,
     write_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.wiki_manifest import release_manifest_excludes_path
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.release_sealing]
@@ -41,6 +41,9 @@ BATCH_MANIFEST_SCHEMA_PATH = (
     REPO_ROOT / "ops" / "schemas" / "release-closeout-batch-manifest.schema.json"
 )
 BATCH_POLICY_PATH = REPO_ROOT / "ops" / "policies" / "release-closeout-batch.json"
+FIXED_POINT_POLICY_PATH = (
+    REPO_ROOT / "ops" / "policies" / "release-closeout-fixed-point.json"
+)
 
 
 def fixed_context() -> RuntimeContext:
@@ -120,6 +123,12 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         batch_policy_dest.parent.mkdir(parents=True, exist_ok=True)
         batch_policy_dest.write_text(
             BATCH_POLICY_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        fixed_point_policy_dest = (
+            self.vault / "ops" / "policies" / "release-closeout-fixed-point.json"
+        )
+        fixed_point_policy_dest.write_text(
+            FIXED_POINT_POLICY_PATH.read_text(encoding="utf-8"), encoding="utf-8"
         )
 
     def tearDown(self) -> None:
@@ -1004,17 +1013,85 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         edited_at = dt.datetime(2030, 1, 2, tzinfo=dt.UTC).timestamp()
         os.utime(source_path, (edited_at, edited_at))
 
-        exit_code = main(
-            [
-                "--vault",
-                self.vault.as_posix(),
-                "--out",
-                "ops/reports/test-batch-manifest.json",
-                "--check",
-            ]
-        )
+        stderr = io.StringIO()
+
+        with redirect_stderr(stderr):
+            exit_code = main(
+                [
+                    "--vault",
+                    self.vault.as_posix(),
+                    "--out",
+                    "ops/reports/test-batch-manifest.json",
+                    "--check",
+                ]
+            )
 
         self.assertEqual(exit_code, 1)
+        stderr_text = stderr.getvalue()
+        self.assertIn(
+            "batch manifest check failed: source files changed after "
+            "checked-in manifest generated_at",
+            stderr_text,
+        )
+        classification_line = stderr_text.split(
+            "batch manifest replay mismatch classification:\n",
+            maxsplit=1,
+        )[1].splitlines()[0]
+        classification = json.loads(classification_line)
+        self.assertEqual(
+            classification["primary_class"],
+            "batch_manifest_source_freshness_mismatch",
+        )
+        self.assertEqual(classification["source_freshness_status"], "fail")
+        self.assertIn(
+            "release-finality-resettle-current-or-refresh",
+            classification["recommended_targets"],
+        )
+
+    def test_check_manifest_classifies_content_drift_without_digest_drift(
+        self,
+    ) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        self._write_closeout_summary()
+        report = build_batch_manifest(
+            self.vault,
+            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.UTC)),
+        )
+        report["dependency_order"] = [
+            *report["dependency_order"],
+            "unexpected-local-metadata",
+        ]
+        write_report(self.vault, report, "ops/reports/test-batch-manifest.json")
+        stderr = io.StringIO()
+
+        with redirect_stderr(stderr):
+            exit_code = main(
+                [
+                    "--vault",
+                    self.vault.as_posix(),
+                    "--out",
+                    "ops/reports/test-batch-manifest.json",
+                    "--check",
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        stderr_text = stderr.getvalue()
+        self.assertIn("batch manifest check failed: content differs", stderr_text)
+        classification_line = stderr_text.split(
+            "batch manifest replay mismatch classification:\n",
+            maxsplit=1,
+        )[1].splitlines()[0]
+        classification = json.loads(classification_line)
+        self.assertEqual(
+            classification["primary_class"],
+            "batch_manifest_content_mismatch",
+        )
+        self.assertEqual(classification["digest_mismatches"], [])
+        self.assertIn(
+            "release-closeout-batch-manifest-promote",
+            classification["recommended_targets"],
+        )
 
     def test_check_manifest_fails_after_sealed_artifact_digest_drift(self) -> None:
         self._write_required_artifacts(currentness_status="current")
@@ -1052,8 +1129,72 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
             )
 
         self.assertEqual(exit_code, 1)
-        self.assertIn("artifact digest mismatches:", stderr.getvalue())
-        self.assertIn("ops/reports/release-evidence-dashboard.json", stderr.getvalue())
+        stderr_text = stderr.getvalue()
+        self.assertIn("artifact digest mismatches:", stderr_text)
+        self.assertIn("ops/reports/release-evidence-dashboard.json", stderr_text)
+        classification_line = stderr_text.split(
+            "batch manifest replay mismatch classification:\n",
+            maxsplit=1,
+        )[1].splitlines()[0]
+        classification = json.loads(classification_line)
+        self.assertEqual(
+            classification["primary_class"],
+            "fixed_point_tracked_writer_mismatch",
+        )
+        self.assertEqual(
+            classification["recommended_fixed_point_initial_targets"],
+            ["release-evidence-dashboard-report"],
+        )
+
+    def test_check_manifest_classifies_freshness_index_cohort_digest_drift(self) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        self._write_closeout_summary()
+        report = build_batch_manifest(
+            self.vault,
+            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.UTC)),
+        )
+        write_report(self.vault, report, "ops/reports/test-batch-manifest.json")
+        self._write_artifact(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "artifact_kind": "test_report",
+                "generated_at": "2026-05-02T08:00:00Z",
+                "producer": "test",
+                "source_tree_fingerprint": "changed",
+                "currentness": {"status": "current"},
+            },
+        )
+        stderr = io.StringIO()
+
+        with redirect_stderr(stderr):
+            exit_code = main(
+                [
+                    "--vault",
+                    self.vault.as_posix(),
+                    "--out",
+                    "ops/reports/test-batch-manifest.json",
+                    "--check",
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        classification_line = stderr.getvalue().split(
+            "batch manifest replay mismatch classification:\n",
+            maxsplit=1,
+        )[1].splitlines()[0]
+        classification = json.loads(classification_line)
+        self.assertEqual(
+            classification["primary_class"],
+            "batch_manifest_freshness_index_cohort_digest_mismatch",
+        )
+        self.assertEqual(
+            classification["recommended_fixed_point_initial_targets"],
+            ["artifact-freshness"],
+        )
+        self.assertNotIn(
+            "fixed_point_tracked_writer_mismatch",
+            classification["classes"],
+        )
 
     def test_batch_manifest_includes_dependency_order_from_policy(self) -> None:
         self._write_required_artifacts()

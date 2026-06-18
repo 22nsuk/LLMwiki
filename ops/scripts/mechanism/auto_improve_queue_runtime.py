@@ -19,7 +19,8 @@ def _normalized_blockers(proposal: dict) -> list[str]:
     ]
 
 
-def _recent_log_overlap_queue_unblock(proposal: dict, proposal_id: str) -> bool:
+def is_recent_log_overlap_queue_unblock(proposal: dict, proposal_id: str | None = None) -> bool:
+    proposal_id = _proposal_id(proposal) if proposal_id is None else str(proposal_id).strip()
     return (
         str(proposal.get("family", "")).strip() == "queue_unblock"
         and str(proposal.get("failure_mode", "")).strip()
@@ -74,7 +75,7 @@ def build_proposal_queue(
                 if not (
                     recent_log_overlap_unblock_enabled
                     and blocker_text == "recent_log_overlap"
-                    and _recent_log_overlap_queue_unblock(proposal, proposal_id)
+                    and is_recent_log_overlap_queue_unblock(proposal, proposal_id)
                 )
             ]
         )

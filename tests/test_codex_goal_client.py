@@ -8,8 +8,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.codex_goal_client import (
+
+from ops.scripts.core.codex_goal_client import (
     DEFAULT_CONTRACT_PATH,
+    AutoImproveGoalContractOptions,
     FakeGoalBackend,
     FileGoalBackend,
     GoalBackendUnavailableError,
@@ -23,7 +25,6 @@ from ops.scripts.codex_goal_client import (
     set_goal,
     update_goal,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 
@@ -111,7 +112,9 @@ class CodexGoalClientTests(unittest.TestCase):
             detect_goal_backend(contract_path="ops/reports/other-goal.json")
 
     def test_default_auto_improve_contract_is_bounded_and_promotion_blocked(self) -> None:
-        contract = build_auto_improve_goal_contract(created_at="2026-05-17T00:00:00Z")
+        contract = build_auto_improve_goal_contract(
+            AutoImproveGoalContractOptions(created_at="2026-05-17T00:00:00Z")
+        )
 
         self.assertIn("non_goals", contract)
         self.assertIn(
@@ -145,6 +148,35 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertEqual(contract["promotion_guard"]["can_promote_result"], False)
         self.assertEqual(contract["promotion_guard"]["sustained_runtime_claimed"], False)
         self.assertEqual(set_goal(contract, vault=self.vault), contract)
+
+    def test_auto_improve_contract_keeps_keyword_option_contract(self) -> None:
+        contract = build_auto_improve_goal_contract(
+            created_at="2026-05-17T00:00:00Z",
+            storage_path="runs/goal-trial/state/codex-goal-contract.json",
+            backend_type="run_local_file",
+            goal_status_path="runs/goal-trial/state/goal-run-status.json",
+        )
+
+        self.assertEqual(contract["created_at"], "2026-05-17T00:00:00Z")
+        self.assertEqual(contract["goal_backend"]["backend_type"], "run_local_file")
+        self.assertEqual(
+            contract["goal_backend"]["storage_path"],
+            "runs/goal-trial/state/codex-goal-contract.json",
+        )
+        self.assertEqual(
+            next(
+                item["path"]
+                for item in contract["required_evidence"]
+                if item["evidence_id"] == "goal_run_status"
+            ),
+            "runs/goal-trial/state/goal-run-status.json",
+        )
+
+        with self.assertRaises(TypeError):
+            build_auto_improve_goal_contract(
+                AutoImproveGoalContractOptions(),
+                created_at="2026-05-17T00:00:00Z",
+            )
 
     def test_cli_writes_default_auto_improve_contract_to_file_backend(self) -> None:
         exit_code = main(
@@ -219,6 +251,40 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         raw = json.loads(
             (self.vault / "ops" / "reports" / "injected-clock-goal-contract.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        envelope = json.loads(
+            next(
+                item["value"]
+                for item in raw["metadata"]["properties"]
+                if item["name"] == "urn:openai:artifact-envelope"
+            )
+        )
+        self.assertEqual(raw["created_at"], "2026-05-21T16:00:00Z")
+        self.assertEqual(envelope["generated_at"], "2026-05-21T16:00:00Z")
+
+    def test_cli_reuses_initial_timestamp_for_created_at_and_envelope(self) -> None:
+        seed_minimal_vault(self.vault)
+
+        with patch(
+            "ops.scripts.core.codex_goal_client._utc_now",
+            side_effect=["2026-05-21T16:00:00Z", "2026-05-21T16:00:01Z"],
+        ):
+            exit_code = main(
+                [
+                    "--vault",
+                    self.vault.as_posix(),
+                    "--out",
+                    "ops/reports/default-clock-goal-contract.json",
+                    "--contract-id",
+                    "default-clock-goal",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        raw = json.loads(
+            (self.vault / "ops" / "reports" / "default-clock-goal-contract.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -531,8 +597,10 @@ class CodexGoalClientTests(unittest.TestCase):
     def test_cli_preserves_existing_runtime_certificate_state(self) -> None:
         contract_path = "ops/reports/preserved-goal-contract.json"
         contract = build_auto_improve_goal_contract(
-            created_at="2026-05-17T00:00:00Z",
-            storage_path=contract_path,
+            AutoImproveGoalContractOptions(
+                created_at="2026-05-17T00:00:00Z",
+                storage_path=contract_path,
+            )
         )
         contract["objective"] = "Keep the operator-requested runtime goal wording stable."
         contract["metadata"] = {
@@ -573,10 +641,12 @@ class CodexGoalClientTests(unittest.TestCase):
 
     def test_run_local_contract_marks_backend_and_status_path(self) -> None:
         contract = build_auto_improve_goal_contract(
-            created_at="2026-05-17T00:00:00Z",
-            storage_path="runs/goal-trial/state/codex-goal-contract.json",
-            backend_type="run_local_file",
-            goal_status_path="runs/goal-trial/state/goal-run-status.json",
+            AutoImproveGoalContractOptions(
+                created_at="2026-05-17T00:00:00Z",
+                storage_path="runs/goal-trial/state/codex-goal-contract.json",
+                backend_type="run_local_file",
+                goal_status_path="runs/goal-trial/state/goal-run-status.json",
+            )
         )
 
         backend = RunLocalFileGoalBackend(

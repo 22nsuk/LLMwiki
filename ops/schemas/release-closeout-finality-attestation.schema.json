@@ -25,6 +25,8 @@
     "self_check",
     "external_report_manifest",
     "tracked_digest_map",
+    "tracked_semantic_digest_map",
+    "tracked_semantic_digest_modes",
     "matches_fixed_point_digest_map",
     "digest_mismatches",
     "finality_status",
@@ -85,6 +87,8 @@
     "self_check": { "$ref": "#/$defs/self_check" },
     "external_report_manifest": { "$ref": "#/$defs/external_report_manifest" },
     "tracked_digest_map": { "$ref": "#/$defs/digest_map" },
+    "tracked_semantic_digest_map": { "$ref": "#/$defs/digest_map" },
+    "tracked_semantic_digest_modes": { "$ref": "#/$defs/semantic_mode_map" },
     "matches_fixed_point_digest_map": { "type": "boolean" },
     "digest_mismatches": {
       "type": "array",
@@ -107,6 +111,10 @@
     "digest_map": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/digest" }
+    },
+    "semantic_mode_map": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
     },
     "fixed_point_report": {
       "type": "object",

@@ -21,9 +21,12 @@ def _phony_targets(text: str) -> list[str]:
 
 _AUTO_PROMOTION_PHONY_TARGETS = (
     "release-auto-promotion-goal-run-id-guard",
+    "release-auto-promotion-goal-run-id-verified-check",
     "release-auto-promotion-preflight",
     "release-auto-promotion-preflight-check",
     "release-auto-promotion-safe-cleanup",
+    "release-auto-promotion-safe-cleanup-cleanup-only",
+    "release-auto-promotion-safe-cleanup-finalize",
     "release-auto-promotion-preseal",
     "release-auto-promotion-preseal-check",
     "release-auto-promotion-ready-plan",
@@ -97,10 +100,13 @@ def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -
     test.assertEqual(
         _recipe_lines(text, "release-auto-promotion-preflight-prerequisites"),
         [
-            "$(MAKE) refresh-generated-core",
             "$(MAKE) external-report-action-matrix",
-            "$(MAKE) generated-artifact-index",
+            "$(MAKE) generated-artifact-index-body",
         ],
+    )
+    test.assertNotIn(
+        "$(MAKE) refresh-generated-core",
+        _target_block(text, "release-auto-promotion-preflight-prerequisites"),
     )
     test.assertEqual(
         _recipe_lines(text, "release-auto-promotion-preflight")[:8],
@@ -120,7 +126,7 @@ def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -
 def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> None:
     preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
     test.assertEqual(
-        preseal_recipe[:14],
+        preseal_recipe[:16],
         [
             "$(MAKE) release-auto-promotion-ready-invalidate",
             "$(MAKE) release-auto-promotion-goal-run-id-guard",
@@ -130,11 +136,13 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
             "$(MAKE) registry-preflight",
             "$(MAKE) release-smoke-full-current-check",
             "$(MAKE) release-smoke-fast-refresh-check",
-            "$(MAKE) release-auto-promotion-safe-cleanup",
+            "$(MAKE) external-report-reference-manifest-settle",
+            "$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only",
             "$(MAKE) learning-readiness-signoff-revalidation",
             "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
             "$(MAKE) remediation-backlog",
             "$(MAKE) auto-improve-readiness-report-body",
+            "$(MAKE) release-closeout-summary-report",
             '$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
         ],
     )
@@ -153,6 +161,18 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
     )
     test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
     test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
+        preseal_recipe.index("$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only"),
+    )
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
+        preseal_recipe.index("$(MAKE) release-closeout-summary-report"),
+    )
+    test.assertLess(
+        preseal_recipe.index("$(MAKE) release-closeout-summary-report"),
+        preseal_recipe.index(preseal_refresh_line),
+    )
     test.assertLess(preseal_recipe.index(preseal_refresh_line), preseal_recipe.index(strict_cohort_line))
     test.assertLess(
         preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
@@ -176,18 +196,64 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         preseal_recipe.index("$(MAKE) remediation-backlog"),
         preseal_recipe.index(strict_cohort_line),
     )
-    test.assertGreater(
+    test.assertLess(
         preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
+        preseal_recipe.index(preseal_fixed_point_line),
+    )
+    test.assertLess(
+        preseal_recipe.index(preseal_fixed_point_line),
         preseal_recipe.index(strict_cohort_line),
     )
     test.assertLess(
-        preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
-        preseal_recipe.index(preseal_fixed_point_line),
-    )
-    test.assertLess(
-        preseal_recipe.index(preseal_fixed_point_line),
+        preseal_recipe.index(strict_cohort_line),
         preseal_recipe.index("$(MAKE) tmp-json-clean"),
     )
+
+
+def _assert_release_targets_do_not_spawn_runtime_trials(
+    test: unittest.TestCase,
+    text: str,
+) -> None:
+    for release_target in (
+        "release-auto-promotion-goal-run-id-guard",
+        "release-auto-promotion-goal-run-id-verified-check",
+        "release-auto-promotion-preflight",
+        "release-auto-promotion-preflight-check",
+        "release-auto-promotion-safe-cleanup",
+        "release-auto-promotion-safe-cleanup-cleanup-only",
+        "release-auto-promotion-safe-cleanup-finalize",
+        "release-auto-promotion-preseal",
+        "release-auto-promotion-preseal-check",
+        "release-auto-promotion-ready-plan",
+        "release-auto-promotion-operator-summary",
+        "release-auto-promotion-ready",
+        "release-auto-promotion-ready-check",
+        "release-authority-settle",
+        "release-authority-archive-candidate-gate",
+        "release-authority-post-ready-finality-current-check",
+        "release-authority-post-ready-finality-current-or-refresh",
+    ):
+        seen: set[str] = set()
+        stack = [release_target]
+        while stack:
+            target = stack.pop()
+            if target in seen:
+                continue
+            seen.add(target)
+            block = _target_block(text, target)
+            for forbidden in (
+                "auto-improve-goal-run",
+                "goal_runtime_runner",
+                "$(GOAL_RUN_COMMAND)",
+            ):
+                test.assertNotIn(
+                    forbidden,
+                    block,
+                    f"{release_target} must not create runtime-trial evidence via {target}",
+                )
+            for line in _recipe_lines(text, target):
+                for match in re.finditer(r"\$\(MAKE\)\s+([A-Za-z0-9_.-]+)", line):
+                    stack.append(match.group(1))
 
 
 class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
@@ -218,7 +284,10 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) test-execution-summary-report-contract-refresh-no-smoke",
             ],
         )
-        self.assertNotIn("$(MAKE) test-execution-summary-report-contract-refresh\n", preflight_block)
+        self.assertNotIn(
+            "$(MAKE) test-execution-summary-report-contract-refresh\n",
+            preflight_block,
+        )
 
         converge_block = _target_block(text, "release-converge")
         self.assertIn("$(MAKE) release-converge-preflight", converge_block)
@@ -423,6 +492,10 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             text,
             "release-auto-promotion-goal-run-id-guard",
         )
+        auto_promotion_verified_goal_identity_block = _target_block(
+            text,
+            "release-auto-promotion-goal-run-id-verified-check",
+        )
         auto_promotion_preflight_block = _target_block(text, "release-auto-promotion-preflight")
         auto_promotion_preseal_block = _target_block(text, "release-auto-promotion-preseal")
         self.assertIn(
@@ -431,6 +504,8 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         )
         self.assertIn('--goal-run-id "$(GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
         self.assertIn('--goal-run-id-origin "$(origin GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
+        self.assertIn("--check", auto_promotion_verified_goal_identity_block)
+        self.assertIn("--require-verified", auto_promotion_verified_goal_identity_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preflight_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preseal_block)
         _assert_auto_promotion_preflight_order(self, text)
@@ -455,19 +530,35 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         _assert_recipe_contains_tokens(
             self,
             text,
-            "release-auto-promotion-safe-cleanup",
+            "release-auto-promotion-safe-cleanup-cleanup-only",
             (
                 "$(MAKE) goal-runtime-clean-transient",
                 "$(MAKE) tmp-json-clean",
                 "ops.scripts.backfill_archived_run_artifacts",
                 "$(MAKE) generated-artifact-index",
-                "$(MAKE) release-authority-sealed-preflight",
                 "$(MAKE) artifact-freshness-refresh-check",
+            ),
+        )
+        self.assertNotIn(
+            "$(MAKE) release-closeout-fixed-point",
+            _target_block(text, "release-auto-promotion-safe-cleanup-cleanup-only"),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "release-auto-promotion-safe-cleanup-finalize",
+            (
                 "$(MAKE) external-report-reference-manifest-release-check",
                 "$(MAKE) release-closeout-batch-manifest-promote",
                 "$(MAKE) release-closeout-fixed-point",
-                "$(MAKE) release-closeout-summary-report",
             ),
+        )
+        self.assertEqual(
+            _recipe_lines(text, "release-auto-promotion-safe-cleanup"),
+            [
+                "$(MAKE) release-auto-promotion-safe-cleanup-finalize",
+                "$(MAKE) tmp-json-clean",
+            ],
         )
         for expensive_writer in _AUTO_PROMOTION_PRESEAL_EXPENSIVE_WRITERS:
             self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
@@ -516,69 +607,101 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) release-auto-promotion-preseal", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-sealed-run-ready-check", auto_promotion_block)
         self.assertIn("release-authority-post-ready-finality", phony_block)
+        self.assertIn("release-authority-post-ready-finality-current-check", phony_block)
+        self.assertIn("release-authority-post-ready-finality-current-or-refresh", phony_block)
+        self.assertIn("release-authority-archive-candidate-gate", phony_block)
+        self.assertIn("release-terminal-finality", phony_block)
+        self.assertEqual(
+            _recipe_lines(text, "release-authority-archive-candidate-gate"),
+            [
+                "$(MAKE) external-report-action-matrix",
+                "$(MAKE) generated-artifact-index-body",
+                "$(MAKE) archive-execution-manifest-check",
+            ],
+        )
         self.assertEqual(
             _recipe_lines(text, "release-authority-post-ready-finality"),
             [
                 "$(MAKE) artifact-freshness-refresh-check",
+                '$(MAKE) release-closeout-batch-manifest-promote RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
                 '$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+                "$(MAKE) tmp-json-clean",
+                '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
             ],
         )
+        post_ready_current_check = _target_block(
+            text,
+            "release-authority-post-ready-finality-current-check",
+        )
+        self.assertIn("$(MAKE) tmp-json-clean", post_ready_current_check)
+        self.assertIn(
+            '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            post_ready_current_check,
+        )
+        self.assertIn(
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+            post_ready_current_check,
+        )
+        self.assertIn("$(MAKE) release-closeout-finality-verify", post_ready_current_check)
+        self.assertIn(
+            "$(MAKE) release-finality-resettle-current-diagnose",
+            post_ready_current_check,
+        )
+        current_or_refresh_block = _target_block(
+            text,
+            "release-authority-post-ready-finality-current-or-refresh",
+        )
+        self.assertIn(
+            "$(MAKE) release-authority-post-ready-finality-current-check",
+            current_or_refresh_block,
+        )
+        self.assertIn(
+            "$(MAKE) release-authority-post-ready-finality",
+            current_or_refresh_block,
+        )
         self.assertEqual(
             _recipe_lines(text, "release-authority-settle"),
             [
-                "$(MAKE) release-finality-resettle",
+                "$(MAKE) release-finality-resettle-current-or-refresh",
+                "$(MAKE) release-auto-promotion-goal-run-id-verified-check",
                 "$(MAKE) release-auto-promotion-preflight",
                 "$(MAKE) release-run-ready",
                 "$(MAKE) release-auto-promotion-preseal",
                 "$(MAKE) release-sealed-run-ready",
                 "@status=0; \\",
                 "$(MAKE) release-auto-promotion-ready || status=$$?; \\",
-                "$(MAKE) release-authority-post-ready-finality || exit $$?; \\",
+                "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\",
+                "if [ $$status -eq 0 ]; then \\",
+                "$(MAKE) release-auto-promotion-preflight-check || exit $$?; \\",
+                "$(MAKE) release-run-ready-check || exit $$?; \\",
+                "$(MAKE) release-auto-promotion-preseal-check || exit $$?; \\",
+                "$(MAKE) release-sealed-run-ready-check || exit $$?; \\",
+                "$(MAKE) release-auto-promotion-ready-check || exit $$?; \\",
+                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \\',
+                "fi; \\",
+                "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\",
                 "if [ $$status -ne 0 ]; then exit $$status; fi",
-                "$(MAKE) release-auto-promotion-preflight-check",
-                "$(MAKE) release-run-ready-check",
-                "$(MAKE) release-auto-promotion-preseal-check",
-                "$(MAKE) release-sealed-run-ready-check",
-                "$(MAKE) release-auto-promotion-ready-check",
-                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention',
             ],
         )
-        for release_target in (
-            "release-auto-promotion-goal-run-id-guard",
-            "release-auto-promotion-preflight",
-            "release-auto-promotion-preflight-check",
-            "release-auto-promotion-safe-cleanup",
-            "release-auto-promotion-preseal",
-            "release-auto-promotion-preseal-check",
-            "release-auto-promotion-ready-plan",
-            "release-auto-promotion-operator-summary",
-            "release-auto-promotion-ready",
-            "release-auto-promotion-ready-check",
-            "release-authority-settle",
-        ):
-            seen: set[str] = set()
-            stack = [release_target]
-            while stack:
-                target = stack.pop()
-                if target in seen:
-                    continue
-                seen.add(target)
-                block = _target_block(text, target)
-                for forbidden in (
-                    "auto-improve-goal-run",
-                    "goal_runtime_runner",
-                    "$(GOAL_RUN_COMMAND)",
-                ):
-                    self.assertNotIn(
-                        forbidden,
-                        block,
-                        f"{release_target} must not create runtime-trial evidence via {target}",
-                    )
-                for line in _recipe_lines(text, target):
-                    for match in re.finditer(r"\$\(MAKE\)\s+([A-Za-z0-9_.-]+)", line):
-                        stack.append(match.group(1))
+        settle_block = _recipe_lines(text, "release-authority-settle")
+        verified_goal_index = settle_block.index(
+            "$(MAKE) release-auto-promotion-goal-run-id-verified-check"
+        )
+        run_ready_index = settle_block.index("$(MAKE) release-run-ready")
+        ready_index = settle_block.index("$(MAKE) release-auto-promotion-ready || status=$$?; \\")
+        archive_gate_index = settle_block.index(
+            "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\"
+        )
+        finality_index = settle_block.index(
+            "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\"
+        )
+        self.assertLess(verified_goal_index, run_ready_index)
+        self.assertLess(ready_index, archive_gate_index)
+        self.assertLess(archive_gate_index, finality_index)
+        _assert_release_targets_do_not_spawn_runtime_trials(self, text)
 
         auto_promotion_plan_block = _target_block(text, "release-auto-promotion-ready-plan")
         self.assertIn("ops.scripts.release_evidence_planner", auto_promotion_plan_block)
@@ -615,8 +738,14 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
 
         core_block = _target_block(text, "release-check-core")
         self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
-        self.assertIn("$(MAKE) test-execution-summary-current-check", core_block)
-        self.assertIn("$(MAKE) test-execution-summary-full-current-check", core_block)
+        self.assertIn(
+            "$(MAKE) test-execution-summary-current-check",
+            core_block,
+        )
+        self.assertIn(
+            "$(MAKE) test-execution-summary-full-current-check",
+            core_block,
+        )
         self.assertNotIn("$(MAKE) test-report-contract-all", core_block)
         self.assertIn("$(MAKE) static", core_block)
         self.assertIn("$(MAKE) artifact-freshness-check", core_block)
@@ -634,10 +763,14 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) unit-tests-all", core_block)
         self.assertLess(
             core_block.index("$(MAKE) release-worktree-clean-check"),
-            core_block.index("$(MAKE) test-execution-summary-current-check"),
+            core_block.index(
+                "$(MAKE) test-execution-summary-current-check"
+            ),
         )
         self.assertLess(
-            core_block.index("$(MAKE) test-execution-summary-full-current-check"),
+            core_block.index(
+                "$(MAKE) test-execution-summary-full-current-check"
+            ),
             core_block.index("$(MAKE) release-smoke-full-current-check"),
         )
 

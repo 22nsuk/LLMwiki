@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import ast
 import json
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.schema_runtime import load_schema, validate_or_raise
+from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 
 REGISTRY_PATH = Path("ops/test-lane-registry.json")
 SCHEMA_PATH = Path("ops/schemas/test-lane-registry.schema.json")
@@ -150,6 +151,96 @@ def pack_selection(pack: dict[str, Any]) -> dict[str, Any]:
 def pack_selectors(registry: dict[str, Any], pack_id: str) -> tuple[str, ...]:
     pack = pack_by_id(registry)[pack_id]
     return tuple(_non_empty_str(item) for item in pack_selection(pack).get("selectors", []) if _non_empty_str(item))
+
+
+def selector_test_file(selector: str) -> str:
+    return _non_empty_str(selector).split("::", 1)[0]
+
+
+def _pytest_mark_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Call):
+        return _pytest_mark_name(node.func)
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == "mark"
+        and isinstance(node.value.value, ast.Name)
+        and node.value.value.id == "pytest"
+    ):
+        return node.attr
+    return ""
+
+
+def _pytestmark_names(node: ast.AST) -> set[str]:
+    if isinstance(node, ast.List | ast.Tuple | ast.Set):
+        marks: set[str] = set()
+        for item in node.elts:
+            marks.update(_pytestmark_names(item))
+        return marks
+    mark = _pytest_mark_name(node)
+    return {mark} if mark else set()
+
+
+def _pytestmark_value(statement: ast.stmt) -> ast.AST | None:
+    if isinstance(statement, ast.Assign) and any(
+        isinstance(target, ast.Name) and target.id == "pytestmark"
+        for target in statement.targets
+    ):
+        return statement.value
+    if (
+        isinstance(statement, ast.AnnAssign)
+        and isinstance(statement.target, ast.Name)
+        and statement.target.id == "pytestmark"
+    ):
+        return statement.value
+    return None
+
+
+def module_level_pytest_marks(test_file: Path) -> set[str]:
+    if not test_file.is_file():
+        return set()
+    try:
+        module = ast.parse(test_file.read_text(encoding="utf-8"), filename=test_file.as_posix())
+    except SyntaxError:
+        return set()
+    marks: set[str] = set()
+    for statement in module.body:
+        value = _pytestmark_value(statement)
+        if value is not None:
+            marks.update(_pytestmark_names(value))
+    return marks
+
+
+def excluded_markers_from_expr(mark_expr: str) -> set[str]:
+    expr = _non_empty_str(mark_expr)
+    excluded: set[str] = set()
+    for mark in ("slow", "integration_heavy", "report_contract", "public"):
+        if f"not {mark}" in expr:
+            excluded.add(mark)
+    return excluded
+
+
+def pack_effective_selectors(
+    registry: dict[str, Any],
+    pack_id: str,
+    *,
+    vault: Path | None = None,
+) -> tuple[str, ...]:
+    selectors = pack_selectors(registry, pack_id)
+    mark_expr = pack_mark_expr(registry, pack_id)
+    if not mark_expr:
+        return selectors
+    excluded_marks = excluded_markers_from_expr(mark_expr)
+    if not excluded_marks:
+        return selectors
+    root = (vault or Path(".")).resolve()
+    kept: list[str] = []
+    for selector in selectors:
+        module_marks = module_level_pytest_marks(root / selector_test_file(selector))
+        if module_marks & excluded_marks:
+            continue
+        kept.append(selector)
+    return tuple(kept)
 
 
 def pack_deselects(registry: dict[str, Any], pack_id: str) -> tuple[str, ...]:

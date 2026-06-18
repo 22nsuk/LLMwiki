@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.output_runtime import (
+from ops.scripts.core.output_runtime import (
     display_path,
     resolve_output_path,
     resolve_repo_output_path,

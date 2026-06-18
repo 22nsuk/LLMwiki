@@ -5,7 +5,7 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .finalize_run_artifact_runtime import (
     CHANGED_FILES_MANIFEST_SCHEMA,

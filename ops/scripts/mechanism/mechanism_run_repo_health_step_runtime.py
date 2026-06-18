@@ -8,10 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.schema_constants_runtime import (
     STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
 )
-from ops.scripts.structural_complexity_budget_runtime import (
+from ops.scripts.eval.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,
     build_report as build_structural_complexity_budget_report,
     target_paths_from_changed_files_manifest,
@@ -29,6 +29,7 @@ from .mechanism_run_common_runtime import (
     write_command_timeout_failure,
     write_json,
 )
+from .structural_complexity_scope_runtime import structural_complexity_source_targets
 
 REPO_HEALTH_DIAGNOSTIC_ARTIFACTS = {
     "tmp/artifact-freshness-report-check.json": "repo-health-artifact-freshness-report-check.json",
@@ -55,8 +56,7 @@ NON_SETTLE_REPO_HEALTH_OUTPUT_RE = re.compile(
     r"(^|\n)(=+\s+FAILURES\s+=+|FAILED\s+tests/|ERROR\s+tests/)"
     r"|\b\d+\s+failed\b"
     r"|\bFound\s+\d+\s+errors?\b"
-    r"|\bwould reformat\b"
-    r"|(^|\n)make(?:\[\d+\])?: \*\*\*",
+    r"|\bwould reformat\b",
     flags=re.IGNORECASE,
 )
 
@@ -242,7 +242,9 @@ def write_structural_complexity_budget_artifact(
     resolution: ExperimentResolution,
     changed_files_manifest: str,
 ) -> StructuralComplexityBudgetStepResult:
-    target_paths = target_paths_from_changed_files_manifest(vault, changed_files_manifest)
+    target_paths = structural_complexity_source_targets(
+        target_paths_from_changed_files_manifest(vault, changed_files_manifest)
+    )
     report = build_structural_complexity_budget_report(
         workspace_vault,
         policy_path=resolution.policy_path_text,

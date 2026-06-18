@@ -5,6 +5,7 @@ OUTCOME_PROVENANCE_GATE_POLICY_OUT ?= ops/reports/outcome-provenance-gate-policy
 OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT ?= tmp/outcome-provenance-gate-policy.candidate.json
 MECHANISM_REVIEW_OUT ?= ops/reports/mechanism-review-candidates.json
 MUTATION_PROPOSAL_OUT ?= ops/reports/mutation-proposals.json
+MUTATION_MAX_PROPOSALS ?=
 MECHANISM_NAVIGATION_INDEX_OUT ?= tmp/mechanism-navigation-index.json
 OBSERVATION_CLOSEOUT_LINT_OUT ?= tmp/observation-closeout-lint.json
 OBSERVATION_CLOSEOUT_REGISTRY ?= ops/observation-closeout-registry.json
@@ -24,6 +25,7 @@ GOAL_WORKTREE_STRICT ?=
 GOAL_RUN_STATUS_OUT ?= ops/reports/goal-run-status.json
 GOAL_RUNTIME_CERTIFICATE_OUT ?= ops/reports/goal-runtime-certificate.json
 GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT ?= tmp/goal-runtime-certificate.candidate.json
+GOAL_RUNTIME_CERTIFICATE_RUN_ID_GUARD_OUT ?= tmp/goal-runtime-certificate-run-id-guard.json
 GOAL_RUNTIME_CERTIFICATE_MODE ?=
 GOAL_RUNTIME_CERTIFICATE_APPLY ?=
 GOAL_RUNTIME_CLEAN_TRANSIENT_OUT ?= tmp/goal-runtime-clean-transient.json
@@ -48,6 +50,7 @@ GOAL_RUNTIME_CLOSEOUT_GENERATED_ARTIFACT_INDEX_OUT ?= $(GOAL_RUNTIME_CLOSEOUT_ST
 GOAL_RUNTIME_CLOSEOUT_ARTIFACT_FRESHNESS_OUT ?= $(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/artifact-freshness-report.json
 GOAL_RUNTIME_LOCK_PATH ?= $(GOAL_RUN_LOG_DIR)/goal-runtime.lock.json
 GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT ?= tmp/goal-runtime-python-preflight.json
+GOAL_RUNTIME_LATEST_SUCCESSFUL_RUN_ARGS ?=
 GOAL_SESSION_RESULT_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/auto-improve-goal-session-result.json
 GOAL_ACTIVE_RUN_STATUS_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/goal-run-status.json
 GOAL_RUN_STATUS_CANDIDATE_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/goal-run-status.candidate.json
@@ -84,8 +87,12 @@ GOAL_FINAL_STATUS ?= stopped
 GOAL_COMPLETED_AT ?=
 GOAL_RUN_LOG_DIR ?= build/goal-runs
 MECHANISM_RUN_ARGS ?=
+MECHANISM_CONTRACT_EVAL_RUN_ID ?= $(RUN_ID)
+MECHANISM_CONTRACT_EVAL_CHANGED_FILES_MANIFEST ?= runs/$(MECHANISM_CONTRACT_EVAL_RUN_ID)/changed-files-manifest.json
+MECHANISM_CONTRACT_EVAL_BEHAVIOR_DELTA ?= runs/$(MECHANISM_CONTRACT_EVAL_RUN_ID)/behavior-delta.json
+MECHANISM_CONTRACT_EVAL_ARGS ?=
 
-.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-refresh goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-pre-run-cleanup goal-runtime-between-run-settle goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-quarantine-preflight goal-runtime-stale-closeout goal-runtime-fixed-point-check goal-runtime-run-admission-converge goal-runtime-run-admission-local-refresh goal-runtime-run-admission goal-runtime-run-admission-resume goal-runtime-maintenance-action-plan goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-maintenance-action auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal run-mechanism-experiment-linux-tmp outcome-metrics promotion-decision-trends routing-provenance-aggregate outcome-provenance-gate-policy
+.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-refresh goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-pre-run-cleanup goal-runtime-between-run-settle goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-quarantine-preflight goal-runtime-stale-closeout goal-runtime-fixed-point-check goal-runtime-run-admission-converge goal-runtime-run-admission-local-refresh goal-runtime-run-admission goal-runtime-run-admission-resume goal-runtime-maintenance-action-plan goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight goal-runtime-latest-successful-run-id goal-runtime-publish-latest-successful-evidence long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-maintenance-action auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate-run-id-guard goal-runtime-status-finalize goal-runtime-certificate-report goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal mechanism-contract-eval run-mechanism-experiment-linux-tmp outcome-metrics promotion-decision-trends routing-provenance-aggregate outcome-provenance-gate-policy
 .PHONY: mechanism-navigation-index observation-closeout-lint
 
 mechanism-navigation-index:
@@ -125,6 +132,7 @@ codex-goal-prompt: codex-goal-contract
 goal-runtime-refresh: auto-improve-goal-preflight auto-improve-goal-status
 
 goal-runtime-publish-snapshot:
+	$(MAKE) goal-runtime-certificate-run-id-guard
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --out "$(CODEX_GOAL_CONTRACT_OUT)" --schema ops/schemas/codex-goal-contract.schema.json
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status
 	$(PYTHON) -m ops.scripts.codex_goal_prompt --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --out "$(CODEX_GOAL_PROMPT_OUT)"
@@ -155,6 +163,7 @@ goal-runtime-local-evidence-converge:
 	$(MAKE) goal-runtime-local-fixed-point-check
 
 goal-runtime-publish-local-evidence:
+	$(MAKE) goal-runtime-certificate-run-id-guard
 	$(MAKE) goal-runtime-local-evidence-converge
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --out "$(CODEX_GOAL_CONTRACT_OUT)" --schema ops/schemas/codex-goal-contract.schema.json
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status
@@ -178,7 +187,7 @@ goal-runtime-pre-run-cleanup:
 	$(MAKE) artifact-freshness-refresh-check
 
 goal-runtime-between-run-settle: goal-runtime-lock-check goal-runtime-python-preflight
-	$(MAKE) refresh-generated-core
+	$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"
 	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-stale-closeout
 	$(MAKE) goal-runtime-pre-run-cleanup
@@ -219,14 +228,18 @@ goal-runtime-closeout-finalize:
 
 goal-runtime-closeout:
 	@set -e; \
-	for target in $$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget cheap --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets); do \
+	targets="$$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget cheap --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets)"; \
+	printf '%s\n' "$$targets" | while IFS= read -r target; do \
+		[ -n "$$target" ] || continue; \
 		$(MAKE) $$target; \
 	done
 	$(MAKE) goal-runtime-closeout-plan GOAL_RUNTIME_CLOSEOUT_BUDGET=cheap
 
 goal-runtime-closeout-full:
 	@set -e; \
-	for target in $$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget full --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets); do \
+	targets="$$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget full --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets)"; \
+	printf '%s\n' "$$targets" | while IFS= read -r target; do \
+		[ -n "$$target" ] || continue; \
 		$(MAKE) $$target; \
 	done
 	$(MAKE) goal-runtime-closeout-plan GOAL_RUNTIME_CLOSEOUT_BUDGET=full
@@ -244,18 +257,20 @@ goal-runtime-fixed-point-check:
 	$(PYTHON) -m ops.scripts.goal_runtime_fixed_point_check --vault "$(VAULT)" --out "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)"
 
 goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python-preflight
-	$(MAKE) refresh-generated-core
+	$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-pre-run-cleanup
+	$(MAKE) mechanism-review
 	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-stale-closeout
 	$(MAKE) goal-runtime-publish-local-evidence
 	$(MAKE) goal-runtime-fixed-point-check
 
 goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight
-	$(MAKE) refresh-generated-core
+	$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-pre-run-cleanup
+	$(MAKE) mechanism-review
 	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-stale-closeout
 
@@ -279,6 +294,17 @@ goal-runtime-lock-stop:
 
 goal-runtime-python-preflight:
 	$(PYTHON) -m ops.scripts.bootstrap_preflight --vault "$(VAULT)" --dev --environment-class goal-runtime --out "$(GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT)"
+
+goal-runtime-latest-successful-run-id:
+	@$(PYTHON) -m ops.scripts.mechanism.goal_runtime_latest_successful_run --vault "$(VAULT)" $(GOAL_RUNTIME_LATEST_SUCCESSFUL_RUN_ARGS)
+
+goal-runtime-publish-latest-successful-evidence:
+	@set -e; \
+	run_id="$$($(PYTHON) -m ops.scripts.mechanism.goal_runtime_latest_successful_run --vault "$(VAULT)")"; \
+	printf 'goal-runtime latest successful GOAL_RUN_ID=%s\n' "$$run_id"; \
+	$(MAKE) goal-runtime-status-finalize GOAL_RUN_ID="$$run_id"; \
+	$(MAKE) goal-runtime-publish-local-evidence GOAL_RUN_ID="$$run_id"; \
+	$(MAKE) goal-runtime-certificate GOAL_RUN_ID="$$run_id"
 
 long-run-preflight-clean: goal-runtime-run-admission-converge
 
@@ -308,8 +334,19 @@ auto-improve-goal-finalize: auto-improve-goal-contract
 auto-improve-goal-run-artifacts: auto-improve-goal-status
 	$(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_RUN_STATUS)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --write-run-artifacts
 
-goal-runtime-certificate: auto-improve-goal-contract
-	@status=0; $(PYTHON) -m ops.scripts.goal_runtime_certificate_report --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --status-report "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)" $(if $(GOAL_RUNTIME_CERTIFICATE_MODE),--runtime-mode "$(GOAL_RUNTIME_CERTIFICATE_MODE)",) $(if $(GOAL_RUNTIME_CERTIFICATE_APPLY),--apply,) || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)" --out "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --schema ops/schemas/goal-runtime-certificate.schema.json --expected-artifact-kind goal_runtime_certificate --expected-producer ops.scripts.goal_runtime_certificate_report || status=$$?; exit $$status
+goal-runtime-certificate-run-id-guard:
+	$(PYTHON) -m ops.scripts.goal_runtime_certificate_run_id_guard --vault "$(VAULT)" --goal-run-id "$(GOAL_RUN_ID)" --goal-run-id-origin "$(origin GOAL_RUN_ID)" --goal-run-status "$(GOAL_RUN_STATUS_OUT)" --goal-runtime-certificate "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --out "$(GOAL_RUNTIME_CERTIFICATE_RUN_ID_GUARD_OUT)"
+
+goal-runtime-status-finalize: auto-improve-goal-contract
+	$(MAKE) goal-runtime-certificate-run-id-guard
+	@status=0; $(MAKE) auto-improve-goal-status || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status || status=$$?; exit $$status
+
+goal-runtime-certificate-report:
+	$(MAKE) goal-runtime-certificate-run-id-guard
+	$(PYTHON) -m ops.scripts.goal_runtime_certificate_report --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --status-report "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)" $(if $(GOAL_RUNTIME_CERTIFICATE_MODE),--runtime-mode "$(GOAL_RUNTIME_CERTIFICATE_MODE)",) $(if $(GOAL_RUNTIME_CERTIFICATE_APPLY),--apply,)
+
+goal-runtime-certificate:
+	@status=0; $(MAKE) goal-runtime-certificate-report || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)" --out "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --schema ops/schemas/goal-runtime-certificate.schema.json --expected-artifact-kind goal_runtime_certificate --expected-producer ops.scripts.goal_runtime_certificate_report || status=$$?; exit $$status
 
 goal-prompt: codex-goal-prompt
 
@@ -317,7 +354,11 @@ mechanism-review:
 	$(PYTHON) -m ops.scripts.mechanism_review --vault "$(VAULT)"
 
 mutation-proposal:
-	$(PYTHON) -m ops.scripts.mutation_proposal --vault "$(VAULT)"
+	$(PYTHON) -m ops.scripts.mutation_proposal --vault "$(VAULT)" $(if $(MUTATION_MAX_PROPOSALS),--max-proposals "$(MUTATION_MAX_PROPOSALS)",)
+
+mechanism-contract-eval:
+	@if [ -z "$(strip $(MECHANISM_CONTRACT_EVAL_RUN_ID))" ]; then echo "RUN_ID or MECHANISM_CONTRACT_EVAL_RUN_ID is required"; exit 2; fi
+	$(PYTHON) -m ops.scripts.mechanism.mechanism_contract_eval --vault "$(VAULT)" --run-id "$(MECHANISM_CONTRACT_EVAL_RUN_ID)" --changed-files-manifest "$(MECHANISM_CONTRACT_EVAL_CHANGED_FILES_MANIFEST)" --behavior-delta "$(MECHANISM_CONTRACT_EVAL_BEHAVIOR_DELTA)" $(MECHANISM_CONTRACT_EVAL_ARGS)
 
 run-mechanism-experiment-linux-tmp:
 	TMPDIR=/tmp TEMP=/tmp TMP=/tmp $(PYTHON) -m ops.scripts.run_mechanism_experiment --vault "$(VAULT)" $(MECHANISM_RUN_ARGS)

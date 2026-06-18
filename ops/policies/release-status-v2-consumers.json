@@ -73,7 +73,7 @@
       "legacy_status_allowed": "release_readiness_state_fallback_only"
     },
     {
-      "path": "ops/scripts/release/release_evidence_dashboard.py",
+      "path": "ops/scripts/release/release_evidence_dashboard_closeout_runtime.py",
       "consumer_role": "release evidence dashboard closeout decision",
       "migration_status": "v2_primary_with_legacy_fallback",
       "status_v2_helper": "release_status_v2_view_with_readiness_fallback",

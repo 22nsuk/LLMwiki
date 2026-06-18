@@ -24,6 +24,7 @@
     "status",
     "gate_effect",
     "recommended_next_action",
+    "stale_routing",
     "safe_to_backfill",
     "mtime_sensitive",
     "summary",
@@ -133,6 +134,9 @@
     "recommended_next_action": {
       "type": "string",
       "minLength": 1
+    },
+    "stale_routing": {
+      "$ref": "#/$defs/stale_routing"
     },
     "safe_to_backfill": {
       "type": "boolean"
@@ -606,6 +610,171 @@
         "mtime_sensitive": { "type": "boolean" }
       }
     },
+    "source_identity_owner_route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_id",
+        "owner_surface",
+        "artifact_count",
+        "issue_count",
+        "artifact_kinds",
+        "recommended_lane",
+        "recommended_targets",
+        "reason_ids",
+        "sample_paths",
+        "summary"
+      ],
+      "properties": {
+        "route_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issue_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifact_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recommended_lane": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reason_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sample_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "stale_routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "recommended_lane",
+        "recommended_targets",
+        "post_commit_lane",
+        "reason_ids",
+        "problem_artifact_count",
+        "source_identity_only_artifact_count",
+        "source_identity_only_issue_count",
+        "source_identity_owner_routes",
+        "schema_or_contract_debt_artifact_count",
+        "mtime_or_test_target_debt_artifact_count",
+        "execution_blocking_artifact_count",
+        "other_operational_attention_artifact_count",
+        "summary"
+      ],
+      "properties": {
+        "classification": {
+          "type": "string",
+          "enum": [
+            "clean",
+            "source_identity_only",
+            "schema_or_contract_debt",
+            "mtime_or_test_target_debt",
+            "execution_blocking_debt",
+            "mixed"
+          ]
+        },
+        "recommended_lane": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "post_commit_lane": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "problem_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_identity_only_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_identity_only_issue_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_identity_owner_routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source_identity_owner_route"
+          }
+        },
+        "schema_or_contract_debt_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mtime_or_test_target_debt_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "execution_blocking_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "other_operational_attention_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "top_debt_file_item": {
       "type": "object",
       "additionalProperties": false,
@@ -677,6 +846,8 @@
         "retention_policy",
         "currentness_status",
         "source_revision_status",
+        "input_fingerprint_status",
+        "input_fingerprint_mismatch_keys",
         "file_mtime_utc",
         "mtime_source",
         "mtime_status",
@@ -749,6 +920,23 @@
             "unknown",
             "not_applicable"
           ]
+        },
+        "input_fingerprint_status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "not_applicable"
+          ]
+        },
+        "input_fingerprint_mismatch_keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
         },
         "currentness_status": {
           "type": "string"

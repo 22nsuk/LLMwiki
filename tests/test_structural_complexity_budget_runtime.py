@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-import datetime as dt
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.structural_complexity_budget_runtime import (
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,
     build_report,
     target_paths_from_changed_files_manifest,
     touched_target_profiles,
 )
-
+from tests.runtime_test_context import frozen_context
 from tests.test_mechanism_assess import seed_policy
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -22,13 +20,6 @@ SCHEMA_PATH = (
     REPO_ROOT / "ops" / "schemas" / "structural-complexity-budget-report.schema.json"
 )
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
-
-
-def fixed_context() -> RuntimeContext:
-    return RuntimeContext(
-        display_timezone=dt.UTC,
-        clock=lambda: dt.datetime(2026, 4, 21, 1, 30, tzinfo=dt.UTC),
-    )
 
 
 class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
@@ -44,7 +35,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
 
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles={
                     "runtime_preview": {
                         "targets": ["ops/scripts/sample_runtime.py"],
@@ -100,7 +91,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
             ):
                 build_report(
                     vault,
-                    context=fixed_context(),
+                    context=frozen_context(),
                     target_profiles={
                         "runtime_preview": {
                             "targets": ["ops/scripts/sample_runtime.py"],
@@ -146,7 +137,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
             with self.assertRaises(json.JSONDecodeError):
                 build_report(
                     vault,
-                    context=fixed_context(),
+                    context=frozen_context(),
                     target_profiles={
                         "runtime_preview": {
                             "targets": ["ops/scripts/sample_runtime.py"],
@@ -194,7 +185,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
 
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles={
                     "runtime_preview": {
                         "targets": ["ops/scripts/sample_runtime.py"],
@@ -233,6 +224,8 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
                 report["targets"][0]["over_budget_metrics"],
                 ["nonempty_line_count_total", "python_branch_node_count"],
             )
+            self.assertEqual(report["targets"][0]["no_headroom_metrics"], ["python_function_count"])
+            self.assertEqual(report["targets"][0]["low_headroom_metrics"], [])
             self.assertEqual(report["targets"][0]["function_budget_candidate_count"], 1)
             self.assertEqual(report["function_budget_candidates"][0]["page"], "ops/scripts/sample_runtime.py")
             self.assertEqual(
@@ -254,6 +247,121 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
             schema = load_schema(SCHEMA_PATH)
             self.assertEqual(validate_with_schema(report, schema), [])
 
+    def test_build_report_marks_budget_edge_headroom_as_attention(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_policy(vault)
+
+            exact = vault / "ops" / "scripts" / "exact_runtime.py"
+            low = vault / "ops" / "scripts" / "low_runtime.py"
+            exact.parent.mkdir(parents=True, exist_ok=True)
+            exact.write_text("def exact_runtime():\n    return 1\n", encoding="utf-8")
+            low.write_text(
+                "\n".join(f"value_{index} = {index}" for index in range(19)) + "\n",
+                encoding="utf-8",
+            )
+
+            report = build_report(
+                vault,
+                context=frozen_context(),
+                target_profiles={
+                    "runtime_preview": {
+                        "targets": [
+                            "ops/scripts/exact_runtime.py",
+                            "ops/scripts/low_runtime.py",
+                        ],
+                        "budgets": {
+                            "nonempty_line_count_total": 20,
+                            "python_function_count": 10,
+                            "python_branch_node_count": 10,
+                        },
+                        "notes": ["Preview test profile"],
+                    }
+                },
+                function_budget_config={
+                    "profiles": {
+                        "runtime": {
+                            "include_prefixes": ["ops/"],
+                            "lines": 100,
+                            "params": 100,
+                            "branches": 100,
+                        },
+                        "tests": {
+                            "include_prefixes": ["tests/"],
+                            "lines": 100,
+                            "params": 100,
+                            "branches": 100,
+                        },
+                    }
+                },
+            )
+
+            targets = {target["path"]: target for target in report["targets"]}
+            self.assertEqual(report["status"], "attention")
+            self.assertEqual(report["summary"]["targets_with_attention_count"], 1)
+            self.assertEqual(targets["ops/scripts/exact_runtime.py"]["status"], "pass")
+            self.assertEqual(targets["ops/scripts/low_runtime.py"]["status"], "warn")
+            self.assertEqual(targets["ops/scripts/low_runtime.py"]["over_budget_metrics"], [])
+            self.assertEqual(targets["ops/scripts/low_runtime.py"]["no_headroom_metrics"], [])
+            self.assertEqual(
+                targets["ops/scripts/low_runtime.py"]["low_headroom_metrics"],
+                ["nonempty_line_count_total"],
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_marks_exact_budget_headroom_as_attention(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_policy(vault)
+
+            target = vault / "ops" / "scripts" / "exact_runtime.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("def exact_runtime():\n    return 1\n", encoding="utf-8")
+
+            report = build_report(
+                vault,
+                context=frozen_context(),
+                target_profiles={
+                    "runtime_preview": {
+                        "targets": ["ops/scripts/exact_runtime.py"],
+                        "budgets": {
+                            "nonempty_line_count_total": 2,
+                            "python_function_count": 1,
+                            "python_branch_node_count": 10,
+                        },
+                        "notes": ["Preview test profile"],
+                    }
+                },
+                function_budget_config={
+                    "profiles": {
+                        "runtime": {
+                            "include_prefixes": ["ops/"],
+                            "lines": 100,
+                            "params": 100,
+                            "branches": 100,
+                        },
+                        "tests": {
+                            "include_prefixes": ["tests/"],
+                            "lines": 100,
+                            "params": 100,
+                            "branches": 100,
+                        },
+                    }
+                },
+            )
+
+            target_report = report["targets"][0]
+            self.assertEqual(report["status"], "attention")
+            self.assertEqual(report["summary"]["targets_with_attention_count"], 1)
+            self.assertEqual(target_report["status"], "warn")
+            self.assertEqual(target_report["over_budget_metrics"], [])
+            self.assertEqual(
+                target_report["no_headroom_metrics"],
+                ["nonempty_line_count_total", "python_function_count"],
+            )
+            self.assertEqual(target_report["low_headroom_metrics"], [])
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_default_profiles_include_high_complexity_helper_preview(self) -> None:
         profile = DEFAULT_TARGET_PROFILES["high_complexity_helpers"]
 
@@ -274,6 +382,9 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
                 "ops/scripts/release/release_closeout_batch_manifest.py",
                 "ops/scripts/release/release_evidence_dashboard.py",
                 "ops/scripts/release/release_closeout_summary.py",
+                "ops/scripts/release/external_report_lifecycle_runtime.py",
+                "ops/scripts/release/release_closeout_fixed_point.py",
+                "ops/scripts/release/release_post_seal_attestation.py",
                 "ops/scripts/test/test_execution_summary.py",
             ],
         )
@@ -332,7 +443,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
 
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles={
                     "runtime_preview": {
                         "targets": ["ops/scripts/monitored_runtime.py"],
@@ -401,7 +512,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
 
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles={
                     "runtime_preview": {
                         "targets": ["ops/scripts/missing_runtime.py"],
@@ -489,7 +600,7 @@ class StructuralComplexityBudgetRuntimeTests(unittest.TestCase):
             paths = target_paths_from_changed_files_manifest(vault, "changed-files-manifest.json")
             report = build_report(
                 vault,
-                context=fixed_context(),
+                context=frozen_context(),
                 target_profiles=touched_target_profiles(DEFAULT_TARGET_PROFILES, paths),
                 function_budget_config={
                     "profiles": {

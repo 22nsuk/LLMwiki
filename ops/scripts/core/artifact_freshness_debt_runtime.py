@@ -22,6 +22,7 @@ ROOT_EPHEMERAL_PATTERNS = [
 TOP_DEBT_LIMIT = 10
 TOP_DEBT_FILE_LIMIT = 10
 DEBT_QUEUE_PATH_LIMIT = 20
+SOURCE_IDENTITY_ROUTE_SAMPLE_PATH_LIMIT = 8
 OWNER_SURFACE_PREFIXES = (
     ("ops/reports/", "ops_reports"),
     ("ops/operator/", "operator_reports"),
@@ -50,8 +51,13 @@ SOURCE_REVISION_ISSUES = (
     "source_revision_mismatch",
     "source_revision_unknown",
 )
+SOURCE_IDENTITY_ISSUES = SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES
+INPUT_FINGERPRINT_ISSUES = (
+    "input_fingerprint_mismatch",
+    "input_fingerprint_unknown",
+)
 OPERATIONAL_ATTENTION_ISSUES = (
-    TEST_TARGET_FINGERPRINT_ISSUES + SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES
+    TEST_TARGET_FINGERPRINT_ISSUES + SOURCE_IDENTITY_ISSUES + INPUT_FINGERPRINT_ISSUES
 )
 EXECUTION_BLOCKING_ISSUES = (
     "root_ephemeral_artifact",
@@ -65,6 +71,94 @@ ADVISORY_ONLY_MTIME_DRIFT_PATHS = {
     "ops/reports/generated-artifact-index.json",
 }
 LEARNING_READINESS_SIGNOFF_REPORT = "ops/reports/learning-readiness-signoff.json"
+SUPPLY_CHAIN_SOURCE_IDENTITY_KINDS = {
+    "cyclonedx_sbom",
+    "in_toto_statement",
+    "openvex_draft",
+    "sbom_export_mapping_report",
+    "sbom_readiness_gate_report",
+    "security_advisories_report",
+    "sigstore_bundle_verification",
+    "spdx_sbom",
+    "supply_chain_artifact_model",
+    "supply_chain_gate_report",
+    "supply_chain_provenance_report",
+}
+RELEASE_SOURCE_PACKAGE_SOURCE_IDENTITY_KINDS = {
+    "source_package_clean_extract",
+}
+RELEASE_FINALITY_SOURCE_IDENTITY_KINDS = {
+    "artifact_freshness_report",
+    "auto_improve_readiness_report",
+    "external_report_action_matrix",
+    "generated_artifact_index_report",
+    "release_clean_blocker_ledger",
+    "release_closeout_fixed_point_report",
+    "release_closeout_sealed_rehearsal_check",
+    "release_closeout_summary",
+    "release_evidence_cohort",
+    "release_evidence_dashboard",
+    "release_lane_summary",
+    "release_risk_taxonomy_matrix",
+}
+GOAL_RUNTIME_SOURCE_IDENTITY_KINDS = {
+    "codex_goal_contract",
+    "codex_goal_prompt",
+    "goal_run_status",
+    "goal_runtime_certificate",
+    "goal_worktree_guard",
+    "remediation_backlog",
+    "self_improvement_negative_lessons",
+    "session_synopsis",
+}
+GOAL_RUNTIME_COMPLETED_RUN_LANE = "goal-runtime-completed-run-evidence"
+GOAL_RUNTIME_COMPLETED_RUN_TARGETS = (
+    "GOAL_RUN_ID=<completed-run-id> make goal-runtime-status-finalize",
+    "GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-local-evidence",
+    "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+)
+LEARNING_SOURCE_IDENTITY_KINDS = {
+    "learning_claim_activation_report",
+    "learning_claim_evidence_bundle",
+    "learning_claim_unlock_review",
+    "learning_confirmed_evidence_cohort",
+    "learning_confirmed_legacy_reconstruction",
+    "learning_delta_scoreboard",
+    "learning_readiness_signoff_revalidation",
+}
+MAINTAINABILITY_SOURCE_IDENTITY_KINDS = {
+    "function_budget_refactor_proposals",
+    "strict_lint_inventory",
+    "strict_type_inventory",
+    "structural_complexity_budget_report",
+}
+MECHANISM_SOURCE_IDENTITY_TARGETS = {
+    "mechanism_review_candidates_report": (
+        "mechanism-review",
+        ("mechanism-review",),
+        "mechanism_review_candidates_source_identity",
+    ),
+    "mutation_proposals_report": (
+        "mutation-proposal",
+        ("mutation-proposal",),
+        "mutation_proposals_source_identity",
+    ),
+    "outcome_metrics_report": (
+        "outcome-metrics",
+        ("outcome-metrics",),
+        "outcome_metrics_source_identity",
+    ),
+    "outcome_provenance_gate_policy": (
+        "outcome-provenance-gate-policy",
+        ("outcome-provenance-gate-policy",),
+        "outcome_provenance_source_identity",
+    ),
+    "promotion_decision_trends": (
+        "promotion-decision-trends",
+        ("promotion-decision-trends",),
+        "promotion_decision_trends_source_identity",
+    ),
+}
 
 
 def owner_surface(rel_path: str) -> str:
@@ -106,9 +200,9 @@ def is_learning_readiness_signoff_source_identity_issue(
     return bool(matching_issues(issues, SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES))
 
 
-def is_ops_report_source_identity_issue(issue: str, *, rel_path: str) -> bool:
+def is_ops_report_claim_blocker_issue(issue: str, *, rel_path: str) -> bool:
     return owner_surface(rel_path) == "ops_reports" and issue.startswith(
-        SOURCE_TREE_FINGERPRINT_ISSUES + SOURCE_REVISION_ISSUES
+        SOURCE_IDENTITY_ISSUES + INPUT_FINGERPRINT_ISSUES
     )
 
 
@@ -140,6 +234,8 @@ def recommended_next_action(
         return "regenerate_canonical_report"
     if "source_revision_unknown" in issues:
         return "regenerate_canonical_report_with_source_revision"
+    if matching_issues(issues, INPUT_FINGERPRINT_ISSUES):
+        return "regenerate_canonical_report"
     if "generated_at_older_than_file_mtime" in issues:
         return "regenerate_artifact_or_refresh_timestamp"
     if "missing_generated_at" in issues:
@@ -190,7 +286,7 @@ def issue_gate_effect(issue: str) -> str:
 def issue_gate_effect_for_record(issue: str, *, rel_path: str) -> str:
     if issue == "schema_validation_failed" and is_run_local_artifact(rel_path):
         return GATE_EFFECT_ADVISORY
-    if is_ops_report_source_identity_issue(issue, rel_path=rel_path):
+    if is_ops_report_claim_blocker_issue(issue, rel_path=rel_path):
         return GATE_EFFECT_CLAIM_BLOCKER
     return issue_gate_effect(issue)
 
@@ -598,3 +694,468 @@ def artifact_freshness_gate_effect(
             *(str(record.get("gate_effect", GATE_EFFECT_NONE)) for record in artifact_records),
         ]
     )
+
+
+def _record_source_identity_issues(record: dict[str, Any]) -> list[str]:
+    return matching_issues(
+        [str(issue) for issue in record.get("issues", [])],
+        SOURCE_IDENTITY_ISSUES,
+    )
+
+
+def _record_test_target_issues(record: dict[str, Any]) -> list[str]:
+    return matching_issues(
+        [str(issue) for issue in record.get("issues", [])],
+        TEST_TARGET_FINGERPRINT_ISSUES,
+    )
+
+
+def _is_source_identity_only_record(record: dict[str, Any]) -> bool:
+    issues = [str(issue) for issue in record.get("issues", [])]
+    if not issues:
+        return False
+    if str(record.get("schema_validation_status", "")) != "pass":
+        return False
+    if record.get("stable_contract_issues") or record.get("mtime_sensitive_issues"):
+        return False
+    return all(issue.startswith(SOURCE_IDENTITY_ISSUES) for issue in issues)
+
+
+def _source_identity_test_summary_lane(rel_path: str) -> tuple[str, tuple[str, ...], str]:
+    if rel_path.endswith("/test-execution-summary-full.json"):
+        return (
+            "test-execution-summary-full-current-or-refresh",
+            ("test-execution-summary-full-current-or-refresh",),
+            "full_suite_test_summary_source_identity",
+        )
+    if rel_path.endswith("/test-execution-summary-public.json"):
+        return (
+            "public-check-summary-current-or-refresh",
+            ("public-check-summary-current-or-refresh",),
+            "public_test_summary_source_identity",
+        )
+    return (
+        "test-execution-summary-current-or-refresh",
+        ("test-execution-summary-current-or-refresh",),
+        "report_contract_test_summary_source_identity",
+    )
+
+
+def _source_identity_release_smoke_lane(rel_path: str) -> tuple[str, tuple[str, ...], str]:
+    if rel_path.endswith("/release-smoke-report-fast.json"):
+        return (
+            "release-smoke-fast-refresh-check",
+            ("release-smoke-fast-refresh-check",),
+            "release_smoke_fast_source_identity",
+        )
+    return (
+        "release-smoke-full-reuse",
+        ("release-smoke-full-reuse",),
+        "release_smoke_full_source_identity",
+    )
+
+
+def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
+    rel_path = str(record.get("path", ""))
+    surface = str(record.get("owner_surface") or owner_surface(rel_path))
+    artifact_kind = str(record.get("artifact_kind", ""))
+    next_action = str(record.get("recommended_next_action", ""))
+    route_id: str
+    lane: str
+    targets: tuple[str, ...]
+    reason_id: str
+
+    if surface == "external_reports":
+        route_id = "external_reports_reference_manifest"
+        lane = "external-report-reference-manifest-settle"
+        targets = (
+            "external-report-reference-manifest-settle",
+            "external-report-lifecycle-refresh",
+        )
+        reason_id = "external_report_reference_manifest_source_identity"
+    elif artifact_kind == "test_execution_summary":
+        lane, targets, reason_id = _source_identity_test_summary_lane(rel_path)
+        route_id = f"ops_reports_{lane.replace('-', '_')}"
+    elif artifact_kind == "public_check_summary":
+        route_id = "ops_reports_public_check_summary"
+        lane = "public-check-summary-current-or-refresh"
+        targets = ("public-check-summary-current-or-refresh",)
+        reason_id = "public_check_summary_source_identity"
+    elif (
+        rel_path == LEARNING_READINESS_SIGNOFF_REPORT
+        or next_action == "refresh_learning_readiness_signoff"
+    ):
+        route_id = "ops_reports_learning_readiness_signoff"
+        lane = "learning-readiness-signoff-refresh"
+        targets = ("learning-readiness-signoff-refresh", "learning-readiness-signoff-revalidation")
+        reason_id = "learning_readiness_signoff_source_identity"
+    elif artifact_kind in LEARNING_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_learning_evidence"
+        lane = "learning-claim-activation-report"
+        targets = (
+            "learning-claim-activation-report",
+            "learning-readiness-signoff-revalidation",
+        )
+        reason_id = "learning_evidence_source_identity"
+    elif artifact_kind in GOAL_RUNTIME_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_goal_runtime"
+        lane = GOAL_RUNTIME_COMPLETED_RUN_LANE
+        targets = GOAL_RUNTIME_COMPLETED_RUN_TARGETS
+        reason_id = "goal_runtime_completed_run_evidence_required"
+    elif artifact_kind in SUPPLY_CHAIN_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_supply_chain"
+        lane = "supply-chain-artifacts-cached"
+        targets = ("supply-chain-artifacts-cached",)
+        reason_id = "supply_chain_source_identity"
+    elif artifact_kind == "release_smoke_report":
+        lane, targets, reason_id = _source_identity_release_smoke_lane(rel_path)
+        route_id = f"ops_reports_{lane.replace('-', '_')}"
+    elif artifact_kind in RELEASE_SOURCE_PACKAGE_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_release_source_package"
+        lane = "release-source-package-check"
+        targets = ("release-source-package-check",)
+        reason_id = "release_source_package_source_identity"
+    elif artifact_kind in MAINTAINABILITY_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_maintainability"
+        lane = "function-budget-refactor-proposals"
+        targets = (
+            "function-budget-refactor-proposals",
+            "lint-uplift-plan",
+            "type-uplift-plan",
+            "complexity-budget",
+        )
+        reason_id = "maintainability_evidence_source_identity"
+    elif artifact_kind in MECHANISM_SOURCE_IDENTITY_TARGETS:
+        lane, targets, reason_id = MECHANISM_SOURCE_IDENTITY_TARGETS[artifact_kind]
+        route_id = f"ops_reports_{lane.replace('-', '_')}"
+    elif artifact_kind in RELEASE_FINALITY_SOURCE_IDENTITY_KINDS:
+        route_id = "ops_reports_release_finality"
+        lane = "release-finality-resettle-current-or-refresh"
+        targets = ("release-finality-resettle-current-or-refresh",)
+        reason_id = "release_finality_source_identity"
+    elif artifact_kind.startswith("raw_registry_"):
+        route_id = "ops_reports_registry_preflight"
+        lane = "registry-preflight"
+        targets = ("registry-preflight",)
+        reason_id = "registry_preflight_source_identity"
+    elif artifact_kind == "github_governance_live_drift_verification":
+        route_id = "ops_reports_github_governance"
+        lane = "github-governance-live-drift"
+        targets = ("github-governance-live-drift",)
+        reason_id = "github_governance_source_identity"
+    elif artifact_kind == "bootstrap_preflight_report":
+        route_id = "ops_reports_bootstrap_preflight"
+        lane = "bootstrap-preflight"
+        targets = ("bootstrap-preflight",)
+        reason_id = "bootstrap_preflight_source_identity"
+    else:
+        route_id = f"{surface}_source_identity_resettle"
+        lane = "freshness-source-identity-converge"
+        targets = ("freshness-source-identity-converge",)
+        reason_id = "source_identity_resettle_fallback"
+
+    return {
+        "route_id": route_id,
+        "owner_surface": surface,
+        "recommended_lane": lane,
+        "recommended_targets": list(targets),
+        "reason_id": reason_id,
+    }
+
+
+def _source_identity_route_summary(route: dict[str, Any]) -> str:
+    artifact_count = route["artifact_count"]
+    owner_surface_value = route["owner_surface"]
+    recommended_lane = route["recommended_lane"]
+    reason_ids = set(route["reason_ids"])
+    if "goal_runtime_completed_run_evidence_required" in reason_ids:
+        return (
+            f"{artifact_count} {owner_surface_value} source-identity artifact(s) require "
+            "completed goal-run evidence; set GOAL_RUN_ID=<completed-run-id> before "
+            "publishing or certifying canonical goal runtime evidence."
+        )
+    if "release_finality_source_identity" in reason_ids:
+        return (
+            f"{artifact_count} {owner_surface_value} source-identity artifact(s) require "
+            "release finality readback/resettle; start with "
+            f"{recommended_lane}."
+        )
+    return (
+        f"{artifact_count} {owner_surface_value} source-identity artifact(s) route to "
+        f"{recommended_lane}."
+    )
+
+
+def _source_identity_owner_routes(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    routes: dict[tuple[str, str], dict[str, Any]] = {}
+    for record in records:
+        descriptor = _source_identity_route_descriptor(record)
+        key = (str(descriptor["owner_surface"]), str(descriptor["route_id"]))
+        route = routes.setdefault(
+            key,
+            {
+                "route_id": descriptor["route_id"],
+                "owner_surface": descriptor["owner_surface"],
+                "artifact_count": 0,
+                "issue_count": 0,
+                "artifact_kinds": set(),
+                "recommended_lane": descriptor["recommended_lane"],
+                "recommended_targets": descriptor["recommended_targets"],
+                "reason_ids": set(),
+                "sample_paths": [],
+            },
+        )
+        route["artifact_count"] += 1
+        route["issue_count"] += len(_record_source_identity_issues(record))
+        artifact_kind = str(record.get("artifact_kind", ""))
+        if artifact_kind:
+            route["artifact_kinds"].add(artifact_kind)
+        route["reason_ids"].add(descriptor["reason_id"])
+        sample_paths = route["sample_paths"]
+        if len(sample_paths) < SOURCE_IDENTITY_ROUTE_SAMPLE_PATH_LIMIT:
+            sample_paths.append(str(record.get("path", "")))
+
+    result: list[dict[str, Any]] = []
+    for route in routes.values():
+        artifact_kinds = sorted(route["artifact_kinds"])
+        reason_ids = sorted(route["reason_ids"])
+        result.append(
+            {
+                "route_id": route["route_id"],
+                "owner_surface": route["owner_surface"],
+                "artifact_count": route["artifact_count"],
+                "issue_count": route["issue_count"],
+                "artifact_kinds": artifact_kinds,
+                "recommended_lane": route["recommended_lane"],
+                "recommended_targets": route["recommended_targets"],
+                "reason_ids": reason_ids,
+                "sample_paths": sorted(route["sample_paths"]),
+                "summary": _source_identity_route_summary(route),
+            }
+        )
+    return sorted(
+        result,
+        key=lambda item: (
+            str(item["owner_surface"]),
+            str(item["recommended_lane"]),
+            str(item["route_id"]),
+        ),
+    )
+
+
+def _artifact_problem_records(artifact_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        record
+        for record in artifact_records
+        if record.get("issues")
+        or record.get("stable_contract_issues")
+        or record.get("mtime_sensitive_issues")
+        or str(record.get("schema_validation_status", "")) in {"fail", "schema_unavailable", "historical_schema_drift"}
+    ]
+
+
+def _schema_or_contract_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        record
+        for record in records
+        if record.get("stable_contract_issues")
+        or str(record.get("schema_validation_status", "")) in {"fail", "schema_unavailable", "historical_schema_drift"}
+    ]
+
+
+def _mtime_or_test_target_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        record
+        for record in records
+        if record.get("mtime_sensitive_issues") or _record_test_target_issues(record)
+    ]
+
+
+def _execution_blocking_artifact_count(
+    records: list[dict[str, Any]],
+    *,
+    root_ephemeral_count: int,
+    non_utf8_count: int,
+) -> int:
+    return root_ephemeral_count + non_utf8_count + sum(
+        1
+        for record in records
+        if str(record.get("gate_effect", "")) == GATE_EFFECT_BLOCKS_EXECUTION
+    )
+
+
+def _other_operational_attention_count(
+    problem_records: list[dict[str, Any]],
+    *categorized_groups: list[dict[str, Any]],
+) -> int:
+    categorized_record_ids = {
+        id(record) for records in categorized_groups for record in records
+    }
+    categorized_record_ids.update(
+        id(record)
+        for record in problem_records
+        if str(record.get("gate_effect", "")) == GATE_EFFECT_BLOCKS_EXECUTION
+    )
+    return sum(1 for record in problem_records if id(record) not in categorized_record_ids)
+
+
+def _stale_routing_decision(
+    *,
+    problem_count: int,
+    source_identity_count: int,
+    schema_or_contract_count: int,
+    mtime_or_test_target_count: int,
+    execution_blocking_count: int,
+    source_identity_owner_routes: list[dict[str, Any]],
+) -> dict[str, Any]:
+    source_identity_only = (
+        problem_count > 0
+        and source_identity_count == problem_count
+        and execution_blocking_count == 0
+    )
+    if problem_count == 0 and execution_blocking_count == 0:
+        return {
+            "classification": "clean",
+            "recommended_lane": "none",
+            "recommended_targets": [],
+            "reason_ids": ["artifact_freshness_clean"],
+            "summary": "No artifact freshness debt needs routing.",
+        }
+    if source_identity_only:
+        goal_runtime_only = source_identity_owner_routes and all(
+            str(route.get("recommended_lane", "")) == GOAL_RUNTIME_COMPLETED_RUN_LANE
+            for route in source_identity_owner_routes
+        )
+        if goal_runtime_only:
+            return {
+                "classification": "source_identity_only",
+                "recommended_lane": GOAL_RUNTIME_COMPLETED_RUN_LANE,
+                "recommended_targets": list(GOAL_RUNTIME_COMPLETED_RUN_TARGETS),
+                "reason_ids": [
+                    "source_identity_only_stale",
+                    "goal_runtime_completed_run_evidence_required",
+                ],
+                "summary": (
+                    f"{source_identity_count} stale goal runtime artifact(s) require "
+                    "completed run evidence. Set GOAL_RUN_ID=<completed-run-id> and "
+                    "publish/certify that run instead of using a generic freshness refresh."
+                ),
+            }
+        return {
+            "classification": "source_identity_only",
+            "recommended_lane": "freshness-source-identity-converge",
+            "recommended_targets": ["freshness-source-identity-converge"],
+            "reason_ids": ["source_identity_only_stale"],
+            "summary": (
+                f"{source_identity_count} stale artifact(s) only differ by source "
+                "revision or source-tree fingerprint. Use the source-identity convergence "
+                "lane before broad release convergence; use owner routes for artifacts that "
+                "need explicit release finality or completed goal-run evidence."
+            ),
+        }
+    if execution_blocking_count:
+        return {
+            "classification": "execution_blocking_debt",
+            "recommended_lane": "artifact-freshness-refresh-check",
+            "recommended_targets": ["artifact-freshness-refresh-check"],
+            "reason_ids": ["execution_blocking_artifact_debt"],
+            "summary": (
+                f"{execution_blocking_count} execution-blocking artifact freshness "
+                "issue(s) need direct repair before release evidence routing."
+            ),
+        }
+    if schema_or_contract_count:
+        return {
+            "classification": "schema_or_contract_debt",
+            "recommended_lane": "release-evidence-converge",
+            "recommended_targets": [
+                "release-evidence-converge",
+                "artifact-freshness-refresh-check",
+            ],
+            "reason_ids": ["schema_or_contract_artifact_debt"],
+            "summary": (
+                f"{schema_or_contract_count} artifact(s) have schema or contract debt; "
+                "use the broader evidence convergence lane after fixing the producer or schema."
+            ),
+        }
+    if mtime_or_test_target_count:
+        return {
+            "classification": "mtime_or_test_target_debt",
+            "recommended_lane": "release-evidence-converge",
+            "recommended_targets": [
+                "release-evidence-converge",
+                "artifact-freshness-refresh-check",
+            ],
+            "reason_ids": ["mtime_or_test_target_artifact_debt"],
+            "summary": (
+                f"{mtime_or_test_target_count} artifact(s) have mtime or test target "
+                "freshness debt; regenerate the owning evidence before final release checks."
+            ),
+        }
+    return {
+        "classification": "mixed",
+        "recommended_lane": "release-evidence-converge",
+        "recommended_targets": [
+            "release-evidence-converge",
+            "artifact-freshness-refresh-check",
+        ],
+        "reason_ids": ["mixed_artifact_freshness_debt"],
+        "summary": (
+            f"{problem_count} artifact freshness issue(s) need owner-specific repair "
+            "before broad release evidence can be trusted."
+        ),
+    }
+
+
+def stale_routing(
+    artifact_records: list[dict[str, Any]],
+    *,
+    root_ephemeral_count: int,
+    non_utf8_count: int,
+) -> dict[str, Any]:
+    problem_records = _artifact_problem_records(artifact_records)
+    source_identity_records = [
+        record for record in problem_records if _is_source_identity_only_record(record)
+    ]
+    source_identity_issue_count = sum(
+        len(_record_source_identity_issues(record)) for record in source_identity_records
+    )
+    source_identity_owner_routes = _source_identity_owner_routes(source_identity_records)
+    schema_or_contract_records = _schema_or_contract_records(problem_records)
+    mtime_or_test_target_records = _mtime_or_test_target_records(problem_records)
+    execution_blocking_artifact_count = _execution_blocking_artifact_count(
+        problem_records,
+        root_ephemeral_count=root_ephemeral_count,
+        non_utf8_count=non_utf8_count,
+    )
+    other_operational_attention_artifact_count = _other_operational_attention_count(
+        problem_records,
+        source_identity_records,
+        schema_or_contract_records,
+        mtime_or_test_target_records,
+    )
+    decision = _stale_routing_decision(
+        problem_count=len(problem_records),
+        source_identity_count=len(source_identity_records),
+        schema_or_contract_count=len(schema_or_contract_records),
+        mtime_or_test_target_count=len(mtime_or_test_target_records),
+        execution_blocking_count=execution_blocking_artifact_count,
+        source_identity_owner_routes=source_identity_owner_routes,
+    )
+
+    return {
+        "classification": decision["classification"],
+        "recommended_lane": decision["recommended_lane"],
+        "recommended_targets": decision["recommended_targets"],
+        "post_commit_lane": "release-post-commit-finalize",
+        "reason_ids": decision["reason_ids"],
+        "problem_artifact_count": len(problem_records) + root_ephemeral_count + non_utf8_count,
+        "source_identity_only_artifact_count": len(source_identity_records),
+        "source_identity_only_issue_count": source_identity_issue_count,
+        "source_identity_owner_routes": source_identity_owner_routes,
+        "schema_or_contract_debt_artifact_count": len(schema_or_contract_records),
+        "mtime_or_test_target_debt_artifact_count": len(mtime_or_test_target_records),
+        "execution_blocking_artifact_count": execution_blocking_artifact_count,
+        "other_operational_attention_artifact_count": other_operational_attention_artifact_count,
+        "summary": decision["summary"],
+    }

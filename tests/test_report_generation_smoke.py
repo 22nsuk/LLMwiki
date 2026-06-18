@@ -7,29 +7,29 @@ from pathlib import Path
 from typing import ClassVar
 
 import pytest
-from ops.scripts.artifact_freshness_runtime import ENVELOPE_REQUIRED_FIELDS
-from ops.scripts.mechanism_review_runtime import (
-    build_report as build_mechanism_review_report,
-)
-from ops.scripts.mutation_proposal_runtime import (
-    build_report as build_mutation_proposal_report,
-)
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.structural_complexity_budget_runtime import (
+
+from ops.scripts.core.artifact_freshness_runtime import ENVELOPE_REQUIRED_FIELDS
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.structural_complexity_budget_runtime import (
     build_report as build_structural_complexity_budget_report,
 )
-from ops.scripts.wiki_eval import evaluate
-from ops.scripts.wiki_eval_coverage_runtime import (
+from ops.scripts.eval.wiki_eval import evaluate
+from ops.scripts.eval.wiki_eval_coverage_runtime import (
     build_report as build_eval_coverage_report,
 )
-from ops.scripts.wiki_lint import lint
-from ops.scripts.wiki_snapshot_runtime import (
+from ops.scripts.eval.wiki_lint import lint
+from ops.scripts.eval.wiki_snapshot_runtime import (
     WikiRuntimeSnapshot,
     build_wiki_runtime_snapshot,
 )
-from ops.scripts.wiki_stage2_eval import evaluate as evaluate_stage2
-
+from ops.scripts.eval.wiki_stage2_eval import evaluate as evaluate_stage2
+from ops.scripts.mechanism.mechanism_review_runtime import (
+    build_report as build_mechanism_review_report,
+)
+from ops.scripts.mechanism.mutation_proposal_runtime import (
+    build_report as build_mutation_proposal_report,
+)
 from tests.report_contract_test_runtime import (
     ReportPayload,
     ReportPayloadMap,

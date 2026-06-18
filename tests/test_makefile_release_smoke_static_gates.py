@@ -30,27 +30,38 @@ class MakefileReleaseSmokeStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
+            "RELEASE_SMOKE_ARCHIVE_OUT ?= build/release/release-smoke.zip",
+            text,
+        )
+        self.assertIn(
+            "RELEASE_SMOKE_FAST_ARCHIVE_OUT ?= build/release/release-smoke-fast.zip",
+            text,
+        )
+        self.assertIn(
             "RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT ?= tmp/release-smoke-report-fast-current-check.json",
             text,
         )
         self.assertIn("RELEASE_SMOKE_REUSE_FROM ?= $(RELEASE_SMOKE_OUT)", text)
         self.assertIn(
-            '$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --out "$(RELEASE_SMOKE_OUT)"',
+            '$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile full --archive-out "$(RELEASE_SMOKE_ARCHIVE_OUT)" --out "$(RELEASE_SMOKE_OUT)"',
             _target_block(text, "release-smoke"),
         )
         self.assertIn("release-smoke-full: release-smoke", text)
         reuse_block = _target_block(text, "release-smoke-full-reuse")
+        self.assertIn('--archive-out "$(RELEASE_SMOKE_ARCHIVE_OUT)"', reuse_block)
         self.assertIn("--reuse-if-current", reuse_block)
         self.assertIn('--reuse-from "$(RELEASE_SMOKE_REUSE_FROM)"', reuse_block)
         current_check_block = _target_block(text, "release-smoke-full-current-check")
+        self.assertIn('--archive-out "$(RELEASE_SMOKE_ARCHIVE_OUT)"', current_check_block)
         self.assertIn("--reuse-if-current", current_check_block)
         self.assertIn("--reuse-only", current_check_block)
         self.assertIn('--out "$(RELEASE_SMOKE_CURRENT_CHECK_OUT)"', current_check_block)
         self.assertIn(
-            '$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"',
+            '$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_SMOKE_FAST_ARCHIVE_OUT)" --out "$(RELEASE_SMOKE_FAST_OUT)"',
             _target_block(text, "release-smoke-fast"),
         )
         fast_current_check_block = _target_block(text, "release-smoke-fast-current-check")
+        self.assertIn('--archive-out "$(RELEASE_SMOKE_FAST_ARCHIVE_OUT)"', fast_current_check_block)
         self.assertIn("--reuse-if-current", fast_current_check_block)
         self.assertIn("--reuse-only", fast_current_check_block)
         self.assertIn('--reuse-from "$(RELEASE_SMOKE_FAST_OUT)"', fast_current_check_block)
@@ -71,10 +82,10 @@ class MakefileReleaseSmokeStaticGateTests(unittest.TestCase):
         )
         release_doc_text = DOCS_RELEASE.read_text(encoding="utf-8")
         self.assertIn(
-            "developer/package precheck이며 canonical release evidence로 쓰지 않는다",
+            "developer/package precheck, not canonical release",
             release_doc_text,
         )
         self.assertIn(
-            "canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다",
+            "canonical release evidence for the full smoke report at",
             release_doc_text,
         )

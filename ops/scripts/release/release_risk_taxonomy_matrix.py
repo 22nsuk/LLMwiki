@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import os
 import sys
 from pathlib import Path
@@ -10,17 +9,22 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_repo_artifact_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.release_risk_taxonomy_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        RELEASE_RISK_TAXONOMY_MATRIX_SCHEMA_PATH,
+    )
+    from ops.scripts.release.release_risk_taxonomy_runtime import (
         ADVISORY_REVIEW_BACKLOG,
         CLEAN_LANE_BLOCKS,
         CONDITIONAL_OPERATOR_REVIEW,
@@ -28,21 +32,20 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         RELEASE_RISK_TAXONOMY_PATH,
         load_release_risk_taxonomy,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
-        RELEASE_RISK_TAXONOMY_MATRIX_SCHEMA_PATH,
-    )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         resolve_repo_artifact_path,
         write_schema_backed_report,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         RELEASE_RISK_TAXONOMY_MATRIX_SCHEMA_PATH,
     )
 
@@ -150,7 +153,7 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=RELEASE_RISK_TAXONOMY_MATRIX_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/release_risk_taxonomy_matrix.py",
+                "ops/scripts/release/release_risk_taxonomy_matrix.py",
                 RELEASE_RISK_TAXONOMY_PATH,
             ],
             file_inputs={"release_risk_taxonomy": RELEASE_RISK_TAXONOMY_PATH},
@@ -215,10 +218,10 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 
 def _set_mtime(path: Path, generated_at: str) -> None:
-    try:
-        timestamp = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00")).timestamp()
-    except ValueError:
+    generated_dt = parse_generated_at(generated_at)
+    if generated_dt is None:
         return
+    timestamp = generated_dt.timestamp()
     os.utime(path, (timestamp, timestamp))
 
 

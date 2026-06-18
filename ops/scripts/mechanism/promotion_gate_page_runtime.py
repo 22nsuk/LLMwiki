@@ -4,8 +4,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.rule_registry_runtime import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.rule_registry_runtime import (
     RuleMetadata,
     RuleSpec,
     collapse_rule_decision_contract,
@@ -14,15 +14,16 @@ from ops.scripts.rule_registry_runtime import (
     evaluate_rule_registry,
     status_rule_reducer,
 )
-from ops.scripts.wiki_eval import evaluate as evaluate_wiki
-from ops.scripts.wiki_lint import lint as lint_wiki
-from ops.scripts.wiki_stage2_eval import evaluate as evaluate_stage2
+from ops.scripts.eval.wiki_eval import evaluate as evaluate_wiki
+from ops.scripts.eval.wiki_lint import lint as lint_wiki
+from ops.scripts.eval.wiki_stage2_eval import evaluate as evaluate_stage2
 
 from .promotion_gate_common_runtime import (
     PROMOTION_REPORT_SCHEMA,
     PromotionGatePolicyError,
     build_history_status,
     decision_to_next_action,
+    decision_to_outcome,
     eval_input_summary,
     extract_policy_identity,
     page_record_map,
@@ -400,6 +401,7 @@ def _assemble_page_class_report(
         "mode": "report_only",
         "artifact_class": context.artifact_class,
         "decision": decision,
+        "outcome": decision_to_outcome(decision),
         "decision_record": decision_contract["decision_record"],
         "decision_reduction": decision_contract["decision_reduction"],
         "summary": context.log["summary"],

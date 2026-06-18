@@ -11,33 +11,37 @@ import unittest
 from collections.abc import Callable
 from pathlib import Path
 
-from ops.scripts.mechanism_assess import main as mechanism_assess_main
-from ops.scripts.output_runtime import resolve_output_path, write_output_text
-from ops.scripts.path_runtime import stable_report_path
-from ops.scripts.planning_gate_validate import main as planning_gate_validate_main
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_gate import main as promotion_gate_main
-from ops.scripts.raw_registry_export import main as raw_registry_export_main
-from ops.scripts.raw_registry_preflight import main as raw_registry_preflight_main
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.output_runtime import resolve_output_path, write_output_text
+from ops.scripts.core.path_runtime import stable_report_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_constants_runtime import (
     RAW_REGISTRY_EXPORT_SCHEMA_PATH,
     WIKI_MANIFEST_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.script_output_surfaces import (
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.script_output_surfaces import (
+    NON_PATH_STATUS_OUTPUT_OPTIONS,
     build_registry as build_script_output_surface_registry,
 )
-from ops.scripts.starter_bundle_runtime import (
+from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_main
+from ops.scripts.core.starter_bundle_runtime import (
     DEFAULT_STARTER_BUNDLE,
     starter_bundle_path,
 )
-from ops.scripts.wiki_eval import main as wiki_eval_main
-from ops.scripts.wiki_eval_coverage import main as wiki_eval_coverage_main
-from ops.scripts.wiki_lint import main as wiki_lint_main
-from ops.scripts.wiki_manifest import main as wiki_manifest_main
-from ops.scripts.wiki_stage2_eval import main as wiki_stage2_eval_main
-
-from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_main
+from ops.scripts.eval.wiki_eval import main as wiki_eval_main
+from ops.scripts.eval.wiki_eval_coverage import main as wiki_eval_coverage_main
+from ops.scripts.eval.wiki_lint import main as wiki_lint_main
+from ops.scripts.eval.wiki_manifest import main as wiki_manifest_main
+from ops.scripts.eval.wiki_stage2_eval import main as wiki_stage2_eval_main
+from ops.scripts.mechanism.mechanism_assess import main as mechanism_assess_main
+from ops.scripts.mechanism.planning_gate_validate import (
+    main as planning_gate_validate_main,
+)
+from ops.scripts.mechanism.promotion_gate import main as promotion_gate_main
+from ops.scripts.registry.raw_registry_export import main as raw_registry_export_main
+from ops.scripts.registry.raw_registry_preflight import (
+    main as raw_registry_preflight_main,
+)
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import (
     seed_minimal_vault,
@@ -81,6 +85,8 @@ def _output_option_names(rel_path: str) -> set[str]:
             continue
         for arg in node.args:
             if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
+                continue
+            if arg.value in NON_PATH_STATUS_OUTPUT_OPTIONS:
                 continue
             if arg.value == "--out" or arg.value.endswith("-out"):
                 options.add(arg.value)
@@ -357,6 +363,51 @@ class WriterOutputPathsTest(unittest.TestCase):
         for entry in _script_output_surface_entries():
             if entry["output_options"]:
                 self.assertIn(entry["classification"], OUTPUT_WRITER_CLASSIFICATIONS)
+
+    def test_fixed_run_artifact_writer_is_classified(self) -> None:
+        entry = next(
+            item
+            for item in _script_output_surface_entries()
+            if item["path"] == "ops/scripts/mechanism/mechanism_contract_eval.py"
+        )
+
+        self.assertEqual(entry["classification"], "repo_artifact")
+        self.assertEqual(entry["output_options"], [])
+        self.assertIn("fixed run artifacts", entry["reason"])
+
+    def test_status_flags_ending_in_out_are_explicitly_allowlisted(self) -> None:
+        registry = build_script_output_surface_registry(REPO_ROOT)
+        goal_status = next(
+            entry
+            for entry in registry["surfaces"]
+            if entry["path"] == "ops/scripts/mechanism/goal_run_status.py"
+        )
+        self.assertNotIn("--last-command-timed-out", goal_status["output_options"])
+
+    def test_only_allowlisted_non_path_status_options_are_excluded(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            script_dir = vault / "ops" / "scripts"
+            script_dir.mkdir(parents=True, exist_ok=True)
+            (script_dir / "status_flags.py").write_text(
+                "import argparse\n"
+                "parser = argparse.ArgumentParser()\n"
+                "parser.add_argument('--last-command-timed-out')\n"
+                "parser.add_argument('--synthetic-timed-out')\n",
+                encoding="utf-8",
+            )
+
+            registry = build_script_output_surface_registry(vault)
+
+        entry = next(
+            item
+            for item in registry["surfaces"]
+            if item["path"] == "ops/scripts/status_flags.py"
+        )
+        self.assertEqual(entry["output_options"], ["--synthetic-timed-out"])
+        self.assertNotIn("--last-command-timed-out", entry["output_options"])
 
     def test_no_output_entries_are_direct_fallback_registry_entries(self) -> None:
         for entry in _script_output_surface_entries():

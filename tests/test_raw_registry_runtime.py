@@ -5,9 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.path_portability_runtime import infozip_c_locale_escape_path
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.raw_registry_runtime import (
+from ops.scripts.core.path_portability_runtime import infozip_c_locale_escape_path
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.registry_exceptions_runtime import (
+    RawRegistryInvalidContinuationLineError,
+    RawRegistryLegacyCompactEntryError,
+)
+from ops.scripts.registry.raw_registry_runtime import (
     build_raw_registry_export,
     build_registry_source_trace_resolution_map,
     enrich_registry_entries_with_inventory,
@@ -15,11 +19,6 @@ from ops.scripts.raw_registry_runtime import (
     parse_raw_registry_page,
     registry_entry_locators,
 )
-from ops.scripts.registry_exceptions_runtime import (
-    RawRegistryInvalidContinuationLineError,
-    RawRegistryLegacyCompactEntryError,
-)
-
 from tests.minimal_vault_runtime import live_registry_shard_pages, seed_minimal_vault
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "raw_registry"

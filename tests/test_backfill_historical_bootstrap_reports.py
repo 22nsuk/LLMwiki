@@ -7,13 +7,13 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.backfill_historical_bootstrap_reports import (
+
+from ops.scripts.core.backfill_historical_bootstrap_reports import (
     ARCHIVE_REASON,
     backfill_historical_bootstrap_reports,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]

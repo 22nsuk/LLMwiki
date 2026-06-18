@@ -4,16 +4,21 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.command_log_summary_runtime import (
+from ops.scripts.core.command_log_summary_runtime import (
     command_log_stream_has_flag,
     command_log_stream_text,
 )
-from ops.scripts.executor_noop_runtime import text_has_executor_noop_mutation_failure
+from ops.scripts.core.executor_noop_runtime import (
+    text_has_executor_noop_mutation_failure,
+)
 
 from .auto_improve_next_run_decision_runtime import (
     NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE,
     NEXT_RUN_FAILURE_REPAIR_FAMILY,
 )
+from .current_target_path_runtime import current_repo_target_paths
+
+WORKER_STRUCTURAL_PREFLIGHT_FAILURE_MARKER = "worker structural complexity preflight blocked"
 
 
 def is_next_run_failure_repair_source(decision: Mapping[str, Any]) -> bool:
@@ -42,6 +47,41 @@ def run_has_noop_mutation_failure(vault: Path, source_run_id: str) -> bool:
     )
 
 
+def run_has_worker_structural_preflight_failure(vault: Path, source_run_id: str) -> bool:
+    return WORKER_STRUCTURAL_PREFLIGHT_FAILURE_MARKER in command_log_stream_text(
+        vault,
+        source_run_id,
+        prefix="mutation-command",
+        stream="stderr",
+    )
+
+
+def _structural_complexity_targets_pass(vault: Path, targets: object) -> bool:
+    target_list = [str(target) for target in targets] if isinstance(targets, list) else []
+    primary_targets = current_repo_target_paths(vault, target_list)
+    if not primary_targets:
+        return False
+    try:
+        from ops.scripts.eval.structural_complexity_budget_runtime import (
+            DEFAULT_TARGET_PROFILES,
+            build_report,
+            touched_target_profiles,
+        )
+
+        report = build_report(
+            vault,
+            target_profiles=touched_target_profiles(DEFAULT_TARGET_PROFILES, primary_targets),
+        )
+    except (OSError, TypeError, ValueError):
+        return False
+    target_statuses = {
+        str(target.get("path", "")).strip(): str(target.get("status", "")).strip()
+        for target in report.get("targets", [])
+        if isinstance(target, dict)
+    }
+    return all(target_statuses.get(target) == "pass" for target in primary_targets)
+
+
 def repair_decision_ended_as_noop_mutation_failure(
     vault: Path,
     decision: Mapping[str, Any],
@@ -63,4 +103,9 @@ def repair_decision_ended_as_noop_mutation_failure(
     source_run_id = str(decision.get("source_run_id", "")).strip()
     if not source_run_id:
         return False
-    return run_has_noop_mutation_failure(vault, source_run_id)
+    if run_has_noop_mutation_failure(vault, source_run_id):
+        return True
+    return run_has_worker_structural_preflight_failure(
+        vault,
+        source_run_id,
+    ) and _structural_complexity_targets_pass(vault, decision.get("primary_targets", []))

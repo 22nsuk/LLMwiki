@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ops.scripts.mechanism_assess import (
+from ops.scripts.mechanism.mechanism_assess import (
     MechanismAssessmentState,
     configured_high_risk_flags,
     detect_risk_flags,

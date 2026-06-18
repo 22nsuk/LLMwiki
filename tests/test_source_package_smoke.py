@@ -11,10 +11,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.source_package_smoke import (
     build_report,
     main,
@@ -115,7 +115,7 @@ class SourcePackageSmokeTests(unittest.TestCase):
                 termination_reason="",
             )
 
-        with patch("ops.scripts.source_package_smoke.run_with_timeout", fake_run):
+        with patch("ops.scripts.release.source_package_smoke.run_with_timeout", fake_run):
             report = build_report(
                 self.vault,
                 source_zip=source_zip.relative_to(self.vault).as_posix(),
@@ -168,7 +168,7 @@ class SourcePackageSmokeTests(unittest.TestCase):
                 termination_reason="",
             )
 
-        with patch("ops.scripts.source_package_smoke.run_with_timeout", fake_run):
+        with patch("ops.scripts.release.source_package_smoke.run_with_timeout", fake_run):
             report = build_report(
                 self.vault,
                 source_zip=source_zip.relative_to(self.vault).as_posix(),

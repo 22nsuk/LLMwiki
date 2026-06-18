@@ -5,9 +5,9 @@ import json
 import re
 from pathlib import Path
 
-from ops.scripts.path_portability_runtime import infozip_c_locale_escape_path
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.registry_exceptions_runtime import (
+from ops.scripts.core.path_portability_runtime import infozip_c_locale_escape_path
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.registry_exceptions_runtime import (
     RawRegistryEntryNoFieldsError,
     RawRegistryExportInvalidJsonError,
     RawRegistryExportReadError,
@@ -22,7 +22,7 @@ from ops.scripts.registry_exceptions_runtime import (
     RawRegistryYamlParseError,
     raw_registry_exception_detail,
 )
-from ops.scripts.yaml_runtime import parse_simple_yaml
+from ops.scripts.core.yaml_runtime import parse_simple_yaml
 
 ENTRY_ID_RE = re.compile(r"^####\s+([A-Z]-\d+(?:-[A-Z]-\d+)?)\s*$")
 FIELD_LINE_RE = re.compile(r"^- ([^:]+):\s*(.*)$")

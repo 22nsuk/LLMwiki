@@ -4,8 +4,7 @@ import datetime as dt
 import json
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-
+from ops.scripts.core.runtime_context import RuntimeContext
 from tests.run_mechanism_experiment_test_utils import mutation_proposal_report
 
 

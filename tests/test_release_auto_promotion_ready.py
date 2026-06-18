@@ -9,10 +9,10 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_revision_runtime import SourceRevision
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_revision_runtime import SourceRevision
 from ops.scripts.release.release_auto_promotion_ready import (
     build_manifest,
     write_manifest,
@@ -742,15 +742,61 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         self._write_inputs()
         operator = self._operator_summary()
         operator["accepted_risk"]["accepted_risk_count"] = 1
+        operator["accepted_risk"]["release_accepted_risk_count"] = 1
         self._write_json("build/release/operator-release-summary.json", operator)
 
         with self._patch_current_repo():
             manifest = build_manifest(self.vault, context=fixed_context())
 
         self.assertEqual(manifest["status"], "fail")
-        self.assertIn("accepted_risk_count_not_zero", manifest["failures"])
-        blocker = next(item for item in manifest["blockers"] if item["id"] == "accepted_risk_count_not_zero")
+        self.assertIn("release_accepted_risk_count_not_zero", manifest["failures"])
+        blocker = next(
+            item for item in manifest["blockers"]
+            if item["id"] == "release_accepted_risk_count_not_zero"
+        )
         self.assertEqual(blocker["gate_effect"], "operator_review_required")
+
+    def test_advisory_only_risk_counts_do_not_block_auto_promotion(self) -> None:
+        self._write_inputs()
+        operator = self._operator_summary()
+        operator["accepted_risk"]["accepted_risk_count"] = 1
+        operator["accepted_risk"]["gate_attention_count"] = 1
+        operator["accepted_risk"]["advisory_lifecycle_family_count"] = 1
+        self._write_json("build/release/operator-release-summary.json", operator)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["accepted_risk_clean"])
+        self.assertTrue(manifest["checks"]["gate_attention_clean"])
+        self.assertEqual(
+            manifest["diagnostics"]["operator"]["accepted_risk"]["accepted_risk_count"],
+            1,
+        )
+        self.assertEqual(
+            manifest["diagnostics"]["operator"]["gate_attention"],
+            {"gate_attention_count": 0},
+        )
+        self.assertNotIn("accepted_risk_count_not_zero", manifest["failures"])
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_clean_lane_blocking_risk_count_blocks_auto_promotion(self) -> None:
+        self._write_inputs()
+        operator = self._operator_summary()
+        operator["accepted_risk"]["accepted_risk_count"] = 1
+        operator["accepted_risk"]["clean_lane_blocking_accepted_risk_family_count"] = 1
+        self._write_json("build/release/operator-release-summary.json", operator)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["accepted_risk_clean"])
+        self.assertIn(
+            "clean_lane_blocking_accepted_risk_family_count_not_zero",
+            manifest["failures"],
+        )
 
     def test_gate_attention_and_learning_claim_counts_are_separate_stage3_diagnostics(self) -> None:
         self._write_inputs()

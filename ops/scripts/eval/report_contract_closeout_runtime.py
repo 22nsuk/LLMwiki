@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from ops.scripts.artifact_io_runtime import read_json_object
+from ops.scripts.core.artifact_io_runtime import read_json_object
 
 POLICY_PATH = "ops/policies/report-contract-closeout.json"
 

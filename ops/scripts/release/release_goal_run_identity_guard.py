@@ -7,12 +7,16 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.auto_promotion_manifest_sections import (
     RequirementSpec,
     append_requirement_blockers,
@@ -23,8 +27,6 @@ from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "build/release/release-auto-promotion-goal-run-identity.json"
 DEFAULT_GOAL_RUN_STATUS = "ops/reports/goal-run-status.json"
@@ -484,7 +486,7 @@ def _goal_runtime_certificate_requirements(
             certificate_input["load_status"],
             "ok",
             "Goal runtime certificate evidence is missing or invalid.",
-            "Run make goal-runtime-certificate for the promoted run.",
+            "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate for the promoted completed run.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_artifact_kind_ok"],
@@ -494,7 +496,7 @@ def _goal_runtime_certificate_requirements(
             certificate_input["artifact_kind"],
             "goal_runtime_certificate",
             "Goal runtime certificate evidence has an unexpected artifact kind.",
-            "Regenerate goal-runtime certificate evidence.",
+            "Regenerate promoted completed run certificate evidence with GOAL_RUN_ID=<completed-run-id>.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_current"],
@@ -504,7 +506,7 @@ def _goal_runtime_certificate_requirements(
             certificate_input["source_tree_fingerprint"],
             fingerprint,
             "Goal runtime certificate evidence does not describe the current source tree.",
-            "Refresh the goal-runtime certificate for the current source tree.",
+            "Refresh the promoted completed run certificate with GOAL_RUN_ID=<completed-run-id>.",
         ),
         RequirementSpec(
             checks["goal_runtime_certificate_run_id_match"],
@@ -528,7 +530,7 @@ def _goal_runtime_certificate_requirements(
             ),
             "report_status=pass; verification_status in eligible,already_verified; eligible=true",
             "The selected goal run does not have verified certificate evidence.",
-            "Run make goal-runtime-certificate after the promoted run is complete.",
+            "Run GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate after the promoted run is complete.",
         ),
     ]
 
@@ -681,6 +683,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--goal-run-status", default=DEFAULT_GOAL_RUN_STATUS)
     parser.add_argument("--goal-runtime-certificate", default=DEFAULT_GOAL_RUNTIME_CERTIFICATE)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--require-verified",
+        action="store_true",
+        help="Fail when the selected goal-run identity is not backed by verified completed-run evidence.",
+    )
     return parser.parse_args(argv)
 
 
@@ -701,6 +708,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"release_goal_run_identity_status={report['status']}")
         print(f"release_goal_run_verification_status={report['verification_status']}")
     if report["status"] != "pass":
+        return 1
+    if args.require_verified and report["verification_status"] != VERIFICATION_VERIFIED:
         return 1
     return 0
 

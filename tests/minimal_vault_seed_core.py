@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,14 +16,28 @@ def _shared() -> Any:
 class _RegistryLinks:
     shard_pages: list[str]
     wiki_family_shard_pages: list[str]
+    system_family_shard_pages: list[str]
+    generated_shard_pages: list[str]
     shard_links: str
     wiki_family_links: str
+    system_family_links: str
     registry_related_links: str
     wiki_shard_related_links: str
     system_shard_related_links: str
 
 
-def _prepare_minimal_vault_surface(root: Path, shared: Any) -> None:
+def _schema_copy_names(shared: Any, schema_names: Collection[str] | None) -> tuple[str, ...]:
+    if schema_names is None:
+        return tuple(shared.SCHEMA_PATHS)
+    return tuple(sorted({Path(name).name for name in schema_names}))
+
+
+def _prepare_minimal_vault_surface(
+    root: Path,
+    shared: Any,
+    *,
+    schema_names: Collection[str] | None = None,
+) -> None:
     (root / "wiki").mkdir()
     (root / "system").mkdir()
     (root / "raw").mkdir()
@@ -44,8 +59,9 @@ def _prepare_minimal_vault_surface(root: Path, shared: Any) -> None:
                 policy_source.read_text(encoding="utf-8"),
                 encoding="utf-8",
             )
-    for name, source in shared.SCHEMA_PATHS.items():
-        if source.exists():
+    for name in _schema_copy_names(shared, schema_names):
+        source = shared.SCHEMA_PATHS.get(name)
+        if source and source.exists():
             (root / "ops" / "schemas" / name).write_text(
                 source.read_text(encoding="utf-8"),
                 encoding="utf-8",
@@ -55,11 +71,26 @@ def _prepare_minimal_vault_surface(root: Path, shared: Any) -> None:
 def _registry_links(shared: Any) -> _RegistryLinks:
     shard_pages = shared.live_registry_shard_pages()
     wiki_family_shard_pages = shared.live_registry_wiki_family_shard_pages()
+    system_family_shard_pages = shared.live_registry_child_shard_pages(
+        "system/system-raw-registry/system.md"
+    )
+    generated_shard_pages = [
+        path
+        for path in shard_pages
+        if path
+        not in {
+            "system/system-raw-registry/wiki.md",
+            "system/system-raw-registry/system.md",
+        }
+    ]
     return _RegistryLinks(
         shard_pages=shard_pages,
         wiki_family_shard_pages=wiki_family_shard_pages,
+        system_family_shard_pages=system_family_shard_pages,
+        generated_shard_pages=generated_shard_pages,
         shard_links=shared.bullet_wikilinks(shard_pages),
         wiki_family_links=shared.bullet_wikilinks(wiki_family_shard_pages),
+        system_family_links=shared.bullet_wikilinks(system_family_shard_pages),
         registry_related_links=shared.bullet_wikilinks(
             [path for path in shard_pages if path != "system/system-raw-registry.md"]
         ),
@@ -238,7 +269,10 @@ tags:
 - system corpus registry shard
 - registered entries: `0`
 
-## Registered raw sources
+## Second-order shards
+{links.system_family_links or "- none currently"}
+
+## Directly listed raw sources
 - none currently
 
 ## Related pages
@@ -498,7 +532,7 @@ def _add_registry_family_shards(
     links: _RegistryLinks,
     source_trace_ref: str,
 ) -> None:
-    for relative_path in links.wiki_family_shard_pages:
+    for relative_path in links.generated_shard_pages:
         files[relative_path] = shared.build_registry_family_shard_page(relative_path, source_trace_ref)
 
 
@@ -509,9 +543,14 @@ def _write_seed_files(root: Path, files: dict[str, str]) -> None:
         path.write_text(content, encoding="utf-8")
 
 
-def seed_minimal_vault(root: Path, source_trace_ref: str = "raw/fake.pdf") -> None:
+def seed_minimal_vault(
+    root: Path,
+    source_trace_ref: str = "raw/fake.pdf",
+    *,
+    schema_names: Collection[str] | None = None,
+) -> None:
     shared = _shared()
-    _prepare_minimal_vault_surface(root, shared)
+    _prepare_minimal_vault_surface(root, shared, schema_names=schema_names)
     links = _registry_links(shared)
     files = _core_pages(source_trace_ref, links)
     _add_registry_family_shards(files, shared, links, source_trace_ref)

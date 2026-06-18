@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import hashlib
 import json
 import locale
@@ -14,24 +13,22 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.path_portability_runtime import (
+    from ops.scripts.core.path_portability_runtime import (
         INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT,
         component_portability_metrics,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.raw_markdown_runtime import raw_markdown_quality_pass
-    from ops.scripts.raw_registry_runtime import (
-        ALIAS_POLICY_VERSION,
-        PATH_ALIAS_RESOLUTION_MODE,
-    )
-    from ops.scripts.registry_diagnostics_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.registry_diagnostics_runtime import (
         RegistryDiagnosticEmitter,
         registry_diagnostic_paths,
         registry_inventory_context_pass,
@@ -41,25 +38,33 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         registry_source_target_page_naming_pass,
         registry_summary_consistency_pass,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         RAW_REGISTRY_PREFLIGHT_REPORT_SCHEMA_PATH,
         RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_SCHEMA_PATH,
     )
+    from ops.scripts.registry.raw_markdown_runtime import raw_markdown_quality_pass
+    from ops.scripts.registry.raw_registry_runtime import (
+        ALIAS_POLICY_VERSION,
+        PATH_ALIAS_RESOLUTION_MODE,
+    )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_mtime_runtime import parse_generated_at
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.path_portability_runtime import (
+    from ops.scripts.core.path_portability_runtime import (
         INFOZIP_C_LOCALE_COMPONENT_BYTE_LIMIT,
         component_portability_metrics,
     )
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.registry_diagnostics_runtime import (
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.registry_diagnostics_runtime import (
         RegistryDiagnosticEmitter,
         registry_diagnostic_paths,
         registry_inventory_context_pass,
@@ -69,8 +74,8 @@ else:
         registry_source_target_page_naming_pass,
         registry_summary_consistency_pass,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         RAW_REGISTRY_PREFLIGHT_REPORT_SCHEMA_PATH,
         RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_SCHEMA_PATH,
     )
@@ -382,9 +387,9 @@ def preflight(
             resolved_policy_path=resolved_policy_path,
             schema_path=RAW_REGISTRY_PREFLIGHT_REPORT_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/raw_registry_preflight.py",
-                "ops/scripts/raw_registry_runtime.py",
-                "ops/scripts/registry_diagnostics_runtime.py",
+                "ops/scripts/registry/raw_registry_preflight.py",
+                "ops/scripts/registry/raw_registry_runtime.py",
+                "ops/scripts/core/registry_diagnostics_runtime.py",
             ],
             path_group_inputs={
                 "raw_registry_entry_pages": raw_registry_entry_pages,
@@ -431,10 +436,10 @@ def preflight(
 
 def _timestamp_output_from_report(destination: Path, report: dict) -> Path:
     generated_at = str(report.get("generated_at", ""))
-    try:
-        timestamp = dt.datetime.fromisoformat(generated_at.replace("Z", "+00:00")).timestamp()
-    except ValueError:
+    generated_dt = parse_generated_at(generated_at)
+    if generated_dt is None:
         return destination
+    timestamp = generated_dt.timestamp()
     os.utime(destination, (timestamp, timestamp))
     return destination
 
@@ -532,9 +537,9 @@ def build_reproducibility_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/raw_registry_preflight.py",
-                "ops/scripts/raw_registry_runtime.py",
-                "ops/scripts/registry_diagnostics_runtime.py",
+                "ops/scripts/registry/raw_registry_preflight.py",
+                "ops/scripts/registry/raw_registry_runtime.py",
+                "ops/scripts/core/registry_diagnostics_runtime.py",
             ],
             file_inputs={
                 "stored_preflight_report": stored_report_path,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.experiment_telemetry_runtime import (
+from ops.scripts.core.experiment_telemetry_runtime import (
     append_ledger_event as telemetry_append_ledger_event,
     load_run_ledger as telemetry_load_run_ledger,
     run_rel as telemetry_run_rel,
@@ -12,9 +12,10 @@ from ops.scripts.experiment_telemetry_runtime import (
     write_run_telemetry,
     write_timeout_failure_artifact as telemetry_write_timeout_failure_artifact,
 )
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .mechanism_run_common_runtime import ExperimentResolution
+from .promotion_gate_common_runtime import decision_to_outcome
 
 
 def run_rel(run_id: str, filename: str) -> str:
@@ -139,9 +140,17 @@ def write_experiment_telemetry(
             },
         },
         "decision": result.get("decision", ""),
+        "outcome": decision_to_outcome(str(result.get("decision", "")).strip()),
         "finalized": result.get("finalized", False),
         "finalize_result": result.get("finalize_result", {}),
     }
+    if isinstance(result.get("promotion_report"), str) and result["promotion_report"].strip():
+        payload["promotion_report"] = result["promotion_report"]
+    if (
+        isinstance(result.get("changed_files_manifest"), str)
+        and result["changed_files_manifest"].strip()
+    ):
+        payload["changed_files_manifest"] = result["changed_files_manifest"]
     if isinstance(result.get("workspace_preparation"), dict):
         payload["workspace_preparation"] = result["workspace_preparation"]
     if isinstance(result.get("post_mutation_generated_artifact_convergence"), dict):

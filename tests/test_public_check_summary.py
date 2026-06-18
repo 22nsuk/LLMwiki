@@ -8,9 +8,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from unittest.mock import patch
 
-import ops.scripts.public_check_summary as public_check_summary_module
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.public_check_summary import (
+import ops.scripts.public.public_check_summary as public_check_summary_module
+from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.public.public_check_summary import (
     PublicCheckRequest,
     _default_command_runner,
     _public_pytest_summary_cache_path,
@@ -19,9 +21,6 @@ from ops.scripts.public_check_summary import (
     reusable_summary_diagnostics,
     write_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault
 
@@ -145,7 +144,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
             )
 
-        with patch("ops.scripts.public_check_summary.run_with_timeout", fake_run_with_timeout):
+        with patch("ops.scripts.public.public_check_summary.run_with_timeout", fake_run_with_timeout):
             _default_command_runner(
                 ["python", "-m", "pytest"],
                 Path("."),
@@ -190,7 +189,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
             seed_minimal_vault(vault)
             seed_public_policy_file(vault)
 
-            with patch("ops.scripts.public_check_summary.run_with_timeout", fake_run_with_timeout):
+            with patch("ops.scripts.public.public_check_summary.run_with_timeout", fake_run_with_timeout):
                 report = build_report(
                     vault,
                     PublicCheckRequest(
@@ -521,7 +520,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 )
 
             with patch(
-                "ops.scripts.public_check_summary._public_pytest_summary_cache_path",
+                "ops.scripts.public.public_check_summary._public_pytest_summary_cache_path",
                 return_value=cache_path,
             ):
                 report = build_report(

@@ -31,6 +31,11 @@ class AutoImproveExecutionRuntimeTests(unittest.TestCase):
         self.assertEqual(argv[argv.index("--workspace-root") + 1], ".")
         self.assertIn("--scope-freeze", argv)
         self.assertIn("--proposal-snapshot", argv)
+        self.assertIn("--repair-context", argv)
+        self.assertEqual(
+            argv[argv.index("--repair-context") + 1],
+            "runs/run-executor/same-session-repair-context.json",
+        )
         self.assertIn("--routing-report", argv)
 
     def test_mutation_command_prefers_workspace_virtualenv_python(self) -> None:
@@ -56,6 +61,29 @@ class AutoImproveExecutionRuntimeTests(unittest.TestCase):
         argv = shlex.split(command)
 
         self.assertEqual(argv[:3], [".venv/bin/python", "-m", "ops.scripts.core.executor"])
+        self.assertEqual(argv[argv.index("--workspace-root") + 1], ".")
+
+    def test_mutation_command_does_not_return_unlinked_scripts_python_as_relative(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "vault"
+            venv_scripts = artifact_root / ".venv" / "Scripts"
+            venv_scripts.mkdir(parents=True)
+            scripts_python = venv_scripts / "python.exe"
+            scripts_python.write_text("# python shim\n", encoding="utf-8")
+            command = mutation_command(
+                artifact_root=artifact_root,
+                run_id="run-executor",
+                scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                roles=["worker"],
+                routing_report_rels=["runs/run-executor/subagent-routing.worker.json"],
+                policy_path="ops/policies/wiki-maintainer-policy.yaml",
+            )
+
+        argv = shlex.split(command)
+
+        self.assertEqual(argv[:3], [str(scripts_python), "-m", "ops.scripts.core.executor"])
+        self.assertNotEqual(argv[0], ".venv/Scripts/python.exe")
         self.assertEqual(argv[argv.index("--workspace-root") + 1], ".")
 
 

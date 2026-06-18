@@ -27,6 +27,7 @@ def _assert_supply_chain_make_variables(case: unittest.TestCase, text: str) -> N
         "SIGSTORE_BUNDLE_OUT ?= ops/reports/sigstore-bundle-verification.json",
         "SIGSTORE_BUNDLE_REF ?=",
         "SUPPLY_CHAIN_BENCHMARK_OUT ?= ops/reports/supply-chain-benchmark.json",
+        "ALLOW_FINALITY_INVALIDATION ?=",
         "UV ?= uv",
         "STRUCTURAL_COMPLEXITY_BUDGET_OUT ?= ops/reports/structural-complexity-budget.json",
         "GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json",
@@ -84,12 +85,14 @@ def _assert_supply_chain_target_names(case: unittest.TestCase, text: str) -> Non
         "raw-registry-cross-environment-evidence-bundle:",
         "raw-registry-cross-environment-evidence-bundle-check:",
         "review-archive:",
+        "review-archive-clean:",
         "closure-registry-envelope:",
         "supply-chain-artifact-model:",
         "spdx-sbom:",
         "in-toto-statement:",
         "sigstore-bundle:",
         "supply-chain-benchmark:",
+        "supply-chain-finality-writer-guard:",
         "sbom-export-mapping:",
         "supply-chain-artifacts-cached:",
         "uv-lock-check:",
@@ -175,6 +178,14 @@ def _assert_sbom_supply_chain_recipes(case: unittest.TestCase, text: str) -> Non
     )
     for target, needle in recipe_expectations:
         case.assertIn(needle, _target_block(text, target))
+    supply_chain_guard = _target_block(text, "supply-chain-finality-writer-guard")
+    case.assertIn("ALLOW_FINALITY_INVALIDATION", supply_chain_guard)
+    case.assertIn("release-closeout-finality-verify", supply_chain_guard)
+    case.assertIn("release-finality-resettle-current-or-refresh", supply_chain_guard)
+    case.assertIn(
+        "supply-chain-artifacts-cached: supply-chain-finality-writer-guard",
+        text,
+    )
 
 
 def _assert_artifact_index_and_freshness_recipes(case: unittest.TestCase, text: str) -> None:
@@ -240,10 +251,29 @@ def _assert_archive_and_complexity_recipes(case: unittest.TestCase, text: str) -
     case.assertIn('rm -f "$(STRUCTURAL_COMPLEXITY_BUDGET_TOUCHED_OUT)"', touched_block)
     case.assertIn("ratchet inactive without touched inputs", touched_block)
     case.assertIn(
-        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"',
+        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.release.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"',
         _target_block(text, "review-archive"),
     )
+    review_archive_clean_block = _target_block(text, "review-archive-clean")
+    case.assertIn("$(MAKE) local-cache-clean", review_archive_clean_block)
+    case.assertIn("$(MAKE) tmp-json-clean", review_archive_clean_block)
+    case.assertIn(
+        "$(MAKE) review-archive REVIEW_ARCHIVE_PROFILE=clean",
+        review_archive_clean_block,
+    )
+    case.assertLess(
+        review_archive_clean_block.index("$(MAKE) local-cache-clean"),
+        review_archive_clean_block.index("$(MAKE) tmp-json-clean"),
+    )
+    case.assertLess(
+        review_archive_clean_block.index("$(MAKE) tmp-json-clean"),
+        review_archive_clean_block.index("$(MAKE) review-archive REVIEW_ARCHIVE_PROFILE=clean"),
+    )
     archive_modes = (
+        (
+            "archive-execution-manifest-check",
+            '$(PYTHON) -m ops.scripts.archive_execution_manifest --vault "$(VAULT)" --index-path "$(GENERATED_ARTIFACT_INDEX_OUT)" --out "$(ARCHIVE_EXECUTION_MANIFEST_OUT)" --mode dry_run --fail-on-attention',
+        ),
         (
             "archive-execution-manifest-apply",
             '$(PYTHON) -m ops.scripts.archive_execution_manifest --vault "$(VAULT)" --index-path "$(GENERATED_ARTIFACT_INDEX_OUT)" --out "$(ARCHIVE_EXECUTION_MANIFEST_OUT)" --mode applied --operator-confirmation "$(ARCHIVE_EXECUTION_OPERATOR_CONFIRMATION)"',
@@ -401,6 +431,7 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
         self.assertIn("--check", sync_check_block)
         self.assertIn('--gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"', sync_check_block)
         public_targets = (
+            "ci-public-tier",
             "public-check",
             "public-check-serial",
             "public-check-parallel",
@@ -412,10 +443,15 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
         for target in public_targets:
             with self.subTest(target=target):
                 block = _target_block(text, target)
-                if target == "public-check-all-check":
+                if target == "ci-public-tier":
+                    self.assertIn("public-check", block)
+                elif target == "public-check-all-check":
                     self.assertIn("public-check-summary-current-check", block)
                 else:
                     self.assertIn("public-check-summary", block)
+        ci_public_block = _target_block(text, "ci-public-tier")
+        self.assertIn("$(MAKE) public-check", ci_public_block)
+        self.assertNotIn("PYTEST_PUBLIC_MARK_EXPR", ci_public_block)
 
     def test_supply_chain_check_targets_exist(self) -> None:
         text = _makefile_text()

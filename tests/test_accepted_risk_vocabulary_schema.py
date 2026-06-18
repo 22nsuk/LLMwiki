@@ -12,17 +12,18 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.release_closeout_summary import (
-    LEARNING_REVIEW_BLOCKER_ID,
-    TAXONOMY_COVERAGE_BLOCKER_ID,
-)
-from ops.scripts.schema_constants_runtime import (
+
+from ops.scripts.core.schema_constants_runtime import (
     ACCEPTED_RISK_VOCABULARY_SCHEMA_PATH,
     ACCEPTED_RISK_VOCABULARY_SCHEMA_URI,
     LEARNING_READINESS_VOCABULARY_SCHEMA_PATH,
     RELEASE_RISK_TAXONOMY_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release.release_closeout_summary import (
+    LEARNING_REVIEW_BLOCKER_ID,
+    TAXONOMY_COVERAGE_BLOCKER_ID,
+)
 
 pytestmark = pytest.mark.public
 

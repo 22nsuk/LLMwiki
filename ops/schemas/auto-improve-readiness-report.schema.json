@@ -1369,7 +1369,8 @@
           "enum": [
             "hard",
             "history_gap",
-            "input_gap"
+            "input_gap",
+            "runtime_history"
           ]
         },
         "unblock_action_type": {

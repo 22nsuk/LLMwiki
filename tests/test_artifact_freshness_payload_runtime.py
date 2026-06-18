@@ -82,3 +82,11 @@ def test_computed_currentness_status_downgrades_declared_current_on_head_drift()
         )
         == "attention"
     )
+    assert (
+        computed_currentness_status(
+            declared_currentness_status="current",
+            source_tree_fingerprint_status="current",
+            input_fingerprint_status="stale",
+        )
+        == "stale"
+    )

@@ -3,15 +3,27 @@ from __future__ import annotations
 import json
 import unittest
 
-from ops.scripts.auto_improve_readiness_queue_runtime import readiness_queue_state
-from ops.scripts.auto_improve_readiness_runtime import (
+from ops.scripts.core.artifact_freshness_payload_runtime import (
+    embed_artifact_envelope_metadata,
+)
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.auto_improve_readiness_learning_runtime import (
+    learning_claim_blocker_payloads,
+)
+from ops.scripts.mechanism.auto_improve_readiness_queue_runtime import (
+    OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER,
+    readiness_execution_fields,
+    readiness_queue_payloads,
+    readiness_queue_state,
+)
+from ops.scripts.mechanism.auto_improve_readiness_runtime import (
+    assess_learning_readiness,
     build_readiness_report,
+    load_readiness_inputs,
     readiness_can_run,
     readiness_exit_code,
     write_readiness_report,
 )
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.auto_improve_readiness_test_runtime import (
     ENVELOPE_SCHEMA_PATH,
     AutoImproveReadinessRuntimeFixture,
@@ -89,6 +101,40 @@ class AutoImproveReadinessQueueRuntimeTests(
             state.queue_evidence_gaps,
         )
 
+        execution = readiness_execution_fields(state)
+
+        self.assertEqual(execution.status, "warn")
+        self.assertEqual(execution.gate_effect, "blocks_execution")
+        self.assertFalse(execution.can_run)
+        self.assertEqual(execution.runnable_proposal_count, 0)
+        self.assertEqual(execution.blocked_proposal_count, 1)
+        self.assertEqual(execution.reasons[0], "no runnable proposal is available")
+        self.assertIn(
+            "proposal blockers active: recent_log_overlap",
+            execution.reasons,
+        )
+        self.assertIn("none are runnable yet", execution.recommended_next_step)
+        self.assertEqual(execution.to_wire()["reasons"], execution.reasons)
+
+        payloads = readiness_queue_payloads(
+            queue_state=state,
+            reports_present=True,
+            mechanism_review_report=reports["mechanism_review"],
+        )
+
+        self.assertFalse(payloads.queue.ready)
+        self.assertEqual(payloads.queue.runnable_proposal_count, 0)
+        self.assertEqual(payloads.queue.blocked_proposal_count, 1)
+        self.assertEqual(
+            payloads.queue.blocked_reason_counts,
+            [{"reason": "recent_log_overlap", "count": 1}],
+        )
+        self.assertEqual(payloads.fallback["status"], "blocked_queue")
+        checks = {check["id"]: check for check in payloads.checks}
+        self.assertFalse(checks["proposal_queue_nonempty"]["pass"])
+        self.assertEqual(len(payloads.remediations), 1)
+        self.assertEqual(payloads.remediations[0]["blocker"], "recent_log_overlap")
+
     def test_build_readiness_report_passes_when_queue_is_nonempty(self) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
@@ -131,11 +177,19 @@ class AutoImproveReadinessQueueRuntimeTests(
         )
 
         report = build_readiness_report(self.vault, context=fixed_context())
+        inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        execution = readiness_execution_fields(inputs.queue_state)
+        payloads = readiness_queue_payloads(
+            queue_state=inputs.queue_state,
+            reports_present=inputs.reports_present,
+            mechanism_review_report=inputs.active_mechanism_review,
+        )
         destination = write_readiness_report(self.vault, report)
         persisted = json.loads(destination.read_text(encoding="utf-8"))
         envelope_schema = load_schema(ENVELOPE_SCHEMA_PATH)
 
         self.assertEqual(validate_with_schema(persisted, envelope_schema), [])
+        self.assertEqual(report["execution_readiness"], execution.to_wire())
         self.assertEqual(persisted["execution_readiness"]["status"], "pass")
         self.assertTrue(persisted["execution_readiness"]["can_run"])
         self.assertEqual(persisted["execution_status"], "pass")
@@ -160,6 +214,10 @@ class AutoImproveReadinessQueueRuntimeTests(
         self.assertEqual(persisted["queue"]["blocked_proposal_count"], 0)
         self.assertEqual(persisted["fallback"]["status"], "not_needed")
         self.assertEqual(persisted["fallback"]["seed_run_count"], 0)
+        self.assertEqual(report["queue"], payloads.queue.to_wire())
+        self.assertEqual(report["fallback"], payloads.fallback)
+        self.assertEqual(report["checks"], payloads.checks)
+        self.assertEqual(report["remediations"], payloads.remediations)
         self.assertEqual(
             persisted["diagnostics"]["loop_health_summary"]["status"], "missing"
         )
@@ -228,6 +286,477 @@ class AutoImproveReadinessQueueRuntimeTests(
             persisted["diagnostics"]["release_evidence_cohort_summary"]["status"],
             "pass",
         )
+
+    def test_fresh_start_queue_excludes_latest_session_attempted_and_quarantined_ids(
+        self,
+    ) -> None:
+        reports = {
+            "outcome_metrics": {
+                "summary": {
+                    "attempts_considered": 7,
+                    "session_reports_considered": 2,
+                }
+            },
+            "mechanism_review": {
+                "summary": {"candidates_emitted": 4},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
+            },
+            "mutation_proposal": {
+                "summary": {
+                    "source_candidates_read": 4,
+                    "proposals_emitted": 4,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": "attempted-in-latest",
+                        "blocked_by": [],
+                        "priority": 100,
+                    },
+                    {
+                        "proposal_id": "quarantined-in-latest",
+                        "blocked_by": [],
+                        "priority": 90,
+                    },
+                    {
+                        "proposal_id": "attempted-only-in-older-session",
+                        "blocked_by": [],
+                        "priority": 80,
+                    },
+                    {
+                        "proposal_id": "fresh-proposal",
+                        "blocked_by": [],
+                        "priority": 70,
+                    },
+                ],
+            },
+        }
+        self._write_report(
+            "ops/reports/auto-improve-sessions/older.json",
+            {
+                "session_id": "older",
+                "generated_at": "2026-04-21T04:00:00Z",
+                "attempted_proposal_ids": ["attempted-only-in-older-session"],
+                "quarantined_proposal_ids": [],
+            },
+            enveloped=False,
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/latest.json",
+            {
+                "session_id": "latest",
+                "generated_at": "2026-04-22T04:00:00Z",
+                "attempted_proposal_ids": ["attempted-in-latest"],
+                "quarantined_proposal_ids": ["quarantined-in-latest"],
+            },
+            enveloped=False,
+        )
+
+        state = readiness_queue_state(self.vault, reports)
+
+        self.assertEqual(
+            state.runnable_proposal_ids,
+            ["attempted-only-in-older-session", "fresh-proposal"],
+        )
+        self.assertEqual(state.blocked_proposal_count, 2)
+        self.assertEqual(
+            state.blocked_reason_counts,
+            {
+                "latest_session_attempted": 1,
+                "latest_session_quarantined": 1,
+            },
+        )
+        self.assertEqual(
+            state.blocked_proposal_ids,
+            {
+                "latest_session_attempted": ["attempted-in-latest"],
+                "latest_session_quarantined": ["quarantined-in-latest"],
+            },
+        )
+        self.assertTrue(state.queue_ready)
+
+    def test_latest_session_attempted_id_becomes_runnable_after_source_tree_change(
+        self,
+    ) -> None:
+        reports = {
+            "outcome_metrics": {
+                "summary": {
+                    "attempts_considered": 7,
+                    "session_reports_considered": 2,
+                }
+            },
+            "mechanism_review": {"summary": {"candidates_emitted": 1}},
+            "mutation_proposal": {
+                "source_tree_fingerprint": "current-tree",
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": "attempted-after-source-change",
+                        "blocked_by": [],
+                        "priority": 100,
+                    }
+                ],
+            },
+        }
+        self._write_report(
+            "ops/reports/auto-improve-sessions/latest.json",
+            embed_artifact_envelope_metadata(
+                {
+                    "session_id": "latest",
+                    "generated_at": "2026-04-22T04:00:00Z",
+                    "attempted_proposal_ids": ["attempted-after-source-change"],
+                    "quarantined_proposal_ids": [],
+                },
+                {
+                    "artifact_kind": "auto_improve_session",
+                    "source_revision": "old",
+                    "source_tree_fingerprint": "old-tree",
+                },
+            ),
+            enveloped=False,
+        )
+
+        state = readiness_queue_state(self.vault, reports)
+
+        self.assertEqual(state.runnable_proposal_ids, ["attempted-after-source-change"])
+        self.assertEqual(state.blocked_proposal_count, 0)
+        self.assertEqual(state.blocked_reason_counts, {})
+
+    def test_open_next_run_repair_quarantines_source_but_keeps_repair_target(
+        self,
+    ) -> None:
+        source = "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime"
+        repair = "next_run_failure_repair__auto-improve-readiness-queue-runtime__validation-blocked"
+        reports = {
+            "outcome_metrics": {
+                "summary": {
+                    "attempts_considered": 8,
+                    "session_reports_considered": 1,
+                }
+            },
+            "mechanism_review": {
+                "summary": {"candidates_emitted": 2},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
+            },
+            "mutation_proposal": {
+                "summary": {
+                    "source_candidates_read": 2,
+                    "proposals_emitted": 2,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "repair plus stale source",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": source,
+                        "blocked_by": [],
+                        "failure_mode": "recent_log_overlap_queue_blocked",
+                        "priority": 100,
+                    },
+                    {
+                        "proposal_id": repair,
+                        "blocked_by": [],
+                        "failure_mode": "next_run_failure_repair",
+                        "priority": 90,
+                    },
+                ],
+            },
+        }
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            reports["mutation_proposal"],
+            enveloped=False,
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/source-failed.json",
+            {
+                "session_id": "source-failed",
+                "generated_at": "2026-04-21T04:00:00Z",
+                "next_run_decisions": [
+                    {
+                        "decision_id": "next-run-decision:source-failed",
+                        "observed_at": "2026-04-21T03:59:00Z",
+                        "proposal_id": source,
+                        "target_proposal_id": repair,
+                        "proposal_family": "queue_unblock",
+                        "decision": "carry_forward",
+                        "next_run_action": "repair_failure",
+                        "status": "open",
+                        "failure_taxonomy": "validation_blocked",
+                        "quarantined_source_proposal": True,
+                        "primary_targets": [
+                            "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+                        ],
+                        "evidence_paths": ["ops/reports/mutation-proposals.json"],
+                    }
+                ],
+            },
+            enveloped=False,
+        )
+
+        state = readiness_queue_state(self.vault, reports)
+
+        self.assertEqual(state.runnable_proposal_ids, [repair])
+        self.assertEqual(state.blocked_proposal_count, 1)
+        self.assertEqual(
+            state.blocked_reason_counts,
+            {OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER: 1},
+        )
+        self.assertEqual(
+            state.blocked_proposal_ids,
+            {OPEN_NEXT_RUN_REPAIR_QUARANTINED_BLOCKER: [source]},
+        )
+        self.assertTrue(state.queue_ready)
+
+    def test_consumed_next_run_repair_decision_no_longer_quarantines_source(
+        self,
+    ) -> None:
+        source = "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime"
+        repair = "next_run_failure_repair__auto-improve-readiness-queue-runtime__validation-blocked"
+        decision_id = "next-run-decision:source-failed"
+        reports = {
+            "outcome_metrics": {
+                "summary": {
+                    "attempts_considered": 8,
+                    "session_reports_considered": 2,
+                }
+            },
+            "mechanism_review": {
+                "summary": {"candidates_emitted": 2},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
+            },
+            "mutation_proposal": {
+                "summary": {
+                    "source_candidates_read": 2,
+                    "proposals_emitted": 2,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": source,
+                        "blocked_by": [],
+                        "failure_mode": "recent_log_overlap_queue_blocked",
+                        "priority": 100,
+                    },
+                    {
+                        "proposal_id": repair,
+                        "blocked_by": [],
+                        "failure_mode": "next_run_failure_repair",
+                        "priority": 90,
+                    },
+                ],
+            },
+        }
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            reports["mutation_proposal"],
+            enveloped=False,
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/source-failed.json",
+            {
+                "session_id": "source-failed",
+                "generated_at": "2026-04-21T04:00:00Z",
+                "next_run_decisions": [
+                    {
+                        "decision_id": decision_id,
+                        "observed_at": "2026-04-21T03:59:00Z",
+                        "proposal_id": source,
+                        "target_proposal_id": repair,
+                        "proposal_family": "queue_unblock",
+                        "decision": "carry_forward",
+                        "next_run_action": "repair_failure",
+                        "status": "open",
+                        "failure_taxonomy": "validation_blocked",
+                        "quarantined_source_proposal": True,
+                        "primary_targets": [
+                            "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+                        ],
+                        "evidence_paths": ["ops/reports/mutation-proposals.json"],
+                    }
+                ],
+            },
+            enveloped=False,
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/repair-consumed.json",
+            {
+                "session_id": "repair-consumed",
+                "generated_at": "2026-04-22T04:00:00Z",
+                "iterations": [{"source_candidate_id": decision_id}],
+            },
+            enveloped=False,
+        )
+
+        state = readiness_queue_state(self.vault, reports)
+
+        self.assertEqual(state.runnable_proposal_ids, [source, repair])
+        self.assertEqual(state.blocked_proposal_count, 0)
+        self.assertEqual(state.blocked_reason_counts, {})
+        self.assertEqual(state.blocked_proposal_ids, {})
+        self.assertTrue(state.queue_ready)
+
+    def test_build_readiness_report_blocks_latest_session_quarantined_repeat(
+        self,
+    ) -> None:
+        self._write_report(
+            "ops/reports/outcome-metrics.json",
+            {
+                "summary": {
+                    "attempts_considered": 7,
+                    "recent_window": 20,
+                    "recent_attempt_count": 7,
+                    "session_reports_considered": 1,
+                }
+            },
+        )
+        self._write_report(
+            "ops/reports/mechanism-review-candidates.json",
+            {
+                "summary": {"candidates_emitted": 1},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
+            },
+        )
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            {
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": "quarantined-in-latest",
+                        "blocked_by": [],
+                        "priority": 100,
+                    }
+                ],
+            },
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/latest.json",
+            {
+                "session_id": "latest",
+                "generated_at": "2026-04-22T04:00:00Z",
+                "stop_reason": "failure_budget_exhausted",
+                "attempted_proposal_ids": ["quarantined-in-latest"],
+                "quarantined_proposal_ids": ["quarantined-in-latest"],
+            },
+            enveloped=False,
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertFalse(readiness_can_run(report))
+        self.assertEqual(report["queue"]["runnable_proposal_count"], 0)
+        self.assertEqual(report["queue"]["runnable_proposal_ids"], [])
+        self.assertEqual(report["queue"]["blocked_proposal_count"], 1)
+        self.assertEqual(
+            report["queue"]["blocked_reason_counts"],
+            [{"reason": "latest_session_quarantined", "count": 1}],
+        )
+        self.assertEqual(report["fallback"]["status"], "blocked_queue")
+        self.assertEqual(
+            report["remediations"][0]["blocker"],
+            "latest_session_quarantined",
+        )
+        self.assertEqual(
+            report["remediations"][0]["blocker_kind"],
+            "runtime_history",
+        )
+        self.assertEqual(
+            report["remediations"][0]["remediation_code"],
+            "repair_quarantined_proposal_before_retry",
+        )
+        self.assertIn("Do not rerun", report["remediations"][0]["retry_condition"])
+        self.assertIn("latest_session_quarantined", report["next_action"])
+        destination = write_readiness_report(self.vault, report)
+        persisted = json.loads(destination.read_text(encoding="utf-8"))
+        envelope_schema = load_schema(ENVELOPE_SCHEMA_PATH)
+        self.assertEqual(validate_with_schema(persisted, envelope_schema), [])
+
+    def test_build_readiness_report_allows_quarantined_repeat_after_repair_queue_resolved(
+        self,
+    ) -> None:
+        self._write_report(
+            "ops/reports/outcome-metrics.json",
+            {
+                "summary": {
+                    "attempts_considered": 7,
+                    "recent_window": 20,
+                    "recent_attempt_count": 7,
+                    "session_reports_considered": 1,
+                }
+            },
+        )
+        self._write_report(
+            "ops/reports/mechanism-review-candidates.json",
+            {"summary": {"candidates_emitted": 1}},
+        )
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            {
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {
+                    "evidence_gaps": [],
+                    "next_run_decision_queue": {
+                        "open_carry_forward_decisions": 0,
+                        "repair_proposals_emitted": 0,
+                        "decision_counts": {"carry_forward": 1},
+                    },
+                },
+                "proposals": [
+                    {
+                        "proposal_id": "quarantined-in-latest",
+                        "blocked_by": [],
+                        "priority": 100,
+                    }
+                ],
+            },
+        )
+        self._write_report(
+            "ops/reports/auto-improve-sessions/latest.json",
+            {
+                "session_id": "latest",
+                "generated_at": "2026-04-22T04:00:00Z",
+                "stop_reason": "failure_budget_exhausted",
+                "attempted_proposal_ids": ["quarantined-in-latest"],
+                "quarantined_proposal_ids": ["quarantined-in-latest"],
+            },
+            enveloped=False,
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(readiness_can_run(report))
+        self.assertEqual(report["queue"]["runnable_proposal_ids"], ["quarantined-in-latest"])
+        self.assertEqual(report["queue"]["blocked_reason_counts"], [])
 
     def test_build_readiness_report_recommends_seed_run_when_queue_is_empty(
         self,
@@ -406,8 +935,15 @@ class AutoImproveReadinessQueueRuntimeTests(
         )
 
         report = build_readiness_report(self.vault, context=fixed_context())
+        inputs = load_readiness_inputs(self.vault, context=fixed_context())
+        learning = assess_learning_readiness(inputs)
+        learning_claim_blockers, signoff_filtered_blockers = (
+            learning_claim_blocker_payloads(learning, signoff_active=True)
+        )
 
         self.assertEqual(report["learning_readiness"]["status"], "not_runnable")
+        self.assertEqual(report["learning_claim_blockers"], learning_claim_blockers)
+        self.assertEqual(signoff_filtered_blockers, learning_claim_blockers)
         self.assertEqual(report["execution_status"], "blocked")
         self.assertFalse(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])

@@ -7,11 +7,11 @@ import unittest
 from pathlib import Path
 from typing import cast
 
-from ops.scripts.auto_improve_route_scaffold_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.auto_improve_route_scaffold_runtime import (
     RouteScaffoldDependencies,
     route_scaffold_phase,
 )
-from ops.scripts.runtime_context import RuntimeContext
 
 
 def fixed_context() -> RuntimeContext:

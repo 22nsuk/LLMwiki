@@ -3,7 +3,8 @@ from __future__ import annotations
 import datetime as dt
 import unittest
 
-from ops.scripts.mechanism_run_scaffold_templates_runtime import (
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.mechanism_run_scaffold_templates_runtime import (
     initial_planning_validation,
     initial_run_ledger,
     placeholder_promotion_report,
@@ -12,8 +13,6 @@ from ops.scripts.mechanism_run_scaffold_templates_runtime import (
     starter_plan_text,
     starter_seed_text,
 )
-from ops.scripts.runtime_context import RuntimeContext
-
 from tests.run_mechanism_experiment_test_utils import mutation_proposal_report
 
 

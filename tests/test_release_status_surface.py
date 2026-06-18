@@ -8,9 +8,13 @@ import tempfile
 from pathlib import Path
 
 import hypothesis.strategies as st
+import pytest
 from hypothesis import given
-from ops.scripts.runtime_context import RuntimeContext
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 from ops.scripts.release.release_status_surface import (
     DEFAULT_REMOTE_SYNC_LIVE_EVIDENCE,
     FRESHNESS_DISPLAY_VALUES,
@@ -26,6 +30,7 @@ from ops.scripts.release.release_status_surface import (
     TOOLCHAIN_ALIGNMENT_POLICY_EVIDENCE_NOT_ENFORCED,
     VAULT_COMPLETENESS_FULL,
     VAULT_COMPLETENESS_PUBLIC,
+    StatusSurfaceSignals,
     build_status_surface,
     lockfile_freshness_display_status,
     remote_sync_display_status,
@@ -41,6 +46,27 @@ def fixed_context() -> RuntimeContext:
     return RuntimeContext(
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 5, 31, 12, 0, tzinfo=dt.UTC),
+    )
+
+
+def _request_object_signals() -> StatusSurfaceSignals:
+    return StatusSurfaceSignals(
+        generated_at="2026-05-31T12:00:00Z",
+        vault_completeness=VAULT_COMPLETENESS_PUBLIC,
+        source_closeout_status="clean_pass",
+        sealed_run_status="sealed_clean_pass",
+        public_summary_status="pass",
+        lock_check_status="enforced",
+        uv_lock_check_passed=True,
+        learning_signoff_status="",
+        goal_runtime_certificate_status="",
+        remote_sync_signal={
+            "status": "pass",
+            "upstream": "origin/feature",
+            "ahead": 0,
+            "behind": 0,
+        },
+        artifact_freshness_display="advisory",
     )
 
 
@@ -201,6 +227,22 @@ def test_property_12_source_closeout_and_sealed_run_axes_are_independent(
     assert _line_by_key(surface, "sealed_run")["axis"] == "sealed_run"
 
 
+def test_status_surface_accepts_signal_request_object() -> None:
+    surface = status_surface_from_signals(_request_object_signals())
+
+    assert _line_by_key(surface, "source_closeout")["status"] == "clean_pass"
+    assert "freshness=advisory" in str(_line_by_key(surface, "source_closeout")["detail"])
+    assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_SYNCED
+
+
+def test_status_surface_rejects_mixed_signal_request_object_and_legacy_kwargs() -> None:
+    with pytest.raises(
+        TypeError,
+        match="signals cannot be combined with legacy keyword arguments: generated_at",
+    ):
+        status_surface_from_signals(_request_object_signals(), generated_at="override")
+
+
 def test_status_surface_reads_existing_file_signals_without_writing_authority() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         vault = Path(temp_dir) / "vault"
@@ -266,7 +308,13 @@ def test_status_surface_reads_existing_file_signals_without_writing_authority() 
 
         assert _line_by_key(surface, "source_closeout")["status"] == "clean_pass"
         assert "freshness=advisory" in str(_line_by_key(surface, "source_closeout")["detail"])
+        assert "evidence_currentness=stale" in str(
+            _line_by_key(surface, "source_closeout")["detail"]
+        )
         assert _line_by_key(surface, "public_summary")["status"] == "pass"
+        assert "evidence_currentness=stale" in str(
+            _line_by_key(surface, "public_summary")["detail"]
+        )
         assert _line_by_key(surface, "lockfile_freshness")["status"] == "pass"
         assert _line_by_key(surface, "learning_signoff")["status"] == "active"
         assert _line_by_key(surface, "remote_sync")["status"] == STATUS_VALUE_SYNCED
@@ -277,6 +325,114 @@ def test_status_surface_reads_existing_file_signals_without_writing_authority() 
         assert surface["toolchain_alignment_status"] == TOOLCHAIN_ALIGNMENT_ALIGNED
         assert surface["recommended_normalization_step"] == "none"
         assert not (vault / "ops" / "operator" / "operator-release-summary.json").exists()
+
+
+def test_status_surface_displays_currentness_for_public_and_closeout_evidence() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        fingerprint = release_source_tree_fingerprint(vault)
+        reports = vault / "ops" / "reports"
+        reports.mkdir(parents=True)
+        current_envelope = {
+            "artifact_status": "current",
+            "currentness": {"status": "current"},
+            "source_revision": "source_package_without_git",
+            "source_tree_fingerprint": fingerprint,
+        }
+        (reports / "release-closeout-summary.json").write_text(
+            json.dumps(
+                {
+                    **current_envelope,
+                    "status": "pass",
+                    "release_authority_status": "clean_pass",
+                    "machine_release_allowed": True,
+                }
+            ),
+            encoding="utf-8",
+        )
+        (reports / "public-check-summary.json").write_text(
+            json.dumps(
+                {
+                    **current_envelope,
+                    "status": "pass",
+                    "summary": {"public_check_status": "pass"},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        surface = build_status_surface(
+            vault,
+            context=fixed_context(),
+            lock_check_runner=lambda _vault: {"status": "pass", "returncode": 0},
+            remote_sync_reader=lambda _vault: {
+                "status": "unknown",
+                "upstream": "",
+                "ahead": 0,
+                "behind": 0,
+            },
+        )
+
+        assert "evidence_currentness=current" in str(
+            _line_by_key(surface, "source_closeout")["detail"]
+        )
+        assert "evidence_currentness=current" in str(
+            _line_by_key(surface, "public_summary")["detail"]
+        )
+
+
+def test_status_surface_keeps_self_declared_currentness_visible_when_evidence_is_stale() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        reports = vault / "ops" / "reports"
+        reports.mkdir(parents=True)
+        stale_envelope = {
+            "artifact_status": "current",
+            "currentness": {"status": "current"},
+            "source_revision": "source_package_without_git",
+            "source_tree_fingerprint": "old-source-tree",
+        }
+        (reports / "release-closeout-summary.json").write_text(
+            json.dumps(
+                {
+                    **stale_envelope,
+                    "status": "pass",
+                    "release_authority_status": "clean_pass",
+                    "machine_release_allowed": True,
+                }
+            ),
+            encoding="utf-8",
+        )
+        (reports / "public-check-summary.json").write_text(
+            json.dumps(
+                {
+                    **stale_envelope,
+                    "status": "pass",
+                    "summary": {"public_check_status": "pass"},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        surface = build_status_surface(
+            vault,
+            context=fixed_context(),
+            lock_check_runner=lambda _vault: {"status": "pass", "returncode": 0},
+            remote_sync_reader=lambda _vault: {
+                "status": "unknown",
+                "upstream": "",
+                "ahead": 0,
+                "behind": 0,
+            },
+        )
+
+        for key in ("source_closeout", "public_summary"):
+            detail = str(_line_by_key(surface, key)["detail"])
+            assert "evidence_currentness=stale" in detail
+            assert "self_declared_currentness=current" in detail
+            assert "source_tree_fingerprint=stale" in detail
 
 
 def test_status_surface_distinguishes_ambient_from_canonical_lock_check() -> None:

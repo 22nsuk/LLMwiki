@@ -12,7 +12,10 @@ Make orchestration, and helper scripts.
 - `mk/artifact.mk`: generated artifact refresh and convergence helpers.
 - `mk/registry.mk`: raw registry and manifest surfaces.
 - `mk/mechanism.mk`: self-improvement, goal runtime, and mechanism workflows.
-- `mk/release.mk`: release evidence, sealing, and closeout workflows.
+- `mk/release.mk`: shared release variables and compatibility entrypoints.
+- `mk/release-authority.mk`: run-ready, sealed-run, and auto-promotion authority.
+- `mk/release-evidence.mk`: release evidence, closeout, archive, and smoke lanes.
+- `mk/release-learning.mk`: learning readiness, remediation, and session evidence.
 - `mk/public.mk`: public export and codebase-memory-mcp sidecar targets.
 - `mk/supply_chain.mk`: provenance, SBOM, OpenVEX, in-toto, and Sigstore surfaces.
 
@@ -55,9 +58,32 @@ objective lane checks that bind HEAD, source fingerprint, and domain-specific
 currentness. Self-declared current fields are diagnostic metadata, not
 authority by themselves.
 
+## Raw Intake And Registry Maintenance
+
+Full-vault raw intake work should move through the reviewable surfaces in this
+order:
+
+1. Run the route proposal audit before writing or promoting pages.
+2. Use the absorption matrix as the per-source decision trail.
+3. Reflect approved source decisions in source, concept, and synthesis bodies,
+   not only in placement metadata.
+4. Check whether raw registry shards need a parent-router or second-order split.
+5. Run `make raw-registry-shard-policy-sync-check` after shard edits; use
+   `make raw-registry-shard-policy-sync-write` only when the check report shows
+   policy surfaces that should be derived from existing shard pages.
+6. Finish with `make lint`, `make stage2-eval`, and
+   `make registry-preflight-check` for full-vault registry changes.
+
+Synthesis and concept pages should read as reusable wiki knowledge, not intake
+or routing memos. Keep route notes in maintenance sections, keep `Related pages`
+focused on navigation rather than source inventories, and use an evidence map
+only when it improves the analysis instead of duplicating `Evidence considered`
+or `Source trace`.
+
 ## Compatibility Surface
 
-Some flat module paths such as `python -m ops.scripts.release_smoke` continue to
-work through compatibility routing. New docs should prefer Make targets or
-canonical package paths such as `ops.scripts.release.release_smoke`; use
-`llm-wiki-*` only for lifecycle policy public CLIs.
+Some lifecycle-policy flat module paths such as
+`python -m ops.scripts.release_smoke` continue to work through compatibility
+routing. New docs should prefer Make targets or canonical package paths such as
+`ops.scripts.release.release_smoke`; use `llm-wiki-*` only for lifecycle policy
+public CLIs.

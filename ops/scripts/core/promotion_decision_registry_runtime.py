@@ -166,7 +166,7 @@ def _decision_id(
     reason_code: str,
 ) -> str:
     raw = "|".join([subject_id, subject_kind, decision, source_rule, source_pass, reason_code])
-    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
     return f"decision:{_clean_token(subject_id)}:{digest}"
 
 

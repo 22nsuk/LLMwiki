@@ -5,8 +5,8 @@ import datetime as dt
 import json
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.runtime_context import RuntimeContext
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
@@ -37,12 +37,16 @@ def seed_vault(vault: Path) -> None:
             source.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
+    mutation_proposal_test_stub = (
+        "from ops.scripts.mechanism import mutation_proposal_runtime\n\n"
+        "def test_placeholder():\n"
+        "    assert mutation_proposal_runtime is not None\n"
+    )
     for rel_path in (
         "tests/test_promotion_gate.py",
         "tests/test_wiki_lint.py",
         "tests/test_mechanism_assess.py",
         "tests/test_example.py",
-        "tests/test_mutation_proposal.py",
         "tests/test_report_generation_smoke.py",
         "tests/test_mechanism_run_validation_runtime.py",
     ):
@@ -50,6 +54,11 @@ def seed_vault(vault: Path) -> None:
             "def test_placeholder():\n    assert True\n",
             encoding="utf-8",
         )
+    for rel_path in (
+        "tests/test_mutation_proposal_build_report.py",
+        "tests/test_mutation_proposal_promotion.py",
+    ):
+        (vault / rel_path).write_text(mutation_proposal_test_stub, encoding="utf-8")
     for rel_path in (
         "ops/scripts/mechanism/mutation_proposal_runtime.py",
         "ops/scripts/mechanism/mechanism_run_validation_runtime.py",
@@ -61,12 +70,13 @@ def seed_vault(vault: Path) -> None:
         )
 
 
+FIXED_GENERATED_AT = "2026-04-14T12:00:00Z"
+
+
 def write_json(path: Path, payload: dict) -> None:
     payload_to_write = copy.deepcopy(payload)
     if "generated_at" in payload_to_write:
-        timestamp = (
-            dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        )
+        timestamp = FIXED_GENERATED_AT
         payload_to_write["generated_at"] = timestamp
         currentness = payload_to_write.get("currentness")
         if isinstance(currentness, dict):

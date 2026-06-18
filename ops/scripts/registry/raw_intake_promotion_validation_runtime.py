@@ -2,16 +2,35 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ops.scripts.schema_constants_runtime import RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH
+from ops.scripts.core.schema_constants_runtime import (
+    RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
+)
 
-from .raw_intake_promotion_shared_runtime import _json_load_object, _string_list
+from .raw_intake_promotion_shared_runtime import (
+    CONCEPT_ANALYSIS_SCAFFOLD_HEADINGS,
+    SYNTHESIS_ANALYSIS_SCAFFOLD_HEADINGS,
+    _evidence_map_rows,
+    _json_load_object,
+    _string_list,
+)
 
-SYNTHESIS_ANALYSIS_TEMPLATE_MARKERS = (
+SYNTHESIS_ROUTE_MEMO_MARKERS = (
+    "Why this deserved a new synthesis",
     "이 묶음이 새로 더하는 것",
     "source 신호",
     "라우팅 기준",
     "이 route를 다시 쓰는 법",
+    "새 synthesis로 분리",
+    "품질 판단",
+    "route target:",
+    "evidence role:",
+    "absorbed into:",
+    "semantic route",
+    "provenance",
+    "이번 batch",
 )
+SYNTHESIS_ANALYSIS_TEMPLATE_MARKERS = SYNTHESIS_ROUTE_MEMO_MARKERS
+SYNTHESIS_DOMAIN_CONCLUSION_MARKERS = (*SYNTHESIS_ROUTE_MEMO_MARKERS, "intake")
 SYNTHESIS_FOLLOW_UP_SPLIT_MARKERS = (
     "### 2026-04-21 후속 근거",
     "follow-up는",
@@ -200,18 +219,19 @@ def _validate_synthesis_sources(
     return errors, warnings
 
 
-def _analysis_block_marker_warnings(
+def _analysis_block_marker_messages(
     *,
     family_slug: str,
     block_index: int,
     heading: object,
     body: object,
-) -> list[dict]:
+) -> tuple[list[dict], list[dict]]:
     text = f"{heading}\n{body}"
+    errors: list[dict] = []
     warnings: list[dict] = []
     markers = [marker for marker in SYNTHESIS_ANALYSIS_TEMPLATE_MARKERS if marker in text]
     if markers:
-        warnings.append(
+        errors.append(
             {
                 "type": "analysis_template_marker_present",
                 "family_slug": family_slug,
@@ -221,7 +241,7 @@ def _analysis_block_marker_warnings(
         )
     split_markers = [marker for marker in SYNTHESIS_FOLLOW_UP_SPLIT_MARKERS if marker in text]
     if split_markers:
-        warnings.append(
+        errors.append(
             {
                 "type": "analysis_follow_up_split_marker_present",
                 "family_slug": family_slug,
@@ -229,7 +249,7 @@ def _analysis_block_marker_warnings(
                 "markers": split_markers,
             }
         )
-    return warnings
+    return errors, warnings
 
 
 def _validate_analysis_block(
@@ -265,14 +285,14 @@ def _validate_analysis_block(
                 "block_index": block_index,
             }
         )
-    warnings.extend(
-        _analysis_block_marker_warnings(
-            family_slug=family_slug,
-            block_index=block_index,
-            heading=heading,
-            body=body,
-        )
+    marker_errors, marker_warnings = _analysis_block_marker_messages(
+        family_slug=family_slug,
+        block_index=block_index,
+        heading=heading,
+        body=body,
     )
+    errors.extend(marker_errors)
+    warnings.extend(marker_warnings)
     purpose = block.get("purpose")
     if not _is_nonempty_string(purpose):
         warnings.append(
@@ -302,11 +322,78 @@ def _validate_synthesis_analysis_blocks(
         )
         errors.extend(block_errors)
         warnings.extend(block_warnings)
+    headings = {
+        block.get("heading", "").strip()
+        for block in analysis_blocks
+        if isinstance(block, dict) and isinstance(block.get("heading"), str)
+    }
+    missing_headings = [
+        heading for heading in SYNTHESIS_ANALYSIS_SCAFFOLD_HEADINGS if heading not in headings
+    ]
+    if missing_headings:
+        errors.append(
+            {
+                "type": "missing_synthesis_analysis_scaffold_headings",
+                "family_slug": family_slug,
+                "missing_headings": missing_headings,
+            }
+        )
     return errors, warnings
+
+
+def _validate_synthesis_evidence_map(family_slug: str, synthesis: dict) -> list[dict]:
+    rows = _evidence_map_rows(synthesis.get("evidence_map"))
+    if not rows:
+        return [{"type": "missing_synthesis_evidence_map", "family_slug": family_slug}]
+
+    errors: list[dict] = []
+    for row_index, row in enumerate(rows):
+        missing_fields = [
+            field
+            for field in ("channel", "sources", "what_they_show", "caveat")
+            if not row.get(field, "").strip()
+        ]
+        if missing_fields:
+            errors.append(
+                {
+                    "type": "incomplete_synthesis_evidence_map_row",
+                    "family_slug": family_slug,
+                    "row_index": row_index,
+                    "missing_fields": missing_fields,
+                }
+            )
+    return errors
+
+
+def _validate_synthesis_domain_conclusion_fields(family_slug: str, synthesis: dict) -> list[dict]:
+    errors: list[dict] = []
+    for field in ("short_answer", "decision_or_takeaway"):
+        value = synthesis.get(field)
+        if not isinstance(value, str):
+            continue
+        markers = [marker for marker in SYNTHESIS_DOMAIN_CONCLUSION_MARKERS if marker in value]
+        if markers:
+            errors.append(
+                {
+                    "type": "synthesis_route_memo_marker_present",
+                    "family_slug": family_slug,
+                    "field": field,
+                    "markers": markers,
+                }
+            )
+    return errors
 
 
 def _validate_synthesis_tail_fields(family_slug: str, synthesis: dict) -> list[dict]:
     errors: list[dict] = []
+    for field in (
+        "what_this_synthesis_excludes",
+        "tensions_and_contradictions",
+        "implications_for_future_ingest",
+        "wiki_placement_note",
+    ):
+        if not _string_list(synthesis.get(field)):
+            errors.append({"type": f"missing_synthesis_{field}", "family_slug": family_slug})
     if not _string_list(synthesis.get("follow_up_questions")):
         errors.append({"type": "missing_synthesis_follow_up_questions", "family_slug": family_slug})
     if not _string_list(synthesis.get("source_trace")):
@@ -355,6 +442,8 @@ def _validate_synthesis_profile(
             error_type="missing_synthesis_field",
         )
     )
+    errors.extend(_validate_synthesis_domain_conclusion_fields(family_slug, synthesis))
+    errors.extend(_validate_synthesis_evidence_map(family_slug, synthesis))
     for validator in (
         _validate_synthesis_sources,
         _validate_synthesis_analysis_blocks,
@@ -469,7 +558,7 @@ def _validate_concept_main_body_blocks(
     errors: list[dict] = []
     main_body_blocks = concept.get("main_body_blocks")
     main_body_text_parts: list[str] = []
-    if not isinstance(main_body_blocks, list) or len(main_body_blocks) < 3:
+    if not isinstance(main_body_blocks, list) or len(main_body_blocks) < len(CONCEPT_ANALYSIS_SCAFFOLD_HEADINGS):
         return [{"type": "insufficient_concept_main_body_blocks", "family_slug": family_slug}], []
     for block_index, block in enumerate(main_body_blocks):
         block_errors, block_text = _validate_concept_body_block(
@@ -480,6 +569,22 @@ def _validate_concept_main_body_blocks(
         errors.extend(block_errors)
         if block_text:
             main_body_text_parts.append(block_text)
+    headings = {
+        block.get("heading", "").strip()
+        for block in main_body_blocks
+        if isinstance(block, dict) and isinstance(block.get("heading"), str)
+    }
+    missing_headings = [
+        heading for heading in CONCEPT_ANALYSIS_SCAFFOLD_HEADINGS if heading not in headings
+    ]
+    if missing_headings:
+        errors.append(
+            {
+                "type": "missing_concept_main_body_scaffold_headings",
+                "family_slug": family_slug,
+                "missing_headings": missing_headings,
+            }
+        )
     return errors, main_body_text_parts
 
 

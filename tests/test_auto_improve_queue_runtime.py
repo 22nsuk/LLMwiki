@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from ops.scripts.auto_improve_queue_runtime import (
+from ops.scripts.mechanism.auto_improve_queue_runtime import (
     build_proposal_queue,
     select_next_proposal,
 )

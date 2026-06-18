@@ -1,12 +1,29 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
-from .auto_improve_queue_runtime import select_next_proposal
+from .auto_improve_error_runtime import AutoImproveUsageError
+from .auto_improve_queue_runtime import (
+    is_recent_log_overlap_queue_unblock,
+    select_next_proposal,
+)
 
+DEFAULT_POST_PROMOTE_MAINTENANCE_CYCLES = 1
 MAINTENANCE_ACTION_RESUME_TARGET = "auto-improve-goal-maintenance-action"
 MAINTENANCE_ACTION_RUNNER_ACTION = "resume_session_with_additional_proposal_budget"
+STABLE_MAINTENANCE_QUEUE_THRESHOLD = 2
+
+
+@dataclass(frozen=True)
+class MaintenanceRunEligibility:
+    should_run: bool
+    reason: str
+    interval_seconds: int = 300
+    max_cycles: int | None = None
+    stop_reason: str | None = None
+    post_promote_cycles: int = DEFAULT_POST_PROMOTE_MAINTENANCE_CYCLES
 
 
 def _int_value(value: object, default: int = 0) -> int:
@@ -33,6 +50,98 @@ def _mapping_value(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _resolve_maintenance_interval(value: int | None) -> int:
+    resolved = 300 if value is None else value
+    if not isinstance(resolved, int) or isinstance(resolved, bool) or resolved < 1:
+        raise AutoImproveUsageError(
+            "maintenance_interval_seconds must be an integer greater than or equal to 1"
+        )
+    return resolved
+
+
+def _resolve_post_promote_maintenance_cycles(value: int | None) -> int:
+    resolved = DEFAULT_POST_PROMOTE_MAINTENANCE_CYCLES if value is None else value
+    if not isinstance(resolved, int) or isinstance(resolved, bool) or resolved < 0:
+        raise AutoImproveUsageError(
+            "post_promote_maintenance_cycles must be an integer greater than or equal to 0"
+        )
+    return resolved
+
+
+def _last_iteration_outcome(session: Mapping[str, Any]) -> str:
+    iterations = session.get("iterations", [])
+    if not isinstance(iterations, list):
+        return ""
+    for iteration in reversed(iterations):
+        if not isinstance(iteration, Mapping):
+            continue
+        return str(iteration.get("outcome", "")).strip()
+    return ""
+
+
+def _maintenance_cycle_count(session: Mapping[str, Any]) -> int:
+    maintenance = _mapping_value(session, "maintenance")
+    return _int_value(maintenance.get("cycle_count"))
+
+
+def _maintenance_run_eligibility(
+    *,
+    maintain_until_budget: bool,
+    post_promote_maintenance_cycles: int | None,
+    maintenance_interval_seconds: int | None,
+    new_iteration_count: int,
+    stop_reason: str | None,
+    last_iteration_outcome: str,
+    elapsed_seconds: int,
+    target_elapsed_seconds: int,
+) -> MaintenanceRunEligibility:
+    post_promote_cycles = _resolve_post_promote_maintenance_cycles(
+        post_promote_maintenance_cycles
+    )
+    if not maintain_until_budget and post_promote_cycles == 0:
+        return MaintenanceRunEligibility(
+            should_run=False,
+            reason="post_promote_maintenance_disabled",
+            post_promote_cycles=post_promote_cycles,
+        )
+    if (
+        not maintain_until_budget
+        and post_promote_maintenance_cycles is None
+        and new_iteration_count <= 0
+    ):
+        return MaintenanceRunEligibility(
+            should_run=False,
+            reason="default_post_promote_without_new_iteration",
+            post_promote_cycles=post_promote_cycles,
+        )
+    if stop_reason != "proposal_budget_exhausted":
+        return MaintenanceRunEligibility(
+            should_run=False,
+            reason="stop_reason_not_proposal_budget_exhausted",
+            post_promote_cycles=post_promote_cycles,
+        )
+    if last_iteration_outcome != "promoted":
+        return MaintenanceRunEligibility(
+            should_run=False,
+            reason="last_iteration_not_promoted",
+            post_promote_cycles=post_promote_cycles,
+        )
+    if elapsed_seconds >= target_elapsed_seconds:
+        return MaintenanceRunEligibility(
+            should_run=False,
+            reason="time_budget_already_exhausted",
+            stop_reason="time_budget_exhausted",
+            post_promote_cycles=post_promote_cycles,
+        )
+    return MaintenanceRunEligibility(
+        should_run=True,
+        reason="eligible",
+        interval_seconds=_resolve_maintenance_interval(maintenance_interval_seconds),
+        max_cycles=None if maintain_until_budget else post_promote_cycles,
+        post_promote_cycles=post_promote_cycles,
+    )
+
+
 def _proposal_repairs_repeat_backlog(proposal: Mapping[str, Any] | None) -> bool:
     if not isinstance(proposal, Mapping):
         return False
@@ -49,19 +158,12 @@ def _proposal_repairs_repeat_backlog(proposal: Mapping[str, Any] | None) -> bool
 
 
 def _proposal_refreshes_stale_maintenance_queue(proposal: Mapping[str, Any] | None) -> bool:
-    if _proposal_repairs_repeat_backlog(proposal):
-        return True
     if not isinstance(proposal, Mapping):
         return False
     if _list_text(proposal.get("blocked_by")):
         return False
-    proposal_id = str(proposal.get("proposal_id", "")).strip()
-    family = str(proposal.get("family", "")).strip()
-    failure_mode = str(proposal.get("failure_mode", "")).strip()
-    return (
-        family == "queue_unblock"
-        and failure_mode == "recent_log_overlap_queue_blocked"
-        and proposal_id.startswith("recent_log_overlap_queue_blocked__")
+    return _proposal_repairs_repeat_backlog(proposal) or is_recent_log_overlap_queue_unblock(
+        dict(proposal)
     )
 
 
@@ -75,6 +177,82 @@ def _expected_maintenance_cycle_count(
         return 0
     remaining = target_elapsed_seconds - start_elapsed_seconds
     return (remaining + interval_seconds - 1) // interval_seconds + 1
+
+
+def _initial_maintenance_payload(
+    *,
+    started_at: str,
+    target_elapsed_seconds: int,
+    start_elapsed_seconds: int,
+    interval_seconds: int,
+    max_cycles: int | None,
+) -> dict[str, Any]:
+    if max_cycles is None:
+        expected_min_cycle_count = _expected_maintenance_cycle_count(
+            start_elapsed_seconds=start_elapsed_seconds,
+            target_elapsed_seconds=target_elapsed_seconds,
+            interval_seconds=interval_seconds,
+        )
+        completion_condition = "time_budget"
+    else:
+        expected_min_cycle_count = max_cycles
+        completion_condition = "post_promote_cycle_limit"
+    return {
+        "mode": "proposal_budget_runtime_maintenance",
+        "status": "running",
+        "started_at": started_at,
+        "completed_at": "",
+        "target_elapsed_seconds": target_elapsed_seconds,
+        "target_cycle_count": expected_min_cycle_count,
+        "completion_condition": completion_condition,
+        "started_elapsed_seconds": start_elapsed_seconds,
+        "interval_seconds": interval_seconds,
+        "expected_min_cycle_count": expected_min_cycle_count,
+        "cycle_count": 0,
+        "meaningful_cycle_count": 0,
+        "stable_queue_snapshot_count": 0,
+        "stable_queue_snapshot": [],
+        "queue_action": {
+            "status": "none",
+            "reason": "",
+            "proposal_ids": [],
+            "recommended_next_step": "",
+        },
+        "last_cycle_elapsed_seconds": 0,
+        "stop_reason": "running",
+        "cycles": [],
+    }
+
+
+def _maintenance_terminal_completion_condition(
+    session: Mapping[str, Any],
+    *,
+    default_completion_condition: str,
+    max_cycles: int | None,
+    elapsed_seconds: int,
+    target_elapsed_seconds: int,
+) -> str | None:
+    maintenance = _mapping_value(session, "maintenance")
+    stable_count = _int_value(maintenance.get("stable_queue_snapshot_count"))
+    stable_snapshot = _list_text(maintenance.get("stable_queue_snapshot"))
+    if stable_count >= STABLE_MAINTENANCE_QUEUE_THRESHOLD and (
+        stable_snapshot
+        or _maintenance_cycle_count(session) >= STABLE_MAINTENANCE_QUEUE_THRESHOLD
+    ):
+        return "stable_queue_snapshot"
+    if max_cycles is not None and _maintenance_cycle_count(session) >= max_cycles:
+        return default_completion_condition
+    if elapsed_seconds >= target_elapsed_seconds:
+        return default_completion_condition
+    return None
+
+
+def _maintenance_completion_stop_reason(completion_condition: str) -> str:
+    if completion_condition == "stable_queue_snapshot":
+        return "stable_queue_snapshot"
+    if completion_condition == "post_promote_cycle_limit":
+        return "post_promote_cycle_limit_reached"
+    return "time_budget_reached"
 
 
 def _maintenance_queue_action(queue_snapshot: list[str]) -> dict[str, Any]:
@@ -193,6 +371,20 @@ def _maintenance_action_base_plan(
     }
 
 
+def _queue_empty_after_recorded_attempts(
+    session: Mapping[str, Any],
+    queue_action_payload: Mapping[str, Any],
+) -> bool:
+    if str(queue_action_payload.get("status", "")).strip() != "none":
+        return False
+    if str(queue_action_payload.get("reason", "")).strip() != "queue_empty":
+        return False
+    return bool(
+        _list_text(session.get("attempted_proposal_ids"))
+        or _list_text(session.get("quarantined_proposal_ids"))
+    )
+
+
 def _block_maintenance_action_plan(
     base_plan: dict[str, Any],
     *,
@@ -202,6 +394,17 @@ def _block_maintenance_action_plan(
     base_plan["blockers"] = [blocker]
     base_plan["recommended_next_action"] = recommended_next_action
     return base_plan
+
+
+def _block_missing_mutation_proposal_report(base_plan: dict[str, Any]) -> dict[str, Any]:
+    return _block_maintenance_action_plan(
+        base_plan,
+        blocker="mutation proposal report is missing or invalid",
+        recommended_next_action=(
+            "Run make mutation-proposal or make goal-runtime-between-run-settle, "
+            "then rerun the maintenance action."
+        ),
+    )
 
 
 def _selected_maintenance_proposal(
@@ -283,6 +486,20 @@ def build_maintenance_action_resume_plan(
         queue_action_payload=queue_action_payload,
     )
     if str(queue_action_payload.get("status", "")).strip() != "action_required":
+        if _queue_empty_after_recorded_attempts(session, queue_action_payload):
+            proposals = mutation_proposals_report_loader().get("proposals")
+            if not isinstance(proposals, list):
+                return _block_missing_mutation_proposal_report(base_plan)
+            selected, _ = _selected_maintenance_proposal(session, proposals)
+            if not selected:
+                return _block_maintenance_action_plan(
+                    base_plan,
+                    blocker="no unattempted runnable proposal is available",
+                    recommended_next_action=(
+                        "Refresh mutation proposals and readiness. If the queue remains blocked, "
+                        "the maintenance action cannot complete by adding proposal budget alone."
+                    ),
+                )
         base_plan["status"] = "pass"
         base_plan["recommended_next_action"] = "No maintenance queue action requires a resume."
         return base_plan
@@ -306,14 +523,7 @@ def build_maintenance_action_resume_plan(
         )
     proposals = mutation_proposals_report_loader().get("proposals")
     if not isinstance(proposals, list):
-        return _block_maintenance_action_plan(
-            base_plan,
-            blocker="mutation proposal report is missing or invalid",
-            recommended_next_action=(
-                "Run make mutation-proposal or make goal-runtime-between-run-settle, "
-                "then rerun the maintenance action."
-            ),
-        )
+        return _block_missing_mutation_proposal_report(base_plan)
     selected, actionable_queue = _selected_maintenance_proposal(session, proposals)
     action_proposal_ids = set(_list_text(queue_action_payload.get("proposal_ids")))
     if not selected:

@@ -7,21 +7,22 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.codex_goal_client import get_goal, set_goal
-from ops.scripts.goal_run_status import (
+
+from ops.scripts.core.codex_goal_client import get_goal, set_goal
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.goal_run_status import (
+    DEFAULT_STATUS_PATH,
     GoalRunStatusRequest,
     build_report as build_goal_run_status_report,
     write_report as write_goal_run_status_report,
     write_run_artifacts,
 )
-from ops.scripts.goal_runtime_certificate_report import (
+from ops.scripts.mechanism.goal_runtime_certificate_report import (
     RUNNER_PRODUCER,
     GoalRuntimeCertificateRequest,
     build_report as build_certificate_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 
@@ -57,6 +58,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             "ops/scripts/mechanism/goal_runtime_certificate.py",
             "ops/scripts/mechanism/goal_runtime_certificate_report.py",
             "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_contract_digest_runtime.py",
             "ops/scripts/mechanism/goal_runtime_backoff.py",
             "ops/scripts/mechanism/goal_runtime_maintenance.py",
             "ops/scripts/mechanism/goal_runtime_resume.py",
@@ -209,6 +211,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         observed_at: str,
         status: str = "running",
         completed_at: str = "",
+        status_report_path: str = DEFAULT_STATUS_PATH,
     ) -> None:
         elapsed_seconds = int((parse_iso_z(observed_at) - parse_iso_z(started_at)).total_seconds())
         command_completed = status == "completed"
@@ -228,10 +231,11 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
                 last_command_returncode=0 if command_completed else -1,
                 last_command_timed_out=False,
                 last_command_termination_reason="completed" if command_completed else "",
+                status_report_path=status_report_path,
                 context=context_at(parse_iso_z(observed_at)),
             )
         )
-        write_goal_run_status_report(self.vault, report)
+        write_goal_run_status_report(self.vault, report, out_path=status_report_path)
         write_run_artifacts(self.vault, report, writer=RUNNER_PRODUCER)
 
     def test_completed_loop_with_full_gates_is_eligible_without_minimum_elapsed_time(self) -> None:
@@ -300,6 +304,69 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(report["contract_update"]["certificate_status_after"], "verified")
         self.assertFalse(report["contract_update"]["applied"])
         self.assertEqual(get_goal(vault=self.vault)["runtime"]["certificate_status"], "unverified")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_completed_loop_keeps_runner_audit_after_canonical_status_refresh(self) -> None:
+        self._seed_goal_contract()
+        self._seed_full_gate_reports()
+        run_id = "20260517-loop"
+        state_status_path = f"runs/goal-{run_id}/state/goal-run-status.json"
+        started_at = "2026-05-17T11:00:00Z"
+        completed_at = "2026-05-17T11:30:00Z"
+        started = parse_iso_z(started_at)
+        completed = parse_iso_z(completed_at)
+        observed_at = started
+        while observed_at < completed:
+            self._write_goal_run_status_at(
+                started_at=started_at,
+                observed_at=iso_z(observed_at),
+                status_report_path=state_status_path,
+            )
+            observed_at += dt.timedelta(minutes=5)
+        self._write_goal_run_status_at(
+            started_at=started_at,
+            observed_at=completed_at,
+            status="completed",
+            completed_at=completed_at,
+            status_report_path=state_status_path,
+        )
+        self._write_session_evidence(
+            run_id,
+            target_elapsed_seconds=int((completed - started).total_seconds()),
+        )
+
+        refreshed = build_goal_run_status_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id=run_id,
+                status="blocked",
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
+            )
+        )
+        write_goal_run_status_report(self.vault, refreshed)
+        write_run_artifacts(self.vault, refreshed)
+
+        self.assertEqual(refreshed["run"]["status"], "completed")
+        self.assertEqual(
+            refreshed["artifacts"]["audit_log_path"],
+            f"runs/goal-{run_id}/state/audit-log.jsonl",
+        )
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertTrue(report["run_artifacts"]["runner_command_audit_current"])
+        self.assertEqual(report["command_observability"]["status"], "clean")
+        self.assertNotIn(
+            "goal run command audit was not written by goal runtime runner for the "
+            "selected completed run; rerun with GOAL_RUN_ID=<completed-run-id> "
+            "through goal-runtime runner before certifying",
+            report["blockers"],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_promoted_proposal_budget_session_without_maintenance_blocks_certificate(self) -> None:
@@ -455,6 +522,67 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(report["session_evidence"]["maintenance_status"], "missing")
         self.assertFalse(report["session_evidence"]["requires_meaningful_maintenance"])
 
+    def test_failure_budget_exhausted_session_is_closed_noncertifiable_failure(self) -> None:
+        self._seed_goal_contract()
+        self._seed_full_gate_reports()
+        self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
+        session_path = (
+            self.vault
+            / "ops"
+            / "reports"
+            / "auto-improve-sessions"
+            / "20260517-loop.json"
+        )
+        session = json.loads(session_path.read_text(encoding="utf-8"))
+        session["stop_reason"] = "failure_budget_exhausted"
+        session["iterations"] = [
+            {
+                "index": 1,
+                "status": "promoted",
+                "outcome": "promoted",
+                "decision": "PROMOTE",
+                "run_id": "20260517-loop-run-01",
+                "proposal_id": "repair-runtime",
+            },
+            {
+                "index": 2,
+                "status": "failed",
+                "outcome": "failed",
+                "decision": "REPAIR",
+                "run_id": "20260517-loop-run-02",
+                "proposal_id": "follow-up-runtime",
+                "quarantined": True,
+            },
+        ]
+        session["attempted_proposal_ids"] = ["repair-runtime", "follow-up-runtime"]
+        session["quarantined_proposal_ids"] = ["follow-up-runtime"]
+        session_path.write_text(json.dumps(session, sort_keys=True), encoding="utf-8")
+
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
+            )
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["certificate"]["verification_status"], "blocked")
+        self.assertEqual(report["session_evidence"]["stop_reason"], "failure_budget_exhausted")
+        self.assertEqual(
+            report["diagnosis"]["certificate_failure_class"],
+            "noncertifiable_closed_failure",
+        )
+        self.assertEqual(
+            report["diagnosis"]["certificate_claim_status"],
+            "not_yet_certifiable",
+        )
+        self.assertFalse(report["diagnosis"]["certifiable"])
+        self.assertIn(
+            "auto-improve session closed as noncertifiable failure after failure budget exhausted",
+            report["blockers"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_promoted_mechanism_session_alone_does_not_certify_current_goal_run(self) -> None:
         self._seed_goal_contract()
         self._seed_full_gate_reports()
@@ -496,6 +624,12 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertIn("runtime_run", report["diagnosis"]["primary_blocker_categories"])
         self.assertIn("session_evidence", report["diagnosis"]["primary_blocker_categories"])
         self.assertIn("command_observability", report["diagnosis"]["primary_blocker_categories"])
+        self.assertIn(
+            "goal run command audit was not written by goal runtime runner for the "
+            "selected completed run; rerun with GOAL_RUN_ID=<completed-run-id> "
+            "through goal-runtime runner before certifying",
+            report["blockers"],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_existing_verified_certificate_is_preserved_when_new_default_run_is_blocked(self) -> None:

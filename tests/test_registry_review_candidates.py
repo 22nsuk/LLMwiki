@@ -5,9 +5,9 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.wiki_lint import lint
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.eval.wiki_lint import lint
 from tests.minimal_vault_runtime import (
     add_registry_entry_scalar_field,
     seed_registry_review_smoke_vault,

@@ -3,15 +3,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from ops.scripts.experiment_telemetry_runtime import run_rel, write_run_telemetry
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.experiment_telemetry_runtime import run_rel, write_run_telemetry
+from ops.scripts.core.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_record_from_payload,
     decision_record_from_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_context import RuntimeContext
 
 from .auto_improve_execute_runtime import ExecuteEvaluatePhaseResult
 from .auto_improve_iteration_telemetry_runtime import (
@@ -19,11 +19,17 @@ from .auto_improve_iteration_telemetry_runtime import (
     iteration_same_eval_contract,
     iteration_same_eval_reason,
 )
-from .auto_improve_next_run_decision_runtime import build_next_run_decision
+from .auto_improve_next_run_decision_runtime import (
+    NextRunDecisionRequest,
+    build_next_run_decision,
+)
 from .auto_improve_outcome_runtime import role_report_path
 from .auto_improve_route_scaffold_runtime import RouteScaffoldPhaseResult
 from .auto_improve_session_runtime import load_optional_json
-from .failure_taxonomy_runtime import failure_taxonomy_from_iteration
+from .failure_taxonomy_runtime import (
+    EQUAL_SCORE_SECONDARY_AXIS_BLOCKER_CHECK_IDS,
+    failure_taxonomy_from_iteration,
+)
 
 ITERATION_TELEMETRY_WRITTEN_FIELDS = frozenset(
     {
@@ -38,6 +44,7 @@ ITERATION_TELEMETRY_WRITTEN_FIELDS = frozenset(
         "routing_reports",
         "executor_reports",
         "phase_durations",
+        "outcome",
         "failure_taxonomy",
         "decision",
         "finalized",
@@ -52,6 +59,8 @@ ITERATION_TELEMETRY_MERGED_FIELDS = frozenset(
         "command_timeouts",
         "timeout_failure_artifacts",
         "pre_promotion_failure_artifacts",
+        "promotion_report",
+        "changed_files_manifest",
         "behavior_delta",
         "behavior_delta_digest",
         "same_eval_reason",
@@ -94,6 +103,8 @@ DISCARD_NON_REGRESSION_CHECK_IDS = (
     "tests_non_regression",
 )
 PROMOTION_CHECK_STATUS_VALUES = frozenset({"PASS", "WARN", "FAIL"})
+SAME_EVAL_STRUCTURAL_METRIC_KEYS = ("nonempty_line_count_total", "python_function_count", "python_branch_node_count", "markdown_heading_count")
+SAME_EVAL_TEST_METRIC_KEYS = ("test_file_count", "test_case_count", "test_guardrail_count")
 
 
 @dataclass(frozen=True)
@@ -251,14 +262,11 @@ def _normalized_repo_relative_path(rel_path: object) -> str:
     return "/".join(parts)
 
 
-def _promotion_report_path_matches_run(rel_path: object, run_id: str) -> bool:
-    if not isinstance(rel_path, str) or not rel_path.strip():
-        return True
-    normalized = _normalized_repo_relative_path(rel_path)
-    return bool(normalized) and (
-        normalized == run_rel(run_id, "promotion-report.json")
-        or normalized.startswith(run_rel(run_id, ""))
-    )
+def _existing_repo_relative_file(vault: Path, rel_path: object) -> str:
+    normalized_path = _normalized_repo_relative_path(rel_path)
+    if not normalized_path:
+        return ""
+    return normalized_path if (vault / normalized_path).is_file() else ""
 
 
 def _decision_record_matches_run(decision_record: object, run_id: str) -> bool:
@@ -284,14 +292,6 @@ def _iteration_executor_report_rels(vault: Path, run_id: str, roles: list[str]) 
     ]
 
 
-def _role_from_executor_report_rel(rel_path: str) -> str:
-    filename = rel_path.rsplit("/", 1)[-1]
-    suffix = "-executor-report.json"
-    if filename.endswith(suffix):
-        return filename[: -len(suffix)]
-    return ""
-
-
 def _blocking_role_from_executor_reports(vault: Path, report_rels: list[str]) -> str:
     for rel_path in report_rels:
         payload = _load_repo_relative_json(vault, rel_path)
@@ -299,7 +299,10 @@ def _blocking_role_from_executor_reports(vault: Path, report_rels: list[str]) ->
             continue
         status = str(payload.get("status", "")).strip().lower()
         if status and status != "pass":
-            return str(payload.get("role", "")).strip() or _role_from_executor_report_rel(rel_path)
+            suffix = "-executor-report.json"
+            filename = rel_path.rsplit("/", 1)[-1]
+            fallback_role = filename[: -len(suffix)] if filename.endswith(suffix) else ""
+            return str(payload.get("role", "")).strip() or fallback_role
     return ""
 
 
@@ -310,18 +313,15 @@ def _load_promotion_report_from_rel(
     run_id: str,
     source_kind: str,
 ) -> LoadedPromotionReport | None:
-    if not _promotion_report_path_matches_run(rel_path, run_id):
+    normalized_path = _normalized_repo_relative_path(rel_path)
+    if not normalized_path.startswith(run_rel(run_id, "")):
         return None
-    payload = _load_repo_relative_json(vault, rel_path)
+    payload = _load_repo_relative_json(vault, normalized_path)
     if payload is None:
         return None
     if not _promotion_report_matches_run(payload, run_id):
         return None
-    return LoadedPromotionReport(
-        payload=payload,
-        source_kind=source_kind,
-        source_path=str(rel_path).strip(),
-    )
+    return LoadedPromotionReport(payload=payload, source_kind=source_kind, source_path=normalized_path)
 
 
 def _promotion_report_from_source(
@@ -335,11 +335,7 @@ def _promotion_report_from_source(
     if isinstance(promotion_report, dict):
         if not _promotion_report_matches_run(promotion_report, run_id):
             return None
-        return LoadedPromotionReport(
-            payload=promotion_report,
-            source_kind="inline",
-            source_path="",
-        )
+        return LoadedPromotionReport(payload=promotion_report, source_kind="inline", source_path="")
     return _load_promotion_report_from_rel(
         vault,
         promotion_report,
@@ -366,6 +362,39 @@ def _iteration_promotion_report(
     )
 
 
+def _changed_files_manifest_from_source(vault: Path, source: object) -> str:
+    if not isinstance(source, dict):
+        return ""
+    direct_path = _existing_repo_relative_file(vault, source.get("changed_files_manifest"))
+    if direct_path:
+        return direct_path
+    inputs = source.get("inputs")
+    if isinstance(inputs, dict):
+        return _existing_repo_relative_file(vault, inputs.get("changed_files_manifest"))
+    return ""
+
+
+def _iteration_changed_files_manifest(
+    vault: Path,
+    *,
+    result: dict | None,
+    existing_report: dict,
+    promotion_report: LoadedPromotionReport | None,
+) -> str:
+    return next(
+        (
+            rel_path
+            for source in (
+                result,
+                existing_report,
+                promotion_report.payload if promotion_report is not None else None,
+            )
+            if (rel_path := _changed_files_manifest_from_source(vault, source))
+        ),
+        "",
+    )
+
+
 def _decision_record_from_source(vault: Path, run_id: str, source: object) -> dict | None:
     if not isinstance(source, dict):
         return None
@@ -376,20 +405,16 @@ def _decision_record_from_source(vault: Path, run_id: str, source: object) -> di
                 promotion_report.payload,
                 require_record=False,
             )
-            return (
-                decision_record
-                if _decision_record_matches_run(decision_record, run_id)
-                else None
-            )
+            return decision_record if _decision_record_matches_run(decision_record, run_id) else None
         except PromotionDecisionRegistryError:
             pass
-    decision_record = source.get("decision_record")
-    if isinstance(decision_record, dict):
-        if not _decision_record_matches_run(decision_record, run_id):
+    raw_decision_record = source.get("decision_record")
+    if isinstance(raw_decision_record, dict):
+        if not _decision_record_matches_run(raw_decision_record, run_id):
             return None
         try:
             return decision_record_from_payload(
-                {"decision_record": decision_record},
+                {"decision_record": raw_decision_record},
                 require_record=True,
             )
         except PromotionDecisionRegistryError:
@@ -418,11 +443,187 @@ def _promotion_check_statuses(promotion_report: dict[str, Any]) -> dict[str, str
     return statuses
 
 
+def _promotion_check_detail(promotion_report: dict[str, Any] | None, check_id: str) -> str:
+    checks = promotion_report.get("checks") if isinstance(promotion_report, dict) else None
+    if not isinstance(checks, list):
+        return ""
+    for check in checks:
+        if not isinstance(check, dict):
+            continue
+        if str(check.get("id", "")).strip() == check_id:
+            return str(check.get("detail", "")).strip().lower()
+    return ""
+
+
+def _equal_score_legacy_candidate_gate_detail(detail: str) -> bool:
+    if not detail:
+        return False
+    required_tokens = (
+        "allowed=true",
+        "score_equal=true",
+        "selected_non_regression=true",
+        "selected_any_improvement=true",
+    )
+    if not all(token in detail for token in required_tokens):
+        return False
+    for accepted_field in ("candidate_eval_accepted", "candidate_lint_accepted"):
+        marker = f"{accepted_field}="
+        if marker in detail and f"{accepted_field}=true" not in detail:
+            return False
+    return True
+
+
+def _same_eval_detail_has_named_improved_axes(detail: str) -> bool:
+    marker = "improved_axes="
+    if marker not in detail:
+        return False
+    tail = detail.split(marker, 1)[1].strip()
+    if tail.startswith("[") and "]" in tail:
+        tail = tail[1 : tail.index("]")]
+    else:
+        tail = tail.split(",", 1)[0].strip()
+    return any(item.strip().strip("'\"") for item in tail.split(","))
+
+
+def _same_eval_mechanism_secondary_axes(
+    vault: Path,
+    run_id: str,
+    promotion_report: LoadedPromotionReport,
+    statuses: dict[str, str],
+) -> list[str]:
+    inputs = promotion_report.payload.get("inputs")
+    inputs = inputs if isinstance(inputs, dict) else {}
+    baseline_path = _normalized_repo_relative_path(inputs.get("baseline_mechanism_report", run_rel(run_id, "baseline-mechanism-assessment.json")))
+    candidate_path = _normalized_repo_relative_path(inputs.get("candidate_mechanism_report", run_rel(run_id, "candidate-mechanism-assessment.json")))
+    run_prefix = run_rel(run_id, "")
+    eligible = (
+        str(promotion_report.payload.get("decision", "")).strip().upper() == "PROMOTE"
+        and statuses.get("equal_score_secondary_eligibility") == "PASS"
+    )
+    baseline = _load_repo_relative_json(vault, baseline_path) if eligible and baseline_path.startswith(run_prefix) else None
+    candidate = _load_repo_relative_json(vault, candidate_path) if eligible and candidate_path.startswith(run_prefix) else None
+    baseline_metrics = baseline.get("total_structural_metrics", baseline.get("structural_metrics")) if baseline is not None else None
+    candidate_metrics = candidate.get("total_structural_metrics", candidate.get("structural_metrics")) if candidate is not None else None
+    if not isinstance(baseline_metrics, dict) or not isinstance(candidate_metrics, dict):
+        return []
+    try:
+        baseline_values = [int(baseline_metrics.get(key, 0)) for key in SAME_EVAL_STRUCTURAL_METRIC_KEYS]
+        candidate_values = [int(candidate_metrics.get(key, 0)) for key in SAME_EVAL_STRUCTURAL_METRIC_KEYS]
+        baseline_tests = [int(baseline_metrics.get(key, 0)) for key in SAME_EVAL_TEST_METRIC_KEYS]
+        candidate_tests = [int(candidate_metrics.get(key, 0)) for key in SAME_EVAL_TEST_METRIC_KEYS]
+    except (TypeError, ValueError):
+        return []
+    complexity_improves = all(
+        candidate <= baseline
+        for baseline, candidate in zip(baseline_values[1:], candidate_values[1:], strict=True)
+    ) and any(candidate < baseline for baseline, candidate in zip(baseline_values, candidate_values, strict=True))
+    tests_improve = any(candidate > baseline for baseline, candidate in zip(baseline_tests, candidate_tests, strict=True))
+    return [axis for axis, improves in (("complexity", complexity_improves), ("tests", tests_improve)) if improves]
+
+
+def _add_same_eval_telemetry_fields(
+    payload: dict[str, Any],
+    request: IterationTelemetryRequest,
+    existing_report: dict[str, Any],
+    promotion_report: LoadedPromotionReport | None,
+    behavior_delta_digest: str,
+) -> None:
+    same_eval_promotion_detail = (
+        _promotion_check_detail(promotion_report.payload, "equal_score_secondary_eligibility")
+        if promotion_report is not None
+        else ""
+    )
+    promotion_statuses = _promotion_check_statuses(promotion_report.payload) if promotion_report is not None else {}
+    same_eval_is_current = promotion_report is not None and (
+        promotion_statuses.get("eval_score_improves") == "WARN"
+        or "score_equal=true" in same_eval_promotion_detail
+    )
+    current_report = cast(LoadedPromotionReport, promotion_report)
+    named_axes = same_eval_is_current and _same_eval_detail_has_named_improved_axes(same_eval_promotion_detail)
+    mechanism_axes = (
+        _same_eval_mechanism_secondary_axes(request.vault, request.run_id, current_report, promotion_statuses)
+        if same_eval_is_current and not named_axes
+        else []
+    )
+    same_eval_existing_report: dict[str, Any] = (
+        {"promotion_report": current_report.payload}
+        if named_axes
+        else {"same_eval": {"strict_secondary_improvement_present": True, "secondary_improvement_axes": mechanism_axes}}
+        if mechanism_axes
+        else existing_report if promotion_report is None else {}
+    )
+    same_eval_reason = iteration_same_eval_reason(request.result, same_eval_existing_report)
+    payload.update({"same_eval_reason": same_eval_reason} if same_eval_reason else {})
+    same_eval_contract = iteration_same_eval_contract(
+        (request.result, None)[same_eval_is_current],
+        same_eval_existing_report,
+        same_eval_reason=same_eval_reason,
+        behavior_delta_digest=behavior_delta_digest,
+    )
+    if any(
+        (
+            same_eval_reason,
+            same_eval_contract["same_eval_reason_code"] != "unknown",
+            same_eval_contract["strict_secondary_improvement_present"],
+            same_eval_contract["secondary_improvement_axes"],
+        )
+    ):
+        payload["same_eval_reason_code"] = same_eval_contract["same_eval_reason_code"]
+        payload["strict_secondary_improvement_present"] = same_eval_contract["strict_secondary_improvement_present"]
+        payload["secondary_improvement_axes"] = same_eval_contract["secondary_improvement_axes"]
+
+
+def _decision_record_reason_code(decision_record: dict[str, Any] | None) -> str:
+    if not isinstance(decision_record, dict):
+        return ""
+    return str(decision_record.get("reason_code", "")).strip()
+
+
+def _equal_score_secondary_axis_failure(
+    statuses: dict[str, str],
+    decision_record: dict[str, Any] | None,
+    failed_ids: list[str],
+) -> bool:
+    if _decision_record_reason_code(decision_record) != "equal_score_secondary_eligibility":
+        return False
+    if statuses.get("equal_score_secondary_eligibility") != "WARN":
+        return False
+    if statuses.get("eval_score_improves") != "WARN":
+        return False
+    if any(statuses.get(check_id) == "FAIL" for check_id in ("candidate_eval_pass", "candidate_lint_pass")):
+        return False
+    return bool(failed_ids) and all(
+        check_id in EQUAL_SCORE_SECONDARY_AXIS_BLOCKER_CHECK_IDS for check_id in failed_ids
+    )
+
+
+def _legacy_equal_score_candidate_gate_failure(
+    statuses: dict[str, str],
+    promotion_report: dict[str, Any] | None,
+) -> bool:
+    return (
+        statuses.get("equal_score_secondary_eligibility") == "WARN"
+        and statuses.get("eval_score_improves") == "WARN"
+        and any(
+            statuses.get(check_id) == "FAIL"
+            for check_id in ("candidate_eval_pass", "candidate_lint_pass")
+        )
+        and _equal_score_legacy_candidate_gate_detail(
+            _promotion_check_detail(promotion_report, "equal_score_secondary_eligibility")
+        )
+    )
+
+
 def _blocking_promotion_check_ids(
     statuses: dict[str, str],
     decision_record: dict[str, Any] | None,
+    promotion_report: dict[str, Any] | None = None,
 ) -> list[str]:
+    if _legacy_equal_score_candidate_gate_failure(statuses, promotion_report):
+        return ["equal_score_secondary_eligibility"]
     failed_ids = sorted(check_id for check_id, status in statuses.items() if status == "FAIL")
+    if _equal_score_secondary_axis_failure(statuses, decision_record, failed_ids):
+        return ["equal_score_secondary_eligibility"]
     if failed_ids:
         return failed_ids
     if isinstance(decision_record, dict):
@@ -490,7 +691,11 @@ def _discard_non_regression_evidence(
             for check_id in DISCARD_NON_REGRESSION_CHECK_IDS
         },
         "non_regression_check_statuses": _non_regression_check_statuses(statuses),
-        "blocking_check_ids": _blocking_promotion_check_ids(statuses, decision_record),
+        "blocking_check_ids": _blocking_promotion_check_ids(
+            statuses,
+            decision_record,
+            promotion_report.payload,
+        ),
         "decision_record_reason_code": str(
             (decision_record or {}).get("reason_code", "")
         ).strip(),
@@ -523,11 +728,7 @@ def _iteration_decision_record(
             promotion_report.payload,
             require_record=False,
         )
-        return (
-            decision_record
-            if _decision_record_matches_run(decision_record, run_id)
-            else None
-        )
+        return decision_record if _decision_record_matches_run(decision_record, run_id) else None
     except PromotionDecisionRegistryError:
         return None
 
@@ -592,10 +793,12 @@ def write_iteration_telemetry(
     )
     existing_report = loaded_existing_report if isinstance(loaded_existing_report, dict) else {}
     observed_at = request.context.isoformat_z()
-    executor_report_rels = _iteration_executor_report_rels(
+    executor_report_rels = _iteration_executor_report_rels(request.vault, request.run_id, request.roles)
+    promotion_report = _iteration_promotion_report(
         request.vault,
         request.run_id,
-        request.roles,
+        request.result,
+        existing_report,
     )
     payload = {
         "session_id": request.session_id,
@@ -609,27 +812,29 @@ def write_iteration_telemetry(
         "routing_reports": request.routing_report_rels,
         "executor_reports": executor_report_rels,
         "phase_durations": request.phase_durations,
+        "outcome": str(request.outcome).strip(),
         "failure_taxonomy": request.outcome if request.outcome != "promoted" else "",
         "decision": (request.result or {}).get("decision", ""),
         "finalized": bool((request.result or {}).get("finalized")),
         "finalize_result": (request.result or {}).get("finalize_result", {}),
     }
-    _preserve_existing_telemetry_fields(payload, existing_report)
-    decision_record = _iteration_decision_record(
+    if promotion_report is not None and promotion_report.source_path:
+        payload["promotion_report"] = promotion_report.source_path
+    changed_files_manifest = _iteration_changed_files_manifest(
         request.vault,
-        request.run_id,
-        request.result,
-        existing_report,
+        result=request.result,
+        existing_report=existing_report,
+        promotion_report=promotion_report,
     )
+    if changed_files_manifest:
+        payload["changed_files_manifest"] = changed_files_manifest
+    _preserve_existing_telemetry_fields(payload, existing_report)
+    decision_record = _iteration_decision_record(request.vault, request.run_id, request.result, existing_report)
     if isinstance(decision_record, dict):
         payload["decision_record"] = decision_record
         payload["decision"] = _decision_from_record(decision_record)
     discard_evidence = _discard_non_regression_evidence(
-        request.vault,
-        request.run_id,
-        request.outcome,
-        request.result,
-        existing_report,
+        request.vault, request.run_id, request.outcome, request.result, existing_report
     )
     if discard_evidence is not None:
         payload["discard_non_regression_evidence"] = discard_evidence
@@ -642,15 +847,11 @@ def write_iteration_telemetry(
     command_timeouts = _iteration_command_timeouts(request.vault, request.run_id, request.result)
     if command_timeouts is not None:
         payload["command_timeouts"] = command_timeouts
-    timeout_failure_artifacts = _iteration_timeout_failure_artifacts(
-        request.vault, request.run_id, request.result
-    )
+    timeout_failure_artifacts = _iteration_timeout_failure_artifacts(request.vault, request.run_id, request.result)
     if timeout_failure_artifacts:
         payload["timeout_failure_artifacts"] = timeout_failure_artifacts
     pre_promotion_failure_artifacts = _iteration_pre_promotion_failure_artifacts(
-        request.vault,
-        request.run_id,
-        request.outcome,
+        request.vault, request.run_id, request.outcome
     )
     if pre_promotion_failure_artifacts:
         payload["pre_promotion_failure_artifacts"] = pre_promotion_failure_artifacts
@@ -658,28 +859,16 @@ def write_iteration_telemetry(
     behavior_delta_digest = ""
     if behavior_delta:
         payload["behavior_delta"] = behavior_delta
-        behavior_delta_digest = iteration_behavior_delta_digest(
-            request.vault,
-            behavior_delta,
-            existing_report,
-        )
+        behavior_delta_digest = iteration_behavior_delta_digest(request.vault, behavior_delta, existing_report)
         if behavior_delta_digest:
             payload["behavior_delta_digest"] = behavior_delta_digest
-    same_eval_reason = iteration_same_eval_reason(request.result, existing_report)
-    if same_eval_reason:
-        payload["same_eval_reason"] = same_eval_reason
-    same_eval_contract = iteration_same_eval_contract(
-        request.result,
+    _add_same_eval_telemetry_fields(
+        payload,
+        request,
         existing_report,
-        same_eval_reason=same_eval_reason,
-        behavior_delta_digest=behavior_delta_digest,
+        promotion_report,
+        behavior_delta_digest,
     )
-    if same_eval_reason or same_eval_contract["same_eval_reason_code"] != "unknown":
-        payload["same_eval_reason_code"] = same_eval_contract["same_eval_reason_code"]
-        payload["strict_secondary_improvement_present"] = same_eval_contract[
-            "strict_secondary_improvement_present"
-        ]
-        payload["secondary_improvement_axes"] = same_eval_contract["secondary_improvement_axes"]
     return write_run_telemetry(request.vault, request.run_id, payload)
 
 
@@ -767,19 +956,21 @@ def persist_iteration_phase(
         iteration_record["failure_taxonomy"] = telemetry_failure_taxonomy
     session["iterations"].append(iteration_record)
     next_run_decision = build_next_run_decision(
-        session_id=session_id,
-        iteration=iteration,
-        run_id=run_id,
-        proposal=proposal,
-        outcome=execution.outcome,
-        roles=route_scaffold.roles,
-        scope_freeze_rel=route_scaffold.scope_freeze_rel,
-        routing_report_rels=route_scaffold.routing_report_rels,
-        telemetry_rel=telemetry_rel,
-        context=context,
-        executor_report_rels=executor_report_rels,
-        blocking_role=_blocking_role_from_executor_reports(vault, executor_report_rels),
-        failure_taxonomy_override=telemetry_failure_taxonomy,
+        NextRunDecisionRequest(
+            session_id=session_id,
+            iteration=iteration,
+            run_id=run_id,
+            proposal=proposal,
+            outcome=execution.outcome,
+            roles=route_scaffold.roles,
+            scope_freeze_rel=route_scaffold.scope_freeze_rel,
+            routing_report_rels=route_scaffold.routing_report_rels,
+            telemetry_rel=telemetry_rel,
+            context=context,
+            executor_report_rels=executor_report_rels,
+            blocking_role=_blocking_role_from_executor_reports(vault, executor_report_rels),
+            failure_taxonomy_override=telemetry_failure_taxonomy,
+        )
     )
     if next_run_decision is not None:
         session.setdefault("next_run_decisions", []).append(next_run_decision)

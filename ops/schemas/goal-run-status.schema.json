@@ -45,6 +45,29 @@
     "retention_policy": { "type": "string" },
     "encoding": { "type": "string", "const": "utf-8" },
     "currentness": { "type": "object" },
+    "completion_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "completion_class",
+        "stop_reason",
+        "completion_status",
+        "promotion_lane",
+        "promotion_lane_label",
+        "headline"
+      ],
+      "properties": {
+        "completion_class": { "type": "string" },
+        "stop_reason": { "type": "string" },
+        "completion_status": {
+          "type": "string",
+          "enum": ["bounded_success", "stopped", "not_available"]
+        },
+        "promotion_lane": { "type": "string" },
+        "promotion_lane_label": { "type": "string" },
+        "headline": { "type": "string", "minLength": 1 }
+      }
+    },
     "goal": {
       "type": "object",
       "additionalProperties": false,
@@ -330,6 +353,8 @@
         "generated_at": { "type": "string" },
         "stop_reason": { "type": "string" },
         "completion_class": { "type": "string" },
+        "promotion_lane": { "type": "string" },
+        "promotion_lane_label": { "type": "string" },
         "iteration_count": { "type": "integer", "minimum": 0 },
         "promoted_iteration_count": { "type": "integer", "minimum": 0 }
       }

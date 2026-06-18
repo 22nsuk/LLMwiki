@@ -3,15 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     EVAL_REPORT_SCHEMA_PATH,
     LINT_REPORT_SCHEMA_PATH,
 )
-from ops.scripts.wiki_eval import evaluate
-from ops.scripts.wiki_lint import lint
-from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
+from ops.scripts.eval.wiki_eval import evaluate
+from ops.scripts.eval.wiki_lint import lint
+from ops.scripts.eval.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 
 from .mechanism_assess import (
     _dedupe_preserve_order,

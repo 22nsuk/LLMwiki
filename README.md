@@ -55,10 +55,17 @@ make static
 make test-public
 ```
 
-For broader local validation:
+For public-mirror development, use corpus-free gates:
 
 ```bash
 make test
+make test-public
+```
+
+For a full local vault with private corpus and generated evidence available, add
+the full-vault maintainer gate:
+
+```bash
 make check
 ```
 
@@ -80,6 +87,7 @@ Use `make help` for the compact, current command index. The main families are:
 | Public mirror | `make sync-public-policy`, `make public-check`, `make public-check-all` |
 | Mechanism/goal runtime | `make auto-improve-readiness`, `make goal-runtime-run-admission`, `make release-auto-promotion-ready` |
 | Release | `make changed-path-minimum-plan`, `make release-run-ready`, `make release-post-commit-finalize`, `make release-sealed-run-ready` |
+| Review handoff | `make review-archive-clean`, `make review-archive` |
 | Supply chain | `make supply-chain-check`, `make cyclonedx-sbom`, `make spdx-sbom`, `make openvex-draft`, `make in-toto-statement`, `make sigstore-bundle` |
 
 ## Common Workflows
@@ -91,6 +99,7 @@ Use `make help` for the compact, current command index. The main families are:
 | Schema, policy, or report-contract change | `make static` | `make test-report-contract-core` |
 | Public export boundary change | `make sync-public-policy` | `make public-check` or `make public-check-all` |
 | Release evidence or package behavior change | `make release-run-ready-check` | `make release-run-ready`; add `make release-sealed-run-ready` when sealing is required |
+| Source review handoff | `make static` | `make review-archive-clean` |
 | Supply-chain artifact change | `make supply-chain-check` | The owning SBOM/provenance target plus relevant release checks |
 
 Full-vault work that reads or mutates `raw/`, `wiki/`, `system/`, `runs/`, or
@@ -113,7 +122,8 @@ tests, and fixtures must not assume those private surfaces exist.
 
 Canonical imports use the domain package paths, for example
 `ops.scripts.release.release_status_surface`. The package still keeps flat
-`ops.scripts.<name>` compatibility aliases for existing Make/script callers.
+`ops.scripts.<name>` compatibility aliases only for lifecycle-policy modules
+and explicitly declared compatibility facades.
 
 ## Documentation Map
 
@@ -129,6 +139,8 @@ Canonical imports use the domain package paths, for example
   templates, and report surfaces.
 - [docs/release.md](./docs/release.md): release evidence, source packages,
   sealing, and SBOM/provenance lanes.
+- [docs/tools.md](./docs/tools.md): public helper scripts under `tools/` and
+  their supported Make entrypoints.
 - [docs/self-improvement-runtime.md](./docs/self-improvement-runtime.md):
   mechanism review, mutation proposal, goal runtime, and promotion.
 - [docs/codebase-memory-mcp.md](./docs/codebase-memory-mcp.md): optional

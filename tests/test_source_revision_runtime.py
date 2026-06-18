@@ -5,9 +5,9 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.source_revision_runtime import resolve_source_revision
 
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.release.release_run_manifest import git_commit
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 

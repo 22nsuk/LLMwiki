@@ -8,17 +8,24 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
     resolve_schema_backed_report_output_path,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.core.generated_artifact_semantic_digest import semantic_digest_maps
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.release.finality_current_diagnostics import (
+    FRESHNESS_INDEX_COHORT_TARGETS as FRESHNESS_INDEX_COHORT_PATHS,
+    SEALED_PREFLIGHT_PATH,
+    dedupe_preserve_order as _dedupe_preserve_order,
+    fixed_point_writer_targets_by_path as _fixed_point_writer_targets_by_path,
+)
 from ops.scripts.release.release_status_v2 import release_status_v2_view
-from ops.scripts.runtime_context import RuntimeContext
 
 DEFAULT_OUT = "ops/reports/release-closeout-finality-attestation.json"
 PRODUCER = "ops.scripts.release_closeout_finality_attestation"
@@ -39,6 +46,12 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _normalized_digest_map(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(path): str(digest) for path, digest in value.items()}
 
 
 def _load_optional(vault: Path, rel_path: str) -> tuple[dict[str, Any], str]:
@@ -85,6 +98,225 @@ def _digest_mismatches(
             }
         )
     return mismatches
+
+
+def _recorded_digest_mismatches(
+    *,
+    recorded: dict[str, str],
+    current: dict[str, str],
+) -> list[dict[str, str]]:
+    paths = sorted(set(recorded) | set(current))
+    return [
+        {
+            "path": path,
+            "recorded_digest": recorded.get(path, SHA256_MISSING),
+            "current_digest": current.get(path, SHA256_MISSING),
+        }
+        for path in paths
+        if recorded.get(path, SHA256_MISSING) != current.get(path, SHA256_MISSING)
+    ]
+
+
+def _batch_manifest_artifact_digest_mismatches(vault: Path) -> list[dict[str, str]]:
+    payload, load_status = _load_optional(vault, BATCH_MANIFEST_PATH)
+    if load_status != "ok":
+        return []
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, list):
+        return []
+    mismatches: list[dict[str, str]] = []
+    for item in artifacts:
+        if not isinstance(item, dict):
+            continue
+        rel_path = str(item.get("path", "")).strip()
+        if not rel_path:
+            continue
+        expected = str(item.get("digest", SHA256_MISSING)).strip() or SHA256_MISSING
+        actual = _sha256_file(vault / rel_path)
+        if expected == actual:
+            continue
+        mismatches.append(
+            {
+                "path": rel_path,
+                "role": str(item.get("role", "")).strip(),
+                "batch_manifest_digest": expected,
+                "current_digest": actual,
+            }
+        )
+    return mismatches
+
+
+def _batch_mismatches_covered_by_semantic_digest(
+    mismatches: list[dict[str, str]],
+    *,
+    recorded_semantic_map: dict[str, str],
+    current_semantic_map: dict[str, str],
+) -> list[dict[str, str]]:
+    covered: list[dict[str, str]] = []
+    for item in mismatches:
+        path = item["path"]
+        recorded = recorded_semantic_map.get(path, "")
+        current = current_semantic_map.get(path, "")
+        if not recorded or recorded != current:
+            continue
+        covered.append(
+            {
+                **item,
+                "recorded_semantic_digest": recorded,
+                "current_semantic_digest": current,
+            }
+        )
+    return covered
+
+
+def _uncovered_batch_mismatches(
+    mismatches: list[dict[str, str]],
+    covered: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    covered_paths = {item["path"] for item in covered}
+    return [item for item in mismatches if item["path"] not in covered_paths]
+
+
+def _sealed_preflight_summary(vault: Path) -> dict[str, Any]:
+    payload, load_status = _load_optional(vault, SEALED_PREFLIGHT_PATH)
+    preflight = payload.get("preflight") if isinstance(payload, dict) else {}
+    preflight = preflight if isinstance(preflight, dict) else {}
+    currentness = payload.get("currentness") if isinstance(payload, dict) else {}
+    currentness = currentness if isinstance(currentness, dict) else {}
+    status = str(payload.get("status", "missing")).strip() if payload else "missing"
+    preflight_status = str(preflight.get("preflight_status", "")).strip()
+    currentness_status = str(currentness.get("status", "")).strip()
+    return {
+        "path": SEALED_PREFLIGHT_PATH,
+        "digest": _sha256_file(vault / SEALED_PREFLIGHT_PATH),
+        "load_status": load_status,
+        "status": status,
+        "preflight_status": preflight_status,
+        "currentness_status": currentness_status,
+        "current": (
+            load_status == "ok"
+            and status == "pass"
+            and preflight_status in {"", "sealed_clean_pass"}
+            and currentness_status in {"", "current"}
+        ),
+    }
+
+
+def _finality_failure_classification(
+    vault: Path,
+    *,
+    failures: list[str],
+    raw_digest_mismatches: list[dict[str, str]],
+    fixed_point_digest_mismatches: list[dict[str, str]],
+    batch_manifest_artifact_digest_mismatches: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    if not failures:
+        return {
+            "status": "pass",
+            "classes": [],
+            "primary_class": "current",
+            "recommended_lane": "none",
+            "recommended_targets": [],
+            "recommended_fixed_point_initial_targets": [],
+            "batch_manifest_artifact_digest_mismatches": [],
+            "freshness_index_cohort_digest_mismatches": [],
+            "sealed_preflight_artifact_digest_mismatches": [],
+            "sealed_preflight": _sealed_preflight_summary(vault),
+            "fixed_point_tracked_writer_mismatches": [],
+            "summary": "finality current-check is current",
+        }
+    batch_mismatches = (
+        batch_manifest_artifact_digest_mismatches
+        if batch_manifest_artifact_digest_mismatches is not None
+        else _batch_manifest_artifact_digest_mismatches(vault)
+    )
+    freshness_index_cohort = [
+        item
+        for item in batch_mismatches
+        if item["path"] in FRESHNESS_INDEX_COHORT_PATHS
+    ]
+    sealed_preflight_artifact_mismatches = [
+        item for item in batch_mismatches if item["path"] == SEALED_PREFLIGHT_PATH
+    ]
+    sealed_preflight = _sealed_preflight_summary(vault)
+    fixed_point_writer_by_path = _fixed_point_writer_targets_by_path(vault)
+    fixed_point_writer_mismatches = [
+        {
+            **item,
+            "writer_target": fixed_point_writer_by_path.get(item["path"], ""),
+        }
+        for item in fixed_point_digest_mismatches
+    ]
+
+    classes: list[str] = []
+    recommended_targets: list[str] = []
+    recommended_initial_targets: list[str] = []
+    if freshness_index_cohort:
+        classes.append("batch_manifest_freshness_index_cohort_digest_mismatch")
+        recommended_initial_targets.extend(
+            FRESHNESS_INDEX_COHORT_PATHS[item["path"]]
+            for item in freshness_index_cohort
+        )
+    if sealed_preflight_artifact_mismatches or (
+        sealed_preflight["load_status"] == "ok" and not sealed_preflight["current"]
+    ):
+        classes.append("sealed_preflight_artifact_mismatch")
+        recommended_targets.append("release-authority-sealed-preflight")
+    if fixed_point_writer_mismatches:
+        classes.append("fixed_point_tracked_writer_mismatch")
+        recommended_initial_targets.extend(
+            item["writer_target"]
+            for item in fixed_point_writer_mismatches
+            if item["writer_target"]
+        )
+    if raw_digest_mismatches and not fixed_point_writer_mismatches:
+        classes.append("finality_attestation_digest_mismatch")
+    if failures and not classes:
+        classes.append("unclassified_finality_current_check_failure")
+
+    if recommended_initial_targets:
+        recommended_targets.append("release-closeout-fixed-point")
+    if classes == ["finality_attestation_digest_mismatch"]:
+        recommended_targets.append("release-closeout-finality-attestation")
+    if classes:
+        recommended_targets.append("release-closeout-finality-verify")
+
+    recommended_targets = _dedupe_preserve_order(recommended_targets)
+    recommended_initial_targets = _dedupe_preserve_order(recommended_initial_targets)
+    recommended_lane = (
+        "release-authority-sealed-preflight + release-closeout-fixed-point"
+        if "sealed_preflight_artifact_mismatch" in classes
+        and "fixed_point_tracked_writer_mismatch" in classes
+        else "release-authority-sealed-preflight"
+        if classes == ["sealed_preflight_artifact_mismatch"]
+        else "release-closeout-fixed-point"
+        if recommended_initial_targets or fixed_point_writer_mismatches
+        else "release-closeout-finality-attestation"
+        if classes == ["finality_attestation_digest_mismatch"]
+        else "release-finality-resettle-current-or-refresh"
+    )
+    return {
+        "status": "pass" if not failures else "fail",
+        "classes": classes,
+        "primary_class": classes[0] if classes else "current",
+        "recommended_lane": recommended_lane,
+        "recommended_targets": recommended_targets,
+        "recommended_fixed_point_initial_targets": recommended_initial_targets,
+        "batch_manifest_artifact_digest_mismatches": batch_mismatches,
+        "freshness_index_cohort_digest_mismatches": freshness_index_cohort,
+        "sealed_preflight_artifact_digest_mismatches": sealed_preflight_artifact_mismatches,
+        "sealed_preflight": sealed_preflight,
+        "fixed_point_tracked_writer_mismatches": fixed_point_writer_mismatches,
+        "summary": (
+            "finality current-check is current"
+            if not failures
+            else (
+                f"primary_class={classes[0] if classes else 'unclassified'}; "
+                f"recommended_lane={recommended_lane}; "
+                f"recommended_targets={','.join(recommended_targets)}"
+            )
+        ),
+    }
 
 
 def _fixed_point_summary(vault: Path) -> tuple[dict[str, Any], dict[str, Any], str]:
@@ -203,6 +435,9 @@ def build_report(
 
     tracked_paths = _tracked_paths_from_fixed_point(fixed_payload)
     tracked_digest_map = _digest_map(vault, tracked_paths)
+    tracked_semantic_digest_map, tracked_semantic_digest_modes = semantic_digest_maps(
+        vault, tracked_paths
+    )
     fixed_point_digest_map = fixed_point_report["final_digest_map"]
     digest_mismatches = _digest_mismatches(fixed_point_digest_map, tracked_digest_map)
     matches_fixed_point_digest_map = not digest_mismatches and bool(tracked_paths)
@@ -224,7 +459,10 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=["ops/scripts/release_closeout_finality_attestation.py"],
+            source_paths=[
+                "ops/scripts/release/release_closeout_finality_attestation.py",
+                "ops/scripts/core/generated_artifact_semantic_digest.py",
+            ],
             file_inputs={
                 "fixed_point_report": FIXED_POINT_REPORT_PATH,
                 "batch_manifest": BATCH_MANIFEST_PATH,
@@ -248,6 +486,8 @@ def build_report(
         "self_check": self_check,
         "external_report_manifest": external_report_manifest,
         "tracked_digest_map": tracked_digest_map,
+        "tracked_semantic_digest_map": tracked_semantic_digest_map,
+        "tracked_semantic_digest_modes": tracked_semantic_digest_modes,
         "matches_fixed_point_digest_map": matches_fixed_point_digest_map,
         "digest_mismatches": digest_mismatches,
         "finality_status": finality_status,
@@ -268,7 +508,10 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
     )
 
 
-def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tuple[bool, list[str]]:
+def _verify_attestation_diagnostics(
+    vault: Path,
+    attestation_path: str = DEFAULT_OUT,
+) -> dict[str, Any]:
     resolved = resolve_schema_backed_report_output_path(
         vault,
         attestation_path,
@@ -277,7 +520,21 @@ def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tupl
     payload, diagnostics = load_optional_json_object_with_diagnostics(resolved)
     load_status = str(diagnostics.get("status", "unknown")).strip() or "unknown"
     if load_status != "ok":
-        return False, [f"attestation_load_status:{load_status}"]
+        load_failures = [f"attestation_load_status:{load_status}"]
+        return {
+            "status": "fail",
+            "failures": load_failures,
+            "failure_classification": _finality_failure_classification(
+                vault,
+                failures=load_failures,
+                raw_digest_mismatches=[],
+                fixed_point_digest_mismatches=[],
+            ),
+            "semantic_fallback_used": False,
+            "raw_digest_mismatches": [],
+            "raw_digest_mismatches_covered_by_semantic_digest": [],
+            "fixed_point_digest_mismatches": [],
+        }
 
     failures: list[str] = []
     for field in ("fixed_point_report", "batch_manifest", "self_check", "external_report_manifest"):
@@ -294,23 +551,79 @@ def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tupl
     fixed_payload, _fixed_summary, _fixed_digest = _fixed_point_summary(vault)
     tracked_paths = _tracked_paths_from_fixed_point(fixed_payload)
     current_tracked_digest_map = _digest_map(vault, tracked_paths)
-    recorded_map = payload.get("tracked_digest_map")
-    if not isinstance(recorded_map, dict) or current_tracked_digest_map != {
-        str(path): str(digest) for path, digest in recorded_map.items()
-    }:
+    recorded_map = _normalized_digest_map(payload.get("tracked_digest_map"))
+    current_semantic_digest_map, _current_semantic_modes = semantic_digest_maps(
+        vault, tracked_paths
+    )
+    recorded_semantic_map = _normalized_digest_map(payload.get("tracked_semantic_digest_map"))
+    semantic_map_matches = bool(recorded_semantic_map) and (
+        current_semantic_digest_map == recorded_semantic_map
+    )
+    raw_digest_mismatches = _recorded_digest_mismatches(
+        recorded=recorded_map,
+        current=current_tracked_digest_map,
+    )
+    raw_mismatch_covered_by_semantic_digest = bool(raw_digest_mismatches) and semantic_map_matches
+    uncovered_raw_digest_mismatches = (
+        [] if raw_mismatch_covered_by_semantic_digest else raw_digest_mismatches
+    )
+    if raw_digest_mismatches and not semantic_map_matches:
         failures.append("tracked_digest_map_current_mismatch")
     raw_fixed_map = fixed_payload.get("final_digest_map")
     fixed_map: dict[str, Any] = raw_fixed_map if isinstance(raw_fixed_map, dict) else {}
-    if _digest_mismatches(fixed_map, current_tracked_digest_map):
+    fixed_point_digest_mismatches = _digest_mismatches(fixed_map, current_tracked_digest_map)
+    uncovered_fixed_point_digest_mismatches = (
+        [] if semantic_map_matches else fixed_point_digest_mismatches
+    )
+    if fixed_point_digest_mismatches and not semantic_map_matches:
         failures.append("fixed_point_digest_map_current_mismatch")
+    batch_mismatches = _batch_manifest_artifact_digest_mismatches(vault)
+    semantic_covered_batch_mismatches = _batch_mismatches_covered_by_semantic_digest(
+        batch_mismatches,
+        recorded_semantic_map=recorded_semantic_map,
+        current_semantic_map=current_semantic_digest_map,
+    )
+    uncovered_batch_mismatches = _uncovered_batch_mismatches(
+        batch_mismatches,
+        semantic_covered_batch_mismatches,
+    )
+    if uncovered_batch_mismatches:
+        failures.append("batch_manifest_artifact_digest_current_mismatch")
+    sealed_preflight = _sealed_preflight_summary(vault)
+    if sealed_preflight["load_status"] == "ok" and not sealed_preflight["current"]:
+        failures.append("sealed_preflight_not_current")
     if str(payload.get("finality_status", "")).strip() != "pass":
         failures.append("attestation_finality_status_not_pass")
-    return not failures, failures
+    return {
+        "status": "pass" if not failures else "fail",
+        "failures": failures,
+        "failure_classification": _finality_failure_classification(
+            vault,
+            failures=failures,
+            raw_digest_mismatches=uncovered_raw_digest_mismatches,
+            fixed_point_digest_mismatches=uncovered_fixed_point_digest_mismatches,
+            batch_manifest_artifact_digest_mismatches=uncovered_batch_mismatches,
+        ),
+        "semantic_fallback_used": raw_mismatch_covered_by_semantic_digest
+        or bool(semantic_covered_batch_mismatches),
+        "raw_digest_mismatches": raw_digest_mismatches,
+        "raw_digest_mismatches_covered_by_semantic_digest": raw_digest_mismatches
+        if raw_mismatch_covered_by_semantic_digest
+        else [],
+        "fixed_point_digest_mismatches": fixed_point_digest_mismatches,
+        "batch_manifest_artifact_digest_mismatches": batch_mismatches,
+        "batch_manifest_artifact_digest_mismatches_covered_by_semantic_digest": semantic_covered_batch_mismatches,
+    }
+
+
+def verify_attestation(vault: Path, attestation_path: str = DEFAULT_OUT) -> tuple[bool, list[str]]:
+    report = _verify_attestation_diagnostics(vault, attestation_path)
+    failures = [str(item) for item in report.get("failures", [])]
+    return report["status"] == "pass", failures
 
 
 def verify_attestation_report(vault: Path, attestation_path: str = DEFAULT_OUT) -> dict[str, Any]:
-    ok, failures = verify_attestation(vault, attestation_path)
-    return {"status": "pass" if ok else "fail", "failures": failures}
+    return _verify_attestation_diagnostics(vault, attestation_path)
 
 
 def write_verify_report(vault: Path, report: dict[str, Any], out_path: str) -> Path:

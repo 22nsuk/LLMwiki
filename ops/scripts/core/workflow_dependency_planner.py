@@ -10,27 +10,27 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object,
         write_schema_backed_report,
     )
-    from ops.scripts.makefile_runtime import load_makefile_text
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.release_closeout_fixed_point import (
+    from ops.scripts.core.makefile_runtime import load_makefile_text
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
+        WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,
+    )
+    from ops.scripts.release.release_closeout_fixed_point import (
         fixed_point_initial_targets_from_policy,
         fixed_point_writer_specs_from_policy,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
-        WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,
-    )
 else:
-    from ops.scripts.release_closeout_fixed_point import (
+    from ops.scripts.release.release_closeout_fixed_point import (
         fixed_point_initial_targets_from_policy,
         fixed_point_writer_specs_from_policy,
     )
@@ -61,7 +61,7 @@ TARGET_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.%/@-]+$")
 OPTION_OR_ASSIGNMENT_RE = re.compile(r"^(?:-|[A-Za-z_][A-Za-z0-9_]*=)")
 
 REPORT_CLOSEOUT_TARGETS = [
-    "test-execution-summary",
+    "test-execution-summary-report-contract",
     "generated-artifact-converge",
     "release-closeout-summary-conditional",
     "release-evidence-cohort",
@@ -93,11 +93,8 @@ EXTERNAL_REPORT_TARGETS = [
 ]
 FINALITY_RESETTLE_TARGETS = [
     "workflow-dependency-planner",
-    "generated-artifact-finality-suffix",
-    "release-closeout-summary-report",
-    "release-closeout-fixed-point",
-    "tmp-json-clean",
-    "release-closeout-finality-verify",
+    "release-authority-sealed-preflight",
+    "release-terminal-finality",
 ]
 
 GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS = [
@@ -491,12 +488,14 @@ def _primary_report_for_target(target: str) -> str:
         "release-closeout-fixed-point": "ops/reports/release-closeout-fixed-point.json",
         "release-closeout-summary-conditional": "ops/reports/release-closeout-summary.json",
         "release-closeout-summary-report": "ops/reports/release-closeout-summary.json",
+        "release-authority-sealed-preflight": "ops/reports/release-closeout-sealed-rehearsal-check.json",
         "release-evidence-closeout-self-check": "ops/reports/release-evidence-closeout-self-check.json",
         "release-evidence-cohort": "ops/reports/release-evidence-cohort.json",
         "release-evidence-dashboard-report": "ops/reports/release-evidence-dashboard.json",
         "release-lane-summary": "ops/reports/release-lane-summary.json",
         "release-smoke-full": "ops/reports/release-smoke-report.json",
-        "test-execution-summary": "ops/reports/test-execution-summary.json",
+        "release-terminal-finality": "ops/reports/release-closeout-finality-attestation.json",
+        "test-execution-summary-report-contract": "ops/reports/test-execution-summary.json",
         "workflow-dependency-planner": "ops/reports/workflow-dependency-planner.json",
     }.get(target, "")
 
@@ -506,6 +505,13 @@ def _fanout_targets_for_target(target: str) -> list[str]:
         "generated-artifact-converge": list(GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS),
         "generated-artifact-script-output": list(GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS),
         "generated-artifact-finality-suffix": list(GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS),
+        "release-terminal-finality": [
+            "generated-artifact-finality-suffix",
+            "release-closeout-summary-report",
+            "release-closeout-fixed-point",
+            "release-closeout-post-check-finalizer-dry-run",
+            "release-closeout-finality-verify",
+        ],
     }.get(target, [])
 
 

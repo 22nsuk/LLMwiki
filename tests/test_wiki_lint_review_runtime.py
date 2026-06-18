@@ -4,9 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.wiki_lint import lint
-from ops.scripts.wiki_lint_review_runtime import (
+import pytest
+
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.eval.wiki_lint import lint
+from ops.scripts.eval.wiki_lint_review_runtime import (
     active_source_missing_concept_candidates,
     concept_carryover_continuity_candidates,
     concept_taxonomy_advisory_candidates,
@@ -18,9 +20,10 @@ from ops.scripts.wiki_lint_review_runtime import (
     synthesis_follow_up_split_candidates,
     wiki_synthesis_multi_question_candidates,
 )
-from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
-
+from ops.scripts.eval.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 from tests.minimal_vault_runtime import seed_open_question_smoke_vault
+
+pytestmark = pytest.mark.slow
 
 
 def write_page(path: Path, text: str) -> None:
@@ -153,25 +156,27 @@ def concept_with_content_quality_scaffold(
 ) -> str:
     if include_scaffold:
         main_body = """### Core model
-core model
+이 concept는 반복 source를 하나의 route memo로 모으지 않고, source가 바꾸는 판단 모델을 설명한다.
 
 ### Common misread
-common misread
+흔한 오독은 모든 source를 같은 강도의 evidence로 보거나, 단순 링크 목록을 concept 본문으로 착각하는 것이다.
 
 ### Key variables
-- variable
+- source가 실제 mechanism을 바꾸는가
+- 같은 signal이 반복되는가
+- 더 좁은 child route가 필요한가
 
 ### Mechanism
-mechanism
+새 source가 들어오면 먼저 claim의 강도와 적용 boundary를 나누고, 그 다음 concept의 재사용 규칙을 갱신한다.
 
 ### Evidence ladder
-- strong evidence
+강한 evidence는 확인된 mechanism 반복이고, 보조 evidence는 단일 headline이나 routing-only signal이다.
 
 ### Concrete examples
-- example
+대표 source와 반례를 함께 적어 후속 ingest가 같은 문서를 장부처럼 늘리지 않도록 한다.
 
 ### Boundary
-boundary
+이 concept는 모든 관련 source를 흡수하는 문서가 아니다. 다른 child route가 더 정확하면 그쪽으로 보낸다.
 """
     else:
         main_body = "thin route note"
@@ -220,6 +225,59 @@ matters
 ## Source trace
 - `raw/fake.pdf`
 """
+
+
+def concept_with_shallow_content_scaffold(stem: str, *, created: str) -> str:
+    return concept_with_content_quality_scaffold(
+        stem,
+        created=created,
+        include_scaffold=True,
+    ).replace(
+        """### Core model
+이 concept는 반복 source를 하나의 route memo로 모으지 않고, source가 바꾸는 판단 모델을 설명한다.
+
+### Common misread
+흔한 오독은 모든 source를 같은 강도의 evidence로 보거나, 단순 링크 목록을 concept 본문으로 착각하는 것이다.
+
+### Key variables
+- source가 실제 mechanism을 바꾸는가
+- 같은 signal이 반복되는가
+- 더 좁은 child route가 필요한가
+
+### Mechanism
+새 source가 들어오면 먼저 claim의 강도와 적용 boundary를 나누고, 그 다음 concept의 재사용 규칙을 갱신한다.
+
+### Evidence ladder
+강한 evidence는 확인된 mechanism 반복이고, 보조 evidence는 단일 headline이나 routing-only signal이다.
+
+### Concrete examples
+대표 source와 반례를 함께 적어 후속 ingest가 같은 문서를 장부처럼 늘리지 않도록 한다.
+
+### Boundary
+이 concept는 모든 관련 source를 흡수하는 문서가 아니다. 다른 child route가 더 정확하면 그쪽으로 보낸다.
+""",
+        """### Core model
+thin
+
+### Common misread
+thin
+
+### Key variables
+thin
+
+### Mechanism
+thin
+
+### Evidence ladder
+evidence
+
+### Concrete examples
+example
+
+### Boundary
+boundary
+""",
+    )
 
 
 def broad_synthesis(include_boundary_sections: bool) -> str:
@@ -331,6 +389,9 @@ line two
 
 ### 라우팅 기준
 line three
+
+### Concrete examples
+route target: [[synthesis--old-target]]
 
 ## What this synthesis excludes
 - unrelated route
@@ -849,11 +910,120 @@ class WikiLintReviewRuntimeTest(unittest.TestCase):
             self.assertEqual(candidate["type"], "synthesis_analysis_template_drift_candidate")
             self.assertEqual(
                 candidate["template_markers"],
-                ["이 묶음이 새로 더하는 것", "source 신호", "라우팅 기준"],
+                ["이 묶음이 새로 더하는 것", "source 신호", "라우팅 기준", "route target:"],
             )
             self.assertEqual(
                 candidate["suggested_action"],
-                "rewrite_analysis_as_cross_source_synthesis",
+                "rewrite_synthesis_narrative_as_domain_conclusion",
+            )
+
+    def test_synthesis_analysis_template_candidates_flag_short_answer_and_decision_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            write_page(vault / "wiki" / "source--s1.md", valid_source("source--s1"))
+            write_page(
+                vault / "wiki" / "synthesis--route-memo-narrative.md",
+                """---
+title: "Route Memo Narrative"
+page_type: "synthesis"
+corpus: "wiki"
+source_count: 1
+aliases:
+  - "synthesis--route-memo-narrative"
+tags:
+  - "corpus/wiki"
+  - "type/synthesis"
+---
+
+# synthesis--route-memo-narrative
+
+## Question
+question
+
+## Short answer
+이번 batch 품질 판단 때문에 새 synthesis로 분리한다.
+
+## Evidence considered
+- [[source--s1]]
+
+## Analysis
+### Core model
+analysis, not routing
+
+## Decision / takeaway
+Why this deserved a new synthesis is the main point.
+""",
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidate = synthesis_analysis_template_candidates(
+                vault,
+                snapshot.pages,
+                policy["refactor_triggers"],
+            )[0]
+
+            self.assertEqual(
+                candidate["markers_by_section"],
+                {
+                    "Short answer": ["새 synthesis로 분리", "품질 판단", "이번 batch"],
+                    "Decision / takeaway": ["Why this deserved a new synthesis"],
+                },
+            )
+
+    def test_synthesis_analysis_template_candidates_ignore_placement_note_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            write_page(vault / "wiki" / "source--s1.md", valid_source("source--s1"))
+            write_page(
+                vault / "wiki" / "synthesis--placement-note.md",
+                """---
+title: "Placement Note Synthesis"
+page_type: "synthesis"
+corpus: "wiki"
+source_count: 1
+aliases:
+  - "synthesis--placement-note"
+tags:
+  - "corpus/wiki"
+  - "type/synthesis"
+---
+
+# synthesis--placement-note
+
+## Question
+question
+
+## Short answer
+answer
+
+## Evidence considered
+- [[source--s1]]
+
+## Analysis
+### Core model
+analysis, not routing
+
+## Wiki placement note
+route target: [[synthesis--placement-note]]
+evidence role: supporting_evidence
+""",
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+
+            self.assertEqual(
+                synthesis_analysis_template_candidates(
+                    vault,
+                    snapshot.pages,
+                    policy["refactor_triggers"],
+                ),
+                [],
             )
 
     def test_active_source_missing_concept_candidates_flag_only_active_sources(self) -> None:
@@ -1057,6 +1227,49 @@ class WikiLintReviewRuntimeTest(unittest.TestCase):
             missing = missing_pages["wiki/concept--recent-thin.md"]
             self.assertIn("Core model", missing)
             self.assertIn("Boundary", missing)
+
+    def test_content_quality_advisory_candidates_flag_shallow_scaffold_body(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            write_page(
+                vault / "wiki" / "concept--shallow-body.md",
+                concept_with_shallow_content_scaffold(
+                    "concept--shallow-body",
+                    created="2026-05-26",
+                ),
+            )
+            write_page(
+                vault / "wiki" / "concept--complete-body.md",
+                concept_with_content_quality_scaffold(
+                    "concept--complete-body",
+                    created="2026-05-26",
+                    include_scaffold=True,
+                ),
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = content_quality_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(len(candidates), 1)
+            body_issue_pages = {
+                item["page"]: item["body_issues"]
+                for item in candidates[0]["pages_with_body_issues"]
+            }
+            self.assertEqual(set(body_issue_pages), {"wiki/concept--shallow-body.md"})
+            issue_types = {
+                issue["issue"]
+                for issue in body_issue_pages["wiki/concept--shallow-body.md"]
+            }
+            self.assertIn("section_body_too_thin", issue_types)
+            self.assertIn("missing_strength_tiers", issue_types)
 
     def test_source_route_advisory_candidates_are_aggregate_and_non_failing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

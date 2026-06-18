@@ -16,35 +16,42 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
-    from ops.scripts.export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.command_runtime import TimedProcessResult, run_with_timeout
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
-    from ops.scripts.test_execution_summary import parse_pytest_counts
+    from ops.scripts.public.export_public_repo import (
+        DEFAULT_PUBLIC_OUT,
+        export_public_repo,
+    )
+    from ops.scripts.public.public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
+    from ops.scripts.test.test_execution_summary import parse_pytest_counts
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
-    from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.source_tree_fingerprint_runtime import (
+    from ops.scripts.core.command_runtime import TimedProcessResult, run_with_timeout
+    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
-    from ops.scripts.test_execution_summary import parse_pytest_counts
+    from ops.scripts.test.test_execution_summary import parse_pytest_counts
 
     from .export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
     from .public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
@@ -670,7 +677,7 @@ def _render_public_check_report(
         "ops/scripts/public/public_check_summary.py",
         "ops/scripts/public/export_public_repo.py",
         "ops/scripts/public/public_surface_policy.py",
-        "ops/scripts/test_execution_summary.py",
+        "ops/scripts/test/test_execution_summary.py",
     ]
     return {
         **build_canonical_report_envelope(

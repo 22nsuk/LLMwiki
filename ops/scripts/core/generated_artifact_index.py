@@ -10,36 +10,50 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.external_report_lifecycle_runtime import (
-        action_statuses,
-        content_lifecycle_inventory,
-        lifecycle_decision,
-        report_lifecycle_profiles,
-    )
-    from ops.scripts.improvement_observations_runtime import (
-        improvement_observation_paths,
-    )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_constants_runtime import (
         GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
     )
-else:
-    from ops.scripts.external_report_lifecycle_runtime import (
+    from ops.scripts.core.source_revision_runtime import resolve_source_revision
+    from ops.scripts.core.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
+    from ops.scripts.mechanism.improvement_observations_runtime import (
+        improvement_observation_paths,
+    )
+    from ops.scripts.release.external_report_action_matrix import (
+        build_report as build_action_matrix_report,
+    )
+    from ops.scripts.release.external_report_lifecycle_runtime import (
         action_statuses,
+        archived_report_action_basis_records,
         content_lifecycle_inventory,
         lifecycle_decision,
         report_lifecycle_profiles,
     )
-    from ops.scripts.improvement_observations_runtime import (
+else:
+    from ops.scripts.mechanism.improvement_observations_runtime import (
         improvement_observation_paths,
+    )
+    from ops.scripts.release.external_report_action_matrix import (
+        build_report as build_action_matrix_report,
+    )
+    from ops.scripts.release.external_report_lifecycle_runtime import (
+        action_statuses,
+        archived_report_action_basis_records,
+        content_lifecycle_inventory,
+        lifecycle_decision,
+        report_lifecycle_profiles,
     )
 
     from .artifact_freshness_runtime import build_canonical_report_envelope
@@ -52,6 +66,8 @@ else:
     from .policy_runtime import load_policy, report_path
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import GENERATED_ARTIFACT_INDEX_SCHEMA_PATH
+    from .source_revision_runtime import resolve_source_revision
+    from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 
 DEFAULT_OUT = "ops/reports/generated-artifact-index.json"
@@ -167,18 +183,141 @@ def _operator_report_inventory(vault: Path) -> list[dict[str, str]]:
     return _file_records(vault, "ops/operator")
 
 
-def _external_report_inventory(vault: Path) -> dict[str, Any]:
-    root = vault / "external-reports"
-    archive_root = root / "archive"
-    archive_file_count = sum(1 for path in archive_root.iterdir() if path.is_file()) if archive_root.exists() else 0
+def _external_report_inventory(
+    vault: Path,
+    *,
+    status_by_action: dict[str, str] | None = None,
+    archived_report_basis: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    statuses = status_by_action or _external_report_lifecycle_statuses(vault)
+    archived_basis = archived_report_basis
+    if archived_basis is None:
+        archived_basis = archived_report_action_basis_records(vault, statuses)
     return {
         "root_records": _file_records(vault, "external-reports"),
         "content_lifecycle_profiles": content_lifecycle_inventory(vault),
-        "archive_file_count": archive_file_count,
+        "archived_report_action_basis": archived_basis,
+        "archive_file_count": len(archived_basis),
     }
 
 
-def _action_matrix_statuses(vault: Path) -> dict[str, str]:
+def _action_matrix_basis_state(vault: Path) -> dict[str, Any]:
+    payload, diagnostics = load_optional_json_object_with_diagnostics(
+        vault / EXTERNAL_REPORT_ACTION_MATRIX_PATH
+    )
+    current_revision = resolve_source_revision(vault).revision
+    current_fingerprint = release_source_tree_fingerprint(vault)
+    base = {
+        "path": EXTERNAL_REPORT_ACTION_MATRIX_PATH,
+        "status": "current",
+        "reason_id": "action_matrix_basis_current",
+        "source_revision": "",
+        "source_tree_fingerprint": "",
+        "current_source_revision": current_revision,
+        "current_source_tree_fingerprint": current_fingerprint,
+        "input_fingerprint_mismatch_keys": [],
+    }
+    if diagnostics.get("missing"):
+        return {
+            **base,
+            "status": "missing",
+            "reason_id": "action_matrix_missing",
+        }
+    if not isinstance(payload, dict):
+        return {
+            **base,
+            "status": "unreadable",
+            "reason_id": "action_matrix_unreadable",
+        }
+    source_revision = str(payload.get("source_revision", "")).strip()
+    source_tree_fingerprint = str(payload.get("source_tree_fingerprint", "")).strip()
+    base.update(
+        {
+            "source_revision": source_revision,
+            "source_tree_fingerprint": source_tree_fingerprint,
+        }
+    )
+    if payload.get("artifact_kind") != "external_report_action_matrix":
+        return {
+            **base,
+            "status": "invalid",
+            "reason_id": "action_matrix_wrong_artifact_kind",
+        }
+    if payload.get("artifact_status") != "current":
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_artifact_not_current",
+        }
+    if str(payload.get("currentness", {}).get("status", "")) != "current":
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_currentness_not_current",
+        }
+    if (
+        not source_revision
+        or not source_tree_fingerprint
+        or source_revision != current_revision
+        or source_tree_fingerprint != current_fingerprint
+    ):
+        return {
+            **base,
+            "status": "source_identity_mismatch",
+            "reason_id": "action_matrix_source_identity_mismatch",
+        }
+    if not isinstance(payload.get("action_items"), list):
+        return {
+            **base,
+            "status": "invalid",
+            "reason_id": "action_matrix_action_items_invalid",
+        }
+    stored_fingerprints = payload.get("input_fingerprints")
+    if not isinstance(stored_fingerprints, dict):
+        return {
+            **base,
+            "status": "invalid",
+            "reason_id": "action_matrix_input_fingerprints_invalid",
+        }
+    try:
+        live_fingerprints = build_action_matrix_report(vault).get("input_fingerprints")
+    except (OSError, TypeError, ValueError, RuntimeError):
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_input_fingerprints_unverifiable",
+        }
+    if not isinstance(live_fingerprints, dict):
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_input_fingerprints_unverifiable",
+        }
+    mismatch_keys = sorted(
+        {
+            str(key)
+            for key in set(stored_fingerprints) | set(live_fingerprints)
+            if stored_fingerprints.get(key) != live_fingerprints.get(key)
+        }
+    )
+    if mismatch_keys:
+        return {
+            **base,
+            "status": "stale",
+            "reason_id": "action_matrix_input_fingerprint_mismatch",
+            "input_fingerprint_mismatch_keys": mismatch_keys,
+        }
+    return base
+
+
+def _action_matrix_statuses(
+    vault: Path,
+    *,
+    basis_state: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    basis = basis_state or _action_matrix_basis_state(vault)
+    if basis.get("status") != "current":
+        return {}
     payload, diagnostics = load_optional_json_object_with_diagnostics(
         vault / EXTERNAL_REPORT_ACTION_MATRIX_PATH
     )
@@ -204,9 +343,13 @@ def _action_matrix_statuses(vault: Path) -> dict[str, str]:
     return statuses
 
 
-def _external_report_lifecycle_statuses(vault: Path) -> dict[str, str]:
+def _external_report_lifecycle_statuses(
+    vault: Path,
+    *,
+    action_matrix_basis: dict[str, Any] | None = None,
+) -> dict[str, str]:
     statuses = action_statuses(vault)
-    statuses.update(_action_matrix_statuses(vault))
+    statuses.update(_action_matrix_statuses(vault, basis_state=action_matrix_basis))
     return statuses
 
 
@@ -318,13 +461,20 @@ def _operator_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str,
     }
 
 
-def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
-    root = vault / "external-reports"
+def _external_reports(
+    vault: Path,
+    *,
+    status_by_action: dict[str, str] | None = None,
+    archived_report_basis: list[dict[str, Any]] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
     root_records = _file_records(vault, "external-reports")
     record_by_path = {record["path"]: record for record in root_records}
     root_paths = [vault / record["path"] for record in root_records]
     lifecycle_profiles = report_lifecycle_profiles(vault, root_paths)
-    status_by_action = _external_report_lifecycle_statuses(vault)
+    statuses = status_by_action or _external_report_lifecycle_statuses(vault)
+    archived_basis = archived_report_basis
+    if archived_basis is None:
+        archived_basis = archived_report_action_basis_records(vault, statuses)
     current: list[dict[str, Any]] = []
     archive_candidates: list[dict[str, Any]] = []
     for profile in lifecycle_profiles:
@@ -333,7 +483,7 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
         decision = lifecycle_decision(
             profile,
             profiles=lifecycle_profiles,
-            statuses=status_by_action,
+            statuses=statuses,
         )
         if decision["archive_recommended"]:
             archive_candidates.append(
@@ -364,13 +514,9 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
                 **_external_report_decision_fields(decision),
             }
         )
-    archive_count = 0
-    archive_root = root / "archive"
-    if archive_root.exists():
-        archive_count = sum(1 for path in archive_root.iterdir() if path.is_file())
     return current, archive_candidates, {
         "external_reports_root_file_count": len(root_records),
-        "external_reports_archive_file_count": archive_count,
+        "external_reports_archive_file_count": len(archived_basis),
     }
 
 
@@ -599,7 +745,24 @@ def build_report(
     runtime_context = context or RuntimeContext.from_policy(policy)
     ops_current, ops_archive, ops_summary = _ops_reports(vault)
     operator_current, operator_archive, operator_summary = _operator_reports(vault)
-    external_current, external_archive, external_summary = _external_reports(vault)
+    action_matrix_basis = _action_matrix_basis_state(vault)
+    action_matrix_statuses = _action_matrix_statuses(
+        vault,
+        basis_state=action_matrix_basis,
+    )
+    external_statuses = _external_report_lifecycle_statuses(
+        vault,
+        action_matrix_basis=action_matrix_basis,
+    )
+    archived_external_report_basis = archived_report_action_basis_records(
+        vault,
+        external_statuses,
+    )
+    external_current, external_archive, external_summary = _external_reports(
+        vault,
+        status_by_action=external_statuses,
+        archived_report_basis=archived_external_report_basis,
+    )
     runs_current, runs_archive, runs_summary = _runs(vault)
     archive_candidates = [*ops_archive, *operator_archive, *external_archive, *runs_archive]
     canonical_reports = [*ops_current, *operator_current, *external_current, *runs_current]
@@ -623,8 +786,9 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/generated_artifact_index.py",
-                "ops/scripts/external_report_lifecycle_runtime.py",
+                "ops/scripts/core/generated_artifact_index.py",
+                "ops/scripts/release/external_report_inventory_runtime.py",
+                "ops/scripts/release/external_report_lifecycle_runtime.py",
             ],
             path_group_inputs={
                 "run_promotion_reports": [
@@ -635,9 +799,18 @@ def build_report(
             text_inputs={
                 "ops_report_inventory": _canonical_inventory_text(_ops_report_inventory(vault)),
                 "operator_report_inventory": _canonical_inventory_text(_operator_report_inventory(vault)),
-                "external_report_inventory": _canonical_inventory_text(_external_report_inventory(vault)),
+                "external_report_inventory": _canonical_inventory_text(
+                    _external_report_inventory(
+                        vault,
+                        status_by_action=external_statuses,
+                        archived_report_basis=archived_external_report_basis,
+                    )
+                ),
                 "external_report_action_matrix_statuses": _canonical_inventory_text(
-                    _action_matrix_statuses(vault)
+                    action_matrix_statuses
+                ),
+                "external_report_action_matrix_basis": _canonical_inventory_text(
+                    action_matrix_basis
                 ),
                 "task_improvement_observation_inventory": _canonical_inventory_text(task_observation_reports),
             },
@@ -663,6 +836,8 @@ def build_report(
         },
         "canonical_reports": canonical_reports,
         "archive_candidates": archive_candidates,
+        "external_report_action_matrix_basis": action_matrix_basis,
+        "archived_external_report_basis": archived_external_report_basis,
     }
 
 

@@ -7,13 +7,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.proposal_scope_runtime import dedupe_preserve_order
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.artifact_freshness_payload_runtime import (
+    embedded_artifact_envelope,
+)
+from ops.scripts.core.path_runtime import normalize_repo_path_text
+from ops.scripts.core.proposal_scope_runtime import dedupe_preserve_order
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 
 from .auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
@@ -31,6 +36,12 @@ from .noop_repair_classifier_runtime import (
 
 ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX = "artifact_freshness_"
 STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY = "structural_complexity_non_regression"
+STRUCTURAL_CLEAN_SUPPRESSIBLE_SOURCE_FAMILIES = frozenset(
+    {
+        NEXT_RUN_FAILURE_REPAIR_FAMILY,
+        "queue_unblock",
+    }
+)
 GENERATED_EVIDENCE_SETTLE_ISSUES = frozenset(
     {
         "missing_artifact_envelope",
@@ -108,6 +119,16 @@ class NextRunRepairProposalDependencies:
     priority_breakdown_factory: Callable[[], Any]
 
 
+@dataclass(frozen=True)
+class _NextRunRepairScope:
+    primary_targets: list[str]
+    supporting_targets: list[str]
+    must_change_tests: list[str]
+    source_run_id: str
+    failure_taxonomy: str
+    evidence_paths: list[str]
+
+
 def _read_json(path: Path) -> dict:
     payload = json.loads(path.read_text(encoding="utf-8"))
     return payload if isinstance(payload, dict) else {}
@@ -164,7 +185,7 @@ def _artifact_freshness_settle_debt_paths(report: dict) -> set[str]:
 
 
 def _current_artifact_freshness_report(vault: Path) -> dict:
-    from ops.scripts.artifact_freshness_runtime import build_report
+    from ops.scripts.core.artifact_freshness_runtime import build_report
 
     return build_report(vault)
 
@@ -182,6 +203,10 @@ def _artifact_freshness_settle_debt_now_clean(vault: Path, report: dict) -> bool
     return original_debt_paths.isdisjoint(
         _artifact_freshness_settle_debt_paths(current_report)
     )
+
+
+def _all_run_artifact_paths(paths: list[str]) -> bool:
+    return bool(paths) and all(path.startswith("runs/") for path in paths)
 
 
 def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id: str) -> bool:
@@ -210,7 +235,9 @@ def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id
         and observed_source_tree_fingerprint != release_source_tree_fingerprint(vault)
     )
     if source_tree_mismatch and schema_invalid_files:
-        return False
+        return _all_run_artifact_paths(
+            schema_invalid_files
+        ) and _artifact_freshness_settle_debt_now_clean(vault, report)
     if not schema_invalid_files:
         return _artifact_freshness_settle_debt_now_clean(vault, report)
     return all(
@@ -238,7 +265,7 @@ def _structural_complexity_targets_pass(vault: Path, targets: list[str]) -> bool
     if not primary_targets:
         return False
     try:
-        from ops.scripts.structural_complexity_budget_runtime import (
+        from ops.scripts.eval.structural_complexity_budget_runtime import (
             DEFAULT_TARGET_PROFILES,
             build_report,
             touched_target_profiles,
@@ -261,11 +288,68 @@ def _structural_complexity_targets_pass(vault: Path, targets: list[str]) -> bool
     return all(target_statuses.get(target) == "pass" for target in primary_targets)
 
 
+def _source_tree_fingerprint_from_artifact(vault: Path, rel_path: str) -> str:
+    try:
+        payload = _read_json(vault / rel_path)
+    except (OSError, json.JSONDecodeError):
+        return ""
+    envelope = embedded_artifact_envelope(payload)
+    for source in (payload, envelope):
+        fingerprint = str(source.get("source_tree_fingerprint", "")).strip()
+        if fingerprint:
+            return fingerprint
+    return ""
+
+
+def _decision_source_tree_fingerprint(vault: Path, decision: dict) -> str:
+    source_run_id = str(decision.get("source_run_id", "")).strip()
+    evidence_paths = _string_list(decision.get("evidence_paths"))
+    if source_run_id:
+        evidence_paths.extend(
+            [
+                f"runs/{source_run_id}/run-telemetry.json",
+                f"runs/{source_run_id}/promotion-report.json",
+            ]
+        )
+    source_session_report = _source_session_report_path(vault, decision)
+    if source_session_report:
+        evidence_paths.append(source_session_report)
+    for rel_path in dedupe_preserve_order(evidence_paths):
+        normalized = safe_repo_relative_path(rel_path)
+        if normalized is None:
+            continue
+        fingerprint = _source_tree_fingerprint_from_artifact(vault, normalized)
+        if fingerprint:
+            return fingerprint
+    return ""
+
+
+def _decision_source_tree_changed(vault: Path, decision: dict) -> bool:
+    fingerprint = _decision_source_tree_fingerprint(vault, decision)
+    return bool(fingerprint) and fingerprint != release_source_tree_fingerprint(vault)
+
+
 def _repair_decision_ended_as_clean_structural_complexity(
     vault: Path,
     decision: dict,
 ) -> bool:
     if str(decision.get("failure_taxonomy", "")).strip() != STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY:
+        return False
+    proposal_family = str(decision.get("proposal_family", "")).strip()
+    failure_mode = str(decision.get("failure_mode", "")).strip()
+    proposal_id = str(decision.get("proposal_id", "")).strip()
+    target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
+    target_is_explicit_repair = target_proposal_id.startswith("next_run_failure_repair__")
+    if proposal_family == "contract_regression_signals" and not (
+        target_is_explicit_repair and _decision_source_tree_changed(vault, decision)
+    ):
+        return False
+    if (
+        proposal_family not in STRUCTURAL_CLEAN_SUPPRESSIBLE_SOURCE_FAMILIES
+        and failure_mode != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
+        and not proposal_id.startswith("next_run_failure_repair__")
+        and not target_is_explicit_repair
+    ):
         return False
     return _structural_complexity_targets_pass(
         vault,
@@ -321,6 +405,25 @@ def decision_evidence_mentions_raw_registry_repair(vault: Path, decision: dict) 
     )
 
 
+def _decision_evidence_paths_are_all_missing(vault: Path, decision: dict) -> bool:
+    evidence_paths = _string_list(decision.get("evidence_paths"))
+    if not evidence_paths:
+        return False
+    if (
+        str(decision.get("failure_taxonomy", "")).strip() == STRUCTURAL_COMPLEXITY_FAILURE_TAXONOMY
+        and _source_session_report_path(vault, decision)
+    ):
+        return False
+    normalized_paths = [
+        rel_path
+        for rel_path in (safe_repo_relative_path(path) for path in evidence_paths)
+        if rel_path is not None
+    ]
+    if not normalized_paths:
+        return False
+    return not _existing_evidence_paths(vault, normalized_paths)
+
+
 def _is_local_only_inventory_repair_target(path: str) -> bool:
     normalized = normalize_repo_path_text(path)
     return normalized in LOCAL_ONLY_INVENTORY_REPAIR_TARGETS
@@ -347,9 +450,9 @@ def _without_local_only_inventory_targets(paths: list[str]) -> list[str]:
 
 def _raw_registry_currentness_evidence_clean(vault: Path) -> bool:
     try:
-        from ops.scripts.raw_registry_export import raw_registry_export_check
-        from ops.scripts.raw_registry_preflight import preflight
-        from ops.scripts.registry_exceptions_runtime import RawRegistryRuntimeError
+        from ops.scripts.core.registry_exceptions_runtime import RawRegistryRuntimeError
+        from ops.scripts.registry.raw_registry_export import raw_registry_export_check
+        from ops.scripts.registry.raw_registry_preflight import preflight
 
         export_report = raw_registry_export_check(vault)
         if (
@@ -376,8 +479,6 @@ def _queue_unblock_decision_superseded_by_current_rotation(
     recent_log_overlap_unblock_failure_mode: str,
     recent_log_overlap_unblock_family: str,
 ) -> bool:
-    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
-        return False
     if str(decision.get("proposal_family", "")).strip() != recent_log_overlap_unblock_family:
         return False
     source_proposal_id = str(decision.get("proposal_id", "")).strip()
@@ -391,18 +492,50 @@ def _queue_unblock_decision_superseded_by_current_rotation(
     )
 
 
-def open_carry_forward_decisions(
-    next_run_decisions: list[dict],
+def _noop_repair_superseded_source_observed_at_by_key(
+    vault: Path,
+    decisions: list[dict],
     *,
-    vault: Path | None = None,
-    consumed_decision_ids: set[str] | None = None,
-    current_proposal_ids: set[str] | None = None,
-    recent_log_overlap_unblock_failure_mode: str,
     recent_log_overlap_unblock_family: str,
-) -> list[dict]:
-    latest_by_target: dict[str, dict] = {}
-    consumed_decision_ids = consumed_decision_ids or set()
-    current_proposal_ids = current_proposal_ids or set()
+) -> dict[str, str]:
+    superseded: dict[str, str] = {}
+    for decision in decisions:
+        if not repair_decision_ended_as_noop_mutation_failure(
+            vault,
+            decision,
+            queue_unblock_family=recent_log_overlap_unblock_family,
+        ):
+            continue
+        observed_at = str(decision.get("observed_at", "")).strip()
+        for field in ("source_candidate_id", "proposal_id"):
+            key = str(decision.get(field, "")).strip()
+            if not key:
+                continue
+            previous = superseded.get(key)
+            if previous is None or observed_at >= previous:
+                superseded[key] = observed_at
+    return superseded
+
+
+def _decision_superseded_by_noop_repair(
+    decision: dict,
+    superseded_source_observed_at_by_key: dict[str, str],
+) -> bool:
+    if not superseded_source_observed_at_by_key:
+        return False
+    observed_at = str(decision.get("observed_at", "")).strip()
+    for field in ("decision_id", "target_proposal_id", "proposal_id"):
+        key = str(decision.get(field, "")).strip()
+        if not key or key not in superseded_source_observed_at_by_key:
+            continue
+        superseded_at = superseded_source_observed_at_by_key[key]
+        if not observed_at or not superseded_at or superseded_at >= observed_at:
+            return True
+    return False
+
+
+def _normalized_carry_forward_decisions(next_run_decisions: list[dict]) -> list[dict]:
+    normalized_decisions: list[dict] = []
     for decision in next_run_decisions:
         if str(decision.get("decision", "")).strip() != CARRY_FORWARD_DECISION:
             continue
@@ -422,36 +555,96 @@ def open_carry_forward_decisions(
                 primary_targets,
                 failure_taxonomy,
             )
-        latest_by_target[target_proposal_id] = {**decision, "target_proposal_id": target_proposal_id}
+        normalized_decisions.append({**decision, "target_proposal_id": target_proposal_id})
+    return normalized_decisions
 
-    open_decisions: list[dict] = []
-    for decision in latest_by_target.values():
-        decision_id = str(decision.get("decision_id", "")).strip()
-        if decision_id and decision_id in consumed_decision_ids:
-            continue
-        if vault is not None and repair_decision_ended_as_noop_mutation_failure(
+
+def _carry_forward_decision_currently_suppressed(
+    decision: dict,
+    *,
+    vault: Path | None,
+    consumed_decision_ids: set[str],
+    current_proposal_ids: set[str],
+    superseded_by_noop_repair: dict[str, str],
+    recent_log_overlap_unblock_failure_mode: str,
+    recent_log_overlap_unblock_family: str,
+) -> bool:
+    decision_id = str(decision.get("decision_id", "")).strip()
+    if decision_id and decision_id in consumed_decision_ids:
+        return True
+    if _decision_superseded_by_noop_repair(decision, superseded_by_noop_repair):
+        return True
+    if vault is not None and repair_decision_ended_as_noop_mutation_failure(
+        vault,
+        decision,
+        queue_unblock_family=recent_log_overlap_unblock_family,
+    ):
+        return True
+    if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
+        return True
+    if vault is not None and _repair_decision_ended_as_clean_structural_complexity(
+        vault,
+        decision,
+    ):
+        return True
+    if vault is not None and _repair_decision_ended_as_clean_raw_registry(vault, decision):
+        return True
+    if vault is not None and _decision_evidence_paths_are_all_missing(vault, decision):
+        return True
+    return _queue_unblock_decision_superseded_by_current_rotation(
+        decision,
+        current_proposal_ids,
+        recent_log_overlap_unblock_failure_mode=recent_log_overlap_unblock_failure_mode,
+        recent_log_overlap_unblock_family=recent_log_overlap_unblock_family,
+    )
+
+
+def open_carry_forward_decisions(
+    next_run_decisions: list[dict],
+    *,
+    vault: Path | None = None,
+    consumed_decision_ids: set[str] | None = None,
+    current_proposal_ids: set[str] | None = None,
+    recent_log_overlap_unblock_failure_mode: str,
+    recent_log_overlap_unblock_family: str,
+) -> list[dict]:
+    latest_by_target: dict[str, dict] = {}
+    consumed_decision_ids = consumed_decision_ids or set()
+    current_proposal_ids = current_proposal_ids or set()
+    normalized_decisions = _normalized_carry_forward_decisions(next_run_decisions)
+    superseded_by_noop_repair = (
+        _noop_repair_superseded_source_observed_at_by_key(
             vault,
+            normalized_decisions,
+            recent_log_overlap_unblock_family=recent_log_overlap_unblock_family,
+        )
+        if vault is not None
+        else {}
+    )
+
+    for decision in normalized_decisions:
+        if _carry_forward_decision_currently_suppressed(
             decision,
-            queue_unblock_family=recent_log_overlap_unblock_family,
-        ):
-            continue
-        if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
-            continue
-        if vault is not None and _repair_decision_ended_as_clean_structural_complexity(
-            vault,
-            decision,
-        ):
-            continue
-        if vault is not None and _repair_decision_ended_as_clean_raw_registry(vault, decision):
-            continue
-        if _queue_unblock_decision_superseded_by_current_rotation(
-            decision,
-            current_proposal_ids,
+            vault=vault,
+            consumed_decision_ids=consumed_decision_ids,
+            current_proposal_ids=current_proposal_ids,
+            superseded_by_noop_repair=superseded_by_noop_repair,
             recent_log_overlap_unblock_failure_mode=recent_log_overlap_unblock_failure_mode,
             recent_log_overlap_unblock_family=recent_log_overlap_unblock_family,
         ):
             continue
-        open_decisions.append(decision)
+        target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
+        previous = latest_by_target.get(target_proposal_id)
+        if previous is None or (
+            str(decision.get("observed_at", "")),
+            str(decision.get("decision_id", "")),
+        ) >= (
+            str(previous.get("observed_at", "")),
+            str(previous.get("decision_id", "")),
+        ):
+            latest_by_target[target_proposal_id] = decision
+
+    open_decisions = list(latest_by_target.values())
     return sorted(
         open_decisions,
         key=lambda item: (
@@ -608,17 +801,65 @@ def _source_session_report_targets(vault: Path, decision: dict) -> list[str]:
     return current_repo_target_paths(vault, [source_report])
 
 
-def next_run_repair_proposal(
+def _existing_evidence_paths(vault: Path, evidence_paths: list[str]) -> list[str]:
+    existing: list[str] = []
+    for evidence_path in evidence_paths:
+        rel_path = safe_repo_relative_path(evidence_path)
+        if rel_path is None:
+            continue
+        if (vault / rel_path).is_file():
+            existing.append(rel_path)
+    return dedupe_preserve_order(existing)
+
+
+def _source_session_report_path(vault: Path, decision: dict) -> str:
+    source_report = safe_repo_relative_path(
+        decision.get(SOURCE_SESSION_REPORT_DECISION_KEY)
+    )
+    if source_report and (vault / source_report).is_file():
+        return source_report
+    return ""
+
+
+def _next_run_repair_evidence_fragment(
+    vault: Path,
+    decision: dict,
+    *,
+    evidence_paths: list[str],
+) -> str:
+    existing_paths = _existing_evidence_paths(vault, evidence_paths)
+    source_session_report = _source_session_report_path(vault, decision)
+    display_paths = dedupe_preserve_order(
+        [*existing_paths, *([source_session_report] if source_session_report else [])]
+    )
+    missing_count = len(
+        [
+            path
+            for path in evidence_paths
+            if safe_repo_relative_path(path) is not None and path not in existing_paths
+        ]
+    )
+
+    if display_paths:
+        fragment = ", ".join(f"`{path}`" for path in display_paths[:3])
+        if len(display_paths) > 3:
+            fragment += f", +{len(display_paths) - 3} more"
+    else:
+        fragment = "the normalized next-run decision record"
+    if missing_count:
+        fragment += f" ({missing_count} missing leaf evidence path"
+        fragment += "s" if missing_count != 1 else ""
+        fragment += " omitted)"
+    return fragment
+
+
+def _next_run_repair_scope(
     vault: Path,
     policy: dict,
     decision: dict,
     *,
     dependencies: NextRunRepairProposalDependencies,
-) -> Any | None:
-    allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
-    if NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE not in allowed_failure_modes:
-        return None
-
+) -> _NextRunRepairScope | None:
     raw_registry_repair = decision_evidence_mentions_raw_registry_repair(vault, decision)
     primary_targets = _non_inventory_current_repo_target_paths(
         vault,
@@ -708,26 +949,55 @@ def next_run_repair_proposal(
             primary_targets=primary_targets,
             supporting_targets=supporting_targets,
         )
+    return _NextRunRepairScope(
+        primary_targets=primary_targets,
+        supporting_targets=supporting_targets,
+        must_change_tests=must_change_tests,
+        source_run_id=source_run_id,
+        failure_taxonomy=failure_taxonomy,
+        evidence_paths=evidence_paths,
+    )
+
+
+def next_run_repair_proposal(
+    vault: Path,
+    policy: dict,
+    decision: dict,
+    *,
+    dependencies: NextRunRepairProposalDependencies,
+) -> Any | None:
+    allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
+    if NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE not in allowed_failure_modes:
+        return None
+
+    scope = _next_run_repair_scope(
+        vault,
+        policy,
+        decision,
+        dependencies=dependencies,
+    )
+    if scope is None:
+        return None
 
     target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
     proposal_id = target_proposal_id or next_run_failure_repair_proposal_id(
-        primary_targets,
-        failure_taxonomy,
+        scope.primary_targets,
+        scope.failure_taxonomy,
     )
     blocking_role = str(decision.get("blocking_role", "")).strip()
     role_fragment = f" from {blocking_role}" if blocking_role else ""
     source_proposal_id = str(decision.get("proposal_id", "")).strip()
-    scoped_targets = ", ".join(f"`{target}`" for target in primary_targets)
-    evidence_fragment = ", ".join(f"`{path}`" for path in evidence_paths[:3])
-    if len(evidence_paths) > 3:
-        evidence_fragment += f", +{len(evidence_paths) - 3} more"
-    if not evidence_fragment:
-        evidence_fragment = f"`runs/{source_run_id}/run-telemetry.json`"
+    scoped_targets = ", ".join(f"`{target}`" for target in scope.primary_targets)
+    evidence_fragment = _next_run_repair_evidence_fragment(
+        vault,
+        decision,
+        evidence_paths=scope.evidence_paths,
+    )
 
     pseudo_candidate = {
         "candidate_id": proposal_id,
-        "primary_targets": primary_targets,
-        "supporting_targets": supporting_targets,
+        "primary_targets": scope.primary_targets,
+        "supporting_targets": scope.supporting_targets,
         "tier": str(decision.get("proposal_tier", "supporting")).strip() or "supporting",
     }
     priority_breakdown = dependencies.priority_breakdown_factory()
@@ -738,43 +1008,43 @@ def next_run_repair_proposal(
         family=NEXT_RUN_FAILURE_REPAIR_FAMILY,
         tier="supporting",
         priority=priority_breakdown.final_priority,
-        primary_targets=primary_targets,
-        supporting_targets=supporting_targets,
-        metrics_triggered=[NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE, failure_taxonomy],
-        run_ids=[source_run_id or "next-run-decision"],
+        primary_targets=scope.primary_targets,
+        supporting_targets=scope.supporting_targets,
+        metrics_triggered=[NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE, scope.failure_taxonomy],
+        run_ids=[scope.source_run_id or "next-run-decision"],
         failure_mode=NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE,
         single_mechanism_scope=(
-            f"repair the `{failure_taxonomy}` failure{role_fragment} on {scoped_targets}; "
+            f"repair the `{scope.failure_taxonomy}` failure{role_fragment} on {scoped_targets}; "
             "keep the next mutation bounded to the failed run evidence and do not resume unrelated queue work first"
         ),
         change_hypothesis=(
-            f"If the next run addresses `{failure_taxonomy}` from `{source_run_id}` before broad discovery, "
+            f"If the next run addresses `{scope.failure_taxonomy}` from `{scope.source_run_id}` before broad discovery, "
             "the same target set can reach a finalized outcome or expose a narrower follow-up reason."
         ),
         expected_binary_signal=(
             f"the next auto-improve attempt for `{source_proposal_id or proposal_id}` no longer records "
-            f"`{failure_taxonomy}` as its failure_taxonomy"
+            f"`{scope.failure_taxonomy}` as its failure_taxonomy"
         ),
         blast_radius_score=dependencies.proposal_blast_radius_score(
             pseudo_candidate,
-            must_change_tests=must_change_tests,
+            must_change_tests=scope.must_change_tests,
         ),
-        must_change_tests=must_change_tests,
+        must_change_tests=scope.must_change_tests,
         must_change_budget_signal={
-            "signal": f"auto_improve_session.next_run_decisions.{failure_taxonomy}",
+            "signal": f"auto_improve_session.next_run_decisions.{scope.failure_taxonomy}",
             "expected_change": "resolved_or_superseded",
         },
         must_not_expand_apply_roots=dependencies.must_not_expand_apply_roots(
             vault,
             policy,
-            proposal_targets=[*primary_targets, *supporting_targets],
-            must_change_tests=must_change_tests,
+            proposal_targets=[*scope.primary_targets, *scope.supporting_targets],
+            must_change_tests=scope.must_change_tests,
         ),
         must_not_increase_untyped_surface=True,
         required_artifacts=dependencies.required_artifacts(),
         blocked_by=[],
         why_now=(
-            f"`{source_run_id}` failed with `{failure_taxonomy}` and the session decision marked it "
+            f"`{scope.source_run_id}` failed with `{scope.failure_taxonomy}` and the session decision marked it "
             f"carry_forward. Evidence: {evidence_fragment}."
         ),
         priority_breakdown=priority_breakdown,

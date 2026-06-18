@@ -63,6 +63,11 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         _assert_workflow_uses_are_sha_pinned(self, workflow)
         _assert_run_contains(
             self,
+            _step(verify, "Run report-contract full sweep"),
+            ("make test-report-contract-all",),
+        )
+        _assert_run_contains(
+            self,
             _step(publish, "Generate supply-chain artifacts"),
             ("make openvex-draft-cached", "make supply-chain-benchmark"),
         )
@@ -111,6 +116,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         )
         self.assertEqual(ci_matrix.get("python_versions"), workflow_matrix["python-version"])
         self.assertEqual(ci_matrix.get("tiers"), workflow_matrix["tier"])
+        self.assertEqual(ci_matrix.get("exclude"), workflow_matrix["exclude"])
 
         singleton_checks_value = required.get("singleton_checks", [])
         self.assertIsInstance(singleton_checks_value, list)

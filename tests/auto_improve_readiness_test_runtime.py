@@ -6,11 +6,11 @@ import json
 import tempfile
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
 from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.runtime_test_context import frozen_context
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
@@ -70,13 +70,20 @@ PRIMARY_REPORT_SPECS = {
         "artifact_kind": "remediation_backlog",
     },
 }
+READINESS_FIXTURE_SCHEMA_NAMES = frozenset(
+    {Path(spec["schema_path"]).name for spec in PRIMARY_REPORT_SPECS.values()}
+    | {
+        "artifact-envelope.schema.json",
+        "auto-improve-readiness-report.schema.json",
+        "goal-worktree-guard.schema.json",
+        "run-telemetry.schema.json",
+        "wiki-maintainer-policy.schema.json",
+    }
+)
 
 
 def fixed_context() -> RuntimeContext:
-    return RuntimeContext(
-        display_timezone=dt.UTC,
-        clock=lambda: dt.datetime(2026, 4, 22, 4, 0, tzinfo=dt.UTC),
-    )
+    return frozen_context(dt.datetime(2026, 4, 22, 4, 0, tzinfo=dt.UTC))
 
 
 def _canonical_jsonable(value: object, *, vault_root: Path | None = None) -> object:
@@ -123,7 +130,7 @@ class AutoImproveReadinessRuntimeFixture:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.vault = Path(self.temp_dir.name) / "vault"
         self.vault.mkdir()
-        seed_minimal_vault(self.vault)
+        seed_minimal_vault(self.vault, schema_names=READINESS_FIXTURE_SCHEMA_NAMES)
         (self.vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
         self._write_report(
             "ops/reports/artifact-freshness-report.json",

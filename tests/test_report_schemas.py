@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import ClassVar
 
 import pytest
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.report_contract_test_runtime import (
     ReportPayload,
     ReportPayloadMap,
@@ -181,6 +181,13 @@ class ReportSchemaContractTest(unittest.TestCase):
         self.assertIn(
             "$.targets[0]: missing required property 'budget_deltas'",
             validate_with_schema(missing_budget_deltas, self.schemas["structural_complexity_budget"]),
+        )
+
+        missing_headroom = copy.deepcopy(self.samples["structural_complexity_budget"])
+        missing_headroom["targets"][0].pop("no_headroom_metrics", None)
+        self.assertIn(
+            "$.targets[0]: missing required property 'no_headroom_metrics'",
+            validate_with_schema(missing_headroom, self.schemas["structural_complexity_budget"]),
         )
 
         invalid_function_monitoring_gate = copy.deepcopy(self.samples["structural_complexity_budget"])
@@ -493,6 +500,13 @@ class ReportSchemaContractTest(unittest.TestCase):
         self.assertIn(
             "$: missing required property 'gate_effect'",
             validate_with_schema(missing_gate_effect, schema),
+        )
+
+        missing_source_identity_routes = copy.deepcopy(report)
+        missing_source_identity_routes["stale_routing"].pop("source_identity_owner_routes", None)
+        self.assertIn(
+            "$.stale_routing: missing required property 'source_identity_owner_routes'",
+            validate_with_schema(missing_source_identity_routes, schema),
         )
 
         for legacy_gate_effect in ("active", "review_required", "shadow"):

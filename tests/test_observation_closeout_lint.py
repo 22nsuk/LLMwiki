@@ -7,9 +7,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.observation_closeout_lint import build_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.observation_closeout_lint import build_report
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -304,6 +305,59 @@ class ObservationCloseoutLintTests(unittest.TestCase):
         schema = load_schema("ops/schemas/observation-closeout-registry.schema.json")
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["open_observations"][0]["path"], rel_obs)
+        self.assertEqual(validate_with_schema(report, schema), [])
+
+    def test_wontfix_observations_require_resolution_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            obs_path = (
+                vault
+                / "ops"
+                / "reports"
+                / "task-improvement-observations"
+                / "task-1"
+                / "improvement-observations.json"
+            )
+            obs_path.parent.mkdir(parents=True)
+            obs_path.write_text(
+                json.dumps(
+                    {
+                        "observations": [
+                            {
+                                "observation_id": "hidden_backlog",
+                                "status": "wontfix",
+                                "surface": "ops/scripts/example.py",
+                                "suggested_followup": "do not hide this",
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            registry_path = vault / "ops" / "observation-closeout-registry.json"
+            registry_path.parent.mkdir(parents=True, exist_ok=True)
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/observation-closeout-registry.schema.json",
+                        "artifact_kind": "observation_closeout_registry",
+                        "retained_observations": [],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+        schema = load_schema("ops/schemas/observation-closeout-registry.schema.json")
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["summary"]["terminal_status_issue_count"], 1)
+        self.assertEqual(
+            report["terminal_status_issues"][0]["reason"],
+            "terminal_status_missing_resolution_evidence",
+        )
         self.assertEqual(validate_with_schema(report, schema), [])
 
 

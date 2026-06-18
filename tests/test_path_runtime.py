@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.path_runtime import stable_report_path
+from ops.scripts.core.path_runtime import stable_report_path
 
 
 class PathRuntimeTest(unittest.TestCase):

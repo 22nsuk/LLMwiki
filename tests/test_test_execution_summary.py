@@ -16,11 +16,12 @@ from unittest.mock import patch
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.test_execution_summary import (
+
+from ops.scripts.core.command_runtime import CommandHeartbeat, TimedProcessResult
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.test.test_execution_summary import (
     REUSE_MISMATCH_COMMAND_IDENTITY,
     REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
     REUSE_MISMATCH_MISSING_SUMMARY,
@@ -40,7 +41,6 @@ from ops.scripts.test_execution_summary import (
     reuse_currentness_diagnostics_from_state,
     semantic_command,
 )
-
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.report_contract
@@ -257,6 +257,76 @@ class TestExecutionSummaryTest(unittest.TestCase):
             classify_status(_result(returncode=130), parse_pytest_counts("")),
             "interrupted",
         )
+
+    def test_main_emits_opt_in_command_heartbeat(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            def fake_run_with_timeout(request: object, **_kwargs: object) -> TimedProcessResult:
+                heartbeat_callback = cast(
+                    Callable[[CommandHeartbeat], None] | None,
+                    _kwargs.get("heartbeat_callback"),
+                )
+                self.assertEqual(_kwargs.get("heartbeat_interval_seconds"), 1)
+                self.assertIsNotNone(heartbeat_callback)
+                heartbeat_callback(
+                    CommandHeartbeat(
+                        args=["python", "-m", "pytest"],
+                        heartbeat_index=1,
+                        elapsed_seconds=12.25,
+                        timeout_seconds=30,
+                        quiet_seconds=12,
+                    )
+                )
+                return _result(
+                    returncode=0,
+                    stdout="= 1 passed in 0.01s =",
+                    termination_reason="completed",
+                )
+
+            stderr = io.StringIO()
+            stdout = io.StringIO()
+            with (
+                patch(
+                    "ops.scripts.test.test_execution_summary.run_with_timeout",
+                    side_effect=fake_run_with_timeout,
+                ),
+                redirect_stderr(stderr),
+                redirect_stdout(stdout),
+            ):
+                status = summary_main(
+                    [
+                        "--vault",
+                        str(vault),
+                        "--out",
+                        "tmp/test-summary.json",
+                        "--suite",
+                        "unit",
+                        "--timeout-seconds",
+                        "30",
+                        "--heartbeat-interval-seconds",
+                        "1",
+                        "--heartbeat-label",
+                        "unit-shard-1",
+                        "--execution-log-out",
+                        "build/test-summary.log",
+                        "--",
+                        sys.executable,
+                        "-m",
+                        "pytest",
+                    ]
+                )
+
+            self.assertEqual(status, 0)
+            heartbeat = stderr.getvalue()
+            self.assertIn("test-execution-summary-heartbeat", heartbeat)
+            self.assertIn("suite=unit", heartbeat)
+            self.assertIn("shard=unit-shard-1", heartbeat)
+            self.assertIn("elapsed_seconds=12.2", heartbeat)
+            self.assertIn("quiet_seconds=12", heartbeat)
+            self.assertIn("log=build/test-summary.log", heartbeat)
 
     def test_build_report_validates_schema_and_preserves_partial_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -648,7 +718,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             )
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(
                     returncode=0,
                     stdout=(
@@ -657,7 +727,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                     ),
                 ),
             ) as run, patch(
-                "ops.scripts.test_execution_summary.time.monotonic",
+                "ops.scripts.test.test_execution_summary.time.monotonic",
                 side_effect=[10.0, 10.25],
             ):
                 digest = collect_pytest_nodeid_digest(
@@ -679,7 +749,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             vault.mkdir()
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(
                     returncode=0,
                     stdout=(
@@ -782,7 +852,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             )
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(
                     returncode=0,
                     stdout="tests/test_collect_sample.py::test_one\n",
@@ -1216,7 +1286,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path = vault / "ops" / "reports" / "test-execution-summary.json"
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 1 passed in 0.01s ="),
             ) as run:
                 returncode = summary_main(
@@ -1248,7 +1318,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             seed_minimal_vault(vault)
 
             with (
-                patch("ops.scripts.test_execution_summary.run_with_timeout") as run,
+                patch("ops.scripts.test.test_execution_summary.run_with_timeout") as run,
                 redirect_stderr(io.StringIO()) as stderr,
                 self.assertRaises(SystemExit) as raised,
             ):
@@ -1289,7 +1359,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=1, stdout="= 1 failed in 0.01s ="),
             ) as run:
                 returncode = summary_main(
@@ -1336,7 +1406,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             test_file.write_text("def test_ok():\n    assert True\n\ndef test_new():\n    assert True\n", encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
             ) as run:
                 returncode = summary_main(
@@ -1382,7 +1452,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             (vault / "README.md").write_text("# Test\n\nSource tree changed.\n", encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
             ) as run:
                 stdout = io.StringIO()
@@ -1435,7 +1505,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
             ) as run:
                 stdout = io.StringIO()
@@ -1487,7 +1557,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(returncode=1, stdout="= 1 failed in 0.01s ="),
             ) as run:
                 returncode = summary_main(
@@ -1734,9 +1804,9 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path = vault / "ops" / "reports" / "test-execution-summary.json"
 
             with (
-                patch("ops.scripts.test_execution_summary.RuntimeContext.from_policy", return_value=_fixed_context()),
+                patch("ops.scripts.test.test_execution_summary.RuntimeContext.from_policy", return_value=_fixed_context()),
                 patch(
-                    "ops.scripts.test_execution_summary.run_with_timeout",
+                    "ops.scripts.test.test_execution_summary.run_with_timeout",
                     return_value=_result(returncode=0, stdout="= 1 passed, 1 deselected in 0.01s ="),
                 ),
             ):
@@ -1780,7 +1850,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 junit_path.write_text("<testsuite tests='3'></testsuite>\n", encoding="utf-8")
                 return _result(returncode=0, stdout="= 1 passed, 2 subtests passed in 0.01s =")
 
-            with patch("ops.scripts.test_execution_summary.run_with_timeout", side_effect=fake_run):
+            with patch("ops.scripts.test.test_execution_summary.run_with_timeout", side_effect=fake_run):
                 returncode = summary_main(
                     [
                         "--vault",
@@ -1828,7 +1898,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 junit_path.write_text("<testsuite tests='1'></testsuite>\n", encoding="utf-8")
                 return _result(returncode=0, stdout="= 2 passed, 1 subtest passed in 0.01s =")
 
-            with patch("ops.scripts.test_execution_summary.run_with_timeout", side_effect=fake_run):
+            with patch("ops.scripts.test.test_execution_summary.run_with_timeout", side_effect=fake_run):
                 returncode = summary_main(
                     [
                         "--vault",
@@ -1864,7 +1934,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path = vault / "ops" / "reports" / "test-execution-summary.json"
 
             with patch(
-                "ops.scripts.test_execution_summary.run_with_timeout",
+                "ops.scripts.test.test_execution_summary.run_with_timeout",
                 return_value=_result(
                     returncode=1,
                     stdout=(

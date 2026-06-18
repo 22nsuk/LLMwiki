@@ -4,7 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
-from ops.scripts.promotion_decision_registry_runtime import (
+from ops.scripts.core.promotion_decision_registry_runtime import (
     DECISION_REDUCER_KEY,
     DECISION_STAGE,
     FINALIZABLE_DECISIONS,
@@ -19,7 +19,7 @@ from ops.scripts.promotion_decision_registry_runtime import (
     telemetry_decision_values,
     validate_decision_record,
 )
-from ops.scripts.rule_registry_runtime import (
+from ops.scripts.core.rule_registry_runtime import (
     RuleMetadata,
     RuleSpec,
     evaluate_rule_registry,

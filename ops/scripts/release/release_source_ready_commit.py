@@ -8,10 +8,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.path_classification_runtime import (
+    LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY,
+    LOCAL_ONLY_PRIVATE_INVENTORY_PATHS,
+    SOURCE_CONTRACT_CATEGORIES,
+    classify_path,
+    matches_prefix_or_root,
+    normalize_repo_path,
+)
+from ops.scripts.core.request_coercion_runtime import coerce_request_or_kwargs
+from ops.scripts.release.release_authority_vocabulary import (
+    REASON_MACHINE_RELEASE_NOT_ALLOWED,
+)
 from ops.scripts.release.release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
-from ops.scripts.release_authority_vocabulary import REASON_MACHINE_RELEASE_NOT_ALLOWED
 
 DEFAULT_OUT = "tmp/release-source-ready-commit.json"
 DEFAULT_MESSAGE = "release: converge source-ready surfaces"
@@ -19,56 +30,8 @@ GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH = "tmp/goal-runtime-local-evidence-refresh.j
 RELEASE_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
 ARTIFACT_FRESHNESS_REPORT = "ops/reports/artifact-freshness-report.json"
 
-GENERATED_FILES = {
-    ".gitignore",
-    "ops/script-output-surfaces.json",
-}
-GENERATED_PREFIXES: tuple[str, ...] = ()
-PUBLIC_SOURCE_FILES = {
-    ".editorconfig",
-    ".gitattributes",
-    ".pre-commit-config.yaml",
-    "AGENTS.md",
-    "ARCHITECTURE.md",
-    "CONTRIBUTING.md",
-    "LICENSE",
-    "Makefile",
-    "README.md",
-    "SECURITY.md",
-    "THIRD_PARTY_NOTICES.md",
-    "mypy.ini",
-    "pyproject.toml",
-    "pytest.ini",
-    "uv.lock",
-}
-LOCAL_SOURCE_CONTRACT_FILES = {
-    "AGENTS.local.md",
-}
-PUBLIC_SOURCE_PREFIXES = (
-    ".codex/agents/",
-    ".github/",
-    "docs/",
-    "mk/",
-    "ops/",
-    "tests/",
-    "tools/",
-)
-SOURCE_CONTRACT_CATEGORIES = {"public_source", "local_source_contract"}
-PRIVATE_OR_TRANSIENT_PREFIXES = (
-    ".git/",
-    ".venv/",
-    "build/",
-    "dist/",
-    "external-reports/",
-    "ops/operator/",
-    "ops/reports/",
-    "raw/",
-    "review/",
-    "runs/",
-    "system/",
-    "tmp/",
-    "wiki/",
-)
+_normalize_repo_path = normalize_repo_path
+_matches_prefix_or_root = matches_prefix_or_root
 DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES = (
     "AGENTS.local.md",
     "external-reports/",
@@ -111,11 +74,6 @@ LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES = (
     "wiki/",
 )
 LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY = "local_only_private_deindex"
-LOCAL_ONLY_PRIVATE_INVENTORY_PATHS = (
-    "ops/manifest.json",
-    "ops/raw-registry.json",
-)
-LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY = "local_only_private_inventory"
 
 
 @dataclass(frozen=True)
@@ -134,6 +92,28 @@ class StatusEntry:
     @property
     def staged(self) -> bool:
         return self.xy[:1] not in (" ", "?")
+
+
+@dataclass(frozen=True)
+class RunCommitRequest:
+    vault: Path
+    out_path: Path
+    message: str
+    pre_status_path: Path | None
+    amend: bool
+    amend_of_path: Path | None
+    dry_run: bool
+    allow_staged: bool
+    only_generated_canonical: bool
+
+
+@dataclass
+class _RunCommitState:
+    request: RunCommitRequest
+    entries: list[StatusEntry]
+    pre_status: dict[str, Any]
+    amend_base: dict[str, Any]
+    report: dict[str, Any]
 
 
 def _run_git(vault: Path, args: list[str]) -> GitResult:
@@ -268,41 +248,6 @@ def tracked_ignored_local_only_inventory_paths(vault: Path) -> list[str]:
         for path in paths
         if path in LOCAL_ONLY_PRIVATE_INVENTORY_PATHS
     )
-
-
-def _normalize_repo_path(path: str) -> str:
-    normalized = Path(path).as_posix()
-    if normalized in ("", "."):
-        return ""
-    if normalized.startswith("/"):
-        return "<outside-repo>"
-    while normalized.startswith("./"):
-        normalized = normalized[2:]
-    parts = normalized.split("/")
-    if ".." in parts:
-        return "<outside-repo>"
-    return normalized
-
-
-def _matches_prefix_or_root(path: str, prefixes: tuple[str, ...]) -> bool:
-    return any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in prefixes)
-
-
-def classify_path(path: str) -> str:
-    normalized = _normalize_repo_path(path)
-    if not normalized or normalized == "<outside-repo>":
-        return "unexpected"
-    if normalized in GENERATED_FILES or _matches_prefix_or_root(normalized, GENERATED_PREFIXES):
-        return "generated_canonical"
-    if normalized in LOCAL_SOURCE_CONTRACT_FILES:
-        return "local_source_contract"
-    if normalized in LOCAL_ONLY_PRIVATE_INVENTORY_PATHS:
-        return LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY
-    if _matches_prefix_or_root(normalized, PRIVATE_OR_TRANSIENT_PREFIXES):
-        return "unexpected"
-    if normalized in PUBLIC_SOURCE_FILES or _matches_prefix_or_root(normalized, PUBLIC_SOURCE_PREFIXES):
-        return "public_source"
-    return "unexpected"
 
 
 def _is_local_only_private_deindex(vault: Path, entry: StatusEntry, path: str) -> bool:
@@ -597,221 +542,309 @@ def build_snapshot(vault: Path, out_path: Path) -> int:
     return 0
 
 
-def run_commit(
+def _coerce_run_commit_request(
+    request: RunCommitRequest | None,
+    legacy_kwargs: dict[str, Any],
+) -> RunCommitRequest:
+    return coerce_request_or_kwargs(
+        request=request,
+        legacy_kwargs=legacy_kwargs,
+        request_type=RunCommitRequest,
+    )
+
+
+def _blocked_report(
+    request: RunCommitRequest,
+    report: dict[str, Any],
     *,
-    vault: Path,
-    out_path: Path,
-    message: str,
-    pre_status_path: Path | None,
-    amend: bool,
-    amend_of_path: Path | None,
-    dry_run: bool,
-    allow_staged: bool,
-    only_generated_canonical: bool,
+    reason: str,
+    stderr_message: str = "",
+    stderr_paths: list[str] | None = None,
+    returncode: int = 1,
 ) -> int:
-    ok, reason = _require_git_worktree(vault)
-    if not ok:
-        _write_report(out_path, {"status": "blocked", "reason": reason, "entries": []})
-        return 1
+    report["status"] = "blocked"
+    report["reason"] = reason
+    _write_report(request.out_path, report)
+    if stderr_message:
+        print(stderr_message, file=sys.stderr)
+    for path in stderr_paths or []:
+        print(path, file=sys.stderr)
+    return returncode or 1
 
-    entries = git_status_entries(vault)
-    pre_status = _load_report(pre_status_path)
-    preexisting_paths = _load_preexisting_paths(pre_status_path)
-    report = _base_report(vault, entries, preexisting_paths=preexisting_paths)
-    report["message"] = message
-    report["dry_run"] = dry_run
-    report["amend"] = amend
 
-    tracked_ignored_inventory_paths = [
+def _initial_run_commit_state(request: RunCommitRequest) -> _RunCommitState:
+    entries = git_status_entries(request.vault)
+    pre_status = _load_report(request.pre_status_path)
+    report = _base_report(
+        request.vault,
+        entries,
+        preexisting_paths=_load_preexisting_paths(request.pre_status_path),
+    )
+    report["message"] = request.message
+    report["dry_run"] = request.dry_run
+    report["amend"] = request.amend
+    return _RunCommitState(
+        request=request,
+        entries=entries,
+        pre_status=pre_status,
+        amend_base=_load_amend_base(request.amend_of_path) if request.amend else {},
+        report=report,
+    )
+
+
+def _tracked_ignored_inventory_paths(report: dict[str, Any]) -> list[str]:
+    return [
         str(path)
         for path in report.get("tracked_ignored_local_only_inventory_paths", [])
         if str(path)
     ]
-    if tracked_ignored_inventory_paths:
-        report["status"] = "blocked"
-        report["reason"] = "tracked_ignored_local_only_inventory_paths"
-        _write_report(out_path, report)
-        print(
-            "release-source-ready-commit refused: tracked ignored local-only inventory paths are present",
-            file=sys.stderr,
+
+
+def _pre_status_head_guard(state: _RunCommitState) -> int | None:
+    if not state.pre_status or state.request.amend:
+        return None
+    expected_head = str(state.pre_status.get("head_before", "")).strip()
+    current_head = _head(state.request.vault)
+    state.report["snapshot"] = _display_path(state.request.vault, state.request.pre_status_path)
+    state.report["expected_head_from_snapshot"] = expected_head
+    state.report["actual_head_before_commit"] = current_head
+    if expected_head and current_head != expected_head:
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="snapshot_head_mismatch",
+            stderr_message=(
+                "release-source-ready-commit refused: current HEAD does not match "
+                "release-source-ready snapshot"
+            ),
         )
-        for path in tracked_ignored_inventory_paths:
-            print(path, file=sys.stderr)
-        return 1
+    return None
 
-    if pre_status and not amend:
-        expected_head = str(pre_status.get("head_before", "")).strip()
-        current_head = _head(vault)
-        report["snapshot"] = _display_path(vault, pre_status_path)
-        report["expected_head_from_snapshot"] = expected_head
-        report["actual_head_before_commit"] = current_head
-        if expected_head and current_head != expected_head:
-            report["status"] = "blocked"
-            report["reason"] = "snapshot_head_mismatch"
-            _write_report(out_path, report)
-            print(
-                "release-source-ready-commit refused: current HEAD does not match release-source-ready snapshot",
-                file=sys.stderr,
-            )
-            return 1
 
-    amend_base = _load_amend_base(amend_of_path) if amend else {}
-    if amend:
-        report["amend_of"] = _display_path(vault, amend_of_path)
-        report["amend_of_status"] = str(amend_base.get("status", "")).strip()
-        expected_head = str(amend_base.get("head_after", "")).strip()
-        current_head = _head(vault)
-        report["expected_head_before_amend"] = expected_head
-        report["actual_head_before_amend"] = current_head
-        if not expected_head:
-            report["status"] = "blocked"
-            report["reason"] = "amend_base_missing_head"
-            _write_report(out_path, report)
-            print("release-source-ready-amend refused: amend base has no head_after", file=sys.stderr)
-            return 1
-        if current_head != expected_head:
-            report["status"] = "blocked"
-            report["reason"] = "amend_base_head_mismatch"
-            _write_report(out_path, report)
-            print("release-source-ready-amend refused: current HEAD does not match amend base", file=sys.stderr)
-            return 1
+def _amend_head_guard(state: _RunCommitState) -> int | None:
+    if not state.request.amend:
+        return None
+    state.report["amend_of"] = _display_path(state.request.vault, state.request.amend_of_path)
+    state.report["amend_of_status"] = str(state.amend_base.get("status", "")).strip()
+    expected_head = str(state.amend_base.get("head_after", "")).strip()
+    current_head = _head(state.request.vault)
+    state.report["expected_head_before_amend"] = expected_head
+    state.report["actual_head_before_amend"] = current_head
+    if not expected_head:
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="amend_base_missing_head",
+            stderr_message="release-source-ready-amend refused: amend base has no head_after",
+        )
+    if current_head != expected_head:
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="amend_base_head_mismatch",
+            stderr_message=(
+                "release-source-ready-amend refused: current HEAD does not match amend base"
+            ),
+        )
+    return None
 
-    unexpected = [item for item in report["entries"] if item["category"] == "unexpected"]
-    local_only_inventory = [
-        item
-        for item in report["entries"]
-        if item["category"] == LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY
-    ]
-    late_source_contract = [
-        item
-        for item in report["entries"]
-        if amend and item["category"] in SOURCE_CONTRACT_CATEGORIES
-    ]
-    staged = [
-        item
-        for item in report["entries"]
-        if item["staged"] and item["category"] != LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY
-    ]
-    non_generated = [
-        item
-        for item in report["entries"]
-        if item["category"] != "generated_canonical"
-    ]
-    paths = [str(item["path"]) for item in report["entries"] if item["path"]]
-    if unexpected:
-        report["status"] = "blocked"
-        report["reason"] = "unexpected_dirty_paths"
-        report["unexpected_paths"] = [item["path"] for item in unexpected]
-        _write_report(out_path, report)
-        print("release-source-ready-commit refused: unexpected dirty paths are present", file=sys.stderr)
-        for item in unexpected:
-            print(item["path"], file=sys.stderr)
-        return 1
-    if local_only_inventory:
-        report["status"] = "blocked"
-        report["reason"] = "local_only_private_inventory_changes"
-        report["local_only_private_inventory_dirty_paths"] = [
-            item["path"] for item in local_only_inventory
+
+def _dirty_entry_groups(report: dict[str, Any], *, amend: bool) -> dict[str, list[dict[str, Any]]]:
+    entries = report["entries"]
+    return {
+        "unexpected": [item for item in entries if item["category"] == "unexpected"],
+        "local_only_inventory": [
+            item for item in entries if item["category"] == LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY
+        ],
+        "late_source_contract": [
+            item for item in entries if amend and item["category"] in SOURCE_CONTRACT_CATEGORIES
+        ],
+        "staged": [
+            item
+            for item in entries
+            if item["staged"] and item["category"] != LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY
+        ],
+        "non_generated": [
+            item for item in entries if item["category"] != "generated_canonical"
+        ],
+    }
+
+
+def _dirty_path_guard(state: _RunCommitState) -> int | None:
+    groups = _dirty_entry_groups(state.report, amend=state.request.amend)
+    if groups["unexpected"]:
+        paths = [str(item["path"]) for item in groups["unexpected"]]
+        state.report["unexpected_paths"] = paths
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="unexpected_dirty_paths",
+            stderr_message="release-source-ready-commit refused: unexpected dirty paths are present",
+            stderr_paths=paths,
+        )
+    if groups["local_only_inventory"]:
+        paths = [str(item["path"]) for item in groups["local_only_inventory"]]
+        state.report["local_only_private_inventory_dirty_paths"] = paths
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="local_only_private_inventory_changes",
+            stderr_message="release-source-ready-commit refused: local-only inventory paths are dirty",
+            stderr_paths=paths,
+        )
+    if groups["late_source_contract"]:
+        return _late_source_contract_guard(state, groups["late_source_contract"])
+    if groups["staged"] and not state.request.allow_staged:
+        state.report["staged_paths"] = [item["path"] for item in groups["staged"]]
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="preexisting_staged_changes",
+            stderr_message="release-source-ready-commit refused: staged changes are present",
+        )
+    if state.request.only_generated_canonical and groups["non_generated"]:
+        paths = [str(item["path"]) for item in groups["non_generated"]]
+        state.report["non_generated_paths"] = paths
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="non_generated_dirty_paths",
+            stderr_message="release-source-ready-commit refused: non-generated dirty paths are present",
+            stderr_paths=paths,
+        )
+    return None
+
+
+def _late_source_contract_guard(
+    state: _RunCommitState,
+    late_source_contract: list[dict[str, Any]],
+) -> int:
+    if all(item["category"] == "public_source" for item in late_source_contract):
+        state.report["late_public_source_paths"] = [
+            item["path"] for item in late_source_contract
         ]
-        _write_report(out_path, report)
-        print(
-            "release-source-ready-commit refused: local-only inventory paths are dirty",
-            file=sys.stderr,
-        )
-        for item in local_only_inventory:
-            print(item["path"], file=sys.stderr)
-        return 1
-    if late_source_contract:
-        report["status"] = "blocked"
-        if all(item["category"] == "public_source" for item in late_source_contract):
-            report["reason"] = "amend_contains_public_source_changes"
-            report["late_public_source_paths"] = [
-                item["path"] for item in late_source_contract
-            ]
-        else:
-            report["reason"] = "amend_contains_source_contract_changes"
-            report["late_source_contract_paths"] = [
-                item["path"] for item in late_source_contract
-            ]
-        _write_report(out_path, report)
-        print(
-            "release-source-ready-amend refused: source contract changed after release-source-ready commit",
-            file=sys.stderr,
-        )
-        return 1
-    if staged and not allow_staged:
-        report["status"] = "blocked"
-        report["reason"] = "preexisting_staged_changes"
-        report["staged_paths"] = [item["path"] for item in staged]
-        _write_report(out_path, report)
-        print("release-source-ready-commit refused: staged changes are present", file=sys.stderr)
-        return 1
-    if only_generated_canonical and non_generated:
-        report["status"] = "blocked"
-        report["reason"] = "non_generated_dirty_paths"
-        report["non_generated_paths"] = [item["path"] for item in non_generated]
-        _write_report(out_path, report)
-        print(
-            "release-source-ready-commit refused: non-generated dirty paths are present",
-            file=sys.stderr,
-        )
-        for item in non_generated:
-            print(item["path"], file=sys.stderr)
-        return 1
+        reason = "amend_contains_public_source_changes"
+    else:
+        state.report["late_source_contract_paths"] = [
+            item["path"] for item in late_source_contract
+        ]
+        reason = "amend_contains_source_contract_changes"
+    return _blocked_report(
+        state.request,
+        state.report,
+        reason=reason,
+        stderr_message=(
+            "release-source-ready-amend refused: source contract changed after "
+            "release-source-ready commit"
+        ),
+    )
 
-    if amend and paths and report["amend_of_status"] not in {"committed", "amended"}:
-        report["status"] = "blocked"
-        report["reason"] = "amend_base_not_committed"
-        report["paths_after_uncommitted_base"] = paths
-        _write_report(out_path, report)
-        print(
-            "release-source-ready-amend refused: release-source-ready commit did not create a commit",
-            file=sys.stderr,
-        )
-        return 1
 
+def _paths_to_commit(report: dict[str, Any]) -> list[str]:
+    return [str(item["path"]) for item in report["entries"] if item["path"]]
+
+
+def _amend_base_status_guard(state: _RunCommitState, paths: list[str]) -> int | None:
+    if not state.request.amend or not paths or state.report["amend_of_status"] in {"committed", "amended"}:
+        return None
+    state.report["paths_after_uncommitted_base"] = paths
+    return _blocked_report(
+        state.request,
+        state.report,
+        reason="amend_base_not_committed",
+        stderr_message=(
+            "release-source-ready-amend refused: release-source-ready commit did not create a commit"
+        ),
+    )
+
+
+def _finish_no_changes_or_dry_run(state: _RunCommitState, paths: list[str]) -> int | None:
     if not paths:
-        report["status"] = "no_changes"
-        report["head_after"] = _head(vault)
-        _write_report(out_path, report)
-        action = "release-source-ready-amend" if amend else "release-source-ready-commit"
+        state.report["status"] = "no_changes"
+        state.report["head_after"] = _head(state.request.vault)
+        _write_report(state.request.out_path, state.report)
+        action = "release-source-ready-amend" if state.request.amend else "release-source-ready-commit"
         print(f"{action}: no dirty release-source-ready changes")
         return 0
-
-    report["paths_to_commit"] = paths
-    if dry_run:
-        report["status"] = "dry_run"
-        report["head_after"] = _head(vault)
-        _write_report(out_path, report)
-        print(out_path.as_posix())
+    state.report["paths_to_commit"] = paths
+    if state.request.dry_run:
+        state.report["status"] = "dry_run"
+        state.report["head_after"] = _head(state.request.vault)
+        _write_report(state.request.out_path, state.report)
+        print(state.request.out_path.as_posix())
         return 0
+    return None
 
-    stage = _stage_entries(vault, report["entries"])
+
+def _stage_and_commit(state: _RunCommitState) -> int:
+    stage = _stage_entries(state.request.vault, state.report["entries"])
     if stage.returncode != 0:
-        report["status"] = "blocked"
-        report["reason"] = "git_add_failed"
-        report["stderr"] = stage.stderr.strip()
-        _write_report(out_path, report)
-        print(stage.stderr, file=sys.stderr)
-        return stage.returncode or 1
-
-    commit = _commit_amend(vault) if amend else _commit(vault, message)
+        state.report["stderr"] = stage.stderr.strip()
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="git_add_failed",
+            stderr_message=stage.stderr,
+            returncode=stage.returncode,
+        )
+    commit = (
+        _commit_amend(state.request.vault)
+        if state.request.amend
+        else _commit(state.request.vault, state.request.message)
+    )
     if commit.returncode != 0:
-        report["status"] = "blocked"
-        report["reason"] = "git_amend_failed" if amend else "git_commit_failed"
-        report["stdout"] = commit.stdout.strip()
-        report["stderr"] = commit.stderr.strip()
-        _write_report(out_path, report)
-        print(commit.stdout, file=sys.stderr)
-        print(commit.stderr, file=sys.stderr)
-        return commit.returncode or 1
-
-    report["status"] = "amended" if amend else "committed"
-    report["stdout"] = commit.stdout.strip()
-    report["head_after"] = _head(vault)
-    _write_report(out_path, report)
-    print(out_path.as_posix())
+        state.report["stdout"] = commit.stdout.strip()
+        state.report["stderr"] = commit.stderr.strip()
+        return _blocked_report(
+            state.request,
+            state.report,
+            reason="git_amend_failed" if state.request.amend else "git_commit_failed",
+            stderr_message=f"{commit.stdout}\n{commit.stderr}",
+            returncode=commit.returncode,
+        )
+    state.report["status"] = "amended" if state.request.amend else "committed"
+    state.report["stdout"] = commit.stdout.strip()
+    state.report["head_after"] = _head(state.request.vault)
+    _write_report(state.request.out_path, state.report)
+    print(state.request.out_path.as_posix())
     return 0
+
+
+def run_commit(
+    request: RunCommitRequest | None = None,
+    **legacy_kwargs: Any,
+) -> int:
+    request = _coerce_run_commit_request(request, legacy_kwargs)
+    ok, reason = _require_git_worktree(request.vault)
+    if not ok:
+        _write_report(request.out_path, {"status": "blocked", "reason": reason, "entries": []})
+        return 1
+
+    state = _initial_run_commit_state(request)
+    tracked_ignored_inventory_paths = _tracked_ignored_inventory_paths(state.report)
+    if tracked_ignored_inventory_paths:
+        return _blocked_report(
+            request,
+            state.report,
+            reason="tracked_ignored_local_only_inventory_paths",
+            stderr_message=(
+                "release-source-ready-commit refused: tracked ignored local-only inventory paths are present"
+            ),
+            stderr_paths=tracked_ignored_inventory_paths,
+        )
+
+    for guard in (_pre_status_head_guard, _amend_head_guard, _dirty_path_guard):
+        result = guard(state)
+        if result is not None:
+            return result
+    paths = _paths_to_commit(state.report)
+    result = _amend_base_status_guard(state, paths)
+    if result is not None:
+        return result
+    result = _finish_no_changes_or_dry_run(state, paths)
+    if result is not None:
+        return result
+    return _stage_and_commit(state)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

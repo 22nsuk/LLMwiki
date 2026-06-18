@@ -77,19 +77,23 @@ surface comparison; this document owns release evidence and staged authority.
   if it would become the effective release auto-promotion run id.
 - `make release-auto-promotion-preflight`: refresh cheap unattended-promotion
   blockers before spending full run-ready cycles. It first runs the goal-run id
-  guard, refreshes cheap generated prerequisites such as queue-input reports and
-  the external-report action matrix, refresh-checks fast smoke, refreshes the
+  guard, refreshes the external-report action matrix and generated-artifact
+  index body without pulling in the broad generated-core writer set,
+  refresh-checks fast smoke, refreshes the
   selected report-contract summary for changed test fingerprints, then runs
   artifact freshness and checks remediation, learning revalidation, and
   auto-improve readiness without building release artifacts, sealing, or
   creating runtime-trial evidence. It removes any older final ready manifest
   before writing new preflight evidence.
-- `make release-auto-promotion-safe-cleanup`: normalize safe generated
-  evidence before preseal. It removes stale goal-runtime transients, cleans tmp
-  JSON candidates, backfills schema-backed historical run artifacts, refreshes
-  generated-artifact index and artifact freshness, refreshes external report
-  reference diagnostics, and rewrites the closeout summary from those current
-  inputs.
+- `make release-auto-promotion-safe-cleanup-cleanup-only`: normalize safe
+  generated evidence before preseal. It removes stale goal-runtime transients,
+  cleans tmp JSON candidates, backfills schema-backed historical run artifacts,
+  and refreshes generated-artifact index plus artifact freshness without running
+  fixed-point.
+- `make release-auto-promotion-safe-cleanup-finalize`: run the optional
+  ZIP-bound external-reference, batch-manifest, and fixed-point suffix. The
+  legacy `make release-auto-promotion-safe-cleanup` target remains a wrapper for
+  cleanup-only plus this explicit finalize step.
 - `make generated-artifact-retention-clean`: dry-run a retention-aware cleanup
   of regenerated local residue. Pass `GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY=1`
   only when you intentionally want to remove allowlisted ignored residue such as
@@ -148,26 +152,43 @@ surface comparison; this document owns release evidence and staged authority.
   release summary is local-only evidence and is refreshed during the prepare
   convergence flow.
 - `make release-post-commit-finalize`: official post-commit evidence suffix for
-  source-ready commits. It runs check/current-only surfaces, verifies finality,
-  and fails if source fingerprint or source contract paths drift. Dirty tracked
-  generated evidence is `attention` and points back to
+  source-ready commits. It runs check/current-only surfaces, writes the
+  post-commit readback report, then leaves `release-closeout-finality-verify` as
+  the final Make invocation. It fails if source fingerprint or source contract
+  paths drift. Dirty tracked generated evidence is `attention` and points back to
   `release-source-ready-prepare`. It does not refresh full pytest evidence,
   staged authority manifests, report writer clusters, or action lifecycle
   cleanup. It also does not replace `release-run-ready`,
   `release-sealed-run-ready`, or `release-auto-promotion-ready` authority.
-  When those staged authority sidecars are stale, the top-level post-commit
-  status may still pass while `authority_readback.status=attention` names the
-  owning authority target.
+  When those staged authority sidecars, including the final
+  auto-promotion-ready manifest, are stale or missing, the top-level
+  post-commit status may still pass while `authority_readback.status=attention`
+  names the owning authority target.
   `make head-aligned-evidence-converge` is a compatibility alias for this target.
 - `make release-authority-settle`: explicit staged-authority writer lane for
-  unattended promotion after release evidence is current. It runs report finality
-  resettle once, then preflight, run-ready, preseal, sealed-run-ready, and
-  auto-promotion-ready manifests. After the ready attempt, it refresh-checks
-  artifact freshness and rewrites release closeout fixed-point/finality so no
+  unattended promotion after release evidence is current. It first runs
+  `release-finality-resettle-current-or-refresh`, which skips the expensive
+  resettle when replay/current finality checks already pass, then runs
+  preflight, run-ready, preseal, sealed-run-ready, and auto-promotion-ready
+  manifests. On a clean ready pass, it refreshes the action matrix and
+  generated artifact index, then runs the archive-candidate gate before
+  post-commit readback or terminal finality. Archive candidates are local-only
+  review-retention decisions, but moving them after finality changes tracked
+  generated evidence and forces another fixed-point pass. If the gate reports
+  candidates, run `make archive-execution-manifest-apply
+  ARCHIVE_EXECUTION_OPERATOR_CONFIRMATION=CONFIRM_ARCHIVE_EXECUTION` when the
+  move is appropriate, then rerun the authority lane from that pre-finality
+  state. After the ready attempt, it runs a post-ready
+  `current-or-refresh` finality tail: replay/current checks skip the ZIP-bound
+  batch-manifest and fixed-point writers when they are already current, otherwise
+  the tail promotes the batch manifest, rewrites fixed-point/finality,
+  replay-verifies the same ZIP metadata, runs the strict post-check dry-run,
+  and then verifies finality so no
   tracked report writer runs after finality. If ready is blocked, this finality
-  tail still runs and the original ready failure is returned. On a clean ready
-  pass, the target ends with check-only authority readback plus post-commit
-  finalizer verification.
+  tail still runs and the original
+  ready failure is returned. On a clean ready pass, check-only authority
+  readback plus post-commit finalizer verification run before the same terminal
+  finality tail.
   It does not regenerate long-tail report producers; run
   `make release-evidence-converge` or the owning evidence refresh target first
   when stale generated reports are the blocker.
@@ -181,11 +202,12 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-evidence-closeout-sealed`: check-only sealed packaging lane for an
   already source-ready tree. It must not run mutating source/evidence convergence;
   zip-bound sealed evidence is written as sidecars under `build/release/`.
-- `make release-smoke-fast`: developer/package precheck이며 canonical release evidence로 쓰지 않는다.
-  Preflight, preseal, and goal-run admission may refresh it to keep archive
-  schema/currentness diagnostics cheap before expensive release evidence is
-  attempted.
-- `make release-smoke`: canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다.
+- `make release-smoke-fast`: developer/package precheck, not canonical release
+  evidence. Preflight, preseal, and goal-run admission may refresh it to keep
+  archive schema/currentness diagnostics cheap before expensive release
+  evidence is attempted.
+- `make release-smoke`: canonical release evidence for the full smoke report at
+  `ops/reports/release-smoke-report.json`.
   Source-package smoke runs registry and wiki lint checks in release-archive
   profile because public source ZIPs intentionally omit `raw/`, `wiki/`, and
   `system/`; missing private corpus surfaces must not become release-smoke
@@ -218,9 +240,9 @@ surface comparison; this document owns release evidence and staged authority.
    explicit `GOAL_RUN_ID=<goal-run-id>` is allowed but the guard can infer the
    effective id from verified global evidence. This includes
    `make release-auto-promotion-goal-run-id-guard` and
-   `make release-auto-promotion-safe-cleanup`; run the safe cleanup target
-   directly only when you need to settle safe generated evidence before retrying
-   preseal.
+   `make release-auto-promotion-safe-cleanup-cleanup-only`; run the cleanup-only
+   target directly when you need to settle safe generated evidence before
+   retrying preseal.
 5. Run `make release-sealed-run-ready` when you need source ZIP and sidecar
    evidence sealed for release review. Its planner requires a current passing
    run-ready manifest plus current passing auto-promotion preseal evidence, and
@@ -290,9 +312,11 @@ Remote-visible release governance is recorded in
 branch protection/ruleset configuration: direct pushes to `main` are forbidden,
 pull requests and required status checks are required, force-pushes and branch
 deletions are disabled, and the required CI matrix mirrors the `CI` workflow
-tiers for Python 3.12, 3.13, and 3.14. Singleton checks include Windows release
-smoke, raw-registry cross-environment evidence, supply-chain, CodeQL, and
-dependency review.
+after its matrix `exclude` entries. The fast tier keeps Python 3.12, 3.13, and
+3.14 coverage; heavier CI tiers are required on Python 3.12 unless the workflow
+and governance matrix are deliberately expanded together. Singleton checks
+include Windows release smoke, raw-registry cross-environment evidence,
+supply-chain, CodeQL, and dependency review.
 
 Live GitHub drift evidence is an operator/full-vault lane, not a public CI or
 release-promotion prerequisite. Create a sanitized JSON input with normalized
@@ -300,13 +324,51 @@ protected branch names, required check contexts, and branch-protection booleans,
 then run:
 
 ```bash
-make collaboration-governance GITHUB_GOVERNANCE_LIVE_INPUT=tmp/github-live.json
+make collaboration-governance GITHUB_GOVERNANCE_LIVE_INPUT=build/release/github-governance-live-input.json
+make operator-evidence-closeout-current-or-refresh
 ```
 
 The resulting `ops/reports/github-governance-live-drift.json` stores only
 normalized counts, missing or mismatched required checks, input digest, status,
 and redaction metadata. Do not retain raw ruleset dumps, tokens, actor payloads,
-or private repository settings in that report.
+or private repository settings in that report. Keep the operator live input under
+`build/release/`; `tmp/` is scratch space and cleanup targets may delete it. Use
+`operator-evidence-closeout-current-or-refresh` after the operator evidence
+writer so the default test-execution summary, generated index, artifact
+freshness, the active matrix, and finality settle without rebuilding release
+packages or rerunning release authority.
+This lane uses stable JSONL artifact-freshness progress so long scans emit
+heartbeat events without writing nondeterministic phase durations into the
+canonical freshness report.
+
+When GitHub repository rulesets are the authority instead of classic branch
+protection, the live input may provide a sanitized `branch_rules` map. Keep only
+the rule `type` values and non-secret parameters needed for the contract:
+
+```json
+{
+  "branch_rules": {
+    "main": [
+      {"type": "deletion"},
+      {"type": "non_fast_forward"},
+      {"type": "required_linear_history"},
+      {
+        "type": "pull_request",
+        "parameters": {"required_approving_review_count": 1}
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "required_status_checks": [
+            {"context": "fast / py3.12"}
+          ]
+        }
+      }
+    ]
+  }
+}
+```
 
 Working branches are pushed with `git push -u origin HEAD:<working-branch>`.
 After push, attach the GitHub Actions workflow run and combined status check to
@@ -387,9 +449,15 @@ only when the operator is renewing or replacing the acceptance decision.
 5. Run `make release-auto-promotion-ready` as the final readback authority. It
    should reuse the current lower-stage evidence rather than rerunning tests,
    rebuilding the package, resealing, or creating runtime-trial evidence.
-   If its planner reports operator accepted-risk or gate-attention counts, rerun
-   `make release-auto-promotion-preseal` and then `make release-sealed-run-ready`
-   so the sealed operator summary is regenerated from current source evidence.
+   If its planner reports release/clean-lane blocking accepted-risk counts or
+   residual non-advisory gate attention, rerun `make release-auto-promotion-preseal`
+   and then `make release-sealed-run-ready` so the sealed operator summary is
+   regenerated from current source evidence.
+   The `release-authority-settle` tail then first tries a ZIP-bound replay and
+   finality current check. Only stale evidence triggers batch-manifest
+   promotion, fixed-point rewrite, batch replay verification, strict
+   post-check dry-run, and finality verification as the terminal report-writer
+   suffix.
 
 Completion is proven only by
 `build/release/release-auto-promotion-ready-manifest.json` with:
@@ -508,12 +576,52 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `public-check-summary-current-check` itself.
 - `ops/reports/release-closeout-finality-attestation.json` is diagnostic only;
   release authority is the staged `release-run`, `release-sealed-run`, and
-  `release-auto-promotion-ready` manifests under `build/release/`. Treat
-  finality verification as terminal for tracked report writers: after refreshing
+  `release-auto-promotion-ready` manifests under `build/release/`. Artifact
+  freshness excludes this finality-owned diagnostic so a terminal finality write
+  does not create freshness debt; validate it with
+  `make release-closeout-finality-verify`. When
+  `release-finality-resettle-current-check` fails, it runs the non-mutating
+  `release-finality-resettle-current-diagnose` helper so the verify JSON includes
+  `failure_classification.primary_class`, `recommended_lane`,
+  `recommended_targets`, and `recommended_fixed_point_initial_targets`. Use that
+  classification, plus the batch replay verifier's
+  `batch manifest replay mismatch classification` JSON when replay fails, to
+  distinguish batch-manifest source freshness/content drift,
+  freshness/index/cohort digest drift, sealed preflight drift, fixed-point
+  tracked-writer drift, and attestation-only digest drift before falling back to
+  a full resettle. After refreshing
   `artifact-freshness`, `external-report-action-matrix`,
   `generated-artifact-index`, `release-closeout-summary-report`, or another
-  fixed-point tracked report, rerun `make release-finality-resettle` so the
-  attestation is written after the last writer.
+  fixed-point tracked report, rerun
+  `make release-finality-resettle-current-or-refresh` so current finality evidence
+  is reused when possible, or the attestation is rewritten and verified after the
+  last tracked writer when needed. The refresh path hands off to
+  `make release-terminal-finality`, which runs the freshness/matrix/index
+  finality suffix, fixed-point writer, strict post-check dry-run, and terminal
+  finality verification in that order. The resettle lane refreshes
+  `release-authority-sealed-preflight` before artifact freshness/finality scans
+  so `ops/reports/release-closeout-sealed-rehearsal-check.json` is not left as a
+  source-identity-only stale record after fixed-point attestation. Do not run
+  `release-closeout-finality-attestation` directly after a freshness or summary
+  refresh: finality verification reads the fixed-point digest map, so the
+  durable repair is `make release-closeout-fixed-point` followed by terminal
+  `make release-closeout-finality-verify`, or simply
+  `make release-finality-resettle-current-or-refresh`.
+  The action matrix is a generated-artifact-index input, so it must be refreshed
+  inside the fixed-point/finality suffix before the attestation, not after it.
+  Staged authority also refreshes the action matrix after
+  `release-auto-promotion-ready` and before archive gating, so release-run and
+  promotion truth-ladder statuses are reflected before terminal finality is
+  considered current.
+  `release-closeout-fixed-point` performs the final action-matrix readback after
+  its post-promote artifact-freshness bootstrap and before it writes the
+  attestation, so the matrix does not retain a pre-bootstrap freshness blocker.
+  Any canonical report writer after the attestation can invalidate the finality
+  digest map and should be treated as a reason to rerun the resettle lane.
+  For staged authority settle, prefer `make release-authority-settle`; its
+  terminal tail checks the effective distribution ZIP first and only rewrites
+  the batch manifest, fixed point, replay verification, and finality evidence
+  when current evidence cannot be reused.
 - `ops/reports/` and `ops/operator/` are preserved locally and ignored by Git.
   If older branches still track entries under those paths, remove them from the
   index with `git rm --cached` while leaving the local files on disk.
@@ -522,6 +630,16 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   archived reports are retained outside Git/source-release authority.
   `ops/reports/external-report-action-matrix.json` separates action lifecycle
   as `resolved`, `historically_true`, `superseded`, or `currently_valid`.
+  It also summarizes currently valid actions by source-action availability,
+  artifact-freshness backlog, and release/operator authority needs so the next
+  lane is visible without reading every action row. Open or planned observations
+  are not generated-only backlog: register them in
+  `ops/observation-closeout-registry.json` before finality sealing, or update the
+  registry and rerun the full resettle lane afterward. Finality-after generated
+  observations are only appropriate for closed statuses with resolution evidence;
+  do not mark an open follow-up `wontfix` merely to avoid the tracked registry
+  update, and do not mutate tracked source while treating the existing finality
+  attestation as current.
   Before a root report is moved to archive, require a per-report absorption
   check: matched action IDs, evidence status, lifecycle, unmatched
   recommendation count, and any operator-only rationale must be recorded in
@@ -547,6 +665,85 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `artifact-freshness` owner target to restore live counts. Excluded stale
   canonical reports need an explicit non-canonical marker, and preserved stale
   payloads need a preservation reason.
+  When artifact freshness reports `stale_routing.classification:
+  source_identity_only`, use `stale_routing.source_identity_owner_routes` to
+  choose the narrow owner lane for each stale artifact group before paying for
+  broad release evidence convergence. If the stale set is only source
+  revision/tree fingerprint drift, start with
+  `make freshness-source-identity-converge`; it delegates to the owner-route
+  aware `make freshness-owner-route-converge`, which reads
+  `stale_routing.source_identity_owner_routes`, runs executable owner targets
+  before terminal finality, writes
+  `tmp/freshness-owner-route-converge-plan.json`, and only then refreshes
+  freshness/index identity evidence plus the finality current-or-refresh wrapper.
+  If the existing artifact freshness report is already `current` and its
+  `source_tree_fingerprint` matches the current source tree, the helper reuses it
+  as the route authority and records `initial_refresh: skipped` in the plan
+  instead of paying for a duplicate freshness refresh.
+  It does not enter full-suite, release-run-ready, promotion authority, or goal
+  publish lanes unless a concrete owner route names that lane. Placeholder
+  targets such as `GOAL_RUN_ID=<completed-run-id> ...` require the matching
+  environment input before the helper mutates any owner report. Treat this as
+  source-identity/finality readback debt, not as evidence payload freshness debt
+  that automatically justifies broad release convergence. The top-level
+  resettle target remains the safe post-commit fallback, while owner routes
+  point to concrete Make targets such as
+  `external-report-reference-manifest-settle`,
+  `test-execution-summary-full-current-or-refresh`,
+  `release-finality-resettle-current-or-refresh`,
+  `GOAL_RUN_ID=<completed-run-id> make goal-runtime-publish-snapshot`,
+  `supply-chain-artifacts-cached`, or
+  `release-source-package-check`.
+  Broad freshness refresh targets do not publish goal runtime status snapshots
+  or rewrite canonical goal prompt/contract surfaces: canonical goal evidence is
+  run evidence, not a generic currentness artifact, and must be refreshed
+  through the goal-runtime lane with an explicit run ID.
+  To avoid source-identity churn, use this order for real run convergence:
+
+  1. Finish all source, code, documentation, policy, schema, fixture, and test
+     edits.
+  2. Validate the changed surface. If a CLI option, output path, or direct
+     script writer surface changed, include `make script-output-surfaces-check`
+     before committing; refresh `make script-output-surfaces` only when the
+     check reports a stale material output/fallback registry.
+  3. Commit the source-ready change before mutating canonical generated
+     evidence.
+  4. Run the narrow generated convergence lane that matches the blocker:
+     `make generated-artifact-converge` for generated-artifact feedback, or
+     `make freshness-source-identity-converge` for source revision/tree
+     fingerprint resettle. Do not jump to broad release convergence unless the
+     owner route still requires it.
+  5. Run `make artifact-freshness-refresh-check`.
+  6. When finality-tracked reports changed, run
+     `make release-finality-resettle-current-or-refresh`.
+  7. Run the release/operator authority lane only after freshness and finality
+     are stable, for example `make release-run-ready` or
+     `make release-authority-settle`.
+     `release-authority-settle` first checks that the selected goal run is
+     backed by verified completed-run evidence. If the goal certificate/status
+     pair is stale, blocked, or only locally diagnostic, the lane stops before
+     paying for full-suite, release package, or sealed-run evidence.
+     `release-authority-settle` writes or refreshes the
+     `release-auto-promotion-ready` manifest, then refreshes the action matrix,
+     generated-artifact index, and archive execution manifest before terminal
+     finality. This happens even when promotion readiness is blocked, so the
+     active matrix reflects the newest blocker state and archive/source-action
+     candidates stop the run before another finality seal.
+  8. Finish with `make release-post-commit-finalize` so HEAD readback,
+     script-output surface checking, artifact freshness checking, and terminal
+     finality verification use the committed tree.
+
+  If the final freshness pass does not change tracked source inputs,
+  `release-run-ready-plan-check` should remain a reuse-only ready plan rather
+  than opening another release evidence loop.
+  After `release-closeout-finality-verify` passes, avoid mutating freshness,
+  supply-chain, matrix, index, or archive reports directly. If one of those
+  writers is required, treat finality as intentionally invalidated and finish
+  with `make release-finality-resettle-current-or-refresh` as the terminal
+  writer/check sequence. `make supply-chain-artifacts-cached` enforces this
+  rule: when current finality already verifies, it fails unless
+  `ALLOW_FINALITY_INVALIDATION=1` is set, and that bypass must be followed by
+  `make release-finality-resettle-current-or-refresh`.
 - `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
   and the release-run manifest.
 - `tmp/` holds scratch checks and candidate files that must not become authority.
@@ -572,16 +769,26 @@ external Sigstore evidence lane, provide an observed bundle reference:
 
 ```bash
 make sigstore-bundle SIGSTORE_BUNDLE_REF=tmp/sigstore.bundle
+make operator-evidence-closeout-current-or-refresh
 ```
 
 `verified-external-bundle` requires a non-empty bundle reference, passing local
-subject checks, and a passing `external_bundle_observed` check. If a bundle is
-present but another check fails, the report remains non-pass as
-`external-bundle-verification-failed`.
+subject checks, a parseable Sigstore bundle JSON payload, and bundle structure
+that carries verification material plus signed content. A placeholder file or a
+bundle with failing checks remains non-pass as
+`external-bundle-verification-failed`; leave the lane operator-pending until the
+publish/release environment has produced an observed bundle.
+The active matrix distinguishes local supply-chain artifact refresh from
+external bundle verification: source-identity drift routes to the freshness
+owner lane, while `supply_chain_external_verification` remains operator-pending
+until `SIGSTORE_BUNDLE_REF=<bundle>` points at an observed bundle.
 
 Canonical dependency evidence is `pyproject.toml` plus `uv.lock`, replayed with
 the canonical-index `make uv-lock-check` gate and frozen `uv export`
-locked-requirements installs in CI and `make dev-install`. Root
+locked-requirements installs in CI and `make dev-install`. `make dev-install`
+uses `DEV_INSTALL_INDEX_URL` for local install replay; it defaults to the
+canonical index but can be overridden without changing the `uv-lock-check`
+authority. Root
 `requirements.txt` and `requirements-dev.txt` are retired from the
 source and public-export surfaces; if an older report or fixture still mentions
 them, treat them only as optional compatibility/provenance inputs.

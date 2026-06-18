@@ -16,6 +16,7 @@
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
       "make test-report-contract-core": 180,
       "make workflow-dependency-planner-check": 60,
+      "make runtime-hotspot-smoke": 240,
       "make script-output-surfaces-check": 30,
       "make report-schema-samples-check": 30,
       "make public-check": 120
@@ -32,6 +33,25 @@
       "duration_seconds": 300
     },
     "rules": [
+      {
+        "rule_id": "runtime_hotspot_source",
+        "path_patterns": [
+          "ops/scripts/mechanism/auto_improve*_runtime.py",
+          "ops/scripts/mechanism/mutation_proposal*_runtime.py",
+          "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
+          "ops/scripts/mechanism/goal_runtime_run_admission.py",
+          "ops/scripts/release/release_evidence_dashboard.py",
+          "ops/scripts/release/release_evidence_dashboard*_runtime.py"
+        ],
+        "commands": [
+          "make static",
+          "make runtime-hotspot-smoke"
+        ],
+        "reason": "Runtime hotspot façade and helper changes need the focused hotspot smoke lane, including slow golden coverage that the generic fast lane excludes.",
+        "coverage_class": "runtime_hotspot",
+        "static_required": true,
+        "duration_seconds": 300
+      },
       {
         "rule_id": "python_runtime_source",
         "path_patterns": [
@@ -246,9 +266,9 @@
       "authority": "persistent",
       "semantics": "Public-surface contract tests for root-tree and exported-tree checks.",
       "ci_tier": "public",
-      "ci_entrypoint": "public-check",
+      "ci_entrypoint": "ci-public-tier",
       "ci_steps": [
-        "make public-check"
+        "make ci-public-tier"
       ],
       "make_target": "test-public",
       "allowed_markers": [
@@ -267,10 +287,9 @@
       "authority": "persistent",
       "semantics": "Report, schema, template, and generated artifact contract tests.",
       "ci_tier": "report-contract",
-      "ci_entrypoint": "test-report-contract-all",
+      "ci_entrypoint": "ci-report-contract-tier",
       "ci_steps": [
-        "make test-report-contract-all",
-        "make external-report-reference-manifest-release-check"
+        "make ci-report-contract-tier"
       ],
       "make_target": "test-report-contract-all",
       "allowed_markers": [
@@ -384,10 +403,10 @@
           "tests/test_mechanism_review.py",
           "tests/test_mechanism_review_candidate_runtime.py",
           "tests/test_mechanism_review_history_runtime.py",
-          "tests/test_mutation_proposal.py::MutationProposalTest::test_missing_artifact_envelope_fails_fast_for_primary_evidence",
-          "tests/test_mutation_proposal.py::MutationProposalTest::test_unknown_currentness_fails_fast_for_primary_evidence",
-          "tests/test_auto_improve_readiness_runtime.py",
+          "tests/test_mutation_proposal_build_report.py::MutationProposalBuildReportTest::test_missing_artifact_envelope_fails_fast_for_primary_evidence",
+          "tests/test_mutation_proposal_build_report.py::MutationProposalBuildReportTest::test_unknown_currentness_fails_fast_for_primary_evidence",
           "tests/test_auto_improve_readiness_queue_runtime.py",
+          "tests/test_auto_improve_readiness_release_authority_runtime.py",
           "tests/test_artifact_freshness_runtime.py::test_no_root_ephemeral_test_artifacts",
           "tests/test_artifact_freshness_runtime.py::ArtifactFreshnessRuntimeTests::test_report_accepts_enveloped_current_json_artifact",
           "tests/test_release_smoke.py::ReleaseSmokeTest::test_build_smoke_commands_match_release_gate_profiles",
@@ -402,6 +421,39 @@
       ],
       "documented_entrypoints": [
         "make fast-smoke"
+      ]
+    },
+    {
+      "pack_id": "runtime_hotspot_smoke",
+      "authority": "advisory",
+      "status": "derived_from_registry",
+      "semantics": "Focused runtime hotspot façade decomposition check for batch feedback before broader fast-lane replay.",
+      "backing_targets": [
+        "runtime-hotspot-smoke"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "selectors": [
+          "tests/test_auto_improve_readiness_runtime.py",
+          "tests/test_auto_improve_readiness_queue_runtime.py",
+          "tests/test_auto_improve_readiness_release_authority_runtime.py",
+          "tests/test_mutation_proposal_build_report.py",
+          "tests/test_mutation_proposal_recent_log_overlap.py",
+          "tests/test_mutation_proposal_promotion.py",
+          "tests/test_next_run_repair_queue_runtime.py",
+          "tests/test_goal_runtime_run_admission.py",
+          "tests/test_release_evidence_dashboard_closeout_runtime.py",
+          "tests/test_release_evidence_dashboard_finalizer_runtime.py",
+          "tests/test_release_evidence_dashboard_learning_delta_runtime.py",
+          "tests/test_runtime_hotspot_facade_golden_outputs.py"
+        ]
+      },
+      "ci_entrypoint": "runtime-hotspot-smoke",
+      "ci_steps": [
+        "make runtime-hotspot-smoke"
+      ],
+      "documented_entrypoints": [
+        "make runtime-hotspot-smoke"
       ]
     },
     {
@@ -465,6 +517,7 @@
         "selectors": [
           "tests/test_test_execution_summary.py",
           "tests/test_makefile_static_gates.py",
+          "tests/test_makefile_fast_smoke_static_gates.py",
           "tests/test_makefile_release_orchestration_static_gates.py",
           "tests/test_makefile_release_evidence_static_gates.py",
           "tests/test_makefile_release_smoke_static_gates.py",
@@ -537,7 +590,6 @@
         "make release-closeout-post-check-finalizer-ci-artifact",
         "make release-closeout-cost-evidence-ci-artifact",
         "make release-closeout-finality-verify-ci-artifact",
-        "make release-closeout-finality-verify",
         "make release-authority-sealed-preflight"
       ],
       "documented_entrypoints": [
@@ -595,6 +647,122 @@
       ],
       "documented_entrypoints": [
         "make test-subprocess"
+      ]
+    },
+    {
+      "pack_id": "schema_static_smoke",
+      "authority": "derived",
+      "status": "derived_from_registry",
+      "semantics": "Schema and static-gate smoke slice for Windows CI and local precheck.",
+      "backing_targets": [
+        "test-schema-static-smoke"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "selectors": [
+          "tests/test_ci_tier_lane_bridge.py",
+          "tests/test_ci_workflow_static.py",
+          "tests/test_makefile_static_gates.py",
+          "tests/test_makefile_fast_smoke_static_gates.py",
+          "tests/test_makefile_release_orchestration_static_gates.py",
+          "tests/test_makefile_release_evidence_static_gates.py",
+          "tests/test_makefile_release_smoke_static_gates.py",
+          "tests/test_makefile_test_execution_summary_gates.py",
+          "tests/test_makefile_auto_improve_goal_static_gates.py",
+          "tests/test_makefile_public_registry_supply_chain_gates.py",
+          "tests/test_report_schema_sample_regeneration.py",
+          "tests/test_report_schemas.py",
+          "tests/test_ruff_strict_preview.py",
+          "tests/test_strict_preview_audit.py"
+        ]
+      },
+      "ci_entrypoint": "test-schema-static-smoke",
+      "ci_steps": [
+        "make test-schema-static-smoke"
+      ],
+      "documented_entrypoints": [
+        "make test-schema-static-smoke"
+      ]
+    },
+    {
+      "pack_id": "report_contract_all",
+      "authority": "derived",
+      "status": "derived_from_registry",
+      "semantics": "Hybrid report-contract lane: marker expression plus explicit selector guard list.",
+      "backing_targets": [
+        "test-report-contract-all"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "pytest_mark_expr": "report_contract",
+        "selectors": [
+          "tests/test_archive_execution_manifest.py",
+          "tests/test_artifact_freshness_runtime.py",
+          "tests/test_artifact_relocation_audit.py",
+          "tests/test_auto_improve_iteration_runtime.py",
+          "tests/test_backfill_archived_run_artifacts.py",
+          "tests/test_backfill_historical_bootstrap_reports.py",
+          "tests/test_bootstrap_preflight.py",
+          "tests/test_ci_tier_lane_bridge.py",
+          "tests/test_ci_workflow_static.py",
+          "tests/test_clean_fixture_regeneration_guard.py",
+          "tests/test_cli_surface_inventory.py",
+          "tests/test_command_log_summary_backfill.py",
+          "tests/test_compatibility_alias_deprecation.py",
+          "tests/test_doc_graph_integrity.py",
+          "tests/test_external_report_lifecycle_static.py",
+          "tests/test_generated_artifact_retention_clean.py",
+          "tests/test_goal_runtime_clean_transient.py",
+          "tests/test_goal_runtime_closeout.py",
+          "tests/test_goal_runtime_fixed_point_check.py",
+          "tests/test_goal_runtime_quarantine_preflight.py",
+          "tests/test_goal_runtime_run_admission.py",
+          "tests/test_goal_runtime_stale_closeout.py",
+          "tests/test_improvement_observations_runtime.py",
+          "tests/test_learning_readiness_signoff.py",
+          "tests/test_lint_uplift_plan.py",
+          "tests/test_runtime_codehealth_hardening_guards.py",
+          "tests/test_make_target_inventory.py",
+          "tests/test_makefile_static_gates.py",
+          "tests/test_makefile_fast_smoke_static_gates.py",
+          "tests/test_makefile_release_orchestration_static_gates.py",
+          "tests/test_makefile_release_evidence_static_gates.py",
+          "tests/test_makefile_release_smoke_static_gates.py",
+          "tests/test_makefile_test_execution_summary_gates.py",
+          "tests/test_makefile_auto_improve_goal_static_gates.py",
+          "tests/test_makefile_public_registry_supply_chain_gates.py",
+          "tests/test_manifest_export_symlink_safety.py",
+          "tests/test_mechanism_navigation_index.py",
+          "tests/test_observability_artifacts_runtime.py",
+          "tests/test_observation_closeout_lint.py",
+          "tests/test_public_surface_snapshot.py",
+          "tests/test_pytest_entrypoint_guidance.py",
+          "tests/test_raw_registry_cross_environment_evidence_bundle.py",
+          "tests/test_raw_registry_cross_environment_matrix.py",
+          "tests/test_raw_registry_shard_policy_sync.py",
+          "tests/test_release_authority_inventory.py",
+          "tests/test_release_closeout_summary.py",
+          "tests/test_release_evidence_cohort.py",
+          "tests/test_release_evidence_dashboard.py",
+          "tests/test_release_smoke.py",
+          "tests/test_report_generation_smoke.py",
+          "tests/test_report_schema_sample_regeneration.py",
+          "tests/test_report_schemas.py",
+          "tests/test_run_templates.py",
+          "tests/test_select_subagent_rung_ladder.py",
+          "tests/test_subagent_profile_schema.py",
+          "tests/test_test_execution_summary.py",
+          "tests/test_tools_migration_plan.py",
+          "tests/test_type_uplift_plan.py",
+          "tests/test_workflow_dependency_planner.py"
+        ]
+      },
+      "ci_entrypoint": "test-report-contract-all",
+      "ci_steps": [
+        "make test-report-contract-all"
+      ],
+      "documented_entrypoints": [
+        "make test-report-contract-all"
       ]
     },
     {
@@ -745,6 +913,11 @@
     },
     {
       "kind": "make_target",
+      "name": "runtime-hotspot-smoke",
+      "maps_to": "runtime_hotspot_smoke"
+    },
+    {
+      "kind": "make_target",
       "name": "unit-tests-all",
       "maps_to": "developer_full"
     },
@@ -835,6 +1008,11 @@
     },
     {
       "kind": "make_target",
+      "name": "ci-public-tier",
+      "maps_to": "public"
+    },
+    {
+      "kind": "make_target",
       "name": "test-report-contract-core",
       "maps_to": "report_contract_core"
     },
@@ -842,6 +1020,16 @@
       "kind": "make_target",
       "name": "test-report-contract-all",
       "maps_to": "report_contract"
+    },
+    {
+      "kind": "make_target",
+      "name": "ci-report-contract-tier",
+      "maps_to": "report_contract"
+    },
+    {
+      "kind": "make_target",
+      "name": "test-schema-static-smoke",
+      "maps_to": "schema_static_smoke"
     },
     {
       "kind": "make_target",
@@ -915,6 +1103,11 @@
     },
     {
       "kind": "documented_entrypoint",
+      "name": "make runtime-hotspot-smoke",
+      "maps_to": "runtime_hotspot_smoke"
+    },
+    {
+      "kind": "documented_entrypoint",
       "name": "make test-fast",
       "maps_to": "fast"
     },
@@ -957,6 +1150,11 @@
       "kind": "documented_entrypoint",
       "name": "make test-report-contract-all",
       "maps_to": "report_contract"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make test-schema-static-smoke",
+      "maps_to": "schema_static_smoke"
     },
     {
       "kind": "documented_entrypoint",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Sequence
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -112,6 +113,10 @@ SCHEMA_PATHS = {
     / "self-improvement-negative-lessons.schema.json",
     "run-telemetry.schema.json": REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json",
     "run-artifact-fingerprint.schema.json": REPO_ROOT / "ops" / "schemas" / "run-artifact-fingerprint.schema.json",
+    "same-session-repair-context.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "same-session-repair-context.schema.json",
     "timeout-failure.schema.json": REPO_ROOT / "ops" / "schemas" / "timeout-failure.schema.json",
     "promotion-decision-trends.schema.json": REPO_ROOT / "ops" / "schemas" / "promotion-decision-trends.schema.json",
     "routing-provenance-aggregate.schema.json": REPO_ROOT / "ops" / "schemas" / "routing-provenance-aggregate.schema.json",
@@ -328,8 +333,18 @@ SCHEMA_PATHS = {
 }
 
 
+@lru_cache(maxsize=1)
+def _live_policy_from_file(path: str, mtime_ns: int, size: int) -> dict[str, Any]:
+    return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+
+
+def clear_live_policy_cache() -> None:
+    _live_policy_from_file.cache_clear()
+
+
 def live_policy() -> dict[str, Any]:
-    return yaml.safe_load(POLICY_PATH.read_text(encoding="utf-8"))
+    stat = POLICY_PATH.stat()
+    return _live_policy_from_file(POLICY_PATH.as_posix(), stat.st_mtime_ns, stat.st_size)
 
 
 def live_registry_shard_pages() -> list[str]:
@@ -386,11 +401,18 @@ def _registry_family_shard_section(
     source_trace_ref: str,
 ) -> str:
     stem = Path(relative_path).stem
+    if relative_path.startswith("system/system-raw-registry/system-"):
+        parent_router = "system-raw-registry/system"
+        related_index = "system-index"
+    else:
+        parent_router = "system-raw-registry/wiki"
+        related_index = "index"
+
     if heading == "Summary":
         child_count = len(live_registry_child_shard_pages(relative_path))
         return "\n".join(
             [
-                "- parent corpus router: [[system-raw-registry/wiki]]",
+                f"- parent corpus router: [[{parent_router}]]",
                 f"- topic family: `{stem}`",
                 "- registered entries: `0`",
                 f"- child registry shards: `{child_count}`",
@@ -398,7 +420,9 @@ def _registry_family_shard_section(
         )
     if heading == "Registered raw sources":
         return "- none currently"
-    if heading == "Child registry shards":
+    if heading == "Directly listed raw sources":
+        return "- none currently"
+    if heading in {"Child registry shards", "Family shards", "Second-order shards"}:
         child_links = bullet_wikilinks(live_registry_child_shard_pages(relative_path))
         return child_links or "- none currently"
     if heading == "Compaction notes":
@@ -407,8 +431,8 @@ def _registry_family_shard_section(
         return "\n".join(
             [
                 "- [[system-raw-registry]]",
-                "- [[system-raw-registry/wiki]]",
-                "- [[index]]",
+                f"- [[{parent_router}]]",
+                f"- [[{related_index}]]",
             ]
         )
     if heading == "Source trace":
@@ -464,8 +488,13 @@ def _ensure_created_frontmatter(root: Path) -> None:
             path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def seed_minimal_vault(root: Path, source_trace_ref: str = "raw/fake.pdf") -> None:
-    _seed_minimal_vault(root, source_trace_ref)
+def seed_minimal_vault(
+    root: Path,
+    source_trace_ref: str = "raw/fake.pdf",
+    *,
+    schema_names: Sequence[str] | None = None,
+) -> None:
+    _seed_minimal_vault(root, source_trace_ref, schema_names=schema_names)
 
 
 def seed_open_question_smoke_vault(root: Path, source_trace_ref: str = "raw/fake.pdf") -> None:

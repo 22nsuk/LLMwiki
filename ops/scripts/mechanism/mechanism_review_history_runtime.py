@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.promotion_decision_registry_runtime import decision_from_report
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.promotion_decision_registry_runtime import decision_from_report
+from ops.scripts.core.schema_constants_runtime import (
     CHANGED_FILES_MANIFEST_SCHEMA_PATH,
     EVAL_REPORT_SCHEMA_PATH,
     MECHANISM_ASSESSMENT_SCHEMA_PATH,
     PROMOTION_REPORT_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
@@ -80,6 +81,8 @@ def load_artifact(
     vault: Path,
     rel_path: str,
     schema: dict,
+    *,
+    normalize: Callable[[dict], dict] | None = None,
 ) -> tuple[dict | None, str | None]:
     resolved = (vault / rel_path).resolve()
     if not resolved.exists():
@@ -88,10 +91,30 @@ def load_artifact(
         payload = read_json(resolved)
     except json.JSONDecodeError as exc:
         return None, f"invalid json in {rel_path}: line {exc.lineno} column {exc.colno}"
+    if normalize is not None:
+        payload = normalize(payload)
     errors = validate_with_schema(payload, schema)
     if errors:
         return None, f"schema validation failed for {rel_path}: {errors[0]}"
     return payload, None
+
+
+def _normalize_legacy_mechanism_assessment(payload: dict) -> dict:
+    for key in ("structural_metrics", "total_structural_metrics"):
+        metrics = payload.get(key)
+        if isinstance(metrics, dict) and "test_guardrail_count" not in metrics:
+            metrics["test_guardrail_count"] = 0
+
+    complexity = payload.get("complexity_profile")
+    if not isinstance(complexity, dict):
+        return payload
+    dimension_evidence = complexity.get("dimension_evidence")
+    if not isinstance(dimension_evidence, dict):
+        return payload
+    verification_cost = dimension_evidence.get("verification_cost")
+    if isinstance(verification_cost, dict) and "test_guardrail_count" not in verification_cost:
+        verification_cost["test_guardrail_count"] = 0
+    return payload
 
 
 def skipped_run_triage(reason: str, detail: str) -> dict[str, object] | None:
@@ -200,13 +223,13 @@ def _load_required_promotion_inputs(
 ) -> tuple[dict[str, dict], dict | None]:
     inputs = promotion_report.get("inputs", {})
     required_input_paths = (
-        ("baseline_eval_report", schemas.eval),
-        ("candidate_eval_report", schemas.eval),
-        ("baseline_mechanism_report", schemas.mechanism),
-        ("candidate_mechanism_report", schemas.mechanism),
+        ("baseline_eval_report", schemas.eval, None),
+        ("candidate_eval_report", schemas.eval, None),
+        ("baseline_mechanism_report", schemas.mechanism, _normalize_legacy_mechanism_assessment),
+        ("candidate_mechanism_report", schemas.mechanism, _normalize_legacy_mechanism_assessment),
     )
     loaded_inputs: dict[str, dict] = {}
-    for key, schema in required_input_paths:
+    for key, schema, normalize in required_input_paths:
         rel_path = inputs.get(key)
         if not isinstance(rel_path, str) or not rel_path.strip():
             return loaded_inputs, skipped_run_failure(
@@ -215,7 +238,7 @@ def _load_required_promotion_inputs(
                 path=report_path(vault, promotion_path),
                 detail=f"missing inputs.{key}",
             )
-        artifact, error = load_artifact(vault, rel_path, schema)
+        artifact, error = load_artifact(vault, rel_path, schema, normalize=normalize)
         if error is not None:
             return loaded_inputs, skipped_run_failure(
                 run_id=promotion_report["run_id"],

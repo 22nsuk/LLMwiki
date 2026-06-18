@@ -194,7 +194,102 @@ page_shape:
       - Registered raw sources
       - Related pages
       - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17.md:
+      - Summary
+      - Family shards
+      - Directly listed raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md:
+      - Summary
+      - Second-order shards
+      - Directly listed raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md:
+      - Summary
+      - Second-order shards
+      - Directly listed raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md:
+      - Summary
+      - Second-order shards
+      - Directly listed raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
     system/system-raw-registry/system.md:
+      - Summary
+      - Second-order shards
+      - Directly listed raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/system-research-papers.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/system-runtime-specs-and-snapshots.md:
       - Summary
       - Registered raw sources
       - Related pages
@@ -601,7 +696,133 @@ frontmatter_contract:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
     system/system-raw-registry/system.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/system-research-papers.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/system-runtime-specs-and-snapshots.md:
       required:
         - special_role
       expected:
@@ -1502,6 +1723,8 @@ system_refactor_policy:
     - system/system-raw-registry.md
     - system/system-raw-registry/wiki.md
     - system/system-raw-registry/system.md
+    - system/system-raw-registry/system-research-papers.md
+    - system/system-raw-registry/system-runtime-specs-and-snapshots.md
   index_max_lines_before_review: 250
   raw_registry_summary_max_lines_before_review: 120
   raw_registry_shard_max_lines_before_review: 500
@@ -1538,12 +1761,18 @@ system_refactor_policy:
     warn_targets:
       - ops/scripts/mechanism/auto_improve_runtime.py
       - ops/scripts/mechanism/mutation_proposal_runtime.py
+      - ops/scripts/mechanism/goal_runtime_run_admission.py
       - ops/scripts/core/codex_exec_executor.py
+      - ops/scripts/core/artifact_freshness_runtime.py
       - ops/scripts/eval/wiki_lint_review_runtime.py
       - ops/scripts/core/policy_validation_runtime.py
       - ops/scripts/release/release_closeout_batch_manifest.py
       - ops/scripts/release/release_evidence_dashboard.py
       - ops/scripts/release/release_closeout_summary.py
+      - ops/scripts/release/external_report_lifecycle_runtime.py
+      - ops/scripts/release/release_smoke.py
+      - ops/scripts/release/release_closeout_fixed_point.py
+      - ops/scripts/release/release_post_seal_attestation.py
       - ops/scripts/learning/learning_claim_evidence_bundle.py
       - ops/scripts/learning/learning_claim_unlock_review.py
     resolved_targets: []
@@ -1579,7 +1808,25 @@ registry_contract:
     - system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md
     - system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md
     - system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md
+    - system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md
     - system/system-raw-registry/system.md
+    - system/system-raw-registry/system-research-papers.md
+    - system/system-raw-registry/system-runtime-specs-and-snapshots.md
   raw_registry_shard_by_corpus:
     wiki: system/system-raw-registry/wiki.md
     system: system/system-raw-registry/system.md
@@ -1612,7 +1859,25 @@ registry_contract:
     system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md: wiki
     system/system-raw-registry/system.md: system
+    system/system-raw-registry/system-research-papers.md: system
+    system/system-raw-registry/system-runtime-specs-and-snapshots.md: system
   raw_registry_export: ops/raw-registry.json
   corpus_roots:
     wiki: wiki
@@ -1621,6 +1886,7 @@ registry_contract:
 corpus_routing:
   type_to_corpus:
     news-snapshot: wiki
+    market-report: wiki
     domain-research-paper: wiki
     domain-web-article: wiki
     review-report: system
@@ -1767,6 +2033,7 @@ promotion_policy:
       - lint_improves
       - structural_complexity_non_regression
       - structural_complexity_improves
+      - structural_regression_debt
       - tests_non_regression
       - tests_increase
       - complexity_profile_score
@@ -1903,17 +2170,18 @@ promotion_policy:
         summary_template: "Candidate lint gate emitted {statuses}: {details}"
       candidate_eval_pass:
         artifact_dependencies:
+          - baseline_eval_report
           - candidate_eval_report
         reducer: candidate_eval_status
         severity: blocker
-        summary_template: "Candidate eval gate emitted {statuses}: {details}"
+        summary_template: "Global eval non-regression guard emitted {statuses}: {details}"
       eval_score_improves:
         artifact_dependencies:
-          - baseline_eval_report
-          - candidate_eval_report
+          - baseline_mechanism_contract_eval_report
+          - candidate_mechanism_contract_eval_report
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Eval score comparison emitted {statuses}: {details}"
+        summary_template: "Mechanism contract eval score comparison emitted {statuses}: {details}"
       lint_non_regression:
         artifact_dependencies:
           - baseline_lint_report
@@ -1942,6 +2210,15 @@ promotion_policy:
         reducer: none
         severity: advisory
         summary_template: "Structural complexity improvement diagnostic emitted {statuses}: {details}"
+      structural_regression_debt:
+        artifact_dependencies:
+          - baseline_mechanism_contract_eval_report
+          - candidate_mechanism_contract_eval_report
+          - baseline_mechanism_report
+          - candidate_mechanism_report
+        reducer: none
+        severity: advisory
+        summary_template: "Structural regression debt diagnostic emitted {statuses}: {details}"
       tests_non_regression:
         artifact_dependencies:
           - baseline_mechanism_report
@@ -1972,6 +2249,8 @@ promotion_policy:
         summary_template: "Risk-flag diagnostic emitted {statuses}: {details}"
       equal_score_secondary_eligibility:
         artifact_dependencies:
+          - baseline_mechanism_contract_eval_report
+          - candidate_mechanism_contract_eval_report
           - baseline_eval_report
           - candidate_eval_report
           - baseline_lint_report

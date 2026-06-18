@@ -130,6 +130,9 @@ RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_SCHEMA_PATH = (
 RUNTIME_EVENT_SCHEMA_PATH = "ops/schemas/runtime-event.schema.json"
 RUN_TELEMETRY_SCHEMA_PATH = "ops/schemas/run-telemetry.schema.json"
 RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH = "ops/schemas/run-artifact-fingerprint.schema.json"
+SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH = (
+    "ops/schemas/same-session-repair-context.schema.json"
+)
 TIMEOUT_FAILURE_SCHEMA_PATH = "ops/schemas/timeout-failure.schema.json"
 PROMOTION_DECISION_TRENDS_SCHEMA_PATH = "ops/schemas/promotion-decision-trends.schema.json"
 ROUTING_PROVENANCE_AGGREGATE_SCHEMA_PATH = "ops/schemas/routing-provenance-aggregate.schema.json"
@@ -199,6 +202,9 @@ PLANNING_GATE_OPTIONAL_ARTIFACT_SCHEMAS = {
     "rollback-rehearsal-report.json": ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     "behavior-delta.json": BEHAVIOR_DELTA_SCHEMA_PATH,
     "structural-complexity-budget.json": STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
+    "same-session-repair-context.json": SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH,
+    "baseline-mechanism-contract-eval.json": EVAL_REPORT_SCHEMA_PATH,
+    "candidate-mechanism-contract-eval.json": EVAL_REPORT_SCHEMA_PATH,
 }
 
 PLANNING_GATE_COMPLETED_MECHANISM_INPUT_SCHEMAS = {
@@ -213,4 +219,6 @@ PLANNING_GATE_COMPLETED_MECHANISM_INPUT_SCHEMAS = {
 
 PLANNING_GATE_OPTIONAL_COMPLETED_MECHANISM_INPUT_SCHEMAS = {
     "behavior_delta": BEHAVIOR_DELTA_SCHEMA_PATH,
+    "baseline_mechanism_contract_eval_report": EVAL_REPORT_SCHEMA_PATH,
+    "candidate_mechanism_contract_eval_report": EVAL_REPORT_SCHEMA_PATH,
 }

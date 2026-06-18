@@ -4,7 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mechanism_run_validation_runtime import (
+from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.mechanism.mechanism_run_validation_runtime import (
     build_changed_files_primary_target_touched_check,
     build_changed_files_scope_gate_check,
     build_event_sequence_phase_checks,
@@ -13,18 +14,17 @@ from ops.scripts.mechanism_run_validation_runtime import (
     display_report_vault,
     normalize_mechanism_artifact_bundle,
 )
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.promotion_gate_mechanism_runtime import (
+from ops.scripts.mechanism.promotion_gate_mechanism_runtime import (
     MechanismGateInputs,
     mechanism_class_report,
 )
-
 from tests.test_promotion_gate_equal_score import (
     LIVE_POLICY_VERSION,
     behavior_delta_report,
     changed_files_manifest,
     eval_report,
     lint_report,
+    mechanism_contract_eval_report,
     mechanism_report,
     run_ledger,
     seed_promotion_vault,
@@ -68,6 +68,18 @@ def mechanism_gate_report(
         baseline_eval_rel="artifacts/baseline-eval.json",
         candidate_eval_report=eval_report(vault, 10),
         candidate_eval_rel="artifacts/candidate-eval.json",
+        baseline_mechanism_contract_eval_report=mechanism_contract_eval_report(
+            vault,
+            4,
+            phase="baseline",
+        ),
+        baseline_mechanism_contract_eval_rel="artifacts/baseline-mechanism-contract-eval.json",
+        candidate_mechanism_contract_eval_report=mechanism_contract_eval_report(
+            vault,
+            4,
+            phase="candidate",
+        ),
+        candidate_mechanism_contract_eval_rel="artifacts/candidate-mechanism-contract-eval.json",
         baseline_lint_report=lint_report(vault, status="warn", warning_count=1),
         baseline_lint_rel="artifacts/baseline-lint.json",
         candidate_lint_report=lint_report(vault),
@@ -302,6 +314,27 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
         self.assertTrue(by_check["mechanism_run_required_events_present"]["pass"])
         self.assertTrue(by_check["mechanism_run_event_order"]["pass"])
         self.assertTrue(by_check["mechanism_run_terminal_event"]["pass"])
+
+    def test_event_sequence_checks_fail_closed_for_unknown_phase(self) -> None:
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": {},
+                "run_ledger_report": evaluated_run_ledger("ops/scripts/example.py"),
+            }
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "unsupported mechanism validation phase: mechanism_replayed; "
+            "supported=mechanism_evaluated, mechanism_finalized",
+        ):
+            build_event_sequence_phase_checks(bundle, phase="mechanism_replayed")
 
     def test_event_sequence_checks_allow_history_update_after_finalized(self) -> None:
         ledger = evaluated_run_ledger("ops/scripts/example.py")

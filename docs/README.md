@@ -17,6 +17,7 @@ Root documents stay short; detailed procedures live here.
 - Repository surface comparison: [repository-surfaces.md](repository-surfaces.md)
 - Public export and boundary rules: [public-mirror.md](public-mirror.md)
 - Release evidence and package sealing: [release.md](release.md)
+- Public helper tools: [tools.md](tools.md)
 - Optional codebase-memory-mcp sidecar: [codebase-memory-mcp.md](codebase-memory-mcp.md)
 - Ops subsystem index: [../ops/README.md](../ops/README.md)
 - Agent role surface: [../.codex/agents/README.md](../.codex/agents/README.md)

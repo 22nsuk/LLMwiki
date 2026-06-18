@@ -4,42 +4,45 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.makefile_runtime import load_makefile_text
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.release_closeout_fixed_point import (
-        POLICY_PATH as FIXED_POINT_POLICY_PATH,
-    )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.workflow_dependency_planner import (
+    from ops.scripts.core.makefile_runtime import load_makefile_text
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.workflow_dependency_planner import (
         MAKE_RECIPE_RE,
         TARGET_RE,
         _first_make_target,
         build_report as build_workflow_dependency_report,
     )
+    from ops.scripts.release.release_closeout_fixed_point import (
+        POLICY_PATH as FIXED_POINT_POLICY_PATH,
+    )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import (
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.makefile_runtime import load_makefile_text
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.workflow_dependency_planner import (
+    from ops.scripts.core.makefile_runtime import load_makefile_text
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.workflow_dependency_planner import (
         MAKE_RECIPE_RE,
         TARGET_RE,
         _first_make_target,
@@ -60,6 +63,7 @@ RELEASE_CONVERGE_TARGET = "release-evidence-converge"
 RELEASE_CONVERGE_PREFLIGHT_TARGET = "release-converge-preflight"
 CHECK_FINALIZED_TARGET = "check-finalized"
 RELEASE_FINALITY_RESETTLE_TARGET = "release-finality-resettle"
+RELEASE_TERMINAL_FINALITY_TARGET = "release-terminal-finality"
 RELEASE_SOURCE_READY_TARGET = "release-source-ready"
 RELEASE_SOURCE_READY_PREPARE_TARGET = "release-source-ready-prepare"
 RELEASE_POST_COMMIT_FINALIZE_TARGET = "release-post-commit-finalize"
@@ -86,6 +90,31 @@ FORBIDDEN_POST_COMMIT_FINALIZER_TARGETS = {
     "test-execution-summary-full-refresh",
     "test-execution-summary-current-or-refresh",
 }
+TARGET_RECIPE_ORDER = (
+    RELEASE_CONVERGE_TARGET,
+    RELEASE_CONVERGE_PREFLIGHT_TARGET,
+    CHECK_FINALIZED_TARGET,
+    RELEASE_FINALITY_RESETTLE_TARGET,
+    RELEASE_TERMINAL_FINALITY_TARGET,
+    RELEASE_SOURCE_READY_TARGET,
+    RELEASE_SOURCE_READY_PREPARE_TARGET,
+    RELEASE_SOURCE_READY_POST_VERIFY_TARGET,
+    RELEASE_POST_COMMIT_FINALIZE_TARGET,
+)
+
+
+@dataclass(frozen=True)
+class _WorkflowOrderInputs:
+    resolved_vault: Path
+    policy: dict[str, Any]
+    resolved_policy_path: Path
+    runtime_context: RuntimeContext
+    generated_at: str
+    makefile_sources: list[str]
+    fixed_point_policy: dict[str, Any]
+    writers: list[dict[str, Any]]
+    planner_report: dict[str, Any]
+    invocations_by_target: dict[str, list[dict[str, Any]]]
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -373,6 +402,8 @@ def _check_planner_fixed_point_writer_order(
     ]
     if "generated-artifact-converge" in planner_steps:
         expected = ["generated-artifact-converge"]
+    elif "release-terminal-finality" in planner_steps:
+        expected = ["release-terminal-finality"]
     elif "generated-artifact-finality-suffix" in planner_steps:
         expected = ["generated-artifact-finality-suffix"]
     else:
@@ -465,20 +496,47 @@ def _release_converge_repetition_budget(invocations: list[dict[str, Any]]) -> di
 def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     expected = [
         "workflow-dependency-planner",
-        "generated-artifact-finality-suffix",
-        "release-closeout-summary-report",
-        "release-closeout-fixed-point",
-        "tmp-json-clean",
-        "release-closeout-finality-verify",
+        "release-authority-sealed-preflight",
+        "release-terminal-finality",
     ]
     check = _check_subsequence(
         "release_finality_resettle_sequence",
         invocations,
         expected,
         details=(
-            "release-finality-resettle must keep narrow generated-report repairs cheap, "
-            "refresh the summary tracked by fixed-point, "
-            "then make release-closeout-fixed-point the terminal writer before finality verify."
+            "release-finality-resettle must refresh planning and sealed rehearsal "
+            "authority before handing off to the terminal finality lane."
+        ),
+    )
+    if _first_index(invocations, "release-evidence-converge"):
+        check["status"] = "fail"
+        check["violations"].append(
+            {
+                "target": "release-evidence-converge",
+                "reason": "resettle_lane_must_not_call_full_converge",
+            }
+        )
+    return check
+
+
+def _release_terminal_finality_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
+    expected = [
+        "generated-artifact-finality-suffix",
+        "release-closeout-summary-report",
+        "release-closeout-fixed-point",
+        "tmp-json-clean",
+        "release-closeout-post-check-finalizer-strict-dry-run",
+        "tmp-json-clean",
+        "release-closeout-finality-verify",
+    ]
+    check = _check_subsequence(
+        "release_terminal_finality_sequence",
+        invocations,
+        expected,
+        details=(
+            "release-terminal-finality must settle freshness/index/matrix through "
+            "the finality suffix, refresh fixed-point once, run a strict dry-run "
+            "currentness check, then make finality verification terminal."
         ),
     )
     finality_index = _first_index(invocations, "release-closeout-finality-verify")
@@ -495,7 +553,7 @@ def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[
         check["violations"].append(
             {
                 "target": "release-evidence-converge",
-                "reason": "resettle_lane_must_not_call_full_converge",
+                "reason": "terminal_finality_lane_must_not_call_full_converge",
             }
         )
     return check
@@ -520,8 +578,8 @@ def _release_post_commit_finalizer_sequence_check(
         expected,
         details=(
             "release-post-commit-finalize must stay a focused HEAD-bound suffix: "
-            "current/check-only surfaces first, terminal finality verify, then "
-            "the non-mutating post-commit readback."
+            "current/check-only surfaces first, post-commit readback before "
+            "the terminal finality verify."
         ),
     )
     if invocations and str(invocations[-1]["target"]) != "release-closeout-finality-verify":
@@ -723,55 +781,78 @@ def _target_recipe_payload(target: str, invocations: list[dict[str, Any]]) -> di
     }
 
 
-def build_report(
+def _workflow_order_inputs(
     vault: Path,
     *,
-    policy_path: str | None = None,
-    context: RuntimeContext | None = None,
-) -> dict[str, Any]:
+    policy_path: str | None,
+    context: RuntimeContext | None,
+) -> _WorkflowOrderInputs:
     resolved_vault = vault.resolve()
     policy, resolved_policy_path = load_policy(resolved_vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    generated_at = runtime_context.isoformat_z()
     makefile_text, makefile_sources = load_makefile_text(resolved_vault)
     fixed_point_policy = _load_json(resolved_vault / FIXED_POINT_POLICY_PATH)
     writers = _fixed_point_writer_specs(fixed_point_policy)
-    release_converge_invocations = _recipe_invocations(makefile_text, RELEASE_CONVERGE_TARGET)
-    check_finalized_invocations = _recipe_invocations(makefile_text, CHECK_FINALIZED_TARGET)
-    release_finality_resettle_invocations = _recipe_invocations(
-        makefile_text,
-        RELEASE_FINALITY_RESETTLE_TARGET,
-    )
-    release_converge_preflight_invocations = _recipe_invocations(
-        makefile_text,
-        RELEASE_CONVERGE_PREFLIGHT_TARGET,
-    )
-    release_source_ready_invocations = _recipe_invocations(makefile_text, RELEASE_SOURCE_READY_TARGET)
-    release_source_ready_prepare_invocations = _recipe_invocations(
-        makefile_text,
-        RELEASE_SOURCE_READY_PREPARE_TARGET,
-    )
-    release_source_ready_post_verify_invocations = _recipe_invocations(
-        makefile_text,
-        RELEASE_SOURCE_READY_POST_VERIFY_TARGET,
-    )
-    release_post_commit_finalize_invocations = _recipe_invocations(
-        makefile_text,
-        RELEASE_POST_COMMIT_FINALIZE_TARGET,
-    )
+    invocations_by_target = {
+        target: _recipe_invocations(makefile_text, target)
+        for target in TARGET_RECIPE_ORDER
+    }
     planner_report = build_workflow_dependency_report(
         resolved_vault,
         changed_paths=["Makefile"],
         policy_path=policy_path,
         context=runtime_context,
     )
-    checks = [
-        _release_converge_finalizer_check(release_converge_invocations),
-        _release_converge_repetition_budget(release_converge_invocations),
-        _release_converge_preflight_check(release_converge_preflight_invocations),
-        _release_finality_resettle_check(release_finality_resettle_invocations),
-        _release_post_commit_finalizer_sequence_check(release_post_commit_finalize_invocations),
-        _release_post_commit_finalizer_repetition_budget(release_post_commit_finalize_invocations),
+    return _WorkflowOrderInputs(
+        resolved_vault=resolved_vault,
+        policy=policy,
+        resolved_policy_path=resolved_policy_path,
+        runtime_context=runtime_context,
+        generated_at=runtime_context.isoformat_z(),
+        makefile_sources=makefile_sources,
+        fixed_point_policy=fixed_point_policy,
+        writers=writers,
+        planner_report=planner_report,
+        invocations_by_target=invocations_by_target,
+    )
+
+
+def _check_finalized_finality_terminal_check(
+    invocations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    finality_index = _first_index(invocations, "release-closeout-finality-verify")
+    violations = []
+    if not finality_index or finality_index != len(invocations):
+        violations.append(
+            {
+                "expected_role": "release-closeout-finality-verify",
+                "reason": "finality_verify_must_be_terminal",
+            }
+        )
+    return _check(
+        "check_finalized_finality_terminal",
+        expected_order=["release-closeout-finality-verify"],
+        observed_order=[str(item["role"]) for item in invocations],
+        violations=violations,
+        details="check-finalized must end with release-closeout-finality-verify after any canonical refreshes.",
+    )
+
+
+def _release_workflow_order_checks(inputs: _WorkflowOrderInputs) -> list[dict[str, Any]]:
+    invocations = inputs.invocations_by_target
+    check_finalized_invocations = invocations[CHECK_FINALIZED_TARGET]
+    return [
+        _release_converge_finalizer_check(invocations[RELEASE_CONVERGE_TARGET]),
+        _release_converge_repetition_budget(invocations[RELEASE_CONVERGE_TARGET]),
+        _release_converge_preflight_check(invocations[RELEASE_CONVERGE_PREFLIGHT_TARGET]),
+        _release_finality_resettle_check(invocations[RELEASE_FINALITY_RESETTLE_TARGET]),
+        _release_terminal_finality_check(invocations[RELEASE_TERMINAL_FINALITY_TARGET]),
+        _release_post_commit_finalizer_sequence_check(
+            invocations[RELEASE_POST_COMMIT_FINALIZE_TARGET]
+        ),
+        _release_post_commit_finalizer_repetition_budget(
+            invocations[RELEASE_POST_COMMIT_FINALIZE_TARGET]
+        ),
         _check_subsequence(
             "check_finalized_post_check_sequence",
             check_finalized_invocations,
@@ -784,109 +865,104 @@ def build_report(
             ],
             details="check-finalized must make post-check canonical refresh self-contained instead of relying on operator memory.",
         ),
-        _check(
-            "check_finalized_finality_terminal",
-            expected_order=["release-closeout-finality-verify"],
-            observed_order=[str(item["role"]) for item in check_finalized_invocations],
-            violations=(
-                []
-                if (
-                    _first_index(check_finalized_invocations, "release-closeout-finality-verify")
-                    and _first_index(check_finalized_invocations, "release-closeout-finality-verify")
-                    == len(check_finalized_invocations)
-                )
-                else [
-                    {
-                        "expected_role": "release-closeout-finality-verify",
-                        "reason": "finality_verify_must_be_terminal",
-                    }
-                ]
-            ),
-            details="check-finalized must end with release-closeout-finality-verify after any canonical refreshes.",
+        _check_finalized_finality_terminal_check(check_finalized_invocations),
+        _check_fixed_point_policy_order(inputs.writers),
+        _release_source_ready_transaction_check(invocations[RELEASE_SOURCE_READY_TARGET]),
+        _release_source_ready_prepare_check(invocations[RELEASE_SOURCE_READY_PREPARE_TARGET]),
+        _release_source_ready_post_verify_check(
+            invocations[RELEASE_SOURCE_READY_POST_VERIFY_TARGET]
         ),
-        _check_fixed_point_policy_order(writers),
-        _release_source_ready_transaction_check(release_source_ready_invocations),
-        _release_source_ready_prepare_check(release_source_ready_prepare_invocations),
-        _release_source_ready_post_verify_check(release_source_ready_post_verify_invocations),
-        _check_planner_hooks(planner_report, release_converge_invocations),
-        _check_planner_fixed_point_writer_order(planner_report, writers),
+        _check_planner_hooks(inputs.planner_report, invocations[RELEASE_CONVERGE_TARGET]),
+        _check_planner_fixed_point_writer_order(inputs.planner_report, inputs.writers),
     ]
+
+
+def _workflow_order_envelope(inputs: _WorkflowOrderInputs) -> dict[str, Any]:
+    return build_canonical_report_envelope(
+        inputs.resolved_vault,
+        generated_at=inputs.generated_at,
+        artifact_kind="release_workflow_order_guard",
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=inputs.resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        source_paths=[
+            "ops/scripts/release/release_workflow_order_guard.py",
+            "ops/scripts/core/workflow_dependency_planner.py",
+            "ops/scripts/release/release_closeout_fixed_point.py",
+            "Makefile",
+            *[path for path in inputs.makefile_sources if path != "Makefile"],
+            FIXED_POINT_POLICY_PATH,
+        ],
+        file_inputs={
+            **{path: path for path in inputs.makefile_sources},
+            "fixed_point_policy": FIXED_POINT_POLICY_PATH,
+        },
+        text_inputs={
+            "fixed_point_initial_order": json.dumps(
+                _fixed_point_initial_order(inputs.writers),
+                ensure_ascii=False,
+            ),
+        },
+    )
+
+
+def _workflow_order_target_recipes(inputs: _WorkflowOrderInputs) -> list[dict[str, Any]]:
+    return [
+        _target_recipe_payload(target, inputs.invocations_by_target[target])
+        for target in TARGET_RECIPE_ORDER
+    ]
+
+
+def _workflow_order_summary(
+    inputs: _WorkflowOrderInputs,
+    checks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    invocations = inputs.invocations_by_target
     return {
-        **build_canonical_report_envelope(
-            resolved_vault,
-            generated_at=generated_at,
-            artifact_kind="release_workflow_order_guard",
-            producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
-            resolved_policy_path=resolved_policy_path,
-            schema_path=SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/release/release_workflow_order_guard.py",
-                "ops/scripts/core/workflow_dependency_planner.py",
-                "ops/scripts/release/release_closeout_fixed_point.py",
-                "Makefile",
-                *[path for path in makefile_sources if path != "Makefile"],
-                FIXED_POINT_POLICY_PATH,
-            ],
-            file_inputs={
-                **{path: path for path in makefile_sources},
-                "fixed_point_policy": FIXED_POINT_POLICY_PATH,
-            },
-            text_inputs={
-                "fixed_point_initial_order": json.dumps(
-                    _fixed_point_initial_order(writers),
-                    ensure_ascii=False,
-                ),
-            },
-        ),
-        "vault": report_path(resolved_vault, resolved_vault),
+        "check_count": len(checks),
+        "fail_count": sum(1 for check in checks if check["status"] == "fail"),
+        "attention_count": sum(1 for check in checks if check["status"] == "attention"),
+        "release_converge_invocation_count": len(invocations[RELEASE_CONVERGE_TARGET]),
+        "check_finalized_invocation_count": len(invocations[CHECK_FINALIZED_TARGET]),
+        "fixed_point_writer_count": len(inputs.writers),
+    }
+
+
+def _workflow_order_report_payload(
+    inputs: _WorkflowOrderInputs,
+    checks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        **_workflow_order_envelope(inputs),
+        "vault": report_path(inputs.resolved_vault, inputs.resolved_vault),
         "status": _status_from_checks(checks),
         "policy": {
-            "path": report_path(resolved_vault, resolved_policy_path),
-            "version": policy.get("version"),
+            "path": report_path(inputs.resolved_vault, inputs.resolved_policy_path),
+            "version": inputs.policy.get("version"),
         },
         "fixed_point_policy": {
             "path": FIXED_POINT_POLICY_PATH,
-            "version": fixed_point_policy.get("version"),
-            "writer_count": len(writers),
-            "initial_iteration_targets": _fixed_point_initial_order(writers),
+            "version": inputs.fixed_point_policy.get("version"),
+            "writer_count": len(inputs.writers),
+            "initial_iteration_targets": _fixed_point_initial_order(inputs.writers),
         },
-        "summary": {
-            "check_count": len(checks),
-            "fail_count": sum(1 for check in checks if check["status"] == "fail"),
-            "attention_count": sum(1 for check in checks if check["status"] == "attention"),
-            "release_converge_invocation_count": len(release_converge_invocations),
-            "check_finalized_invocation_count": len(check_finalized_invocations),
-            "fixed_point_writer_count": len(writers),
-        },
+        "summary": _workflow_order_summary(inputs, checks),
         "checks": checks,
-        "target_recipes": [
-            _target_recipe_payload(RELEASE_CONVERGE_TARGET, release_converge_invocations),
-            _target_recipe_payload(
-                RELEASE_CONVERGE_PREFLIGHT_TARGET,
-                release_converge_preflight_invocations,
-            ),
-            _target_recipe_payload(CHECK_FINALIZED_TARGET, check_finalized_invocations),
-            _target_recipe_payload(
-                RELEASE_FINALITY_RESETTLE_TARGET,
-                release_finality_resettle_invocations,
-            ),
-            _target_recipe_payload(RELEASE_SOURCE_READY_TARGET, release_source_ready_invocations),
-            _target_recipe_payload(
-                RELEASE_SOURCE_READY_PREPARE_TARGET,
-                release_source_ready_prepare_invocations,
-            ),
-            _target_recipe_payload(
-                RELEASE_SOURCE_READY_POST_VERIFY_TARGET,
-                release_source_ready_post_verify_invocations,
-            ),
-            _target_recipe_payload(
-                RELEASE_POST_COMMIT_FINALIZE_TARGET,
-                release_post_commit_finalize_invocations,
-            ),
-        ],
-        "planner_snapshot": _planner_snapshot(planner_report),
+        "target_recipes": _workflow_order_target_recipes(inputs),
+        "planner_snapshot": _planner_snapshot(inputs.planner_report),
     }
+
+
+def build_report(
+    vault: Path,
+    *,
+    policy_path: str | None = None,
+    context: RuntimeContext | None = None,
+) -> dict[str, Any]:
+    inputs = _workflow_order_inputs(vault, policy_path=policy_path, context=context)
+    checks = _release_workflow_order_checks(inputs)
+    return _workflow_order_report_payload(inputs, checks)
 
 
 def write_report(vault: Path, report: dict[str, Any], out_path: str | None = None) -> Path:

@@ -1,22 +1,24 @@
 from __future__ import annotations
 
 import argparse
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
-from ops.scripts.observability_artifacts_shared_runtime import (
+from ops.scripts.core.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel_from_status,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
+    load_json_object_from_path,
+)
 
 DEFAULT_OUT = "tmp/goal-runtime-fixed-point-check.json"
 PRODUCER = "ops.scripts.goal_runtime_fixed_point_check"
@@ -49,14 +51,6 @@ class GoalRuntimeFixedPointCheckRequest:
     auto_improve_readiness_path: str = AUTO_IMPROVE_READINESS_PATH
     session_synopsis_path: str = SESSION_SYNOPSIS_PATH
     remediation_backlog_path: str = REMEDIATION_BACKLOG_PATH
-
-
-def _load_json_object(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
 
 
 def _dict_list(value: object) -> list[dict[str, Any]]:
@@ -96,7 +90,7 @@ def _completed_self_improvement_terminal_queue(
     session_path = _auto_improve_session_path(vault, status_report)
     if not session_path:
         return False
-    session = _load_json_object(vault / session_path)
+    session = load_json_object_from_path(vault / session_path)
     if str(session.get("status", "")).strip() != "complete":
         return False
     if str(session.get("stop_reason", "")).strip() not in TERMINAL_QUEUE_STOP_REASONS:
@@ -368,11 +362,11 @@ def build_report(request: GoalRuntimeFixedPointCheckRequest) -> dict[str, Any]:
         "remediation_backlog": request.remediation_backlog_path,
     }
     reports = {
-        "contract": _load_json_object(vault / request.codex_goal_contract_path),
-        "status": _load_json_object(vault / request.goal_run_status_path),
-        "readiness": _load_json_object(vault / request.auto_improve_readiness_path),
-        "session": _load_json_object(vault / request.session_synopsis_path),
-        "backlog": _load_json_object(vault / request.remediation_backlog_path),
+        "contract": load_json_object_from_path(vault / request.codex_goal_contract_path),
+        "status": load_json_object_from_path(vault / request.goal_run_status_path),
+        "readiness": load_json_object_from_path(vault / request.auto_improve_readiness_path),
+        "session": load_json_object_from_path(vault / request.session_synopsis_path),
+        "backlog": load_json_object_from_path(vault / request.remediation_backlog_path),
     }
     checks = [
         *_report_loaded_checks(reports, report_paths=report_paths),

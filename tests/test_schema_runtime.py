@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
-from ops.scripts.schema_runtime import (
+from ops.scripts.core.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
+from ops.scripts.core.schema_runtime import (
     load_schema,
     load_schema_with_vault_override,
     validate_or_raise,

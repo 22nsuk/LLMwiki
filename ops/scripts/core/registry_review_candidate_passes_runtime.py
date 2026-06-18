@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.wiki_page_runtime import line_count
+from ops.scripts.eval.wiki_page_runtime import line_count
 
 from .candidate_rule_runtime import CandidateRuleSpec, evaluate_candidate_rules
 from .policy_runtime import report_path

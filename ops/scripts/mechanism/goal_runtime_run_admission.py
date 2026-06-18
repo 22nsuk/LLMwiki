@@ -7,27 +7,38 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import (
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
     GATE_EFFECT_NONE,
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     canonical_gate_effect,
 )
-from ops.scripts.observability_artifacts_shared_runtime import (
+from ops.scripts.core.observability_artifacts_shared_runtime import (
     auto_improve_session_report_rel,
     resolve_auto_improve_session_report_rel,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.structural_complexity_scope_runtime import (
+from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.mechanism.auto_improve_learning_preflight_runtime import (
+    goal_contract_authorizes_learning_uncertain,
+)
+from ops.scripts.mechanism.auto_improve_queue_runtime import build_proposal_queue
+from ops.scripts.mechanism.goal_contract_digest_runtime import (
+    semantic_goal_contract_digest,
+)
+from ops.scripts.mechanism.goal_runtime_json_loader_runtime import (
+    load_json_object_from_vault,
+)
+from ops.scripts.mechanism.structural_complexity_scope_runtime import (
     generated_canonical_targets,
+    proposal_declares_structural_complexity_repair,
     source_targets_structural_complexity_report,
     structural_complexity_source_targets,
 )
@@ -50,15 +61,6 @@ SOURCE_COMMAND = "python -m ops.scripts.goal_runtime_run_admission --vault ."
 START_BLOCKER_SEVERITY = "block_start"
 PROMOTION_BLOCKER_SEVERITY = "block_promotion"
 MAINTENANCE_ACTION_RUNNER_ACTION = "resume_session_with_additional_proposal_budget"
-STRUCTURAL_COMPLEXITY_REPAIR_MARKERS = (
-    "structural_complexity",
-    "structural-complexity",
-    "complexity_non_regression",
-    "complexity-non-regression",
-    "function_budget",
-    "function-budget",
-)
-
 
 def _default_gate_effect(*, status: str, severity: str) -> str:
     if status == "pass":
@@ -113,12 +115,30 @@ class _AdmissionReportInputs:
     inputs: dict[str, str]
 
 
-def _load_json_object(vault: Path, rel_path: str) -> dict[str, Any]:
-    try:
-        payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
+@dataclass(frozen=True)
+class _MaintenanceActionPlanState:
+    status: str
+    can_resume: bool
+    plan_session_id: str
+    plan_blockers: list[str]
+    runner_action: str
+    proposal_ids: list[str]
+    selected_proposal_id: str
+    selected_in_action_queue: bool
+    selected_in_current_report: bool
+    selected_runnable: bool
+    selected_blockers: list[str]
+    selected_effective_blockers: list[str]
+
+
+@dataclass(frozen=True)
+class _StructuralComplexityBudgetState:
+    status: str
+    target_count: int
+    attention_count: int
+    failure_count: int
+    over_budget_targets: list[dict[str, Any]]
+    error: str = ""
 
 
 def _as_bool(value: object) -> bool:
@@ -193,7 +213,7 @@ def _resume_completion_context(vault: Path, session_id: str) -> dict[str, Any]:
     path = resolve_auto_improve_session_report_rel(vault, session_id) or _resume_session_report_path(session_id)
     if not path:
         return {"active": False, "session_report": ""}
-    session = _load_json_object(vault, path)
+    session = load_json_object_from_vault(vault, path)
     iterations = _list_field(session, "iterations")
     budget = _dict_field(session, "budget")
     max_proposals = _as_int(budget.get("max_proposals"))
@@ -219,6 +239,8 @@ def _resume_completion_context(vault: Path, session_id: str) -> dict[str, Any]:
         "max_proposals": max_proposals,
         "proposal_budget_exhausted": budget_exhausted,
         "maintenance_status": maintenance_status,
+        "attempted_proposal_ids": _list_strings(session.get("attempted_proposal_ids")),
+        "quarantined_proposal_ids": _list_strings(session.get("quarantined_proposal_ids")),
     }
 
 
@@ -488,10 +510,15 @@ def _mutation_queue_check(
     blocked_available_count = _as_int(queue_selection.get("blocked_available_count"))
     blocked_reason_counts = _list_field(queue_selection, "blocked_reason_counts")
     resume_active = _as_bool(resume_completion.get("active"))
+    effective_selected_ids = _selected_runnable_proposal_ids(
+        mutation_proposals,
+        resume_completion=resume_completion,
+    )
     passed = resume_active or (
         kind_status == "present"
         and runnable_available_count > 0
         and selected_runnable_count > 0
+        and bool(effective_selected_ids)
     )
     return _check(
         check_id="start_runnable_proposal_queue",
@@ -507,6 +534,14 @@ def _mutation_queue_check(
             "proposal_count": len(proposals),
             "runnable_available_count": runnable_available_count,
             "selected_runnable_count": selected_runnable_count,
+            "effective_selected_runnable_count": len(effective_selected_ids),
+            "effective_selected_runnable_proposal_ids": effective_selected_ids,
+            "attempted_proposal_ids": _list_strings(
+                resume_completion.get("attempted_proposal_ids")
+            ),
+            "quarantined_proposal_ids": _list_strings(
+                resume_completion.get("quarantined_proposal_ids")
+            ),
             "blocked_available_count": blocked_available_count,
             "blocked_reason_counts": blocked_reason_counts,
             "resume_completion": resume_completion,
@@ -538,20 +573,45 @@ def _source_tree_fingerprint(payload: dict[str, Any]) -> str:
     return str(payload.get("source_tree_fingerprint", "")).strip()
 
 
-def _selected_runnable_proposal_ids(mutation_proposals: dict[str, Any]) -> list[str]:
+def _resume_queue_exclusions(resume_completion: dict[str, Any]) -> tuple[set[str], set[str]]:
+    return (
+        set(_list_strings(resume_completion.get("attempted_proposal_ids"))),
+        set(_list_strings(resume_completion.get("quarantined_proposal_ids"))),
+    )
+
+
+def _selected_runnable_proposal_ids(
+    mutation_proposals: dict[str, Any],
+    *,
+    resume_completion: dict[str, Any],
+) -> list[str]:
     return [
         str(proposal.get("proposal_id", "")).strip()
-        for proposal in _selected_runnable_proposals(mutation_proposals)
+        for proposal in _selected_runnable_proposals(
+            mutation_proposals,
+            resume_completion=resume_completion,
+        )
         if str(proposal.get("proposal_id", "")).strip()
     ]
 
 
-def _selected_runnable_proposals(mutation_proposals: dict[str, Any]) -> list[dict[str, Any]]:
-    proposals: list[dict[str, Any]] = []
-    for proposal in _list_field(mutation_proposals, "proposals"):
-        if isinstance(proposal, dict) and _proposal_is_runnable(proposal):
-            proposals.append(proposal)
-    return proposals
+def _selected_runnable_proposals(
+    mutation_proposals: dict[str, Any],
+    *,
+    resume_completion: dict[str, Any],
+) -> list[dict[str, Any]]:
+    proposals = [
+        proposal
+        for proposal in _list_field(mutation_proposals, "proposals")
+        if isinstance(proposal, dict)
+    ]
+    attempted, quarantined = _resume_queue_exclusions(resume_completion)
+    queue = build_proposal_queue(
+        {"proposals": proposals},
+        attempted=attempted,
+        quarantined=quarantined,
+    )
+    return [proposal for proposal in queue if _proposal_is_runnable(proposal)]
 
 
 def _readiness_runnable_proposal_ids(readiness: dict[str, Any]) -> list[str]:
@@ -588,7 +648,10 @@ def _readiness_mutation_proposal_currentness_check(
         )
     ).strip()
     observed_mutation_digest = _artifact_file_sha256(vault, mutation_proposals_path)
-    mutation_selected_ids = _selected_runnable_proposal_ids(mutation_proposals)
+    mutation_selected_ids = _selected_runnable_proposal_ids(
+        mutation_proposals,
+        resume_completion=resume_completion,
+    )
     readiness_runnable_ids = _readiness_runnable_proposal_ids(readiness)
 
     has_canonical_currentness = bool(mutation_currentness or readiness_currentness)
@@ -688,19 +751,60 @@ def _proposal_target_paths(proposal: dict[str, Any]) -> list[str]:
     )
 
 
-def _proposal_declares_structural_complexity_repair(proposal: dict[str, Any]) -> bool:
-    fields = [
-        proposal.get("proposal_id", ""),
-        proposal.get("failure_mode", ""),
-        proposal.get("single_mechanism_scope", ""),
-        proposal.get("change_hypothesis", ""),
-        proposal.get("expected_binary_signal", ""),
-        *_list_strings(proposal.get("metrics_triggered")),
-    ]
-    budget_signal = _dict_field(proposal, "must_change_budget_signal")
-    fields.extend(str(value) for value in budget_signal.values())
-    text = "\n".join(str(field).lower() for field in fields)
-    return any(marker in text for marker in STRUCTURAL_COMPLEXITY_REPAIR_MARKERS)
+def _proposal_primary_target_paths(proposal: dict[str, Any]) -> list[str]:
+    primary_targets = list(dict.fromkeys(_list_strings(proposal.get("primary_targets"))))
+    return primary_targets or _proposal_target_paths(proposal)
+
+
+def _structural_complexity_budget_state(
+    vault: Path,
+    source_target_paths: list[str],
+    *,
+    context: RuntimeContext,
+) -> _StructuralComplexityBudgetState:
+    if not source_target_paths:
+        return _StructuralComplexityBudgetState(
+            status="not_applicable",
+            target_count=0,
+            attention_count=0,
+            failure_count=0,
+            over_budget_targets=[],
+        )
+    try:
+        budget_report = source_targets_structural_complexity_report(
+            vault,
+            source_target_paths,
+            context=context,
+        )
+        summary = _dict_field(budget_report, "summary")
+        over_budget_targets = [
+            {
+                "path": str(target.get("path", "")).strip(),
+                "status": str(target.get("status", "")).strip(),
+                "over_budget_metrics": _list_strings(target.get("over_budget_metrics")),
+                "function_budget_candidate_count": _as_int(
+                    target.get("function_budget_candidate_count")
+                ),
+            }
+            for target in _list_field(budget_report, "targets")
+            if str(target.get("status", "")).strip() in {"warn", "fail"}
+        ]
+        return _StructuralComplexityBudgetState(
+            status=str(budget_report.get("status", "")).strip(),
+            target_count=_as_int(summary.get("target_count")),
+            attention_count=_as_int(summary.get("targets_with_attention_count")),
+            failure_count=_as_int(summary.get("targets_with_failure_count")),
+            over_budget_targets=over_budget_targets,
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        return _StructuralComplexityBudgetState(
+            status="fail",
+            target_count=0,
+            attention_count=0,
+            failure_count=0,
+            over_budget_targets=[],
+            error=str(exc),
+        )
 
 
 def _structural_complexity_budget_start_check(
@@ -712,13 +816,24 @@ def _structural_complexity_budget_start_check(
     resume_completion: dict[str, Any],
 ) -> dict[str, Any]:
     resume_active = _as_bool(resume_completion.get("active"))
-    selected = _selected_runnable_proposals(mutation_proposals)
+    selected = _selected_runnable_proposals(
+        mutation_proposals,
+        resume_completion=resume_completion,
+    )
     selected_ids = [
         str(proposal.get("proposal_id", "")).strip()
         for proposal in selected
-        if str(proposal.get("proposal_id", "")).strip()
+            if str(proposal.get("proposal_id", "")).strip()
     ]
     target_paths = list(
+        dict.fromkeys(
+            path
+            for proposal in selected
+            for path in _proposal_primary_target_paths(proposal)
+            if path
+        )
+    )
+    raw_target_paths = list(
         dict.fromkeys(
             path
             for proposal in selected
@@ -726,47 +841,19 @@ def _structural_complexity_budget_start_check(
             if path
         )
     )
-    generated_targets = generated_canonical_targets(target_paths)
+    generated_targets = generated_canonical_targets(raw_target_paths)
     source_target_paths = structural_complexity_source_targets(target_paths)
     structural_repair_allowed = any(
-        _proposal_declares_structural_complexity_repair(proposal)
+        proposal_declares_structural_complexity_repair(proposal)
         for proposal in selected
     )
-    report_status = "not_applicable"
-    target_count = 0
-    attention_count = 0
-    failure_count = 0
-    over_budget_targets: list[dict[str, Any]] = []
-    error = ""
-    if source_target_paths:
-        try:
-            budget_report = source_targets_structural_complexity_report(
-                vault,
-                source_target_paths,
-                context=context,
-            )
-            report_status = str(budget_report.get("status", "")).strip()
-            summary = _dict_field(budget_report, "summary")
-            target_count = _as_int(summary.get("target_count"))
-            attention_count = _as_int(summary.get("targets_with_attention_count"))
-            failure_count = _as_int(summary.get("targets_with_failure_count"))
-            over_budget_targets = [
-                {
-                    "path": str(target.get("path", "")).strip(),
-                    "status": str(target.get("status", "")).strip(),
-                    "over_budget_metrics": _list_strings(target.get("over_budget_metrics")),
-                    "function_budget_candidate_count": _as_int(
-                        target.get("function_budget_candidate_count")
-                    ),
-                }
-                for target in _list_field(budget_report, "targets")
-                if str(target.get("status", "")).strip() in {"warn", "fail"}
-            ]
-        except (OSError, TypeError, ValueError) as exc:
-            report_status = "fail"
-            error = str(exc)
+    budget = _structural_complexity_budget_state(
+        vault,
+        source_target_paths,
+        context=context,
+    )
     passed = resume_active or not source_target_paths or (
-        report_status == "pass" or structural_repair_allowed
+        budget.status == "pass" or structural_repair_allowed
     )
     return _check(
         check_id="start_structural_complexity_budget_clear",
@@ -783,15 +870,15 @@ def _structural_complexity_budget_start_check(
         observed={
             "selected_proposal_ids": selected_ids,
             "target_paths": source_target_paths,
-            "raw_target_paths": target_paths,
+            "raw_target_paths": raw_target_paths,
             "ignored_generated_canonical_targets": generated_targets,
             "structural_complexity_repair_allowed": structural_repair_allowed,
-            "status": report_status,
-            "target_count": target_count,
-            "targets_with_attention_count": attention_count,
-            "targets_with_failure_count": failure_count,
-            "over_budget_targets": over_budget_targets,
-            "error": error,
+            "status": budget.status,
+            "target_count": budget.target_count,
+            "targets_with_attention_count": budget.attention_count,
+            "targets_with_failure_count": budget.failure_count,
+            "over_budget_targets": budget.over_budget_targets,
+            "error": budget.error,
             "resume_completion": resume_completion,
         },
         reason=(
@@ -800,7 +887,7 @@ def _structural_complexity_budget_start_check(
             else "no selected proposal targets require an early structural budget check"
             if not source_target_paths
             else "selected proposal is an explicit bounded structural complexity repair"
-            if structural_repair_allowed and report_status != "pass"
+            if structural_repair_allowed and budget.status != "pass"
             else "selected proposal targets are within touched structural complexity budget"
             if passed
             else "selected proposal touches over-budget runtime surface without being scoped as a structural complexity repair"
@@ -864,14 +951,7 @@ def _readiness_execution_check(
 
 
 def _contract_authorizes_learning_uncertain(contract: dict[str, Any]) -> bool:
-    execution_policy = _dict_field(contract, "execution_policy")
-    learning = _dict_field(execution_policy, "learning_uncertain")
-    return (
-        _as_bool(learning.get("allow_bounded_trial"))
-        and _as_bool(learning.get("requires_explicit_authorization"))
-        and str(learning.get("authorization_source", "")).strip()
-        == "codex_goal_contract"
-    )
+    return goal_contract_authorizes_learning_uncertain(contract)
 
 
 def _readiness_learning_uncertain_check(
@@ -953,6 +1033,61 @@ def _proposal_is_runnable(proposal: dict[str, Any]) -> bool:
     return not blocked_by and not blockers and status not in {"blocked", "discarded", "quarantined"}
 
 
+def _maintenance_action_plan_state(
+    maintenance_action_plan: dict[str, Any],
+    mutation_proposals: dict[str, Any],
+    *,
+    resume_completion: dict[str, Any],
+) -> _MaintenanceActionPlanState:
+    status = str(maintenance_action_plan.get("status", "missing")).strip() or "missing"
+    decisions = _dict_field(maintenance_action_plan, "decisions")
+    queue_action = _dict_field(maintenance_action_plan, "queue_action")
+    selected = _dict_field(maintenance_action_plan, "selected_proposal")
+    selected_proposal_id = str(selected.get("proposal_id", "")).strip()
+    proposal_ids = _list_strings(queue_action.get("proposal_ids"))
+    runner_action = str(queue_action.get("runner_action", "")).strip()
+    matching_proposal = next(
+        (
+            proposal
+            for proposal in _list_field(mutation_proposals, "proposals")
+            if isinstance(proposal, dict)
+            and str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
+        ),
+        {},
+    )
+    matching_runnable_proposal = next(
+        (
+            proposal
+            for proposal in _selected_runnable_proposals(
+                mutation_proposals,
+                resume_completion=resume_completion,
+            )
+            if str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
+        ),
+        {},
+    )
+    selected_blockers = _list_strings(matching_proposal.get("blocked_by")) if matching_proposal else []
+    selected_effective_blockers = (
+        _list_strings(matching_runnable_proposal.get("blocked_by"))
+        if matching_runnable_proposal
+        else selected_blockers
+    )
+    return _MaintenanceActionPlanState(
+        status=status,
+        can_resume=_as_bool(decisions.get("can_resume")),
+        plan_session_id=str(maintenance_action_plan.get("session_id", "")).strip(),
+        plan_blockers=_list_strings(maintenance_action_plan.get("blockers")),
+        runner_action=runner_action,
+        proposal_ids=proposal_ids,
+        selected_proposal_id=selected_proposal_id,
+        selected_in_action_queue=not proposal_ids or selected_proposal_id in proposal_ids,
+        selected_in_current_report=bool(matching_proposal),
+        selected_runnable=bool(matching_runnable_proposal),
+        selected_blockers=selected_blockers,
+        selected_effective_blockers=selected_effective_blockers,
+    )
+
+
 def _maintenance_action_plan_check(
     maintenance_action_plan: dict[str, Any],
     path: str,
@@ -962,52 +1097,33 @@ def _maintenance_action_plan_check(
     readiness: dict[str, Any],
     readiness_path: str,
     resume_session_id: str,
+    resume_completion: dict[str, Any],
 ) -> dict[str, Any]:
     kind_status = _artifact_kind_check(
         maintenance_action_plan,
         "goal_runtime_maintenance_action_plan",
     )
-    status = str(maintenance_action_plan.get("status", "missing")).strip() or "missing"
-    decisions = _dict_field(maintenance_action_plan, "decisions")
-    queue_action = _dict_field(maintenance_action_plan, "queue_action")
-    selected = _dict_field(maintenance_action_plan, "selected_proposal")
-    selected_proposal_id = str(selected.get("proposal_id", "")).strip()
-    proposal_ids = _list_strings(queue_action.get("proposal_ids"))
-    runner_action = str(queue_action.get("runner_action", "")).strip()
-    can_resume = _as_bool(decisions.get("can_resume"))
-    plan_session_id = str(maintenance_action_plan.get("session_id", "")).strip()
-    plan_blockers = _list_strings(maintenance_action_plan.get("blockers"))
-
-    proposals = [
-        proposal
-        for proposal in _list_field(mutation_proposals, "proposals")
-        if isinstance(proposal, dict)
-    ]
-    matching_proposals = [
-        proposal
-        for proposal in proposals
-        if str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
-    ]
-    matching_proposal = matching_proposals[0] if matching_proposals else {}
-    selected_in_current_report = bool(matching_proposal)
-    selected_runnable = bool(matching_proposal) and _proposal_is_runnable(matching_proposal)
+    plan_state = _maintenance_action_plan_state(
+        maintenance_action_plan,
+        mutation_proposals,
+        resume_completion=resume_completion,
+    )
 
     execution = _dict_field(readiness, "execution_readiness")
     readiness_can_run = _as_bool(execution.get("can_run"))
     readiness_runnable_count = _as_int(execution.get("runnable_proposal_count"))
-    selected_in_action_queue = not proposal_ids or selected_proposal_id in proposal_ids
     passed = (
         kind_status == "present"
-        and status == "pass"
-        and can_resume
+        and plan_state.status == "pass"
+        and plan_state.can_resume
         and bool(resume_session_id)
-        and plan_session_id == resume_session_id
-        and not plan_blockers
-        and runner_action == MAINTENANCE_ACTION_RUNNER_ACTION
-        and bool(selected_proposal_id)
-        and selected_in_action_queue
-        and selected_in_current_report
-        and selected_runnable
+        and plan_state.plan_session_id == resume_session_id
+        and not plan_state.plan_blockers
+        and plan_state.runner_action == MAINTENANCE_ACTION_RUNNER_ACTION
+        and bool(plan_state.selected_proposal_id)
+        and plan_state.selected_in_action_queue
+        and plan_state.selected_in_current_report
+        and plan_state.selected_runnable
         and readiness_can_run
         and readiness_runnable_count > 0
     )
@@ -1028,17 +1144,25 @@ def _maintenance_action_plan_check(
         },
         observed={
             "artifact_status": kind_status,
-            "status": status,
-            "decisions.can_resume": can_resume,
+            "status": plan_state.status,
+            "decisions.can_resume": plan_state.can_resume,
             "resume_session_id": resume_session_id,
-            "plan_session_id": plan_session_id,
-            "blockers": plan_blockers,
-            "queue_action.runner_action": runner_action,
-            "queue_action.proposal_ids": proposal_ids,
-            "selected_proposal_id": selected_proposal_id,
-            "selected_in_action_queue": selected_in_action_queue,
-            "selected_in_current_report": selected_in_current_report,
-            "selected_runnable": selected_runnable,
+            "plan_session_id": plan_state.plan_session_id,
+            "blockers": plan_state.plan_blockers,
+            "queue_action.runner_action": plan_state.runner_action,
+            "queue_action.proposal_ids": plan_state.proposal_ids,
+            "selected_proposal_id": plan_state.selected_proposal_id,
+            "selected_in_action_queue": plan_state.selected_in_action_queue,
+            "selected_in_current_report": plan_state.selected_in_current_report,
+            "selected_runnable": plan_state.selected_runnable,
+            "selected_blockers": plan_state.selected_blockers,
+            "selected_effective_blockers": plan_state.selected_effective_blockers,
+            "attempted_proposal_ids": _list_strings(
+                resume_completion.get("attempted_proposal_ids")
+            ),
+            "quarantined_proposal_ids": _list_strings(
+                resume_completion.get("quarantined_proposal_ids")
+            ),
             "execution_readiness.can_run": readiness_can_run,
             "execution_readiness.runnable_proposal_count": readiness_runnable_count,
         },
@@ -1140,7 +1264,7 @@ def _durable_goal_authority_check(
     runtime_certificate: dict[str, Any],
     runtime_certificate_path: str,
 ) -> dict[str, Any]:
-    contract_digest = _canonical_json_digest(contract) if contract else ""
+    contract_digest = semantic_goal_contract_digest(contract) if contract else ""
     contract_backend = _dict_field(contract, "goal_backend")
     contract_runtime = _dict_field(contract, "runtime")
     contract_guard = _dict_field(contract, "promotion_guard")
@@ -1236,7 +1360,7 @@ def _durable_goal_authority_check(
         next_action=(
             "Proceed with promotion authority checks."
             if passed
-            else "Run `make auto-improve-goal-contract auto-improve-goal-status goal-runtime-certificate` with the same GOAL_RUN_ID, then rerun admission before claiming completion or promotion."
+            else "Run `make auto-improve-goal-contract goal-runtime-status-finalize goal-runtime-certificate` with the same GOAL_RUN_ID, then rerun admission before claiming completion or promotion."
         ),
         evidence_paths=[contract_path, goal_run_status_path, runtime_certificate_path],
     )
@@ -1311,31 +1435,31 @@ def _load_admission_reports(
     active_request: GoalRuntimeRunAdmissionRequest,
 ) -> _AdmissionReports:
     return _AdmissionReports(
-        cleanup=_load_json_object(vault, active_request.cleanup_report_path),
-        quarantine_preflight=_load_json_object(
+        cleanup=load_json_object_from_vault(vault, active_request.cleanup_report_path),
+        quarantine_preflight=load_json_object_from_vault(
             vault,
             active_request.quarantine_preflight_report_path,
         ),
-        fixed_point=_load_json_object(vault, active_request.fixed_point_report_path),
-        guard=_load_json_object(vault, active_request.goal_worktree_guard_report_path),
-        mutation_proposals=_load_json_object(
+        fixed_point=load_json_object_from_vault(vault, active_request.fixed_point_report_path),
+        guard=load_json_object_from_vault(vault, active_request.goal_worktree_guard_report_path),
+        mutation_proposals=load_json_object_from_vault(
             vault,
             active_request.mutation_proposals_report_path,
         ),
-        readiness=_load_json_object(vault, active_request.readiness_report_path),
-        remediation_backlog=_load_json_object(
+        readiness=load_json_object_from_vault(vault, active_request.readiness_report_path),
+        remediation_backlog=load_json_object_from_vault(
             vault,
             active_request.remediation_backlog_report_path,
         ),
-        goal_contract=_load_json_object(vault, active_request.goal_contract_path),
-        goal_run_status=_load_json_object(vault, active_request.goal_run_status_path),
+        goal_contract=load_json_object_from_vault(vault, active_request.goal_contract_path),
+        goal_run_status=load_json_object_from_vault(vault, active_request.goal_run_status_path),
         resume_completion=_resume_completion_context(vault, active_request.resume_session_id),
         maintenance_action_plan=(
-            _load_json_object(vault, active_request.maintenance_action_plan_path)
+            load_json_object_from_vault(vault, active_request.maintenance_action_plan_path)
             if active_request.maintenance_action_plan_path
             else {}
         ),
-        runtime_certificate=_load_json_object(
+        runtime_certificate=load_json_object_from_vault(
             vault,
             active_request.runtime_certificate_report_path,
         ),
@@ -1357,6 +1481,7 @@ def _maintenance_action_checks(
             readiness=reports.readiness,
             readiness_path=active_request.readiness_report_path,
             resume_session_id=active_request.resume_session_id,
+            resume_completion=reports.resume_completion,
         )
     ]
 
@@ -1497,6 +1622,7 @@ def _admission_report_inputs(
 def _admission_source_paths() -> list[str]:
     return [
         "ops/scripts/mechanism/goal_runtime_run_admission.py",
+        "ops/scripts/mechanism/auto_improve_queue_runtime.py",
         "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
         "ops/schemas/goal-runtime-run-admission.schema.json",
         "mk/mechanism.mk",
@@ -1508,7 +1634,7 @@ def _admission_envelope(
     active_request: GoalRuntimeRunAdmissionRequest,
     *,
     context: RuntimeContext,
-    resolved_policy_path: str,
+    resolved_policy_path: Path,
     file_inputs: dict[str, str],
 ) -> dict[str, Any]:
     return build_canonical_report_envelope(

@@ -4,11 +4,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import WIKI_EVAL_COVERAGE_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import WIKI_EVAL_COVERAGE_SCHEMA_PATH
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 
 from .wiki_snapshot_runtime import WikiRuntimeSnapshot, build_wiki_runtime_snapshot
 from .wiki_stage2_runtime import (
@@ -19,7 +19,7 @@ from .wiki_stage2_runtime import (
 
 WIKI_EVAL_COVERAGE_SCHEMA = WIKI_EVAL_COVERAGE_SCHEMA_PATH
 PRODUCER = "ops.scripts.wiki_eval_coverage_runtime"
-SOURCE_COMMAND = "python -m ops.scripts.wiki_eval_coverage"
+SOURCE_COMMAND = "python -m ops.scripts.eval.wiki_eval_coverage"
 
 
 @dataclass(frozen=True)
@@ -271,7 +271,7 @@ def _base_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=policy_path,
             schema_path=WIKI_EVAL_COVERAGE_SCHEMA,
-            source_paths=["ops/scripts/wiki_eval_coverage_runtime.py"],
+            source_paths=["ops/scripts/eval/wiki_eval_coverage_runtime.py"],
             path_group_inputs={
                 "pages": sorted(report_path(vault, path) for path in runtime_snapshot.pages.values()),
             },

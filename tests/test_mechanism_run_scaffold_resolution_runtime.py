@@ -6,19 +6,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.mechanism_run_common_runtime import (
+from ops.scripts.mechanism.mechanism_run_common_runtime import (
     CommandSpec,
     RunMechanismExperimentArtifactError,
     RunMechanismExperimentUsageError,
     load_current_policy,
 )
-from ops.scripts.mechanism_run_scaffold_resolution_runtime import (
+from ops.scripts.mechanism.mechanism_run_scaffold_resolution_runtime import (
     PreparedExecutionCommands,
     command_argv,
     prepare_execution_commands,
     resolve_experiment_inputs,
 )
-
 from tests.run_mechanism_experiment_test_utils import (
     mutation_proposal_report,
     seed_wrapper_vault,
@@ -45,6 +44,33 @@ class MechanismRunScaffoldResolutionRuntimeTests(unittest.TestCase):
             self.assertEqual(prepared.mutation.timeout_seconds, 42)
             self.assertEqual(prepared.check.timeout_seconds, 42)
             self.assertEqual(prepared.mutation.argv[0], sys.executable)
+
+    def test_prepare_execution_commands_defaults_repo_health_to_focused_pytest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+
+            prepared = prepare_execution_commands(
+                mutation_command=f"{sys.executable} tools/mutate_success.py",
+                check_command=None,
+                cwd=vault,
+                timeout_seconds=42,
+                test_files=["tests/test_example.py"],
+            )
+
+            self.assertEqual(
+                prepared.check.argv,
+                [
+                    sys.executable,
+                    "-B",
+                    "-m",
+                    "pytest",
+                    "-p",
+                    "no:cacheprovider",
+                    "tests/test_example.py",
+                ],
+            )
 
     def test_command_argv_preserves_relative_virtualenv_executable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

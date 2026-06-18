@@ -5,27 +5,40 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
+from ops.scripts.core.policy_runtime import report_path
 
 from .wiki_page_runtime import load_text, section_body
 from .wiki_stage2_runtime import (
     broad_synthesis_boundary_missing_sections,
     broad_synthesis_watch_advisory,
     broad_wiki_synthesis_metrics,
+    content_quality_scaffold_body_issues,
     content_quality_scaffold_missing_sections,
     inbound_page_linkers,
     research_anchor_missing_sections,
 )
 
-SYNTHESIS_ANALYSIS_TEMPLATE_MARKERS = (
+SYNTHESIS_ROUTE_MEMO_MARKERS = (
+    "Why this deserved a new synthesis",
     "이 묶음이 새로 더하는 것",
     "source 신호",
     "라우팅 기준",
     "이 route를 다시 쓰는 법",
+    "새 synthesis로 분리",
+    "품질 판단",
+    "route target:",
+    "evidence role:",
+    "absorbed into:",
+    "semantic route",
+    "provenance",
+    "이번 batch",
 )
+SYNTHESIS_ANALYSIS_TEMPLATE_MARKERS = SYNTHESIS_ROUTE_MEMO_MARKERS
+SYNTHESIS_DOMAIN_CONCLUSION_MARKERS = (*SYNTHESIS_ROUTE_MEMO_MARKERS, "intake")
 SYNTHESIS_FOLLOW_UP_SPLIT_MARKERS = (
     "### 2026-04-21 후속 근거",
     "follow-up는",
+    "후속 intake",
     "기록된 후속 intake 판단을 이미 반영했다",
 )
 CONCEPT_CONTINUITY_MARKERS = (
@@ -177,12 +190,34 @@ def synthesis_analysis_template_candidates(
         if not relative_path.startswith("wiki/synthesis--"):
             continue
 
-        analysis = section_body(load_text(path), "Analysis") or ""
-        template_markers = [
-            marker for marker in SYNTHESIS_ANALYSIS_TEMPLATE_MARKERS if marker in analysis
-        ]
-        if not template_markers:
+        text = load_text(path)
+        sections = {
+            "Short answer": section_body(text, "Short answer") or "",
+            "Analysis": section_body(text, "Analysis") or "",
+            "Decision / takeaway": section_body(text, "Decision / takeaway") or "",
+        }
+        markers_by_section = {
+            section: [
+                marker
+                for marker in (
+                    SYNTHESIS_ANALYSIS_TEMPLATE_MARKERS
+                    if section == "Analysis"
+                    else SYNTHESIS_DOMAIN_CONCLUSION_MARKERS
+                )
+                if marker in section_text
+            ]
+            for section, section_text in sections.items()
+        }
+        markers_by_section = {
+            section: markers for section, markers in markers_by_section.items() if markers
+        }
+        if not markers_by_section:
             continue
+        template_markers = [
+            marker
+            for markers in markers_by_section.values()
+            for marker in markers
+        ]
 
         candidates.append(
             {
@@ -191,11 +226,12 @@ def synthesis_analysis_template_candidates(
                 "value": len(template_markers),
                 "threshold": 0,
                 "template_markers": template_markers,
+                "markers_by_section": markers_by_section,
                 "reason": (
-                    "synthesis Analysis section still reads like a promotion memo or routing note "
-                    "instead of cross-source analysis"
+                    "synthesis narrative sections still read like a promotion memo or routing note "
+                    "instead of reusable cross-source analysis"
                 ),
-                "suggested_action": "rewrite_analysis_as_cross_source_synthesis",
+                "suggested_action": "rewrite_synthesis_narrative_as_domain_conclusion",
             }
         )
 
@@ -418,6 +454,7 @@ def content_quality_advisory_candidates(
     applies_to = set(advisory.get("applies_to_page_types", ["concept", "synthesis"]))
     recommended_headings = list(advisory.get("recommended_headings", []))
     pages_with_missing_headings: list[dict] = []
+    pages_with_body_issues: list[dict] = []
 
     for stem, path in sorted(pages.items()):
         relative_path = report_path(vault, path)
@@ -442,8 +479,17 @@ def content_quality_advisory_candidates(
                     "missing_headings": missing_headings,
                 }
             )
+        body_issues = content_quality_scaffold_body_issues(text, recommended_headings)
+        if body_issues:
+            pages_with_body_issues.append(
+                {
+                    "page": relative_path,
+                    "created": created,
+                    "body_issues": body_issues,
+                }
+            )
 
-    if not pages_with_missing_headings:
+    if not pages_with_missing_headings and not pages_with_body_issues:
         return []
 
     return [
@@ -451,13 +497,14 @@ def content_quality_advisory_candidates(
             "type": "content_quality_scaffold_advisory",
             "page": "wiki/{concept,synthesis}--*.md",
             "value": {
-                "page_count": len(pages_with_missing_headings),
+                "page_count": len(pages_with_missing_headings) + len(pages_with_body_issues),
             },
             "threshold": {
                 "page_count": 0,
             },
             "recommended_headings": recommended_headings,
             "pages_with_missing_headings": pages_with_missing_headings,
+            "pages_with_body_issues": pages_with_body_issues,
             "reason": (
                 "concept/synthesis pages should carry wiki-substance scaffolding "
                 "before routing tables or source aggregation dominate the page"

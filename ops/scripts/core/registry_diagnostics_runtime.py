@@ -4,7 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ops.scripts.raw_registry_runtime import (
+from ops.scripts.registry.raw_registry_runtime import (
     build_raw_sha256_index,
     build_registry_locator_groups,
     enrich_registry_entries_with_inventory,

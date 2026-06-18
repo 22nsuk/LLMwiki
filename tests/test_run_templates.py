@@ -5,8 +5,9 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.planning_gate_validate import validate_run_dir
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.mechanism.planning_gate_validate import validate_run_dir
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

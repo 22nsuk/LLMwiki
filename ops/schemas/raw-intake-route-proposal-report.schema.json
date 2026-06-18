@@ -105,7 +105,10 @@
         "review_required_count",
         "review_satisfied_count",
         "closeout_pass_count",
-        "closeout_fail_count"
+        "closeout_fail_count",
+        "audit_clear_count",
+        "audit_review_required_count",
+        "audit_manual_override_count"
       ],
       "properties": {
         "entry_count": { "type": "integer", "minimum": 0 },
@@ -113,7 +116,10 @@
         "review_required_count": { "type": "integer", "minimum": 0 },
         "review_satisfied_count": { "type": "integer", "minimum": 0 },
         "closeout_pass_count": { "type": "integer", "minimum": 0 },
-        "closeout_fail_count": { "type": "integer", "minimum": 0 }
+        "closeout_fail_count": { "type": "integer", "minimum": 0 },
+        "audit_clear_count": { "type": "integer", "minimum": 0 },
+        "audit_review_required_count": { "type": "integer", "minimum": 0 },
+        "audit_manual_override_count": { "type": "integer", "minimum": 0 }
       }
     },
     "blocking_issues": {
@@ -156,6 +162,7 @@
         "target",
         "confidence",
         "review_status",
+        "route_audit",
         "review_gate",
         "closeout_status",
         "issues",
@@ -171,6 +178,7 @@
         "target": { "type": "string" },
         "confidence": { "type": "string" },
         "review_status": { "type": "string" },
+        "route_audit": { "$ref": "#/$defs/routeAudit" },
         "review_gate": { "type": "string", "enum": ["satisfied", "required"] },
         "closeout_status": { "type": "string", "enum": ["pass", "fail"] },
         "issues": {
@@ -182,6 +190,95 @@
           "items": { "type": "string", "minLength": 1 }
         }
       }
+    },
+    "candidateRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposed_action", "target", "confidence"],
+      "properties": {
+        "proposed_action": { "type": "string" },
+        "target": { "type": "string" },
+        "confidence": { "type": "string" }
+      }
+    },
+    "matchEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["term", "fields", "match_kind"],
+      "properties": {
+        "term": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "match_kind": { "type": "string", "enum": ["token_boundary"] }
+      }
+    },
+    "routeAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_route",
+        "matched_rule",
+        "matched_terms",
+        "match_evidence",
+        "manual_override_reason",
+        "audit_status",
+        "review_reasons"
+      ],
+      "properties": {
+        "candidate_route": { "$ref": "#/$defs/candidateRoute" },
+        "matched_rule": { "type": "string", "minLength": 1 },
+        "matched_terms": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "match_evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/matchEvidence" }
+        },
+        "manual_override_reason": { "type": "string" },
+        "audit_status": {
+          "type": "string",
+          "enum": ["clear", "review_required", "manual_override_recorded"]
+        },
+        "review_reasons": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "audit_status": { "const": "review_required" }
+            },
+            "required": ["audit_status"]
+          },
+          "then": {
+            "properties": {
+              "match_evidence": { "minItems": 1 },
+              "review_reasons": {
+                "contains": { "const": "manual_override_reason_missing" }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "audit_status": { "const": "manual_override_recorded" }
+            },
+            "required": ["audit_status"]
+          },
+          "then": {
+            "properties": {
+              "manual_override_reason": { "minLength": 1 }
+            }
+          }
+        }
+      ]
     }
   }
 }

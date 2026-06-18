@@ -4,19 +4,21 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
-from ops.scripts.output_runtime import write_output_text
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.run_id_runtime import reject_template_placeholder_run_id
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
+from ops.scripts.core.observability_artifacts_runtime import (
+    write_run_artifact_fingerprint,
+)
+from ops.scripts.core.output_runtime import write_output_text
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.run_id_runtime import reject_template_placeholder_run_id
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
     PLANNING_VALIDATION_SCHEMA_PATH,
     PROMOTION_REPORT_SCHEMA_PATH,
     PROPOSAL_SNAPSHOT_SCHEMA_PATH,
     RUN_LEDGER_SCHEMA_PATH,
     SEED_SCHEMA_PATH,
 )
-from ops.scripts.starter_bundle_runtime import (
+from ops.scripts.core.starter_bundle_runtime import (
     SYSTEM_MECHANISM_STARTER_BUNDLE,
     starter_bundle_path,
 )

@@ -5,8 +5,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
+)
 
 ACTION_LIFECYCLE_RESOLVED = "resolved"
 ACTION_LIFECYCLE_HISTORICALLY_TRUE = "historically_true"
@@ -46,13 +48,14 @@ def _artifact_freshness_state(
     total_artifact_count: int | None = None,
     operational_attention_artifact_count: int | None = None,
     summary: str | None = None,
+    stale_routing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if summary is None:
         summary = (
             f"{stale_artifact_count} stale / {total_artifact_count} total; "
             f"{operational_attention_artifact_count} operational attention"
         )
-    return {
+    state: dict[str, Any] = {
         "evidence_status": evidence_status,
         "evidence_path": ARTIFACT_FRESHNESS_REPORT_PATH,
         "stale_artifact_count": stale_artifact_count,
@@ -62,6 +65,45 @@ def _artifact_freshness_state(
         "reason_id": reason_id,
         "owner_target": ARTIFACT_FRESHNESS_OWNER_TARGET,
     }
+    if stale_routing is not None:
+        state["stale_routing"] = stale_routing
+    return state
+
+
+def _artifact_freshness_stale_routing(payload: dict[str, Any]) -> dict[str, Any] | None:
+    routing = payload.get("stale_routing")
+    if not isinstance(routing, dict):
+        return None
+    classification = str(routing.get("classification", "")).strip()
+    recommended_lane = str(routing.get("recommended_lane", "")).strip()
+    summary = str(routing.get("summary", "")).strip()
+    recommended_targets = _clean_string_list(routing.get("recommended_targets"))
+    reason_ids = _clean_string_list(routing.get("reason_ids"))
+    if not classification or not recommended_lane or not summary:
+        return None
+    return {
+        "classification": classification,
+        "recommended_lane": recommended_lane,
+        "recommended_targets": recommended_targets,
+        "reason_ids": reason_ids,
+        "summary": summary,
+    }
+
+
+def _clean_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        text = item.strip()
+        if not text or text in seen:
+            continue
+        cleaned.append(text)
+        seen.add(text)
+    return cleaned
 
 
 def _artifact_freshness_unavailable_state(*, evidence_status: str, reason_id: str) -> dict[str, Any]:
@@ -151,6 +193,7 @@ def _canonical_artifact_freshness_state_from_report(
         stale_artifact_count=stale_artifact_count,
         total_artifact_count=total_artifact_count,
         operational_attention_artifact_count=operational_attention_artifact_count,
+        stale_routing=_artifact_freshness_stale_routing(payload),
     )
 
 

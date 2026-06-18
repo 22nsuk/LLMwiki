@@ -5,9 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.wiki_stage2_eval import evaluate
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.eval.wiki_stage2_eval import evaluate
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LIVE_POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"

@@ -5,10 +5,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-from ops.scripts.ci_tier_lane_bridge import build_report
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.test.ci_tier_lane_bridge import build_report
 from tests.minimal_vault_runtime import REPO_ROOT
 
 pytestmark = pytest.mark.report_contract
@@ -46,16 +46,19 @@ class CiTierLaneBridgeTests(unittest.TestCase):
             "make release-closeout-finality-verify-ci-artifact",
             release_closeout_commands,
         )
-        self.assertIn(
-            "make release-closeout-finality-verify",
-            release_closeout_commands,
-        )
+        self.assertNotIn("make release-closeout-finality-verify", release_closeout_commands)
         self.assertIn(
             "make release-authority-sealed-preflight",
             release_closeout_commands,
         )
-        self.assertIn("make test-report-contract-all", by_tier["report-contract"]["workflow_run_text"])
-        self.assertNotIn("make test-report-contract-core", by_tier["report-contract"]["workflow_run_text"])
+        self.assertIn("set +e", release_closeout_commands)
+        self.assertIn("finality_status=0", release_closeout_commands)
+        self.assertIn("sealed_preflight_status=0", release_closeout_commands)
+        self.assertIn("finality_status=$?", release_closeout_commands)
+        self.assertIn("sealed_preflight_status=$?", release_closeout_commands)
+        self.assertIn("exit 0", release_closeout_commands)
+        report_contract_run = by_tier["report-contract"]["workflow_run_text"]
+        self.assertEqual(report_contract_run.strip(), "make ci-report-contract-tier")
         self.assertEqual(
             validate_with_schema(
                 report,

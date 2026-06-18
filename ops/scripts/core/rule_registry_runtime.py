@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ops.scripts.promotion_gate_common_runtime import PromotionGatePolicyError
+from ops.scripts.mechanism.promotion_gate_common_runtime import PromotionGatePolicyError
 
 from .promotion_decision_registry_runtime import (
     reduce_decision_proposals,

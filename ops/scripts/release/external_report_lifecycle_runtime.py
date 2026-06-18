@@ -1,33 +1,24 @@
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import json
 import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.core.release_authority_state_runtime import (
-    RELEASE_AUTHORITY_VERIFIED_STATUSES,
-    authoritative_live_rerun_fail_count,
-    authoritative_live_rerun_not_run_count,
-    current_release_manifest_pass,
-    release_artifact_revision,
-    release_authority_reports_verified,
-    release_status_v2_view_with_readiness_fallback,
-)
-from ops.scripts.gate_effect_vocabulary import (
+from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
-    GATE_EFFECT_BLOCKS_PROMOTION,
     GATE_EFFECT_CLAIM_BLOCKER,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
 )
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_revision_runtime import resolve_source_revision
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-from ops.scripts.workflow_dependency_planner import (
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.workflow_dependency_planner import (
     build_report as build_workflow_dependency_report,
+)
+from ops.scripts.mechanism.goal_contract_digest_runtime import (
+    semantic_goal_contract_digest,
 )
 
 from .external_report_action_catalog import (
@@ -61,6 +52,7 @@ from .external_report_inventory_runtime import (
     active_reference_report_paths,
     active_report_paths,
     archived_report_count,
+    archived_report_paths,
     as_dict,
     as_int,
     as_list,
@@ -75,7 +67,38 @@ from .external_report_inventory_runtime import (
     report_type_for_path,
     unmatched_recommendation_count,
 )
-from .release_closeout_finality_attestation import verify_attestation
+from .external_report_lifecycle_profile_runtime import (
+    archived_report_action_basis_records,
+    content_lifecycle_inventory,
+    coverage_action_basis,
+    coverage_archive_decision_code,
+    coverage_with_action_basis,
+    lifecycle_decision,
+    report_coverage_item,
+    report_lifecycle_profiles,
+)
+from .external_report_release_verification_runtime import (
+    ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID,
+    RELEASE_VERIFIED_ACTION_RESOLVERS,
+    REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID,
+    CountStatusResolver,
+    _dedupe_reason_ids,
+    _evidence_reason_ids,
+    _reason_detail,
+    _reason_token,
+    _release_verified_count_status,
+    _status_with_archive_reconciliation_observations,
+    archive_reconciliation_observation_inventory,
+    archive_reconciliation_observation_paths,
+    archive_reconciliation_observation_reason_ids,
+    full_suite_evidence_currentness_verified,
+    promotion_truth_ladder_verified,
+    release_evidence_bundle_and_attestation_verified,
+    release_run_verified,
+    release_verified_action_reason_ids,
+    release_verified_action_status,
+    source_package_distribution_binding_verified,
+)
 from .release_workflow_order_guard import (
     build_report as build_release_workflow_order_guard_report,
 )
@@ -111,6 +134,7 @@ _INVENTORY_COMPAT_EXPORTS = (
     active_reference_report_paths,
     active_report_paths,
     archived_report_count,
+    archived_report_paths,
     as_dict,
     as_int,
     as_list,
@@ -125,40 +149,35 @@ _INVENTORY_COMPAT_EXPORTS = (
     report_text,
     unmatched_recommendation_count,
 )
+_PROFILE_COMPAT_EXPORTS = (
+    archived_report_action_basis_records,
+    content_lifecycle_inventory,
+    coverage_action_basis,
+    coverage_archive_decision_code,
+    coverage_with_action_basis,
+    lifecycle_decision,
+    report_coverage_item,
+    report_lifecycle_profiles,
+)
+_RELEASE_VERIFICATION_COMPAT_EXPORTS = (
+    ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID,
+    RELEASE_VERIFIED_ACTION_RESOLVERS,
+    REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID,
+    CountStatusResolver,
+    archive_reconciliation_observation_inventory,
+    archive_reconciliation_observation_paths,
+    archive_reconciliation_observation_reason_ids,
+    full_suite_evidence_currentness_verified,
+    promotion_truth_ladder_verified,
+    release_evidence_bundle_and_attestation_verified,
+    release_run_verified,
+    release_verified_action_reason_ids,
+    release_verified_action_status,
+    source_package_distribution_binding_verified,
+)
 
-TASK_IMPROVEMENT_OBSERVATIONS_ROOT = "ops/reports/task-improvement-observations"
-OPEN_IMPROVEMENT_OBSERVATION_STATUSES = {"open", "planned"}
-RESOLUTION_EVIDENCE_REQUIRED_STATUSES = {"automated"}
-RESOLUTION_EVIDENCE_PREFIXES = ("source:", "test:", "artifact:", "digest:", "make:")
-ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS: dict[str, set[str]] = {
-    "archived_report_action_trace_gap": {
-        "external_report_lifecycle",
-        "active_report_manifest_freshness",
-    },
-    "status_surface_currentness_visibility_gap": {
-        "artifact_freshness_performance_observability",
-        "operator_entrypoint_index",
-        "selected_contract_currentness_gate",
-    },
-    "dev_install_index_portability_gap": {
-        "operator_entrypoint_index",
-        "uv_lock_canonical_policy",
-    },
-    "github_governance_live_drift_gap": {
-        "github_governance_live_drift_verification",
-    },
-    "review_bundle_full_vault_hygiene_gap": {
-        "repo_boundary_history_hygiene",
-        "source_package_distribution_binding",
-        "windows_path_and_archive_alias_parity",
-    },
-    "full_vault_archive_mtime_normalization_gap": {
-        "source_package_distribution_binding",
-        "windows_path_and_archive_alias_parity",
-    },
-}
 ARCHIVE_RECONCILIATION_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
-    "archived_report_action_trace_gap": (
+    ARCHIVED_REPORT_ACTION_TRACE_OBSERVATION_ID: (
         "external_report_reconciliation",
         "external_report_lifecycle",
         ["external-report-lifecycle-refresh", "external-report-action-matrix"],
@@ -178,10 +197,10 @@ ARCHIVE_RECONCILIATION_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         "github_live_governance",
         ["collaboration-governance"],
     ),
-    "review_bundle_full_vault_hygiene_gap": (
+    REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID: (
         "review_bundle_hygiene",
-        "source_package",
-        ["release-source-package-check", "public-check"],
+        "review_archive",
+        ["review-archive", "external-report-action-matrix"],
     ),
     "full_vault_archive_mtime_normalization_gap": (
         "archive_portability",
@@ -231,6 +250,11 @@ MAINTAINABILITY_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         ["function-budget-refactor-proposals"],
     ),
 }
+SIGSTORE_EXTERNAL_BUNDLE_TARGETS = [
+    "sigstore-bundle SIGSTORE_BUNDLE_REF=<bundle>",
+    "operator-evidence-closeout-current-or-refresh",
+]
+
 SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
     "supply_chain_gate_not_pass": (
         "supply_chain_external_gate",
@@ -250,37 +274,37 @@ SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
     "supply_chain_sigstore_local_integrity_only": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_sigstore_external_bundle_not_verified": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_sigstore_checks_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_sigstore_check_failed": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_sigstore_bundle_ref_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_external_bundle_rule_missing": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_external_bundle_not_observed": (
         "supply_chain_external_bundle_verification",
         "supply_chain_external_verification",
-        ["supply-chain-check"],
+        SIGSTORE_EXTERNAL_BUNDLE_TARGETS,
     ),
     "supply_chain_release_attestation_missing": (
         "supply_chain_external_workflow_verification",
@@ -296,6 +320,110 @@ SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
         "supply_chain_external_workflow_verification",
         "supply_chain_external_verification",
         ["supply-chain-check"],
+    ),
+}
+REASON_PREFIX_TARGETS: tuple[tuple[tuple[str, ...], str, str, str, tuple[str, ...]], ...] = (
+    (
+        ("release_run_manifest_",),
+        "release_run_ready",
+        "release_run",
+        "",
+        ("release-run-ready-plan-check", "release-run-ready"),
+    ),
+    (
+        ("release_sealed_run_manifest_",),
+        "release_sealed_run_ready",
+        "sealed_release",
+        "",
+        ("release-sealed-run-ready-plan", "release-sealed-run-ready"),
+    ),
+    (
+        ("release_auto_promotion_ready_manifest_",),
+        "release_auto_promotion_ready",
+        "unattended_promotion",
+        "",
+        ("release-auto-promotion-ready-plan", "release-auto-promotion-ready"),
+    ),
+    (
+        ("release_finality_", "release_closeout_fixed_point_"),
+        "release_auto_promotion_preseal",
+        "release_preseal",
+        "",
+        (
+            "release-auto-promotion-preseal",
+            "release-closeout-fixed-point",
+            "release-closeout-finality-verify",
+        ),
+    ),
+    (
+        ("release_dashboard_", "release_authority_", "release_closeout_"),
+        "release_auto_promotion_preseal",
+        "release_preseal",
+        "",
+        ("release-auto-promotion-preseal", "release-evidence-dashboard"),
+    ),
+    (
+        ("source_package_",),
+        "release_source_package",
+        "source_package",
+        "",
+        ("release-source-package-check",),
+    ),
+    (
+        ("external_report_",),
+        "external_report_reference_manifest",
+        "external_report_lifecycle",
+        "",
+        ("external-report-reference-manifest-settle",),
+    ),
+    (
+        ("collaboration_governance_",),
+        "collaboration_governance",
+        "github_governance",
+        GATE_EFFECT_ADVISORY,
+        ("collaboration-governance", "operator-evidence-closeout-current-or-refresh"),
+    ),
+    (
+        ("full_suite_",),
+        "release_run_ready",
+        "release_run",
+        "",
+        ("test-execution-summary-full-current-or-refresh",),
+    ),
+    (
+        ("goal_runtime_",),
+        "goal_runtime_certificate",
+        "unattended_promotion",
+        GATE_EFFECT_CLAIM_BLOCKER,
+        (
+            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate",
+            "release-auto-promotion-goal-run-id-guard",
+            "release-auto-promotion-ready-plan",
+        ),
+    ),
+    (
+        ("goal_run_status_",),
+        "goal_runtime_status",
+        "goal_runtime_status",
+        GATE_EFFECT_CLAIM_BLOCKER,
+        (
+            "goal-run-status",
+            "goal-runtime-reconcile",
+        ),
+    ),
+)
+REASON_EXACT_TARGETS: dict[str, tuple[str, str, str, tuple[str, ...]]] = {
+    "release_auto_promotion_not_allowed": (
+        "release_auto_promotion_ready",
+        "unattended_promotion",
+        "",
+        ("release-auto-promotion-ready-plan", "release-auto-promotion-ready"),
+    ),
+    "release_unattended_promotion_not_allowed": (
+        "release_auto_promotion_ready",
+        "unattended_promotion",
+        "",
+        ("release-auto-promotion-ready-plan", "release-auto-promotion-ready"),
     ),
 }
 GITHUB_LIVE_GOVERNANCE_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
@@ -317,439 +445,6 @@ GITHUB_LIVE_GOVERNANCE_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
 }
 
 
-def _resolution_evidence_items(observation: dict[str, Any]) -> list[str]:
-    value = observation.get("resolution_evidence")
-    if not isinstance(value, list):
-        return []
-    return [str(item).strip() for item in value if str(item).strip()]
-
-
-def _has_verified_resolution_evidence(observation: dict[str, Any]) -> bool:
-    return any(
-        item.startswith(RESOLUTION_EVIDENCE_PREFIXES)
-        for item in _resolution_evidence_items(observation)
-    )
-
-
-def _observation_keeps_archive_action_active(observation: dict[str, Any]) -> bool:
-    status = str(observation.get("status", "")).strip()
-    if status in OPEN_IMPROVEMENT_OBSERVATION_STATUSES:
-        return True
-    return status in RESOLUTION_EVIDENCE_REQUIRED_STATUSES and not _has_verified_resolution_evidence(
-        observation
-    )
-
-
-def _observation_runtime_status(observation: dict[str, Any]) -> str:
-    status = str(observation.get("status", "")).strip()
-    if status in RESOLUTION_EVIDENCE_REQUIRED_STATUSES and not _has_verified_resolution_evidence(
-        observation
-    ):
-        return f"{status}_missing_resolution_evidence"
-    return status
-
-
-def _archive_reconciliation_observation_records(vault: Path) -> list[dict[str, Any]]:
-    root = vault / TASK_IMPROVEMENT_OBSERVATIONS_ROOT
-    if not root.is_dir():
-        return []
-    records: list[dict[str, Any]] = []
-    for path in sorted(root.glob("*/improvement-observations.json")):
-        payload = load_json_object(path)
-        observations = as_list(payload.get("observations"))
-        for observation in observations:
-            if not isinstance(observation, dict):
-                continue
-            observation_id = str(observation.get("observation_id", "")).strip()
-            action_ids = ARCHIVE_RECONCILIATION_OBSERVATION_ACTIONS.get(observation_id)
-            if action_ids is None or not _observation_keeps_archive_action_active(observation):
-                continue
-            records.append(
-                {
-                    "observation_id": observation_id,
-                    "path": report_path(vault, path),
-                    "status": _observation_runtime_status(observation),
-                    "resolution_evidence_status": (
-                        "verified"
-                        if _has_verified_resolution_evidence(observation)
-                        else "missing"
-                    ),
-                    "action_ids": sorted(action_ids),
-                }
-            )
-    return records
-
-
-def archive_reconciliation_observation_inventory(vault: Path) -> list[dict[str, Any]]:
-    return _archive_reconciliation_observation_records(vault)
-
-
-def archive_reconciliation_observation_paths(vault: Path) -> list[str]:
-    return sorted({str(record["path"]) for record in _archive_reconciliation_observation_records(vault)})
-
-
-def archive_reconciliation_observation_reason_ids(vault: Path, action_id: str) -> list[str]:
-    return sorted(
-        {
-            str(record["observation_id"])
-            for record in _archive_reconciliation_observation_records(vault)
-            if action_id in set(record["action_ids"])
-        }
-    )
-
-
-def _status_with_archive_reconciliation_observations(vault: Path, action_id: str, status: str) -> str:
-    if status != "implemented":
-        return status
-    if archive_reconciliation_observation_reason_ids(vault, action_id):
-        return "partially_automated"
-    return status
-
-
-def _release_authority_reports_verified(vault: Path) -> bool:
-    closeout = load_json_object(vault / "ops/reports/release-closeout-summary.json")
-    dashboard = load_json_object(vault / "ops/reports/release-evidence-dashboard.json")
-    return release_authority_reports_verified(closeout=closeout, dashboard=dashboard)
-
-
-def _full_suite_evidence_verified(vault: Path) -> bool:
-    full_summary = load_json_object(vault / "ops/reports/test-execution-summary-full.json")
-    full_counts = as_dict(full_summary.get("counts"))
-    return (
-        full_summary.get("status") == "pass"
-        and as_int(full_counts.get("failed")) == 0
-        and as_int(full_counts.get("errors")) == 0
-    )
-
-
-def _dedupe_reason_ids(reason_ids: list[str]) -> list[str]:
-    return list(dict.fromkeys(reason_id for reason_id in reason_ids if reason_id))
-
-
-def _reason_token(value: object) -> str:
-    token = re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
-    return token or "unknown"
-
-
-def _reason_detail(
-    reason_id: str,
-    *,
-    owning_stage: str,
-    recommended_targets: list[str],
-    blocking_scope: str | None = None,
-    gate_effect: str = GATE_EFFECT_BLOCKS_PROMOTION,
-) -> dict[str, Any]:
-    return {
-        "reason_id": reason_id,
-        "owning_stage": owning_stage,
-        "blocking_scope": blocking_scope or owning_stage,
-        "gate_effect": gate_effect,
-        "recommended_targets": recommended_targets,
-    }
-
-
-def _evidence_reason_ids(evidence: list[dict[str, Any]]) -> list[str]:
-    missing_count = sum(1 for item in evidence if not bool(item.get("exists")))
-    if missing_count:
-        return ["evidence_missing"]
-    return []
-
-
-def _release_authority_report_reason_ids(vault: Path) -> list[str]:
-    closeout = load_json_object(vault / "ops/reports/release-closeout-summary.json")
-    dashboard = load_json_object(vault / "ops/reports/release-evidence-dashboard.json")
-    closeout_summary = as_dict(closeout.get("summary"))
-    dashboard_summary = as_dict(dashboard.get("summary"))
-    view = release_status_v2_view_with_readiness_fallback(closeout)
-    reasons: list[str] = []
-    if closeout.get("status") != "pass":
-        reasons.append("release_closeout_summary_not_pass")
-    if closeout_summary.get("live_make_check_status") != "pass":
-        reasons.append("release_closeout_live_make_check_not_pass")
-    if not bool(view.get("status_v2_available")):
-        reasons.append("release_closeout_status_v2_missing")
-    if str(view.get("release_authority_status", "")).strip() not in RELEASE_AUTHORITY_VERIFIED_STATUSES:
-        reasons.append("release_authority_status_not_verified")
-        reasons.extend(
-            f"release_authority_blocker:{_reason_token(reason_id)}"
-            for reason_id in as_list(view.get("blocker_reason_ids"))
-        )
-    if authoritative_live_rerun_fail_count(dashboard):
-        reasons.append("release_dashboard_authoritative_live_rerun_fail")
-    if authoritative_live_rerun_not_run_count(dashboard):
-        reasons.append("release_dashboard_authoritative_live_rerun_not_run")
-    if as_int(dashboard_summary.get("required_input_fail_count")):
-        reasons.append("release_dashboard_required_input_fail")
-    if reasons:
-        return _dedupe_reason_ids(reasons)
-    if not release_authority_reports_verified(closeout=closeout, dashboard=dashboard):
-        return ["release_authority_reports_not_verified"]
-    return []
-
-
-def _current_release_manifest_reason_ids(
-    vault: Path,
-    rel_path: str,
-    artifact_kind: str,
-    reason_prefix: str,
-) -> list[str]:
-    payload = load_json_object(vault / rel_path)
-    if not payload:
-        return [f"{reason_prefix}_missing"]
-    reasons: list[str] = []
-    if payload.get("status") != "pass":
-        reasons.append(f"{reason_prefix}_not_pass")
-    if payload.get("artifact_kind") != artifact_kind:
-        reasons.append(f"{reason_prefix}_artifact_kind_mismatch")
-    current_fingerprint = release_source_tree_fingerprint(vault)
-    if str(payload.get("source_tree_fingerprint", "")).strip() != current_fingerprint:
-        reasons.append(f"{reason_prefix}_source_tree_fingerprint_mismatch")
-    artifact_revision = release_artifact_revision(payload)
-    current_revision = resolve_source_revision(vault).revision
-    if not artifact_revision:
-        reasons.append(f"{reason_prefix}_source_revision_missing")
-    elif artifact_revision not in {current_revision, "source_package_without_git"}:
-        reasons.append(f"{reason_prefix}_source_revision_mismatch")
-    return reasons
-
-
-def _release_artifact_revision_current(vault: Path, payload: dict[str, Any]) -> bool:
-    artifact_revision = release_artifact_revision(payload)
-    return bool(artifact_revision) and artifact_revision in {
-        resolve_source_revision(vault).revision,
-        "source_package_without_git",
-    }
-
-
-def _source_package_reason_ids(vault: Path) -> list[str]:
-    source_package = load_json_object(vault / "ops/reports/source-package-clean-extract.json")
-    if not source_package:
-        return ["source_package_clean_extract_missing"]
-    reasons: list[str] = []
-    if source_package.get("status") != "pass":
-        reasons.append("source_package_clean_extract_not_pass")
-    return reasons
-
-
-def _reference_manifest_distribution_reason_ids(vault: Path) -> list[str]:
-    manifest = load_json_object(vault / REFERENCE_MANIFEST)
-    if not manifest:
-        return ["external_report_reference_manifest_missing"]
-    summary = as_dict(manifest.get("summary"))
-    reasons: list[str] = []
-    if summary.get("current_distribution_zip_known") is not True:
-        reasons.append("external_report_current_distribution_zip_missing")
-    if summary.get("basis_zip_matches_current_distribution") is not True:
-        reasons.append("external_report_basis_zip_not_bound")
-    if str(summary.get("zip_provenance_status", "")).strip() != "basis_current_match":
-        reasons.append("external_report_zip_provenance_not_bound")
-    return reasons
-
-
-def _full_suite_reason_ids(vault: Path) -> list[str]:
-    full_summary = load_json_object(vault / "ops/reports/test-execution-summary-full.json")
-    if not full_summary:
-        return ["full_suite_summary_missing"]
-    full_counts = as_dict(full_summary.get("counts"))
-    reasons: list[str] = []
-    if full_summary.get("status") != "pass":
-        reasons.append("full_suite_summary_not_pass")
-    if as_int(full_counts.get("failed")):
-        reasons.append("full_suite_failed_tests")
-    if as_int(full_counts.get("errors")):
-        reasons.append("full_suite_error_tests")
-    return reasons
-
-
-def release_verified_action_reason_ids(vault: Path, action_id: str) -> list[str]:
-    reasons: list[str] = []
-    if action_id in {
-        "source_package_distribution_binding",
-        "release_evidence_bundle_and_attestation",
-        "full_suite_evidence_currentness",
-        "promotion_truth_ladder",
-    }:
-        reasons.extend(_release_authority_report_reason_ids(vault))
-    if action_id in {
-        "source_package_distribution_binding",
-        "release_evidence_bundle_and_attestation",
-    }:
-        reasons.extend(_source_package_reason_ids(vault))
-    if action_id in {
-        "release_evidence_bundle_and_attestation",
-        "full_suite_evidence_currentness",
-    }:
-        reasons.extend(_full_suite_reason_ids(vault))
-    if action_id in {
-        "source_package_distribution_binding",
-        "release_evidence_bundle_and_attestation",
-        "full_suite_evidence_currentness",
-    }:
-        reasons.extend(
-            _current_release_manifest_reason_ids(
-                vault,
-                "build/release/release-run-manifest.json",
-                "release_run_manifest",
-                "release_run_manifest",
-            )
-        )
-    if action_id == "source_package_distribution_binding":
-        reasons.extend(
-            _current_release_manifest_reason_ids(
-                vault,
-                "build/release/release-sealed-run-manifest.json",
-                "release_sealed_run_manifest",
-                "release_sealed_run_manifest",
-            )
-        )
-        reasons.extend(_reference_manifest_distribution_reason_ids(vault))
-    if action_id == "release_evidence_bundle_and_attestation":
-        reasons.extend(
-            _current_release_manifest_reason_ids(
-                vault,
-                "build/release/release-sealed-run-manifest.json",
-                "release_sealed_run_manifest",
-                "release_sealed_run_manifest",
-            )
-        )
-    if action_id == "release_evidence_bundle_and_attestation":
-        fixed_point = load_json_object(vault / "ops/reports/release-closeout-fixed-point.json")
-        finality = load_json_object(vault / "ops/reports/release-closeout-finality-attestation.json")
-        finality_fixed_point = as_dict(finality.get("fixed_point_report"))
-        finality_verified, _finality_failures = verify_attestation(vault)
-        if fixed_point.get("status") != "pass":
-            reasons.append("release_closeout_fixed_point_not_pass")
-        if not bool(fixed_point.get("converged")):
-            reasons.append("release_closeout_fixed_point_not_converged")
-        if finality_fixed_point.get("status") != "pass":
-            reasons.append("release_finality_fixed_point_report_not_pass")
-        if not finality_verified:
-            reasons.append("release_finality_attestation_verification_failed")
-    if action_id == "promotion_truth_ladder":
-        ready = load_json_object(vault / "build/release/release-auto-promotion-ready-manifest.json")
-        if not ready:
-            reasons.append("release_auto_promotion_ready_manifest_missing")
-        else:
-            if ready.get("status") != "pass":
-                reasons.append("release_auto_promotion_ready_manifest_not_pass")
-            if ready.get("artifact_kind") != "release_auto_promotion_ready_manifest":
-                reasons.append("release_auto_promotion_ready_manifest_kind_mismatch")
-            if ready.get("auto_promotion_status") != "allowed":
-                reasons.append("release_auto_promotion_not_allowed")
-            if ready.get("unattended_promotion_allowed") is not True:
-                reasons.append("release_unattended_promotion_not_allowed")
-            if (
-                str(ready.get("source_tree_fingerprint", "")).strip()
-                != release_source_tree_fingerprint(vault)
-            ):
-                reasons.append("release_auto_promotion_ready_manifest_source_tree_fingerprint_mismatch")
-            artifact_revision = release_artifact_revision(ready)
-            if not artifact_revision:
-                reasons.append("release_auto_promotion_ready_manifest_source_revision_missing")
-            elif not _release_artifact_revision_current(vault, ready):
-                reasons.append("release_auto_promotion_ready_manifest_source_revision_mismatch")
-    return _dedupe_reason_ids(reasons)
-
-
-def source_package_distribution_binding_verified(vault: Path) -> bool:
-    source_package = load_json_object(vault / "ops/reports/source-package-clean-extract.json")
-    return (
-        _release_authority_reports_verified(vault)
-        and source_package.get("status") == "pass"
-        and current_release_manifest_pass(
-            vault,
-            "build/release/release-run-manifest.json",
-            "release_run_manifest",
-        )
-        and current_release_manifest_pass(
-            vault,
-            "build/release/release-sealed-run-manifest.json",
-            "release_sealed_run_manifest",
-        )
-        and not _reference_manifest_distribution_reason_ids(vault)
-    )
-
-
-def full_suite_evidence_currentness_verified(vault: Path) -> bool:
-    return (
-        _release_authority_reports_verified(vault)
-        and _full_suite_evidence_verified(vault)
-        and current_release_manifest_pass(
-            vault,
-            "build/release/release-run-manifest.json",
-            "release_run_manifest",
-        )
-    )
-
-
-def promotion_truth_ladder_verified(vault: Path) -> bool:
-    ready = load_json_object(vault / "build/release/release-auto-promotion-ready-manifest.json")
-    return (
-        _release_authority_reports_verified(vault)
-        and ready.get("status") == "pass"
-        and ready.get("artifact_kind") == "release_auto_promotion_ready_manifest"
-        and ready.get("auto_promotion_status") == "allowed"
-        and ready.get("unattended_promotion_allowed") is True
-        and str(ready.get("source_tree_fingerprint", "")).strip()
-        == release_source_tree_fingerprint(vault)
-        and _release_artifact_revision_current(vault, ready)
-    )
-
-
-def release_evidence_bundle_and_attestation_verified(vault: Path) -> bool:
-    fixed_point = load_json_object(vault / "ops/reports/release-closeout-fixed-point.json")
-    finality = load_json_object(vault / "ops/reports/release-closeout-finality-attestation.json")
-    finality_fixed_point = as_dict(finality.get("fixed_point_report"))
-    finality_verified, _finality_failures = verify_attestation(vault)
-    return (
-        _release_authority_reports_verified(vault)
-        and _full_suite_evidence_verified(vault)
-        and source_package_distribution_binding_verified(vault)
-        and fixed_point.get("status") == "pass"
-        and bool(fixed_point.get("converged"))
-        and finality_fixed_point.get("status") == "pass"
-        and finality_verified
-    )
-
-
-RELEASE_VERIFIED_ACTION_RESOLVERS: dict[str, Callable[[Path], bool]] = {
-    "source_package_distribution_binding": source_package_distribution_binding_verified,
-    "release_evidence_bundle_and_attestation": release_evidence_bundle_and_attestation_verified,
-    "full_suite_evidence_currentness": full_suite_evidence_currentness_verified,
-    "promotion_truth_ladder": promotion_truth_ladder_verified,
-}
-
-
-def release_run_verified(vault: Path) -> bool:
-    return all(verifier(vault) for verifier in RELEASE_VERIFIED_ACTION_RESOLVERS.values())
-
-
-def release_verified_action_status(
-    vault: Path,
-    existing_count: int,
-    expected_count: int,
-    *,
-    action_id: str,
-) -> str:
-    if existing_count == 0:
-        return "planned"
-    if existing_count < expected_count:
-        return "partially_automated"
-    verifier = RELEASE_VERIFIED_ACTION_RESOLVERS[action_id]
-    return "implemented" if verifier(vault) else "requires_release_run_verification"
-
-
-def _release_verified_count_status(action_id: str) -> CountStatusResolver:
-    def resolver(vault: Path, existing_count: int, expected_count: int) -> str:
-        return release_verified_action_status(
-            vault,
-            existing_count,
-            expected_count,
-            action_id=action_id,
-        )
-
-    return resolver
-
 
 def json_report_status(path: Path) -> str:
     payload = load_json_object(path)
@@ -768,13 +463,45 @@ def _implemented_artifact_report(vault: Path, rel_path: str, artifact_kind: str)
 
 
 def _canonical_json_digest(payload: dict[str, Any]) -> str:
-    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+    return semantic_goal_contract_digest(payload)
 
 
 def _current_contract_digest(vault: Path) -> str:
     contract = load_json_object(vault / "ops/reports/codex-goal-contract.json")
-    return _canonical_json_digest(contract) if contract else ""
+    return semantic_goal_contract_digest(contract) if contract else ""
+
+
+def _goal_status_contract_digest(vault: Path, goal: dict[str, Any]) -> str:
+    contract_path = str(goal.get("contract_path", "")).strip()
+    if contract_path == "ops/reports/codex-goal-contract.json" or (
+        contract_path.startswith("runs/goal-")
+        and contract_path.endswith("/state/codex-goal-contract.json")
+    ):
+        contract = load_json_object(vault / contract_path)
+        return semantic_goal_contract_digest(contract) if contract else ""
+    return _current_contract_digest(vault)
+
+
+def _goal_runtime_certificate_noncertifiable_closed_failure(
+    vault: Path,
+    goal_status_report: dict[str, Any],
+) -> bool:
+    certificate = load_json_object(vault / "ops/reports/goal-runtime-certificate.json")
+    if (
+        certificate.get("artifact_kind") != "goal_runtime_certificate"
+        or certificate.get("producer") != "ops.scripts.goal_runtime_certificate_report"
+    ):
+        return False
+    diagnosis = as_dict(certificate.get("diagnosis"))
+    if diagnosis.get("certificate_failure_class") != "noncertifiable_closed_failure":
+        return False
+    run = as_dict(goal_status_report.get("run"))
+    current_scope = as_dict(diagnosis.get("current_scope"))
+    return bool(
+        current_scope.get("run_id") == run.get("run_id")
+        and current_scope.get("run_status") == run.get("status")
+        and current_scope.get("runtime_mode") == run.get("runtime_mode")
+    )
 
 
 def _all_evidence_status(existing_count: int, expected_count: int) -> str | None:
@@ -821,8 +548,19 @@ def source_revision_unknown_canonical_reports_status(
     return "partially_automated"
 
 
+RELEASE_LANE_MUTABILITY_SPLIT_SURFACES = (
+    "mk/release.mk",
+    "mk/release-authority.mk",
+    "mk/release-evidence.mk",
+    "mk/release-learning.mk",
+)
+
+
 def release_lane_mutability_split_status(vault: Path) -> str:
-    makefile_text = _read_text_or_empty(vault / "mk/release.mk")
+    makefile_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in RELEASE_LANE_MUTABILITY_SPLIT_SURFACES
+    )
     required_targets = (
         "release-evidence-converge:",
         "release-verify-current:",
@@ -1126,7 +864,7 @@ def goal_run_status_audit_resume_status(
     artifacts = as_dict(report.get("artifacts"))
     health = as_dict(report.get("health"))
     runtime_certificate = as_dict(report.get("runtime_certificate"))
-    contract_digest = _current_contract_digest(vault)
+    contract_digest = _goal_status_contract_digest(vault, goal)
     status_report_path = str(artifacts.get("status_report_path", "")).strip()
     status_report_path_valid = status_report_path == "ops/reports/goal-run-status.json" or (
         status_report_path.startswith("runs/goal-")
@@ -1148,6 +886,15 @@ def goal_run_status_audit_resume_status(
         health.get("promotion_status") == "blocked"
         and health.get("can_promote_result") is False
         and runtime_certificate.get("status") in {"pending", "complete"}
+    )
+    noncertifiable_closed_failure_state = bool(
+        report.get("status") == "attention"
+        and health.get("promotion_status") == "allowed"
+        and health.get("can_promote_result") is True
+        and runtime_certificate.get("status") == "pending"
+        and runtime_certificate.get("certificate_status") == "unverified"
+        and runtime_certificate.get("mode") == "self_improvement_loop"
+        and _goal_runtime_certificate_noncertifiable_closed_failure(vault, report)
     )
     verified_completed_state = bool(
         report.get("status") == "pass"
@@ -1171,7 +918,11 @@ def goal_run_status_audit_resume_status(
         and health.get("command_heartbeat_status") in {"current", "stale", "not_recorded"}
         and health.get("backoff_status") in {"inactive", "active", "expired"}
         and health.get("resume_status") in {"not_requested", "ready"}
-        and (blocked_pending_state or verified_completed_state)
+        and (
+            blocked_pending_state
+            or noncertifiable_closed_failure_state
+            or verified_completed_state
+        )
         and runtime_certificate.get("mode") == "self_improvement_loop"
     ):
         return "implemented"
@@ -1409,9 +1160,16 @@ def artifact_freshness_performance_observability_reason_ids(
         operational_attention_count = as_int(
             summary.get("operational_attention_artifact_count")
         )
-        if max(0, stale_artifact_count - operational_attention_count):
+        stale_routing = as_dict(report.get("stale_routing"))
+        is_source_identity_resettle = (
+            stale_artifact_count
+            and stale_routing.get("classification") == "source_identity_only"
+        )
+        if is_source_identity_resettle:
+            reasons.append("artifact_freshness_source_identity_resettle")
+        elif max(0, stale_artifact_count - operational_attention_count):
             reasons.append("artifact_freshness_stale_canonical_reports")
-        if operational_attention_count:
+        if operational_attention_count and not is_source_identity_resettle:
             reasons.append("artifact_freshness_operational_attention")
         if as_int(summary.get("stable_contract_debt_artifact_count")):
             reasons.append("artifact_freshness_stable_contract_debt")
@@ -1503,13 +1261,11 @@ def repository_surface_entrypoint_documentation_status(
     return "partially_automated"
 
 
-def release_mechanism_service_layer_extraction_status(
-    vault: Path,
-    existing_count: int,
-    expected_count: int,
-) -> str:
-    if existing_count == 0:
-        return "planned"
+def _contains_all(text: str, tokens: tuple[str, ...]) -> bool:
+    return all(token in text for token in tokens)
+
+
+def _release_authority_service_complete(vault: Path) -> bool:
     core_text = _read_text_or_empty(vault / "ops/scripts/core/release_authority_state_runtime.py")
     facade_text = _read_text_or_empty(vault / "ops/scripts/release/release_status_v2.py")
     mechanism_text = _read_text_or_empty(
@@ -1519,107 +1275,137 @@ def release_mechanism_service_layer_extraction_status(
         vault / "ops/scripts/release/external_report_lifecycle_runtime.py"
     )
     inventory_text = _read_text_or_empty(vault / "ops/scripts/release/release_authority_inventory.py")
-    currentness_text = _read_text_or_empty(
-        vault / "ops/scripts/core/release_currentness_state_runtime.py"
+    facade_uses_service = (
+        "from ops.scripts.core.release_authority_state_runtime import" in facade_text
+        or "from ops.scripts.core import release_authority_state_runtime" in facade_text
     )
-    risk_text = _read_text_or_empty(vault / "ops/scripts/core/release_risk_state_runtime.py")
-    learning_text = _read_text_or_empty(
-        vault / "ops/scripts/core/learning_claim_state_runtime.py"
-    )
-    cohort_text = _read_text_or_empty(vault / "ops/scripts/release/release_evidence_cohort.py")
-    dashboard_text = _read_text_or_empty(
-        vault / "ops/scripts/release/release_evidence_dashboard.py"
-    )
-    closeout_text = _read_text_or_empty(
-        vault / "ops/scripts/release/release_closeout_summary.py"
-    )
-    clean_blocker_text = _read_text_or_empty(
-        vault / "ops/scripts/release/release_clean_blocker_ledger.py"
-    )
-    unlock_text = _read_text_or_empty(
-        vault / "ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py"
-    )
-    authority_extracted = all(
-        token in core_text
-        for token in (
+    return _contains_all(
+        core_text,
+        (
             "release_status_v2_view",
             "machine_release_allowed_from_status_view",
             "clean_required_preflight_passes",
             "release_authority_reports_verified",
             "current_release_manifest_pass",
             "release_artifact_revision",
+        ),
+    ) and all(
+        (
+            facade_uses_service,
+            "machine_release_allowed_from_status_view" in mechanism_text,
+            "clean_required_preflight_passes" in mechanism_text,
+            "release_authority_reports_verified" in lifecycle_text,
+            "current_release_manifest_pass" in lifecycle_text,
+            "release_artifact_revision" in inventory_text,
         )
     )
-    facade_uses_authority_service = (
-        "from ops.scripts.core.release_authority_state_runtime import" in facade_text
-        or "from ops.scripts.core import release_authority_state_runtime" in facade_text
+
+
+def _release_currentness_service_complete(vault: Path) -> bool:
+    currentness_text = _read_text_or_empty(
+        vault / "ops/scripts/core/release_currentness_state_runtime.py"
     )
-    consumers_use_service = (
-        facade_uses_authority_service
-        and "machine_release_allowed_from_status_view" in mechanism_text
-        and "clean_required_preflight_passes" in mechanism_text
-        and "release_authority_reports_verified" in lifecycle_text
-        and "current_release_manifest_pass" in lifecycle_text
-        and "release_artifact_revision" in inventory_text
+    cohort_text = _read_text_or_empty(vault / "ops/scripts/release/release_evidence_cohort.py")
+    dashboard_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_evidence_dashboard.py"
     )
-    currentness_extracted = all(
-        token in currentness_text
-        for token in (
-            "def currentness_field",
-            "def live_rerun_state",
-            "def components_match_current_source_tree",
+    dashboard_status_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_evidence_dashboard_status_runtime.py"
+    )
+    closeout_gate_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_closeout_gate_runtime.py"
+    )
+    dashboard_uses_currentness_service = (
+        "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_text
+        or "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_status_text
+    )
+    dashboard_uses_live_rerun_state = (
+        "live_rerun_state(" in dashboard_text
+        or "live_rerun_state(" in dashboard_status_text
+    )
+    return _contains_all(
+        currentness_text,
+        ("def currentness_field", "def live_rerun_state", "def components_match_current_source_tree"),
+    ) and all(
+        (
+            "from ops.scripts.core.release_currentness_state_runtime import" in cohort_text,
+            "from ops.scripts.core.release_currentness_state_runtime import" in closeout_gate_text,
+            dashboard_uses_currentness_service,
+            dashboard_uses_live_rerun_state,
+            "components_match_current_source_tree(" in closeout_gate_text,
         )
     )
-    currentness_consumers_use_service = (
-        "from ops.scripts.core.release_currentness_state_runtime import" in cohort_text
-        and "from ops.scripts.core.release_currentness_state_runtime import" in closeout_text
-        and "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_text
-        and "live_rerun_state(" in dashboard_text
-        and "components_match_current_source_tree(" in closeout_text
+
+
+def _release_risk_service_complete(vault: Path) -> bool:
+    risk_text = _read_text_or_empty(vault / "ops/scripts/core/release_risk_state_runtime.py")
+    closeout_risk_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_closeout_risk_runtime.py"
     )
-    risk_extracted = all(
-        token in risk_text
-        for token in (
+    clean_blocker_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_clean_blocker_ledger.py"
+    )
+    return _contains_all(
+        risk_text,
+        (
             "def release_risk_identity",
             "def release_risk_blocks_clean_lane",
             "def release_risk_list",
             "def release_blocker_entry",
+        ),
+    ) and all(
+        (
+            "from ops.scripts.core.release_risk_state_runtime import" in closeout_risk_text,
+            "from ops.scripts.core.release_risk_state_runtime import" in clean_blocker_text,
+            "release_risk_identity(" in closeout_risk_text,
+            "release_risk_blocks_clean_lane(" in clean_blocker_text,
         )
     )
-    risk_consumers_use_service = (
-        "from ops.scripts.core.release_risk_state_runtime import" in closeout_text
-        and "from ops.scripts.core.release_risk_state_runtime import" in clean_blocker_text
-        and "release_risk_identity(" in closeout_text
-        and "release_risk_blocks_clean_lane(" in clean_blocker_text
+
+
+def _learning_claim_service_complete(vault: Path) -> bool:
+    learning_text = _read_text_or_empty(vault / "ops/scripts/core/learning_claim_state_runtime.py")
+    dashboard_learning_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_evidence_dashboard_learning_delta_runtime.py"
     )
-    learning_extracted = all(
-        token in learning_text
-        for token in (
+    unlock_text = _read_text_or_empty(
+        vault / "ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py"
+    )
+    return _contains_all(
+        learning_text,
+        (
             "def confirmed_evidence_summary",
             "def confirmed_predicate_results",
             "def confirmed_blocking_predicate_ids",
             "def confirmed_wording_allowed",
+        ),
+    ) and all(
+        (
+            "from ops.scripts.core.learning_claim_state_runtime import" in dashboard_learning_text,
+            "from ops.scripts.core.learning_claim_state_runtime import" in unlock_text,
+            "confirmed_evidence_summary(" in dashboard_learning_text,
+            "confirmed_evidence_summary(" in unlock_text,
         )
     )
-    learning_consumers_use_service = (
-        "from ops.scripts.core.learning_claim_state_runtime import" in dashboard_text
-        and "from ops.scripts.core.learning_claim_state_runtime import" in unlock_text
-        and "confirmed_evidence_summary(" in dashboard_text
-        and "confirmed_evidence_summary(" in unlock_text
-    )
+
+
+def release_mechanism_service_layer_extraction_status(
+    vault: Path,
+    existing_count: int,
+    expected_count: int,
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    if existing_count != expected_count or not _release_authority_service_complete(vault):
+        return "partially_automated"
     complete_service_family = all(
         (
-            currentness_extracted,
-            currentness_consumers_use_service,
-            risk_extracted,
-            risk_consumers_use_service,
-            learning_extracted,
-            learning_consumers_use_service,
+            _release_currentness_service_complete(vault),
+            _release_risk_service_complete(vault),
+            _learning_claim_service_complete(vault),
         )
     )
-    if existing_count == expected_count and authority_extracted and consumers_use_service:
-        return "implemented" if complete_service_family else "partially_automated"
-    return "partially_automated"
+    return "implemented" if complete_service_family else "partially_automated"
 
 
 def github_native_security_automation_status(
@@ -1825,6 +1611,11 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
         check.get("pass") is True for check in external_bundle_checks
     )
     sigstore_check_failed = any(check.get("pass") is not True for check in sigstore_checks)
+    local_sigstore_check_failed = any(
+        check.get("pass") is not True
+        for check in sigstore_checks
+        if not str(check.get("rule", "")).startswith("external_bundle_")
+    )
     reasons: list[str] = []
     if gate.get("status") != "pass":
         reasons.append("supply_chain_gate_not_pass")
@@ -1838,7 +1629,7 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
         reasons.append("supply_chain_sigstore_external_bundle_not_verified")
     if not sigstore_checks:
         reasons.append("supply_chain_sigstore_checks_missing")
-    elif sigstore_check_failed:
+    elif local_sigstore_check_failed or (sigstore_bundle_ref and sigstore_check_failed):
         reasons.append("supply_chain_sigstore_check_failed")
     if not sigstore_bundle_ref:
         reasons.append("supply_chain_sigstore_bundle_ref_missing")
@@ -2054,7 +1845,6 @@ def sealed_preflight_canonicalization_status(
 
 
 StatusResolver = Callable[[Path], str]
-CountStatusResolver = Callable[[Path, int, int], str]
 
 
 def external_report_lifecycle_status(vault: Path) -> str:
@@ -2251,6 +2041,92 @@ def goal_execution_runtime_certificate_reason_ids(vault: Path) -> list[str]:
     return _dedupe_reason_ids(reasons)
 
 
+def goal_run_status_audit_resume_reason_ids(vault: Path) -> list[str]:
+    report = load_json_object(vault / "ops/reports/goal-run-status.json")
+    if not report:
+        return ["goal_run_status_missing"]
+    goal = as_dict(report.get("goal"))
+    backend = as_dict(goal.get("backend"))
+    artifacts = as_dict(report.get("artifacts"))
+    health = as_dict(report.get("health"))
+    runtime_certificate = as_dict(report.get("runtime_certificate"))
+    contract_digest = _goal_status_contract_digest(vault, goal)
+    status_report_path = str(artifacts.get("status_report_path", "")).strip()
+    status_report_path_valid = status_report_path == "ops/reports/goal-run-status.json" or (
+        status_report_path.startswith("runs/goal-")
+        and status_report_path.endswith("/state/goal-run-status.json")
+    )
+    artifact_paths = {
+        "status_markdown_path": "runs/goal-",
+        "audit_log_path": "runs/goal-",
+        "resume_metadata_path": "runs/goal-",
+        "checkpoint_command_log_path": "runs/goal-",
+    }
+    paths_valid = all(
+        str(artifacts.get(key, "")).startswith(prefix)
+        if prefix.endswith("-")
+        else artifacts.get(key) == prefix
+        for key, prefix in artifact_paths.items()
+    )
+    blocked_pending_state = bool(
+        health.get("promotion_status") == "blocked"
+        and health.get("can_promote_result") is False
+        and runtime_certificate.get("status") in {"pending", "complete"}
+    )
+    noncertifiable_closed_failure_state = bool(
+        report.get("status") == "attention"
+        and health.get("promotion_status") == "allowed"
+        and health.get("can_promote_result") is True
+        and runtime_certificate.get("status") == "pending"
+        and runtime_certificate.get("certificate_status") == "unverified"
+        and runtime_certificate.get("mode") == "self_improvement_loop"
+        and _goal_runtime_certificate_noncertifiable_closed_failure(vault, report)
+    )
+    verified_completed_state = bool(
+        report.get("status") == "pass"
+        and health.get("promotion_status") == "allowed"
+        and health.get("can_promote_result") is True
+        and runtime_certificate.get("status") == "complete"
+        and runtime_certificate.get("certificate_status") == "verified"
+        and runtime_certificate.get("full_gate_clean") is True
+        and not as_list(runtime_certificate.get("promotion_blockers"))
+    )
+    reasons: list[str] = []
+    if report.get("artifact_kind") != "goal_run_status":
+        reasons.append("goal_run_status_wrong_artifact_kind")
+    if report.get("producer") != "ops.scripts.goal_run_status":
+        reasons.append("goal_run_status_wrong_producer")
+    if report.get("status") not in {"pass", "attention", "fail"}:
+        reasons.append("goal_run_status_unrecognized_status")
+    if not bool(backend.get("process_persistent")):
+        reasons.append("goal_run_status_backend_not_process_persistent")
+    if goal.get("contract_sha256") != contract_digest:
+        reasons.append("goal_run_status_contract_digest_mismatch")
+    if not status_report_path_valid:
+        reasons.append("goal_run_status_report_path_invalid")
+    if not paths_valid:
+        reasons.append("goal_run_status_artifact_paths_invalid")
+    if health.get("heartbeat_status") not in {"current", "stale"}:
+        reasons.append("goal_run_status_heartbeat_invalid")
+    if health.get("checkpoint_status") not in {"current", "stale"}:
+        reasons.append("goal_run_status_checkpoint_invalid")
+    if health.get("command_heartbeat_status") not in {"current", "stale", "not_recorded"}:
+        reasons.append("goal_run_status_command_heartbeat_invalid")
+    if health.get("backoff_status") not in {"inactive", "active", "expired"}:
+        reasons.append("goal_run_status_backoff_invalid")
+    if health.get("resume_status") not in {"not_requested", "ready"}:
+        reasons.append("goal_run_status_resume_invalid")
+    if not (
+        blocked_pending_state
+        or noncertifiable_closed_failure_state
+        or verified_completed_state
+    ):
+        reasons.append("goal_run_status_promotion_state_invalid")
+    if runtime_certificate.get("mode") != "self_improvement_loop":
+        reasons.append("goal_run_status_wrong_runtime_mode")
+    return _dedupe_reason_ids(reasons)
+
+
 def action_status_reason_ids(
     vault: Path,
     action_id: str,
@@ -2275,6 +2151,8 @@ def action_status_reason_ids(
         reasons.extend(collaboration_governance_surface_reason_ids(vault))
     elif action_id == "goal_execution_runtime_certificate":
         reasons.extend(goal_execution_runtime_certificate_reason_ids(vault))
+    elif action_id == "goal_run_status_audit_resume":
+        reasons.extend(goal_run_status_audit_resume_reason_ids(vault))
     elif action_id == "artifact_freshness_performance_observability":
         reasons.extend(
             artifact_freshness_performance_observability_reason_ids(
@@ -2289,207 +2167,134 @@ def action_status_reason_ids(
     return _dedupe_reason_ids(reasons)
 
 
+def _target_reason_detail(
+    reason_id: str,
+    *,
+    owning_stage: str,
+    blocking_scope: str,
+    recommended_targets: tuple[str, ...] | list[str],
+    gate_effect: str = "",
+) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
+        "owning_stage": owning_stage,
+        "blocking_scope": blocking_scope,
+        "recommended_targets": list(recommended_targets),
+    }
+    if gate_effect:
+        kwargs["gate_effect"] = gate_effect
+    return _reason_detail(reason_id, **kwargs)
+
+
+def _prefix_reason_detail(reason_id: str) -> dict[str, Any] | None:
+    if reason_id in REASON_EXACT_TARGETS:
+        owning_stage, blocking_scope, gate_effect, recommended_targets = REASON_EXACT_TARGETS[
+            reason_id
+        ]
+        return _target_reason_detail(
+            reason_id,
+            owning_stage=owning_stage,
+            blocking_scope=blocking_scope,
+            gate_effect=gate_effect,
+            recommended_targets=recommended_targets,
+        )
+    for prefixes, owning_stage, blocking_scope, gate_effect, recommended_targets in (
+        REASON_PREFIX_TARGETS
+    ):
+        if reason_id.startswith(prefixes):
+            return _target_reason_detail(
+                reason_id,
+                owning_stage=owning_stage,
+                blocking_scope=blocking_scope,
+                gate_effect=gate_effect,
+                recommended_targets=recommended_targets,
+            )
+    if reason_id.startswith("artifact_freshness_"):
+        recommended_targets = ("artifact-freshness-refresh-check",)
+        if reason_id == "artifact_freshness_source_identity_resettle":
+            recommended_targets = (
+                "freshness-source-identity-converge",
+                "artifact-freshness-refresh-check",
+            )
+        if reason_id == "artifact_freshness_stable_contract_debt":
+            recommended_targets = (
+                "artifact-freshness-stable-contract-debt-refresh",
+                "artifact-freshness-refresh-check",
+            )
+        return _target_reason_detail(
+            reason_id,
+            owning_stage="artifact_freshness",
+            blocking_scope="artifact_freshness",
+            gate_effect=GATE_EFFECT_ADVISORY,
+            recommended_targets=recommended_targets,
+        )
+    return None
+
+
+def _mapped_reason_detail(
+    reason_id: str,
+    mapping: dict[str, tuple[str, str, list[str]]],
+    *,
+    gate_effect: str = GATE_EFFECT_ADVISORY,
+) -> dict[str, Any] | None:
+    if reason_id not in mapping:
+        return None
+    owning_stage, blocking_scope, recommended_targets = mapping[reason_id]
+    return _target_reason_detail(
+        reason_id,
+        owning_stage=owning_stage,
+        blocking_scope=blocking_scope,
+        gate_effect=gate_effect,
+        recommended_targets=recommended_targets,
+    )
+
+
+def _action_status_reason_detail(reason_id: str, *, fallback_target: str) -> dict[str, Any]:
+    prefix_detail = _prefix_reason_detail(reason_id)
+    if prefix_detail is not None:
+        return prefix_detail
+    for mapping in (
+        MAINTAINABILITY_REASON_TARGETS,
+        SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS,
+    ):
+        mapped_detail = _mapped_reason_detail(reason_id, mapping)
+        if mapped_detail is not None:
+            return mapped_detail
+    mapped_detail = _mapped_reason_detail(
+        reason_id,
+        GITHUB_LIVE_GOVERNANCE_REASON_TARGETS,
+        gate_effect=GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+    )
+    if mapped_detail is not None:
+        return mapped_detail
+    if reason_id == "github_governance_live_drift_gap":
+        archive_live_detail = _mapped_reason_detail(
+            reason_id,
+            ARCHIVE_RECONCILIATION_REASON_TARGETS,
+            gate_effect=GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+        )
+        if archive_live_detail is not None:
+            return archive_live_detail
+    archive_detail = _mapped_reason_detail(reason_id, ARCHIVE_RECONCILIATION_REASON_TARGETS)
+    if archive_detail is not None:
+        return archive_detail
+    return _target_reason_detail(
+        reason_id,
+        owning_stage="action_recommended_target",
+        blocking_scope="action_matrix",
+        gate_effect=GATE_EFFECT_ADVISORY,
+        recommended_targets=(fallback_target,),
+    )
+
+
 def action_status_reason_details(
     reason_ids: list[str],
     *,
     fallback_target: str,
 ) -> list[dict[str, Any]]:
-    details: list[dict[str, Any]] = []
-    for reason_id in reason_ids:
-        if reason_id.startswith("release_run_manifest_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_run_ready",
-                    blocking_scope="release_run",
-                    recommended_targets=[
-                        "release-run-ready-plan-check",
-                        "release-run-ready",
-                    ],
-                )
-            )
-        elif reason_id.startswith("release_sealed_run_manifest_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_sealed_run_ready",
-                    blocking_scope="sealed_release",
-                    recommended_targets=[
-                        "release-sealed-run-ready-plan",
-                        "release-sealed-run-ready",
-                    ],
-                )
-            )
-        elif reason_id.startswith("release_auto_promotion_ready_manifest_") or reason_id in {
-            "release_auto_promotion_not_allowed",
-            "release_unattended_promotion_not_allowed",
-        }:
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_auto_promotion_ready",
-                    blocking_scope="unattended_promotion",
-                    recommended_targets=[
-                        "release-auto-promotion-ready-plan",
-                        "release-auto-promotion-ready",
-                    ],
-                )
-            )
-        elif reason_id.startswith(("release_finality_", "release_closeout_fixed_point_")):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_auto_promotion_preseal",
-                    blocking_scope="release_preseal",
-                    recommended_targets=[
-                        "release-auto-promotion-preseal",
-                        "release-closeout-fixed-point",
-                        "release-closeout-finality-verify",
-                    ],
-                )
-            )
-        elif reason_id.startswith(("release_dashboard_", "release_authority_", "release_closeout_")):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_auto_promotion_preseal",
-                    blocking_scope="release_preseal",
-                    recommended_targets=[
-                        "release-auto-promotion-preseal",
-                        "release-evidence-dashboard",
-                    ],
-                )
-            )
-        elif reason_id.startswith("source_package_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_source_package",
-                    blocking_scope="source_package",
-                    recommended_targets=["release-source-package-check"],
-                )
-            )
-        elif reason_id.startswith("external_report_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="external_report_reference_manifest",
-                    blocking_scope="external_report_lifecycle",
-                    recommended_targets=["external-report-reference-manifest-settle"],
-                )
-            )
-        elif reason_id in MAINTAINABILITY_REASON_TARGETS:
-            owning_stage, blocking_scope, recommended_targets = MAINTAINABILITY_REASON_TARGETS[
-                reason_id
-            ]
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage=owning_stage,
-                    blocking_scope=blocking_scope,
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        elif reason_id in SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS:
-            owning_stage, blocking_scope, recommended_targets = SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS[
-                reason_id
-            ]
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage=owning_stage,
-                    blocking_scope=blocking_scope,
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        elif reason_id in GITHUB_LIVE_GOVERNANCE_REASON_TARGETS:
-            owning_stage, blocking_scope, recommended_targets = (
-                GITHUB_LIVE_GOVERNANCE_REASON_TARGETS[reason_id]
-            )
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage=owning_stage,
-                    blocking_scope=blocking_scope,
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        elif reason_id.startswith("collaboration_governance_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="collaboration_governance",
-                    blocking_scope="github_governance",
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=["collaboration-governance"],
-                )
-            )
-        elif reason_id.startswith("full_suite_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="release_run_ready",
-                    blocking_scope="release_run",
-                    recommended_targets=["test-execution-summary-full-current-or-refresh"],
-                )
-            )
-        elif reason_id.startswith("goal_runtime_"):
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="goal_runtime_certificate",
-                    blocking_scope="unattended_promotion",
-                    gate_effect=GATE_EFFECT_CLAIM_BLOCKER,
-                    recommended_targets=[
-                        "goal-runtime-certificate",
-                        "release-auto-promotion-goal-run-id-guard",
-                        "release-auto-promotion-ready-plan",
-                    ],
-                )
-            )
-        elif reason_id.startswith("artifact_freshness_"):
-            recommended_targets = ["artifact-freshness-refresh-check"]
-            if reason_id == "artifact_freshness_stable_contract_debt":
-                recommended_targets = [
-                    "artifact-freshness-stable-contract-debt-refresh",
-                    "artifact-freshness-refresh-check",
-                ]
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="artifact_freshness",
-                    blocking_scope="artifact_freshness",
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        elif reason_id in ARCHIVE_RECONCILIATION_REASON_TARGETS:
-            owning_stage, blocking_scope, recommended_targets = ARCHIVE_RECONCILIATION_REASON_TARGETS[
-                reason_id
-            ]
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage=owning_stage,
-                    blocking_scope=blocking_scope,
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=recommended_targets,
-                )
-            )
-        else:
-            details.append(
-                _reason_detail(
-                    reason_id,
-                    owning_stage="action_recommended_target",
-                    blocking_scope="action_matrix",
-                    gate_effect=GATE_EFFECT_ADVISORY,
-                    recommended_targets=[fallback_target],
-                )
-            )
-    return details
+    return [
+        _action_status_reason_detail(reason_id, fallback_target=fallback_target)
+        for reason_id in reason_ids
+    ]
 
 
 def action_statuses(vault: Path) -> dict[str, str]:
@@ -2497,275 +2302,3 @@ def action_statuses(vault: Path) -> dict[str, str]:
         str(action["action_id"]): status_from_evidence(vault, action)[0]
         for action in ACTION_CATALOG
     }
-
-
-def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
-    rel_path = report_path(vault, path)
-    text = report_text(path)
-    report_type = report_type_for_path(path)
-    operator_only_rationale = ""
-    if report_type == "binary_report":
-        action_ids = ["operator_only_external_report_binary"]
-        operator_only_rationale = "binary_report_requires_operator_review"
-    elif report_type == "reference_manifest":
-        action_ids = ["external_report_lifecycle"]
-        operator_only_rationale = "reference_manifest_lifecycle_evidence"
-    elif not text:
-        action_ids = ["external_report_lifecycle"]
-        operator_only_rationale = "unreadable_narrative_report"
-    else:
-        action_ids = matched_actions(text)
-    if path.name == Path(REFERENCE_MANIFEST).name:
-        action_ids = sorted(set(action_ids) | {"active_report_manifest_freshness"})
-    return {
-        "path": rel_path,
-        "report_type": report_type,
-        "content_sha256": content_sha256(path),
-        "coverage_markers": coverage_markers(path, text),
-        "priority_mentions": priority_counts(text),
-        "unmatched_recommendation_count": unmatched_recommendation_count(text),
-        "matched_action_ids": action_ids,
-        "matched_action_count": len(action_ids),
-        "operator_only_rationale": operator_only_rationale,
-    }
-
-
-def report_lifecycle_profiles(vault: Path, paths: list[Path]) -> list[dict[str, Any]]:
-    profiles = []
-    for path in paths:
-        text = report_text(path)
-        coverage = report_coverage_item(vault, path)
-        rel_parts = Path(str(coverage["path"])).parts
-        profiles.append(
-            {
-                **coverage,
-                "lifecycle_namespace": "archive" if "archive" in rel_parts else "active_root",
-                "line_count": len(text.splitlines()) if text else None,
-                "content_sha256": content_sha256(path),
-                "coverage_markers": coverage_markers(path, text),
-                "explicit_archive_status": bool(ARCHIVE_STATUS_RE.search(text)),
-                "explicit_successor_paths": sorted(
-                    item.strip()
-                    for item in SUPERSEDED_BY_RE.findall(text)
-                    if item.strip()
-                ),
-            }
-        )
-    return profiles
-
-
-def content_lifecycle_inventory(vault: Path) -> list[dict[str, Any]]:
-    return report_lifecycle_profiles(vault, active_report_paths(vault))
-
-
-def _unresolved_action_ids(profile: dict[str, Any], statuses: dict[str, str]) -> set[str]:
-    return {
-        str(action_id)
-        for action_id in profile["matched_action_ids"]
-        if statuses.get(str(action_id)) != "implemented"
-    }
-
-
-def coverage_action_basis(profile: dict[str, Any], statuses: dict[str, str]) -> dict[str, Any]:
-    unresolved = sorted(_unresolved_action_ids(profile, statuses))
-    return {
-        "report_type": str(profile.get("report_type", "")),
-        "content_sha256": str(profile.get("content_sha256", "")),
-        "matched_action_ids": sorted(str(action_id) for action_id in profile["matched_action_ids"]),
-        "matched_action_count": int(profile.get("matched_action_count") or 0),
-        "unresolved_action_ids": unresolved,
-        "unresolved_action_count": len(unresolved),
-        "unmatched_recommendation_count": int(
-            profile.get("unmatched_recommendation_count") or 0
-        ),
-        "operator_only_rationale": str(profile.get("operator_only_rationale", "")).strip(),
-    }
-
-
-def coverage_archive_decision_code(
-    action_basis: dict[str, Any],
-    *,
-    implemented_code: str = "all_structured_actions_implemented",
-) -> str:
-    if action_basis["operator_only_rationale"]:
-        return str(action_basis["operator_only_rationale"])
-    if int(action_basis["unmatched_recommendation_count"]) > 0:
-        return "unmatched_recommendations_require_operator_review"
-    if int(action_basis["unresolved_action_count"]) > 0:
-        return "unresolved_actions_keep_report_active"
-    return implemented_code
-
-
-def coverage_with_action_basis(
-    coverage: list[dict[str, Any]],
-    statuses: dict[str, str],
-) -> list[dict[str, Any]]:
-    enriched: list[dict[str, Any]] = []
-    for item in coverage:
-        action_basis = coverage_action_basis(item, statuses)
-        enriched.append(
-            {
-                **item,
-                "unresolved_action_ids": action_basis["unresolved_action_ids"],
-                "unresolved_action_count": action_basis["unresolved_action_count"],
-                "archive_decision_code": coverage_archive_decision_code(action_basis),
-            }
-        )
-    return enriched
-
-
-def _archive_decision_code(
-    *,
-    profile: dict[str, Any],
-    action_basis: dict[str, Any],
-    archive_recommended: bool,
-    reason_code: str,
-) -> str:
-    if archive_recommended:
-        return reason_code
-    action_decision_code = coverage_archive_decision_code(
-        action_basis,
-        implemented_code="implemented_action_basis_without_archive_marker",
-    )
-    if action_decision_code != "implemented_action_basis_without_archive_marker":
-        return action_decision_code
-    if profile.get("report_type") != "narrative_report":
-        return reason_code
-    return action_decision_code
-
-
-def _decision_record(
-    profile: dict[str, Any],
-    statuses: dict[str, str],
-    *,
-    archive_recommended: bool,
-    reason: str,
-    reason_code: str,
-    superseded_by: list[str],
-) -> dict[str, Any]:
-    action_basis = coverage_action_basis(profile, statuses)
-    return {
-        **action_basis,
-        "archive_decision_code": _archive_decision_code(
-            profile=profile,
-            action_basis=action_basis,
-            archive_recommended=archive_recommended,
-            reason_code=reason_code,
-        ),
-        "archive_recommended": archive_recommended,
-        "reason": reason,
-        "superseded_by": superseded_by,
-    }
-
-
-def _coverage_authority(profile: dict[str, Any], statuses: dict[str, str]) -> tuple[int, int, int, int]:
-    unresolved = _unresolved_action_ids(profile, statuses)
-    namespace_rank = 1 if profile.get("lifecycle_namespace") == "active_root" else 0
-    return (
-        namespace_rank,
-        len(profile.get("coverage_markers", [])),
-        len(unresolved),
-        int(profile.get("matched_action_count") or 0),
-    )
-
-
-def lifecycle_decision(
-    profile: dict[str, Any],
-    *,
-    profiles: list[dict[str, Any]],
-    statuses: dict[str, str],
-) -> dict[str, Any]:
-    path = str(profile["path"])
-    if profile["report_type"] != "narrative_report":
-        if profile["report_type"] == "binary_report":
-            return _decision_record(
-                profile,
-                statuses,
-                archive_recommended=False,
-                reason=(
-                    "Binary active reports require operator-only review or an explicit "
-                    "extracted mapping before lifecycle automation can archive them."
-                ),
-                reason_code="binary_report_requires_operator_review",
-                superseded_by=[],
-            )
-        return _decision_record(
-            profile,
-            statuses,
-            archive_recommended=False,
-            reason="Reference manifest remains active lifecycle evidence.",
-            reason_code="reference_manifest_lifecycle_evidence",
-            superseded_by=[],
-        )
-    action_ids = {str(action_id) for action_id in profile["matched_action_ids"]}
-    if not action_ids:
-        if profile.get("lifecycle_namespace") == "archive":
-            return _decision_record(
-                profile,
-                statuses,
-                archive_recommended=True,
-                reason="Archived external report has no structured action coverage; archive remains sticky.",
-                reason_code="archive_sticky_without_structured_action_coverage",
-                superseded_by=[],
-            )
-        return _decision_record(
-            profile,
-            statuses,
-            archive_recommended=False,
-            reason="No structured action coverage was detected; keep active for operator review.",
-            reason_code="unmatched_recommendations_require_operator_review",
-            superseded_by=[],
-        )
-    if bool(profile["explicit_archive_status"]):
-        return _decision_record(
-            profile,
-            statuses,
-            archive_recommended=True,
-            reason="External report carries an explicit closed/superseded archive lifecycle marker.",
-            reason_code="explicit_archive_status",
-            superseded_by=list(profile["explicit_successor_paths"]),
-        )
-
-    unresolved = sorted(_unresolved_action_ids(profile, statuses))
-    if not unresolved:
-        return _decision_record(
-            profile,
-            statuses,
-            archive_recommended=True,
-            reason="All structured action themes from this external report are implemented in canonical evidence.",
-            reason_code="all_structured_actions_implemented",
-            superseded_by=[],
-        )
-
-    unresolved_set = set(unresolved)
-    covering_reports = []
-    own_authority = _coverage_authority(profile, statuses)
-    for other in profiles:
-        other_path = str(other["path"])
-        if other_path == path or other["report_type"] != "narrative_report":
-            continue
-        other_actions = {str(action_id) for action_id in other["matched_action_ids"]}
-        other_authority = _coverage_authority(other, statuses)
-        if unresolved_set.issubset(other_actions) and other_authority > own_authority:
-            covering_reports.append(other_path)
-
-    if covering_reports:
-        return _decision_record(
-            profile,
-            statuses,
-            archive_recommended=True,
-            reason=(
-                "External report has no unique unresolved action themes; remaining open themes are covered by "
-                "a broader active external report."
-            ),
-            reason_code="unresolved_actions_covered_by_broader_report",
-            superseded_by=sorted(covering_reports),
-        )
-    return _decision_record(
-        profile,
-        statuses,
-        archive_recommended=False,
-        reason="External report still carries unique unresolved action themes not covered by another active report.",
-        reason_code="unresolved_actions_keep_report_active",
-        superseded_by=[],
-    )

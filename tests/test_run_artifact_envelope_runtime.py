@@ -6,10 +6,13 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
-from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY
-from ops.scripts.backfill_archived_run_artifacts import ARCHIVED_RUN_ARTIFACT_SPECS
-from ops.scripts.run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
-
+from ops.scripts.core.artifact_freshness_runtime import (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+)
+from ops.scripts.core.backfill_archived_run_artifacts import ARCHIVED_RUN_ARTIFACT_SPECS
+from ops.scripts.core.run_artifact_envelope_runtime import (
+    maybe_embed_run_artifact_envelope,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

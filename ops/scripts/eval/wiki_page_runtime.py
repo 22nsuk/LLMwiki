@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.source_trace_runtime import extract_source_trace_refs
+from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.core.source_trace_runtime import extract_source_trace_refs
 
 PAGE_ROOTS = ("wiki", "system")
 SPECIAL_PAGES = {"AGENTS"}

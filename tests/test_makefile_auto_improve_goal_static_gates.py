@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +15,8 @@ from tests.makefile_static_helpers import (
 )
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+
+DOCS_SELF_IMPROVEMENT_RUNTIME = Path("docs/self-improvement-runtime.md")
 
 
 _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS = (
@@ -74,6 +77,10 @@ _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS = (
         "GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT",
         "tmp/goal-runtime-certificate.candidate.json",
     ),
+    (
+        "GOAL_RUNTIME_CERTIFICATE_RUN_ID_GUARD_OUT",
+        "tmp/goal-runtime-certificate-run-id-guard.json",
+    ),
     ("GOAL_RUNTIME_CLEAN_TRANSIENT_OUT", "tmp/goal-runtime-clean-transient.json"),
     ("GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY", "1"),
     (
@@ -131,6 +138,7 @@ _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS = (
         "GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT",
         "tmp/goal-runtime-python-preflight.json",
     ),
+    ("GOAL_RUNTIME_LATEST_SUCCESSFUL_RUN_ARGS", ""),
     (
         "GOAL_SESSION_RESULT_OUT",
         "$(GOAL_ACTIVE_STATE_DIR)/auto-improve-goal-session-result.json",
@@ -154,6 +162,7 @@ _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS = (
     ("GOAL_ARTIFACT_CLASS", "system_mechanism"),
     ("GOAL_FINAL_STATUS", "stopped"),
     ("GOAL_RUN_LOG_DIR", "build/goal-runs"),
+    ("MUTATION_MAX_PROPOSALS", ""),
 )
 
 _AUTO_IMPROVE_GOAL_EMPTY_ASSIGNMENTS = (
@@ -312,6 +321,11 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--maintenance-action-plan-out \"$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)\"",
             ),
         )
+        mutation_proposal_recipe = _target_block(text, "mutation-proposal")
+        self.assertIn(
+            '$(if $(MUTATION_MAX_PROPOSALS),--max-proposals "$(MUTATION_MAX_PROPOSALS)",)',
+            mutation_proposal_recipe,
+        )
 
     def test_auto_improve_goal_phony_targets_and_dependencies(self) -> None:
         text = _makefile_text()
@@ -359,6 +373,8 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             "goal-runtime-lock-status",
             "goal-runtime-lock-stop",
             "goal-runtime-python-preflight",
+            "goal-runtime-latest-successful-run-id",
+            "goal-runtime-publish-latest-successful-evidence",
             "long-run-preflight-clean",
             "auto-improve-goal-preflight",
             "auto-improve-goal-run",
@@ -367,6 +383,8 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             "auto-improve-goal-maintenance-action",
             "auto-improve-goal-finalize",
             "auto-improve-goal-run-artifacts",
+            "goal-runtime-status-finalize",
+            "goal-runtime-certificate-report",
             "goal-runtime-certificate",
             "goal-worktree-guard",
         ):
@@ -418,10 +436,22 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         )
         _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
-        _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "goal-runtime-status-finalize", "auto-improve-goal-contract")
+        self.assertNotIn(
+            "auto-improve-goal-contract",
+            _target_block(text, "goal-runtime-certificate-report").splitlines()[0],
+        )
+        self.assertNotIn(
+            "auto-improve-goal-contract",
+            _target_block(text, "goal-runtime-certificate").splitlines()[0],
+        )
+        self.assertNotIn(
+            "auto-improve-goal-status",
+            _target_block(text, "goal-runtime-certificate").splitlines()[0],
+        )
         _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
 
-    def test_auto_improve_goal_admission_lock_and_contract_recipes(self) -> None:
+    def test_auto_improve_goal_admission_ordering_recipes(self) -> None:
         text = _makefile_text()
 
         admission_block = _target_block(text, "goal-runtime-run-admission")
@@ -434,9 +464,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-run-admission-converge",
             (
-                "$(MAKE) refresh-generated-core",
+                '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"',
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) mechanism-review",
                 "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-stale-closeout",
                 "$(MAKE) goal-runtime-publish-local-evidence",
@@ -448,9 +479,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-run-admission-local-refresh",
             (
-                "$(MAKE) refresh-generated-core",
+                '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"',
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) mechanism-review",
                 "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-stale-closeout",
             ),
@@ -471,7 +503,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-between-run-settle",
             (
-                "$(MAKE) refresh-generated-core",
+                '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"',
                 "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-stale-closeout",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
@@ -493,7 +525,9 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             )
         settle_recipe = _recipe_lines(text, "goal-runtime-between-run-settle")
         self.assertLess(
-            settle_recipe.index("$(MAKE) refresh-generated-core"),
+            settle_recipe.index(
+                '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"'
+            ),
             settle_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
         )
         self.assertLess(
@@ -510,13 +544,23 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         ):
             admission_recipe = _recipe_lines(text, admission_target)
             self.assertLess(
-                admission_recipe.index("$(MAKE) refresh-generated-core"),
+                admission_recipe.index(
+                    '$(MAKE) refresh-generated-core MUTATION_MAX_PROPOSALS="$(GOAL_MAX_PROPOSALS)"'
+                ),
                 admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
             )
             self.assertLess(
                 admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
+                admission_recipe.index("$(MAKE) mechanism-review"),
+            )
+            self.assertLess(
+                admission_recipe.index("$(MAKE) mechanism-review"),
                 admission_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
             )
+
+    def test_auto_improve_goal_admission_contract_and_status_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -591,6 +635,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--out \"$(CODEX_GOAL_PROMPT_OUT)\"",
             ),
         )
+
+    def test_auto_improve_goal_lock_preflight_and_cleanup_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -662,6 +710,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-publish-snapshot",
             (
+                "$(MAKE) goal-runtime-certificate-run-id-guard",
                 "--candidate \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
                 "--out \"$(CODEX_GOAL_CONTRACT_OUT)\"",
                 "--candidate \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
@@ -700,7 +749,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             ),
         )
 
-    def test_auto_improve_goal_local_evidence_and_closeout_recipes(self) -> None:
+    def test_auto_improve_goal_local_evidence_report_recipes(self) -> None:
         text = _makefile_text()
 
         _assert_recipe_contains_tokens(
@@ -761,6 +810,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--remediation-backlog \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
             ),
         )
+
+    def test_goal_runtime_reconcile_and_closeout_candidate_recipes(self) -> None:
+        text = _makefile_text()
+
         reconcile_block = _target_block(text, "goal-runtime-reconcile")
         self.assertNotIn("$(MAKE) goal-runtime-publish-snapshot", reconcile_block)
         self.assertNotIn("$(MAKE) session-synopsis", reconcile_block)
@@ -833,6 +886,10 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) script-output-surfaces", candidate_block)
         self.assertNotIn("$(MAKE) generated-artifact-index", candidate_block)
         self.assertNotIn("$(MAKE) artifact-freshness", candidate_block)
+
+    def test_goal_runtime_closeout_publish_and_dispatch_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -881,6 +938,8 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             (
                 "@set -e; \\",
                 "--budget cheap --candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\" --format targets",
+                "printf '%s\\n' \"$$targets\" | while IFS= read -r target; do \\",
+                "[ -n \"$$target\" ] || continue; \\",
                 "$(MAKE) $$target",
                 "GOAL_RUNTIME_CLOSEOUT_BUDGET=cheap",
             ),
@@ -892,14 +951,22 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             (
                 "@set -e; \\",
                 "--budget full --candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\" --format targets",
+                "printf '%s\\n' \"$$targets\" | while IFS= read -r target; do \\",
+                "[ -n \"$$target\" ] || continue; \\",
                 "$(MAKE) $$target",
                 "GOAL_RUNTIME_CLOSEOUT_BUDGET=full",
             ),
         )
+        self.assertNotIn("for target in $$(", _target_block(text, "goal-runtime-closeout"))
+        self.assertNotIn("for target in $$(", _target_block(text, "goal-runtime-closeout-full"))
         self.assertNotIn(
-            "test-execution-summary-full-refresh",
+            "TEST_EXECUTION_SUMMARY_FULL_MODE=refresh",
             _target_block(text, "goal-runtime-closeout"),
         )
+
+    def test_goal_runtime_local_evidence_refresh_and_publish_recipes(self) -> None:
+        text = _makefile_text()
+
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -936,8 +1003,12 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             6,
         )
         self.assertIn(
-            "$(MAKE) goal-runtime-local-evidence-converge",
+            "$(MAKE) goal-runtime-certificate-run-id-guard",
             _recipe_lines(text, "goal-runtime-publish-local-evidence")[0],
+        )
+        self.assertIn(
+            "$(MAKE) goal-runtime-local-evidence-converge",
+            _recipe_lines(text, "goal-runtime-publish-local-evidence")[1],
         )
 
     def test_auto_improve_goal_runner_finalize_and_certificate_recipes(self) -> None:
@@ -1004,15 +1075,113 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         _assert_recipe_contains_tokens(
             self,
             text,
-            "goal-runtime-certificate",
+            "goal-runtime-status-finalize",
             (
+                "$(MAKE) goal-runtime-certificate-run-id-guard",
+                "$(MAKE) auto-improve-goal-status",
+                "--candidate \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_RUN_STATUS_OUT)\"",
+                "ops/schemas/goal-run-status.schema.json",
+                "--expected-artifact-kind goal_run_status",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-certificate-report",
+            (
+                "$(MAKE) goal-runtime-certificate-run-id-guard",
                 "ops.scripts.goal_runtime_certificate_report",
                 "--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
                 "--status-report \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
                 "--out \"$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)\"",
                 "$(if $(GOAL_RUNTIME_CERTIFICATE_MODE),--runtime-mode \"$(GOAL_RUNTIME_CERTIFICATE_MODE)\",)",
                 "$(if $(GOAL_RUNTIME_CERTIFICATE_APPLY),--apply,)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-certificate",
+            (
+                "$(MAKE) goal-runtime-certificate-report",
+                "--candidate \"$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)\"",
+                "--out \"$(GOAL_RUNTIME_CERTIFICATE_OUT)\"",
                 "ops/schemas/goal-runtime-certificate.schema.json",
                 "--expected-artifact-kind goal_runtime_certificate",
             ),
         )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-certificate-run-id-guard",
+            (
+                "ops.scripts.goal_runtime_certificate_run_id_guard",
+                "--goal-run-id \"$(GOAL_RUN_ID)\"",
+                "--goal-run-id-origin \"$(origin GOAL_RUN_ID)\"",
+                "--goal-run-status \"$(GOAL_RUN_STATUS_OUT)\"",
+                "--goal-runtime-certificate \"$(GOAL_RUNTIME_CERTIFICATE_OUT)\"",
+                "--out \"$(GOAL_RUNTIME_CERTIFICATE_RUN_ID_GUARD_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-latest-successful-run-id",
+            (
+                "ops.scripts.mechanism.goal_runtime_latest_successful_run",
+                "--vault \"$(VAULT)\"",
+                "$(GOAL_RUNTIME_LATEST_SUCCESSFUL_RUN_ARGS)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-publish-latest-successful-evidence",
+            (
+                "ops.scripts.mechanism.goal_runtime_latest_successful_run",
+                "$(MAKE) goal-runtime-status-finalize GOAL_RUN_ID=\"$$run_id\"",
+                "$(MAKE) goal-runtime-publish-local-evidence GOAL_RUN_ID=\"$$run_id\"",
+                "$(MAKE) goal-runtime-certificate GOAL_RUN_ID=\"$$run_id\"",
+            ),
+        )
+        status_finalize_recipe = _recipe_lines(text, "goal-runtime-status-finalize")
+        self.assertEqual(status_finalize_recipe[0], "$(MAKE) goal-runtime-certificate-run-id-guard")
+        self.assertIn("$(MAKE) auto-improve-goal-status", status_finalize_recipe[1])
+        self.assertLess(
+            status_finalize_recipe[1].index("$(MAKE) auto-improve-goal-status"),
+            status_finalize_recipe[1].index('--candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)"'),
+        )
+        certificate_report_recipe = _recipe_lines(text, "goal-runtime-certificate-report")
+        self.assertEqual(
+            certificate_report_recipe[0],
+            "$(MAKE) goal-runtime-certificate-run-id-guard",
+        )
+        self.assertIn("ops.scripts.goal_runtime_certificate_report", certificate_report_recipe[1])
+        certificate_recipe = _recipe_lines(text, "goal-runtime-certificate")
+        self.assertIn("$(MAKE) goal-runtime-certificate-report", certificate_recipe[0])
+        self.assertNotIn("auto-improve-goal-status", _target_block(text, "goal-runtime-certificate"))
+        self.assertNotIn("$(GOAL_RUN_STATUS_OUT)", _target_block(text, "goal-runtime-certificate"))
+
+    def test_goal_runtime_certificate_status_write_contract_is_split_and_documented(self) -> None:
+        text = _makefile_text()
+        docs_text = DOCS_SELF_IMPROVEMENT_RUNTIME.read_text(encoding="utf-8")
+        normalized_docs_text = " ".join(docs_text.split())
+        status_finalize_recipe = _recipe_lines(text, "goal-runtime-status-finalize")
+        certificate_recipe = _recipe_lines(text, "goal-runtime-certificate")
+
+        self.assertIn("$(MAKE) auto-improve-goal-status", status_finalize_recipe[1])
+        self.assertIn('--candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)"', status_finalize_recipe[1])
+        self.assertIn('--out "$(GOAL_RUN_STATUS_OUT)"', status_finalize_recipe[1])
+        self.assertNotIn("auto-improve-goal-status", "\n".join(certificate_recipe))
+        self.assertNotIn("$(GOAL_RUN_STATUS_OUT)", "\n".join(certificate_recipe))
+        self.assertIn("explicit mutating status writer", normalized_docs_text)
+        self.assertIn("read-only certificate renderer", normalized_docs_text)
+        self.assertIn("does not run `auto-improve-goal-status`", normalized_docs_text)
+        self.assertIn(
+            "preserves an existing terminal status and `completed_at`",
+            normalized_docs_text,
+        )
+        self.assertIn("run a run-id guard before mutating evidence", normalized_docs_text)
+        self.assertIn("GOAL_RUN_ID", normalized_docs_text)
+        self.assertIn("GOAL_COMPLETED_AT=<timestamp>", normalized_docs_text)
