@@ -42,6 +42,8 @@ def mutation_command(
         shlex.quote(scope_freeze_rel),
         "--proposal-snapshot",
         shlex.quote(proposal_snapshot_rel),
+        "--repair-context",
+        shlex.quote(f"runs/{run_id}/same-session-repair-context.json"),
     ]
     for role in roles:
         parts.extend(["--role", shlex.quote(role)])

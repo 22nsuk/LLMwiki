@@ -90,6 +90,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--policy-path", default="ops/policies/wiki-maintainer-policy.yaml")
     ap.add_argument("--scope-freeze", required=True)
     ap.add_argument("--proposal-snapshot", required=True)
+    ap.add_argument("--repair-context", default="")
     ap.add_argument("--role", action="append", default=[])
     ap.add_argument("--routing-report", action="append", default=[])
     return ap.parse_args(argv)
@@ -484,6 +485,7 @@ def run_executor_pipeline(
     policy_path: str,
     scope_freeze_rel: str,
     proposal_snapshot_rel: str,
+    repair_context_rel: str = "",
     roles: list[str],
     routing_reports: list[str],
 ) -> dict:
@@ -521,6 +523,7 @@ def run_executor_pipeline(
             routing_report_rel=routing_report_rel,
             scope_freeze_rel=scope_freeze_rel,
             proposal_snapshot_rel=proposal_snapshot_rel,
+            repair_context_rel=repair_context_rel,
             context=context,
             timeout_seconds=timeout_seconds,
         )
@@ -580,6 +583,7 @@ def main(argv: list[str] | None = None) -> None:
             policy_path=args.policy_path,
             scope_freeze_rel=args.scope_freeze,
             proposal_snapshot_rel=args.proposal_snapshot,
+            repair_context_rel=args.repair_context,
             roles=args.role,
             routing_reports=args.routing_report,
         )

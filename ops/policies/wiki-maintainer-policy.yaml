@@ -2033,6 +2033,7 @@ promotion_policy:
       - lint_improves
       - structural_complexity_non_regression
       - structural_complexity_improves
+      - structural_regression_debt
       - tests_non_regression
       - tests_increase
       - complexity_profile_score
@@ -2209,6 +2210,15 @@ promotion_policy:
         reducer: none
         severity: advisory
         summary_template: "Structural complexity improvement diagnostic emitted {statuses}: {details}"
+      structural_regression_debt:
+        artifact_dependencies:
+          - baseline_mechanism_contract_eval_report
+          - candidate_mechanism_contract_eval_report
+          - baseline_mechanism_report
+          - candidate_mechanism_report
+        reducer: none
+        severity: advisory
+        summary_template: "Structural regression debt diagnostic emitted {statuses}: {details}"
       tests_non_regression:
         artifact_dependencies:
           - baseline_mechanism_report

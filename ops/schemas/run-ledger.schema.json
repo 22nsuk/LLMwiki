@@ -72,6 +72,7 @@
             "review_blocked",
             "validation_blocked",
             "worker_repo_health_preflight_checked",
+            "same_session_repair_attempt_scheduled",
             "workspace_apply_canary_ready",
             "workspace_rollback_rehearsed",
             "workspace_applied",

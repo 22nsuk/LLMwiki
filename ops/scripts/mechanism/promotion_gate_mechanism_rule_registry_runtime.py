@@ -297,6 +297,28 @@ def _structural_complexity_improves_checks(ctx: _MechanismRuleRegistryContext) -
     ]
 
 
+def _structural_regression_debt_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
+    state = ctx.state
+    debt_required = (
+        state.score_improves
+        and not state.structural_non_regression
+        and not state.tests_increase
+    )
+    return [
+        {
+            "id": "structural_regression_debt",
+            "status": "WARN" if debt_required else "PASS",
+            "detail": (
+                f"score_improves={str(state.score_improves).lower()}, "
+                f"structural_non_regression={str(state.structural_non_regression).lower()}, "
+                f"tests_increase={str(state.tests_increase).lower()}, "
+                f"failed_axes={state.failed_secondary_axes}, "
+                f"debt_observation_required={str(debt_required).lower()}"
+            ),
+        }
+    ]
+
+
 def _tests_non_regression_checks(ctx: _MechanismRuleRegistryContext) -> list[dict]:
     state = ctx.state
     return [
@@ -418,6 +440,7 @@ MECHANISM_RULE_EVALUATORS: dict[str, MechanismRuleEvaluator] = {
     "lint_improves": _lint_improves_checks,
     "structural_complexity_non_regression": _structural_complexity_non_regression_checks,
     "structural_complexity_improves": _structural_complexity_improves_checks,
+    "structural_regression_debt": _structural_regression_debt_checks,
     "tests_non_regression": _tests_non_regression_checks,
     "tests_increase": _tests_increase_checks,
     "complexity_profile_score": _complexity_profile_score_checks,

@@ -1537,6 +1537,11 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
                 check for check in report["checks"] if check["id"] == "behavior_delta_presence"
             )
             self.assertEqual(presence_check["status"], "WARN")
+            debt_check = next(
+                check for check in report["checks"] if check["id"] == "structural_regression_debt"
+            )
+            self.assertEqual(debt_check["status"], "WARN")
+            self.assertIn("debt_observation_required=true", debt_check["detail"])
 
     def test_auto_improve_requires_behavior_delta_even_with_score_improvement(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

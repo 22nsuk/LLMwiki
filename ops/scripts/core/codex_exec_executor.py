@@ -231,6 +231,8 @@ class _ExecutionRequest:
     routing_report_rel: str
     scope_freeze_rel: str
     proposal_snapshot_rel: str
+    repair_context_rel: str
+    repair_context: dict[str, Any] | None
     artifacts: _ExecutorArtifacts
     argv: list[str]
     sanitized_argv: list[str]
@@ -251,6 +253,8 @@ class PromptMaterializationRequest:
     proposal_snapshot_rel: str
     scope_freeze_rel: str
     routing_report_rel: str
+    repair_context_rel: str
+    repair_context: dict[str, Any] | None
     artifacts: _ExecutorArtifacts
     command_argv: list[str]
     timeout_seconds: int
@@ -367,6 +371,12 @@ def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ExecutorContractError(f"{label} root must be an object")
     return payload
+
+
+def _load_optional_json_object(path: Path, *, label: str) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    return _load_json_object(path, label=label)
 
 
 def _dependency_module_payloads(
@@ -541,6 +551,26 @@ def _worker_structural_budget_guardrails(role: str) -> str:
     )
 
 
+def _same_session_repair_context_block(
+    request: PromptMaterializationRequest,
+    *,
+    sanitize_roots: list[Path],
+) -> str:
+    if not request.repair_context:
+        return ""
+    repair_context = _sanitize_json_strings(request.repair_context, roots=sanitize_roots)
+    return (
+        "Same-session repair context:\n"
+        "- The parent wrapper scheduled this run after a prior parent validation failure.\n"
+        "- Treat this as a bounded same-session repair attempt: re-evaluate the candidate "
+        "from the supplied evidence and run the full role responsibility, not a worker-only retry.\n"
+        f"- repair_context: `{request.repair_context_rel}`\n"
+        "```json\n"
+        f"{json.dumps(repair_context, ensure_ascii=False, indent=2)}\n"
+        "```\n\n"
+    )
+
+
 def _executor_prompt_text(
     request: PromptMaterializationRequest,
     *,
@@ -575,6 +605,10 @@ def _executor_prompt_text(
             "parent apply guardrails for live-repo mutation.\n"
         )
     structural_budget_guardrails = _worker_structural_budget_guardrails(request.role)
+    same_session_repair_context = _same_session_repair_context_block(
+        request,
+        sanitize_roots=sanitize_roots,
+    )
     return f"""You are executing the `{request.role}` role for LLM Wiki vNext.
 
 Role profile:
@@ -616,7 +650,7 @@ Executor phase boundary:
 - Validator/reviewer/auditor roles should not fail only because post-executor artifacts such as `candidate-mechanism-assessment.json`, `candidate-eval.json`, `candidate-lint.json`, `changed-files-manifest.json`, or finalized `promotion-report.json` are not available yet.
 - Treat those post-executor artifacts as highest-value next checks unless the current prompt explicitly asks you to validate a completed run directory.
 
-Scope freeze summary:
+{same_session_repair_context}Scope freeze summary:
 ```json
 {json.dumps(scope_freeze, ensure_ascii=False, indent=2)}
 ```
@@ -1017,6 +1051,7 @@ def build_execution_request(
     routing_report_rel: str,
     scope_freeze_rel: str,
     proposal_snapshot_rel: str,
+    repair_context_rel: str = "",
     context: RuntimeContext,
     timeout_seconds: int,
 ) -> _ExecutionRequest:
@@ -1027,6 +1062,14 @@ def build_execution_request(
         routing_report_rel=routing_report_rel,
         scope_freeze_rel=scope_freeze_rel,
         proposal_snapshot_rel=proposal_snapshot_rel,
+    )
+    repair_context = (
+        _load_optional_json_object(
+            artifact_root / repair_context_rel,
+            label=repair_context_rel,
+        )
+        if repair_context_rel
+        else None
     )
     argv = _codex_exec_argv(
         workspace_root=workspace_root,
@@ -1050,6 +1093,8 @@ def build_execution_request(
             proposal_snapshot_rel=proposal_snapshot_rel,
             scope_freeze_rel=scope_freeze_rel,
             routing_report_rel=routing_report_rel,
+            repair_context_rel=repair_context_rel,
+            repair_context=repair_context,
             artifacts=artifacts,
             command_argv=argv,
             timeout_seconds=timeout_seconds,
@@ -1067,6 +1112,8 @@ def build_execution_request(
         routing_report_rel=routing_report_rel,
         scope_freeze_rel=scope_freeze_rel,
         proposal_snapshot_rel=proposal_snapshot_rel,
+        repair_context_rel=repair_context_rel,
+        repair_context=repair_context,
         artifacts=artifacts,
         argv=argv,
         sanitized_argv=sanitized_argv,
@@ -1500,6 +1547,7 @@ def execute_codex_exec_role(
     routing_report_rel: str,
     scope_freeze_rel: str,
     proposal_snapshot_rel: str,
+    repair_context_rel: str = "",
     context: RuntimeContext,
     timeout_seconds: int = DEFAULT_CODEX_EXEC_TIMEOUT_SECONDS,
 ) -> ExecutorReportPayload:
@@ -1512,6 +1560,7 @@ def execute_codex_exec_role(
         routing_report_rel=routing_report_rel,
         scope_freeze_rel=scope_freeze_rel,
         proposal_snapshot_rel=proposal_snapshot_rel,
+        repair_context_rel=repair_context_rel,
         context=context,
         timeout_seconds=timeout_seconds,
     )

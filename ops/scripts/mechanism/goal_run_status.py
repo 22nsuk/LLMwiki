@@ -46,6 +46,11 @@ SESSION_SYNOPSIS_PATH = "ops/reports/session-synopsis.json"
 PRODUCER = "ops.scripts.goal_run_status"
 SCHEMA_PATH = "ops/schemas/goal-run-status.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_run_status --vault ."
+BOUNDED_SUCCESS_COMPLETION_CLASS = "bounded_success_after_promotion"
+NARROW_MECHANISM_CONTRACT_PROMOTION_LANE = "narrow_mechanism_contract_promotion"
+NARROW_MECHANISM_CONTRACT_PROMOTION_LABEL = "narrow mechanism-contract promotion"
+BOUNDED_PROMOTION_LANE = "bounded_promotion"
+BOUNDED_PROMOTION_LABEL = "bounded promotion"
 TERMINAL_RUN_STATUSES = {"completed", "failed", "stopped"}
 STATUS_REFRESH_RUN_STATUSES = {"running", "blocked"}
 PRIOR_CLOCK_RUN_STATUSES = {"running", "paused", "blocked", *TERMINAL_RUN_STATUSES}
@@ -196,16 +201,72 @@ def _session_synopsis_link(vault: Path) -> dict[str, Any]:
 def _promoted_iteration_count(iterations: object) -> int:
     if not isinstance(iterations, list):
         return 0
-    return sum(
-        1
-        for item in iterations
-        if isinstance(item, Mapping)
-        and (
-            str(item.get("decision", "")).strip() == "PROMOTE"
-            or str(item.get("outcome", "")).strip() == "promoted"
-            or str(item.get("status", "")).strip() == "promoted"
-        )
+    return sum(1 for item in iterations if _iteration_was_promoted(item))
+
+
+def _iteration_was_promoted(iteration: object) -> bool:
+    return isinstance(iteration, Mapping) and (
+        str(iteration.get("decision", "")).strip() == "PROMOTE"
+        or str(iteration.get("outcome", "")).strip() == "promoted"
+        or str(iteration.get("status", "")).strip() == "promoted"
     )
+
+
+def _last_promoted_iteration(iterations: object) -> Mapping[str, Any]:
+    if not isinstance(iterations, list):
+        return {}
+    for iteration in reversed(iterations):
+        if _iteration_was_promoted(iteration):
+            return iteration
+    return {}
+
+
+def _uses_mechanism_contract_eval_score(report: Mapping[str, Any]) -> bool:
+    diagnostics = report.get("diagnostics")
+    diagnostics = diagnostics if isinstance(diagnostics, Mapping) else {}
+    mechanism_contract_eval = diagnostics.get("mechanism_contract_eval")
+    mechanism_contract_eval = (
+        mechanism_contract_eval if isinstance(mechanism_contract_eval, Mapping) else {}
+    )
+    mechanism_eval_applicability = diagnostics.get("mechanism_eval_applicability")
+    mechanism_eval_applicability = (
+        mechanism_eval_applicability if isinstance(mechanism_eval_applicability, Mapping) else {}
+    )
+    return (
+        str(report.get("artifact_class", "")).strip() == "system_mechanism"
+        and str(report.get("decision", "")).strip() == "PROMOTE"
+        and str(mechanism_contract_eval.get("score_source", "")).strip()
+        == "mechanism_contract_eval"
+        and str(mechanism_eval_applicability.get("classification", "")).strip()
+        == "mechanism_contract_eval"
+    )
+
+
+def _promotion_report_for_iteration(vault: Path, iteration: Mapping[str, Any]) -> Mapping[str, Any]:
+    rel_path = str(iteration.get("promotion_report", "")).strip()
+    if not rel_path:
+        return {}
+    return load_optional_json_object(vault / rel_path)
+
+
+def _completion_promotion_lane(
+    vault: Path,
+    *,
+    completion_class: str,
+    iterations: object,
+) -> tuple[str, str]:
+    if completion_class != BOUNDED_SUCCESS_COMPLETION_CLASS:
+        return "", ""
+    promoted_iteration = _last_promoted_iteration(iterations)
+    if not promoted_iteration:
+        return "", ""
+    promotion_report = _promotion_report_for_iteration(vault, promoted_iteration)
+    if _uses_mechanism_contract_eval_score(promotion_report):
+        return (
+            NARROW_MECHANISM_CONTRACT_PROMOTION_LANE,
+            NARROW_MECHANISM_CONTRACT_PROMOTION_LABEL,
+        )
+    return BOUNDED_PROMOTION_LANE, BOUNDED_PROMOTION_LABEL
 
 
 def _auto_improve_session_report_path(run_id: str) -> str:
@@ -234,6 +295,8 @@ def _auto_improve_session_link(vault: Path, run_id: str) -> dict[str, Any]:
             "generated_at": "",
             "stop_reason": "",
             "completion_class": "",
+            "promotion_lane": "",
+            "promotion_lane_label": "",
             "iteration_count": 0,
             "promoted_iteration_count": 0,
         }
@@ -246,20 +309,64 @@ def _auto_improve_session_link(vault: Path, run_id: str) -> dict[str, Any]:
             "generated_at": "",
             "stop_reason": "",
             "completion_class": "",
+            "promotion_lane": "",
+            "promotion_lane_label": "",
             "iteration_count": 0,
             "promoted_iteration_count": 0,
         }
     iterations = session.get("iterations")
     iteration_count = len(iterations) if isinstance(iterations, list) else 0
+    completion_class = _auto_improve_session_completion_class(session)
+    promotion_lane, promotion_lane_label = _completion_promotion_lane(
+        vault,
+        completion_class=completion_class,
+        iterations=iterations,
+    )
     return {
         "link_status": "linked",
         "report_path": report_path,
         "status": str(session.get("status", "")).strip(),
         "generated_at": str(session.get("generated_at", "")).strip(),
         "stop_reason": str(session.get("stop_reason", "")).strip(),
-        "completion_class": _auto_improve_session_completion_class(session),
+        "completion_class": completion_class,
+        "promotion_lane": promotion_lane,
+        "promotion_lane_label": promotion_lane_label,
         "iteration_count": iteration_count,
         "promoted_iteration_count": _promoted_iteration_count(iterations),
+    }
+
+
+def _completion_summary(auto_improve_session: Mapping[str, Any]) -> dict[str, str]:
+    completion_class = str(auto_improve_session.get("completion_class", "")).strip()
+    stop_reason = str(auto_improve_session.get("stop_reason", "")).strip()
+    promotion_lane = str(auto_improve_session.get("promotion_lane", "")).strip()
+    promotion_lane_label = str(auto_improve_session.get("promotion_lane_label", "")).strip()
+    if completion_class == BOUNDED_SUCCESS_COMPLETION_CLASS:
+        label = promotion_lane_label or BOUNDED_PROMOTION_LABEL
+        return {
+            "completion_class": completion_class,
+            "stop_reason": stop_reason,
+            "completion_status": "bounded_success",
+            "promotion_lane": promotion_lane or BOUNDED_PROMOTION_LANE,
+            "promotion_lane_label": label,
+            "headline": f"{completion_class}: {label}",
+        }
+    if completion_class:
+        return {
+            "completion_class": completion_class,
+            "stop_reason": stop_reason,
+            "completion_status": "stopped",
+            "promotion_lane": promotion_lane,
+            "promotion_lane_label": promotion_lane_label,
+            "headline": completion_class,
+        }
+    return {
+        "completion_class": "",
+        "stop_reason": stop_reason,
+        "completion_status": "not_available",
+        "promotion_lane": "",
+        "promotion_lane_label": "",
+        "headline": "auto-improve session completion not available",
     }
 
 
@@ -708,6 +815,7 @@ def build_report(request: GoalRunStatusRequest) -> dict[str, Any]:
             request=request,
             auto_improve_session=auto_improve_session,
         ),
+        "completion_summary": _completion_summary(auto_improve_session),
         "goal": _goal_payload(
             request=request,
             contract=contract,

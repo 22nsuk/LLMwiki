@@ -14,6 +14,7 @@ from .goal_runtime_resume import mapping_field, resume_metadata_from_report
 def build_status_markdown(report: Mapping[str, Any]) -> str:
     goal = mapping_field(report, "goal")
     run = mapping_field(report, "run")
+    completion_summary = mapping_field(report, "completion_summary")
     observability = mapping_field(report, "observability")
     health = mapping_field(report, "health")
     runtime_certificate = mapping_field(report, "runtime_certificate")
@@ -32,6 +33,11 @@ def build_status_markdown(report: Mapping[str, Any]) -> str:
         [
             f"# Goal Run {run.get('run_id', '')}",
             "",
+            f"- completion_class: {completion_summary.get('completion_class', '')}",
+            f"- completion_status: {completion_summary.get('completion_status', '')}",
+            f"- promotion_lane: {completion_summary.get('promotion_lane_label', '')}",
+            f"- completion_headline: {completion_summary.get('headline', '')}",
+            f"- stop_reason: {completion_summary.get('stop_reason', '')}",
             f"- status: {run.get('status', '')}",
             f"- runtime_mode: {run.get('runtime_mode', '')}",
             f"- goal: {goal.get('contract_id', '')}",

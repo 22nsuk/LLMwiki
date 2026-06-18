@@ -45,6 +45,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH,
         RUN_LEDGER_SCHEMA_PATH,
         RUN_TELEMETRY_SCHEMA_PATH,
+        SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH,
         SHADOW_APPLY_REPORT_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
@@ -83,6 +84,7 @@ else:
         RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH,
         RUN_LEDGER_SCHEMA_PATH,
         RUN_TELEMETRY_SCHEMA_PATH,
+        SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH,
         SHADOW_APPLY_REPORT_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
@@ -578,6 +580,16 @@ ARCHIVED_RUN_ARTIFACT_SPECS = {
         schema_path=RUN_TELEMETRY_SCHEMA_PATH,
         artifact_kind="run_telemetry",
         source_paths=(SCRIPT_PATH, "ops/scripts/core/experiment_telemetry_runtime.py"),
+        derive_generated_at=_payload_generated_at,
+    ),
+    "same-session-repair-context.json": ArchivedRunArtifactSpec(
+        filename="same-session-repair-context.json",
+        schema_path=SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH,
+        artifact_kind="same_session_repair_context",
+        source_paths=(
+            SCRIPT_PATH,
+            "ops/scripts/mechanism/run_mechanism_experiment_runtime.py",
+        ),
         derive_generated_at=_payload_generated_at,
     ),
     "generated-artifact-convergence.json": ArchivedRunArtifactSpec(

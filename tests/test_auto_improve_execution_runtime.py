@@ -31,6 +31,11 @@ class AutoImproveExecutionRuntimeTests(unittest.TestCase):
         self.assertEqual(argv[argv.index("--workspace-root") + 1], ".")
         self.assertIn("--scope-freeze", argv)
         self.assertIn("--proposal-snapshot", argv)
+        self.assertIn("--repair-context", argv)
+        self.assertEqual(
+            argv[argv.index("--repair-context") + 1],
+            "runs/run-executor/same-session-repair-context.json",
+        )
         self.assertIn("--routing-report", argv)
 
     def test_mutation_command_prefers_workspace_virtualenv_python(self) -> None:

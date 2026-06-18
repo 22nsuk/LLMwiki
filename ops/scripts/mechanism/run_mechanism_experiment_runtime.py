@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,9 @@ from ops.scripts.core.policy_runtime import (
 from ops.scripts.core.promotion_decision_registry_runtime import decision_from_report
 from ops.scripts.core.run_id_runtime import reject_template_placeholder_run_id
 from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.schema_constants_runtime import (
+    SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH,
+)
 
 from .mechanism_contract_eval_runtime import (
     MechanismContractEvalRequest,
@@ -36,8 +40,9 @@ from .mechanism_run_common_runtime import (
     RunMechanismExperimentUsageError,
     RunMechanismExperimentWriteError,
     WorkspaceApplyResult,
+    write_json,
 )
-from .mechanism_run_ledger_runtime import append_ledger_event
+from .mechanism_run_ledger_runtime import append_ledger_event, run_rel
 from .mechanism_run_promotion_runtime import (
     _build_completed_run_result,
     _build_promotion_report,
@@ -66,6 +71,15 @@ from .mechanism_run_workspace_runtime import (
 )
 from .post_mutation_generated_artifact_convergence_runtime import (
     run_post_mutation_generated_artifact_convergence,
+)
+
+SAME_SESSION_REPAIR_CONTEXT_FILENAME = "same-session-repair-context.json"
+SAME_SESSION_REPAIR_CONTEXT_SCHEMA = SAME_SESSION_REPAIR_CONTEXT_SCHEMA_PATH
+SAME_SESSION_REPAIR_MAX_ATTEMPTS = 1
+REPAIRABLE_PARENT_VALIDATION_FAILURES = frozenset(
+    {
+        "structural_complexity_non_regression",
+    }
 )
 
 __all__ = [
@@ -163,6 +177,17 @@ class _WorkspaceExperimentResult:
     promotion: PromotionStepResult
     finalize_step: FinalizeStepResult
     workspace_apply: WorkspaceApplyResult
+    candidate_changed_files_snapshot: str
+
+
+@dataclass(frozen=True)
+class _WorkspaceParentValidationFailure:
+    attempt_index: int
+    workspace_preparation: dict[str, Any]
+    mutation_step: CommandStepResult
+    generated_artifact_convergence: dict[str, Any]
+    candidate_artifacts: dict[str, Any]
+    repo_health: RepoHealthStepResult
     candidate_changed_files_snapshot: str
 
 
@@ -337,45 +362,6 @@ def _capture_candidate_artifacts_from_workspace(
         )
 
 
-def _repo_health_blocked_phase_result(
-    vault: Path,
-    *,
-    request: RunMechanismExperimentRequest,
-    scaffold: Any,
-    resolution: Any,
-    baseline_artifacts: dict[str, Any],
-    candidate_artifacts: dict[str, Any],
-    workspace_vault: Path,
-    workspace_preparation: dict[str, Any],
-    generated_artifact_convergence: dict[str, Any],
-    repo_health: RepoHealthStepResult,
-) -> dict[str, Any]:
-    candidate_changed_files_snapshot = _write_candidate_changed_files_snapshot(
-        vault,
-        workspace_vault,
-        run_id=request.run_id,
-        context=resolution.context,
-        changed_files_manifest=repo_health.changed_files_manifest,
-        decision="SKIPPED",
-        apply_mode=_resolve_apply_mode(request, resolution),
-        apply_status="not_applicable",
-        live_applied=False,
-        capture_reason=_repo_health_failure_taxonomy(repo_health),
-    )
-    return _build_repo_health_blocked_result(
-        vault,
-        run_id=request.run_id,
-        scaffold=scaffold,
-        resolution=resolution,
-        baseline_artifacts=baseline_artifacts,
-        candidate_artifacts=candidate_artifacts,
-        workspace_preparation=workspace_preparation,
-        generated_artifact_convergence=generated_artifact_convergence,
-        repo_health=repo_health,
-        candidate_changed_files_snapshot=candidate_changed_files_snapshot,
-    )
-
-
 def _promotion_workspace_phase_result(
     vault: Path,
     *,
@@ -491,15 +477,278 @@ def _write_mechanism_contract_eval_artifacts(
     return write_mechanism_contract_eval_pair(contract_eval_request)
 
 
-def _run_workspace_experiment_phase(
+def _same_session_repair_context_rel(run_id: str) -> str:
+    return run_rel(run_id, SAME_SESSION_REPAIR_CONTEXT_FILENAME)
+
+
+def _copy_repair_context_into_workspace(vault: Path, workspace_vault: Path, *, run_id: str) -> None:
+    rel_path = _same_session_repair_context_rel(run_id)
+    source = vault / rel_path
+    if not source.is_file():
+        return
+    destination = workspace_vault / rel_path
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+
+
+def _attempt_artifact_rel(run_id: str, attempt_index: int, rel_path: str) -> str:
+    return f"runs/{run_id}/attempts/{attempt_index}/{Path(rel_path).name}"
+
+
+def _copy_attempt_artifact(
+    vault: Path,
+    *,
+    run_id: str,
+    attempt_index: int,
+    rel_path: str,
+) -> str:
+    if not rel_path:
+        return ""
+    source = vault / rel_path
+    if not source.is_file():
+        return rel_path
+    destination_rel = _attempt_artifact_rel(run_id, attempt_index, rel_path)
+    destination = vault / destination_rel
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+    return destination_rel
+
+
+def _preserve_parent_failure_artifacts(
+    vault: Path,
+    *,
+    run_id: str,
+    failure: _WorkspaceParentValidationFailure,
+) -> dict[str, Any]:
+    attempt_index = failure.attempt_index
+    generated_artifact_convergence = str(
+        failure.generated_artifact_convergence.get("artifact", "")
+    ).strip()
+    return {
+        "changed_files_manifest": _copy_attempt_artifact(
+            vault,
+            run_id=run_id,
+            attempt_index=attempt_index,
+            rel_path=failure.repo_health.changed_files_manifest,
+        ),
+        "structural_complexity_budget": _copy_attempt_artifact(
+            vault,
+            run_id=run_id,
+            attempt_index=attempt_index,
+            rel_path=failure.repo_health.structural_complexity_budget,
+        ),
+        "behavior_delta": _copy_attempt_artifact(
+            vault,
+            run_id=run_id,
+            attempt_index=attempt_index,
+            rel_path=failure.repo_health.behavior_delta,
+        ),
+        "candidate_changed_files_snapshot": _copy_attempt_artifact(
+            vault,
+            run_id=run_id,
+            attempt_index=attempt_index,
+            rel_path=failure.candidate_changed_files_snapshot,
+        ),
+        "generated_artifact_convergence": _copy_attempt_artifact(
+            vault,
+            run_id=run_id,
+            attempt_index=attempt_index,
+            rel_path=generated_artifact_convergence,
+        ),
+        "mutation_logs": [
+            copied
+            for rel_path in failure.mutation_step.logs
+            if (
+                copied := _copy_attempt_artifact(
+                    vault,
+                    run_id=run_id,
+                    attempt_index=attempt_index,
+                    rel_path=rel_path,
+                )
+            )
+        ],
+        "repo_health_logs": [
+            copied
+            for rel_path in failure.repo_health.logs
+            if (
+                copied := _copy_attempt_artifact(
+                    vault,
+                    run_id=run_id,
+                    attempt_index=attempt_index,
+                    rel_path=rel_path,
+                )
+            )
+        ],
+    }
+
+
+def _same_session_repair_allowed(
+    failure: _WorkspaceParentValidationFailure,
+    *,
+    repair_attempts_used: int,
+) -> bool:
+    repo_health = failure.repo_health
+    return (
+        repair_attempts_used < SAME_SESSION_REPAIR_MAX_ATTEMPTS
+        and _repo_health_failure_taxonomy(repo_health) in REPAIRABLE_PARENT_VALIDATION_FAILURES
+        and repo_health.result["returncode"] == 0
+        and not bool(repo_health.result.get("timed_out", False))
+    )
+
+
+def _write_same_session_repair_context(
+    vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    resolution: Any,
+    failure: _WorkspaceParentValidationFailure,
+    repair_attempt_index: int,
+) -> tuple[str, dict[str, Any]]:
+    preserved = _preserve_parent_failure_artifacts(
+        vault,
+        run_id=request.run_id,
+        failure=failure,
+    )
+    repo_health = failure.repo_health
+    failure_taxonomy = _repo_health_failure_taxonomy(repo_health)
+    payload = {
+        "$schema": SAME_SESSION_REPAIR_CONTEXT_SCHEMA,
+        "run_id": request.run_id,
+        "generated_at": resolution.context.isoformat_z(),
+        "artifact_kind": "same_session_repair_context",
+        "schema_version": 1,
+        "status": "scheduled",
+        "trigger": "parent_validation_failure",
+        "repair_model": "same_session_bounded_full_chain",
+        "repair_attempt_index": repair_attempt_index,
+        "max_repair_attempts": SAME_SESSION_REPAIR_MAX_ATTEMPTS,
+        "failure_taxonomy": failure_taxonomy,
+        "previous_attempt": {
+            "attempt_index": failure.attempt_index,
+            "repo_health": {
+                "returncode": repo_health.result["returncode"],
+                "timed_out": bool(repo_health.result.get("timed_out", False)),
+                "termination_reason": str(repo_health.result.get("termination_reason", "")),
+                "structural_complexity_budget_status": (
+                    repo_health.structural_complexity_budget_status
+                ),
+                "failure_taxonomy": failure_taxonomy,
+            },
+            "artifacts": preserved,
+        },
+        "instructions": [
+            "Use the previous attempt evidence to repair the candidate inside the same run session.",
+            "Rerun the full executor responsibility chain; do not treat this as a worker-only retry.",
+            "Keep the repair narrowly focused on the parent validation blocker before adding new behavior.",
+        ],
+    }
+    rel_path = _same_session_repair_context_rel(request.run_id)
+    write_json(vault, rel_path, payload, SAME_SESSION_REPAIR_CONTEXT_SCHEMA)
+    return rel_path, preserved
+
+
+def _record_same_session_repair_scheduled(
+    vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    resolution: Any,
+    repair_context: str,
+    preserved_artifacts: dict[str, Any],
+) -> None:
+    previous_artifacts = [
+        str(preserved_artifacts.get("changed_files_manifest", "")).strip(),
+        str(preserved_artifacts.get("structural_complexity_budget", "")).strip(),
+        str(preserved_artifacts.get("behavior_delta", "")).strip(),
+        str(preserved_artifacts.get("candidate_changed_files_snapshot", "")).strip(),
+        str(preserved_artifacts.get("generated_artifact_convergence", "")).strip(),
+        *[str(item).strip() for item in preserved_artifacts.get("mutation_logs", [])],
+        *[str(item).strip() for item in preserved_artifacts.get("repo_health_logs", [])],
+    ]
+    append_ledger_event(
+        vault,
+        request.run_id,
+        event_type="same_session_repair_attempt_scheduled",
+        summary=(
+            "Parent validation blocked the candidate; scheduled one bounded "
+            "same-session repair attempt with preserved failure evidence."
+        ),
+        artifacts=[repair_context, *[item for item in previous_artifacts if item]],
+        decision="same_session_repair_scheduled",
+        context=resolution.context,
+        status="running",
+    )
+
+
+def _workspace_parent_validation_failure(
+    vault: Path,
+    workspace_vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    resolution: Any,
+    attempt_index: int,
+    workspace_preparation: dict[str, Any],
+    mutation_step: CommandStepResult,
+    generated_artifact_convergence: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+    repo_health: RepoHealthStepResult,
+) -> _WorkspaceParentValidationFailure:
+    candidate_changed_files_snapshot = _write_candidate_changed_files_snapshot(
+        vault,
+        workspace_vault,
+        run_id=request.run_id,
+        context=resolution.context,
+        changed_files_manifest=repo_health.changed_files_manifest,
+        decision="SKIPPED",
+        apply_mode=_resolve_apply_mode(request, resolution),
+        apply_status="not_applicable",
+        live_applied=False,
+        capture_reason=_repo_health_failure_taxonomy(repo_health),
+    )
+    return _WorkspaceParentValidationFailure(
+        attempt_index=attempt_index,
+        workspace_preparation=workspace_preparation,
+        mutation_step=mutation_step,
+        generated_artifact_convergence=generated_artifact_convergence,
+        candidate_artifacts=candidate_artifacts,
+        repo_health=repo_health,
+        candidate_changed_files_snapshot=candidate_changed_files_snapshot,
+    )
+
+
+def _repo_health_blocked_result_from_failure(
     vault: Path,
     *,
     request: RunMechanismExperimentRequest,
     scaffold: Any,
     resolution: Any,
     baseline_artifacts: dict[str, Any],
-) -> _WorkspaceExperimentResult | dict[str, Any]:
-    with _mechanism_temporary_directory(prefix=f"{request.run_id}-workspace-") as workspace_root:
+    failure: _WorkspaceParentValidationFailure,
+) -> dict[str, Any]:
+    return _build_repo_health_blocked_result(
+        vault,
+        run_id=request.run_id,
+        scaffold=scaffold,
+        resolution=resolution,
+        baseline_artifacts=baseline_artifacts,
+        candidate_artifacts=failure.candidate_artifacts,
+        workspace_preparation=failure.workspace_preparation,
+        generated_artifact_convergence=failure.generated_artifact_convergence,
+        repo_health=failure.repo_health,
+        candidate_changed_files_snapshot=failure.candidate_changed_files_snapshot,
+    )
+
+
+def _run_single_workspace_attempt(
+    vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    resolution: Any,
+    baseline_artifacts: dict[str, Any],
+    attempt_index: int,
+) -> _WorkspaceExperimentResult | _WorkspaceParentValidationFailure:
+    with _mechanism_temporary_directory(
+        prefix=f"{request.run_id}-workspace-attempt-{attempt_index}-"
+    ) as workspace_root:
         workspace = _prepare_workspace_copy(
             vault,
             run_id=request.run_id,
@@ -514,6 +763,7 @@ def _run_workspace_experiment_phase(
             ),
         )
         workspace_vault = workspace.workspace_vault
+        _copy_repair_context_into_workspace(vault, workspace_vault, run_id=request.run_id)
         mutation_step = _execute_mutation_step(
             vault,
             workspace_vault,
@@ -542,16 +792,16 @@ def _run_workspace_experiment_phase(
             diff_model=str(workspace.telemetry.get("diff_model", "full_workspace")),
         )
         if not repo_health.passed:
-            return _repo_health_blocked_phase_result(
+            return _workspace_parent_validation_failure(
                 vault,
+                workspace_vault,
                 request=request,
-                scaffold=scaffold,
                 resolution=resolution,
-                baseline_artifacts=baseline_artifacts,
-                candidate_artifacts=candidate_artifacts,
-                workspace_vault=workspace_vault,
+                attempt_index=attempt_index,
                 workspace_preparation=workspace.telemetry,
+                mutation_step=mutation_step,
                 generated_artifact_convergence=generated_artifact_convergence,
+                candidate_artifacts=candidate_artifacts,
                 repo_health=repo_health,
             )
 
@@ -567,3 +817,55 @@ def _run_workspace_experiment_phase(
             generated_artifact_convergence=generated_artifact_convergence,
             repo_health=repo_health,
         )
+
+
+def _run_workspace_experiment_phase(
+    vault: Path,
+    *,
+    request: RunMechanismExperimentRequest,
+    scaffold: Any,
+    resolution: Any,
+    baseline_artifacts: dict[str, Any],
+) -> _WorkspaceExperimentResult | dict[str, Any]:
+    repair_attempts_used = 0
+    attempt_index = 1
+    while True:
+        attempt_result = _run_single_workspace_attempt(
+            vault,
+            request=request,
+            resolution=resolution,
+            baseline_artifacts=baseline_artifacts,
+            attempt_index=attempt_index,
+        )
+        if isinstance(attempt_result, _WorkspaceExperimentResult):
+            return attempt_result
+
+        if not _same_session_repair_allowed(
+            attempt_result,
+            repair_attempts_used=repair_attempts_used,
+        ):
+            return _repo_health_blocked_result_from_failure(
+                vault,
+                request=request,
+                scaffold=scaffold,
+                resolution=resolution,
+                baseline_artifacts=baseline_artifacts,
+                failure=attempt_result,
+            )
+
+        repair_attempts_used += 1
+        repair_context, preserved_artifacts = _write_same_session_repair_context(
+            vault,
+            request=request,
+            resolution=resolution,
+            failure=attempt_result,
+            repair_attempt_index=repair_attempts_used,
+        )
+        _record_same_session_repair_scheduled(
+            vault,
+            request=request,
+            resolution=resolution,
+            repair_context=repair_context,
+            preserved_artifacts=preserved_artifacts,
+        )
+        attempt_index += 1

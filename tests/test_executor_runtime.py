@@ -506,6 +506,72 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertNotIn("Worker structural budget guardrails:", prompt)
             self.assertNotIn("do not generate or require those artifacts inside the worker phase", prompt)
 
+    def test_execute_codex_exec_role_includes_same_session_repair_context_when_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker"])
+            _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            repair_context_rel = "runs/run-executor/same-session-repair-context.json"
+            (vault / repair_context_rel).write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/same-session-repair-context.schema.json",
+                        "run_id": "run-executor",
+                        "failure_taxonomy": "structural_complexity_non_regression",
+                        "previous_attempt": {
+                            "attempt_index": 1,
+                            "artifacts": {
+                                "structural_complexity_budget": (
+                                    "runs/run-executor/attempts/1/"
+                                    "structural-complexity-budget.json"
+                                )
+                            },
+                        },
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                Path(argv[out_index]).write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": ["repaired"]}}),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+                execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="worker",
+                    routing_report_rel="runs/run-executor/subagent-routing.worker.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    repair_context_rel=repair_context_rel,
+                    context=RuntimeContext(display_timezone=dt.UTC),
+                )
+
+            prompt = (vault / "runs" / "run-executor" / "worker-prompt.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("Same-session repair context:", prompt)
+            self.assertIn("bounded same-session repair attempt", prompt)
+            self.assertIn("not a worker-only retry", prompt)
+            self.assertIn("structural_complexity_non_regression", prompt)
+            self.assertIn(repair_context_rel, prompt)
+
     def test_validator_prompt_characterization_preserves_json_template_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

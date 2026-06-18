@@ -80,6 +80,46 @@ class StructuralComplexityBudgetCliTests(unittest.TestCase):
 
             self.assertEqual(exc.exception.code, 1)
 
+    def test_touched_check_fails_on_new_no_headroom_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_policy(vault)
+            stderr = io.StringIO()
+            report = {
+                "status": "attention",
+                "targets": [
+                    {
+                        "path": "ops/scripts/new_runtime.py",
+                        "over_budget_metrics": [],
+                        "no_headroom_metrics": ["nonempty_line_count_total"],
+                        "low_headroom_metrics": [],
+                        "function_budget_candidate_count": 0,
+                    }
+                ],
+            }
+
+            with (
+                mock.patch("ops.scripts.eval.structural_complexity_budget.build_report", return_value=report),
+                mock.patch("ops.scripts.eval.structural_complexity_budget.write_report"),
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as exc,
+            ):
+                main(
+                    [
+                        "--vault",
+                        str(vault),
+                        "--out",
+                        "ops/reports/structural-complexity-budget-touched.json",
+                        "--fail-on-attention",
+                        "--target",
+                        "ops/scripts/new_runtime.py",
+                    ]
+                )
+
+            self.assertEqual(exc.exception.code, 1)
+            self.assertIn("complexity ratchet regression", stderr.getvalue())
+            self.assertIn("new_warn_targets=ops/scripts/new_runtime.py", stderr.getvalue())
+
     def test_touched_check_fails_on_ratchet_regression_before_attention_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

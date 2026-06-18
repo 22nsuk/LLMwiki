@@ -145,10 +145,12 @@ class GoalRunStatusTests(unittest.TestCase):
         run_id: str,
         *,
         include_completion_class: bool = True,
+        mechanism_contract_promotion: bool = False,
         rel_dir: str = "ops/reports/auto-improve-sessions",
     ) -> None:
         path = self.vault / rel_dir / f"{run_id}.json"
         path.parent.mkdir(parents=True, exist_ok=True)
+        promotion_rel = f"runs/{run_id}-run-01/promotion-report.json"
         payload = {
             "status": "complete",
             "generated_at": "2026-05-17T12:00:00Z",
@@ -159,11 +161,33 @@ class GoalRunStatusTests(unittest.TestCase):
                     "status": "promoted",
                     "decision": "PROMOTE",
                     "outcome": "promoted",
+                    "promotion_report": promotion_rel if mechanism_contract_promotion else "",
                 }
             ],
         }
         if include_completion_class:
             payload["completion_class"] = "bounded_success_after_promotion"
+        if mechanism_contract_promotion:
+            promotion_path = self.vault / promotion_rel
+            promotion_path.parent.mkdir(parents=True, exist_ok=True)
+            promotion_path.write_text(
+                json.dumps(
+                    {
+                        "artifact_class": "system_mechanism",
+                        "decision": "PROMOTE",
+                        "diagnostics": {
+                            "mechanism_contract_eval": {
+                                "score_source": "mechanism_contract_eval",
+                            },
+                            "mechanism_eval_applicability": {
+                                "classification": "mechanism_contract_eval",
+                            },
+                        },
+                    },
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
         path.write_text(
             json.dumps(payload, sort_keys=True),
             encoding="utf-8",
@@ -293,6 +317,11 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(report["runtime_certificate"]["full_gate_clean"], False)
         self.assertEqual(report["periodic_evidence"]["status"], "not_due")
         self.assertEqual(report["periodic_evidence"]["next_checkpoint_id"], "checkpoint_6h")
+        self.assertEqual(report["completion_summary"]["completion_status"], "not_available")
+        self.assertEqual(
+            report["completion_summary"]["headline"],
+            "auto-improve session completion not available",
+        )
         self.assertEqual(report["session_synopsis"]["link_status"], "linked")
         self.assertEqual(report["session_synopsis"]["recent_blocker_count"], 2)
         self.assertEqual(report["session_synopsis"]["next_action"], "Trial only; do not promote.")
@@ -985,7 +1014,11 @@ class GoalRunStatusTests(unittest.TestCase):
 
     def test_goal_run_status_refresh_preserves_terminal_runner_status(self) -> None:
         self._seed_goal_contract()
-        self._seed_auto_improve_session("20260517-trial", include_completion_class=False)
+        self._seed_auto_improve_session(
+            "20260517-trial",
+            include_completion_class=False,
+            mechanism_contract_promotion=True,
+        )
         final = build_report(
             GoalRunStatusRequest(
                 vault=self.vault,
@@ -1006,6 +1039,11 @@ class GoalRunStatusTests(unittest.TestCase):
         )
         write_report(self.vault, final)
         write_run_artifacts(self.vault, final)
+        status_markdown = (
+            self.vault / "runs" / "goal-20260517-trial" / "status.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("- completion_class: bounded_success_after_promotion", status_markdown)
+        self.assertIn("- promotion_lane: narrow mechanism-contract promotion", status_markdown)
 
         refreshed = build_report(
             GoalRunStatusRequest(
@@ -1034,6 +1072,15 @@ class GoalRunStatusTests(unittest.TestCase):
             refreshed["auto_improve_session"]["completion_class"],
             "bounded_success_after_promotion",
         )
+        self.assertEqual(
+            refreshed["auto_improve_session"]["promotion_lane"],
+            "narrow_mechanism_contract_promotion",
+        )
+        self.assertEqual(
+            refreshed["completion_summary"]["headline"],
+            "bounded_success_after_promotion: narrow mechanism-contract promotion",
+        )
+        self.assertEqual(refreshed["completion_summary"]["completion_status"], "bounded_success")
         self.assertEqual(refreshed["auto_improve_session"]["promoted_iteration_count"], 1)
         self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
 

@@ -331,6 +331,8 @@
         "budget",
         "budget_deltas",
         "over_budget_metrics",
+        "no_headroom_metrics",
+        "low_headroom_metrics",
         "function_budget_candidate_count"
       ],
       "additionalProperties": false,
@@ -358,6 +360,28 @@
           "$ref": "#/$defs/budgetDeltaMetrics"
         },
         "over_budget_metrics": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "nonempty_line_count_total",
+              "python_function_count",
+              "python_branch_node_count"
+            ]
+          }
+        },
+        "no_headroom_metrics": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "nonempty_line_count_total",
+              "python_function_count",
+              "python_branch_node_count"
+            ]
+          }
+        },
+        "low_headroom_metrics": {
           "type": "array",
           "items": {
             "type": "string",

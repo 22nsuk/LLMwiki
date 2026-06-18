@@ -183,6 +183,13 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(missing_budget_deltas, self.schemas["structural_complexity_budget"]),
         )
 
+        missing_headroom = copy.deepcopy(self.samples["structural_complexity_budget"])
+        missing_headroom["targets"][0].pop("no_headroom_metrics", None)
+        self.assertIn(
+            "$.targets[0]: missing required property 'no_headroom_metrics'",
+            validate_with_schema(missing_headroom, self.schemas["structural_complexity_budget"]),
+        )
+
         invalid_function_monitoring_gate = copy.deepcopy(self.samples["structural_complexity_budget"])
         invalid_function_monitoring_gate["diagnostics"]["function_budget_monitoring"]["gate_effect"] = "warn"
         self.assertIn(

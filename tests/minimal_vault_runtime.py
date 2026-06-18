@@ -113,6 +113,10 @@ SCHEMA_PATHS = {
     / "self-improvement-negative-lessons.schema.json",
     "run-telemetry.schema.json": REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json",
     "run-artifact-fingerprint.schema.json": REPO_ROOT / "ops" / "schemas" / "run-artifact-fingerprint.schema.json",
+    "same-session-repair-context.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "same-session-repair-context.schema.json",
     "timeout-failure.schema.json": REPO_ROOT / "ops" / "schemas" / "timeout-failure.schema.json",
     "promotion-decision-trends.schema.json": REPO_ROOT / "ops" / "schemas" / "promotion-decision-trends.schema.json",
     "routing-provenance-aggregate.schema.json": REPO_ROOT / "ops" / "schemas" / "routing-provenance-aggregate.schema.json",

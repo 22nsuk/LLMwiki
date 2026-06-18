@@ -77,6 +77,7 @@ SUPPORTED_SYSTEM_MECHANISM_PROMOTION_RULES = {
     "lint_improves",
     "structural_complexity_non_regression",
     "structural_complexity_improves",
+    "structural_regression_debt",
     "tests_non_regression",
     "tests_increase",
     "complexity_profile_score",

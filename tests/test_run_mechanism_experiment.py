@@ -721,6 +721,114 @@ class RunMechanismExperimentTests(unittest.TestCase):
                 "ops/schemas/candidate-changed-files-snapshot.schema.json",
             )
 
+    def test_wrapper_repairs_parent_validation_failure_once_in_same_session(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            mutation_tool = vault / "tools" / "mutate_same_session_repair.py"
+            mutation_tool.write_text(
+                """
+from pathlib import Path
+repair_context = Path('runs/run-wrapper-same-session-repair/same-session-repair-context.json')
+target = Path('ops/scripts/example.py')
+if repair_context.exists():
+    target.write_text(
+        "def subject(value):\\n"
+        "    return 1 if value > 0 else 0\\n",
+        encoding='utf-8',
+    )
+else:
+    target.write_text(
+        '\\n'.join('VALUE_%d = %d' % (index, index) for index in range(901)) + '\\n',
+        encoding='utf-8',
+    )
+""",
+                encoding="utf-8",
+            )
+
+            result = run_mechanism_experiment(
+                vault,
+                run_id="run-wrapper-same-session-repair",
+                policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                primary_targets=["ops/scripts/example.py"],
+                supporting_targets=[],
+                test_files=["tests/test_example.py"],
+                log_summary="Wrapper-driven same-session repair",
+                mutation_command=f"{sys.executable} tools/mutate_same_session_repair.py",
+                check_command=f"{sys.executable} -c \"print('repo health ok')\"",
+                require_signoff=False,
+                signoff_status="approved",
+                signoff_by="human",
+                signoff_ts="2026-04-14T00:00:00Z",
+                apply_mode="canary_only",
+                finalize=True,
+                context=fixed_context(),
+            )
+
+            run_dir = vault / "runs" / "run-wrapper-same-session-repair"
+            repair_context = json.loads(
+                (run_dir / "same-session-repair-context.json").read_text(encoding="utf-8")
+            )
+            first_attempt_snapshot = json.loads(
+                (run_dir / "attempts" / "1" / "candidate-changed-files-snapshot.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            structural_budget = json.loads(
+                (run_dir / "structural-complexity-budget.json").read_text(encoding="utf-8")
+            )
+            run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
+            run_artifact_fingerprint = json.loads(
+                (run_dir / "run-artifact-fingerprint.json").read_text(encoding="utf-8")
+            )
+
+            self.assertNotEqual(result["decision"], "SKIPPED")
+            self.assertEqual(
+                result["promotion_report"],
+                "runs/run-wrapper-same-session-repair/promotion-report.json",
+            )
+            self.assertTrue(result["repo_health"]["passed"])
+            self.assertEqual(
+                result["repo_health"]["structural_complexity_budget_status"],
+                "pass",
+            )
+            self.assertEqual(repair_context["repair_model"], "same_session_bounded_full_chain")
+            self.assertEqual(repair_context["repair_attempt_index"], 1)
+            self.assertEqual(
+                repair_context["previous_attempt"]["artifacts"]["structural_complexity_budget"],
+                (
+                    "runs/run-wrapper-same-session-repair/attempts/1/"
+                    "structural-complexity-budget.json"
+                ),
+            )
+            self.assertIn(
+                "VALUE_900 = 900",
+                first_attempt_snapshot["files"][0]["candidate"]["content_utf8"],
+            )
+            self.assertEqual(structural_budget["status"], "pass")
+            event_types = [event["type"] for event in run_ledger["events"]]
+            self.assertIn("same_session_repair_attempt_scheduled", event_types)
+            repo_health_decisions = [
+                event["decision"]
+                for event in run_ledger["events"]
+                if event["type"] == "repo_health_checked"
+            ]
+            self.assertEqual(
+                repo_health_decisions,
+                ["structural_complexity_non_regression", "repo_health_pass"],
+            )
+            repair_fingerprint = next(
+                item
+                for item in run_artifact_fingerprint["artifacts"]
+                if item["path"]
+                == "runs/run-wrapper-same-session-repair/same-session-repair-context.json"
+            )
+            self.assertEqual(
+                repair_fingerprint["schema"],
+                "ops/schemas/same-session-repair-context.schema.json",
+            )
+
     def test_wrapper_sparse_manifest_uses_copied_universe_diff_from_policy(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
