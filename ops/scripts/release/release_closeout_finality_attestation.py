@@ -146,7 +146,7 @@ def _batch_manifest_artifact_digest_mismatches(vault: Path) -> list[dict[str, st
     return mismatches
 
 
-def _batch_mismatches_covered_by_semantic_digest(
+def _mismatches_covered_by_semantic_digest(
     mismatches: list[dict[str, str]],
     *,
     recorded_semantic_map: dict[str, str],
@@ -169,7 +169,7 @@ def _batch_mismatches_covered_by_semantic_digest(
     return covered
 
 
-def _uncovered_batch_mismatches(
+def _uncovered_mismatches(
     mismatches: list[dict[str, str]],
     covered: list[dict[str, str]],
 ) -> list[dict[str, str]]:
@@ -537,6 +537,7 @@ def _verify_attestation_diagnostics(
         }
 
     failures: list[str] = []
+    component_digest_mismatches: list[dict[str, str]] = []
     for field in ("fixed_point_report", "batch_manifest", "self_check", "external_report_manifest"):
         item = payload.get(field)
         if not isinstance(item, dict):
@@ -546,7 +547,14 @@ def _verify_attestation_diagnostics(
         expected = str(item.get("digest", "")).strip()
         actual = _sha256_file(vault / rel_path) if rel_path else SHA256_MISSING
         if expected != actual:
-            failures.append(f"{field}_digest_mismatch")
+            component_digest_mismatches.append(
+                {
+                    "field": field,
+                    "path": rel_path,
+                    "recorded_digest": expected,
+                    "current_digest": actual,
+                }
+            )
 
     fixed_payload, _fixed_summary, _fixed_digest = _fixed_point_summary(vault)
     tracked_paths = _tracked_paths_from_fixed_point(fixed_payload)
@@ -577,13 +585,23 @@ def _verify_attestation_diagnostics(
     )
     if fixed_point_digest_mismatches and not semantic_map_matches:
         failures.append("fixed_point_digest_map_current_mismatch")
+    semantic_covered_component_mismatches = _mismatches_covered_by_semantic_digest(
+        component_digest_mismatches,
+        recorded_semantic_map=recorded_semantic_map,
+        current_semantic_map=current_semantic_digest_map,
+    )
+    uncovered_component_digest_mismatches = _uncovered_mismatches(
+        component_digest_mismatches,
+        semantic_covered_component_mismatches,
+    )
+    failures.extend(f"{item['field']}_digest_mismatch" for item in uncovered_component_digest_mismatches)
     batch_mismatches = _batch_manifest_artifact_digest_mismatches(vault)
-    semantic_covered_batch_mismatches = _batch_mismatches_covered_by_semantic_digest(
+    semantic_covered_batch_mismatches = _mismatches_covered_by_semantic_digest(
         batch_mismatches,
         recorded_semantic_map=recorded_semantic_map,
         current_semantic_map=current_semantic_digest_map,
     )
-    uncovered_batch_mismatches = _uncovered_batch_mismatches(
+    uncovered_batch_mismatches = _uncovered_mismatches(
         batch_mismatches,
         semantic_covered_batch_mismatches,
     )
@@ -605,12 +623,15 @@ def _verify_attestation_diagnostics(
             batch_manifest_artifact_digest_mismatches=uncovered_batch_mismatches,
         ),
         "semantic_fallback_used": raw_mismatch_covered_by_semantic_digest
+        or bool(semantic_covered_component_mismatches)
         or bool(semantic_covered_batch_mismatches),
         "raw_digest_mismatches": raw_digest_mismatches,
         "raw_digest_mismatches_covered_by_semantic_digest": raw_digest_mismatches
         if raw_mismatch_covered_by_semantic_digest
         else [],
         "fixed_point_digest_mismatches": fixed_point_digest_mismatches,
+        "component_digest_mismatches": component_digest_mismatches,
+        "component_digest_mismatches_covered_by_semantic_digest": semantic_covered_component_mismatches,
         "batch_manifest_artifact_digest_mismatches": batch_mismatches,
         "batch_manifest_artifact_digest_mismatches_covered_by_semantic_digest": semantic_covered_batch_mismatches,
     }

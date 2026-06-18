@@ -235,6 +235,45 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
             [generated_path],
         )
 
+    def test_finality_verify_allows_envelope_only_batch_manifest_digest_drift(self) -> None:
+        self._seed_finality_inputs()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        batch_payload = json.loads((self.vault / BATCH_MANIFEST_PATH).read_text(encoding="utf-8"))
+        batch_payload["generated_at"] = "2026-05-09T12:01:00Z"
+        batch_payload["input_fingerprints"] = {"clock": "changed"}
+        self._write_json(BATCH_MANIFEST_PATH, batch_payload)
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "pass")
+        self.assertEqual(diagnostics["failures"], [])
+        self.assertTrue(diagnostics["semantic_fallback_used"])
+        self.assertEqual(
+            [
+                (item["field"], item["path"])
+                for item in diagnostics["component_digest_mismatches_covered_by_semantic_digest"]
+            ],
+            [("batch_manifest", BATCH_MANIFEST_PATH)],
+        )
+
+    def test_finality_verify_fails_after_batch_manifest_semantic_drift(self) -> None:
+        self._seed_finality_inputs()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        batch_payload = json.loads((self.vault / BATCH_MANIFEST_PATH).read_text(encoding="utf-8"))
+        batch_payload["semantic_release_status"] = "changed_after_finality"
+        self._write_json(BATCH_MANIFEST_PATH, batch_payload)
+
+        ok, failures = verify_attestation(self.vault)
+
+        self.assertFalse(ok)
+        self.assertIn("batch_manifest_digest_mismatch", failures)
+        self.assertIn("tracked_digest_map_current_mismatch", failures)
+        self.assertIn("fixed_point_digest_map_current_mismatch", failures)
+
     def test_finality_verify_fails_after_nested_provenance_drift(self) -> None:
         self._seed_finality_inputs()
         generated_path = "ops/reports/generated-artifact-index.json"
