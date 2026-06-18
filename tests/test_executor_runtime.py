@@ -15,7 +15,6 @@ from unittest import mock
 import pytest
 
 from ops.scripts.core.codex_exec_executor import (
-    EXTERNAL_WORKSPACE_SANDBOX_FLAG,
     ExecutorContractError,
     ExecutorReportRequest,
     _build_executor_report,
@@ -964,7 +963,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 self.assertIsInstance(env, dict)
                 captured_env.update(cast(dict[str, str], env))
                 out_index = argv.index("-o") + 1
-                Path(argv[out_index]).write_text(
+                output_path = Path(argv[out_index])
+                self.assertTrue(output_path.is_relative_to(workspace_root))
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(
                     json.dumps(
                         {"status": "pass", "diagnostics": {"notes": ["validated"]}},
                         ensure_ascii=False,
@@ -991,8 +993,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
 
             self.assertEqual(report["status"], "pass")
-            self.assertIn(EXTERNAL_WORKSPACE_SANDBOX_FLAG, report["command"]["argv"])
-            self.assertNotIn("--full-auto", report["command"]["argv"])
+            self.assertIn("--full-auto", report["command"]["argv"])
+            self.assertNotIn("--dangerously-bypass-approvals-and-sandbox", report["command"]["argv"])
             self.assertEqual(captured_env["VIRTUAL_ENV"], str(workspace_root / ".venv"))
             self.assertEqual(captured_env["PATH"].split(os.pathsep)[0], str(workspace_venv_bin))
             python_check = subprocess.run(
@@ -1005,7 +1007,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(python_check.stdout, "workspace-python\n")
 
-    def test_codex_exec_uses_external_workspace_sandbox_for_read_only_temp_workspace(self) -> None:
+    def test_codex_exec_preserves_read_only_sandbox_for_temp_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             artifact_root = Path(temp_dir) / "artifact"
             workspace_root = Path(temp_dir) / "workspace"
@@ -1041,10 +1043,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             def fake_run(argv: list[str], **kwargs: object) -> object:
                 self.assertEqual(kwargs["cwd"], workspace_root)
-                self.assertIn(EXTERNAL_WORKSPACE_SANDBOX_FLAG, argv)
-                self.assertNotIn("-s", argv)
+                self.assertIn("-s", argv)
+                self.assertEqual(argv[argv.index("-s") + 1], "read-only")
+                self.assertNotIn("--dangerously-bypass-approvals-and-sandbox", argv)
                 out_index = argv.index("-o") + 1
-                Path(argv[out_index]).write_text(
+                output_path = Path(argv[out_index])
+                self.assertTrue(output_path.is_relative_to(workspace_root))
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(
                     json.dumps(
                         {"status": "pass", "diagnostics": {"notes": ["audited"]}},
                         ensure_ascii=False,

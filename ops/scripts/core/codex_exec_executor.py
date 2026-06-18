@@ -52,7 +52,6 @@ PROJECT_CHECK_LANE = (
 )
 PROJECT_FULL_REGRESSION_LANE = "make test-all"
 PROJECT_RELEASE_EVIDENCE_LANE = "make test-execution-summary-full-current-or-refresh"
-EXTERNAL_WORKSPACE_SANDBOX_FLAG = "--dangerously-bypass-approvals-and-sandbox"
 _CODEX_USAGE_LIMIT_RE = re.compile(
     r"(usage limit|try again at|upgrade to pro)",
     flags=re.IGNORECASE,
@@ -757,9 +756,9 @@ def _codex_exec_argv(
         artifact_root=artifact_root,
         workspace_root=workspace_root,
     ):
-        argv.insert(2, EXTERNAL_WORKSPACE_SANDBOX_FLAG)
-        argv.insert(3, "--skip-git-repo-check")
-    elif sandbox_mode == "workspace-write":
+        output_index = argv.index("-o") + 1
+        argv[output_index] = str(workspace_root / output_last_message_rel)
+    if sandbox_mode == "workspace-write":
         argv.insert(2, "--full-auto")
         argv.insert(3, "--skip-git-repo-check")
     else:
@@ -1452,6 +1451,20 @@ def launch_execution(request: _ExecutionRequest) -> object:
     )
 
 
+def _capture_model_output(request: _ExecutionRequest) -> dict[str, Any] | None:
+    artifact_output = request.artifact_root / request.artifacts.output_last_message_rel
+    model_output = _read_model_output(artifact_output)
+    if model_output is not None:
+        return model_output
+    workspace_output = request.workspace_root / request.artifacts.output_last_message_rel
+    model_output = _read_model_output(workspace_output)
+    if model_output is None:
+        return None
+    artifact_output.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(workspace_output, artifact_output)
+    return model_output
+
+
 def capture_execution_artifacts(request: _ExecutionRequest, completed: object) -> dict[str, Any] | None:
     _persist_executor_streams(
         artifact_root=request.artifact_root,
@@ -1463,7 +1476,7 @@ def capture_execution_artifacts(request: _ExecutionRequest, completed: object) -
         context=request.context,
         sanitized_argv=request.sanitized_argv,
     )
-    return _read_model_output(request.artifact_root / request.artifacts.output_last_message_rel)
+    return _capture_model_output(request)
 
 
 def assess_execution_result(
