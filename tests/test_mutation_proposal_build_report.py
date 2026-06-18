@@ -1249,6 +1249,12 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 "    return None\n",
                 encoding="utf-8",
             )
+            telemetry_target = "ops/scripts/mechanism/auto_improve_iteration_telemetry_runtime.py"
+            (vault / telemetry_target).write_text(
+                "def iteration_same_eval_contract() -> dict:\n"
+                "    return {}\n",
+                encoding="utf-8",
+            )
             (vault / "ops" / "script-output-surfaces.json").write_text("{}\n", encoding="utf-8")
             (vault / "tests" / "test_auto_improve_iteration_runtime.py").write_text(
                 (
@@ -1289,6 +1295,7 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 proposal_report["proposals"][0]["supporting_targets"],
                 [
                     "ops/schemas/run-telemetry.schema.json",
+                    telemetry_target,
                     "ops/script-output-surfaces.json",
                 ],
             )

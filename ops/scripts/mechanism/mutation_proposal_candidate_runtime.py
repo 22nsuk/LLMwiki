@@ -26,6 +26,11 @@ REPEATED_SAME_EVAL_AFTER_PROMOTE_FAILURE_MODE = "repeated_same_eval_after_promot
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
+SAME_EVAL_ADJACENT_SUPPORTING_TARGETS_BY_PRIMARY = {
+    "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py": [
+        "ops/scripts/mechanism/auto_improve_iteration_telemetry_runtime.py",
+    ],
+}
 CLOSED_REPEATED_DISCARD_BLOCKER_IDS = frozenset(
     {
         "discard_equal_score_secondary_eligibility",
@@ -513,6 +518,13 @@ def with_generated_supporting_targets(
     return ordered
 
 
+def _same_eval_adjacent_supporting_targets(vault: Path, primary_targets: list[str]) -> list[str]:
+    targets: list[str] = []
+    for primary_target in primary_targets:
+        targets.extend(SAME_EVAL_ADJACENT_SUPPORTING_TARGETS_BY_PRIMARY.get(primary_target, []))
+    return current_repo_target_paths(vault, targets)
+
+
 def _proposal_supporting_targets_for_failure_mode(
     vault: Path,
     *,
@@ -522,6 +534,11 @@ def _proposal_supporting_targets_for_failure_mode(
 ) -> list[str]:
     if failure_mode == REPEATED_DISCARD_FAILURE_MODE:
         return []
+    if failure_mode == REPEATED_SAME_EVAL_AFTER_PROMOTE_FAILURE_MODE:
+        supporting_targets = [
+            *supporting_targets,
+            *_same_eval_adjacent_supporting_targets(vault, primary_targets),
+        ]
     return with_generated_supporting_targets(
         vault,
         primary_targets=primary_targets,
