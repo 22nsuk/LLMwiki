@@ -14,6 +14,7 @@ from tests.external_report_action_matrix_test_runtime import (
     REPO_ROOT,
     SCHEMA_PATH,
     ExternalReportActionMatrixTestBase,
+    _active_action_resolution_summary,
     _canonical_json_digest,
     _sha256_file,
     action_status_reason_details,
@@ -122,6 +123,34 @@ _GOAL_NATIVE_COMPLETED_CONTRACT_ACTION_IDS = (
 
 
 class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
+    def test_active_summary_prioritizes_source_action_targets_over_freshness(self) -> None:
+        summary = _active_action_resolution_summary(
+            [
+                {
+                    "action_id": "freshness",
+                    "is_active": True,
+                    "verification_readiness_status": "artifact_freshness_pending",
+                    "recommended_target": "artifact-freshness-refresh-check",
+                    "status_reason_details": [
+                        {"recommended_targets": ["external-report-reference-manifest-settle"]}
+                    ],
+                },
+                {
+                    "action_id": "source",
+                    "is_active": True,
+                    "verification_readiness_status": "source_action_required",
+                    "recommended_target": "external-report-action-matrix",
+                    "status_reason_details": [
+                        {"recommended_targets": ["external-report-action-matrix"]}
+                    ],
+                },
+            ]
+        )
+
+        self.assertEqual(summary["status"], "source_action_available")
+        self.assertEqual(summary["recommended_lane"], "source-action")
+        self.assertEqual(summary["recommended_targets"], ["external-report-action-matrix"])
+
     def test_generated_artifact_policy_status_requires_pass_report_status(self) -> None:
         for rel_path, text in {
             "ops/scripts/core/generated_artifact_index.py": (
@@ -1343,14 +1372,16 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "external-report-lifecycle-refresh",
             ],
         )
+        active_summary = report["summary"]["active_action_resolution_summary"]
+        self.assertEqual(active_summary["status"], "source_action_available")
+        self.assertEqual(active_summary["recommended_lane"], "source-action")
+        self.assertEqual(active_summary["artifact_freshness_pending_count"], 1)
+        self.assertGreater(active_summary["source_action_required_count"], 0)
         self.assertEqual(
-            report["summary"]["active_action_resolution_summary"]["recommended_targets"],
-            [
-                "freshness-source-identity-converge",
-                "artifact-freshness-refresh-check",
-                "external-report-reference-manifest-settle",
-                "external-report-lifecycle-refresh",
+            active_summary["active_action_ids_by_verification_readiness_status"][
+                "artifact_freshness_pending"
             ],
+            ["artifact_freshness_performance_observability"],
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 

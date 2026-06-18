@@ -392,16 +392,16 @@ def _active_action_resolution_summary(actions: list[dict[str, Any]]) -> dict[str
     else:
         status = "no_active_blockers"
         recommended_lane = "none"
-    if artifact_freshness_pending_count:
-        recommended_targets = _active_recommended_targets(
-            active_actions,
-            readiness_status="artifact_freshness_pending",
-            fallback=recommended_lane,
-        )
-    elif source_action_required_count:
+    if source_action_required_count:
         recommended_targets = _active_recommended_targets(
             active_actions,
             readiness_status="source_action_required",
+            fallback=recommended_lane,
+        )
+    elif artifact_freshness_pending_count:
+        recommended_targets = _active_recommended_targets(
+            active_actions,
+            readiness_status="artifact_freshness_pending",
             fallback=recommended_lane,
         )
     elif release_or_operator_pending_count:

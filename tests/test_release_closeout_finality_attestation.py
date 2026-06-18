@@ -186,6 +186,55 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
             ["ops/reports/generated-artifact-index.json"],
         )
 
+    def test_finality_verify_allows_envelope_only_batch_artifact_digest_drift(self) -> None:
+        self._seed_finality_inputs()
+        generated_path = "ops/reports/generated-artifact-index.json"
+        batch_payload = json.loads((self.vault / BATCH_MANIFEST_PATH).read_text(encoding="utf-8"))
+        batch_payload["artifacts"] = [
+            {
+                "path": generated_path,
+                "digest": _sha256(self.vault / generated_path),
+                "role": "primary_evidence",
+            }
+        ]
+        self._write_json(BATCH_MANIFEST_PATH, batch_payload)
+        batch_digest = _sha256(self.vault / BATCH_MANIFEST_PATH)
+        self._write_json(
+            SELF_CHECK_PATH,
+            {
+                "status": {"result": "pass"},
+                "closeout_inputs": {"batch_manifest_fingerprint": batch_digest},
+            },
+        )
+        self._rebind_fixed_point_to_current_batch_and_self_check()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        self._write_json(
+            generated_path,
+            {
+                "artifact_kind": "generated_artifact_index",
+                "generated_at": "2026-05-09T12:01:00Z",
+                "input_fingerprints": {"clock": "changed"},
+                "status": "pass",
+            },
+        )
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "pass")
+        self.assertEqual(diagnostics["failures"], [])
+        self.assertTrue(diagnostics["semantic_fallback_used"])
+        self.assertEqual(
+            [
+                item["path"]
+                for item in diagnostics[
+                    "batch_manifest_artifact_digest_mismatches_covered_by_semantic_digest"
+                ]
+            ],
+            [generated_path],
+        )
+
     def test_finality_verify_fails_after_nested_provenance_drift(self) -> None:
         self._seed_finality_inputs()
         generated_path = "ops/reports/generated-artifact-index.json"

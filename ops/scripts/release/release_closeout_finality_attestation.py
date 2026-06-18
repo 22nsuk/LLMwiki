@@ -146,6 +146,37 @@ def _batch_manifest_artifact_digest_mismatches(vault: Path) -> list[dict[str, st
     return mismatches
 
 
+def _batch_mismatches_covered_by_semantic_digest(
+    mismatches: list[dict[str, str]],
+    *,
+    recorded_semantic_map: dict[str, str],
+    current_semantic_map: dict[str, str],
+) -> list[dict[str, str]]:
+    covered: list[dict[str, str]] = []
+    for item in mismatches:
+        path = item["path"]
+        recorded = recorded_semantic_map.get(path, "")
+        current = current_semantic_map.get(path, "")
+        if not recorded or recorded != current:
+            continue
+        covered.append(
+            {
+                **item,
+                "recorded_semantic_digest": recorded,
+                "current_semantic_digest": current,
+            }
+        )
+    return covered
+
+
+def _uncovered_batch_mismatches(
+    mismatches: list[dict[str, str]],
+    covered: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    covered_paths = {item["path"] for item in covered}
+    return [item for item in mismatches if item["path"] not in covered_paths]
+
+
 def _sealed_preflight_summary(vault: Path) -> dict[str, Any]:
     payload, load_status = _load_optional(vault, SEALED_PREFLIGHT_PATH)
     preflight = payload.get("preflight") if isinstance(payload, dict) else {}
@@ -177,6 +208,7 @@ def _finality_failure_classification(
     failures: list[str],
     raw_digest_mismatches: list[dict[str, str]],
     fixed_point_digest_mismatches: list[dict[str, str]],
+    batch_manifest_artifact_digest_mismatches: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     if not failures:
         return {
@@ -193,7 +225,11 @@ def _finality_failure_classification(
             "fixed_point_tracked_writer_mismatches": [],
             "summary": "finality current-check is current",
         }
-    batch_mismatches = _batch_manifest_artifact_digest_mismatches(vault)
+    batch_mismatches = (
+        batch_manifest_artifact_digest_mismatches
+        if batch_manifest_artifact_digest_mismatches is not None
+        else _batch_manifest_artifact_digest_mismatches(vault)
+    )
     freshness_index_cohort = [
         item
         for item in batch_mismatches
@@ -541,7 +577,17 @@ def _verify_attestation_diagnostics(
     )
     if fixed_point_digest_mismatches and not semantic_map_matches:
         failures.append("fixed_point_digest_map_current_mismatch")
-    if _batch_manifest_artifact_digest_mismatches(vault):
+    batch_mismatches = _batch_manifest_artifact_digest_mismatches(vault)
+    semantic_covered_batch_mismatches = _batch_mismatches_covered_by_semantic_digest(
+        batch_mismatches,
+        recorded_semantic_map=recorded_semantic_map,
+        current_semantic_map=current_semantic_digest_map,
+    )
+    uncovered_batch_mismatches = _uncovered_batch_mismatches(
+        batch_mismatches,
+        semantic_covered_batch_mismatches,
+    )
+    if uncovered_batch_mismatches:
         failures.append("batch_manifest_artifact_digest_current_mismatch")
     sealed_preflight = _sealed_preflight_summary(vault)
     if sealed_preflight["load_status"] == "ok" and not sealed_preflight["current"]:
@@ -556,13 +602,17 @@ def _verify_attestation_diagnostics(
             failures=failures,
             raw_digest_mismatches=uncovered_raw_digest_mismatches,
             fixed_point_digest_mismatches=uncovered_fixed_point_digest_mismatches,
+            batch_manifest_artifact_digest_mismatches=uncovered_batch_mismatches,
         ),
-        "semantic_fallback_used": raw_mismatch_covered_by_semantic_digest,
+        "semantic_fallback_used": raw_mismatch_covered_by_semantic_digest
+        or bool(semantic_covered_batch_mismatches),
         "raw_digest_mismatches": raw_digest_mismatches,
         "raw_digest_mismatches_covered_by_semantic_digest": raw_digest_mismatches
         if raw_mismatch_covered_by_semantic_digest
         else [],
         "fixed_point_digest_mismatches": fixed_point_digest_mismatches,
+        "batch_manifest_artifact_digest_mismatches": batch_mismatches,
+        "batch_manifest_artifact_digest_mismatches_covered_by_semantic_digest": semantic_covered_batch_mismatches,
     }
 
 
