@@ -438,10 +438,53 @@ def _promotion_check_statuses(promotion_report: dict[str, Any]) -> dict[str, str
     return statuses
 
 
+def _promotion_check_detail(promotion_report: dict[str, Any] | None, check_id: str) -> str:
+    checks = promotion_report.get("checks") if isinstance(promotion_report, dict) else None
+    if not isinstance(checks, list):
+        return ""
+    for check in checks:
+        if not isinstance(check, dict):
+            continue
+        if str(check.get("id", "")).strip() == check_id:
+            return str(check.get("detail", "")).strip().lower()
+    return ""
+
+
+def _equal_score_legacy_candidate_gate_detail(detail: str) -> bool:
+    if not detail:
+        return False
+    required_tokens = (
+        "allowed=true",
+        "score_equal=true",
+        "selected_non_regression=true",
+        "selected_any_improvement=true",
+    )
+    if not all(token in detail for token in required_tokens):
+        return False
+    for accepted_field in ("candidate_eval_accepted", "candidate_lint_accepted"):
+        marker = f"{accepted_field}="
+        if marker in detail and f"{accepted_field}=true" not in detail:
+            return False
+    return True
+
+
 def _blocking_promotion_check_ids(
     statuses: dict[str, str],
     decision_record: dict[str, Any] | None,
+    promotion_report: dict[str, Any] | None = None,
 ) -> list[str]:
+    if (
+        statuses.get("equal_score_secondary_eligibility") == "WARN"
+        and statuses.get("eval_score_improves") == "WARN"
+        and any(
+            statuses.get(check_id) == "FAIL"
+            for check_id in ("candidate_eval_pass", "candidate_lint_pass")
+        )
+        and _equal_score_legacy_candidate_gate_detail(
+            _promotion_check_detail(promotion_report, "equal_score_secondary_eligibility")
+        )
+    ):
+        return ["equal_score_secondary_eligibility"]
     failed_ids = sorted(check_id for check_id, status in statuses.items() if status == "FAIL")
     if failed_ids:
         return failed_ids
@@ -510,7 +553,11 @@ def _discard_non_regression_evidence(
             for check_id in DISCARD_NON_REGRESSION_CHECK_IDS
         },
         "non_regression_check_statuses": _non_regression_check_statuses(statuses),
-        "blocking_check_ids": _blocking_promotion_check_ids(statuses, decision_record),
+        "blocking_check_ids": _blocking_promotion_check_ids(
+            statuses,
+            decision_record,
+            promotion_report.payload,
+        ),
         "decision_record_reason_code": str(
             (decision_record or {}).get("reason_code", "")
         ).strip(),
