@@ -138,6 +138,7 @@ _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS = (
         "GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT",
         "tmp/goal-runtime-python-preflight.json",
     ),
+    ("GOAL_RUNTIME_LATEST_SUCCESSFUL_RUN_ARGS", ""),
     (
         "GOAL_SESSION_RESULT_OUT",
         "$(GOAL_ACTIVE_STATE_DIR)/auto-improve-goal-session-result.json",
@@ -372,6 +373,8 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             "goal-runtime-lock-status",
             "goal-runtime-lock-stop",
             "goal-runtime-python-preflight",
+            "goal-runtime-latest-successful-run-id",
+            "goal-runtime-publish-latest-successful-evidence",
             "long-run-preflight-clean",
             "auto-improve-goal-preflight",
             "auto-improve-goal-run",
@@ -1119,6 +1122,27 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--goal-run-status \"$(GOAL_RUN_STATUS_OUT)\"",
                 "--goal-runtime-certificate \"$(GOAL_RUNTIME_CERTIFICATE_OUT)\"",
                 "--out \"$(GOAL_RUNTIME_CERTIFICATE_RUN_ID_GUARD_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-latest-successful-run-id",
+            (
+                "ops.scripts.mechanism.goal_runtime_latest_successful_run",
+                "--vault \"$(VAULT)\"",
+                "$(GOAL_RUNTIME_LATEST_SUCCESSFUL_RUN_ARGS)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-publish-latest-successful-evidence",
+            (
+                "ops.scripts.mechanism.goal_runtime_latest_successful_run",
+                "$(MAKE) goal-runtime-status-finalize GOAL_RUN_ID=\"$$run_id\"",
+                "$(MAKE) goal-runtime-publish-local-evidence GOAL_RUN_ID=\"$$run_id\"",
+                "$(MAKE) goal-runtime-certificate GOAL_RUN_ID=\"$$run_id\"",
             ),
         )
         status_finalize_recipe = _recipe_lines(text, "goal-runtime-status-finalize")

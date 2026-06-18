@@ -15,6 +15,7 @@ from .promotion_gate_mechanism_rule_registry_runtime import (
     build_mechanism_rule_registry as _build_mechanism_rule_registry,
 )
 from .promotion_gate_mechanism_state_runtime import (
+    MechanismGateInputRequest,
     MechanismGateInputs,
     MechanismPromotionState,
     build_mechanism_promotion_state as _build_mechanism_promotion_state,
@@ -38,32 +39,14 @@ class MechanismPromotionReportRequest:
 
 
 def collect_mechanism_gate_inputs(
-    vault: Path,
-    baseline_eval_path: str,
-    candidate_eval_path: str,
-    baseline_lint_path: str,
-    candidate_lint_path: str,
-    baseline_mechanism_path: str,
-    candidate_mechanism_path: str,
-    changed_files_manifest_path: str,
-    run_ledger_path: str,
-    behavior_delta_path: str | None = None,
-    baseline_mechanism_contract_eval_path: str | None = None,
-    candidate_mechanism_contract_eval_path: str | None = None,
+    vault_or_request: Path | MechanismGateInputRequest,
+    *legacy_args: Any,
+    **legacy_fields: Any,
 ) -> MechanismGateInputs:
     return _collect_mechanism_gate_inputs(
-        vault,
-        baseline_eval_path,
-        candidate_eval_path,
-        baseline_lint_path,
-        candidate_lint_path,
-        baseline_mechanism_path,
-        candidate_mechanism_path,
-        changed_files_manifest_path,
-        run_ledger_path,
-        behavior_delta_path,
-        baseline_mechanism_contract_eval_path=baseline_mechanism_contract_eval_path,
-        candidate_mechanism_contract_eval_path=candidate_mechanism_contract_eval_path,
+        vault_or_request,
+        *legacy_args,
+        **legacy_fields,
     )
 
 

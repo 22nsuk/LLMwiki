@@ -161,6 +161,36 @@ Generated artifact convergence:
             self.assertIn("make generated-artifact-converge", persisted["prompt"]["text"])
             self.assertIn("make release-run-ready", persisted["prompt"]["text"])
 
+    def test_prompt_report_records_sustained_claim_ban_when_certificate_verified_but_promotion_blocked(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            contract = sample_goal_contract()
+            contract["promotion_guard"].update(
+                {
+                    "can_promote_result": False,
+                    "runtime_certificate_verified": True,
+                    "promotion_blockers": ["release_lineage_mismatch"],
+                }
+            )
+            set_goal(contract, vault=vault)
+
+            report = build_report(
+                vault,
+                context=RuntimeContext(
+                    display_timezone=dt.UTC,
+                    clock=lambda: dt.datetime(2026, 5, 17, tzinfo=dt.UTC),
+                ),
+            )
+
+            self.assertTrue(report["prompt"]["includes_promotion_ban"])
+            self.assertTrue(report["prompt"]["includes_sustained_claim_ban"])
+            self.assertIn("Do not claim sustained unattended operation.", report["prompt"]["text"])
+            self.assertNotIn("SUSTAINED CLAIM BAN:", report["prompt"]["text"])
+
     def test_prompt_guides_promotion_work_without_reward_hacking(self) -> None:
         prompt = build_prompt_text(sample_goal_contract())
 

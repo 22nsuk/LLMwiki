@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from ops.scripts.core.policy_runtime import report_path
 
@@ -53,6 +54,22 @@ class MechanismGateInputs:
     baseline_mechanism_contract_eval_rel: str = ""
     candidate_mechanism_contract_eval_report: dict | None = None
     candidate_mechanism_contract_eval_rel: str = ""
+
+
+@dataclass(frozen=True)
+class MechanismGateInputRequest:
+    vault: Path
+    baseline_eval_path: str
+    candidate_eval_path: str
+    baseline_lint_path: str
+    candidate_lint_path: str
+    baseline_mechanism_path: str
+    candidate_mechanism_path: str
+    changed_files_manifest_path: str
+    run_ledger_path: str
+    behavior_delta_path: str | None = None
+    baseline_mechanism_contract_eval_path: str | None = None
+    candidate_mechanism_contract_eval_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -214,6 +231,19 @@ SEMANTIC_STRUCTURAL_METRIC_KEYS = (
 MECHANISM_CONTRACT_EVAL_ARTIFACT_KIND = "mechanism_contract_eval_report"
 
 
+_MECHANISM_GATE_INPUT_POSITIONAL_FIELDS = (
+    "baseline_eval_path",
+    "candidate_eval_path",
+    "baseline_lint_path",
+    "candidate_lint_path",
+    "baseline_mechanism_path",
+    "candidate_mechanism_path",
+    "changed_files_manifest_path",
+    "run_ledger_path",
+    "behavior_delta_path",
+)
+
+
 def _require_mechanism_contract_eval_identity(report: dict, rel_path: str, *, phase: str) -> None:
     artifact_kind = report.get("artifact_kind")
     if artifact_kind != MECHANISM_CONTRACT_EVAL_ARTIFACT_KIND:
@@ -229,100 +259,127 @@ def _require_mechanism_contract_eval_identity(report: dict, rel_path: str, *, ph
 
 
 def collect_mechanism_gate_inputs(
-    vault: Path,
-    baseline_eval_path: str,
-    candidate_eval_path: str,
-    baseline_lint_path: str,
-    candidate_lint_path: str,
-    baseline_mechanism_path: str,
-    candidate_mechanism_path: str,
-    changed_files_manifest_path: str,
-    run_ledger_path: str,
-    behavior_delta_path: str | None = None,
-    baseline_mechanism_contract_eval_path: str | None = None,
-    candidate_mechanism_contract_eval_path: str | None = None,
+    vault_or_request: Path | MechanismGateInputRequest,
+    *legacy_args: Any,
+    **legacy_fields: Any,
 ) -> MechanismGateInputs:
-    baseline_eval_report, baseline_eval_rel = validate_json_artifact(
-        vault,
-        baseline_eval_path,
-        EVAL_REPORT_SCHEMA,
+    request = _coerce_mechanism_gate_input_request(
+        vault_or_request,
+        legacy_args,
+        legacy_fields,
     )
-    candidate_eval_report, candidate_eval_rel = validate_json_artifact(
-        vault,
-        candidate_eval_path,
-        EVAL_REPORT_SCHEMA,
-    )
-    baseline_mechanism_contract_eval_report = None
-    baseline_mechanism_contract_eval_rel = ""
-    candidate_mechanism_contract_eval_report = None
-    candidate_mechanism_contract_eval_rel = ""
-    if bool(baseline_mechanism_contract_eval_path) != bool(candidate_mechanism_contract_eval_path):
+    return collect_mechanism_gate_inputs_from_request(request)
+
+
+def _coerce_mechanism_gate_input_request(
+    vault_or_request: Path | MechanismGateInputRequest,
+    legacy_args: tuple[Any, ...],
+    legacy_fields: dict[str, Any],
+) -> MechanismGateInputRequest:
+    if isinstance(vault_or_request, MechanismGateInputRequest):
+        if legacy_args or legacy_fields:
+            raise TypeError("collect_mechanism_gate_inputs accepts either a request object or legacy fields")
+        return vault_or_request
+    if len(legacy_args) > len(_MECHANISM_GATE_INPUT_POSITIONAL_FIELDS):
+        raise TypeError("too many positional arguments for collect_mechanism_gate_inputs")
+    fields = dict(legacy_fields)
+    for name, value in zip(_MECHANISM_GATE_INPUT_POSITIONAL_FIELDS, legacy_args, strict=False):
+        if name in fields:
+            raise TypeError(f"collect_mechanism_gate_inputs got multiple values for argument '{name}'")
+        fields[name] = value
+    return MechanismGateInputRequest(vault=vault_or_request, **fields)
+
+
+def _load_mechanism_contract_eval_pair(
+    request: MechanismGateInputRequest,
+) -> tuple[dict | None, str, dict | None, str]:
+    baseline_path = request.baseline_mechanism_contract_eval_path
+    candidate_path = request.candidate_mechanism_contract_eval_path
+    if bool(baseline_path) != bool(candidate_path):
         raise PromotionGateUsageError(
             "mechanism contract eval requires both baseline and candidate reports"
         )
-    if baseline_mechanism_contract_eval_path and candidate_mechanism_contract_eval_path:
-        (
-            baseline_mechanism_contract_eval_report,
-            baseline_mechanism_contract_eval_rel,
-        ) = validate_json_artifact(
-            vault,
-            baseline_mechanism_contract_eval_path,
-            EVAL_REPORT_SCHEMA,
-        )
-        (
-            candidate_mechanism_contract_eval_report,
-            candidate_mechanism_contract_eval_rel,
-        ) = validate_json_artifact(
-            vault,
-            candidate_mechanism_contract_eval_path,
-            EVAL_REPORT_SCHEMA,
-        )
-        _require_mechanism_contract_eval_identity(
-            baseline_mechanism_contract_eval_report,
-            baseline_mechanism_contract_eval_rel,
-            phase="baseline",
-        )
-        _require_mechanism_contract_eval_identity(
-            candidate_mechanism_contract_eval_report,
-            candidate_mechanism_contract_eval_rel,
-            phase="candidate",
-        )
+    if not baseline_path or not candidate_path:
+        return None, "", None, ""
+
+    baseline_report, baseline_rel = validate_json_artifact(
+        request.vault,
+        baseline_path,
+        EVAL_REPORT_SCHEMA,
+    )
+    candidate_report, candidate_rel = validate_json_artifact(
+        request.vault,
+        candidate_path,
+        EVAL_REPORT_SCHEMA,
+    )
+    _require_mechanism_contract_eval_identity(
+        baseline_report,
+        baseline_rel,
+        phase="baseline",
+    )
+    _require_mechanism_contract_eval_identity(
+        candidate_report,
+        candidate_rel,
+        phase="candidate",
+    )
+    return baseline_report, baseline_rel, candidate_report, candidate_rel
+
+
+def collect_mechanism_gate_inputs_from_request(
+    request: MechanismGateInputRequest,
+) -> MechanismGateInputs:
+    baseline_eval_report, baseline_eval_rel = validate_json_artifact(
+        request.vault,
+        request.baseline_eval_path,
+        EVAL_REPORT_SCHEMA,
+    )
+    candidate_eval_report, candidate_eval_rel = validate_json_artifact(
+        request.vault,
+        request.candidate_eval_path,
+        EVAL_REPORT_SCHEMA,
+    )
+    (
+        baseline_mechanism_contract_eval_report,
+        baseline_mechanism_contract_eval_rel,
+        candidate_mechanism_contract_eval_report,
+        candidate_mechanism_contract_eval_rel,
+    ) = _load_mechanism_contract_eval_pair(request)
     baseline_lint_report, baseline_lint_rel = validate_json_artifact(
-        vault,
-        baseline_lint_path,
+        request.vault,
+        request.baseline_lint_path,
         LINT_REPORT_SCHEMA,
     )
     candidate_lint_report, candidate_lint_rel = validate_json_artifact(
-        vault,
-        candidate_lint_path,
+        request.vault,
+        request.candidate_lint_path,
         LINT_REPORT_SCHEMA,
     )
     baseline_mechanism_report, baseline_mechanism_rel = validate_json_artifact(
-        vault,
-        baseline_mechanism_path,
+        request.vault,
+        request.baseline_mechanism_path,
         MECHANISM_REPORT_SCHEMA,
     )
     candidate_mechanism_report, candidate_mechanism_rel = validate_json_artifact(
-        vault,
-        candidate_mechanism_path,
+        request.vault,
+        request.candidate_mechanism_path,
         MECHANISM_REPORT_SCHEMA,
     )
     changed_files_manifest_report, changed_files_manifest_rel = validate_json_artifact(
-        vault,
-        changed_files_manifest_path,
+        request.vault,
+        request.changed_files_manifest_path,
         CHANGED_FILES_MANIFEST_SCHEMA,
     )
     run_ledger_report, run_ledger_rel = validate_json_artifact(
-        vault,
-        run_ledger_path,
+        request.vault,
+        request.run_ledger_path,
         RUN_LEDGER_SCHEMA,
     )
     behavior_delta_report = None
     behavior_delta_rel = ""
-    if behavior_delta_path:
+    if request.behavior_delta_path:
         behavior_delta_report, behavior_delta_rel = validate_json_artifact(
-            vault,
-            behavior_delta_path,
+            request.vault,
+            request.behavior_delta_path,
             BEHAVIOR_DELTA_SCHEMA,
         )
     return MechanismGateInputs(

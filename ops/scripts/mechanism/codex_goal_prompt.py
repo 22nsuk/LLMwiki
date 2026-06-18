@@ -21,6 +21,7 @@ DEFAULT_OUT = "ops/reports/codex-goal-prompt.json"
 PRODUCER = "ops.scripts.codex_goal_prompt"
 SCHEMA_PATH = "ops/schemas/codex-goal-prompt.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.codex_goal_prompt --vault ."
+SUSTAINED_CLAIM_BAN_TEXT = "Do not claim sustained unattended operation"
 
 
 def _mapping_value(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
@@ -115,7 +116,7 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
                 "",
                 "PROMOTION BAN: can_promote_result=false.",
                 "Do not promote release, learning, or improvement claims.",
-                "Do not claim sustained unattended operation.",
+                f"{SUSTAINED_CLAIM_BAN_TEXT}.",
                 "Do not call update_goal complete until blockers are cleared by evidence.",
                 "",
                 "Promotion blockers:",
@@ -243,7 +244,7 @@ def build_report(
             "text": prompt_text,
             "line_count": len(prompt_text.splitlines()),
             "includes_promotion_ban": "PROMOTION BAN: can_promote_result=false." in prompt_text,
-            "includes_sustained_claim_ban": "SUSTAINED CLAIM BAN:" in prompt_text,
+            "includes_sustained_claim_ban": SUSTAINED_CLAIM_BAN_TEXT in prompt_text,
             "includes_budget_limits": "Budget limits:" in prompt_text,
             "includes_allowed_roots": "Allowed roots:" in prompt_text,
         },

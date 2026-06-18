@@ -61,6 +61,23 @@ canonical goal prompt/contract surfaces; refresh the goal runtime lane with the
 intended explicit run ID when canonical status or certificate evidence needs to
 move.
 
+When artifact freshness reports the goal-runtime owner route with
+`GOAL_RUN_ID=<completed-run-id>`, select the completed goal session id, not the
+inner mechanism iteration run id. Use:
+
+```bash
+make goal-runtime-latest-successful-run-id
+make goal-runtime-publish-latest-successful-evidence
+```
+
+The selector only accepts a completed auto-improve session that contains a
+non-quarantined `PROMOTE` iteration with a matching `PROMOTE` promotion report
+and finalized `PROMOTE` run telemetry. The publish target resolves that session
+id and passes it as an explicit `GOAL_RUN_ID` to
+`goal-runtime-status-finalize`, `goal-runtime-publish-local-evidence`, and
+`goal-runtime-certificate`, so other operators do not need to hand-copy the
+placeholder command from artifact freshness.
+
 Default goal runs do not spend the remaining wall-clock budget after one
 promotion. `GOAL_POST_PROMOTE_MAINTENANCE_CYCLES ?= 1` keeps a single
 post-promote stabilization cycle, while `GOAL_MAINTAIN_UNTIL_BUDGET ?= 0`

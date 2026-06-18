@@ -37,6 +37,7 @@ from .planning_gate_validate import validate_run_dir
 from .promotion_gate import write_report as write_promotion_report
 from .promotion_gate_common_runtime import build_log, build_signoff
 from .promotion_gate_mechanism_runtime import (
+    MechanismGateInputRequest,
     MechanismGateInputs,
     MechanismPromotionReportRequest,
     collect_mechanism_gate_inputs,
@@ -112,17 +113,19 @@ def _promotion_gate_inputs(
         else {}
     )
     return collect_mechanism_gate_inputs(
-        vault,
-        run_rel(run_id, "baseline-eval.json"),
-        run_rel(run_id, "candidate-eval.json"),
-        run_rel(run_id, "baseline-lint.json"),
-        run_rel(run_id, "candidate-lint.json"),
-        run_rel(run_id, "baseline-mechanism-assessment.json"),
-        run_rel(run_id, "candidate-mechanism-assessment.json"),
-        request.changed_files_manifest_path,
-        run_rel(run_id, "run-ledger.json"),
-        behavior_delta_path=request.behavior_delta_path,
-        **contract_eval_kwargs,
+        MechanismGateInputRequest(
+            vault=vault,
+            baseline_eval_path=run_rel(run_id, "baseline-eval.json"),
+            candidate_eval_path=run_rel(run_id, "candidate-eval.json"),
+            baseline_lint_path=run_rel(run_id, "baseline-lint.json"),
+            candidate_lint_path=run_rel(run_id, "candidate-lint.json"),
+            baseline_mechanism_path=run_rel(run_id, "baseline-mechanism-assessment.json"),
+            candidate_mechanism_path=run_rel(run_id, "candidate-mechanism-assessment.json"),
+            changed_files_manifest_path=request.changed_files_manifest_path,
+            run_ledger_path=run_rel(run_id, "run-ledger.json"),
+            behavior_delta_path=request.behavior_delta_path,
+            **contract_eval_kwargs,
+        )
     )
 
 

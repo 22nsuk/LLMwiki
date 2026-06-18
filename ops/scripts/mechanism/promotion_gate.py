@@ -34,6 +34,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         repo_relative_path,
     )
     from ops.scripts.mechanism.promotion_gate_mechanism_runtime import (
+        MechanismGateInputRequest,
         MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
@@ -73,6 +74,7 @@ else:
         repo_relative_path,
     )
     from .promotion_gate_mechanism_runtime import (
+        MechanismGateInputRequest,
         MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
@@ -203,18 +205,20 @@ def _mechanism_class_report_request(
 
 def _mechanism_gate_inputs(request: MechanismClassReportRequest) -> MechanismGateInputs:
     return collect_mechanism_gate_inputs(
-        request.vault,
-        request.baseline_eval_path,
-        request.candidate_eval_path,
-        request.baseline_lint_path,
-        request.candidate_lint_path,
-        request.baseline_mechanism_path,
-        request.candidate_mechanism_path,
-        request.changed_files_manifest_path,
-        request.run_ledger_path,
-        behavior_delta_path=request.behavior_delta_path,
-        baseline_mechanism_contract_eval_path=request.baseline_mechanism_contract_eval_path,
-        candidate_mechanism_contract_eval_path=request.candidate_mechanism_contract_eval_path,
+        MechanismGateInputRequest(
+            vault=request.vault,
+            baseline_eval_path=request.baseline_eval_path,
+            candidate_eval_path=request.candidate_eval_path,
+            baseline_lint_path=request.baseline_lint_path,
+            candidate_lint_path=request.candidate_lint_path,
+            baseline_mechanism_path=request.baseline_mechanism_path,
+            candidate_mechanism_path=request.candidate_mechanism_path,
+            changed_files_manifest_path=request.changed_files_manifest_path,
+            run_ledger_path=request.run_ledger_path,
+            behavior_delta_path=request.behavior_delta_path,
+            baseline_mechanism_contract_eval_path=request.baseline_mechanism_contract_eval_path,
+            candidate_mechanism_contract_eval_path=request.candidate_mechanism_contract_eval_path,
+        )
     )
 
 
@@ -393,18 +397,20 @@ def _build_report(args: argparse.Namespace) -> tuple[Path, dict]:
     ) = _required_mechanism_args(args)
     run_ledger_path = args.run_ledger or f"runs/{args.run_id}/run-ledger.json"
     inputs = collect_mechanism_gate_inputs(
-        vault,
-        baseline_eval_path,
-        candidate_eval_path,
-        baseline_lint_path,
-        candidate_lint_path,
-        baseline_mechanism_path,
-        candidate_mechanism_path,
-        changed_files_manifest_path,
-        run_ledger_path,
-        behavior_delta_path=args.behavior_delta,
-        baseline_mechanism_contract_eval_path=args.baseline_mechanism_contract_eval_report,
-        candidate_mechanism_contract_eval_path=args.candidate_mechanism_contract_eval_report,
+        MechanismGateInputRequest(
+            vault=vault,
+            baseline_eval_path=baseline_eval_path,
+            candidate_eval_path=candidate_eval_path,
+            baseline_lint_path=baseline_lint_path,
+            candidate_lint_path=candidate_lint_path,
+            baseline_mechanism_path=baseline_mechanism_path,
+            candidate_mechanism_path=candidate_mechanism_path,
+            changed_files_manifest_path=changed_files_manifest_path,
+            run_ledger_path=run_ledger_path,
+            behavior_delta_path=args.behavior_delta,
+            baseline_mechanism_contract_eval_path=args.baseline_mechanism_contract_eval_report,
+            candidate_mechanism_contract_eval_path=args.candidate_mechanism_contract_eval_report,
+        )
     )
     report = build_mechanism_class_report(
         request=MechanismPromotionReportRequest(

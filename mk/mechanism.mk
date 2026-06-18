@@ -50,6 +50,7 @@ GOAL_RUNTIME_CLOSEOUT_GENERATED_ARTIFACT_INDEX_OUT ?= $(GOAL_RUNTIME_CLOSEOUT_ST
 GOAL_RUNTIME_CLOSEOUT_ARTIFACT_FRESHNESS_OUT ?= $(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/artifact-freshness-report.json
 GOAL_RUNTIME_LOCK_PATH ?= $(GOAL_RUN_LOG_DIR)/goal-runtime.lock.json
 GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT ?= tmp/goal-runtime-python-preflight.json
+GOAL_RUNTIME_LATEST_SUCCESSFUL_RUN_ARGS ?=
 GOAL_SESSION_RESULT_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/auto-improve-goal-session-result.json
 GOAL_ACTIVE_RUN_STATUS_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/goal-run-status.json
 GOAL_RUN_STATUS_CANDIDATE_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/goal-run-status.candidate.json
@@ -91,7 +92,7 @@ MECHANISM_CONTRACT_EVAL_CHANGED_FILES_MANIFEST ?= runs/$(MECHANISM_CONTRACT_EVAL
 MECHANISM_CONTRACT_EVAL_BEHAVIOR_DELTA ?= runs/$(MECHANISM_CONTRACT_EVAL_RUN_ID)/behavior-delta.json
 MECHANISM_CONTRACT_EVAL_ARGS ?=
 
-.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-refresh goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-pre-run-cleanup goal-runtime-between-run-settle goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-quarantine-preflight goal-runtime-stale-closeout goal-runtime-fixed-point-check goal-runtime-run-admission-converge goal-runtime-run-admission-local-refresh goal-runtime-run-admission goal-runtime-run-admission-resume goal-runtime-maintenance-action-plan goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-maintenance-action auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate-run-id-guard goal-runtime-status-finalize goal-runtime-certificate-report goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal mechanism-contract-eval run-mechanism-experiment-linux-tmp outcome-metrics promotion-decision-trends routing-provenance-aggregate outcome-provenance-gate-policy
+.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-refresh goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-pre-run-cleanup goal-runtime-between-run-settle goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-quarantine-preflight goal-runtime-stale-closeout goal-runtime-fixed-point-check goal-runtime-run-admission-converge goal-runtime-run-admission-local-refresh goal-runtime-run-admission goal-runtime-run-admission-resume goal-runtime-maintenance-action-plan goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight goal-runtime-latest-successful-run-id goal-runtime-publish-latest-successful-evidence long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-maintenance-action auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate-run-id-guard goal-runtime-status-finalize goal-runtime-certificate-report goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal mechanism-contract-eval run-mechanism-experiment-linux-tmp outcome-metrics promotion-decision-trends routing-provenance-aggregate outcome-provenance-gate-policy
 .PHONY: mechanism-navigation-index observation-closeout-lint
 
 mechanism-navigation-index:
@@ -293,6 +294,17 @@ goal-runtime-lock-stop:
 
 goal-runtime-python-preflight:
 	$(PYTHON) -m ops.scripts.bootstrap_preflight --vault "$(VAULT)" --dev --environment-class goal-runtime --out "$(GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT)"
+
+goal-runtime-latest-successful-run-id:
+	@$(PYTHON) -m ops.scripts.mechanism.goal_runtime_latest_successful_run --vault "$(VAULT)" $(GOAL_RUNTIME_LATEST_SUCCESSFUL_RUN_ARGS)
+
+goal-runtime-publish-latest-successful-evidence:
+	@set -e; \
+	run_id="$$($(PYTHON) -m ops.scripts.mechanism.goal_runtime_latest_successful_run --vault "$(VAULT)")"; \
+	printf 'goal-runtime latest successful GOAL_RUN_ID=%s\n' "$$run_id"; \
+	$(MAKE) goal-runtime-status-finalize GOAL_RUN_ID="$$run_id"; \
+	$(MAKE) goal-runtime-publish-local-evidence GOAL_RUN_ID="$$run_id"; \
+	$(MAKE) goal-runtime-certificate GOAL_RUN_ID="$$run_id"
 
 long-run-preflight-clean: goal-runtime-run-admission-converge
 
