@@ -40,6 +40,7 @@ from .schema_constants_runtime import STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA
 ROLE_ORDER = ("worker", "reviewer", "validator")
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 SCRIPT_OUTPUT_SURFACES_MODULE = "ops/scripts/core/script_output_surfaces.py"
+SCRIPT_OUTPUT_SURFACES_REFRESH_TIMEOUT_SECONDS = 60
 OPS_SCRIPTS_PREFIX = "ops/scripts/"
 WORKER_REPO_HEALTH_PREFLIGHT_STDOUT = "worker-repo-health-preflight.stdout.txt"
 WORKER_REPO_HEALTH_PREFLIGHT_STDERR = "worker-repo-health-preflight.stderr.txt"
@@ -212,35 +213,53 @@ def _should_refresh_script_output_surfaces(
     changed_primary_targets: list[str],
     supporting_targets: list[str],
 ) -> bool:
-    return any(target.startswith(OPS_SCRIPTS_PREFIX) for target in changed_primary_targets)
+    return (
+        SCRIPT_OUTPUT_SURFACES_TARGET in supporting_targets
+        and any(target.startswith(OPS_SCRIPTS_PREFIX) for target in changed_primary_targets)
+    )
 
 
-def _workspace_python(workspace_root: Path) -> str:
-    for rel_path in (".venv/bin/python", ".venv/Scripts/python.exe", ".venv/Scripts/python"):
-        python_path = workspace_root / rel_path
-        if python_path.exists():
-            return str(python_path)
-    return sys.executable
+def _trusted_repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _script_output_surfaces_refresh_env() -> dict[str, str]:
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in {"PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV"}
+    }
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
 
 
 def _refresh_script_output_surfaces(workspace_root: Path) -> None:
-    if not (workspace_root / SCRIPT_OUTPUT_SURFACES_MODULE).is_file():
+    trusted_root = _trusted_repo_root()
+    if not (trusted_root / SCRIPT_OUTPUT_SURFACES_MODULE).is_file():
         return
-    completed = subprocess.run(
-        [
-            _workspace_python(workspace_root),
-            "-m",
-            "ops.scripts.script_output_surfaces",
-            "--vault",
-            ".",
-            "--out",
-            SCRIPT_OUTPUT_SURFACES_TARGET,
-        ],
-        cwd=workspace_root,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "ops.scripts.script_output_surfaces",
+                "--vault",
+                str(workspace_root),
+                "--out",
+                str(workspace_root / SCRIPT_OUTPUT_SURFACES_TARGET),
+            ],
+            cwd=trusted_root,
+            env=_script_output_surfaces_refresh_env(),
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=SCRIPT_OUTPUT_SURFACES_REFRESH_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ExecutorRuntimeExecutionError(
+            "timed out refreshing ops/script-output-surfaces.json after worker changed "
+            f"ops/scripts target ({SCRIPT_OUTPUT_SURFACES_REFRESH_TIMEOUT_SECONDS}s)"
+        ) from exc
     if completed.returncode != 0:
         detail = (completed.stderr or completed.stdout or "").strip()
         raise ExecutorRuntimeExecutionError(

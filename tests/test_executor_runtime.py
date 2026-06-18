@@ -1567,7 +1567,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             scope_path = vault / "runs" / "run-executor" / "scope-freeze.json"
             scope = json.loads(scope_path.read_text(encoding="utf-8"))
-            scope["inputs"]["supporting_targets"] = []
+            scope["inputs"]["supporting_targets"] = ["ops/script-output-surfaces.json"]
             scope_path.write_text(json.dumps(scope, ensure_ascii=False, indent=2), encoding="utf-8")
             (vault / "ops" / "script-output-surfaces.json").write_text("stale\n", encoding="utf-8")
             worker_routing = _write_routing_report(
@@ -1617,21 +1617,29 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
                     return subprocess.CompletedProcess(argv, 0, stdout="repo health ok\n", stderr="")
                 events.append("script-output-surfaces")
-                self.assertEqual(argv[0], str(vault / ".venv" / "bin" / "python"))
+                self.assertEqual(argv[0], sys.executable)
                 self.assertEqual(
                     argv[1:],
                     [
                         "-m",
                         "ops.scripts.script_output_surfaces",
                         "--vault",
-                        ".",
+                        str(vault),
                         "--out",
-                        "ops/script-output-surfaces.json",
+                        str(vault / "ops" / "script-output-surfaces.json"),
                     ],
                 )
+                self.assertEqual(kwargs.get("cwd"), REPO_ROOT)
+                self.assertEqual(kwargs.get("timeout"), 60)
+                env = kwargs.get("env")
+                self.assertIsInstance(env, dict)
+                self.assertNotIn("PYTHONPATH", cast(dict[str, str], env))
+                self.assertNotIn("PYTHONHOME", cast(dict[str, str], env))
+                self.assertNotIn("VIRTUAL_ENV", cast(dict[str, str], env))
+                self.assertEqual(cast(dict[str, str], env)["PYTHONDONTWRITEBYTECODE"], "1")
                 refresh_cwd_value = kwargs.get("cwd")
                 self.assertIsNotNone(refresh_cwd_value)
-                refresh_cwd = Path(str(refresh_cwd_value))
+                refresh_cwd = vault
                 (refresh_cwd / "ops" / "script-output-surfaces.json").write_text(
                     "fresh\n",
                     encoding="utf-8",
@@ -1658,6 +1666,81 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 (vault / "ops" / "script-output-surfaces.json").read_text(encoding="utf-8"),
                 "fresh\n",
             )
+
+    def test_run_executor_pipeline_does_not_refresh_script_output_surfaces_without_supporting_target(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            (vault / "ops" / "scripts" / "core").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "scripts" / "core" / "script_output_surfaces.py").write_text(
+                "# worker-controlled module must not be executed\n",
+                encoding="utf-8",
+            )
+            scope_path = vault / "runs" / "run-executor" / "scope-freeze.json"
+            scope = json.loads(scope_path.read_text(encoding="utf-8"))
+            scope["inputs"]["supporting_targets"] = []
+            scope_path.write_text(json.dumps(scope, ensure_ascii=False, indent=2), encoding="utf-8")
+            worker_routing = _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            validator_routing = _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="read-only",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            events: list[str] = []
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                output_path = Path(argv[out_index])
+                role = output_path.name.replace("-last-message.json", "")
+                events.append(role)
+                if role == "worker":
+                    (vault / "ops" / "scripts" / "example.py").write_text(
+                        "def subject():\n    return 2\n",
+                        encoding="utf-8",
+                    )
+                output_path.write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
+
+            def fake_subprocess(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if _is_worker_repo_health_preflight(argv):
+                    events.append("post-worker-repo-health")
+                    self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
+                    return subprocess.CompletedProcess(argv, 0, stdout="repo health ok\n", stderr="")
+                return _executor_subprocess_completed(argv)
+
+            with (
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_subprocess),
+            ):
+                run_executor_pipeline(
+                    vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    roles=["worker", "validator"],
+                    routing_reports=[worker_routing, validator_routing],
+                )
+
+            self.assertEqual(events, ["worker", "post-worker-repo-health", "validator"])
 
     def test_run_executor_pipeline_blocks_non_worker_roles_when_post_worker_repo_health_fails(
         self,
