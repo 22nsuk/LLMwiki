@@ -23,7 +23,10 @@ from ops.scripts.core.python_function_budget_runtime import (
 )
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema
-from ops.scripts.mechanism import auto_improve_iteration_persistence_runtime
+from ops.scripts.mechanism import (
+    auto_improve_iteration_persistence_runtime,
+    auto_improve_iteration_runtime,
+)
 from ops.scripts.mechanism.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluatePhaseResult,
@@ -2339,6 +2342,27 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 candidate_id="",
                 decision_reason="scope_freeze_status",
             )
+
+    def test_record_selected_proposal_uses_attempt_suffix_when_run_dir_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "runs" / "auto-session-run-01").mkdir(parents=True)
+            session = {"attempted_proposal_ids": [], "run_ids": []}
+            attempted: set[str] = set()
+
+            run_id = auto_improve_iteration_runtime._record_selected_proposal(
+                vault,
+                session,
+                attempted,
+                session_id="auto-session",
+                iteration=1,
+                proposal={"proposal_id": "proposal-1"},
+                build_run_id=lambda *_args: "auto-session-run-01",
+            )
+
+        self.assertEqual(run_id, "auto-session-run-01-attempt-02")
+        self.assertEqual(session["run_ids"], ["auto-session-run-01-attempt-02"])
+        self.assertEqual(session["attempted_proposal_ids"], ["proposal-1"])
 
     def test_run_auto_improve_iteration_stops_on_retryable_executor_usage_limit(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

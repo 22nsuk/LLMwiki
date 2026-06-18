@@ -81,13 +81,34 @@ def _record_selected_proposal(
     proposal: dict[str, Any],
     build_run_id: Callable[[str, int, dict[str, Any]], str],
 ) -> str:
-    run_id = build_run_id(session_id, iteration, proposal)
+    run_id = _unique_run_id(
+        vault,
+        build_run_id(session_id, iteration, proposal),
+        session_run_ids=[
+            str(item).strip()
+            for item in session.get("run_ids", [])
+            if str(item).strip()
+        ],
+    )
     run_dir = vault / "runs" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     attempted.add(proposal["proposal_id"])
     session["attempted_proposal_ids"] = sorted(attempted)
     session["run_ids"].append(run_id)
     return run_id
+
+
+def _unique_run_id(vault: Path, base_run_id: str, *, session_run_ids: list[str]) -> str:
+    used_run_ids = set(session_run_ids)
+    if base_run_id not in used_run_ids and not (vault / "runs" / base_run_id).exists():
+        return base_run_id
+
+    attempt = 2
+    while True:
+        candidate = f"{base_run_id}-attempt-{attempt:02d}"
+        if candidate not in used_run_ids and not (vault / "runs" / candidate).exists():
+            return candidate
+        attempt += 1
 
 
 def _duration_ms(phase_durations: dict[str, float]) -> int:
