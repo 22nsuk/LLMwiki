@@ -36,6 +36,7 @@ from tests.minimal_vault_runtime import (
     REPO_ROOT,
     seed_minimal_vault,
     seed_subagent_profiles,
+    set_policy_value,
 )
 
 pytestmark = pytest.mark.slow
@@ -188,6 +189,19 @@ def _executor_subprocess_completed(
 
 
 def _is_worker_repo_health_preflight(argv: list[str]) -> bool:
+    return _is_full_worker_repo_health_preflight(argv) or _is_focused_worker_repo_health_preflight(argv)
+
+
+def _is_full_worker_repo_health_preflight(argv: list[str]) -> bool:
+    return (
+        len(argv) == 3
+        and Path(argv[0]).name == "make"
+        and argv[1].startswith("PYTHON=")
+        and argv[2] == "check"
+    )
+
+
+def _is_focused_worker_repo_health_preflight(argv: list[str]) -> bool:
     return (
         len(argv) >= 7
         and Path(argv[0]).name.startswith("python")
@@ -1428,6 +1442,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
                 if _is_worker_repo_health_preflight(argv):
                     self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
+                    self.assertTrue(_is_full_worker_repo_health_preflight(argv))
+                    self.assertEqual(kwargs.get("timeout"), 5400)
                     executed_roles.append("post-worker-repo-health")
                 return _executor_subprocess_completed(argv)
 
@@ -1465,6 +1481,76 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 ],
             )
             self.assertEqual(ledger["events"][-2]["decision"], "worker_repo_health_preflight_pass")
+
+    def test_run_executor_pipeline_keeps_sparse_worker_repo_health_preflight_focused(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            set_policy_value(
+                vault,
+                ("auto_improve_policy", "workspace_preparation"),
+                {"mode": "sparse_manifest", "declared_dependencies": ["tools/"]},
+            )
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            worker_routing = _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            validator_routing = _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="read-only",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            captured_preflight: list[list[str]] = []
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                output_path = Path(argv[out_index])
+                role = output_path.name.replace("-last-message.json", "")
+                if role == "worker":
+                    (vault / "ops" / "scripts" / "example.py").write_text(
+                        "def subject():\n    return 2\n",
+                        encoding="utf-8",
+                    )
+                output_path.write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
+
+            def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if _is_worker_repo_health_preflight(argv):
+                    self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
+                    self.assertTrue(_is_focused_worker_repo_health_preflight(argv))
+                    self.assertEqual(kwargs.get("timeout"), 5400)
+                    captured_preflight.append(argv)
+                return _executor_subprocess_completed(argv)
+
+            with (
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+            ):
+                run_executor_pipeline(
+                    vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    roles=["worker", "validator"],
+                    routing_reports=[worker_routing, validator_routing],
+                )
+
+            self.assertEqual(len(captured_preflight), 1)
+            self.assertEqual(captured_preflight[0][-1], "tests/test_example.py")
 
     def test_run_executor_pipeline_refreshes_script_output_surfaces_after_ops_script_change(
         self,

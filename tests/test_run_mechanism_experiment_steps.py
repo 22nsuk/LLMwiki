@@ -46,6 +46,7 @@ from ops.scripts.mechanism.run_mechanism_experiment_runtime import (
     RunMechanismExperimentUsageError,
     _mechanism_temp_dir_parent,
 )
+from tests.minimal_vault_runtime import set_policy_value
 from tests.run_mechanism_experiment_test_utils import seed_wrapper_vault
 
 
@@ -217,6 +218,78 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             self.assertIsNotNone(resolution.check_command_spec)
             self.assertEqual(resolution.mutation_command_spec.timeout_seconds, 5400)
             self.assertEqual(resolution.check_command_spec.timeout_seconds, 5400)
+
+    def test_resolve_experiment_inputs_defaults_full_workspace_check_to_make_check(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+
+            resolution = _resolve_experiment_inputs(
+                ExperimentInputRequest(
+                    vault=vault.resolve(),
+                    run_id="run-steps-full-default-check",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    primary_targets=["ops/scripts/example.py"],
+                    supporting_targets=[],
+                    test_files=["tests/test_example.py"],
+                    log_summary=None,
+                    mutation_command=f"{sys.executable} tools/mutate_success.py",
+                    check_command=None,
+                    proposal_id=None,
+                    proposal_report_path=None,
+                    scaffold_only=False,
+                )
+            )
+
+            self.assertIsNotNone(resolution.check_command_spec)
+            self.assertEqual(Path(resolution.check_command_spec.argv[0]).name, "make")
+            self.assertEqual(
+                resolution.check_command_spec.argv[1:],
+                [f"PYTHON={sys.executable}", "check"],
+            )
+
+    def test_resolve_experiment_inputs_keeps_sparse_default_check_focused(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            set_policy_value(
+                vault,
+                ("auto_improve_policy", "workspace_preparation"),
+                {"mode": "sparse_manifest", "declared_dependencies": ["tools/"]},
+            )
+
+            resolution = _resolve_experiment_inputs(
+                ExperimentInputRequest(
+                    vault=vault.resolve(),
+                    run_id="run-steps-sparse-default-check",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    primary_targets=["ops/scripts/example.py"],
+                    supporting_targets=[],
+                    test_files=["tests/test_example.py"],
+                    log_summary=None,
+                    mutation_command=f"{sys.executable} tools/mutate_success.py",
+                    check_command=None,
+                    proposal_id=None,
+                    proposal_report_path=None,
+                    scaffold_only=False,
+                )
+            )
+
+            self.assertIsNotNone(resolution.check_command_spec)
+            self.assertEqual(
+                resolution.check_command_spec.argv,
+                [
+                    sys.executable,
+                    "-B",
+                    "-m",
+                    "pytest",
+                    "-p",
+                    "no:cacheprovider",
+                    "tests/test_example.py",
+                ],
+            )
 
     def test_run_command_records_timeout_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
