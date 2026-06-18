@@ -197,6 +197,26 @@ def _assert_successful_runtime_events_and_learning(case: unittest.TestCase, arti
 
 
 class AutoImproveRuntimeTests(unittest.TestCase):
+    def test_build_run_id_includes_proposal_identity_to_prevent_snapshot_collision(self) -> None:
+        proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+        repair_proposal = {
+            **proposal,
+            "proposal_id": "next_run_failure_repair__example__validation_blocked",
+        }
+
+        first = auto_improve_runtime._build_run_id("auto-session", 1, proposal)
+        second = auto_improve_runtime._build_run_id("auto-session", 1, repair_proposal)
+
+        self.assertNotEqual(first, second)
+        self.assertRegex(
+            first,
+            r"^auto-session-run-01-example-[a-z0-9-]+-[0-9a-f]{10}$",
+        )
+        self.assertRegex(
+            second,
+            r"^auto-session-run-01-example-[a-z0-9-]+-[0-9a-f]{10}$",
+        )
+
     def test_maintenance_action_plan_schema_requires_canonical_envelope(self) -> None:
         plan_schema = load_schema(REPO_ROOT / "ops/schemas/goal-runtime-maintenance-action-plan.schema.json")
         bare_business_plan = {

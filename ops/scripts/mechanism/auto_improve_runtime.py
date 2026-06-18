@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import time
@@ -209,9 +210,29 @@ def _run_slug(text: str) -> str:
     return normalized[:48] or "proposal"
 
 
+def _proposal_identity_slug(proposal: Mapping[str, Any]) -> str:
+    proposal_id = str(proposal.get("proposal_id", "")).strip()
+    if proposal_id:
+        identity = proposal_id
+        prefix = _run_slug(proposal_id)[:32].strip("-")
+    else:
+        identity = json.dumps(
+            {
+                "primary_targets": proposal.get("primary_targets", []),
+                "supporting_targets": proposal.get("supporting_targets", []),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        prefix = "proposal"
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:10]
+    return f"{prefix or 'proposal'}-{digest}"
+
+
 def _build_run_id(session_id: str, iteration: int, proposal: dict) -> str:
     primary = proposal["primary_targets"][0]
-    return f"{session_id}-run-{iteration:02d}-{_run_slug(Path(primary).stem)}"
+    proposal_identity = _proposal_identity_slug(proposal)
+    return f"{session_id}-run-{iteration:02d}-{_run_slug(Path(primary).stem)}-{proposal_identity}"
 
 
 def _pre_run_readiness_snapshot(
