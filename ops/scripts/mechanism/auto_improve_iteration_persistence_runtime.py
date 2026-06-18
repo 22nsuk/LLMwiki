@@ -471,6 +471,18 @@ def _equal_score_legacy_candidate_gate_detail(detail: str) -> bool:
     return True
 
 
+def _same_eval_detail_has_named_improved_axes(detail: str) -> bool:
+    marker = "improved_axes="
+    if marker not in detail:
+        return False
+    tail = detail.split(marker, 1)[1].strip()
+    if tail.startswith("[") and "]" in tail:
+        tail = tail[1 : tail.index("]")]
+    else:
+        tail = tail.split(",", 1)[0].strip()
+    return any(item.strip().strip("'\"") for item in tail.split(","))
+
+
 def _decision_record_reason_code(decision_record: dict[str, Any] | None) -> str:
     if not isinstance(decision_record, dict):
         return ""
@@ -774,7 +786,7 @@ def write_iteration_telemetry(
     )
     same_eval_existing_report = (
         {"promotion_report": cast(LoadedPromotionReport, promotion_report).payload}
-        if same_eval_is_current
+        if same_eval_is_current and _same_eval_detail_has_named_improved_axes(same_eval_promotion_detail)
         else existing_report if promotion_report is None else {}
     )
     same_eval_reason = iteration_same_eval_reason(request.result, same_eval_existing_report)
