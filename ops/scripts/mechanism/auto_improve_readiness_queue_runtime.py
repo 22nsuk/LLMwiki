@@ -137,9 +137,25 @@ def _latest_session_attempted(
     latest_session: dict[str, Any],
     mutation_proposal_report: dict[str, Any],
 ) -> set[str]:
-    if _latest_session_source_changed(latest_session, mutation_proposal_report):
+    if _latest_session_source_changed(
+        latest_session,
+        mutation_proposal_report,
+    ) or _latest_session_quarantine_resolved(mutation_proposal_report):
         return set()
     return set(_string_list(latest_session.get("attempted_proposal_ids")))
+
+
+def _latest_session_quarantine_resolved(mutation_proposal_report: dict[str, Any]) -> bool:
+    diagnostics = mutation_proposal_report.get("diagnostics")
+    queue = diagnostics.get("next_run_decision_queue") if isinstance(diagnostics, dict) else {}
+    queue = queue if isinstance(queue, dict) else {}
+    decision_counts = queue.get("decision_counts") if isinstance(queue, dict) else {}
+    decision_counts = decision_counts if isinstance(decision_counts, dict) else {}
+    return (
+        _int_value(decision_counts.get("carry_forward")) > 0
+        and _int_value(queue.get("open_carry_forward_decisions")) == 0
+        and _int_value(queue.get("repair_proposals_emitted")) == 0
+    )
 
 
 def _runnable_proposal_ids(
@@ -150,7 +166,9 @@ def _runnable_proposal_ids(
     if not isinstance(proposals, list):
         return []
     latest_session = _latest_auto_improve_session(vault)
-    quarantined = set(_string_list(latest_session.get("quarantined_proposal_ids")))
+    quarantined = set() if _latest_session_quarantine_resolved(mutation_proposal_report) else set(
+        _string_list(latest_session.get("quarantined_proposal_ids"))
+    )
     quarantined.update(
         open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)
     )
@@ -178,7 +196,9 @@ def _latest_session_exclusion_blockers(
         return {}, {}
     latest_session = _latest_auto_improve_session(vault)
     attempted = _latest_session_attempted(latest_session, mutation_proposal_report)
-    quarantined = set(_string_list(latest_session.get("quarantined_proposal_ids")))
+    quarantined = set() if _latest_session_quarantine_resolved(mutation_proposal_report) else set(
+        _string_list(latest_session.get("quarantined_proposal_ids"))
+    )
     open_repair_quarantined = set(
         open_repair_quarantined_source_proposal_ids(vault, mutation_proposal_report)
     )
