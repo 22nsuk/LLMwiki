@@ -45,6 +45,7 @@ from tests.runtime_hotspot_golden_contract import (
     STRUCTURAL_GOLDEN_DIGESTS,
     assert_structural_contract,
     canonical_bytes,
+    strip_volatile_fields,
     structural_digest,
 )
 from tests.test_release_closeout_summary import (
@@ -266,3 +267,35 @@ def test_runtime_hotspot_golden_digest_failure_message_names_recovery_target() -
     assert "expected=expected" in message
     assert "actual=actual" in message
     assert GOLDEN_CHECK_COMMAND in message
+
+
+def test_runtime_hotspot_structural_digest_keeps_fingerprint_shape_not_values() -> None:
+    baseline = {
+        "input_fingerprints": {
+            "policy": "old-policy-digest",
+            "schema": "old-schema-digest",
+        },
+        "producer_input_fingerprint": "old-producer-digest",
+        "source_revision": "old-revision",
+        "source_tree_fingerprint": "old-tree-digest",
+    }
+    refreshed = {
+        "input_fingerprints": {
+            "policy": "new-policy-digest",
+            "schema": "new-schema-digest",
+        },
+        "producer_input_fingerprint": "new-producer-digest",
+        "source_revision": "new-revision",
+        "source_tree_fingerprint": "new-tree-digest",
+    }
+    changed_shape = {
+        **refreshed,
+        "input_fingerprints": {
+            **refreshed["input_fingerprints"],
+            "new_axis": "new-axis-digest",
+        },
+    }
+
+    assert strip_volatile_fields(baseline) == strip_volatile_fields(refreshed)
+    assert structural_digest(baseline) == structural_digest(refreshed)
+    assert structural_digest(refreshed) != structural_digest(changed_shape)

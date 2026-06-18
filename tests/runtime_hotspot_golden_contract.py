@@ -29,11 +29,24 @@ VOLATILE_FIELD_NAMES = frozenset(
     }
 )
 
+FINGERPRINT_MAP_FIELD_NAMES = frozenset({"input_fingerprints"})
+
+VOLATILE_FIELD_VALUE_SENTINELS = {
+    "current_source_revision": "<current_source_revision>",
+    "current_source_tree_fingerprint": "<current_source_tree_fingerprint>",
+    "observed_source_revision": "<observed_source_revision>",
+    "observed_source_tree_fingerprint": "<observed_source_tree_fingerprint>",
+    "producer_input_fingerprint": "<producer_input_fingerprint>",
+    "source_revision": "<source_revision>",
+    "source_tree_fingerprint": "<source_tree_fingerprint>",
+    "source_tree_fingerprint_current": "<source_tree_fingerprint_current>",
+}
+
 STRUCTURAL_GOLDEN_DIGESTS = {
-    "mutation_proposal": "92f6e28997edaf53c6b2cbce7632205fba05894f691a0ff7e76ae588a67ddb32",
-    "release_evidence_dashboard": "bdb164ff7b7bdad823d13aecd45624e8d70818f9fcae7e6d2dfa9ce927143993",
-    "release_closeout_summary": "c22133c43822d9625338b50931a5754e696490732b7165227e6433b96708bd7e",
-    "auto_improve_session_bundle": "47df5de8dae219ce763f4377bc8f4526d57b5178f229cdfd8202e4414caaa103",
+    "mutation_proposal": "99536d57a2fc8f1a5ceb2fe658cec2f7e75bd4cb3d63b83dc6121c68ea426366",
+    "release_evidence_dashboard": "3cdc62c1128d5fad032aa4cc2fda5931805d12964f76b2acdbf0dcd8e6d90d32",
+    "release_closeout_summary": "6b2a8f1a26d6ee8eb149653cc0e8d6e2108b2627f9997aa8367adb21e2746152",
+    "auto_improve_session_bundle": "4f8f612077c773f77e425f9ea3ba5759514b1f77f58d96203e4dbc24175c3a4f",
 }
 
 STRUCTURAL_CONTRACTS: dict[str, dict[str, object]] = {
@@ -88,11 +101,18 @@ def canonical_bytes(payload: object) -> bytes:
 
 def strip_volatile_fields(value: object) -> object:
     if isinstance(value, dict):
-        return {
-            key: strip_volatile_fields(item)
-            for key, item in value.items()
-            if key not in VOLATILE_FIELD_NAMES
-        }
+        stripped: dict[str, object] = {}
+        for key, item in value.items():
+            if key in VOLATILE_FIELD_NAMES:
+                continue
+            if key in FINGERPRINT_MAP_FIELD_NAMES and isinstance(item, dict):
+                stripped[key] = dict.fromkeys(sorted(item), "<fingerprint>")
+                continue
+            if key in VOLATILE_FIELD_VALUE_SENTINELS:
+                stripped[key] = VOLATILE_FIELD_VALUE_SENTINELS[key]
+                continue
+            stripped[key] = strip_volatile_fields(item)
+        return stripped
     if isinstance(value, list):
         return [strip_volatile_fields(item) for item in value]
     return value
