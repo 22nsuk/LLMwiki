@@ -169,6 +169,32 @@ def _mismatches_covered_by_semantic_digest(
     return covered
 
 
+def _mismatches_covered_by_semantic_digest_with_fixed_point_authority(
+    mismatches: list[dict[str, str]],
+    *,
+    fixed_point_digest_map: dict[str, str],
+    recorded_semantic_map: dict[str, str],
+    current_semantic_map: dict[str, str],
+) -> list[dict[str, str]]:
+    digest_consistent_mismatches: list[dict[str, str]] = []
+    for item in mismatches:
+        path = item["path"]
+        fixed_point_digest = fixed_point_digest_map.get(path, "")
+        if not fixed_point_digest or item["recorded_digest"] != fixed_point_digest:
+            continue
+        digest_consistent_mismatches.append(
+            {
+                **item,
+                "fixed_point_digest": fixed_point_digest,
+            }
+        )
+    return _mismatches_covered_by_semantic_digest(
+        digest_consistent_mismatches,
+        recorded_semantic_map=recorded_semantic_map,
+        current_semantic_map=current_semantic_map,
+    )
+
+
 def _uncovered_mismatches(
     mismatches: list[dict[str, str]],
     covered: list[dict[str, str]],
@@ -571,24 +597,38 @@ def _verify_attestation_diagnostics(
         recorded=recorded_map,
         current=current_tracked_digest_map,
     )
-    raw_mismatch_covered_by_semantic_digest = bool(raw_digest_mismatches) and semantic_map_matches
-    uncovered_raw_digest_mismatches = (
-        [] if raw_mismatch_covered_by_semantic_digest else raw_digest_mismatches
-    )
-    if raw_digest_mismatches and not semantic_map_matches:
-        failures.append("tracked_digest_map_current_mismatch")
     raw_fixed_map = fixed_payload.get("final_digest_map")
-    fixed_map: dict[str, Any] = raw_fixed_map if isinstance(raw_fixed_map, dict) else {}
+    fixed_map = _normalized_digest_map(raw_fixed_map)
+    semantic_covered_raw_mismatches = (
+        _mismatches_covered_by_semantic_digest_with_fixed_point_authority(
+            raw_digest_mismatches,
+            fixed_point_digest_map=fixed_map,
+            recorded_semantic_map=recorded_semantic_map,
+            current_semantic_map=current_semantic_digest_map,
+        )
+        if semantic_map_matches
+        else []
+    )
+    uncovered_raw_digest_mismatches = (
+        _uncovered_mismatches(raw_digest_mismatches, semantic_covered_raw_mismatches)
+    )
+    if uncovered_raw_digest_mismatches:
+        failures.append("tracked_digest_map_current_mismatch")
     fixed_point_digest_mismatches = _digest_mismatches(fixed_map, current_tracked_digest_map)
     uncovered_fixed_point_digest_mismatches = (
         [] if semantic_map_matches else fixed_point_digest_mismatches
     )
     if fixed_point_digest_mismatches and not semantic_map_matches:
         failures.append("fixed_point_digest_map_current_mismatch")
-    semantic_covered_component_mismatches = _mismatches_covered_by_semantic_digest(
-        component_digest_mismatches,
-        recorded_semantic_map=recorded_semantic_map,
-        current_semantic_map=current_semantic_digest_map,
+    semantic_covered_component_mismatches = (
+        _mismatches_covered_by_semantic_digest_with_fixed_point_authority(
+            component_digest_mismatches,
+            fixed_point_digest_map=fixed_map,
+            recorded_semantic_map=recorded_semantic_map,
+            current_semantic_map=current_semantic_digest_map,
+        )
+        if semantic_map_matches
+        else []
     )
     uncovered_component_digest_mismatches = _uncovered_mismatches(
         component_digest_mismatches,
@@ -622,13 +662,11 @@ def _verify_attestation_diagnostics(
             fixed_point_digest_mismatches=uncovered_fixed_point_digest_mismatches,
             batch_manifest_artifact_digest_mismatches=uncovered_batch_mismatches,
         ),
-        "semantic_fallback_used": raw_mismatch_covered_by_semantic_digest
+        "semantic_fallback_used": bool(semantic_covered_raw_mismatches)
         or bool(semantic_covered_component_mismatches)
         or bool(semantic_covered_batch_mismatches),
         "raw_digest_mismatches": raw_digest_mismatches,
-        "raw_digest_mismatches_covered_by_semantic_digest": raw_digest_mismatches
-        if raw_mismatch_covered_by_semantic_digest
-        else [],
+        "raw_digest_mismatches_covered_by_semantic_digest": semantic_covered_raw_mismatches,
         "fixed_point_digest_mismatches": fixed_point_digest_mismatches,
         "component_digest_mismatches": component_digest_mismatches,
         "component_digest_mismatches_covered_by_semantic_digest": semantic_covered_component_mismatches,

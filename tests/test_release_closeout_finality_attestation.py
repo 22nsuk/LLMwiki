@@ -258,6 +258,52 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
             [("batch_manifest", BATCH_MANIFEST_PATH)],
         )
 
+    def test_finality_verify_rejects_tampered_batch_manifest_component_digest(self) -> None:
+        self._seed_finality_inputs()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        attestation_payload = json.loads((self.vault / DEFAULT_OUT).read_text(encoding="utf-8"))
+        attestation_payload["batch_manifest"]["digest"] = "0" * 64
+        self._write_json(DEFAULT_OUT, attestation_payload)
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "fail")
+        self.assertEqual(diagnostics["failures"], ["batch_manifest_digest_mismatch"])
+        self.assertFalse(diagnostics["semantic_fallback_used"])
+        self.assertEqual(diagnostics["raw_digest_mismatches"], [])
+        self.assertEqual(
+            diagnostics["component_digest_mismatches_covered_by_semantic_digest"],
+            [],
+        )
+
+    def test_finality_verify_rejects_tampered_component_and_tracked_digest(self) -> None:
+        self._seed_finality_inputs()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        attestation_payload = json.loads((self.vault / DEFAULT_OUT).read_text(encoding="utf-8"))
+        bogus_digest = "0" * 64
+        attestation_payload["batch_manifest"]["digest"] = bogus_digest
+        attestation_payload["tracked_digest_map"][BATCH_MANIFEST_PATH] = bogus_digest
+        self._write_json(DEFAULT_OUT, attestation_payload)
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "fail")
+        self.assertIn("tracked_digest_map_current_mismatch", diagnostics["failures"])
+        self.assertIn("batch_manifest_digest_mismatch", diagnostics["failures"])
+        self.assertFalse(diagnostics["semantic_fallback_used"])
+        self.assertEqual(
+            diagnostics["raw_digest_mismatches_covered_by_semantic_digest"],
+            [],
+        )
+        self.assertEqual(
+            diagnostics["component_digest_mismatches_covered_by_semantic_digest"],
+            [],
+        )
+
     def test_finality_verify_fails_after_batch_manifest_semantic_drift(self) -> None:
         self._seed_finality_inputs()
         report = build_report(self.vault, context=fixed_context())
