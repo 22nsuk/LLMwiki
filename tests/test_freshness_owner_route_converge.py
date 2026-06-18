@@ -145,6 +145,41 @@ class FreshnessOwnerRouteConvergeTests(unittest.TestCase):
         self.assertEqual(plan["selected_targets"], [])
         self.assertEqual(plan["blocked_targets"][0]["reason"], "goal_run_id_required")
 
+    def test_build_plan_keeps_local_owner_targets_when_operator_routes_are_blocked(self) -> None:
+        plan = build_plan(
+            _report(
+                [
+                    {
+                        "route_id": "ops_reports_maintainability",
+                        "recommended_targets": ["complexity-budget"],
+                    },
+                    {
+                        "route_id": "ops_reports_goal_runtime",
+                        "recommended_targets": [
+                            "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate"
+                        ],
+                    },
+                ]
+            ),
+            env={},
+        )
+
+        self.assertEqual(plan["status"], "partial_owner_targets_available")
+        self.assertEqual(plan["selected_targets"], ["complexity-budget"])
+        self.assertEqual(plan["blocked_targets"][0]["reason"], "goal_run_id_required")
+        self.assertEqual(
+            plan["terminal_suffix_targets"],
+            [
+                "artifact-freshness-refresh-check",
+                "generated-artifact-index",
+                "artifact-freshness-refresh-check",
+            ],
+        )
+        self.assertEqual(
+            plan["deferred_terminal_suffix_targets"],
+            ["release-finality-resettle-current-or-refresh"],
+        )
+
     def test_build_plan_noops_when_freshness_is_clean(self) -> None:
         plan = build_plan(_report([], classification="clean"))
 
@@ -318,6 +353,67 @@ class FreshnessOwnerRouteConvergeTests(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertEqual(command_log, ["artifact-freshness-refresh-check"])
             self.assertEqual(plan["status"], "source_report_not_current")
+
+    def test_run_converge_runs_local_targets_before_reporting_operator_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            vault = Path(tmp)
+            report_path = vault / "ops/reports/artifact-freshness-report.json"
+            plan_path = vault / "tmp/plan.json"
+            command_log_path = vault / "make-targets.txt"
+            make_path = vault / "fake-make"
+            make_path.write_text(
+                f"#!/usr/bin/env bash\nprintf '%s\\n' \"$1\" >> {command_log_path}\n",
+                encoding="utf-8",
+            )
+            os.chmod(make_path, 0o755)
+            _write_json(
+                report_path,
+                _current_report(
+                    vault,
+                    [
+                        {
+                            "route_id": "external_reports_reference_manifest",
+                            "recommended_targets": [
+                                "external-report-reference-manifest-settle"
+                            ],
+                        },
+                        {
+                            "route_id": "ops_reports_goal_runtime",
+                            "recommended_targets": [
+                                "GOAL_RUN_ID=<completed-run-id> make goal-runtime-certificate"
+                            ],
+                        },
+                    ],
+                ),
+            )
+
+            code = run_converge(
+                vault=vault,
+                report_path="ops/reports/artifact-freshness-report.json",
+                plan_out="tmp/plan.json",
+                make_bin=make_path.as_posix(),
+                python="python",
+                env={},
+                dry_run=False,
+            )
+
+            command_log = command_log_path.read_text(encoding="utf-8").splitlines()
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            self.assertEqual(code, 2)
+            self.assertEqual(
+                command_log,
+                [
+                    "external-report-reference-manifest-settle",
+                    "artifact-freshness-refresh-check",
+                    "generated-artifact-index",
+                    "artifact-freshness-refresh-check",
+                ],
+            )
+            self.assertEqual(plan["status"], "partial_pass_operator_blocked")
+            self.assertEqual(
+                plan["deferred_terminal_suffix_targets"],
+                ["release-finality-resettle-current-or-refresh"],
+            )
 
 
 if __name__ == "__main__":

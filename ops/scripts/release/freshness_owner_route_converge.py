@@ -34,6 +34,7 @@ TERMINAL_SUFFIX_TARGETS = (
     "artifact-freshness-refresh-check",
     "release-finality-resettle-current-or-refresh",
 )
+PARTIAL_TERMINAL_SUFFIX_TARGETS = TERMINAL_SUFFIX_TARGETS[:-1]
 ALLOWED_ROUTE_TARGETS: dict[str, frozenset[str]] = {
     "external_reports_reference_manifest": frozenset(
         {
@@ -273,10 +274,18 @@ def build_plan(report: dict[str, Any], *, env: Mapping[str, str] | None = None) 
     )
     blocked_targets = [item for item in route_items if item.get("status") == "blocked"]
     skipped_targets = [item for item in route_items if item.get("status") == "skipped"]
+    terminal_suffix_targets = (
+        PARTIAL_TERMINAL_SUFFIX_TARGETS if blocked_targets else TERMINAL_SUFFIX_TARGETS
+    )
+    deferred_terminal_suffix_targets = (
+        [TERMINAL_SUFFIX_TARGETS[-1]] if blocked_targets and selected_targets else []
+    )
     if classification == "clean":
         status = "clean"
     elif classification != "source_identity_only":
         status = "not_source_identity_only"
+    elif blocked_targets and selected_targets:
+        status = "partial_owner_targets_available"
     elif blocked_targets:
         status = "blocked"
     elif selected_targets:
@@ -295,7 +304,8 @@ def build_plan(report: dict[str, Any], *, env: Mapping[str, str] | None = None) 
         "blocked_target_count": len(blocked_targets),
         "skipped_targets": skipped_targets,
         "skipped_target_count": len(skipped_targets),
-        "terminal_suffix_targets": list(TERMINAL_SUFFIX_TARGETS),
+        "terminal_suffix_targets": list(terminal_suffix_targets),
+        "deferred_terminal_suffix_targets": deferred_terminal_suffix_targets,
         "summary": _plan_summary(
             status=status,
             selected_count=len(selected_targets),
@@ -524,9 +534,9 @@ def run_converge(
             _write_plan(vault, plan, plan_out)
             return int(result["returncode"]) or 1
 
-    for target in TERMINAL_SUFFIX_TARGETS:
+    for target in plan["terminal_suffix_targets"]:
         result = _run_make_target(
-            target,
+            str(target),
             make_bin=make_bin,
             python=python,
             vault=vault,
@@ -538,6 +548,22 @@ def run_converge(
             plan["status"] = "terminal_suffix_failed"
             _write_plan(vault, plan, plan_out)
             return int(result["returncode"]) or 1
+
+    if plan["blocked_targets"]:
+        plan["status"] = "partial_pass_operator_blocked"
+        plan["summary"] = _plan_summary(
+            status="partial_pass_operator_blocked",
+            selected_count=int(plan["selected_target_count"]),
+            blocked_count=int(plan["blocked_target_count"]),
+            skipped_count=int(plan["skipped_target_count"]),
+        )
+        _write_plan(vault, plan, plan_out)
+        print(
+            "freshness-owner-route-converge: local owner routes converged; "
+            "operator input remains required",
+            file=sys.stderr,
+        )
+        return 2
 
     plan["status"] = "pass"
     plan["summary"] = _plan_summary(
