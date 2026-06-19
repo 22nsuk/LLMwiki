@@ -120,6 +120,7 @@ release-auto-promotion-operator-summary:
 	$(PYTHON) -m ops.scripts.operator_release_summary --vault "$(VAULT)" --out "$(RELEASE_AUTO_PROMOTION_OPERATOR_SUMMARY_OUT)" --batch-manifest "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)" --self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"
 
 release-auto-promotion-ready:
+	$(MAKE) release-auto-promotion-operator-summary
 	@status=0; $(MAKE) release-auto-promotion-ready-plan || status=$$?; \
 	if [ $$status -ne 0 ]; then \
 		echo "release-auto-promotion-ready-plan is blocked; writing blocked ready manifest for diagnostics"; \
