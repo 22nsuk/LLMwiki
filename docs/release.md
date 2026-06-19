@@ -562,8 +562,12 @@ fingerprints, accepted risk, gate attention, or learning blockers.
 - `ops/reports/public-check-summary.json` proves the exported public tree contract.
   `public-check-summary-current-check`, `public-check-all-check`, and
   `release-run-ready` reuse this report only when the same
-  `source_tree_fingerprint` still matches; stale evidence reruns the full public
-  export check lane. Its inner `pytest_public` step runs
+  `source_tree_fingerprint` and `input_fingerprints.public_check_config` still
+  match; stale evidence reruns the full public export check lane. The config
+  fingerprint binds the resolved public export directory and boundary, public
+  Python identity, pytest flags, ruff/mypy targets, and runner timeout/heartbeat
+  settings while excluding the temporary pytest summary cache path. Its inner
+  `pytest_public` step runs
   `ops.scripts.test_execution_summary --suite public --reuse-if-current` inside
   the exported tree, reusing a temporary `test-execution-summary-public.json`
   cache instead of the repository canonical report path. After a refresh, the

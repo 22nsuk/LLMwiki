@@ -168,6 +168,12 @@ keep the corresponding actions active in the matrix.
 `public-check-summary` records per-command heartbeat counts, quiet seconds,
 timeout termination reason, signal sent, and final observed process state; use
 those diagnostics before assuming a timed-out public pytest is still running.
+Reuse-only public-check paths also compare the stored
+`input_fingerprints.public_check_config` against the requested public export
+directory, export boundary, public Python identity, pytest flags, and
+ruff/mypy targets, plus the runner timeout and heartbeat settings. The
+temporary pytest summary cache path is intentionally not part of that
+fingerprint.
 When CI public-check fails, inspect the printed `failure_causes` and uploaded
 `public-check-summary-*` candidate before rerunning the full lane. Keep release
 authority failures separate: missing finality attestation or sealed evidence is
