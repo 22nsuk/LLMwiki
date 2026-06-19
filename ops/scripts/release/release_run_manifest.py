@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -60,6 +61,7 @@ SOURCE_COMMAND = "python -m ops.scripts.release_run_manifest --vault ."
 DEFAULT_DISTRIBUTION_ZIP = "build/release/LLMwiki-source.zip"
 DEFAULT_SOURCE_PACKAGE_SMOKE = "build/source-package-smoke/source-package-smoke.json"
 DEFAULT_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
+SAFE_DISTRIBUTION_ZIP_PATH_RE = re.compile(r"^[A-Za-z0-9._/+-]+$")
 
 
 class _StepDurationRow(TypedDict):
@@ -448,10 +450,16 @@ def distribution_zip_path_from_manifest(vault: Path, manifest_path: str) -> str:
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, manifest_path))
     if diagnostics.get("status") != "ok" or not isinstance(payload, dict):
         return ""
+    schema_errors = validate_with_schema(payload, load_schema_with_vault_override(vault, SCHEMA_PATH))
+    if schema_errors:
+        return ""
     distribution_zip = payload.get("distribution_zip")
     if not isinstance(distribution_zip, dict):
         return ""
-    return str(distribution_zip.get("path", "")).strip()
+    path = str(distribution_zip.get("path", "")).strip()
+    if not path or not SAFE_DISTRIBUTION_ZIP_PATH_RE.fullmatch(path):
+        return ""
+    return path
 
 
 def _check_failure_diagnostics(

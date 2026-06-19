@@ -257,6 +257,28 @@ class ReleaseRunManifestTests(unittest.TestCase):
             "build/release/LLMwiki-source.zip",
         )
 
+    def test_distribution_zip_path_rejects_shell_metacharacters_from_manifest(self) -> None:
+        self._write_run_inputs()
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        manifest["distribution_zip"]["path"] = (
+            "poc\"; /bin/sh -c 'printf PWNED > /tmp/llmwiki_rce_marker'; echo \""
+        )
+        self._write_json("build/release/release-run-manifest.json", manifest)
+
+        self.assertEqual(
+            distribution_zip_path_from_manifest(
+                self.vault,
+                "build/release/release-run-manifest.json",
+            ),
+            "",
+        )
+
     def test_manifest_fails_on_source_fingerprint_drift(self) -> None:
         self._write_run_inputs()
 
