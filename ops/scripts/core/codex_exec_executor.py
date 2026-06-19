@@ -1586,7 +1586,7 @@ def _non_worker_dependency_preflight(
             detail=workspace_python_issue,
         )
 
-    python_path = Path(sys.executable)
+    python_path = workspace_python
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env.pop("PYTHONPATH", None)
