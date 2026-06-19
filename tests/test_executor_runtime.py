@@ -1562,12 +1562,19 @@ class ExecutorRuntimeTests(unittest.TestCase):
             seed_subagent_profiles(vault, ["worker", "validator"])
             (vault / "ops" / "scripts" / "core").mkdir(parents=True, exist_ok=True)
             (vault / "ops" / "scripts" / "core" / "script_output_surfaces.py").write_text(
-                "# script-output-surfaces marker\n",
+                "from pathlib import Path\n"
+                "Path('workspace-code-executed.txt').write_text('executed', encoding='utf-8')\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "schemas" / "script-output-surfaces.schema.json").write_text(
+                (REPO_ROOT / "ops" / "schemas" / "script-output-surfaces.schema.json").read_text(
+                    encoding="utf-8"
+                ),
                 encoding="utf-8",
             )
             scope_path = vault / "runs" / "run-executor" / "scope-freeze.json"
             scope = json.loads(scope_path.read_text(encoding="utf-8"))
-            scope["inputs"]["supporting_targets"] = []
+            scope["inputs"]["supporting_targets"] = ["ops/script-output-surfaces.json"]
             scope_path.write_text(json.dumps(scope, ensure_ascii=False, indent=2), encoding="utf-8")
             (vault / "ops" / "script-output-surfaces.json").write_text("stale\n", encoding="utf-8")
             worker_routing = _write_routing_report(
@@ -1612,31 +1619,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
                 if argv[1:2] == ["-c"]:
                     return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
-                if _is_worker_repo_health_preflight(argv):
-                    events.append("post-worker-repo-health")
-                    self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
-                    return subprocess.CompletedProcess(argv, 0, stdout="repo health ok\n", stderr="")
-                events.append("script-output-surfaces")
-                self.assertEqual(argv[0], str(vault / ".venv" / "bin" / "python"))
-                self.assertEqual(
-                    argv[1:],
-                    [
-                        "-m",
-                        "ops.scripts.script_output_surfaces",
-                        "--vault",
-                        ".",
-                        "--out",
-                        "ops/script-output-surfaces.json",
-                    ],
-                )
-                refresh_cwd_value = kwargs.get("cwd")
-                self.assertIsNotNone(refresh_cwd_value)
-                refresh_cwd = Path(str(refresh_cwd_value))
-                (refresh_cwd / "ops" / "script-output-surfaces.json").write_text(
-                    "fresh\n",
-                    encoding="utf-8",
-                )
-                return subprocess.CompletedProcess(argv, 0, stdout="fresh\n", stderr="")
+                self.assertTrue(_is_worker_repo_health_preflight(argv))
+                events.append("post-worker-repo-health")
+                self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
+                return subprocess.CompletedProcess(argv, 0, stdout="repo health ok\n", stderr="")
 
             with (
                 mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
@@ -1653,11 +1639,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     routing_reports=[worker_routing, validator_routing],
                 )
 
-            self.assertEqual(events, ["worker", "script-output-surfaces", "post-worker-repo-health", "validator"])
-            self.assertEqual(
-                (vault / "ops" / "script-output-surfaces.json").read_text(encoding="utf-8"),
-                "fresh\n",
-            )
+            self.assertEqual(events, ["worker", "post-worker-repo-health", "validator"])
+            refreshed = json.loads((vault / "ops" / "script-output-surfaces.json").read_text(encoding="utf-8"))
+            self.assertEqual(refreshed["artifact_kind"], "script_output_surfaces")
+            self.assertFalse((vault / "workspace-code-executed.txt").exists())
 
     def test_run_executor_pipeline_blocks_non_worker_roles_when_post_worker_repo_health_fails(
         self,
