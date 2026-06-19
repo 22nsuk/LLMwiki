@@ -57,7 +57,7 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         block = render_public_gitignore_block()
 
         for segment in PUBLIC_EXCLUDED_SEGMENTS:
-            self.assertIn(f"{segment}/", block)
+            self.assertIn(segment, block)
         for pattern in PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS:
             self.assertIn(pattern, block)
 
@@ -92,6 +92,13 @@ class PublicSurfacePolicyTests(unittest.TestCase):
             "tools/notes.swp",
             "tools/notes.swo",
             "tools/notes~",
+            "docs/sub/.git",
+            "ops/nested/.git",
+            "tools/worktree/.git",
+            "docs/.coverage/data",
+            "tools/helper.pyc/output",
+            "ops/.coverage.worker/cache",
+            "tests/foo.pyc/bar",
         )
         public_paths = (
             "docs/development.md",

@@ -78,7 +78,8 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
     "Thumbs.db",
 )
 
-PUBLIC_EXCLUDED_SEGMENT_GITIGNORE_PATTERNS = tuple(f"{segment}/" for segment in PUBLIC_EXCLUDED_SEGMENTS)
+# Without a trailing slash, Git matches both files and directories named like the segment.
+PUBLIC_EXCLUDED_SEGMENT_GITIGNORE_PATTERNS = PUBLIC_EXCLUDED_SEGMENTS
 
 PUBLIC_GITIGNORE_START = "# >>> public-surface-policy >>>"
 PUBLIC_GITIGNORE_END = "# <<< public-surface-policy <<<"
@@ -87,9 +88,12 @@ PUBLIC_GITIGNORE_TEMPLATE = "ops/templates/public-mirror.gitignore"
 
 def is_public_excluded_by_local_state(rel_path: str) -> bool:
     path = PurePosixPath(rel_path)
-    if any(segment in PUBLIC_EXCLUDED_SEGMENTS for segment in path.parts):
-        return True
-    return any(fnmatchcase(path.name, pattern) for pattern in PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS)
+    for part in path.parts:
+        if part in PUBLIC_EXCLUDED_SEGMENTS:
+            return True
+        if any(fnmatchcase(part, pattern) for pattern in PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS):
+            return True
+    return False
 
 
 def render_public_gitignore_block() -> str:
