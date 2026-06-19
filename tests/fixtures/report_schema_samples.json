@@ -3946,7 +3946,7 @@
       "release_distribution_zip_smoke": "3f159a5b22a6fc864f4311e3d0537763401458bde7e7dce59d13702bf8f1cbaf",
       "source_package_smoke": "9d4bc1f6ecf05f7144fc10f23f62ddda61e93dd796da256715d8237c3b0c6f79",
       "source_package_clean_extract": "11206674977a6b07f703397c7a6eda88bc0a77626eea2a75f126cef9d102457f",
-      "authority_manifest": "bfb6d499d4ab9bf68e8377278ec36542677e7b16089a8c2a33f14d7f4b4e30ab"
+      "authority_manifest": "1f84c0fc62425060df07dfc345a3668fbcd9402d62065a94d718c6c18690586c"
     },
     "schema_version": 1,
     "artifact_status": "current",
@@ -4162,7 +4162,7 @@
       "current_source_revision": "abc123",
       "source_tree_fingerprint": "fp-current",
       "current_source_tree_fingerprint": "fp-current",
-      "input_fingerprint": "bfb6d499d4ab9bf68e8377278ec36542677e7b16089a8c2a33f14d7f4b4e30ab",
+      "input_fingerprint": "1f84c0fc62425060df07dfc345a3668fbcd9402d62065a94d718c6c18690586c",
       "alignment_status": "current",
       "issues": [],
       "recommended_next_target": "release-run-ready"

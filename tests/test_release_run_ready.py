@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.generated_artifact_semantic_digest import semantic_file_digest
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.release_run_ready import (
@@ -31,7 +32,7 @@ RUN_MANIFEST_SCHEMA_PATH = (
 )
 ZERO_SHA256 = "0" * 64
 READY_PLAN_GOLDEN_SHA256 = (
-    "27f932e646d2f2e74169d9dcc252ccb367a92fba2d2022cb0642d9bbe74b2e91"
+    "d9b67ed539c83b28d9a08d5c3e36dd450f9b6bdebb4689611739a5b80cfc30b7"
 )
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",
@@ -503,10 +504,26 @@ def _source_package_clean_extract_payload(
     }
 
 
+def _release_closeout_summary_payload() -> dict[str, object]:
+    return {
+        **_common_envelope(
+            schema="ops/schemas/release-closeout-summary.schema.json",
+            artifact_kind="release_closeout_summary",
+            producer="ops.scripts.release_closeout_summary",
+            source_command="python -m ops.scripts.release_closeout_summary --vault . --profile default",
+        ),
+        "status": {"result": "pass"},
+        "release_authority_status": "release_ready",
+        "machine_release_allowed": True,
+        "summary": {"ready_component_count": 1, "blocker_count": 0},
+    }
+
+
 def _release_run_manifest_payload(
     source_zip: dict[str, object],
     *,
     source_package_smoke_sha256: str,
+    closeout_summary_fingerprint: str,
     source_package_smoke_path: str = "build/source-package-smoke/source-package-smoke.json",
 ) -> dict[str, object]:
     return {
@@ -521,7 +538,7 @@ def _release_run_manifest_payload(
             "distribution_zip": str(source_zip["sha256"]),
             "source_package_smoke": source_package_smoke_sha256,
             "source_package_smoke_source_zip": str(source_zip["sha256"]),
-            "closeout_summary": "",
+            "closeout_summary": closeout_summary_fingerprint,
         },
         "schema_version": 5,
         "status": "pass",
@@ -603,10 +620,16 @@ def _write_current_run_ready_evidence(
 ) -> dict[str, object]:
     source_zip = _file_identity(vault, source_zip_path)
     source_package_smoke = _source_package_smoke_payload(source_zip)
+    closeout_summary_path = "ops/reports/release-closeout-summary.json"
+    _write_json(vault, closeout_summary_path, _release_closeout_summary_payload())
+    _semantic_mode, closeout_summary_fingerprint = semantic_file_digest(
+        vault / closeout_summary_path
+    )
     evidence = {
         "build/release/release-run-manifest.json": _release_run_manifest_payload(
             source_zip,
             source_package_smoke_sha256=_json_payload_sha256(source_package_smoke),
+            closeout_summary_fingerprint=closeout_summary_fingerprint,
             source_package_smoke_path=source_package_smoke_path,
         ),
         "ops/reports/test-execution-summary-full.json": _test_execution_summary_payload(

@@ -86,6 +86,35 @@ class ReleaseRunManifestTests(unittest.TestCase):
             },
         )
 
+    def _write_closeout_summary(
+        self,
+        *,
+        generated_at: str = "2026-05-23T12:00:00Z",
+        machine_release_allowed: bool = True,
+        note: str = "stable",
+    ) -> None:
+        self._write_json(
+            "ops/reports/release-closeout-summary.json",
+            {
+                "$schema": "ops/schemas/release-closeout-summary.schema.json",
+                "artifact_kind": "release_closeout_summary",
+                "generated_at": generated_at,
+                "producer": "ops.scripts.release_closeout_summary",
+                "source_command": "python -m ops.scripts.release_closeout_summary --vault . --profile default",
+                "source_revision": "abc123",
+                "source_tree_fingerprint": "fp-current",
+                "input_fingerprints": {"fixture": "same"},
+                "schema_version": 1,
+                "artifact_status": "current",
+                "retention_policy": "canonical_report",
+                "encoding": "utf-8",
+                "currentness": {"status": "current", "checked_at": generated_at},
+                "status": {"result": "pass"},
+                "machine_release_allowed": machine_release_allowed,
+                "note": note,
+            },
+        )
+
     def _patch_clean_repo(self, fingerprint: str) -> Any:
         return patch.multiple(
             "ops.scripts.release.release_run_manifest",
@@ -677,12 +706,11 @@ class ReleaseRunManifestTests(unittest.TestCase):
             original,
         )
 
-    def test_check_mode_reports_closeout_summary_drift_without_overwriting_manifest(self) -> None:
+    def test_check_mode_allows_closeout_summary_envelope_refresh_without_overwriting_manifest(
+        self,
+    ) -> None:
         self._write_run_inputs()
-        self._write_json(
-            "ops/reports/release-closeout-summary.json",
-            {"machine_release_allowed": False, "note": "old"},
-        )
+        self._write_closeout_summary(generated_at="2026-05-23T12:00:00Z")
         with self._patch_clean_repo("fp-current"):
             manifest = build_manifest(
                 self.vault,
@@ -693,10 +721,36 @@ class ReleaseRunManifestTests(unittest.TestCase):
         original = (self.vault / "build/release/release-run-manifest.json").read_text(
             encoding="utf-8"
         )
-        self._write_json(
-            "ops/reports/release-closeout-summary.json",
-            {"machine_release_allowed": True, "note": "new"},
+        self._write_closeout_summary(generated_at="2026-05-23T12:05:00Z")
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 0)
+        output = stdout.getvalue()
+        self.assertNotIn("release_run_manifest_input_fingerprint_drift", output)
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
         )
+
+    def test_check_mode_reports_closeout_summary_semantic_drift_without_overwriting_manifest(
+        self,
+    ) -> None:
+        self._write_run_inputs()
+        self._write_closeout_summary(machine_release_allowed=False, note="old")
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+        self._write_closeout_summary(machine_release_allowed=True, note="new")
 
         stdout = io.StringIO()
         with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):

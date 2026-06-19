@@ -18,6 +18,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
+    from ops.scripts.core.generated_artifact_semantic_digest import semantic_file_digest
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.release_authority_state_runtime import (
         release_status_v2_view_with_readiness_fallback,
@@ -38,6 +39,7 @@ else:
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
+    from ops.scripts.core.generated_artifact_semantic_digest import semantic_file_digest
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.release_authority_state_runtime import (
         release_status_v2_view_with_readiness_fallback,
@@ -202,14 +204,19 @@ def _manifest_input_fingerprints(
     *,
     zip_identity: dict[str, Any],
     smoke: dict[str, Any],
-    closeout_identity: dict[str, Any],
+    closeout_summary_fingerprint: str,
 ) -> dict[str, str]:
     return {
         "distribution_zip": str(zip_identity["sha256"]),
         "source_package_smoke": str(smoke["sha256"]),
         "source_package_smoke_source_zip": str(smoke["source_zip_sha256"]),
-        "closeout_summary": str(closeout_identity["sha256"]),
+        "closeout_summary": closeout_summary_fingerprint,
     }
+
+
+def _closeout_summary_fingerprint(vault: Path, closeout_summary: str | Path) -> str:
+    _semantic_mode, digest = semantic_file_digest(_resolve(vault, closeout_summary))
+    return digest
 
 
 def _current_manifest_input_fingerprints(
@@ -222,7 +229,7 @@ def _current_manifest_input_fingerprints(
     return _manifest_input_fingerprints(
         zip_identity=_file_identity(vault, distribution_zip),
         smoke=_source_package_smoke(vault, source_package_smoke),
-        closeout_identity=_file_identity(vault, closeout_summary),
+        closeout_summary_fingerprint=_closeout_summary_fingerprint(vault, closeout_summary),
     )
 
 
@@ -476,7 +483,7 @@ def build_manifest(
     step_rows = list(steps or [])
     zip_identity = _file_identity(vault, distribution_zip)
     smoke = _source_package_smoke(vault, source_package_smoke)
-    closeout_identity = _file_identity(vault, closeout_summary)
+    closeout_summary_fingerprint = _closeout_summary_fingerprint(vault, closeout_summary)
     authority_axes = _closeout_authority_axes(vault, closeout_summary)
     failures: list[str] = []
     if expected_source_tree_fingerprint != final_fingerprint:
@@ -535,7 +542,7 @@ def build_manifest(
         "input_fingerprints": _manifest_input_fingerprints(
             zip_identity=zip_identity,
             smoke=smoke,
-            closeout_identity=closeout_identity,
+            closeout_summary_fingerprint=closeout_summary_fingerprint,
         ),
         "schema_version": SCHEMA_VERSION,
         "artifact_status": "current",
