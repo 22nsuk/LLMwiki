@@ -655,59 +655,90 @@ def open_carry_forward_decisions(
     )
 
 
+def _run_artifact_path(vault: Path, source_run_id: str, filename: str) -> Path | None:
+    run_id = safe_repo_relative_path(source_run_id)
+    if run_id is None or "/" in run_id:
+        return None
+    path = vault / "runs" / run_id / filename
+    try:
+        path.resolve().relative_to((vault / "runs" / run_id).resolve())
+    except (OSError, ValueError):
+        return None
+    return path
+
+
+def _declared_scope_from_manifest(
+    vault: Path,
+    manifest: dict,
+) -> tuple[set[str], list[str], list[str]]:
+    declared = manifest.get("declared_targets")
+    declared = declared if isinstance(declared, dict) else {}
+    primary_paths = set(
+        current_repo_target_paths(
+            vault,
+            [str(path) for path in declared.get("primary_targets", [])],
+        )
+    )
+    supporting_targets = current_repo_target_paths(
+        vault,
+        [str(path) for path in declared.get("supporting_targets", [])],
+    )
+    test_files = current_repo_target_paths(
+        vault,
+        [str(path) for path in declared.get("test_files", [])],
+    )
+    declared_paths = set([*primary_paths, *supporting_targets, *test_files])
+    return declared_paths, supporting_targets, test_files
+
+
 def _changed_manifest_extra_scope(
     vault: Path,
     source_run_id: str,
     *,
     must_change_test_paths: Callable[[Path, list[str]], list[str]],
 ) -> tuple[list[str], list[str]]:
-    manifest_path = vault / "runs" / source_run_id / "changed-files-manifest.json"
-    if not manifest_path.is_file():
+    manifest_path = _run_artifact_path(
+        vault,
+        source_run_id,
+        "changed-files-manifest.json",
+    )
+    if manifest_path is None or not manifest_path.is_file():
         return [], []
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return [], []
-    declared = manifest.get("declared_targets")
-    declared = declared if isinstance(declared, dict) else {}
-    declared_paths = set(
-        current_repo_target_paths(
-            vault,
-            [
-                *[str(path) for path in declared.get("primary_targets", [])],
-                *[str(path) for path in declared.get("supporting_targets", [])],
-                *[str(path) for path in declared.get("test_files", [])],
-            ],
-        )
-    )
-    supporting_targets: list[str] = []
-    must_change_tests: list[str] = []
-    files = manifest.get("files")
-    if not isinstance(files, list):
+    if not isinstance(manifest, dict):
         return [], []
-    for item in files:
-        if not isinstance(item, dict):
-            continue
-        normalized_path = normalize_repo_path_text(item.get("path"))
-        if normalized_path is None or normalized_path in declared_paths:
-            continue
-        if normalized_path.startswith("tests/") and normalized_path.endswith(".py"):
-            must_change_tests.append(normalized_path)
-        elif normalized_path.startswith("ops/") and (vault / normalized_path).is_file():
-            supporting_targets.append(normalized_path)
-    return dedupe_preserve_order(supporting_targets), must_change_test_paths(
-        vault,
-        must_change_tests,
-    )
+    _, supporting_targets, test_files = _declared_scope_from_manifest(vault, manifest)
+    return dedupe_preserve_order(
+        [
+            path
+            for path in supporting_targets
+            if path.startswith("ops/") and (vault / path).is_file()
+        ]
+    ), must_change_test_paths(vault, test_files)
 
 
-def _evidence_report_paths(vault: Path, evidence_paths: list[str]) -> list[Path]:
+def _evidence_report_paths(
+    vault: Path,
+    source_run_id: str,
+    evidence_paths: list[str],
+) -> list[Path]:
+    run_id = safe_repo_relative_path(source_run_id)
+    if run_id is None or "/" in run_id:
+        return []
+    run_dir = vault / "runs" / run_id
     resolved: list[Path] = []
     for evidence_path in evidence_paths:
-        normalized_path = normalize_repo_path_text(evidence_path)
-        if normalized_path is None:
+        normalized_path = safe_repo_relative_path(evidence_path)
+        if normalized_path is None or not normalized_path.startswith(f"runs/{run_id}/"):
             continue
         path = vault / normalized_path
+        try:
+            path.resolve().relative_to(run_dir.resolve())
+        except (OSError, ValueError):
+            continue
         if path.is_file() and path.suffix == ".json":
             resolved.append(path)
     return resolved
@@ -715,13 +746,19 @@ def _evidence_report_paths(vault: Path, evidence_paths: list[str]) -> list[Path]
 
 def _diagnostic_note_extra_scope(
     vault: Path,
+    source_run_id: str,
     evidence_paths: list[str],
+    allowed_scope: set[str],
     *,
     must_change_test_paths: Callable[[Path, list[str]], list[str]],
 ) -> tuple[list[str], list[str]]:
     supporting_targets: list[str] = []
     must_change_tests: list[str] = []
-    for evidence_report_path in _evidence_report_paths(vault, evidence_paths):
+    for evidence_report_path in _evidence_report_paths(
+        vault,
+        source_run_id,
+        evidence_paths,
+    ):
         try:
             report = json.loads(evidence_report_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -740,7 +777,11 @@ def _diagnostic_note_extra_scope(
             ]
             for match in note_paths:
                 normalized_path = normalize_repo_path_text(match)
-                if normalized_path is None or not (vault / normalized_path).is_file():
+                if (
+                    normalized_path is None
+                    or normalized_path not in allowed_scope
+                    or not (vault / normalized_path).is_file()
+                ):
                     continue
                 if normalized_path.startswith("tests/") and normalized_path.endswith(".py"):
                     must_change_tests.append(normalized_path)
@@ -763,17 +804,31 @@ def _next_run_repair_extra_scope(
 ) -> tuple[list[str], list[str]]:
     supporting_targets: list[str] = []
     must_change_tests: list[str] = []
+    allowed_scope = set(
+        current_repo_target_paths(
+            vault,
+            [
+                *[str(target) for target in decision.get("primary_targets", [])],
+                *[str(target) for target in decision.get("supporting_targets", [])],
+                *[str(target) for target in decision.get("must_change_tests", [])],
+            ],
+        )
+    )
     if failure_taxonomy == "changed_files_manifest_scope":
         manifest_supporting, manifest_tests = _changed_manifest_extra_scope(
             vault,
             source_run_id,
             must_change_test_paths=must_change_test_paths,
         )
-        supporting_targets.extend(manifest_supporting)
-        must_change_tests.extend(manifest_tests)
+        supporting_targets.extend(
+            path for path in manifest_supporting if path in allowed_scope
+        )
+        must_change_tests.extend(path for path in manifest_tests if path in allowed_scope)
     diagnostic_supporting, diagnostic_tests = _diagnostic_note_extra_scope(
         vault,
+        source_run_id,
         evidence_paths,
+        allowed_scope,
         must_change_test_paths=must_change_test_paths,
     )
     supporting_targets.extend(diagnostic_supporting)
