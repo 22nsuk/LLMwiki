@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -193,6 +195,7 @@ class _ModelOutputRead:
     payload: dict[str, Any] | None
     status: str
     note: str
+    raw_bytes: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -851,27 +854,73 @@ def _persist_executor_streams(
 
 
 def _read_model_output(path: Path) -> _ModelOutputRead:
-    if not path.exists():
+    if not path.exists() and not path.is_symlink():
         return _ModelOutputRead(
             payload=None,
             status="missing",
             note=f"codex exec completed without model output: {path.name} was not written",
         )
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        path_stat = path.lstat()
+    except OSError as exc:
+        return _ModelOutputRead(
+            payload=None,
+            status="invalid_file",
+            note=f"codex exec wrote unreadable model output file: {exc}",
+        )
+    if stat.S_ISLNK(path_stat.st_mode) or not stat.S_ISREG(path_stat.st_mode):
+        return _ModelOutputRead(
+            payload=None,
+            status="invalid_file",
+            note="codex exec wrote invalid model output file: expected a regular file, not a symlink or special file",
+        )
+    try:
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        try:
+            fd_stat = os.fstat(fd)
+            if not stat.S_ISREG(fd_stat.st_mode):
+                return _ModelOutputRead(
+                    payload=None,
+                    status="invalid_file",
+                    note="codex exec wrote invalid model output file: expected a regular file, not a symlink or special file",
+                )
+            with os.fdopen(fd, "rb") as handle:
+                fd = -1
+                raw_bytes = handle.read()
+        finally:
+            if fd != -1:
+                os.close(fd)
+    except OSError as exc:
+        return _ModelOutputRead(
+            payload=None,
+            status="invalid_file",
+            note=f"codex exec wrote unreadable model output file: {exc}",
+        )
+    try:
+        payload = json.loads(raw_bytes.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        return _ModelOutputRead(
+            payload=None,
+            status="invalid_json",
+            note=f"codex exec wrote invalid UTF-8 model output JSON: {exc}",
+            raw_bytes=raw_bytes,
+        )
     except json.JSONDecodeError as exc:
         return _ModelOutputRead(
             payload=None,
             status="invalid_json",
             note=f"codex exec wrote invalid model output JSON: {exc}",
+            raw_bytes=raw_bytes,
         )
     if not isinstance(payload, dict):
         return _ModelOutputRead(
             payload=None,
             status="invalid_root",
             note="codex exec wrote invalid model output: root must be an object",
+            raw_bytes=raw_bytes,
         )
-    return _ModelOutputRead(payload=payload, status="ok", note="")
+    return _ModelOutputRead(payload=payload, status="ok", note="", raw_bytes=raw_bytes)
 
 
 def _summarize_execution(
@@ -1192,6 +1241,18 @@ def _workspace_virtualenv_python(workspace_root: Path) -> Path | None:
     return None
 
 
+def _trusted_workspace_python_source(artifact_root: Path) -> Path:
+    repo_python = artifact_root / ".venv" / "bin" / "python"
+    if repo_python.exists():
+        return repo_python
+    return Path(sys.executable).resolve()
+
+
+def _expected_external_workspace_python_shim(artifact_root: Path) -> str:
+    source_python = _trusted_workspace_python_source(artifact_root)
+    return f"#!/bin/sh\nexec {shlex.quote(str(source_python))} \"$@\"\n"
+
+
 def _same_path(left: Path, right: Path) -> bool:
     try:
         return left.resolve() == right.resolve()
@@ -1415,6 +1476,63 @@ def _dependency_preflight_failure_summary(
     )
 
 
+def _external_workspace_python_issue(request: _ExecutionRequest, workspace_python: Path) -> str:
+    if _same_path(request.workspace_root, request.artifact_root):
+        return ""
+    try:
+        python_stat = workspace_python.lstat()
+    except OSError as exc:
+        return f"workspace virtualenv python shim is unreadable: {exc}"
+    if not stat.S_ISREG(python_stat.st_mode):
+        return "workspace virtualenv python shim must be a regular file"
+    if not os.access(workspace_python, os.X_OK):
+        return "workspace virtualenv python shim is not executable"
+    try:
+        actual = workspace_python.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return f"workspace virtualenv python shim is unreadable: {exc}"
+    expected = _expected_external_workspace_python_shim(request.artifact_root)
+    if actual != expected:
+        return "workspace virtualenv python shim does not match the trusted parent interpreter"
+    return ""
+
+
+def _workspace_python_failure(
+    *,
+    request: _ExecutionRequest,
+    workspace_python: Path,
+    detail: str,
+) -> tuple[ExecutorDependencyPreflightPayload, _ExecutionSummary]:
+    roots = [request.artifact_root, request.workspace_root]
+    python_display = _sanitize_path_text(str(workspace_python), roots=roots)
+    preflight = _dependency_preflight_payload(
+        role_requires_project_check=True,
+        status="fail",
+        python_path=python_display,
+        python_executable="",
+        python_version="",
+        python_exists=True,
+        required_modules=_dependency_module_payloads("not_checked", detail=detail),
+        returncode=126,
+    )
+    return (
+        preflight,
+        _ExecutionSummary(
+            status="fail",
+            decision="blocked",
+            notes=[
+                (
+                    f"executor dependency preflight blocked {request.role}: "
+                    f"{python_display} failed workspace Python trust check; {detail}"
+                )
+            ],
+            timed_out=False,
+            timeout_seconds=request.timeout_seconds,
+            termination_reason="completed",
+        ),
+    )
+
+
 def _non_worker_dependency_preflight(
     request: _ExecutionRequest,
 ) -> tuple[ExecutorDependencyPreflightPayload, _ExecutionSummary | None]:
@@ -1458,6 +1576,14 @@ def _non_worker_dependency_preflight(
                 timeout_seconds=request.timeout_seconds,
                 termination_reason="completed",
             ),
+        )
+
+    workspace_python_issue = _external_workspace_python_issue(request, workspace_python)
+    if workspace_python_issue:
+        return _workspace_python_failure(
+            request=request,
+            workspace_python=workspace_python,
+            detail=workspace_python_issue,
         )
 
     python_path = Path(sys.executable)
@@ -1559,10 +1685,11 @@ def capture_execution_artifacts(request: _ExecutionRequest, completed: object) -
     )
     workspace_output = _model_output_path(request.workspace_root, request.artifacts)
     artifact_output = _model_output_path(request.artifact_root, request.artifacts)
-    if workspace_output.exists() and not _same_path(workspace_output, artifact_output):
+    model_output = _read_model_output(workspace_output)
+    if model_output.raw_bytes is not None and not _same_path(workspace_output, artifact_output):
         artifact_output.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(workspace_output, artifact_output)
-    return _read_model_output(workspace_output)
+        artifact_output.write_bytes(model_output.raw_bytes)
+    return model_output
 
 
 def assess_execution_result(
