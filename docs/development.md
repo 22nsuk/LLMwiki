@@ -180,13 +180,13 @@ CI splits registry-backed lanes into parallel jobs; see
 shape. Docs should point to registry-backed Make targets rather than
 hand-maintained pytest marker expressions.
 The `report-contract` CI tier uses `make test-report-contract-core` on pull
-requests to keep review latency bounded; the full `make test-report-contract-all`
-sweep remains a checkpoint-grade lane and is run by the release workflow before
-release artifacts are built.
+requests to keep review latency bounded. The full `make test-report-contract-all`
+sweep remains a checkpoint-grade lane for workflow dispatch, release branch
+pushes, tag pushes, and the release workflow before release artifacts are built.
 
-Dependabot branches are checked through the `pull_request` event; the CI
-`push` trigger ignores `dependabot/**` so one dependency PR SHA does not spend
-two full CI waves. When a PR check run has empty job steps and its check-run
+Dependabot and other PR branches are checked through the `pull_request` event;
+the CI `push` trigger is limited to release branches and tags so one PR SHA does
+not spend two full CI waves. When a PR check run has empty job steps and its check-run
 annotation says the job was not started because an Actions budget prevented
 use, classify it as infrastructure/budget triage. Do not debug action pins,
 test failures, or release evidence until the budget is available and a rerun or
