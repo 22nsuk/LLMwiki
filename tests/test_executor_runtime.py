@@ -193,6 +193,8 @@ def _executor_subprocess_completed(
         return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
     if len(argv) >= 2 and argv[1] == "-c":
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+    if len(argv) >= 4 and argv[1:4] == ["-I", "-B", "-c"]:
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
     if _is_worker_repo_health_preflight(argv):
         return subprocess.CompletedProcess(
             argv,
@@ -636,7 +638,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(
                 hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "f6cc7b3c137096ccc31ba7175a8c39dc11150d79643218d2aa507baebe329142",
+                "71d2e41c4c7a3758038b7fb9cf2797dbd1b1d4d2b3a1e77f64c5c0fa31cd3ff3",
             )
             section_positions = [
                 prompt.index(section)
@@ -732,7 +734,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             "role_requires_project_check": True,
             "status": "failed",
             "command": {
-                "argv": [".venv/bin/python", "-c", "<project-dependency-preflight>"],
+                "argv": [".venv/bin/python", "-I", "-B", "-c", "<project-dependency-preflight>"],
                 "project_check_lane": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider <focused-selector>",
             },
             "python": {
@@ -779,7 +781,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
         self.assertEqual(first_payload["diagnostics"]["notes"], ["validator blocked", "missing dependency evidence"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "f18d6d1402f6d6fc61594f7464827c7faede73cf4dc7da4ea7e0d26bf67049e2",
+            "9832348ee3e5877a4c033ab0effbcb754b6a8c49e086b377178afb408818e78c",
         )
 
     def test_codex_exec_prefers_workspace_virtualenv_on_path(self) -> None:
@@ -993,6 +995,56 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 report["diagnostics"]["dependency_preflight"]["python"]["executable"],
                 ".venv/bin/python",
             )
+
+    def test_non_worker_dependency_preflight_ignores_workspace_import_shadowing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            marker = vault / "shadow-executed.txt"
+            (vault / "pytest.py").write_text(
+                f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed', encoding='utf-8')\n",
+                encoding="utf-8",
+            )
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                Path(argv[argv.index("-o") + 1]).write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": ["validated"]}}),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with (
+                mock.patch.dict(os.environ, {"PYTHONPATH": str(vault)}),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["diagnostics"]["dependency_preflight"]["status"], "pass")
+            self.assertEqual(
+                report["diagnostics"]["dependency_preflight"]["command"]["argv"],
+                [".venv/bin/python", "-I", "-B", "-c", "<project-dependency-preflight>"],
+            )
+            self.assertFalse(marker.exists())
 
     def test_external_workspace_python_shim_preserves_artifact_venv_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

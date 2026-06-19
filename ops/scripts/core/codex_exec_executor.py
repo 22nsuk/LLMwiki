@@ -50,6 +50,7 @@ NON_WORKER_PROJECT_CHECK_MODULES = (
     ("jsonschema", "jsonschema"),
     ("yaml", "PyYAML"),
 )
+DEPENDENCY_PREFLIGHT_PYTHON_FLAGS = ("-I", "-B")
 PROJECT_CHECK_LANE = (
     "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider <focused-selector>"
 )
@@ -407,7 +408,11 @@ def _dependency_module_payloads(
 
 
 def _dependency_preflight_command_payload(python_display: str) -> ExecutorDependencyCommandPayload:
-    argv = [python_display, "-c", "<project-dependency-preflight>"] if python_display else []
+    argv = (
+        [python_display, *DEPENDENCY_PREFLIGHT_PYTHON_FLAGS, "-c", "<project-dependency-preflight>"]
+        if python_display
+        else []
+    )
     return {
         "argv": argv,
         "project_check_lane": PROJECT_CHECK_LANE,
@@ -1590,7 +1595,7 @@ def _non_worker_dependency_preflight(
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env.pop("PYTHONPATH", None)
-    command = [str(python_path), "-c", _project_dependency_check_script()]
+    command = [str(python_path), *DEPENDENCY_PREFLIGHT_PYTHON_FLAGS, "-c", _project_dependency_check_script()]
     try:
         completed = subprocess.run(
             command,
