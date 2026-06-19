@@ -5,7 +5,7 @@ import argparse
 import datetime as dt
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +32,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         DEFAULT_SOURCE_PACKAGE_SMOKE,
         _file_identity,
         _resolve,
+        _safe_vault_relative_path,
         build_manifest,
         git_clean,
         git_commit,
@@ -62,6 +63,7 @@ else:
         DEFAULT_SOURCE_PACKAGE_SMOKE,
         _file_identity,
         _resolve,
+        _safe_vault_relative_path,
         build_manifest,
         git_clean,
         git_commit,
@@ -199,6 +201,22 @@ PLAN_SPECS = (
 )
 
 
+def _plan_specs_for_inputs(
+    vault: Path,
+    *,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+) -> tuple[RunReadyPlanSpec, ...]:
+    safe_source_package_smoke = _safe_vault_relative_path(vault, source_package_smoke)
+    if safe_source_package_smoke == DEFAULT_SOURCE_PACKAGE_SMOKE:
+        return PLAN_SPECS
+    return tuple(
+        replace(spec, path=safe_source_package_smoke)
+        if spec.name == "source_package_smoke"
+        else spec
+        for spec in PLAN_SPECS
+    )
+
+
 def _tail(text: str, *, limit: int = 4000) -> str:
     return text if len(text) <= limit else text[-limit:]
 
@@ -295,12 +313,25 @@ def _synthetic_preflight(vault: Path, expected_fingerprint: str) -> dict[str, An
     }
 
 
-def _release_steps(make_bin: str) -> list[tuple[str, list[str]]]:
+def _release_steps(
+    make_bin: str,
+    *,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+) -> list[tuple[str, list[str]]]:
     return [
         ("release-test-current", [make_bin, "release-test-current"]),
         ("release-public-current", [make_bin, "release-public-current"]),
         ("release-smoke-full-reuse", [make_bin, "release-smoke-full-reuse"]),
-        ("release-source-package-check", [make_bin, "release-source-package-check"]),
+        (
+            "release-source-package-check",
+            [
+                make_bin,
+                "release-source-package-check",
+                f"RELEASE_CLOSEOUT_DISTRIBUTION_ZIP={distribution_zip}",
+                f"SOURCE_PACKAGE_SMOKE_OUT={source_package_smoke}",
+            ],
+        ),
     ]
 
 
@@ -764,7 +795,10 @@ def build_run_ready_plan(
             duration_budget_seconds=duration_budget_seconds,
             command_duration_seconds=command_duration_seconds,
         )
-        for spec in PLAN_SPECS
+        for spec in _plan_specs_for_inputs(
+            vault,
+            source_package_smoke=source_package_smoke,
+        )
     )
     authority_alignment = run_manifest_alignment(
         vault,
@@ -865,7 +899,11 @@ def run_release_ready(
     expected = release_source_tree_fingerprint(vault)
     steps: list[dict[str, Any]] = [_synthetic_preflight(vault, expected)]
     if steps[-1]["status"] == "pass":
-        for name, command in _release_steps(make_bin):
+        for name, command in _release_steps(
+            make_bin,
+            distribution_zip=distribution_zip,
+            source_package_smoke=source_package_smoke,
+        ):
             step = _command_step(
                 vault=vault,
                 name=name,

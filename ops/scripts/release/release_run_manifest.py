@@ -180,6 +180,8 @@ def _loaded_run_manifest_identity(vault: Path, manifest_path: str | Path) -> dic
         "schema_valid": not schema_errors,
         "artifact_kind": str(payload.get("artifact_kind", "")).strip(),
         "status": _status_label(payload.get("status")),
+        "failures": _manifest_failures(payload),
+        "distribution_zip_path": _manifest_distribution_zip_path(payload),
         "source_revision": str(payload.get("source_revision", "")).strip(),
         "input_fingerprints": _input_fingerprints(payload),
         "source_tree_fingerprint": str(
@@ -224,6 +226,10 @@ def _current_manifest_input_fingerprints(
     )
 
 
+def _current_distribution_zip_path(vault: Path, distribution_zip: str) -> str:
+    return _safe_vault_relative_path(vault, _file_identity(vault, distribution_zip)["path"])
+
+
 def run_manifest_alignment(
     vault: Path,
     manifest_path: str | Path = DEFAULT_OUT,
@@ -247,6 +253,7 @@ def run_manifest_alignment(
         source_package_smoke=source_package_smoke,
         closeout_summary=closeout_summary,
     )
+    current_distribution_zip_path = _current_distribution_zip_path(vault, distribution_zip)
     issues: list[str] = []
     if identity["load_status"] != "ok":
         issues.append("not_loadable")
@@ -260,6 +267,8 @@ def run_manifest_alignment(
         issues.append("currentness_not_current")
     if identity["status"] and identity["status"] != "pass":
         issues.append("not_pass")
+    if identity["failures"]:
+        issues.append("failures_present")
     if identity["source_revision"] and identity["source_revision"] != current_revision:
         issues.append("source_revision_stale")
     if (
@@ -275,6 +284,12 @@ def run_manifest_alignment(
         and identity["input_fingerprints"] != current_input_fingerprints
     ):
         issues.append("input_fingerprint_stale")
+    if (
+        identity["load_status"] == "ok"
+        and identity["schema_valid"]
+        and identity["distribution_zip_path"] != current_distribution_zip_path
+    ):
+        issues.append("distribution_zip_path_stale")
     alignment_status = "current" if not issues else "stale"
     if not identity["exists"]:
         alignment_status = "missing"
@@ -583,6 +598,13 @@ def _manifest_text_field(payload: dict[str, Any], field: str) -> str:
     return str(payload.get(field, "")).strip()
 
 
+def _manifest_distribution_zip_path(payload: dict[str, Any]) -> str:
+    distribution_zip = payload.get("distribution_zip")
+    if not isinstance(distribution_zip, dict):
+        return ""
+    return str(distribution_zip.get("path", "")).strip()
+
+
 def _manifest_failures(payload: dict[str, Any]) -> list[str]:
     failures = payload.get("failures")
     if not isinstance(failures, list):
@@ -597,6 +619,8 @@ def _check_manifest(previous_payload: dict[str, Any], manifest: dict[str, Any]) 
         failures.append("release_run_manifest_persisted_not_pass")
     if _input_fingerprints(previous_payload) != _input_fingerprints(manifest):
         failures.append("release_run_manifest_input_fingerprint_drift")
+    if _manifest_distribution_zip_path(previous_payload) != _manifest_distribution_zip_path(manifest):
+        failures.append("release_run_manifest_distribution_zip_path_drift")
     if _manifest_text_field(previous_payload, "source_revision") != _manifest_text_field(
         manifest,
         "source_revision",
@@ -649,6 +673,13 @@ def _check_mode_drift_diagnostic_lines(
     lines: list[str] = []
     if "release_run_manifest_input_fingerprint_drift" in failures:
         lines.append(_input_fingerprint_drift_line(previous_payload, manifest))
+    if "release_run_manifest_distribution_zip_path_drift" in failures:
+        lines.append(
+            "distribution_zip_path_drift=expected:"
+            + _manifest_distribution_zip_path(previous_payload)
+            + ";current:"
+            + _manifest_distribution_zip_path(manifest)
+        )
     if "release_run_manifest_source_revision_drift" in failures:
         lines.append(
             _text_field_drift_line(

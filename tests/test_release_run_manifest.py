@@ -547,6 +547,47 @@ class ReleaseRunManifestTests(unittest.TestCase):
             original,
         )
 
+    def test_check_mode_reports_distribution_zip_path_drift_without_overwriting_manifest(self) -> None:
+        self._write_run_inputs()
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+        default_zip = self.vault / "build" / "release" / "LLMwiki-source.zip"
+        custom_zip = self.vault / "build" / "release" / "custom-source.zip"
+        custom_zip.write_bytes(default_zip.read_bytes())
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--check",
+                    "--distribution-zip",
+                    "build/release/custom-source.zip",
+                ]
+            )
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("release_run_manifest_distribution_zip_path_drift", output)
+        self.assertIn(
+            "distribution_zip_path_drift=expected:build/release/LLMwiki-source.zip;"
+            "current:build/release/custom-source.zip",
+            output,
+        )
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
     def test_check_mode_rejects_persisted_failure_without_overwriting_manifest(self) -> None:
         self._write_run_inputs()
         with self._patch_clean_repo("fp-current"):

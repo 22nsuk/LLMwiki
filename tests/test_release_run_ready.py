@@ -502,6 +502,7 @@ def _release_run_manifest_payload(
     source_zip: dict[str, object],
     *,
     source_package_smoke_sha256: str,
+    source_package_smoke_path: str = "build/source-package-smoke/source-package-smoke.json",
 ) -> dict[str, object]:
     return {
         **_common_envelope(
@@ -579,7 +580,7 @@ def _release_run_manifest_payload(
             "sha256": source_zip["sha256"],
         },
         "source_package_smoke": {
-            "path": "build/source-package-smoke/source-package-smoke.json",
+            "path": source_package_smoke_path,
             "exists": True,
             "status": "pass",
             "sha256": ZERO_SHA256,
@@ -593,6 +594,7 @@ def _write_current_run_ready_evidence(
     vault: Path,
     *,
     source_zip_path: str = "build/release/LLMwiki-source.zip",
+    source_package_smoke_path: str = "build/source-package-smoke/source-package-smoke.json",
 ) -> dict[str, object]:
     source_zip = _file_identity(vault, source_zip_path)
     source_package_smoke = _source_package_smoke_payload(source_zip)
@@ -600,6 +602,7 @@ def _write_current_run_ready_evidence(
         "build/release/release-run-manifest.json": _release_run_manifest_payload(
             source_zip,
             source_package_smoke_sha256=_json_payload_sha256(source_package_smoke),
+            source_package_smoke_path=source_package_smoke_path,
         ),
         "ops/reports/test-execution-summary-full.json": _test_execution_summary_payload(
             suite="full",
@@ -620,7 +623,7 @@ def _write_current_run_ready_evidence(
             source_command="python -m ops.scripts.release.release_smoke --vault . --profile fast",
             archive_file=source_zip,
         ),
-        "build/source-package-smoke/source-package-smoke.json": source_package_smoke,
+        source_package_smoke_path: source_package_smoke,
         "ops/reports/source-package-clean-extract.json": _source_package_clean_extract_payload(
             source_zip
         ),
@@ -688,7 +691,15 @@ def test_release_run_ready_uses_source_package_check_for_stage2_evidence() -> No
         ("release-test-current", ["make", "release-test-current"]),
         ("release-public-current", ["make", "release-public-current"]),
         ("release-smoke-full-reuse", ["make", "release-smoke-full-reuse"]),
-        ("release-source-package-check", ["make", "release-source-package-check"]),
+        (
+            "release-source-package-check",
+            [
+                "make",
+                "release-source-package-check",
+                "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip",
+                "SOURCE_PACKAGE_SMOKE_OUT=build/source-package-smoke/source-package-smoke.json",
+            ],
+        ),
     ]
 
 
@@ -858,6 +869,31 @@ def test_run_ready_plan_blocks_on_authority_manifest_input_fingerprint_drift(
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
+def test_run_ready_plan_blocks_on_authority_manifest_persisted_failures(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    manifest_path = vault / "build" / "release" / "release-run-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["status"] = "pass"
+    manifest["failures"] = ["git_worktree_dirty"]
+    _write_json(vault, "build/release/release-run-manifest.json", manifest)
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(vault, context=fixed_context())
+
+    alignment = plan["authority_manifest_alignment"]
+    assert plan["plan_status"] == "blocked"
+    assert plan["minimal_next_target"] == "release-run-ready"
+    assert alignment["alignment_status"] == "stale"
+    assert "failures_present" in alignment["issues"]
+    assert plan["stale_evidence_causes"][0]["node"] == "authority_manifest"
+    assert "failures_present" in plan["reason_codes"]
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
 def test_run_ready_plan_aligns_authority_manifest_to_selected_distribution_zip(
     tmp_path: Path,
 ) -> None:
@@ -883,6 +919,88 @@ def test_run_ready_plan_aligns_authority_manifest_to_selected_distribution_zip(
         vault / "build/release/release-run-manifest.json"
     )
     assert selected_zip["path"] == "build/release/custom-source.zip"
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_blocks_on_authority_manifest_distribution_zip_path_drift(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    default_zip = vault / "build" / "release" / "LLMwiki-source.zip"
+    custom_zip = vault / "build" / "release" / "custom-source.zip"
+    custom_zip.write_bytes(default_zip.read_bytes())
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(
+            vault,
+            distribution_zip="build/release/custom-source.zip",
+            context=fixed_context(),
+        )
+
+    alignment = plan["authority_manifest_alignment"]
+    assert plan["plan_status"] == "blocked"
+    assert plan["minimal_next_target"] == "release-run-ready"
+    assert alignment["alignment_status"] == "stale"
+    assert "input_fingerprint_stale" not in alignment["issues"]
+    assert "distribution_zip_path_stale" in alignment["issues"]
+    assert "distribution_zip_path_stale" in plan["reason_codes"]
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_uses_selected_source_package_smoke_path(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(
+        vault,
+        source_package_smoke_path="tmp/custom-source-package-smoke.json",
+    )
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(
+            vault,
+            source_package_smoke="tmp/custom-source-package-smoke.json",
+            context=fixed_context(),
+        )
+
+    source_smoke_node = next(
+        node for node in plan["nodes"] if node["name"] == "source_package_smoke"
+    )
+    assert plan["plan_status"] == "ready"
+    assert source_smoke_node["path"] == "tmp/custom-source-package-smoke.json"
+    assert source_smoke_node["can_reuse"] is True
+    assert plan["authority_manifest_alignment"]["alignment_status"] == "current"
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_sanitizes_invalid_selected_source_package_smoke_path(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    outside_path = (tmp_path.parent / "outside-source-package-smoke.json").as_posix()
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(
+            vault,
+            source_package_smoke=outside_path,
+            context=fixed_context(),
+        )
+
+    source_smoke_node = next(
+        node for node in plan["nodes"] if node["name"] == "source_package_smoke"
+    )
+    serialized = json.dumps(plan, ensure_ascii=False)
+    assert plan["plan_status"] == "blocked"
+    assert source_smoke_node["path"] == "."
+    assert source_smoke_node["can_reuse"] is False
+    assert "not_loadable" in source_smoke_node["issues"]
+    assert outside_path not in serialized
+    assert tmp_path.as_posix() not in serialized
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
@@ -1122,9 +1240,10 @@ def test_run_release_ready_passes_selected_distribution_zip_to_manifest(
     vault = tmp_path
     _copy_run_manifest_schema(vault)
     selected_zip = _file_identity(vault, "build/release/custom-source.zip")
+    selected_smoke = "tmp/custom-source-package-smoke.json"
     _write_json(
         vault,
-        "build/source-package-smoke/source-package-smoke.json",
+        selected_smoke,
         _source_package_smoke_payload(selected_zip),
     )
 
@@ -1140,10 +1259,35 @@ def test_run_release_ready_passes_selected_distribution_zip_to_manifest(
         },
         "ignored_tracked_file_count": lambda _vault: 0,
     }
+    commands: list[list[str]] = []
+
+    def pass_step(
+        *,
+        vault: Path,
+        name: str,
+        command: list[str],
+        expected_fingerprint: str,
+        timeout_seconds: int,
+    ) -> dict[str, object]:
+        del vault, timeout_seconds
+        commands.append(command)
+        return {
+            "name": name,
+            "status": "pass",
+            "summary_mode": "executed",
+            "command": command,
+            "returncode": 0,
+            "duration_ms": 1,
+            "source_tree_fingerprint_before": expected_fingerprint,
+            "source_tree_fingerprint_after": expected_fingerprint,
+            "stdout_tail": "",
+            "stderr_tail": "",
+        }
+
     with (
         patch.multiple("ops.scripts.release.release_run_ready", **clean_repo),
         patch.multiple("ops.scripts.release.release_run_manifest", **clean_repo),
-        patch("ops.scripts.release.release_run_ready._release_steps", return_value=[]),
+        patch("ops.scripts.release.release_run_ready._command_step", pass_step),
     ):
         manifest = run_release_ready(
             vault=vault,
@@ -1151,11 +1295,19 @@ def test_run_release_ready_passes_selected_distribution_zip_to_manifest(
             make_bin="make",
             timeout_seconds=60,
             distribution_zip="build/release/custom-source.zip",
+            source_package_smoke=selected_smoke,
             context=fixed_context(),
         )
 
     assert manifest["status"] == "pass"
+    assert [
+        "make",
+        "release-source-package-check",
+        "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/custom-source.zip",
+        "SOURCE_PACKAGE_SMOKE_OUT=tmp/custom-source-package-smoke.json",
+    ] in commands
     assert manifest["distribution_zip"]["path"] == "build/release/custom-source.zip"
+    assert manifest["source_package_smoke"]["path"] == selected_smoke
     assert manifest["distribution_zip"]["sha256"] == selected_zip["sha256"]
     assert manifest["input_fingerprints"]["distribution_zip"] == selected_zip["sha256"]
     assert (
@@ -1167,6 +1319,7 @@ def test_run_release_ready_passes_selected_distribution_zip_to_manifest(
         (vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8")
     )
     assert persisted["distribution_zip"]["path"] == "build/release/custom-source.zip"
+    assert persisted["source_package_smoke"]["path"] == selected_smoke
     assert validate_with_schema(persisted, load_schema(RUN_MANIFEST_SCHEMA_PATH)) == []
 
 
