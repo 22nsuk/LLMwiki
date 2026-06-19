@@ -1680,7 +1680,7 @@
       "properties": [
         {
           "name": "urn:openai:artifact-envelope",
-          "value": "{\"$schema\": \"ops/schemas/supply-chain-provenance.schema.json\", \"artifact_kind\": \"supply_chain_provenance_report\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-04-15T00:00:00Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-15T00:00:00Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"ci_workflow_path\": \"b803fcb7f17ed9235f1e5cb1fcd2f5d3b2838429d4368ae4c57ce4436577f03f\", \"policy\": \"924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51\", \"pyproject.toml\": \"ec7d3392c485db1fd6ad1e9c748a352df7db2f010a8191942e4c8d22fd7cef76\", \"requirements-dev.txt\": \"40640d7f22bdded667e36c33cf8b260e5b4168a1ea19fec7cbf92ff796de96a2\", \"requirements.txt\": \"b4603b9468ade4d639d2c6f73b89d50e1fa5d227c73ab15be0382cca478513e6\", \"schema\": \"89198542e624b0447d31f085a4a8c35ae8d2b38879a0da84a70df1cb170abee9\", \"source_package_sha256\": \"ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb\", \"source_package_status\": \"d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1\", \"source_paths\": \"edf512761ed83bc72dc350fadeeff8becf1eba6d991d8af685a5b78eadcdee8d\", \"status\": \"d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1\", \"uv.lock\": \"c511effc0307bcb5e307d6f94f3db27dae947e03ee3764903439bad9174b0329\"}, \"producer\": \"ops.scripts.supply_chain_provenance\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.supply_chain_provenance --vault . --out ops/reports/supply-chain-provenance.json\", \"source_revision\": \"source_package_without_git\", \"source_tree_fingerprint\": \"2a43aedbaac4dd9fba74ae1de464a19441d058afc1b8b2747f83647868c19735\"}"
+          "value": "{\"$schema\": \"ops/schemas/supply-chain-provenance.schema.json\", \"artifact_kind\": \"supply_chain_provenance_report\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-04-15T00:00:00Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-15T00:00:00Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"ci_workflow_path\": \"b803fcb7f17ed9235f1e5cb1fcd2f5d3b2838429d4368ae4c57ce4436577f03f\", \"policy\": \"924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51\", \"pyproject.toml\": \"ec7d3392c485db1fd6ad1e9c748a352df7db2f010a8191942e4c8d22fd7cef76\", \"requirements-dev.txt\": \"40640d7f22bdded667e36c33cf8b260e5b4168a1ea19fec7cbf92ff796de96a2\", \"requirements.txt\": \"b4603b9468ade4d639d2c6f73b89d50e1fa5d227c73ab15be0382cca478513e6\", \"schema\": \"89198542e624b0447d31f085a4a8c35ae8d2b38879a0da84a70df1cb170abee9\", \"source_package_sha256\": \"ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb\", \"source_package_status\": \"d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1\", \"source_paths\": \"edf512761ed83bc72dc350fadeeff8becf1eba6d991d8af685a5b78eadcdee8d\", \"status\": \"d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1\", \"uv.lock\": \"c511effc0307bcb5e307d6f94f3db27dae947e03ee3764903439bad9174b0329\"}, \"producer\": \"ops.scripts.supply_chain_provenance\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.supply_chain_provenance --vault . --out ops/reports/supply-chain-provenance.json\", \"source_revision\": \"source_package_without_git\", \"source_tree_fingerprint\": \"0b2a6214c9501f76a7a5ed16808fd226b4e2003f9e150ad5a07fac93dc048fca\"}"
         }
       ]
     }
@@ -2886,7 +2886,7 @@
       "properties": [
         {
           "name": "urn:openai:artifact-envelope",
-          "value": "{\"$schema\": \"ops/schemas/sbom-export-mapping.schema.json\", \"artifact_kind\": \"sbom_export_mapping_report\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-04-15T00:00:00Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-15T00:00:00Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"ops_manifest\": \"missing\", \"policy\": \"924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51\", \"provenance_generated_at\": \"7e5f0a94848d44d08b16c8883cf485a60b70f818e4a942216a8af35063ff323e\", \"public_export_files\": \"36d548f37ca4f5f2b2edcae321ec1ef27c143536cc59a69d454c25fb9d69580e\", \"release_manifest_files\": \"c8c5acdba56abc29837f03a06bdc7dfee2a11e637d42d03351137d1e859478c5\", \"schema\": \"f4d5961b248c0fd1c0437416094a767a02815b30ab4fb1d24a36fe1be68c067a\", \"source_paths\": \"881bf1deeb1f3fa43d0871588a018075f1343505b0f696a3f70c10a2e0bbe6c1\", \"status\": \"d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1\"}, \"producer\": \"ops.scripts.sbom_export_mapping\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.sbom_export_mapping --vault . --out ops/reports/sbom-export-mapping.json\", \"source_revision\": \"source_package_without_git\", \"source_tree_fingerprint\": \"2a43aedbaac4dd9fba74ae1de464a19441d058afc1b8b2747f83647868c19735\"}"
+          "value": "{\"$schema\": \"ops/schemas/sbom-export-mapping.schema.json\", \"artifact_kind\": \"sbom_export_mapping_report\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-04-15T00:00:00Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-15T00:00:00Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"ops_manifest\": \"missing\", \"policy\": \"924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51\", \"provenance_generated_at\": \"7e5f0a94848d44d08b16c8883cf485a60b70f818e4a942216a8af35063ff323e\", \"public_export_files\": \"ab63fb90ec8f493f722d93a8eff9b538b7251fb684b1a93b62879b0de3a8189b\", \"release_manifest_files\": \"f370cc00ca538585690f3a4545f62cd4c36297988dd68ea5e64025c6eb9a397f\", \"schema\": \"f4d5961b248c0fd1c0437416094a767a02815b30ab4fb1d24a36fe1be68c067a\", \"source_paths\": \"881bf1deeb1f3fa43d0871588a018075f1343505b0f696a3f70c10a2e0bbe6c1\", \"status\": \"d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1\"}, \"producer\": \"ops.scripts.sbom_export_mapping\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.sbom_export_mapping --vault . --out ops/reports/sbom-export-mapping.json\", \"source_revision\": \"source_package_without_git\", \"source_tree_fingerprint\": \"0b2a6214c9501f76a7a5ed16808fd226b4e2003f9e150ad5a07fac93dc048fca\"}"
         }
       ]
     }
@@ -2898,28 +2898,28 @@
     "producer": "ops.scripts.auto_improve_readiness_runtime",
     "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
     "source_revision": "source_package_without_git",
-    "source_tree_fingerprint": "2c1e7a8eb2ba47db6d9428cd40e7015a9a32044b0a9c263f2131c1f266d13913",
+    "source_tree_fingerprint": "7bf98b659135e63cfa8cea34999399e128c73edb8ff1abb42443600939c1e543",
     "input_fingerprints": {
       "policy": "924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51",
       "schema": "7c039b2411dd67dd10d194bd2b78f5f81ed02989ac45d39ebf4459092cc83199",
       "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
       "source_paths": "047293551d0e1a1f55af9a71c9218098346dfc8215f43954f57308ca269d7943",
-      "artifact_freshness_report": "c2dc4f06ffff6305c1a8b73829622b8aeedc095f2c799edd42d2b7da14865721",
-      "goal_worktree_guard_report": "3216133acb2564a1ef3da5a8e6b5b41f7d735d472c50e1afa2383d4807aba9b7",
+      "artifact_freshness_report": "fdf2c878d4c58fe56e31c786ec91b327ed9309173b17188a7ba278668ffd0901",
+      "goal_worktree_guard_report": "f0981c544d3b796a8006000434caf13a4ac488c8a791d7172b2bf85a80ea22b9",
       "learning_confirmed_legacy_reconstruction_report": "missing",
       "learning_readiness_signoff_report": "missing",
-      "mechanism_review_report": "d2bf726cb8734da4ae0ba0d479f5d308bd632ffdf9672cea0ec3333e26bfceb9",
-      "mutation_proposal_report": "58ea7ebaf3d0be30686f6dd0d806db244cd4b5e78b0a43baf442df2a991cd173",
-      "outcome_metrics_report": "aea2cc2325571f16738584ea44cd68a4c462780ff9a6a78da0b8bd8de49ce399",
+      "mechanism_review_report": "3a803477105be4388e2fe31ab5d01f3b649cdde33ea00ee5f2b3b44d3ae1fee2",
+      "mutation_proposal_report": "394ac189a082b1b0370d629e1f67671753d4254fa93d1ebf11f339a63cb2c6cc",
+      "outcome_metrics_report": "bcdd04a56a4b054a916e1145d0ba716796271cacbd0619e6a3d01e54bf882039",
       "release_authority_preflight_report": "missing",
-      "release_closeout_batch_manifest_report": "306920ba88be6354f8e00c3462425a4e8b05f8f4889afe2d5fa7f283a97d2c7d",
-      "release_closeout_finality_attestation_report": "a2609b0f1313fb06be28d7da765345e1693fe3546629bb639c733f7b54161ac0",
-      "release_closeout_post_check_finalizer_report": "cf21cbc5f073c285c197afca30169d426b5ecbd540dea12b55b2fb75c8d8265b",
-      "release_closeout_summary_report": "d5da53c20e11867e087f8baf12cd1b9193587329b380322c3b0a90f7a04c572d",
-      "release_evidence_cohort_report": "f7d433909071958b22f84019b1842bd49ea0054b0c2e9f4d2cb89c30939efbb1",
+      "release_closeout_batch_manifest_report": "632d723e2dd8cd258a9649bba6f123836d110235c5019c1f83810a52181c995e",
+      "release_closeout_finality_attestation_report": "cf001f4368c706d84366aa54b334c507f8ad40d732c600cc2036092b4c7da2ed",
+      "release_closeout_post_check_finalizer_report": "1986b499fc92de2e1cf39d56060c304d2a72a670884c9c6f64e235ecbfaeeb1c",
+      "release_closeout_summary_report": "d12dab364246584918faec282eb212bd3efa321c5ed8991297f6e4f03fa94b2e",
+      "release_evidence_cohort_report": "d643de7abbf1cfbb689ec26b64035fa0e24e81f126af30b0cd16144fe05f552d",
       "remediation_backlog_report": "missing",
-      "selected_contract_summary_report": "10ec7f0d12ca77dac1f5ddb9af79d83159e8271be0ee68686d9d1c9954cd082e",
-      "source_package_clean_extract_report": "d6311443facd49b026d9f22011db7c4fc46f01e9fed3af14ab7da61dc5b11e9a",
+      "selected_contract_summary_report": "528e54da3a57ec81324f4095f1ab98b6be95b753c8522097931b9fabe3c75c8b",
+      "source_package_clean_extract_report": "7a20ba1cc74d633a162be9620e8181442655b439504936bceda307d6b5becdc7",
       "release_authority_preflight_report_candidates": "e569767bfd41399c9df61e10d22007f18bdc84a55975da019d5fd89e28d90e75"
     },
     "schema_version": 1,
@@ -3547,7 +3547,7 @@
         },
         {
           "name": "urn:openai:artifact-envelope",
-          "value": "{\"$schema\": \"http://cyclonedx.org/schema/bom-1.6.schema.json\", \"artifact_kind\": \"cyclonedx_sbom\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-04-15T00:00:00Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-15T00:00:00Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"ci_workflow\": \"63d6104f1e7545aef0a223c2c27db41b5c44c0945033fb59bea585da7bde0a1f\", \"lock\": \"c511effc0307bcb5e307d6f94f3db27dae947e03ee3764903439bad9174b0329\", \"policy\": \"924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51\", \"pyproject\": \"ec7d3392c485db1fd6ad1e9c748a352df7db2f010a8191942e4c8d22fd7cef76\", \"schema\": \"97e1cec5b717d05634576fe57c570c3c31565a29bfc033463996d3b77665c9ab\", \"source_paths\": \"b398a9e391451e25f5cd6f2a3ef39298ab8cb26fdc321cc26ce2cacad0be036f\"}, \"producer\": \"ops.scripts.cyclonedx_sbom\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.cyclonedx_sbom\", \"source_revision\": \"source_package_without_git\", \"source_tree_fingerprint\": \"2a43aedbaac4dd9fba74ae1de464a19441d058afc1b8b2747f83647868c19735\"}"
+          "value": "{\"$schema\": \"http://cyclonedx.org/schema/bom-1.6.schema.json\", \"artifact_kind\": \"cyclonedx_sbom\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-04-15T00:00:00Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-15T00:00:00Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"ci_workflow\": \"63d6104f1e7545aef0a223c2c27db41b5c44c0945033fb59bea585da7bde0a1f\", \"lock\": \"c511effc0307bcb5e307d6f94f3db27dae947e03ee3764903439bad9174b0329\", \"policy\": \"924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51\", \"pyproject\": \"ec7d3392c485db1fd6ad1e9c748a352df7db2f010a8191942e4c8d22fd7cef76\", \"schema\": \"97e1cec5b717d05634576fe57c570c3c31565a29bfc033463996d3b77665c9ab\", \"source_paths\": \"b398a9e391451e25f5cd6f2a3ef39298ab8cb26fdc321cc26ce2cacad0be036f\"}, \"producer\": \"ops.scripts.cyclonedx_sbom\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.cyclonedx_sbom\", \"source_revision\": \"source_package_without_git\", \"source_tree_fingerprint\": \"0b2a6214c9501f76a7a5ed16808fd226b4e2003f9e150ad5a07fac93dc048fca\"}"
         }
       ]
     },
@@ -3691,17 +3691,17 @@
     "producer": "ops.scripts.openvex_draft",
     "source_command": "python -m ops.scripts.supply_chain.openvex_draft",
     "source_revision": "source_package_without_git",
-    "source_tree_fingerprint": "9c1f482e0066d793964fc67482557f2b478a393e93fbd6ec6f80c6f5cc706f20",
+    "source_tree_fingerprint": "834e92322df69885e66c8632400b014592017328316791a244848e9c38deb570",
     "input_fingerprints": {
       "policy": "924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51",
       "schema": "69fbeb5a6df62c8a1bd9b6565825972f7f2c0d243544f7e660562bf176184182",
       "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
       "source_paths": "115f9568243f08e7fc1ab915477b84361c1eace91e3e751525b9fe54f597a617",
-      "cyclonedx_bom": "5ee69502da02ea6a41052d42e513911131550d4ffda7671ca48bc0de1ecdacb7",
-      "artifact_model": "5e57eced61c756804771fceff494d8dd6892a0d77bafbc0c7675d9b2d0e0ccf5",
+      "cyclonedx_bom": "38685d12ae79001355153a90b7b81f8747f78153a3970c2b6eb2860afb0ca6ec",
+      "artifact_model": "4af7e4dc68554e79f8b4d78d007fa35f89737d4bff16b9ce04684b92bd6c5128",
       "cyclonedx_bom_ref": "871448152f022bb76e7513cc3ed3628a615930baefd708c32ae7b5a6cc00c6cc",
       "cyclonedx_summary": "5bec66f3e11f4237a8d688f5f3ae45cbb34fe23a549215120c2dcde8cb019cb9",
-      "security_advisories_report": "ce167f3178d4bf99afac849b07b94d6ed92aa6d4f0da90dfba1f60caf6380c9e",
+      "security_advisories_report": "8423c54f61e617bf07030bc2cdbe3d91f7ed065b801d55e0b9cb312558c35882",
       "vulnerability_source": "f923eac087499adee3fda8b80b1214f35a031a0bee38789658fd4ee4ea99185e"
     },
     "schema_version": 1,
@@ -3852,7 +3852,7 @@
     "producer": "ops.scripts.artifact_freshness_runtime",
     "source_command": "python -m ops.scripts.artifact_freshness_runtime --vault .",
     "source_revision": "source_package_without_git",
-    "source_tree_fingerprint": "2c1e7a8eb2ba47db6d9428cd40e7015a9a32044b0a9c263f2131c1f266d13913",
+    "source_tree_fingerprint": "7bf98b659135e63cfa8cea34999399e128c73edb8ff1abb42443600939c1e543",
     "input_fingerprints": {
       "policy": "924ea31c365a153a633967c0a3d4d6c29b597bfd11f1dfc285ecf065ba62ef51",
       "schema": "489b3959b57d72d7bca86630e4714ca8580bc82a1fecebbcad5da51ffc06032d",
@@ -3941,7 +3941,7 @@
       "release_preflight": "fp-current",
       "test_execution_summary_full": "423925d24483952588c8c9dbd5e9bf05c50ab317bd428a59095f9d5a82f0ba4a",
       "test_execution_summary_report_contract": "b43190a64ce74a87f78be50b7fb43291ef939c1474bcd6c5e7b674f11906cecd",
-      "public_check_summary": "385d80af67140e1d6e7abd9211f8b24d85056ded4c363d4ae3706616843461ad",
+      "public_check_summary": "f7f1f8d70f2876b4909547507fc31678e7400e3283f3ebadd07a8966fd984bbe",
       "release_smoke_full": "0f357dffd9f342a4a44765cf17e765bc1eb2d2ccacf377f99d242761213bf2d0",
       "release_distribution_zip_smoke": "3f159a5b22a6fc864f4311e3d0537763401458bde7e7dce59d13702bf8f1cbaf",
       "source_package_smoke": "9d4bc1f6ecf05f7144fc10f23f62ddda61e93dd796da256715d8237c3b0c6f79",
@@ -4052,7 +4052,7 @@
         "status": "pass",
         "source_revision": "abc123",
         "source_tree_fingerprint": "fp-current",
-        "input_fingerprint": "385d80af67140e1d6e7abd9211f8b24d85056ded4c363d4ae3706616843461ad",
+        "input_fingerprint": "f7f1f8d70f2876b4909547507fc31678e7400e3283f3ebadd07a8966fd984bbe",
         "can_reuse": true,
         "issues": [],
         "reason_codes": [],

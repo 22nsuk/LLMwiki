@@ -275,7 +275,21 @@ def test_runtime_hotspot_structural_digest_keeps_fingerprint_shape_not_values() 
             "policy": "old-policy-digest",
             "schema": "old-schema-digest",
         },
+        "metadata": {
+            "properties": [
+                {
+                    "name": "urn:openai:artifact-envelope",
+                    "value": (
+                        '{"input_fingerprints":{"policy":"old-policy-digest"},'
+                        '"sha256":"old-sha","source_tree_fingerprint":"old-tree-digest"}'
+                    ),
+                }
+            ]
+        },
         "producer_input_fingerprint": "old-producer-digest",
+        "public_check_config_fingerprint": "old-config-digest",
+        "report_sha256": "old-report-sha",
+        "sha256": "old-sha",
         "source_revision": "old-revision",
         "source_tree_fingerprint": "old-tree-digest",
     }
@@ -284,7 +298,21 @@ def test_runtime_hotspot_structural_digest_keeps_fingerprint_shape_not_values() 
             "policy": "new-policy-digest",
             "schema": "new-schema-digest",
         },
+        "metadata": {
+            "properties": [
+                {
+                    "name": "urn:openai:artifact-envelope",
+                    "value": (
+                        '{"input_fingerprints":{"policy":"new-policy-digest"},'
+                        '"sha256":"new-sha","source_tree_fingerprint":"new-tree-digest"}'
+                    ),
+                }
+            ]
+        },
         "producer_input_fingerprint": "new-producer-digest",
+        "public_check_config_fingerprint": "new-config-digest",
+        "report_sha256": "new-report-sha",
+        "sha256": "new-sha",
         "source_revision": "new-revision",
         "source_tree_fingerprint": "new-tree-digest",
     }
@@ -295,7 +323,23 @@ def test_runtime_hotspot_structural_digest_keeps_fingerprint_shape_not_values() 
             "new_axis": "new-axis-digest",
         },
     }
+    changed_embedded_shape = {
+        **refreshed,
+        "metadata": {
+            "properties": [
+                {
+                    "name": "urn:openai:artifact-envelope",
+                    "value": (
+                        '{"input_fingerprints":{"new_axis":"new-axis-digest",'
+                        '"policy":"new-policy-digest"},'
+                        '"sha256":"new-sha","source_tree_fingerprint":"new-tree-digest"}'
+                    ),
+                }
+            ]
+        },
+    }
 
     assert strip_volatile_fields(baseline) == strip_volatile_fields(refreshed)
     assert structural_digest(baseline) == structural_digest(refreshed)
     assert structural_digest(refreshed) != structural_digest(changed_shape)
+    assert structural_digest(refreshed) != structural_digest(changed_embedded_shape)

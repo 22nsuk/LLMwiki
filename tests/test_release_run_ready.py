@@ -32,7 +32,7 @@ RUN_MANIFEST_SCHEMA_PATH = (
 )
 ZERO_SHA256 = "0" * 64
 READY_PLAN_GOLDEN_SHA256 = (
-    "d9b67ed539c83b28d9a08d5c3e36dd450f9b6bdebb4689611739a5b80cfc30b7"
+    "68e16be59572e60f05485d59332f582093b7941c01edc20a675ebae22e19bb38"
 )
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",
@@ -275,6 +275,10 @@ def _public_check_summary_payload() -> dict[str, object]:
         "vault": ".",
         "policy": _policy(),
         "status": "pass",
+        "input_fingerprints": {
+            "source": "fp-current",
+            "public_check_config": ZERO_SHA256,
+        },
         "summary": {
             "public_export_status": "pass",
             "public_check_status": "pass",
@@ -283,6 +287,7 @@ def _public_check_summary_payload() -> dict[str, object]:
             "export_root_fingerprint": ZERO_SHA256,
             "public_export_manifest_sha256": ZERO_SHA256,
             "public_surface_policy_sha256": ZERO_SHA256,
+            "public_check_config_fingerprint": ZERO_SHA256,
             "command_count": 3,
             "command_fail_count": 0,
             "negative_assertion_fail_count": 0,

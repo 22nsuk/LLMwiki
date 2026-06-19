@@ -30,6 +30,9 @@ VOLATILE_FIELD_NAMES = frozenset(
 )
 
 FINGERPRINT_MAP_FIELD_NAMES = frozenset({"input_fingerprints"})
+FINGERPRINT_VALUE_FIELD_NAMES = frozenset({"input_fingerprint", "sha256"})
+FINGERPRINT_VALUE_FIELD_SUFFIXES = ("_fingerprint", "_sha256")
+ARTIFACT_ENVELOPE_PROPERTY_NAME = "urn:openai:artifact-envelope"
 
 VOLATILE_FIELD_VALUE_SENTINELS = {
     "current_source_revision": "<current_source_revision>",
@@ -45,8 +48,8 @@ VOLATILE_FIELD_VALUE_SENTINELS = {
 STRUCTURAL_GOLDEN_DIGESTS = {
     "mutation_proposal": "99536d57a2fc8f1a5ceb2fe658cec2f7e75bd4cb3d63b83dc6121c68ea426366",
     "release_evidence_dashboard": "3cdc62c1128d5fad032aa4cc2fda5931805d12964f76b2acdbf0dcd8e6d90d32",
-    "release_closeout_summary": "6b2a8f1a26d6ee8eb149653cc0e8d6e2108b2627f9997aa8367adb21e2746152",
-    "auto_improve_session_bundle": "4f8f612077c773f77e425f9ea3ba5759514b1f77f58d96203e4dbc24175c3a4f",
+    "release_closeout_summary": "0cf9f6fcd926a9c75a41e1457fb8c6c26f42dc6749042468108d62294df3ac97",
+    "auto_improve_session_bundle": "00e645dd5bcd510f35c4b022d4c155be81a5eb78541c7dc3ebbccef59391a164",
 }
 
 STRUCTURAL_CONTRACTS: dict[str, dict[str, object]] = {
@@ -99,17 +102,61 @@ def canonical_bytes(payload: object) -> bytes:
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8") + b"\n"
 
 
+def _fingerprint_value_sentinel(key: str, item: object) -> str | None:
+    if not isinstance(item, str):
+        return None
+    if key in VOLATILE_FIELD_VALUE_SENTINELS:
+        return VOLATILE_FIELD_VALUE_SENTINELS[key]
+    if key in FINGERPRINT_VALUE_FIELD_NAMES or key.endswith(FINGERPRINT_VALUE_FIELD_SUFFIXES):
+        return f"<{key}>"
+    return None
+
+
+def _strip_artifact_envelope_property_value(value: str) -> str:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return value
+    return json.dumps(
+        strip_volatile_fields(parsed),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _strip_metadata_properties(properties: list[object]) -> list[object]:
+    stripped_properties: list[object] = []
+    for property_payload in properties:
+        if not isinstance(property_payload, dict):
+            stripped_properties.append(strip_volatile_fields(property_payload))
+            continue
+        stripped_property: dict[str, object] = {}
+        is_artifact_envelope = property_payload.get("name") == ARTIFACT_ENVELOPE_PROPERTY_NAME
+        for key, item in property_payload.items():
+            if key == "value" and is_artifact_envelope and isinstance(item, str):
+                stripped_property[key] = _strip_artifact_envelope_property_value(item)
+                continue
+            stripped_property[key] = strip_volatile_fields(item)
+        stripped_properties.append(stripped_property)
+    return stripped_properties
+
+
 def strip_volatile_fields(value: object) -> object:
     if isinstance(value, dict):
         stripped: dict[str, object] = {}
         for key, item in value.items():
             if key in VOLATILE_FIELD_NAMES:
                 continue
+            if key == "properties" and isinstance(item, list):
+                stripped[key] = _strip_metadata_properties(item)
+                continue
             if key in FINGERPRINT_MAP_FIELD_NAMES and isinstance(item, dict):
                 stripped[key] = dict.fromkeys(sorted(item), "<fingerprint>")
                 continue
-            if key in VOLATILE_FIELD_VALUE_SENTINELS:
-                stripped[key] = VOLATILE_FIELD_VALUE_SENTINELS[key]
+            fingerprint_sentinel = _fingerprint_value_sentinel(key, item)
+            if fingerprint_sentinel is not None:
+                stripped[key] = fingerprint_sentinel
                 continue
             stripped[key] = strip_volatile_fields(item)
         return stripped

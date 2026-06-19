@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import datetime as dt
+import io
 import json
 import tempfile
 import unittest
 from collections.abc import Mapping, Sequence
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,6 +17,7 @@ from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.public.public_check_summary import (
     PublicCheckRequest,
     _default_command_runner,
+    _public_check_config_fingerprint,
     _public_pytest_summary_cache_path,
     _resolve_public_python,
     build_report,
@@ -258,6 +261,14 @@ class PublicCheckSummaryTests(unittest.TestCase):
             )
             self.assertRegex(report["summary"]["export_root_fingerprint"], r"^[a-f0-9]{64}$")
             self.assertRegex(report["summary"]["public_surface_policy_sha256"], r"^[a-f0-9]{64}$")
+            self.assertRegex(
+                report["summary"]["public_check_config_fingerprint"],
+                r"^[a-f0-9]{64}$",
+            )
+            self.assertEqual(
+                report["summary"]["public_check_config_fingerprint"],
+                report["input_fingerprints"]["public_check_config"],
+            )
             self.assertTrue(report["public_export"]["output_dir"].startswith("<tmp>/"))
             self.assertTrue(report["public_export"]["output_dir"].endswith(f"/{public_out.name}"))
             self.assertTrue(_public_pytest_summary_cache_path().exists())
@@ -570,6 +581,178 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 stale["current_source_tree_fingerprint"],
                 json.loads(destination.read_text(encoding="utf-8"))["source_tree_fingerprint"],
             )
+
+    def test_reusable_summary_requires_matching_public_check_config_fingerprint(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            original_request = PublicCheckRequest(
+                public_out=str(Path(temp_dir) / "public"),
+                public_python="/home/alice/.venv/bin/python",
+                ruff_targets="ops/scripts tests",
+                mypy_targets="ops/scripts",
+                pytest_mark_expr="public",
+                pytest_flags="-q",
+                timeout_seconds=90,
+                heartbeat_interval_seconds=10,
+            )
+
+            report = build_report(
+                vault,
+                original_request,
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+            destination = write_report(vault, report)
+
+            matching = reusable_summary_diagnostics(vault, destination, original_request)
+            self.assertTrue(matching["reusable"])
+            self.assertEqual(
+                matching["public_check_config_fingerprint"],
+                report["input_fingerprints"]["public_check_config"],
+            )
+
+            mismatched_python = reusable_summary_diagnostics(
+                vault,
+                destination,
+                PublicCheckRequest(
+                    public_out=str(Path(temp_dir) / "public"),
+                    public_python="/home/bob/.venv/bin/python",
+                    ruff_targets="ops/scripts tests",
+                    mypy_targets="ops/scripts",
+                    pytest_mark_expr="public",
+                    pytest_flags="-q",
+                    timeout_seconds=90,
+                    heartbeat_interval_seconds=10,
+                ),
+            )
+            self.assertFalse(mismatched_python["reusable"])
+            self.assertIn("public_check_config", mismatched_python["reason"])
+            self.assertNotEqual(
+                mismatched_python["expected_public_check_config_fingerprint"],
+                mismatched_python["observed_public_check_config_fingerprint"],
+            )
+
+            mismatched_public_out = reusable_summary_diagnostics(
+                vault,
+                destination,
+                PublicCheckRequest(
+                    public_out="tmp/public",
+                    public_python="/home/alice/.venv/bin/python",
+                    ruff_targets="ops/scripts tests",
+                    mypy_targets="ops/scripts",
+                    pytest_mark_expr="public",
+                    pytest_flags="-q",
+                    timeout_seconds=90,
+                    heartbeat_interval_seconds=10,
+                ),
+            )
+            self.assertFalse(mismatched_public_out["reusable"])
+            self.assertIn("public_check_config", mismatched_public_out["reason"])
+
+            mismatched_pytest = reusable_summary_diagnostics(
+                vault,
+                destination,
+                PublicCheckRequest(
+                    public_out=str(Path(temp_dir) / "public"),
+                    public_python="/home/alice/.venv/bin/python",
+                    ruff_targets="ops/scripts tests",
+                    mypy_targets="ops/scripts",
+                    pytest_mark_expr="",
+                    pytest_flags="-q",
+                    timeout_seconds=90,
+                    heartbeat_interval_seconds=10,
+                ),
+            )
+            self.assertFalse(mismatched_pytest["reusable"])
+            self.assertIn("public_check_config", mismatched_pytest["reason"])
+
+            mismatched_ruff = reusable_summary_diagnostics(
+                vault,
+                destination,
+                PublicCheckRequest(
+                    public_out=str(Path(temp_dir) / "public"),
+                    public_python="/home/alice/.venv/bin/python",
+                    ruff_targets="ops/scripts",
+                    mypy_targets="ops/scripts",
+                    pytest_mark_expr="public",
+                    pytest_flags="-q",
+                    timeout_seconds=90,
+                    heartbeat_interval_seconds=10,
+                ),
+            )
+            self.assertFalse(mismatched_ruff["reusable"])
+            self.assertIn("public_check_config", mismatched_ruff["reason"])
+
+    def test_public_check_config_fingerprint_excludes_internal_pytest_cache_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            request = PublicCheckRequest(
+                public_out=str(Path(temp_dir) / "public"),
+                public_python="python",
+                pytest_flags="-q",
+            )
+
+            with patch(
+                "ops.scripts.public.public_check_summary._public_pytest_summary_cache_path",
+                return_value=Path(temp_dir) / "cache-a" / "test-execution-summary-public.json",
+            ):
+                left = _public_check_config_fingerprint(vault, request)
+
+            with patch(
+                "ops.scripts.public.public_check_summary._public_pytest_summary_cache_path",
+                return_value=Path(temp_dir) / "cache-b" / "test-execution-summary-public.json",
+            ):
+                right = _public_check_config_fingerprint(vault, request)
+
+            self.assertEqual(left, right)
+
+    def test_cli_reuse_only_rejects_mismatched_public_check_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            public_out = Path(temp_dir) / "public"
+            report = build_report(
+                vault,
+                PublicCheckRequest(
+                    public_out=str(public_out),
+                    public_python="python",
+                    pytest_mark_expr="public",
+                    pytest_flags="-q",
+                ),
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+            destination = write_report(vault, report)
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exit_code = public_check_summary_module.main(
+                    [
+                        "--vault",
+                        str(vault),
+                        "--reuse-only",
+                        "--reuse-from",
+                        str(destination),
+                        "--public-out",
+                        str(public_out),
+                        "--public-python",
+                        "python",
+                        "--pytest-mark-expr",
+                        "",
+                        "--pytest-flags=-q",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 1)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["summary_mode"], "executed")
+            self.assertIn("public_check_config", payload["reuse_diagnostics"]["reason"])
 
     def test_script_output_surfaces_refresh_does_not_stale_public_summary_without_source_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

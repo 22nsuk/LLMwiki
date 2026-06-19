@@ -66,6 +66,7 @@ DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 30
 TAIL_LINE_COUNT = 80
 PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH = "ops/reports/test-execution-summary-public.json"
 PUBLIC_PYTEST_SUMMARY_CACHE_DIRNAME = "tmp-public-check-summary-cache"
+PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY = "public_check_config"
 CommandRunner = Callable[[Sequence[str], Path, int], TimedProcessResult]
 PRIVATE_EXPORT_PATTERNS = (
     "raw/",
@@ -113,6 +114,10 @@ def _sha256_file(path: Path) -> str:
 def _canonical_sha256(payload: object) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _canonical_json_text(payload: object) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
 def _int_value(value: object) -> int:
@@ -227,6 +232,49 @@ def _remove_optional_file(path: Path) -> None:
 
 def _pytest_public_summary_suite(pytest_mark_expr: str) -> str:
     return "public" if pytest_mark_expr.strip() == "public" else "pytest"
+
+
+def _public_check_config_payload(vault: Path, request: PublicCheckRequest) -> dict[str, Any]:
+    resolved_public_out = _resolve_out_dir(vault, request.public_out).resolve()
+    resolved_vault = vault.resolve()
+    try:
+        public_out_relative_to_vault = resolved_public_out.relative_to(resolved_vault).as_posix()
+        public_out_boundary = "inside_source_vault"
+    except ValueError:
+        public_out_relative_to_vault = ""
+        public_out_boundary = "outside_source_vault"
+    return {
+        "version": 1,
+        "public_out": {
+            "boundary": public_out_boundary,
+            "relative_to_vault": public_out_relative_to_vault,
+            "resolved_path": resolved_public_out.as_posix(),
+        },
+        "public_python": {
+            "identity": _resolve_public_python(vault, request.public_python),
+        },
+        "ruff": {
+            "targets": shlex.split(request.ruff_targets),
+        },
+        "mypy": {
+            "targets": shlex.split(request.mypy_targets),
+        },
+        "pytest": {
+            "flags": shlex.split(request.pytest_flags),
+            "mark_expr": request.pytest_mark_expr,
+            "summary_suite": _pytest_public_summary_suite(request.pytest_mark_expr),
+        },
+        "timeout_seconds": request.timeout_seconds,
+        "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
+    }
+
+
+def _public_check_config_text(vault: Path, request: PublicCheckRequest) -> str:
+    return _canonical_json_text(_public_check_config_payload(vault, request))
+
+
+def _public_check_config_fingerprint(vault: Path, request: PublicCheckRequest) -> str:
+    return _canonical_sha256(_public_check_config_payload(vault, request))
 
 
 def _pytest_public_summary_command(
@@ -608,6 +656,7 @@ def _summary_payload(
     export: _PublicExportSnapshot,
     commands: list[dict[str, Any]],
     status: str,
+    public_check_config_fingerprint: str,
 ) -> dict[str, Any]:
     pytest_counts = commands[-1].get("pytest_counts", {})
     public_pytest_command = _public_pytest_command(commands)
@@ -619,6 +668,7 @@ def _summary_payload(
         "export_root_fingerprint": export.export_root_fingerprint,
         "public_export_manifest_sha256": _sha256_file(export.manifest_path),
         "public_surface_policy_sha256": _sha256_file(vault / "ops/scripts/public/public_surface_policy.py"),
+        "public_check_config_fingerprint": public_check_config_fingerprint,
         "command_count": len(commands),
         "command_fail_count": sum(1 for command in commands if command["status"] != "pass"),
         "negative_assertion_fail_count": sum(
@@ -670,6 +720,7 @@ def _render_public_check_report(
     runtime_context: RuntimeContext,
     export: _PublicExportSnapshot,
     commands: list[dict[str, Any]],
+    request: PublicCheckRequest,
 ) -> dict[str, Any]:
     status = _public_check_status(commands, export.negative_assertions)
     source_paths = [
@@ -679,6 +730,8 @@ def _render_public_check_report(
         "ops/scripts/public/public_surface_policy.py",
         "ops/scripts/test/test_execution_summary.py",
     ]
+    public_check_config_text = _public_check_config_text(vault, request)
+    public_check_config_fingerprint = _public_check_config_fingerprint(vault, request)
     return {
         **build_canonical_report_envelope(
             vault,
@@ -696,11 +749,20 @@ def _render_public_check_report(
                     "ops/scripts/public/public_surface_policy.py",
                 ]
             },
+            text_inputs={
+                PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY: public_check_config_text,
+            },
         ),
         "vault": report_path(vault, vault),
         "policy": {"path": report_path(vault, resolved_policy_path), "version": policy.get("version")},
         "status": status,
-        "summary": _summary_payload(vault, export, commands, status),
+        "summary": _summary_payload(
+            vault,
+            export,
+            commands,
+            status,
+            public_check_config_fingerprint,
+        ),
         "public_export": _public_export_payload(vault, export),
         "public_export_negative_assertions": export.negative_assertions,
         "failure_causes": _public_check_failure_causes(commands, export.negative_assertions),
@@ -732,6 +794,7 @@ def build_report(
         runtime_context,
         export,
         commands,
+        request,
     )
 
 
@@ -748,7 +811,11 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str = DEFAULT_OU
     )
 
 
-def reusable_summary_diagnostics(vault: Path, path_value: str | Path) -> dict[str, Any]:
+def reusable_summary_diagnostics(
+    vault: Path,
+    path_value: str | Path,
+    request: PublicCheckRequest | None = None,
+) -> dict[str, Any]:
     path = Path(path_value)
     if not path.is_absolute():
         path = vault / path
@@ -765,6 +832,8 @@ def reusable_summary_diagnostics(vault: Path, path_value: str | Path) -> dict[st
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     summary = payload.get("summary")
     summary = summary if isinstance(summary, dict) else {}
+    input_fingerprints = payload.get("input_fingerprints")
+    input_fingerprints = input_fingerprints if isinstance(input_fingerprints, dict) else {}
     checks = {
         "artifact_kind": payload.get("artifact_kind") == "public_check_summary",
         "producer": payload.get("producer") == PRODUCER,
@@ -772,12 +841,27 @@ def reusable_summary_diagnostics(vault: Path, path_value: str | Path) -> dict[st
         "public_check_status": summary.get("public_check_status") == "pass",
         "source_tree_fingerprint": payload.get("source_tree_fingerprint") == current_source_tree_fingerprint,
     }
+    if request is not None:
+        expected_public_check_config_fingerprint = _public_check_config_fingerprint(vault, request)
+        observed_public_check_config_fingerprint = str(
+            input_fingerprints.get(PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY, "")
+        )
+        checks[PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY] = (
+            observed_public_check_config_fingerprint == expected_public_check_config_fingerprint
+        )
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         diagnostics["reason"] = f"not_current:{','.join(failed)}"
         diagnostics["checks"] = checks
         diagnostics["current_source_tree_fingerprint"] = current_source_tree_fingerprint
         diagnostics["observed_source_tree_fingerprint"] = str(payload.get("source_tree_fingerprint", ""))
+        if request is not None:
+            diagnostics["expected_public_check_config_fingerprint"] = (
+                expected_public_check_config_fingerprint
+            )
+            diagnostics["observed_public_check_config_fingerprint"] = (
+                observed_public_check_config_fingerprint
+            )
         return diagnostics
     diagnostics.update(
         {
@@ -785,6 +869,9 @@ def reusable_summary_diagnostics(vault: Path, path_value: str | Path) -> dict[st
             "reason": "current_passing_public_check_summary",
             "generated_at": str(payload.get("generated_at", "")),
             "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
+            "public_check_config_fingerprint": str(
+                input_fingerprints.get(PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY, "")
+            ),
         }
     )
     return diagnostics
@@ -838,8 +925,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.reuse_only:
         args.reuse_if_current = True
     vault = Path(args.vault).resolve()
+    request = PublicCheckRequest(
+        public_out=args.public_out,
+        public_python=args.public_python,
+        ruff_targets=args.ruff_targets,
+        mypy_targets=args.mypy_targets,
+        pytest_mark_expr=args.pytest_mark_expr,
+        pytest_flags=args.pytest_flags,
+        timeout_seconds=args.timeout_seconds,
+        heartbeat_interval_seconds=args.heartbeat_interval_seconds,
+    )
     if args.reuse_if_current:
-        diagnostics = reusable_summary_diagnostics(vault, args.reuse_from or args.out)
+        diagnostics = reusable_summary_diagnostics(vault, args.reuse_from or args.out, request)
         if diagnostics["reusable"]:
             print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
             return 0
@@ -848,16 +945,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
     report = build_report(
         vault,
-        PublicCheckRequest(
-            public_out=args.public_out,
-            public_python=args.public_python,
-            ruff_targets=args.ruff_targets,
-            mypy_targets=args.mypy_targets,
-            pytest_mark_expr=args.pytest_mark_expr,
-            pytest_flags=args.pytest_flags,
-            timeout_seconds=args.timeout_seconds,
-            heartbeat_interval_seconds=args.heartbeat_interval_seconds,
-        ),
+        request,
     )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
