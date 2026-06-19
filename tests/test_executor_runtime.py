@@ -911,7 +911,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stdout.txt").is_file())
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stderr.txt").is_file())
 
-    def test_non_worker_dependency_preflight_uses_trusted_python_probe(self) -> None:
+    def test_non_worker_dependency_preflight_uses_workspace_python_probe(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -932,10 +932,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
                 if argv[:3] == ["git", "rev-parse", "HEAD"]:
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
-                self.assertEqual(argv[0], sys.executable)
+                self.assertEqual(argv[0], str(venv_python))
                 self.assertEqual(Path(str(kwargs.get("cwd"))), Path(os.sep))
                 payload = {
-                    "python": {"executable": sys.executable, "version": "3.test"},
+                    "python": {"executable": str(venv_python), "version": "3.test"},
                     "modules": [
                         {
                             "import_name": "pytest",
@@ -985,7 +985,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
 
             self.assertEqual(report["status"], "pass")
-            self.assertEqual(report["diagnostics"]["dependency_preflight"]["python"]["path"], sys.executable)
+            self.assertEqual(
+                report["diagnostics"]["dependency_preflight"]["python"]["path"],
+                ".venv/bin/python",
+            )
+            self.assertEqual(
+                report["diagnostics"]["dependency_preflight"]["python"]["executable"],
+                ".venv/bin/python",
+            )
 
     def test_external_workspace_python_shim_preserves_artifact_venv_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
