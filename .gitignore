@@ -1,68 +1,45 @@
-# Full local vault local-only policy.
-#
-# Public mirror selection is intentionally separate from this file. The export
-# policy lives in ops/scripts/public/public_surface_policy.py, and the public
-# mirror .gitignore template lives in ops/templates/public-mirror.gitignore.
-# Paths ignored here are operator-local state. If one of these paths is tracked,
-# deindex it with git rm --cached while keeping the local file in place.
-
-# Local Python environments and caches inside public directories
-.venv/
-.pytest_cache/
-__pycache__/
-*.pyc
-
-# Temporary local work artifacts
-tmp/
-tmp_*.txt
-
-# Local-only full-vault and generated evidence surfaces
+# >>> public-surface-policy >>>
+# Generated from ops.scripts.public_surface_policy.
+# Root public repos should track only this allowlisted surface.
+*
+!/.gitattributes
+!/.gitignore
+!/.codex/
+!/.codex/agents/
+!/.codex/agents/**
+!/.github/
+!/.github/**
+!/docs/
+!/docs/**
+!/mk/
+!/mk/**
+!/AGENTS.md
+!/ARCHITECTURE.md
+!/CHANGELOG.md
+!/CONTRIBUTING.md
+!/LICENSE
+!/Makefile
+!/pyproject.toml
+!/README.md
+!/SECURITY.md
+!/THIRD_PARTY_NOTICES.md
+!/ops/
+!/ops/**
+!/pytest.ini
+!/tests/
+!/tests/**
+!/tools/
+!/tools/**
+!/uv.lock
 AGENTS.local.md
-external-reports/
-raw/
-wiki/
-system/
-runs/
-review/
 ops/manifest.json
 ops/raw-registry.json
-ops/reports/
-ops/operator/
-
-# Ephemeral test run artifacts: keep pytest outputs under tmp/test-runs/<run-id>/.
-pytest_target.log
-pytest_target.xml
-pytest_requested_output.txt
-pytest_*.log
-pytest_*.xml
-pytest_*_output.txt
-pytest_*_requested*.txt
-tmp/test-runs/
-
-# Obsidian local state
-.obsidian/
-
-# Editor and OS noise
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# Extra local tool caches
-.hypothesis/
-.mypy_cache/
-.ruff_cache/
-.cache/
-.codebase-memory/
-.kiro/
-.ouroboros/
-.ouroboros_eval_artifact.md
-.serena/
-.coverage
-.coverage.*
-build/
-dist/
-*.egg-info/
+ops/operator/*
+ops/reports/*
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+# Generated ops/operator and ops/reports evidence is local-only.
+# Common Python tool caches remain local-only inside allowlisted trees.
+# <<< public-surface-policy <<<

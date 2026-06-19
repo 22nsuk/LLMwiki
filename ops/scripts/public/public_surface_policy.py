@@ -105,7 +105,12 @@ def render_public_gitignore_block() -> str:
         "ops/raw-registry.json",
         "ops/operator/*",
         "ops/reports/*",
+        "**/__pycache__/",
+        "**/.pytest_cache/",
+        "**/.mypy_cache/",
+        "**/.ruff_cache/",
         "# Generated ops/operator and ops/reports evidence is local-only.",
+        "# Common Python tool caches remain local-only inside allowlisted trees.",
         PUBLIC_GITIGNORE_END,
     ]
     return "\n".join(lines) + "\n"

@@ -12,8 +12,10 @@ document owns the public mirror/export lane only.
 
 The source of truth is `ops/scripts/public/public_surface_policy.py`.
 The public mirror `.gitignore` is generated into
-`ops/templates/public-mirror.gitignore`; the repository root `.gitignore` is
-full-vault hygiene only and must not be treated as public export policy.
+`ops/templates/public-mirror.gitignore`, and the repository root `.gitignore`
+uses the same deny-by-default allowlist to protect full-vault operators from
+accidentally staging unknown private files. The canonical membership policy
+remains `ops/scripts/public/public_surface_policy.py`.
 
 The public mirror includes:
 
@@ -48,9 +50,9 @@ schema-backed summaries such as the external report action matrix.
 ## Generated Evidence
 
 `ops/reports/` and `ops/operator/` are generated evidence surfaces, not public
-source. They are excluded from public export as whole directories and ignored in
-the full-vault root `.gitignore` the same way `external-reports/` is. Existing
-local evidence should be preserved on disk, but any tracked entries under these
+source. They are excluded from public export as whole directories and remain
+ignored by the deny-by-default root `.gitignore` allowlist. Existing local
+evidence should be preserved on disk, but any tracked entries under these
 surfaces should be removed from the index with `git rm --cached`.
 
 If a generated report needs to influence public behavior, promote the rule,
@@ -68,8 +70,9 @@ make public-check
 
 Use `make help` for the compact operator index and
 `make sync-public-policy-check` in check-only contexts. These targets sync or
-check `ops/templates/public-mirror.gitignore`, not the full-vault root
-`.gitignore`. Use `make public-check-all` when the exported tree should run all
+check both `ops/templates/public-mirror.gitignore` and the repository root
+`.gitignore` so the public mirror template and full-vault Git commit boundary
+stay aligned. Use `make public-check-all` when the exported tree should run all
 tests rather than only the public marker tier. General lane-selection guidance
 lives in [development.md](development.md).
 

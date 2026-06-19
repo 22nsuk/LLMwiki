@@ -36,20 +36,18 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         block = gitignore_text[start:end] + "\n"
         self.assertEqual(block, render_public_gitignore_block())
 
-    def test_root_gitignore_is_full_vault_hygiene_not_public_policy(self) -> None:
+    def test_root_gitignore_matches_public_policy_deny_by_default(self) -> None:
         gitignore_text = Path(".gitignore").read_text(encoding="utf-8")
+        start = gitignore_text.index(PUBLIC_GITIGNORE_START)
+        end = gitignore_text.index(PUBLIC_GITIGNORE_END) + len(PUBLIC_GITIGNORE_END)
+        block = gitignore_text[start:end] + "\n"
 
-        if Path("PUBLIC-EXPORT-MANIFEST.json").exists():
-            self.assertIn(PUBLIC_GITIGNORE_START, gitignore_text)
-            self.assertIn("ops/reports/*", gitignore_text)
-            self.assertIn("ops/operator/*", gitignore_text)
-            return
-
-        self.assertNotIn(PUBLIC_GITIGNORE_START, gitignore_text)
-        self.assertIn("ops/reports/", gitignore_text)
-        self.assertIn("ops/operator/", gitignore_text)
-        self.assertIn("raw/", gitignore_text)
-        self.assertIn("external-reports/", gitignore_text)
+        self.assertEqual(block, render_public_gitignore_block())
+        self.assertIn("*", block.splitlines())
+        self.assertIn("!/ops/", block)
+        self.assertIn("ops/reports/*", block)
+        self.assertIn("ops/operator/*", block)
+        self.assertIn("**/__pycache__/", block)
 
     def test_public_export_uses_policy_and_generated_gitignore_for_sample_vault(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

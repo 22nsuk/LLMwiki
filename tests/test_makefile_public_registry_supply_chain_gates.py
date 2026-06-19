@@ -408,6 +408,7 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
         _assert_assignment_exists(
             self, text, "PUBLIC_GITIGNORE_TEMPLATE", "ops/templates/public-mirror.gitignore"
         )
+        _assert_assignment_exists(self, text, "ROOT_GITIGNORE", ".gitignore")
         self.assertIn('--public-out "$(PUBLIC_OUT)"', summary_block)
         self.assertIn('--public-python "$(PUBLIC_PYTHON)"', summary_block)
         self.assertIn('--ruff-targets "$(RUFF_TARGETS)"', summary_block)
@@ -430,6 +431,7 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) public-check-summary", summary_current_or_refresh_block)
         self.assertIn("--check", sync_check_block)
         self.assertIn('--gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"', sync_check_block)
+        self.assertIn('--gitignore "$(ROOT_GITIGNORE)"', sync_check_block)
         public_targets = (
             "ci-public-tier",
             "public-check",

@@ -36,5 +36,10 @@ ops/manifest.json
 ops/raw-registry.json
 ops/operator/*
 ops/reports/*
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
 # Generated ops/operator and ops/reports evidence is local-only.
+# Common Python tool caches remain local-only inside allowlisted trees.
 # <<< public-surface-policy <<<

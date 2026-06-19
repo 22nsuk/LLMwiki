@@ -7,6 +7,7 @@ PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS ?= 30
 PUBLIC_OUT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)/llm-wiki-public-repo
 PUBLIC_PYTHON ?= $(if $(wildcard $(firstword $(PYTHON))),$(abspath $(firstword $(PYTHON))),$(shell command -v $(firstword $(PYTHON))))
 PUBLIC_GITIGNORE_TEMPLATE ?= ops/templates/public-mirror.gitignore
+ROOT_GITIGNORE ?= .gitignore
 CBM_BIN ?= codebase-memory-mcp
 CBM_CACHE_ROOT ?= $(if $(XDG_CACHE_HOME),$(XDG_CACHE_HOME),$(HOME)/.cache)
 CBM_PUBLIC_OUT ?= $(CBM_CACHE_ROOT)/llmwiki/codebase-memory-mcp/public-surface
@@ -22,9 +23,11 @@ CBM_SEARCH_LIMIT ?= 10
 
 sync-public-policy:
 	$(PYTHON) -m ops.scripts.public.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"
+	$(PYTHON) -m ops.scripts.public.sync_public_surface_gitignore --gitignore "$(ROOT_GITIGNORE)"
 
 sync-public-policy-check:
 	$(PYTHON) -m ops.scripts.public.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)" --check
+	$(PYTHON) -m ops.scripts.public.sync_public_surface_gitignore --gitignore "$(ROOT_GITIGNORE)" --check
 
 public-export:
 	$(PYTHON) -m ops.scripts.export_public_repo --vault "$(VAULT)" --out "$(PUBLIC_OUT)"
