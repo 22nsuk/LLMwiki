@@ -210,17 +210,21 @@ def _make_target_with_vars(
     return " ".join([target, *suffix])
 
 
+def _safe_selected_repo_path(vault: Path, path_value: str) -> str:
+    return _safe_vault_relative_path(
+        vault,
+        display_path(vault, _resolve(vault, path_value)),
+    )
+
+
 def _plan_specs_for_inputs(
     vault: Path,
     *,
     distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
     source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
 ) -> tuple[RunReadyPlanSpec, ...]:
-    safe_distribution_zip = _safe_vault_relative_path(
-        vault,
-        _file_identity(vault, distribution_zip)["path"],
-    )
-    safe_source_package_smoke = _safe_vault_relative_path(vault, source_package_smoke)
+    safe_distribution_zip = _safe_selected_repo_path(vault, distribution_zip)
+    safe_source_package_smoke = _safe_selected_repo_path(vault, source_package_smoke)
     distribution_zip_vars: tuple[tuple[str, str], ...] = (
         (("RELEASE_CLOSEOUT_DISTRIBUTION_ZIP", safe_distribution_zip),)
         if safe_distribution_zip
@@ -967,12 +971,14 @@ def run_release_ready(
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     expected = release_source_tree_fingerprint(vault)
+    safe_distribution_zip = _safe_selected_repo_path(vault, distribution_zip)
+    safe_source_package_smoke = _safe_selected_repo_path(vault, source_package_smoke)
     steps: list[dict[str, Any]] = [_synthetic_preflight(vault, expected)]
-    if steps[-1]["status"] == "pass":
+    if steps[-1]["status"] == "pass" and safe_distribution_zip and safe_source_package_smoke:
         for name, command in _release_steps(
             make_bin,
-            distribution_zip=distribution_zip,
-            source_package_smoke=source_package_smoke,
+            distribution_zip=safe_distribution_zip,
+            source_package_smoke=safe_source_package_smoke,
         ):
             step = _command_step(
                 vault=vault,
@@ -988,8 +994,8 @@ def run_release_ready(
         vault,
         expected_source_tree_fingerprint=expected,
         steps=steps,
-        distribution_zip=distribution_zip,
-        source_package_smoke=source_package_smoke,
+        distribution_zip=safe_distribution_zip,
+        source_package_smoke=safe_source_package_smoke,
         closeout_summary=closeout_summary,
         context=context or RuntimeContext(display_timezone=dt.UTC),
     )

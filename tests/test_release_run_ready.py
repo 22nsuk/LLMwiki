@@ -1072,6 +1072,32 @@ def test_run_ready_plan_uses_selected_source_package_smoke_path(
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
+def test_run_ready_plan_normalizes_in_vault_absolute_source_package_smoke_path(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(
+        vault,
+        source_package_smoke_path="tmp/custom-source-package-smoke.json",
+    )
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(
+            vault,
+            source_package_smoke=(vault / "tmp/custom-source-package-smoke.json").as_posix(),
+            context=fixed_context(),
+        )
+
+    source_smoke_node = next(
+        node for node in plan["nodes"] if node["name"] == "source_package_smoke"
+    )
+    assert plan["plan_status"] == "ready"
+    assert source_smoke_node["path"] == "tmp/custom-source-package-smoke.json"
+    assert source_smoke_node["can_reuse"] is True
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
 def test_run_ready_plan_sanitizes_invalid_selected_source_package_smoke_path(
     tmp_path: Path,
 ) -> None:
@@ -1447,6 +1473,54 @@ def test_run_release_ready_passes_selected_distribution_zip_to_manifest(
     )
     assert persisted["distribution_zip"]["path"] == "build/release/custom-source.zip"
     assert persisted["source_package_smoke"]["path"] == selected_smoke
+    assert validate_with_schema(persisted, load_schema(RUN_MANIFEST_SCHEMA_PATH)) == []
+
+
+def test_run_release_ready_rejects_unsafe_paths_before_make(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_run_manifest_schema(vault)
+
+    clean_repo = {
+        "release_source_tree_fingerprint": lambda _vault: "fp-current",
+        "git_commit": lambda _vault: "abc123",
+        "git_clean": lambda _vault: True,
+        "remote_sync": lambda _vault: {
+            "status": "pass",
+            "upstream": "origin/main",
+            "ahead": 0,
+            "behind": 0,
+        },
+        "ignored_tracked_file_count": lambda _vault: 0,
+    }
+
+    def fail_step(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("unsafe selected release input reached make execution")
+
+    with (
+        patch.multiple("ops.scripts.release.release_run_ready", **clean_repo),
+        patch.multiple("ops.scripts.release.release_run_manifest", **clean_repo),
+        patch("ops.scripts.release.release_run_ready._command_step", fail_step),
+    ):
+        manifest = run_release_ready(
+            vault=vault,
+            out_path="build/release/release-run-manifest.json",
+            make_bin="make",
+            timeout_seconds=60,
+            distribution_zip="/tmp/not-in-vault.zip",
+            source_package_smoke="/tmp/not-in-vault-smoke.json",
+            context=fixed_context(),
+        )
+
+    assert manifest["status"] == "fail"
+    assert "distribution_zip_path_not_vault_relative" in manifest["failures"]
+    assert "source_package_smoke_path_not_vault_relative" in manifest["failures"]
+    persisted = json.loads(
+        (vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8")
+    )
+    assert persisted["distribution_zip"]["path"] == ""
+    assert persisted["source_package_smoke"]["path"] == ""
     assert validate_with_schema(persisted, load_schema(RUN_MANIFEST_SCHEMA_PATH)) == []
 
 

@@ -330,6 +330,7 @@ def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
     input_fingerprints = payload.get("input_fingerprints") if isinstance(payload, dict) else {}
     input_fingerprints = input_fingerprints if isinstance(input_fingerprints, dict) else {}
     source_zip_sha256_raw = str(source_zip.get("sha256") or "").strip()
+    source_zip_path_raw = str(source_zip.get("path") or "").strip()
     source_zip_input_sha256_raw = str(input_fingerprints.get("source_zip") or "").strip()
     source_zip_sha256 = _sha256_or_empty(source_zip_sha256_raw)
     source_zip_input_sha256 = _sha256_or_empty(source_zip_input_sha256_raw)
@@ -338,8 +339,10 @@ def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
         "exists": identity["exists"],
         "status": _status_label(payload.get("status")),
         "sha256": identity["sha256"],
+        "source_zip_path": _safe_vault_relative_path(vault, source_zip_path_raw),
         "source_zip_sha256": source_zip_sha256,
         "_source_zip_input_sha256": source_zip_input_sha256,
+        "_source_zip_path_present": bool(source_zip_path_raw),
         "_source_zip_sha256_invalid": bool(source_zip_sha256_raw) and not source_zip_sha256,
         "_source_zip_input_sha256_invalid": bool(source_zip_input_sha256_raw) and not source_zip_input_sha256,
     }
@@ -490,8 +493,16 @@ def build_manifest(
         failures.append("source_package_smoke_path_not_vault_relative")
     if not smoke["exists"] or smoke["status"] != "pass":
         failures.append("source_package_smoke_not_pass")
+    distribution_zip_path = _safe_vault_relative_path(vault, zip_identity["path"])
+    smoke_source_zip_path = str(smoke["source_zip_path"])
     smoke_source_zip_sha256 = str(smoke["source_zip_sha256"])
     smoke_source_zip_input_sha256 = str(smoke.get("_source_zip_input_sha256", ""))
+    if not smoke.get("_source_zip_path_present"):
+        failures.append("source_package_smoke_source_zip_path_missing")
+    elif not smoke_source_zip_path:
+        failures.append("source_package_smoke_source_zip_path_not_vault_relative")
+    elif distribution_zip_path and smoke_source_zip_path != distribution_zip_path:
+        failures.append("source_package_smoke_source_zip_path_mismatch")
     if smoke.get("_source_zip_sha256_invalid"):
         failures.append("source_package_smoke_source_zip_fingerprint_invalid")
     elif not smoke_source_zip_sha256:

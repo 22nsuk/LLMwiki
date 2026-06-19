@@ -317,6 +317,31 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertIn("source_package_smoke_source_zip_mismatch", manifest["failures"])
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
+    def test_manifest_fails_when_smoked_source_zip_path_does_not_match_distribution(self) -> None:
+        self._write_run_inputs()
+        default_zip = self.vault / "build/release/LLMwiki-source.zip"
+        custom_zip = self.vault / "build/release/custom-source.zip"
+        custom_zip.write_bytes(default_zip.read_bytes())
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                distribution_zip="build/release/custom-source.zip",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_path_mismatch",
+            manifest["failures"],
+        )
+        self.assertNotIn(
+            "source_package_smoke_source_zip_mismatch",
+            manifest["failures"],
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
     def test_manifest_requires_smoke_source_zip_identity_not_input_fingerprint_only(self) -> None:
         self._write_run_inputs()
         smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"

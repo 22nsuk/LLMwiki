@@ -159,7 +159,9 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
         'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
     )
+    run_ready_check_line = "$(MAKE) release-run-ready-check"
     test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
+    test.assertEqual(preseal_recipe.count(run_ready_check_line), 2)
     test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
     test.assertLess(
         preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
@@ -179,12 +181,21 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         preseal_recipe.index(strict_cohort_line),
     )
     preseal_freshness_index = preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check")
+    final_closeout_summary_index = preseal_recipe.index(
+        "$(MAKE) release-closeout-summary-report",
+        preseal_freshness_index,
+    )
     test.assertLess(
         preseal_freshness_index,
-        preseal_recipe.index(
-            "$(MAKE) release-closeout-summary-report",
-            preseal_freshness_index,
-        ),
+        final_closeout_summary_index,
+    )
+    test.assertLess(
+        final_closeout_summary_index,
+        preseal_recipe.index(run_ready_check_line, final_closeout_summary_index),
+    )
+    test.assertLess(
+        preseal_recipe.index(run_ready_check_line, final_closeout_summary_index),
+        preseal_recipe.index("$(MAKE) release-evidence-dashboard-report"),
     )
     test.assertLess(
         preseal_recipe.index(

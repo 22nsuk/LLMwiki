@@ -97,6 +97,7 @@ release-auto-promotion-preseal:
 	$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"
 	$(MAKE) artifact-freshness-refresh-check
 	$(MAKE) release-closeout-summary-report
+	$(MAKE) release-run-ready-check
 	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
 	$(MAKE) release-clean-blocker-ledger
