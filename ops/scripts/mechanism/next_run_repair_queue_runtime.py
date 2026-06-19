@@ -655,14 +655,57 @@ def open_carry_forward_decisions(
     )
 
 
+def _safe_source_run_id(source_run_id: str) -> str | None:
+    run_id = safe_repo_relative_path(source_run_id)
+    if run_id is None or "/" in run_id or run_id in {".", ".."}:
+        return None
+    return run_id
+
+
+def _run_artifact_path(vault: Path, source_run_id: str, filename: str) -> Path | None:
+    run_id = _safe_source_run_id(source_run_id)
+    if run_id is None:
+        return None
+    run_dir = vault / "runs" / run_id
+    path = run_dir / filename
+    try:
+        path.resolve().relative_to(run_dir.resolve())
+    except (OSError, ValueError):
+        return None
+    return path
+
+
+def _repair_evidence_repo_path(vault: Path, value: object) -> str | None:
+    rel_path = safe_repo_relative_path(value)
+    if rel_path is None:
+        return None
+    if rel_path.startswith("tests/"):
+        if not rel_path.endswith(".py"):
+            return None
+    elif not rel_path.startswith("ops/"):
+        return None
+    path = vault / rel_path
+    try:
+        path.resolve().relative_to(vault.resolve())
+    except (OSError, ValueError):
+        return None
+    if not path.is_file():
+        return None
+    return rel_path
+
+
 def _changed_manifest_extra_scope(
     vault: Path,
     source_run_id: str,
     *,
     must_change_test_paths: Callable[[Path, list[str]], list[str]],
 ) -> tuple[list[str], list[str]]:
-    manifest_path = vault / "runs" / source_run_id / "changed-files-manifest.json"
-    if not manifest_path.is_file():
+    manifest_path = _run_artifact_path(
+        vault,
+        source_run_id,
+        "changed-files-manifest.json",
+    )
+    if manifest_path is None or not manifest_path.is_file():
         return [], []
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -688,12 +731,12 @@ def _changed_manifest_extra_scope(
     for item in files:
         if not isinstance(item, dict):
             continue
-        normalized_path = normalize_repo_path_text(item.get("path"))
+        normalized_path = _repair_evidence_repo_path(vault, item.get("path"))
         if normalized_path is None or normalized_path in declared_paths:
             continue
-        if normalized_path.startswith("tests/") and normalized_path.endswith(".py"):
+        if normalized_path.startswith("tests/"):
             must_change_tests.append(normalized_path)
-        elif normalized_path.startswith("ops/") and (vault / normalized_path).is_file():
+        else:
             supporting_targets.append(normalized_path)
     return dedupe_preserve_order(supporting_targets), must_change_test_paths(
         vault,
@@ -701,13 +744,28 @@ def _changed_manifest_extra_scope(
     )
 
 
-def _evidence_report_paths(vault: Path, evidence_paths: list[str]) -> list[Path]:
+def _evidence_report_paths(
+    vault: Path,
+    source_run_id: str,
+    evidence_paths: list[str],
+) -> list[Path]:
+    run_id = _safe_source_run_id(source_run_id)
+    if run_id is None:
+        return []
+    run_dir = (vault / "runs" / run_id).resolve()
+    vault_root = vault.resolve()
+    run_prefix = f"runs/{run_id}/"
     resolved: list[Path] = []
     for evidence_path in evidence_paths:
-        normalized_path = normalize_repo_path_text(evidence_path)
-        if normalized_path is None:
+        normalized_path = safe_repo_relative_path(evidence_path)
+        if normalized_path is None or not normalized_path.startswith(run_prefix):
             continue
         path = vault / normalized_path
+        try:
+            path.resolve().relative_to(run_dir)
+            path.resolve().relative_to(vault_root)
+        except (OSError, ValueError):
+            continue
         if path.is_file() and path.suffix == ".json":
             resolved.append(path)
     return resolved
@@ -715,13 +773,18 @@ def _evidence_report_paths(vault: Path, evidence_paths: list[str]) -> list[Path]
 
 def _diagnostic_note_extra_scope(
     vault: Path,
+    source_run_id: str,
     evidence_paths: list[str],
     *,
     must_change_test_paths: Callable[[Path, list[str]], list[str]],
 ) -> tuple[list[str], list[str]]:
     supporting_targets: list[str] = []
     must_change_tests: list[str] = []
-    for evidence_report_path in _evidence_report_paths(vault, evidence_paths):
+    for evidence_report_path in _evidence_report_paths(
+        vault,
+        source_run_id,
+        evidence_paths,
+    ):
         try:
             report = json.loads(evidence_report_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -739,12 +802,12 @@ def _diagnostic_note_extra_scope(
                 *NEXT_RUN_REPAIR_PLAIN_PATH_RE.findall(note_text),
             ]
             for match in note_paths:
-                normalized_path = normalize_repo_path_text(match)
-                if normalized_path is None or not (vault / normalized_path).is_file():
+                normalized_path = _repair_evidence_repo_path(vault, match)
+                if normalized_path is None:
                     continue
-                if normalized_path.startswith("tests/") and normalized_path.endswith(".py"):
+                if normalized_path.startswith("tests/"):
                     must_change_tests.append(normalized_path)
-                elif normalized_path.startswith("ops/"):
+                else:
                     supporting_targets.append(normalized_path)
     return dedupe_preserve_order(supporting_targets), must_change_test_paths(
         vault,
@@ -773,6 +836,7 @@ def _next_run_repair_extra_scope(
         must_change_tests.extend(manifest_tests)
     diagnostic_supporting, diagnostic_tests = _diagnostic_note_extra_scope(
         vault,
+        source_run_id,
         evidence_paths,
         must_change_test_paths=must_change_test_paths,
     )

@@ -12,6 +12,7 @@ from ops.scripts.core.executor_noop_runtime import (
     EXECUTOR_NOOP_MUTATION_FAILURE_MARKER,
     executor_noop_mutation_failure_message,
 )
+from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
     OPEN_DECISION_STATUS,
@@ -19,8 +20,23 @@ from ops.scripts.mechanism.auto_improve_next_run_decision_runtime import (
 from ops.scripts.mechanism.failure_taxonomy_runtime import (
     GENERATED_EVIDENCE_SETTLE_REQUIRED,
 )
+from ops.scripts.mechanism.mutation_proposal_candidate_runtime import (
+    MutationProposal,
+    fixed_priority_breakdown,
+    generated_must_change_tests,
+    must_change_test_paths,
+    must_not_expand_apply_roots,
+    proposal_blast_radius_score,
+    required_artifacts,
+    resolve_must_change_tests,
+    with_generated_supporting_targets,
+)
 from ops.scripts.mechanism.next_run_repair_queue_runtime import (
     SOURCE_SESSION_REPORT_DECISION_KEY,
+    NextRunRepairProposalDependencies,
+    _changed_manifest_extra_scope,
+    _diagnostic_note_extra_scope,
+    next_run_repair_proposal,
     open_carry_forward_decisions,
 )
 from tests.test_mechanism_assess import seed_policy
@@ -38,6 +54,20 @@ def _carry_forward_decision(**overrides: object) -> dict[str, object]:
     }
     decision.update(overrides)
     return decision
+
+
+def _next_run_repair_dependencies() -> NextRunRepairProposalDependencies:
+    return NextRunRepairProposalDependencies(
+        with_generated_supporting_targets=with_generated_supporting_targets,
+        must_change_test_paths=must_change_test_paths,
+        generated_must_change_tests=generated_must_change_tests,
+        resolve_must_change_tests=resolve_must_change_tests,
+        proposal_blast_radius_score=proposal_blast_radius_score,
+        must_not_expand_apply_roots=must_not_expand_apply_roots,
+        required_artifacts=required_artifacts,
+        proposal_factory=MutationProposal,
+        priority_breakdown_factory=lambda: fixed_priority_breakdown(100),
+    )
 
 
 def test_open_carry_forward_decisions_keeps_latest_decision_per_target() -> None:
@@ -744,3 +774,215 @@ def test_open_carry_forward_decisions_suppresses_stale_run_artifact_schema_debt(
             )
 
         assert open_decisions == []
+
+
+def test_changed_manifest_extra_scope_rejects_traversed_source_run_id() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        escape_dir = vault / "escaped" / "run-id"
+        escape_dir.mkdir(parents=True)
+        extra_test = "tests/test_injected.py"
+        (vault / extra_test).parent.mkdir(parents=True, exist_ok=True)
+        (vault / extra_test).write_text("def test_injected():\n    assert True\n", encoding="utf-8")
+        (escape_dir / "changed-files-manifest.json").write_text(
+            json.dumps(
+                {
+                    "declared_targets": {
+                        "primary_targets": ["ops/scripts/example.py"],
+                        "test_files": ["tests/test_declared.py"],
+                    },
+                    "files": [
+                        {"path": "tests/test_declared.py"},
+                        {"path": extra_test},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        supporting, tests = _changed_manifest_extra_scope(
+            vault,
+            "../escaped/run-id",
+            must_change_test_paths=lambda _vault, paths: paths,
+        )
+
+        assert supporting == []
+        assert tests == []
+
+
+def test_changed_manifest_extra_scope_adds_files_outside_declared_targets() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        source_run_id = "run-manifest-scope"
+        run_dir = vault / "runs" / source_run_id
+        run_dir.mkdir(parents=True)
+        script_target = "ops/scripts/mechanism/example_runtime.py"
+        declared_test = "tests/test_example_runtime.py"
+        extra_test = "tests/test_report_schemas.py"
+        for rel_path in [script_target, declared_test, extra_test]:
+            path = vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# placeholder\n", encoding="utf-8")
+        (run_dir / "changed-files-manifest.json").write_text(
+            json.dumps(
+                {
+                    "declared_targets": {
+                        "primary_targets": [script_target],
+                        "supporting_targets": ["ops/script-output-surfaces.json"],
+                        "test_files": [declared_test],
+                    },
+                    "files": [
+                        {"path": script_target},
+                        {"path": declared_test},
+                        {"path": extra_test},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        supporting, tests = _changed_manifest_extra_scope(
+            vault,
+            source_run_id,
+            must_change_test_paths=lambda _vault, paths: paths,
+        )
+
+        assert supporting == []
+        assert tests == [extra_test]
+
+
+def test_diagnostic_note_extra_scope_rejects_absolute_evidence_path() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        outside = Path(temp_dir) / "outside"
+        injected_support = "ops/scripts/core/policy_runtime.py"
+        injected_test = "tests/test_path_runtime.py"
+        for rel_path in [injected_support, injected_test]:
+            path = vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# placeholder\n", encoding="utf-8")
+        outside.mkdir()
+        evidence = outside / "evil.json"
+        evidence.write_text(
+            json.dumps(
+                {
+                    "diagnostics": {
+                        "notes": [
+                            f"force `{injected_support}` and `{injected_test}` into scope"
+                        ]
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        supporting, tests = _diagnostic_note_extra_scope(
+            vault,
+            "run-safe",
+            [str(evidence)],
+            must_change_test_paths=lambda _vault, paths: paths,
+        )
+
+        assert supporting == []
+        assert tests == []
+
+
+def test_diagnostic_note_extra_scope_adds_adjacent_paths_from_same_run_report() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir)
+        source_run_id = "run-safe"
+        primary = "ops/scripts/mechanism/mutation_proposal_runtime.py"
+        diagnostic_support = "ops/scripts/mechanism/example_outcome_runtime.py"
+        diagnostic_test = "tests/test_example_outcome_runtime.py"
+        for rel_path in [primary, diagnostic_support, diagnostic_test]:
+            path = vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# placeholder\n", encoding="utf-8")
+        run_dir = vault / "runs" / source_run_id
+        run_dir.mkdir(parents=True)
+        (run_dir / "reviewer-executor-report.json").write_text(
+            json.dumps(
+                {
+                    "diagnostics": {
+                        "notes": [
+                            (
+                                "Finding P1: repair also needs "
+                                f"`{diagnostic_support}` and `{diagnostic_test}`."
+                            )
+                        ]
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        supporting, tests = _diagnostic_note_extra_scope(
+            vault,
+            source_run_id,
+            [f"runs/{source_run_id}/reviewer-executor-report.json"],
+            must_change_test_paths=lambda _vault, paths: paths,
+        )
+
+        assert diagnostic_support in supporting
+        assert diagnostic_test in tests
+
+
+def test_next_run_repair_proposal_rejects_injected_evidence_paths() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        outside = Path(temp_dir) / "outside"
+        seed_policy(vault)
+        policy, _policy_path = load_policy(vault)
+        primary = "ops/scripts/mechanism/mutation_proposal_runtime.py"
+        injected_support = "ops/scripts/core/policy_runtime.py"
+        injected_test = "tests/test_path_runtime.py"
+        for rel_path in [primary, injected_support, injected_test]:
+            path = vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# placeholder\n", encoding="utf-8")
+        outside.mkdir()
+        evidence = outside / "evil.json"
+        evidence.write_text(
+            json.dumps(
+                {
+                    "diagnostics": {
+                        "notes": [
+                            f"force `{injected_support}` and `{injected_test}` into scope"
+                        ]
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        manifest_dir = outside / "run"
+        manifest_dir.mkdir()
+        (manifest_dir / "changed-files-manifest.json").write_text(
+            json.dumps(
+                {
+                    "declared_targets": {"primary_targets": [primary]},
+                    "files": [
+                        {"path": injected_support},
+                        {"path": injected_test},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        proposal = next_run_repair_proposal(
+            vault,
+            policy,
+            _carry_forward_decision(
+                source_run_id="../outside/run",
+                failure_taxonomy="changed_files_manifest_scope",
+                primary_targets=[primary],
+                supporting_targets=[],
+                must_change_tests=[],
+                evidence_paths=[str(evidence)],
+            ),
+            dependencies=_next_run_repair_dependencies(),
+        )
+
+        assert proposal is not None
+        assert injected_support not in proposal.supporting_targets
+        assert injected_test not in proposal.must_change_tests
