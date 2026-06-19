@@ -586,8 +586,12 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         phony_block = _target_block(text, ".PHONY")
         auto_promotion_block = _target_block(text, "release-auto-promotion-ready")
         self.assertIn("ops.scripts.release_auto_promotion_ready", auto_promotion_block)
+        self.assertIn("$(MAKE) release-auto-promotion-operator-summary", auto_promotion_block)
         self.assertIn("$(MAKE) release-auto-promotion-ready-plan", auto_promotion_block)
-        self.assertNotIn("$(MAKE) release-auto-promotion-operator-summary", auto_promotion_block)
+        self.assertLess(
+            auto_promotion_block.index("$(MAKE) release-auto-promotion-operator-summary"),
+            auto_promotion_block.index("$(MAKE) release-auto-promotion-ready-plan"),
+        )
         self.assertIn('--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"', auto_promotion_block)
         self.assertIn('--sealed-run-manifest "$(RELEASE_SEALED_RUN_MANIFEST_OUT)"', auto_promotion_block)
         self.assertIn('--goal-run-status "$(GOAL_RUN_STATUS_OUT)"', auto_promotion_block)
