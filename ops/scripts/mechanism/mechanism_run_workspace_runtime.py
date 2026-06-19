@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import shlex
 import shutil
+import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -106,17 +108,24 @@ def _copytree_ignore(_dir: str, names: list[str]) -> set[str]:
     return ignored
 
 
-def _link_repo_virtualenv(vault: Path, workspace_vault: Path) -> None:
-    source = vault / ".venv"
-    if not source.is_dir() or not (source / "bin" / "python").exists():
-        return
-    destination = workspace_vault / ".venv"
+def _workspace_python_source(vault: Path) -> Path:
+    repo_python = vault / ".venv" / "bin" / "python"
+    if repo_python.exists():
+        return repo_python.resolve()
+    return Path(sys.executable).resolve()
+
+
+def _provision_workspace_python_shim(vault: Path, workspace_vault: Path) -> None:
+    destination = workspace_vault / ".venv" / "bin" / "python"
     if destination.exists() or destination.is_symlink():
         return
-    try:
-        destination.symlink_to(source.resolve(), target_is_directory=True)
-    except OSError:
-        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    source_python = _workspace_python_source(vault)
+    destination.write_text(
+        f"#!/bin/sh\nexec {shlex.quote(str(source_python))} \"$@\"\n",
+        encoding="utf-8",
+    )
+    destination.chmod(0o755)
 
 
 def _is_ignored_candidate_surface(rel_path: str, *, run_id: str) -> bool:
@@ -197,7 +206,7 @@ def _prepare_candidate_report_workspace(
         return workspace_vault
     report_workspace_vault = Path(workspace_root) / "vault"
     shutil.copytree(vault, report_workspace_vault, ignore=_copytree_ignore)
-    _link_repo_virtualenv(vault, report_workspace_vault)
+    _provision_workspace_python_shim(vault, report_workspace_vault)
     _overlay_workspace_digest_changes(
         workspace_vault,
         report_workspace_vault,
@@ -599,7 +608,7 @@ def _prepare_workspace_copy(
     workspace_vault = Path(workspace_root) / "vault"
     copy_started = time.monotonic()
     shutil.copytree(vault, workspace_vault, ignore=_copytree_ignore)
-    _link_repo_virtualenv(vault, workspace_vault)
+    _provision_workspace_python_shim(vault, workspace_vault)
     copy_seconds = round(time.monotonic() - copy_started, 3)
     copied_file_count = _snapshot_repo_file_count(workspace_vault, run_id=run_id)
     return WorkspacePreparation(
@@ -653,7 +662,7 @@ def _prepare_sparse_workspace_copy(
     copy_started = time.monotonic()
     for rel_path in copy_entries:
         _copy_sparse_entry(vault, workspace_vault, rel_path, run_id=run_id)
-    _link_repo_virtualenv(vault, workspace_vault)
+    _provision_workspace_python_shim(vault, workspace_vault)
     copy_seconds = round(time.monotonic() - copy_started, 3)
     baseline_file_digests = _snapshot_repo_file_digests(workspace_vault, run_id=run_id)
     copied_file_count = _snapshot_repo_file_count(workspace_vault, run_id=run_id)

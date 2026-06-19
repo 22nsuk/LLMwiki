@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 import tomllib
 from dataclasses import dataclass
@@ -52,7 +53,6 @@ PROJECT_CHECK_LANE = (
 )
 PROJECT_FULL_REGRESSION_LANE = "make test-all"
 PROJECT_RELEASE_EVIDENCE_LANE = "make test-execution-summary-full-current-or-refresh"
-EXTERNAL_WORKSPACE_SANDBOX_FLAG = "--dangerously-bypass-approvals-and-sandbox"
 _CODEX_USAGE_LIMIT_RE = re.compile(
     r"(usage limit|try again at|upgrade to pro)",
     flags=re.IGNORECASE,
@@ -186,6 +186,13 @@ class _ExecutionSummary:
     timed_out: bool
     timeout_seconds: int
     termination_reason: str
+
+
+@dataclass(frozen=True)
+class _ModelOutputRead:
+    payload: dict[str, Any] | None
+    status: str
+    note: str
 
 
 @dataclass(frozen=True)
@@ -595,7 +602,7 @@ def _executor_prompt_text(
     routing_report = _sanitize_json_strings(request.routing_report, roots=sanitize_roots)
     template = _sanitize_json_strings(template, roots=sanitize_roots)
     external_sandbox_note = ""
-    if _uses_external_workspace_sandbox(
+    if _uses_external_workspace(
         artifact_root=request.artifact_root,
         workspace_root=request.workspace_root,
     ):
@@ -723,7 +730,7 @@ def _load_executor_inputs(
     return routing_report, scope_freeze, profile
 
 
-def _uses_external_workspace_sandbox(*, artifact_root: Path, workspace_root: Path) -> bool:
+def _uses_external_workspace(*, artifact_root: Path, workspace_root: Path) -> bool:
     try:
         return artifact_root.resolve() != workspace_root.resolve()
     except OSError:
@@ -733,7 +740,6 @@ def _uses_external_workspace_sandbox(*, artifact_root: Path, workspace_root: Pat
 def _codex_exec_argv(
     *,
     workspace_root: Path,
-    artifact_root: Path,
     routing_report: dict[str, Any],
     output_last_message_rel: str,
 ) -> list[str]:
@@ -750,16 +756,10 @@ def _codex_exec_argv(
         "--output-schema",
         str(workspace_root / EXECUTOR_REPORT_SCHEMA),
         "-o",
-        str(artifact_root / output_last_message_rel),
+        str(workspace_root / output_last_message_rel),
         "-",
     ]
-    if _uses_external_workspace_sandbox(
-        artifact_root=artifact_root,
-        workspace_root=workspace_root,
-    ):
-        argv.insert(2, EXTERNAL_WORKSPACE_SANDBOX_FLAG)
-        argv.insert(3, "--skip-git-repo-check")
-    elif sandbox_mode == "workspace-write":
+    if sandbox_mode == "workspace-write":
         argv.insert(2, "--full-auto")
         argv.insert(3, "--skip-git-repo-check")
     else:
@@ -777,6 +777,32 @@ def _executor_artifacts(run_id: str, role: str) -> _ExecutorArtifacts:
         command_log_summary_rel=command_log_summary_rel(run_id),
         prompt_rel=run_rel(run_id, f"{role}-prompt.md"),
     )
+
+
+def _model_output_path(root: Path, artifacts: _ExecutorArtifacts) -> Path:
+    return root / artifacts.output_last_message_rel
+
+
+def _clear_stale_model_output(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists() and not path.is_symlink():
+        return
+    if path.is_dir() and not path.is_symlink():
+        raise ExecutorContractError(f"model output path is a directory: {path.name}")
+    path.unlink()
+
+
+def _clear_stale_model_outputs(
+    *,
+    artifact_root: Path,
+    workspace_root: Path,
+    artifacts: _ExecutorArtifacts,
+) -> None:
+    workspace_output = _model_output_path(workspace_root, artifacts)
+    artifact_output = _model_output_path(artifact_root, artifacts)
+    _clear_stale_model_output(workspace_output)
+    if not _same_path(workspace_output, artifact_output):
+        _clear_stale_model_output(artifact_output)
 
 
 def _persist_executor_streams(
@@ -824,18 +850,33 @@ def _persist_executor_streams(
     )
 
 
-def _read_model_output(path: Path) -> dict[str, Any] | None:
+def _read_model_output(path: Path) -> _ModelOutputRead:
     if not path.exists():
-        return None
+        return _ModelOutputRead(
+            payload=None,
+            status="missing",
+            note=f"codex exec completed without model output: {path.name} was not written",
+        )
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return _ModelOutputRead(
+            payload=None,
+            status="invalid_json",
+            note=f"codex exec wrote invalid model output JSON: {exc}",
+        )
+    if not isinstance(payload, dict):
+        return _ModelOutputRead(
+            payload=None,
+            status="invalid_root",
+            note="codex exec wrote invalid model output: root must be an object",
+        )
+    return _ModelOutputRead(payload=payload, status="ok", note="")
 
 
 def _summarize_execution(
     completed: object,
-    model_output: dict[str, Any] | None,
+    model_output: _ModelOutputRead,
     *,
     fallback_timeout_seconds: int,
 ) -> _ExecutionSummary:
@@ -856,12 +897,20 @@ def _summarize_execution(
         usage_limit_note = _codex_usage_limit_note(str(getattr(completed, "stderr", "")))
         if usage_limit_note:
             notes.append(usage_limit_note)
-    elif isinstance(model_output, dict):
-        returned_status = str(model_output.get("status", "pass"))
+    elif model_output.payload is None:
+        status = "fail"
+        decision = "blocked"
+        notes.append(model_output.note)
+    else:
+        if "status" not in model_output.payload:
+            status = "fail"
+            decision = "blocked"
+            notes.append("codex exec model output omitted required status field")
+        returned_status = str(model_output.payload.get("status", "")).strip()
         if returned_status != "pass":
             status = "fail"
             decision = "blocked"
-        diagnostics = model_output.get("diagnostics", {})
+        diagnostics = model_output.payload.get("diagnostics", {})
         returned_notes = diagnostics.get("notes", []) if isinstance(diagnostics, dict) else []
         if isinstance(returned_notes, list):
             notes.extend(str(item) for item in returned_notes if str(item).strip())
@@ -1073,9 +1122,13 @@ def build_execution_request(
     )
     argv = _codex_exec_argv(
         workspace_root=workspace_root,
-        artifact_root=artifact_root,
         routing_report=routing_report,
         output_last_message_rel=artifacts.output_last_message_rel,
+    )
+    _clear_stale_model_outputs(
+        artifact_root=artifact_root,
+        workspace_root=workspace_root,
+        artifacts=artifacts,
     )
     sanitized_argv = _sanitize_argv(
         _display_command_argv(argv),
@@ -1159,18 +1212,57 @@ def _path_without_workspace_virtualenv(workspace_root: Path) -> str:
     return os.pathsep.join(entries)
 
 
+def _path_is_inside_workspace(path: Path, workspace_root: Path) -> bool:
+    try:
+        path.resolve().relative_to(workspace_root.resolve())
+        return True
+    except (OSError, ValueError):
+        try:
+            path.absolute().relative_to(workspace_root.absolute())
+            return True
+        except ValueError:
+            return False
+
+
+def _path_has_workspace_entry(path_text: str, workspace_root: Path) -> bool:
+    for entry in path_text.split(os.pathsep):
+        if entry in {"", "."}:
+            return True
+        entry_path = Path(entry)
+        if not entry_path.is_absolute():
+            return True
+        if _path_is_inside_workspace(entry_path, workspace_root):
+            return True
+    return False
+
+
+def _workspace_codex_candidate_exists(workspace_root: Path) -> bool:
+    venv_bin = _workspace_virtualenv_bin(workspace_root)
+    candidates = [workspace_root / name for name in ("codex", "codex.exe", "codex.cmd")]
+    if venv_bin is not None:
+        candidates.extend(
+            venv_bin / name
+            for name in ("codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.js")
+        )
+    return any(path.exists() for path in candidates)
+
+
 def _codex_executable(workspace_root: Path) -> str:
-    resolved = shutil.which("codex", path=_path_without_workspace_virtualenv(workspace_root))
+    path_text = _path_without_workspace_virtualenv(workspace_root)
+    if not path_text or _path_has_workspace_entry(path_text, workspace_root):
+        if _workspace_codex_candidate_exists(workspace_root):
+            raise ExecutorContractError(
+                "unable to resolve codex from trusted PATH; refusing to launch a workspace codex"
+            )
+        raise ExecutorContractError(
+            "unable to resolve codex from trusted PATH; refusing workspace-relative fallback"
+        )
+    resolved = shutil.which("codex", path=path_text)
     if resolved:
         return resolved
-    venv_bin = _workspace_virtualenv_bin(workspace_root)
-    if venv_bin is not None and any(
-        (venv_bin / name).exists()
-        for name in ("codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.js")
-    ):
+    if _workspace_codex_candidate_exists(workspace_root):
         raise ExecutorContractError(
-            "unable to resolve codex outside workspace virtualenv; "
-            "refusing to launch workspace .venv/bin/codex"
+            "unable to resolve codex from trusted PATH; refusing to launch a workspace codex"
         )
     return "codex"
 
@@ -1332,8 +1424,8 @@ def _non_worker_dependency_preflight(
             _dependency_preflight_template(request.role, request.workspace_root, roots),
             None,
         )
-    python_path = _workspace_virtualenv_python(request.workspace_root)
-    if python_path is None:
+    workspace_python = _workspace_virtualenv_python(request.workspace_root)
+    if workspace_python is None:
         missing_python = request.workspace_root / ".venv" / "bin" / "python"
         python_display = _sanitize_path_text(str(missing_python), roots=roots)
         preflight = _dependency_preflight_payload(
@@ -1358,8 +1450,8 @@ def _non_worker_dependency_preflight(
                     (
                         f"executor dependency preflight blocked {request.role}: "
                         "missing workspace virtualenv python at .venv/bin/python; "
-                        "run make dev-install and ensure the mechanism workspace links repo .venv "
-                        "before reviewer/validator/auditor execution"
+                        "prepare an isolated workspace Python shim before "
+                        "reviewer/validator/auditor execution"
                     )
                 ],
                 timed_out=False,
@@ -1368,13 +1460,15 @@ def _non_worker_dependency_preflight(
             ),
         )
 
-    env = _execution_env(request.workspace_root) or dict(os.environ)
+    python_path = Path(sys.executable)
+    env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env.pop("PYTHONPATH", None)
     command = [str(python_path), "-c", _project_dependency_check_script()]
     try:
         completed = subprocess.run(
             command,
-            cwd=request.workspace_root,
+            cwd=Path(os.sep),
             env=env,
             text=True,
             capture_output=True,
@@ -1452,7 +1546,7 @@ def launch_execution(request: _ExecutionRequest) -> object:
     )
 
 
-def capture_execution_artifacts(request: _ExecutionRequest, completed: object) -> dict[str, Any] | None:
+def capture_execution_artifacts(request: _ExecutionRequest, completed: object) -> _ModelOutputRead:
     _persist_executor_streams(
         artifact_root=request.artifact_root,
         run_id=request.run_id,
@@ -1463,12 +1557,17 @@ def capture_execution_artifacts(request: _ExecutionRequest, completed: object) -
         context=request.context,
         sanitized_argv=request.sanitized_argv,
     )
-    return _read_model_output(request.artifact_root / request.artifacts.output_last_message_rel)
+    workspace_output = _model_output_path(request.workspace_root, request.artifacts)
+    artifact_output = _model_output_path(request.artifact_root, request.artifacts)
+    if workspace_output.exists() and not _same_path(workspace_output, artifact_output):
+        artifact_output.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(workspace_output, artifact_output)
+    return _read_model_output(workspace_output)
 
 
 def assess_execution_result(
     completed: object,
-    model_output: dict[str, Any] | None,
+    model_output: _ModelOutputRead,
     *,
     timeout_seconds: int,
 ) -> _ExecutionSummary:

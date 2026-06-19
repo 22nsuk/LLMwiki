@@ -15,7 +15,6 @@ from unittest import mock
 import pytest
 
 from ops.scripts.core.codex_exec_executor import (
-    EXTERNAL_WORKSPACE_SANDBOX_FLAG,
     ExecutorContractError,
     ExecutorReportRequest,
     _build_executor_report,
@@ -851,22 +850,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertNotIn(str(outer_codex), prompt)
 
-    def test_non_worker_dependency_preflight_blocks_before_codex_exec(self) -> None:
+    def test_non_worker_dependency_preflight_blocks_when_workspace_python_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             _seed_executor_vault(vault)
             seed_subagent_profiles(vault, ["validator"])
             venv_python = vault / ".venv" / "bin" / "python"
-            venv_python.write_text(
-                "#!/bin/sh\n"
-                "printf 'pytest (pytest): ModuleNotFoundError: missing\\n'\n"
-                "printf 'jsonschema (jsonschema): ModuleNotFoundError: missing\\n'\n"
-                "printf 'PyYAML (yaml): ModuleNotFoundError: missing\\n'\n"
-                "exit 1\n",
-                encoding="utf-8",
-            )
-            venv_python.chmod(0o755)
+            venv_python.unlink()
             _write_routing_report(
                 vault,
                 "validator",
@@ -897,16 +888,90 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 report["diagnostics"]["dependency_preflight"]["command"]["project_check_lane"],
                 "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider <focused-selector>",
             )
-            self.assertTrue(report["diagnostics"]["dependency_preflight"]["python"]["exists"])
+            self.assertFalse(report["diagnostics"]["dependency_preflight"]["python"]["exists"])
             notes = "\n".join(report["diagnostics"]["notes"])
             self.assertIn("executor dependency preflight blocked validator", notes)
-            self.assertIn("pytest", notes)
-            self.assertIn("jsonschema", notes)
-            self.assertIn("PyYAML", notes)
+            self.assertIn("missing workspace virtualenv python", notes)
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stdout.txt").is_file())
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stderr.txt").is_file())
 
-    def test_codex_exec_uses_workspace_virtualenv_when_artifact_root_differs(self) -> None:
+    def test_non_worker_dependency_preflight_uses_trusted_python_probe(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            venv_python = vault / ".venv" / "bin" / "python"
+            venv_python.write_text("#!/bin/sh\nexit 99\n", encoding="utf-8")
+            venv_python.chmod(0o755)
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[:3] == ["git", "rev-parse", "HEAD"]:
+                    return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
+                self.assertEqual(argv[0], sys.executable)
+                self.assertEqual(Path(str(kwargs.get("cwd"))), Path(os.sep))
+                payload = {
+                    "python": {"executable": sys.executable, "version": "3.test"},
+                    "modules": [
+                        {
+                            "import_name": "pytest",
+                            "package": "pytest",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                        {
+                            "import_name": "jsonschema",
+                            "package": "jsonschema",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                        {
+                            "import_name": "yaml",
+                            "package": "PyYAML",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                    ],
+                }
+                return subprocess.CompletedProcess(argv, 0, stdout=json.dumps(payload), stderr="")
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                Path(argv[argv.index("-o") + 1]).write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": ["validated"]}}),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with (
+                mock.patch("ops.scripts.core.codex_exec_executor.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["diagnostics"]["dependency_preflight"]["python"]["path"], sys.executable)
+
+    def test_codex_exec_uses_workspace_output_when_artifact_root_differs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             artifact_root = Path(temp_dir) / "artifact"
             workspace_root = Path(temp_dir) / "workspace"
@@ -964,6 +1029,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 self.assertIsInstance(env, dict)
                 captured_env.update(cast(dict[str, str], env))
                 out_index = argv.index("-o") + 1
+                self.assertTrue(Path(argv[out_index]).is_relative_to(workspace_root))
                 Path(argv[out_index]).write_text(
                     json.dumps(
                         {"status": "pass", "diagnostics": {"notes": ["validated"]}},
@@ -991,10 +1057,13 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
 
             self.assertEqual(report["status"], "pass")
-            self.assertIn(EXTERNAL_WORKSPACE_SANDBOX_FLAG, report["command"]["argv"])
-            self.assertNotIn("--full-auto", report["command"]["argv"])
+            self.assertIn("--full-auto", report["command"]["argv"])
+            self.assertNotIn("--dangerously-bypass-approvals-and-sandbox", report["command"]["argv"])
             self.assertEqual(captured_env["VIRTUAL_ENV"], str(workspace_root / ".venv"))
             self.assertEqual(captured_env["PATH"].split(os.pathsep)[0], str(workspace_venv_bin))
+            self.assertTrue(
+                (artifact_root / "runs" / "run-executor" / "validator-last-message.json").is_file()
+            )
             python_check = subprocess.run(
                 ["python"],
                 cwd=workspace_root,
@@ -1041,9 +1110,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             def fake_run(argv: list[str], **kwargs: object) -> object:
                 self.assertEqual(kwargs["cwd"], workspace_root)
-                self.assertIn(EXTERNAL_WORKSPACE_SANDBOX_FLAG, argv)
-                self.assertNotIn("-s", argv)
+                self.assertNotIn("--dangerously-bypass-approvals-and-sandbox", argv)
+                self.assertEqual(argv[2:5], ["-s", "read-only", "--skip-git-repo-check"])
                 out_index = argv.index("-o") + 1
+                self.assertTrue(Path(argv[out_index]).is_relative_to(workspace_root))
                 Path(argv[out_index]).write_text(
                     json.dumps(
                         {"status": "pass", "diagnostics": {"notes": ["audited"]}},
@@ -1097,7 +1167,79 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 mock.patch.dict(os.environ, {"PATH": str(venv_bin)}),
                 self.assertRaisesRegex(
                     ExecutorContractError,
-                    "refusing to launch workspace .venv/bin/codex",
+                    "refusing to launch a workspace codex",
+                ),
+            ):
+                execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+    def test_codex_exec_blocks_workspace_root_codex_with_empty_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            (vault / "codex").write_text("#!/bin/sh\n", encoding="utf-8")
+            (vault / "codex").chmod(0o755)
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": ""}),
+                self.assertRaisesRegex(
+                    ExecutorContractError,
+                    "refusing to launch a workspace codex",
+                ),
+            ):
+                execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+    def test_codex_exec_blocks_workspace_subdirectory_codex_on_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            workspace_bin = vault / "tools" / "bin"
+            workspace_bin.mkdir(parents=True)
+            (workspace_bin / "codex").write_text("#!/bin/sh\n", encoding="utf-8")
+            (workspace_bin / "codex").chmod(0o755)
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(workspace_bin)}),
+                self.assertRaisesRegex(
+                    ExecutorContractError,
+                    "refusing workspace-relative fallback",
                 ),
             ):
                 execute_codex_exec_role(
@@ -1394,6 +1536,134 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 report["diagnostics"]["notes"],
             )
 
+    def test_successful_codex_exit_without_model_output_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker"])
+            _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+
+            def fake_run(_argv: list[str], **_: object) -> object:
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="worker",
+                    routing_report_rel="runs/run-executor/subagent-routing.worker.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertIn("without model output", "\n".join(report["diagnostics"]["notes"]))
+
+    def test_successful_codex_exit_ignores_stale_model_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker"])
+            stale_output = vault / "runs" / "run-executor" / "worker-last-message.json"
+            stale_output.write_text(
+                json.dumps({"status": "pass", "diagnostics": {"notes": ["stale pass"]}}),
+                encoding="utf-8",
+            )
+            _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+
+            def fake_run(_argv: list[str], **_: object) -> object:
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="worker",
+                    routing_report_rel="runs/run-executor/subagent-routing.worker.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "fail")
+            notes = "\n".join(report["diagnostics"]["notes"])
+            self.assertIn("without model output", notes)
+            self.assertNotIn("stale pass", notes)
+
+    def test_successful_codex_exit_with_invalid_model_output_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker"])
+            _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                Path(argv[argv.index("-o") + 1]).write_text("{", encoding="utf-8")
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="worker",
+                    routing_report_rel="runs/run-executor/subagent-routing.worker.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertIn("invalid model output JSON", "\n".join(report["diagnostics"]["notes"]))
+
     def test_run_executor_pipeline_orders_roles_and_records_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -1565,9 +1835,15 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 "# script-output-surfaces marker\n",
                 encoding="utf-8",
             )
+            (vault / "ops" / "schemas" / "script-output-surfaces.schema.json").write_text(
+                (REPO_ROOT / "ops" / "schemas" / "script-output-surfaces.schema.json").read_text(
+                    encoding="utf-8"
+                ),
+                encoding="utf-8",
+            )
             scope_path = vault / "runs" / "run-executor" / "scope-freeze.json"
             scope = json.loads(scope_path.read_text(encoding="utf-8"))
-            scope["inputs"]["supporting_targets"] = []
+            scope["inputs"]["supporting_targets"] = ["ops/script-output-surfaces.json"]
             scope_path.write_text(json.dumps(scope, ensure_ascii=False, indent=2), encoding="utf-8")
             (vault / "ops" / "script-output-surfaces.json").write_text("stale\n", encoding="utf-8")
             worker_routing = _write_routing_report(
@@ -1607,40 +1883,16 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
-            def fake_refresh(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-                if argv[:3] == ["git", "rev-parse", "HEAD"]:
-                    return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
-                if argv[1:2] == ["-c"]:
-                    return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+            def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
                 if _is_worker_repo_health_preflight(argv):
                     events.append("post-worker-repo-health")
                     self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
                     return subprocess.CompletedProcess(argv, 0, stdout="repo health ok\n", stderr="")
-                events.append("script-output-surfaces")
-                self.assertEqual(argv[0], str(vault / ".venv" / "bin" / "python"))
-                self.assertEqual(
-                    argv[1:],
-                    [
-                        "-m",
-                        "ops.scripts.script_output_surfaces",
-                        "--vault",
-                        ".",
-                        "--out",
-                        "ops/script-output-surfaces.json",
-                    ],
-                )
-                refresh_cwd_value = kwargs.get("cwd")
-                self.assertIsNotNone(refresh_cwd_value)
-                refresh_cwd = Path(str(refresh_cwd_value))
-                (refresh_cwd / "ops" / "script-output-surfaces.json").write_text(
-                    "fresh\n",
-                    encoding="utf-8",
-                )
-                return subprocess.CompletedProcess(argv, 0, stdout="fresh\n", stderr="")
+                return _executor_subprocess_completed(argv)
 
             with (
                 mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_refresh),
+                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
             ):
                 run_executor_pipeline(
                     vault,
@@ -1653,11 +1905,78 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     routing_reports=[worker_routing, validator_routing],
                 )
 
-            self.assertEqual(events, ["worker", "script-output-surfaces", "post-worker-repo-health", "validator"])
-            self.assertEqual(
-                (vault / "ops" / "script-output-surfaces.json").read_text(encoding="utf-8"),
-                "fresh\n",
+            self.assertEqual(events, ["worker", "post-worker-repo-health", "validator"])
+            refreshed = json.loads(
+                (vault / "ops" / "script-output-surfaces.json").read_text(encoding="utf-8")
             )
+            self.assertEqual(refreshed["artifact_kind"], "script_output_surfaces")
+
+    def test_run_executor_pipeline_blocks_script_output_refresh_when_generator_changed(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            generator_path = vault / "ops" / "scripts" / "core" / "script_output_surfaces.py"
+            generator_path.parent.mkdir(parents=True, exist_ok=True)
+            generator_path.write_text("# old generator\n", encoding="utf-8")
+            scope_path = vault / "runs" / "run-executor" / "scope-freeze.json"
+            scope = json.loads(scope_path.read_text(encoding="utf-8"))
+            scope["inputs"]["primary_targets"] = ["ops/scripts/core/script_output_surfaces.py"]
+            scope["inputs"]["supporting_targets"] = ["ops/script-output-surfaces.json"]
+            scope_path.write_text(json.dumps(scope, ensure_ascii=False, indent=2), encoding="utf-8")
+            worker_routing = _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            validator_routing = _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="read-only",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            events: list[str] = []
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                output_path = Path(argv[out_index])
+                role = output_path.name.replace("-last-message.json", "")
+                events.append(role)
+                if role == "worker":
+                    generator_path.write_text("# new generator\n", encoding="utf-8")
+                output_path.write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
+
+            with (
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                self.assertRaisesRegex(
+                    ExecutorRuntimeExecutionError,
+                    "refusing to refresh ops/script-output-surfaces.json",
+                ),
+            ):
+                run_executor_pipeline(
+                    vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    roles=["worker", "validator"],
+                    routing_reports=[worker_routing, validator_routing],
+                )
+
+            self.assertEqual(events, ["worker"])
 
     def test_run_executor_pipeline_blocks_non_worker_roles_when_post_worker_repo_health_fails(
         self,
