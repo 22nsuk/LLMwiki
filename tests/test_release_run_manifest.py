@@ -343,6 +343,40 @@ class ReleaseRunManifestTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
+    def test_manifest_records_malformed_smoke_source_zip_fingerprint_as_failure(self) -> None:
+        self._write_run_inputs()
+        smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        smoke["source_zip"]["sha256"] = "not-a-sha"
+        smoke["input_fingerprints"]["source_zip"] = "not-a-sha"
+        smoke_path.write_text(json.dumps(smoke, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_fingerprint_invalid",
+            manifest["failures"],
+        )
+        self.assertEqual(manifest["source_package_smoke"]["source_zip_sha256"], "")
+        self.assertEqual(
+            manifest["input_fingerprints"]["source_package_smoke_source_zip"],
+            "",
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+        self.assertTrue(
+            write_manifest(
+                self.vault,
+                manifest,
+                "build/release/release-run-manifest.json",
+            ).exists()
+        )
+
     def test_manifest_fails_when_smoke_source_zip_fingerprints_disagree(self) -> None:
         self._write_run_inputs()
         smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
@@ -508,6 +542,38 @@ class ReleaseRunManifestTests(unittest.TestCase):
         output = stdout.getvalue()
         self.assertIn("failures=release_run_manifest_input_fingerprint_drift", output)
         self.assertIn("input_fingerprint_drift=expected:", output)
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
+    def test_check_mode_rejects_persisted_failure_without_overwriting_manifest(self) -> None:
+        self._write_run_inputs()
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        manifest["status"] = "fail"
+        manifest["failures"] = ["git_worktree_dirty"]
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("release_run_manifest_persisted_not_pass", output)
+        self.assertIn("persisted_release_run_manifest_status=fail", output)
+        self.assertIn(
+            "persisted_release_run_manifest_failures=git_worktree_dirty",
+            output,
+        )
         self.assertEqual(
             (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
             original,

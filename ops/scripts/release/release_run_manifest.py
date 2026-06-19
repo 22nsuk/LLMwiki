@@ -65,6 +65,7 @@ SCHEMA_VERSION = 5
 SAFE_VAULT_RELATIVE_PATH_RE = re.compile(
     r"^(?!/)(?!.*//)(?!.*(?:^|/)\.\.?(?:/|$))[A-Za-z0-9._+/-]+$"
 )
+SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 
 
 class _StepDurationRow(TypedDict):
@@ -157,6 +158,11 @@ def _schema_safe_file_identity(vault: Path, identity: dict[str, Any]) -> dict[st
     return {**identity, "path": _safe_vault_relative_path(vault, identity.get("path", ""))}
 
 
+def _sha256_or_empty(value: object) -> str:
+    text = str(value or "").strip()
+    return text if SHA256_RE.fullmatch(text) else ""
+
+
 def _loaded_run_manifest_identity(vault: Path, manifest_path: str | Path) -> dict[str, Any]:
     identity = _file_identity(vault, manifest_path)
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, manifest_path))
@@ -224,6 +230,9 @@ def run_manifest_alignment(
     *,
     current_revision: str | None = None,
     current_source_tree_fingerprint: str | None = None,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+    closeout_summary: str = DEFAULT_CLOSEOUT_SUMMARY,
 ) -> dict[str, Any]:
     current_revision = current_revision if current_revision is not None else git_commit(vault)
     current_source_tree_fingerprint = (
@@ -232,7 +241,12 @@ def run_manifest_alignment(
         else release_source_tree_fingerprint(vault)
     )
     identity = _loaded_run_manifest_identity(vault, manifest_path)
-    current_input_fingerprints = _current_manifest_input_fingerprints(vault)
+    current_input_fingerprints = _current_manifest_input_fingerprints(
+        vault,
+        distribution_zip=distribution_zip,
+        source_package_smoke=source_package_smoke,
+        closeout_summary=closeout_summary,
+    )
     issues: list[str] = []
     if identity["load_status"] != "ok":
         issues.append("not_loadable")
@@ -300,8 +314,10 @@ def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
     source_zip = source_zip if isinstance(source_zip, dict) else {}
     input_fingerprints = payload.get("input_fingerprints") if isinstance(payload, dict) else {}
     input_fingerprints = input_fingerprints if isinstance(input_fingerprints, dict) else {}
-    source_zip_sha256 = str(source_zip.get("sha256") or "").strip()
-    source_zip_input_sha256 = str(input_fingerprints.get("source_zip") or "").strip()
+    source_zip_sha256_raw = str(source_zip.get("sha256") or "").strip()
+    source_zip_input_sha256_raw = str(input_fingerprints.get("source_zip") or "").strip()
+    source_zip_sha256 = _sha256_or_empty(source_zip_sha256_raw)
+    source_zip_input_sha256 = _sha256_or_empty(source_zip_input_sha256_raw)
     return {
         "path": identity["path"],
         "exists": identity["exists"],
@@ -309,6 +325,8 @@ def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
         "sha256": identity["sha256"],
         "source_zip_sha256": source_zip_sha256,
         "_source_zip_input_sha256": source_zip_input_sha256,
+        "_source_zip_sha256_invalid": bool(source_zip_sha256_raw) and not source_zip_sha256,
+        "_source_zip_input_sha256_invalid": bool(source_zip_input_sha256_raw) and not source_zip_input_sha256,
     }
 
 
@@ -459,8 +477,12 @@ def build_manifest(
         failures.append("source_package_smoke_not_pass")
     smoke_source_zip_sha256 = str(smoke["source_zip_sha256"])
     smoke_source_zip_input_sha256 = str(smoke.get("_source_zip_input_sha256", ""))
-    if not smoke_source_zip_sha256:
+    if smoke.get("_source_zip_sha256_invalid"):
+        failures.append("source_package_smoke_source_zip_fingerprint_invalid")
+    elif not smoke_source_zip_sha256:
         failures.append("source_package_smoke_source_zip_fingerprint_missing")
+    elif smoke.get("_source_zip_input_sha256_invalid"):
+        failures.append("source_package_smoke_source_zip_input_fingerprint_invalid")
     elif (
         smoke_source_zip_input_sha256
         and smoke_source_zip_input_sha256 != smoke_source_zip_sha256
@@ -561,8 +583,18 @@ def _manifest_text_field(payload: dict[str, Any], field: str) -> str:
     return str(payload.get(field, "")).strip()
 
 
+def _manifest_failures(payload: dict[str, Any]) -> list[str]:
+    failures = payload.get("failures")
+    if not isinstance(failures, list):
+        return []
+    return [str(item) for item in failures if str(item)]
+
+
 def _check_manifest(previous_payload: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
     failures = [str(item) for item in manifest.get("failures", []) if str(item)]
+    previous_failures = _manifest_failures(previous_payload)
+    if _manifest_text_field(previous_payload, "status") != "pass" or previous_failures:
+        failures.append("release_run_manifest_persisted_not_pass")
     if _input_fingerprints(previous_payload) != _input_fingerprints(manifest):
         failures.append("release_run_manifest_input_fingerprint_drift")
     if _manifest_text_field(previous_payload, "source_revision") != _manifest_text_field(
@@ -635,6 +667,17 @@ def _check_mode_drift_diagnostic_lines(
                 label="git_commit_drift",
             )
         )
+    if "release_run_manifest_persisted_not_pass" in failures:
+        lines.append(
+            "persisted_release_run_manifest_status="
+            + _manifest_text_field(previous_payload, "status")
+        )
+        previous_failures = _manifest_failures(previous_payload)
+        if previous_failures:
+            lines.append(
+                "persisted_release_run_manifest_failures="
+                + ",".join(previous_failures)
+            )
     return lines
 
 

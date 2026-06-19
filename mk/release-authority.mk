@@ -6,16 +6,16 @@ release-authority-inventory:
 release-run-ready:
 	$(MAKE) release-run-ready-plan
 	$(MAKE) release-auto-promotion-ready-invalidate
-	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --make-bin "$(RELEASE_RUN_READY_MAKE_BIN)" --timeout-seconds "$(RELEASE_RUN_READY_TIMEOUT_SECONDS)"
+	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --make-bin "$(RELEASE_RUN_READY_MAKE_BIN)" --timeout-seconds "$(RELEASE_RUN_READY_TIMEOUT_SECONDS)" --distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"
 
 release-run-ready-plan:
-	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --plan --plan-out "$(RELEASE_RUN_READY_PLAN_OUT)"
+	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --plan --plan-out "$(RELEASE_RUN_READY_PLAN_OUT)" --distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"
 
 release-run-ready-plan-check:
-	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --plan --plan-out "$(RELEASE_RUN_READY_PLAN_CHECK_OUT)" --require-ready
+	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --plan --plan-out "$(RELEASE_RUN_READY_PLAN_CHECK_OUT)" --require-ready --distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"
 
 release-run-ready-check:
-	$(PYTHON) -m ops.scripts.release_run_manifest --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --check
+	$(PYTHON) -m ops.scripts.release_run_manifest --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --check --distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"
 
 release-sealed-run-ready-plan:
 	$(PYTHON) -m ops.scripts.release_evidence_planner --vault "$(VAULT)" --stage sealed-run-ready --out "$(RELEASE_SEALED_RUN_READY_PLAN_OUT)" --require-ready

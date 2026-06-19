@@ -27,6 +27,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         release_source_tree_fingerprint,
     )
     from ops.scripts.release.release_run_manifest import (
+        DEFAULT_CLOSEOUT_SUMMARY,
+        DEFAULT_DISTRIBUTION_ZIP,
+        DEFAULT_SOURCE_PACKAGE_SMOKE,
         _file_identity,
         _resolve,
         build_manifest,
@@ -54,6 +57,9 @@ else:
         release_source_tree_fingerprint,
     )
     from ops.scripts.release.release_run_manifest import (
+        DEFAULT_CLOSEOUT_SUMMARY,
+        DEFAULT_DISTRIBUTION_ZIP,
+        DEFAULT_SOURCE_PACKAGE_SMOKE,
         _file_identity,
         _resolve,
         build_manifest,
@@ -730,6 +736,9 @@ def _duration_summary(
 def build_run_ready_plan(
     vault: Path,
     *,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+    closeout_summary: str = DEFAULT_CLOSEOUT_SUMMARY,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
@@ -762,6 +771,9 @@ def build_run_ready_plan(
         DEFAULT_OUT,
         current_revision=revision,
         current_source_tree_fingerprint=fingerprint,
+        distribution_zip=distribution_zip,
+        source_package_smoke=source_package_smoke,
+        closeout_summary=closeout_summary,
     )
     causes = [_plan_cause(node) for node in nodes if not node["can_reuse"]]
     if authority_alignment["alignment_status"] != "current":
@@ -845,6 +857,9 @@ def run_release_ready(
     out_path: str,
     make_bin: str,
     timeout_seconds: int,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+    closeout_summary: str = DEFAULT_CLOSEOUT_SUMMARY,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     expected = release_source_tree_fingerprint(vault)
@@ -865,6 +880,9 @@ def run_release_ready(
         vault,
         expected_source_tree_fingerprint=expected,
         steps=steps,
+        distribution_zip=distribution_zip,
+        source_package_smoke=source_package_smoke,
+        closeout_summary=closeout_summary,
         context=context or RuntimeContext(display_timezone=dt.UTC),
     )
     write_manifest(vault, manifest, out_path)
@@ -890,6 +908,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--make-bin", default="make")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("--distribution-zip", default=DEFAULT_DISTRIBUTION_ZIP)
+    parser.add_argument("--source-package-smoke", default=DEFAULT_SOURCE_PACKAGE_SMOKE)
+    parser.add_argument("--closeout-summary", default=DEFAULT_CLOSEOUT_SUMMARY)
     return parser.parse_args(argv)
 
 
@@ -897,7 +918,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     if args.plan:
-        plan = build_run_ready_plan(vault)
+        plan = build_run_ready_plan(
+            vault,
+            distribution_zip=args.distribution_zip,
+            source_package_smoke=args.source_package_smoke,
+            closeout_summary=args.closeout_summary,
+        )
         path = write_run_ready_plan(vault, plan, args.plan_out)
         print(display_path(vault, path))
         print(f"release_run_ready_plan_status={plan['plan_status']}")
@@ -931,6 +957,9 @@ def main(argv: list[str] | None = None) -> int:
         out_path=args.out,
         make_bin=args.make_bin,
         timeout_seconds=args.timeout_seconds,
+        distribution_zip=args.distribution_zip,
+        source_package_smoke=args.source_package_smoke,
+        closeout_summary=args.closeout_summary,
     )
     print(display_path(vault, (vault / args.out).resolve()))
     print(f"release_run_status={manifest['status']}")
