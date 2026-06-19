@@ -500,9 +500,12 @@ def run_executor_pipeline(
     test_files = _test_files_from_scope_freeze(artifact_root, scope_freeze_rel)
     primary_before_worker = _target_digest_snapshot(workspace_root, primary_targets)
     has_post_worker_roles = any(role != "worker" for role in ordered_roles)
+    tracks_worker_source_changes = (
+        has_post_worker_roles or SCRIPT_OUTPUT_SURFACES_TARGET in supporting_targets
+    )
     source_before_worker = (
         _worker_source_digest_snapshot(workspace_root)
-        if has_post_worker_roles
+        if tracks_worker_source_changes
         else {}
     )
     for role in ordered_roles:
@@ -531,11 +534,19 @@ def run_executor_pipeline(
                 raise ExecutorRuntimeExecutionError(
                     executor_noop_mutation_failure_message("worker", primary_targets)
                 )
+            changed_worker_source_targets = (
+                _changed_targets(
+                    source_before_worker,
+                    _worker_source_digest_snapshot(workspace_root),
+                )
+                if tracks_worker_source_changes
+                else []
+            )
             if _should_refresh_script_output_surfaces(
                 changed_primary_targets=changed_primary_targets,
                 supporting_targets=supporting_targets,
             ):
-                if SCRIPT_OUTPUT_SURFACES_MODULE in changed_primary_targets:
+                if SCRIPT_OUTPUT_SURFACES_MODULE in changed_worker_source_targets:
                     raise ExecutorRuntimeExecutionError(
                         "worker changed ops/scripts/core/script_output_surfaces.py; "
                         "refusing to refresh ops/script-output-surfaces.json with the "
@@ -548,10 +559,7 @@ def run_executor_pipeline(
                     workspace_root=workspace_root,
                     run_id=run_id,
                     policy_path=policy_path,
-                    changed_targets=_changed_targets(
-                        source_before_worker,
-                        _worker_source_digest_snapshot(workspace_root),
-                    ),
+                    changed_targets=changed_worker_source_targets,
                     context=context,
                 )
                 _run_worker_repo_health_preflight(

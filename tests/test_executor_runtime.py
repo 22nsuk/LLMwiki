@@ -4,6 +4,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -164,6 +165,22 @@ def _seed_executor_vault(vault: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def _write_external_workspace_python_shim(artifact_root: Path, workspace_root: Path) -> Path:
+    source_python = artifact_root / ".venv" / "bin" / "python"
+    if source_python.exists():
+        source_python = source_python.resolve()
+    else:
+        source_python = Path(sys.executable).resolve()
+    workspace_python = workspace_root / ".venv" / "bin" / "python"
+    workspace_python.parent.mkdir(parents=True, exist_ok=True)
+    workspace_python.write_text(
+        f"#!/bin/sh\nexec {shlex.quote(str(source_python))} \"$@\"\n",
+        encoding="utf-8",
+    )
+    workspace_python.chmod(0o755)
+    return workspace_python
 
 
 def _executor_subprocess_completed(
@@ -987,16 +1004,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 encoding="utf-8",
             )
             artifact_python.chmod(0o755)
-            workspace_venv_bin = workspace_root / ".venv" / "bin"
-            workspace_venv_bin.mkdir(parents=True)
-            workspace_python = workspace_venv_bin / "python"
-            workspace_python.write_text(
-                f"#!/bin/sh\n"
-                f"if [ \"${{1:-}}\" = \"-c\" ]; then exec {json.dumps(sys.executable)} \"$@\"; fi\n"
-                "printf 'workspace-python\\n'\n",
-                encoding="utf-8",
-            )
-            workspace_python.chmod(0o755)
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            workspace_venv_bin = workspace_python.parent
             (workspace_root / "ops" / "schemas").mkdir(parents=True)
             (workspace_root / "ops" / "schemas" / "executor-report.schema.json").write_text(
                 (REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text(
@@ -1072,7 +1081,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 capture_output=True,
                 check=False,
             )
-            self.assertEqual(python_check.stdout, "workspace-python\n")
+            self.assertEqual(python_check.stdout, "artifact-python\n")
 
     def test_codex_exec_uses_external_workspace_sandbox_for_read_only_temp_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1082,16 +1091,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             workspace_root.mkdir()
             _seed_executor_vault(artifact_root)
             seed_subagent_profiles(artifact_root, ["provenance-auditor"])
-            workspace_venv_bin = workspace_root / ".venv" / "bin"
-            workspace_venv_bin.mkdir(parents=True)
-            workspace_python = workspace_venv_bin / "python"
-            workspace_python.write_text(
-                f"#!/bin/sh\n"
-                f"if [ \"${{1:-}}\" = \"-c\" ]; then exec {json.dumps(sys.executable)} \"$@\"; fi\n"
-                "printf 'workspace-python\\n'\n",
-                encoding="utf-8",
-            )
-            workspace_python.chmod(0o755)
+            _write_external_workspace_python_shim(artifact_root, workspace_root)
             (workspace_root / "ops" / "schemas").mkdir(parents=True)
             (workspace_root / "ops" / "schemas" / "executor-report.schema.json").write_text(
                 (REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text(
@@ -1141,6 +1141,53 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 encoding="utf-8"
             )
             self.assertIn("disposable mechanism workspace copy", prompt)
+
+    def test_non_worker_dependency_preflight_blocks_modified_external_workspace_python_shim(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            _seed_executor_vault(artifact_root)
+            seed_subagent_profiles(artifact_root, ["validator"])
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            workspace_python.write_text("#!/bin/sh\nexit 99\n", encoding="utf-8")
+            workspace_python.chmod(0o755)
+            _write_routing_report(
+                artifact_root,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout") as run,
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            run.assert_not_called()
+            self.assertEqual(report["status"], "fail")
+            notes = "\n".join(report["diagnostics"]["notes"])
+            self.assertIn("workspace Python trust check", notes)
+            self.assertIn("shim does not match the trusted parent interpreter", notes)
 
     def test_codex_exec_blocks_workspace_virtualenv_codex_when_no_outer_codex_exists(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1623,6 +1670,62 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("without model output", notes)
             self.assertNotIn("stale pass", notes)
 
+    @unittest.skipIf(os.name == "nt", "POSIX symlink semantics are required")
+    def test_successful_codex_exit_rejects_symlinked_workspace_model_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            _seed_executor_vault(artifact_root)
+            seed_subagent_profiles(artifact_root, ["worker"])
+            _write_routing_report(
+                artifact_root,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+            outside_output = Path(temp_dir) / "outside-last-message.json"
+            outside_output.write_text(
+                json.dumps({"status": "pass", "diagnostics": {"notes": ["outside pass"]}}),
+                encoding="utf-8",
+            )
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                output_path = Path(argv[argv.index("-o") + 1])
+                output_path.unlink(missing_ok=True)
+                os.symlink(outside_output, output_path)
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                    run_id="run-executor",
+                    role="worker",
+                    routing_report_rel="runs/run-executor/subagent-routing.worker.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "fail")
+            notes = "\n".join(report["diagnostics"]["notes"])
+            self.assertIn("invalid model output file", notes)
+            self.assertNotIn("outside pass", notes)
+            self.assertFalse(
+                (artifact_root / "runs" / "run-executor" / "worker-last-message.json").exists()
+            )
+
     def test_successful_codex_exit_with_invalid_model_output_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -1952,6 +2055,77 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 events.append(role)
                 if role == "worker":
                     generator_path.write_text("# new generator\n", encoding="utf-8")
+                output_path.write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
+
+            with (
+                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                self.assertRaisesRegex(
+                    ExecutorRuntimeExecutionError,
+                    "refusing to refresh ops/script-output-surfaces.json",
+                ),
+            ):
+                run_executor_pipeline(
+                    vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    roles=["worker", "validator"],
+                    routing_reports=[worker_routing, validator_routing],
+                )
+
+            self.assertEqual(events, ["worker"])
+
+    def test_run_executor_pipeline_blocks_script_output_refresh_when_generator_changed_as_extra_file(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            generator_path = vault / "ops" / "scripts" / "core" / "script_output_surfaces.py"
+            generator_path.parent.mkdir(parents=True, exist_ok=True)
+            generator_path.write_text("# old generator\n", encoding="utf-8")
+            scope_path = vault / "runs" / "run-executor" / "scope-freeze.json"
+            scope = json.loads(scope_path.read_text(encoding="utf-8"))
+            scope["inputs"]["primary_targets"] = ["ops/scripts/example.py"]
+            scope["inputs"]["supporting_targets"] = ["ops/script-output-surfaces.json"]
+            scope_path.write_text(json.dumps(scope, ensure_ascii=False, indent=2), encoding="utf-8")
+            worker_routing = _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            validator_routing = _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="read-only",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            events: list[str] = []
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                output_path = Path(argv[out_index])
+                role = output_path.name.replace("-last-message.json", "")
+                events.append(role)
+                if role == "worker":
+                    (vault / "ops" / "scripts" / "example.py").write_text(
+                        "def subject():\n    return 3\n",
+                        encoding="utf-8",
+                    )
+                    generator_path.write_text("# extra generator change\n", encoding="utf-8")
                 output_path.write_text(
                     json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}),
                     encoding="utf-8",
