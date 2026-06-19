@@ -1244,7 +1244,7 @@ def _workspace_virtualenv_python(workspace_root: Path) -> Path | None:
 def _trusted_workspace_python_source(artifact_root: Path) -> Path:
     repo_python = artifact_root / ".venv" / "bin" / "python"
     if repo_python.exists():
-        return repo_python.resolve()
+        return repo_python
     return Path(sys.executable).resolve()
 
 

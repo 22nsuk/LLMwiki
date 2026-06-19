@@ -21,6 +21,7 @@ from ops.scripts.core.codex_exec_executor import (
     _build_executor_report,
     _ExecutionSummary,
     _ExecutorArtifacts,
+    _expected_external_workspace_python_shim,
     _SyntheticCompleted,
     build_execution_request,
     execute_codex_exec_role,
@@ -169,9 +170,7 @@ def _seed_executor_vault(vault: Path) -> None:
 
 def _write_external_workspace_python_shim(artifact_root: Path, workspace_root: Path) -> Path:
     source_python = artifact_root / ".venv" / "bin" / "python"
-    if source_python.exists():
-        source_python = source_python.resolve()
-    else:
+    if not source_python.exists():
         source_python = Path(sys.executable).resolve()
     workspace_python = workspace_root / ".venv" / "bin" / "python"
     workspace_python.parent.mkdir(parents=True, exist_ok=True)
@@ -987,6 +986,29 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "pass")
             self.assertEqual(report["diagnostics"]["dependency_preflight"]["python"]["path"], sys.executable)
+
+    def test_external_workspace_python_shim_preserves_artifact_venv_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            base_python = Path(temp_dir) / "base-python"
+            base_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            base_python.chmod(0o755)
+            try:
+                artifact_python.symlink_to(base_python)
+            except (NotImplementedError, OSError) as exc:
+                self.skipTest(f"symlink unavailable: {exc}")
+
+            expected = f"#!/bin/sh\nexec {shlex.quote(str(artifact_python))} \"$@\"\n"
+
+            self.assertEqual(_expected_external_workspace_python_shim(artifact_root), expected)
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            self.assertEqual(workspace_python.read_text(encoding="utf-8"), expected)
+            self.assertNotIn(str(base_python), expected)
 
     def test_codex_exec_uses_workspace_output_when_artifact_root_differs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
