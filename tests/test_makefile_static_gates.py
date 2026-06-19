@@ -1548,7 +1548,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("ci-report-contract-tier", _target_block(text, ".PHONY"))
         ci_block = _target_block(text, "ci-report-contract-tier")
         self.assertIn("workflow_dispatch:*", ci_block)
-        self.assertIn("push:refs/heads/main", ci_block)
+        self.assertNotIn("push:refs/heads/main", ci_block)
         self.assertIn("push:refs/heads/release/*", ci_block)
         self.assertIn("push:refs/tags/*", ci_block)
         self.assertIn("$(MAKE) test-report-contract-all", ci_block)

@@ -89,7 +89,7 @@ release-closeout-cost-evidence-ci-artifact:
 
 ci-report-contract-tier:
 	@case "$(CI_REPORT_CONTRACT_EVENT_NAME):$(CI_REPORT_CONTRACT_REF)" in \
-		workflow_dispatch:*|push:refs/heads/main|push:refs/heads/release/*|push:refs/tags/*) \
+		workflow_dispatch:*|push:refs/heads/release/*|push:refs/tags/*) \
 			$(MAKE) test-report-contract-all ;; \
 		*) \
 			$(MAKE) test-report-contract-core ;; \
