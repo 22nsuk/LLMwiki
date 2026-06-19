@@ -45,7 +45,7 @@
       "type": "object",
       "additionalProperties": { "type": "string" }
     },
-    "schema_version": { "type": "integer", "const": 4 },
+    "schema_version": { "type": "integer", "const": 5 },
     "artifact_status": { "type": "string", "const": "current" },
     "retention_policy": { "type": "string", "const": "release_sidecar_authority" },
     "encoding": { "type": "string", "const": "utf-8" },
@@ -87,12 +87,13 @@
     "source_package_smoke": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "exists", "status", "sha256"],
+      "required": ["path", "exists", "status", "sha256", "source_zip_sha256"],
       "properties": {
-        "path": { "type": "string" },
+        "path": { "$ref": "#/$defs/vault_relative_path" },
         "exists": { "type": "boolean" },
         "status": { "type": "string" },
-        "sha256": { "type": "string" }
+        "sha256": { "type": "string" },
+        "source_zip_sha256": { "$ref": "#/$defs/sha256_or_empty" }
       }
     },
     "failures": {
@@ -102,12 +103,23 @@
     }
   },
   "$defs": {
+    "vault_relative_path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.\\.?(?:/|$))[A-Za-z0-9._+/-]+$"
+    },
+    "sha256_or_empty": {
+      "type": "string",
+      "anyOf": [
+        { "const": "" },
+        { "pattern": "^[a-f0-9]{64}$" }
+      ]
+    },
     "file_identity": {
       "type": "object",
       "additionalProperties": false,
       "required": ["path", "exists", "size_bytes", "sha256"],
       "properties": {
-        "path": { "type": "string" },
+        "path": { "$ref": "#/$defs/vault_relative_path" },
         "exists": { "type": "boolean" },
         "size_bytes": { "type": "integer", "minimum": 0 },
         "sha256": { "type": "string" }

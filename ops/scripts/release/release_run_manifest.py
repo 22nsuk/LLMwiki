@@ -5,9 +5,10 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import re
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, TypedDict
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
@@ -60,6 +61,10 @@ SOURCE_COMMAND = "python -m ops.scripts.release_run_manifest --vault ."
 DEFAULT_DISTRIBUTION_ZIP = "build/release/LLMwiki-source.zip"
 DEFAULT_SOURCE_PACKAGE_SMOKE = "build/source-package-smoke/source-package-smoke.json"
 DEFAULT_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
+SCHEMA_VERSION = 5
+SAFE_VAULT_RELATIVE_PATH_RE = re.compile(
+    r"^(?!/)(?!.*//)(?!.*(?:^|/)\.\.?(?:/|$))[A-Za-z0-9._+/-]+$"
+)
 
 
 class _StepDurationRow(TypedDict):
@@ -129,6 +134,23 @@ def _file_identity(vault: Path, path_value: str | Path) -> dict[str, Any]:
         "size_bytes": path.stat().st_size if exists else 0,
         "sha256": _sha256_file(path) if exists else "",
     }
+
+
+def _safe_vault_relative_path(vault: Path, path_value: object) -> str:
+    raw_text = str(path_value).strip()
+    if not raw_text or "\\" in raw_text:
+        return ""
+    if not SAFE_VAULT_RELATIVE_PATH_RE.fullmatch(raw_text):
+        return ""
+    rel_path = PurePosixPath(raw_text)
+    if rel_path.is_absolute() or any(part in {"", ".", ".."} for part in rel_path.parts):
+        return ""
+    resolved = (vault / Path(*rel_path.parts)).resolve()
+    try:
+        resolved.relative_to(vault.resolve())
+    except ValueError:
+        return ""
+    return rel_path.as_posix()
 
 
 def _loaded_run_manifest_identity(vault: Path, manifest_path: str | Path) -> dict[str, Any]:
@@ -234,11 +256,19 @@ def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path_value))
     if diagnostics.get("status") != "ok":
         payload = {}
+    source_zip = payload.get("source_zip") if isinstance(payload, dict) else {}
+    source_zip = source_zip if isinstance(source_zip, dict) else {}
+    input_fingerprints = payload.get("input_fingerprints") if isinstance(payload, dict) else {}
+    input_fingerprints = input_fingerprints if isinstance(input_fingerprints, dict) else {}
+    source_zip_sha256 = str(source_zip.get("sha256") or "").strip()
+    source_zip_input_sha256 = str(input_fingerprints.get("source_zip") or "").strip()
     return {
         "path": identity["path"],
         "exists": identity["exists"],
         "status": _status_label(payload.get("status")),
         "sha256": identity["sha256"],
+        "source_zip_sha256": source_zip_sha256 or source_zip_input_sha256,
+        "_source_zip_input_sha256": source_zip_input_sha256,
     }
 
 
@@ -380,8 +410,21 @@ def build_manifest(
         failures.append("ignored_tracked_files_present")
     if not zip_identity["exists"]:
         failures.append("distribution_zip_missing")
+    if not _safe_vault_relative_path(vault, zip_identity["path"]):
+        failures.append("distribution_zip_path_not_vault_relative")
     if not smoke["exists"] or smoke["status"] != "pass":
         failures.append("source_package_smoke_not_pass")
+    smoke_source_zip_sha256 = str(smoke["source_zip_sha256"])
+    smoke_source_zip_input_sha256 = str(smoke.get("_source_zip_input_sha256", ""))
+    if not smoke_source_zip_sha256:
+        failures.append("source_package_smoke_source_zip_fingerprint_missing")
+    elif (
+        smoke_source_zip_input_sha256
+        and smoke_source_zip_input_sha256 != smoke_source_zip_sha256
+    ):
+        failures.append("source_package_smoke_source_zip_fingerprint_mismatch")
+    elif zip_identity["sha256"] != smoke_source_zip_sha256:
+        failures.append("source_package_smoke_source_zip_mismatch")
     failures.extend(
         f"step_failed:{step.get('name', 'unknown')}"
         for step in step_rows
@@ -399,8 +442,9 @@ def build_manifest(
         "input_fingerprints": {
             "distribution_zip": zip_identity["sha256"],
             "source_package_smoke": smoke["sha256"],
+            "source_package_smoke_source_zip": smoke_source_zip_sha256,
         },
-        "schema_version": 4,
+        "schema_version": SCHEMA_VERSION,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_authority",
         "encoding": "utf-8",
@@ -417,7 +461,13 @@ def build_manifest(
         "steps": step_rows,
         "step_duration_summary": _step_duration_summary(step_rows),
         "distribution_zip": zip_identity,
-        "source_package_smoke": smoke,
+        "source_package_smoke": {
+            "path": smoke["path"],
+            "exists": smoke["exists"],
+            "status": smoke["status"],
+            "sha256": smoke["sha256"],
+            "source_zip_sha256": smoke_source_zip_sha256,
+        },
         "failures": _unique_failures(failures),
     }
 
@@ -448,10 +498,43 @@ def distribution_zip_path_from_manifest(vault: Path, manifest_path: str) -> str:
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, manifest_path))
     if diagnostics.get("status") != "ok" or not isinstance(payload, dict):
         return ""
+    schema_errors = validate_with_schema(payload, load_schema_with_vault_override(vault, SCHEMA_PATH))
+    if schema_errors:
+        return ""
     distribution_zip = payload.get("distribution_zip")
     if not isinstance(distribution_zip, dict):
         return ""
-    return str(distribution_zip.get("path", "")).strip()
+    return _safe_vault_relative_path(vault, distribution_zip.get("path", ""))
+
+
+def _input_fingerprints(payload: dict[str, Any]) -> dict[str, str]:
+    input_fingerprints = payload.get("input_fingerprints")
+    if not isinstance(input_fingerprints, dict):
+        return {}
+    return {str(key): str(value) for key, value in input_fingerprints.items()}
+
+
+def _check_manifest(previous_payload: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
+    failures = [str(item) for item in manifest.get("failures", []) if str(item)]
+    if _input_fingerprints(previous_payload) != _input_fingerprints(manifest):
+        failures.append("release_run_manifest_input_fingerprint_drift")
+    return {
+        **manifest,
+        "status": "pass" if not failures else "fail",
+        "failures": _unique_failures(failures),
+    }
+
+
+def _input_fingerprint_drift_line(
+    previous_payload: dict[str, Any],
+    manifest: dict[str, Any],
+) -> str:
+    return (
+        "input_fingerprint_drift=expected:"
+        + json.dumps(_input_fingerprints(previous_payload), sort_keys=True)
+        + ";current:"
+        + json.dumps(_input_fingerprints(manifest), sort_keys=True)
+    )
 
 
 def _check_failure_diagnostics(
@@ -468,6 +551,8 @@ def _check_failure_diagnostics(
         "failures=" + ",".join(failures),
     ]
     if "source_tree_fingerprint_drift" not in failures:
+        if "release_run_manifest_input_fingerprint_drift" in failures:
+            lines.append(_input_fingerprint_drift_line(previous_payload, manifest))
         return lines
     generated_at = str(previous_payload.get("generated_at", "")).strip()
     change_sample = release_source_tree_change_sample(
@@ -498,6 +583,8 @@ def _check_failure_diagnostics(
     )
     if changed_paths:
         lines.append("changed_after_generated_at=" + ",".join(changed_paths))
+    if "release_run_manifest_input_fingerprint_drift" in failures:
+        lines.append(_input_fingerprint_drift_line(previous_payload, manifest))
     return lines
 
 
@@ -530,6 +617,16 @@ def main(argv: list[str] | None = None) -> int:
         if diagnostics.get("status") != "ok":
             print(json.dumps({"status": "fail", "reason": diagnostics}, ensure_ascii=False, indent=2))
             return 1
+        schema_errors = validate_with_schema(payload, load_schema_with_vault_override(vault, SCHEMA_PATH))
+        if schema_errors:
+            print(
+                json.dumps(
+                    {"status": "fail", "reason": {"schema_errors": schema_errors}},
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 1
         previous_payload = payload
         expected = str(payload.get("expected_source_tree_fingerprint", "")).strip()
         steps = payload.get("steps") if isinstance(payload.get("steps"), list) else []
@@ -544,15 +641,18 @@ def main(argv: list[str] | None = None) -> int:
         source_package_smoke=args.source_package_smoke,
         closeout_summary=args.closeout_summary,
     )
-    path = write_manifest(vault, manifest, args.out)
-    print(display_path(vault, path))
     if args.check:
+        manifest = _check_manifest(previous_payload, manifest)
+        print(display_path(vault, _resolve(vault, args.out)))
         for line in _check_failure_diagnostics(
             vault,
             previous_payload=previous_payload,
             manifest=manifest,
         ):
             print(line)
+        return 0 if manifest["status"] == "pass" else 1
+    path = write_manifest(vault, manifest, args.out)
+    print(display_path(vault, path))
     return 0 if manifest["status"] == "pass" else 1
 
 

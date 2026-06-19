@@ -27,7 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PLAN_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-run-ready-plan.schema.json"
 ZERO_SHA256 = "0" * 64
 READY_PLAN_GOLDEN_SHA256 = (
-    "64b602874c8cd2d0d55999e6fa7a0dd1a5cd70edfe4cf2ca680a74c955b5406f"
+    "d70e3062306ebac2bd492dd7894a326e6896384321fd32f84851bada209025ed"
 )
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",
@@ -489,7 +489,12 @@ def _release_run_manifest_payload(source_zip: dict[str, object]) -> dict[str, ob
             source_command="python -m ops.scripts.release_run_manifest --vault .",
             retention_policy="release_sidecar_authority",
         ),
-        "schema_version": 4,
+        "input_fingerprints": {
+            "distribution_zip": str(source_zip["sha256"]),
+            "source_package_smoke": ZERO_SHA256,
+            "source_package_smoke_source_zip": str(source_zip["sha256"]),
+        },
+        "schema_version": 5,
         "status": "pass",
         "release_authority_status": "release_ready",
         "machine_release_allowed": True,
@@ -555,6 +560,7 @@ def _release_run_manifest_payload(source_zip: dict[str, object]) -> dict[str, ob
             "exists": True,
             "status": "pass",
             "sha256": ZERO_SHA256,
+            "source_zip_sha256": str(source_zip["sha256"]),
         },
         "failures": [],
     }

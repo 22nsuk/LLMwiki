@@ -239,6 +239,9 @@ def release_owned_artifact_freshness_attention(vault: Path, payload: dict[str, A
             continue
         raw_issues = item.get("issues")
         issues = [str(issue).strip() for issue in raw_issues] if isinstance(raw_issues, list) else []
+        raw_mtime_sensitive_issues = item.get("mtime_sensitive_issues")
+        if isinstance(raw_mtime_sensitive_issues, list):
+            issues.extend(str(issue).strip() for issue in raw_mtime_sensitive_issues)
         if any(
             issue
             in {
@@ -246,6 +249,7 @@ def release_owned_artifact_freshness_attention(vault: Path, payload: dict[str, A
                 "source_revision_unknown",
                 "source_tree_fingerprint_mismatch",
                 "source_tree_fingerprint_unknown",
+                "generated_at_older_than_file_mtime",
                 "test_target_missing",
             }
             or issue.startswith("test_target_fingerprint_mismatch")
