@@ -767,7 +767,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             "f18d6d1402f6d6fc61594f7464827c7faede73cf4dc7da4ea7e0d26bf67049e2",
         )
 
-    def test_codex_exec_prefers_workspace_virtualenv_on_path(self) -> None:
+    def test_codex_exec_launch_env_excludes_workspace_virtualenv_from_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -836,16 +836,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertEqual(report["command"]["argv"][0], "codex")
             self.assertEqual(report["command"]["argv"][report["command"]["argv"].index("--cd") + 1], ".")
             self.assertEqual(captured_env["VIRTUAL_ENV"], str(vault / ".venv"))
-            self.assertEqual(captured_env["PATH"].split(os.pathsep)[0], str(venv_bin))
-            python_check = subprocess.run(
-                ["python"],
-                cwd=vault,
-                env=captured_env,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            self.assertEqual(python_check.stdout, "workspace-python\n")
+            self.assertNotIn(str(venv_bin), captured_env["PATH"].split(os.pathsep))
             prompt = (vault / "runs" / "run-executor" / "validator-prompt.md").read_text(
                 encoding="utf-8"
             )
@@ -994,16 +985,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn(EXTERNAL_WORKSPACE_SANDBOX_FLAG, report["command"]["argv"])
             self.assertNotIn("--full-auto", report["command"]["argv"])
             self.assertEqual(captured_env["VIRTUAL_ENV"], str(workspace_root / ".venv"))
-            self.assertEqual(captured_env["PATH"].split(os.pathsep)[0], str(workspace_venv_bin))
-            python_check = subprocess.run(
-                ["python"],
-                cwd=workspace_root,
-                env=captured_env,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            self.assertEqual(python_check.stdout, "workspace-python\n")
+            self.assertNotIn(str(workspace_venv_bin), captured_env["PATH"].split(os.pathsep))
 
     def test_codex_exec_uses_external_workspace_sandbox_for_read_only_temp_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

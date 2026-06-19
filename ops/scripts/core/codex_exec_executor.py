@@ -1180,12 +1180,7 @@ def _execution_env(workspace_root: Path) -> dict[str, str] | None:
     if venv_bin is None:
         return None
     env = dict(os.environ)
-    existing_path = env.get("PATH", "")
-    env["PATH"] = (
-        str(venv_bin)
-        if not existing_path
-        else f"{venv_bin}{os.pathsep}{existing_path}"
-    )
+    env["PATH"] = _path_without_workspace_virtualenv(workspace_root)
     env["VIRTUAL_ENV"] = str(workspace_root / ".venv")
     return env
 
