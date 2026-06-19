@@ -31,10 +31,34 @@
 !/tools/
 !/tools/**
 !/uv.lock
+# Re-ignore local/private state opened by the allowlisted prefixes above.
 AGENTS.local.md
 ops/manifest.json
 ops/raw-registry.json
-ops/operator/*
-ops/reports/*
+ops/operator/
+ops/operator/**
+ops/reports/
+ops/reports/**
+.codebase-memory/
+.cache/
+.git/
+.hypothesis/
+.idea/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.coverage
+.coverage.*
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 # Generated ops/operator and ops/reports evidence is local-only.
 # <<< public-surface-policy <<<

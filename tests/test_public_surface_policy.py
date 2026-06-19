@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +14,7 @@ from ops.scripts.public.export_public_repo import (
     should_export_public,
 )
 from ops.scripts.public.public_surface_policy import (
+    PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS,
     PUBLIC_EXCLUDED_SEGMENTS,
     PUBLIC_GITIGNORE_END,
     PUBLIC_GITIGNORE_START,
@@ -22,6 +25,20 @@ from ops.scripts.public.public_surface_policy import (
 )
 
 pytestmark = pytest.mark.public
+
+
+def _git_check_ignored(repo: Path, paths: tuple[str, ...]) -> set[str]:
+    result = subprocess.run(
+        ["git", "check-ignore", "--no-index", "--stdin"],
+        cwd=repo,
+        input="".join(f"{path}\n" for path in paths),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode not in (0, 1):
+        raise AssertionError(f"git check-ignore failed: {result.stderr}")
+    return set(result.stdout.splitlines())
 
 
 class PublicSurfacePolicyTests(unittest.TestCase):
@@ -35,6 +52,69 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         end = gitignore_text.index(PUBLIC_GITIGNORE_END) + len(PUBLIC_GITIGNORE_END)
         block = gitignore_text[start:end] + "\n"
         self.assertEqual(block, render_public_gitignore_block())
+
+    def test_public_mirror_gitignore_reblocks_local_state_after_allowlist(self) -> None:
+        block = render_public_gitignore_block()
+
+        for segment in PUBLIC_EXCLUDED_SEGMENTS:
+            self.assertIn(f"{segment}/", block)
+        for pattern in PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS:
+            self.assertIn(pattern, block)
+
+    def test_public_mirror_gitignore_and_export_policy_reblock_allowlist_local_state(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for public mirror .gitignore probes")
+
+        ignored_paths = (
+            "ops/reports/example.json",
+            "ops/reports/nested/example.json",
+            "ops/operator/summary.json",
+            "ops/operator/nested/summary.json",
+            "ops/manifest.json",
+            "ops/raw-registry.json",
+            "docs/__pycache__/x.pyc",
+            "ops/.pytest_cache/v/cache",
+            "tests/.mypy_cache/a",
+            "tools/.ruff_cache/a",
+            "ops/.codebase-memory/graph.db.zst",
+            "ops/.cache/tool/state",
+            "docs/.idea/workspace.xml",
+            "docs/.vscode/settings.json",
+            "tools/.venv/bin/python",
+            "tests/.hypothesis/examples/x",
+            "tools/helper.pyc",
+            "tools/helper.pyo",
+            "tools/native.pyd",
+            "docs/.coverage",
+            "docs/.coverage.worker",
+            "mk/.DS_Store",
+            "tests/Thumbs.db",
+            "tools/notes.swp",
+            "tools/notes.swo",
+            "tools/notes~",
+        )
+        public_paths = (
+            "docs/development.md",
+            "ops/scripts/example.py",
+            "tests/test_example.py",
+            "tools/helper.py",
+            "mk/public.mk",
+            ".codex/agents/worker.toml",
+            ".github/workflows/ci.yml",
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            (repo / ".gitignore").write_text(render_public_gitignore_block(), encoding="utf-8")
+
+            self.assertEqual(_git_check_ignored(repo, ignored_paths), set(ignored_paths))
+            self.assertEqual(_git_check_ignored(repo, public_paths), set())
+
+        for rel_path in ignored_paths:
+            self.assertFalse(should_export_public(rel_path), rel_path)
+        for rel_path in public_paths:
+            self.assertTrue(should_export_public(rel_path), rel_path)
 
     def test_root_gitignore_is_full_vault_hygiene_not_public_policy(self) -> None:
         gitignore_text = Path(".gitignore").read_text(encoding="utf-8")

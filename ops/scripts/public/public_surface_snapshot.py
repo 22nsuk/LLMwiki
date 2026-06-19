@@ -15,9 +15,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.public.public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
-        PUBLIC_EXCLUDED_SEGMENTS,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
+        is_public_excluded_by_local_state,
     )
 else:
     from ..core.output_runtime import display_path
@@ -25,18 +25,14 @@ else:
     from .public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
-        PUBLIC_EXCLUDED_SEGMENTS,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
+        is_public_excluded_by_local_state,
     )
 
 
 DEFAULT_OUT = "tmp/public-surface-snapshot.json"
 PRODUCER = "ops.scripts.public_surface_snapshot"
-
-
-def _is_excluded_by_segment(path: Path) -> bool:
-    return any(part in PUBLIC_EXCLUDED_SEGMENTS for part in path.parts)
 
 
 def _prefix_file_count(vault: Path, prefix: str) -> int:
@@ -45,7 +41,11 @@ def _prefix_file_count(vault: Path, prefix: str) -> int:
         return 0
     if root.is_file():
         return 1
-    return sum(1 for path in root.rglob("*") if path.is_file() and not _is_excluded_by_segment(path.relative_to(vault)))
+    return sum(
+        1
+        for path in root.rglob("*")
+        if path.is_file() and not is_public_excluded_by_local_state(path.relative_to(vault).as_posix())
+    )
 
 
 def _excluded_prefix_presence(vault: Path) -> list[dict[str, Any]]:
