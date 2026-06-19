@@ -27,7 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PLAN_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-run-ready-plan.schema.json"
 ZERO_SHA256 = "0" * 64
 READY_PLAN_GOLDEN_SHA256 = (
-    "d70e3062306ebac2bd492dd7894a326e6896384321fd32f84851bada209025ed"
+    "6382fd687f2bf016669090beb9f317304b66a4515683d46967eb33cdff8e08f6"
 )
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",
@@ -58,6 +58,12 @@ def _write_json(vault: Path, rel_path: str, payload: dict[str, object]) -> None:
     path = vault / rel_path
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _json_payload_sha256(payload: dict[str, object]) -> str:
+    return hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+    ).hexdigest()
 
 
 def _sha256_file(path: Path) -> str:
@@ -480,7 +486,11 @@ def _source_package_clean_extract_payload(
     }
 
 
-def _release_run_manifest_payload(source_zip: dict[str, object]) -> dict[str, object]:
+def _release_run_manifest_payload(
+    source_zip: dict[str, object],
+    *,
+    source_package_smoke_sha256: str,
+) -> dict[str, object]:
     return {
         **_common_envelope(
             schema="ops/schemas/release-run-manifest.schema.json",
@@ -491,8 +501,9 @@ def _release_run_manifest_payload(source_zip: dict[str, object]) -> dict[str, ob
         ),
         "input_fingerprints": {
             "distribution_zip": str(source_zip["sha256"]),
-            "source_package_smoke": ZERO_SHA256,
+            "source_package_smoke": source_package_smoke_sha256,
             "source_package_smoke_source_zip": str(source_zip["sha256"]),
+            "closeout_summary": "",
         },
         "schema_version": 5,
         "status": "pass",
@@ -568,9 +579,11 @@ def _release_run_manifest_payload(source_zip: dict[str, object]) -> dict[str, ob
 
 def _write_current_run_ready_evidence(vault: Path) -> None:
     source_zip = _file_identity(vault, "build/release/LLMwiki-source.zip")
+    source_package_smoke = _source_package_smoke_payload(source_zip)
     evidence = {
         "build/release/release-run-manifest.json": _release_run_manifest_payload(
-            source_zip
+            source_zip,
+            source_package_smoke_sha256=_json_payload_sha256(source_package_smoke),
         ),
         "ops/reports/test-execution-summary-full.json": _test_execution_summary_payload(
             suite="full",
@@ -591,9 +604,7 @@ def _write_current_run_ready_evidence(vault: Path) -> None:
             source_command="python -m ops.scripts.release.release_smoke --vault . --profile fast",
             archive_file=source_zip,
         ),
-        "build/source-package-smoke/source-package-smoke.json": _source_package_smoke_payload(
-            source_zip
-        ),
+        "build/source-package-smoke/source-package-smoke.json": source_package_smoke,
         "ops/reports/source-package-clean-extract.json": _source_package_clean_extract_payload(
             source_zip
         ),
@@ -803,6 +814,30 @@ def test_run_ready_plan_selects_stale_authority_manifest_as_minimal_next_target(
     assert (
         plan["stale_evidence_causes"][0]["minimal_next_target"] == "release-run-ready"
     )
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_blocks_on_authority_manifest_input_fingerprint_drift(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    manifest_path = vault / "build" / "release" / "release-run-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["input_fingerprints"]["distribution_zip"] = "0" * 64
+    _write_json(vault, "build/release/release-run-manifest.json", manifest)
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(vault, context=fixed_context())
+
+    alignment = plan["authority_manifest_alignment"]
+    assert plan["plan_status"] == "blocked"
+    assert plan["minimal_next_target"] == "release-run-ready"
+    assert alignment["alignment_status"] == "stale"
+    assert "input_fingerprint_stale" in alignment["issues"]
+    assert plan["stale_evidence_causes"][0]["node"] == "authority_manifest"
+    assert "input_fingerprint_stale" in plan["reason_codes"]
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 

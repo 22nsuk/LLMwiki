@@ -89,7 +89,7 @@
       "additionalProperties": false,
       "required": ["path", "exists", "status", "sha256", "source_zip_sha256"],
       "properties": {
-        "path": { "$ref": "#/$defs/vault_relative_path" },
+        "path": { "$ref": "#/$defs/vault_relative_path_or_empty" },
         "exists": { "type": "boolean" },
         "status": { "type": "string" },
         "sha256": { "type": "string" },
@@ -107,6 +107,13 @@
       "type": "string",
       "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.\\.?(?:/|$))[A-Za-z0-9._+/-]+$"
     },
+    "vault_relative_path_or_empty": {
+      "type": "string",
+      "anyOf": [
+        { "const": "" },
+        { "$ref": "#/$defs/vault_relative_path" }
+      ]
+    },
     "sha256_or_empty": {
       "type": "string",
       "anyOf": [
@@ -119,7 +126,7 @@
       "additionalProperties": false,
       "required": ["path", "exists", "size_bytes", "sha256"],
       "properties": {
-        "path": { "$ref": "#/$defs/vault_relative_path" },
+        "path": { "$ref": "#/$defs/vault_relative_path_or_empty" },
         "exists": { "type": "boolean" },
         "size_bytes": { "type": "integer", "minimum": 0 },
         "sha256": { "type": "string" }

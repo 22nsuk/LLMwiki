@@ -153,6 +153,10 @@ def _safe_vault_relative_path(vault: Path, path_value: object) -> str:
     return rel_path.as_posix()
 
 
+def _schema_safe_file_identity(vault: Path, identity: dict[str, Any]) -> dict[str, Any]:
+    return {**identity, "path": _safe_vault_relative_path(vault, identity.get("path", ""))}
+
+
 def _loaded_run_manifest_identity(vault: Path, manifest_path: str | Path) -> dict[str, Any]:
     identity = _file_identity(vault, manifest_path)
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, manifest_path))
@@ -171,6 +175,7 @@ def _loaded_run_manifest_identity(vault: Path, manifest_path: str | Path) -> dic
         "artifact_kind": str(payload.get("artifact_kind", "")).strip(),
         "status": _status_label(payload.get("status")),
         "source_revision": str(payload.get("source_revision", "")).strip(),
+        "input_fingerprints": _input_fingerprints(payload),
         "source_tree_fingerprint": str(
             payload.get("final_source_tree_fingerprint")
             or payload.get("source_tree_fingerprint")
@@ -183,6 +188,34 @@ def _loaded_run_manifest_identity(vault: Path, manifest_path: str | Path) -> dic
             else ""
         ).strip(),
     }
+
+
+def _manifest_input_fingerprints(
+    *,
+    zip_identity: dict[str, Any],
+    smoke: dict[str, Any],
+    closeout_identity: dict[str, Any],
+) -> dict[str, str]:
+    return {
+        "distribution_zip": str(zip_identity["sha256"]),
+        "source_package_smoke": str(smoke["sha256"]),
+        "source_package_smoke_source_zip": str(smoke["source_zip_sha256"]),
+        "closeout_summary": str(closeout_identity["sha256"]),
+    }
+
+
+def _current_manifest_input_fingerprints(
+    vault: Path,
+    *,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+    closeout_summary: str = DEFAULT_CLOSEOUT_SUMMARY,
+) -> dict[str, str]:
+    return _manifest_input_fingerprints(
+        zip_identity=_file_identity(vault, distribution_zip),
+        smoke=_source_package_smoke(vault, source_package_smoke),
+        closeout_identity=_file_identity(vault, closeout_summary),
+    )
 
 
 def run_manifest_alignment(
@@ -199,6 +232,7 @@ def run_manifest_alignment(
         else release_source_tree_fingerprint(vault)
     )
     identity = _loaded_run_manifest_identity(vault, manifest_path)
+    current_input_fingerprints = _current_manifest_input_fingerprints(vault)
     issues: list[str] = []
     if identity["load_status"] != "ok":
         issues.append("not_loadable")
@@ -221,6 +255,12 @@ def run_manifest_alignment(
         issues.append("source_tree_fingerprint_stale")
     if identity["load_status"] == "ok" and not identity["source_tree_fingerprint"]:
         issues.append("source_tree_fingerprint_missing")
+    if (
+        identity["load_status"] == "ok"
+        and identity["schema_valid"]
+        and identity["input_fingerprints"] != current_input_fingerprints
+    ):
+        issues.append("input_fingerprint_stale")
     alignment_status = "current" if not issues else "stale"
     if not identity["exists"]:
         alignment_status = "missing"
@@ -267,7 +307,7 @@ def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
         "exists": identity["exists"],
         "status": _status_label(payload.get("status")),
         "sha256": identity["sha256"],
-        "source_zip_sha256": source_zip_sha256 or source_zip_input_sha256,
+        "source_zip_sha256": source_zip_sha256,
         "_source_zip_input_sha256": source_zip_input_sha256,
     }
 
@@ -400,6 +440,7 @@ def build_manifest(
     step_rows = list(steps or [])
     zip_identity = _file_identity(vault, distribution_zip)
     smoke = _source_package_smoke(vault, source_package_smoke)
+    closeout_identity = _file_identity(vault, closeout_summary)
     authority_axes = _closeout_authority_axes(vault, closeout_summary)
     failures: list[str] = []
     if expected_source_tree_fingerprint != final_fingerprint:
@@ -412,6 +453,8 @@ def build_manifest(
         failures.append("distribution_zip_missing")
     if not _safe_vault_relative_path(vault, zip_identity["path"]):
         failures.append("distribution_zip_path_not_vault_relative")
+    if not _safe_vault_relative_path(vault, smoke["path"]):
+        failures.append("source_package_smoke_path_not_vault_relative")
     if not smoke["exists"] or smoke["status"] != "pass":
         failures.append("source_package_smoke_not_pass")
     smoke_source_zip_sha256 = str(smoke["source_zip_sha256"])
@@ -439,11 +482,11 @@ def build_manifest(
         "source_command": SOURCE_COMMAND,
         "source_revision": commit,
         "source_tree_fingerprint": final_fingerprint,
-        "input_fingerprints": {
-            "distribution_zip": zip_identity["sha256"],
-            "source_package_smoke": smoke["sha256"],
-            "source_package_smoke_source_zip": smoke_source_zip_sha256,
-        },
+        "input_fingerprints": _manifest_input_fingerprints(
+            zip_identity=zip_identity,
+            smoke=smoke,
+            closeout_identity=closeout_identity,
+        ),
         "schema_version": SCHEMA_VERSION,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_authority",
@@ -460,9 +503,9 @@ def build_manifest(
         "ignored_tracked_file_count": ignored_count,
         "steps": step_rows,
         "step_duration_summary": _step_duration_summary(step_rows),
-        "distribution_zip": zip_identity,
+        "distribution_zip": _schema_safe_file_identity(vault, zip_identity),
         "source_package_smoke": {
-            "path": smoke["path"],
+            "path": _safe_vault_relative_path(vault, smoke["path"]),
             "exists": smoke["exists"],
             "status": smoke["status"],
             "sha256": smoke["sha256"],
