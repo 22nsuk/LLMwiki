@@ -18,6 +18,7 @@ from ops.scripts.core.observability_artifacts_shared_runtime import (
     resolve_auto_improve_session_report_rel,
 )
 from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.path_runtime import normalize_repo_path_text
 from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.core.runtime_context import RuntimeContext
 
@@ -403,7 +404,23 @@ def _prior_artifact_paths(prior_report: Mapping[str, Any]) -> GoalRunArtifactPat
     }
     if not all(values.values()):
         return None
+    if not all(_artifact_path_is_repo_relative(value) for value in values.values()):
+        return None
     return GoalRunArtifactPaths(**values)
+
+
+def _artifact_path_is_repo_relative(value: str) -> bool:
+    path = Path(value)
+    normalized = normalize_repo_path_text(value)
+    return (
+        not path.is_absolute()
+        and normalized is not None
+        and normalized != "."
+        and normalized != ".."
+        and not (len(normalized) > 2 and normalized[1] == ":" and normalized[2] == "/")
+        and not normalized.startswith("../")
+        and "/../" not in normalized
+    )
 
 
 def _goal_run_artifact_paths(
