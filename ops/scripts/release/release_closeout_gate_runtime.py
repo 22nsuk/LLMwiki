@@ -246,6 +246,7 @@ def release_owned_artifact_freshness_attention(vault: Path, payload: dict[str, A
                 "source_revision_unknown",
                 "source_tree_fingerprint_mismatch",
                 "source_tree_fingerprint_unknown",
+                "generated_at_older_than_file_mtime",
                 "test_target_missing",
             }
             or issue.startswith("test_target_fingerprint_mismatch")
