@@ -748,7 +748,41 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str = DEFAULT_OU
     )
 
 
-def reusable_summary_diagnostics(vault: Path, path_value: str | Path) -> dict[str, Any]:
+def _expected_public_check_command_strings(vault: Path, request: PublicCheckRequest) -> dict[str, str]:
+    public_python = _resolve_public_python(vault, request.public_python)
+    public_out_path = _resolve_out_dir(vault, request.public_out)
+    pytest_summary_cache_path = _public_pytest_summary_cache_path()
+    return {
+        command_id: shlex.join([sanitize_report_text(vault, str(arg)) for arg in argv])
+        for command_id, argv, _summary_path in _public_check_command_specs(
+            public_python=public_python,
+            request=request,
+            public_out_path=public_out_path,
+            pytest_summary_cache_path=pytest_summary_cache_path,
+        )
+    }
+
+
+def _observed_public_check_command_strings(payload: dict[str, Any]) -> dict[str, str]:
+    commands = payload.get("commands")
+    if not isinstance(commands, list):
+        return {}
+    observed: dict[str, str] = {}
+    for command in commands:
+        if not isinstance(command, dict):
+            continue
+        command_id = str(command.get("id") or "").strip()
+        command_value = str(command.get("command") or "").strip()
+        if command_id and command_value:
+            observed[command_id] = command_value
+    return observed
+
+
+def reusable_summary_diagnostics(
+    vault: Path,
+    path_value: str | Path,
+    request: PublicCheckRequest | None = None,
+) -> dict[str, Any]:
     path = Path(path_value)
     if not path.is_absolute():
         path = vault / path
@@ -772,12 +806,19 @@ def reusable_summary_diagnostics(vault: Path, path_value: str | Path) -> dict[st
         "public_check_status": summary.get("public_check_status") == "pass",
         "source_tree_fingerprint": payload.get("source_tree_fingerprint") == current_source_tree_fingerprint,
     }
+    if request is not None:
+        expected_commands = _expected_public_check_command_strings(vault, request)
+        observed_commands = _observed_public_check_command_strings(payload)
+        checks["command_configuration"] = observed_commands == expected_commands
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         diagnostics["reason"] = f"not_current:{','.join(failed)}"
         diagnostics["checks"] = checks
         diagnostics["current_source_tree_fingerprint"] = current_source_tree_fingerprint
         diagnostics["observed_source_tree_fingerprint"] = str(payload.get("source_tree_fingerprint", ""))
+        if request is not None:
+            diagnostics["expected_commands"] = expected_commands
+            diagnostics["observed_commands"] = observed_commands
         return diagnostics
     diagnostics.update(
         {
@@ -838,8 +879,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.reuse_only:
         args.reuse_if_current = True
     vault = Path(args.vault).resolve()
+    request = PublicCheckRequest(
+        public_out=args.public_out,
+        public_python=args.public_python,
+        ruff_targets=args.ruff_targets,
+        mypy_targets=args.mypy_targets,
+        pytest_mark_expr=args.pytest_mark_expr,
+        pytest_flags=args.pytest_flags,
+        timeout_seconds=args.timeout_seconds,
+        heartbeat_interval_seconds=args.heartbeat_interval_seconds,
+    )
     if args.reuse_if_current:
-        diagnostics = reusable_summary_diagnostics(vault, args.reuse_from or args.out)
+        diagnostics = reusable_summary_diagnostics(vault, args.reuse_from or args.out, request)
         if diagnostics["reusable"]:
             print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
             return 0
@@ -848,16 +899,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
     report = build_report(
         vault,
-        PublicCheckRequest(
-            public_out=args.public_out,
-            public_python=args.public_python,
-            ruff_targets=args.ruff_targets,
-            mypy_targets=args.mypy_targets,
-            pytest_mark_expr=args.pytest_mark_expr,
-            pytest_flags=args.pytest_flags,
-            timeout_seconds=args.timeout_seconds,
-            heartbeat_interval_seconds=args.heartbeat_interval_seconds,
-        ),
+        request,
     )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))

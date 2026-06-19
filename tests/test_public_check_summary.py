@@ -571,6 +571,43 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 json.loads(destination.read_text(encoding="utf-8"))["source_tree_fingerprint"],
             )
 
+    def test_reusable_summary_requires_matching_command_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            original_request = PublicCheckRequest(
+                public_out=str(Path(temp_dir) / "public"),
+                public_python="python",
+                pytest_mark_expr="public",
+                pytest_flags="-q",
+            )
+
+            report = build_report(
+                vault,
+                original_request,
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+            destination = write_report(vault, report)
+
+            matching = reusable_summary_diagnostics(vault, destination, original_request)
+            self.assertTrue(matching["reusable"])
+
+            all_surfaces_request = PublicCheckRequest(
+                public_out=str(Path(temp_dir) / "public"),
+                public_python="python",
+                pytest_mark_expr="",
+                pytest_flags="-q",
+            )
+            mismatched = reusable_summary_diagnostics(vault, destination, all_surfaces_request)
+
+            self.assertFalse(mismatched["reusable"])
+            self.assertIn("command_configuration", mismatched["reason"])
+            self.assertIn("-m public", mismatched["observed_commands"]["pytest_public"])
+            self.assertNotIn("-m public", mismatched["expected_commands"]["pytest_public"])
+
     def test_script_output_surfaces_refresh_does_not_stale_public_summary_without_source_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
