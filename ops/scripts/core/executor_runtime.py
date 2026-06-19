@@ -36,6 +36,7 @@ from .policy_runtime import load_policy, workspace_preparation_mode_from_policy
 from .run_artifact_envelope_runtime import maybe_embed_run_artifact_envelope
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH
+from .script_output_surfaces import build_registry, write_registry
 
 ROLE_ORDER = ("worker", "reviewer", "validator")
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
@@ -212,41 +213,26 @@ def _should_refresh_script_output_surfaces(
     changed_primary_targets: list[str],
     supporting_targets: list[str],
 ) -> bool:
-    return any(target.startswith(OPS_SCRIPTS_PREFIX) for target in changed_primary_targets)
-
-
-def _workspace_python(workspace_root: Path) -> str:
-    for rel_path in (".venv/bin/python", ".venv/Scripts/python.exe", ".venv/Scripts/python"):
-        python_path = workspace_root / rel_path
-        if python_path.exists():
-            return str(python_path)
-    return sys.executable
+    return (
+        SCRIPT_OUTPUT_SURFACES_TARGET in supporting_targets
+        and any(target.startswith(OPS_SCRIPTS_PREFIX) for target in changed_primary_targets)
+    )
 
 
 def _refresh_script_output_surfaces(workspace_root: Path) -> None:
     if not (workspace_root / SCRIPT_OUTPUT_SURFACES_MODULE).is_file():
         return
-    completed = subprocess.run(
-        [
-            _workspace_python(workspace_root),
-            "-m",
-            "ops.scripts.script_output_surfaces",
-            "--vault",
-            ".",
-            "--out",
+    try:
+        write_registry(
+            workspace_root,
+            build_registry(workspace_root),
             SCRIPT_OUTPUT_SURFACES_TARGET,
-        ],
-        cwd=workspace_root,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if completed.returncode != 0:
-        detail = (completed.stderr or completed.stdout or "").strip()
+        )
+    except (OSError, SyntaxError, UnicodeDecodeError, ValueError) as exc:
         raise ExecutorRuntimeExecutionError(
             "failed to refresh ops/script-output-surfaces.json after worker changed "
-            f"ops/scripts target: {detail}"
-        )
+            f"ops/scripts target: {type(exc).__name__}: {exc}"
+        ) from exc
 
 
 def _stream_text(value: str | bytes | None) -> str:
@@ -549,6 +535,12 @@ def run_executor_pipeline(
                 changed_primary_targets=changed_primary_targets,
                 supporting_targets=supporting_targets,
             ):
+                if SCRIPT_OUTPUT_SURFACES_MODULE in changed_primary_targets:
+                    raise ExecutorRuntimeExecutionError(
+                        "worker changed ops/scripts/core/script_output_surfaces.py; "
+                        "refusing to refresh ops/script-output-surfaces.json with the "
+                        "parent's already-imported generator"
+                    )
                 _refresh_script_output_surfaces(workspace_root)
             if has_post_worker_roles:
                 _run_worker_structural_complexity_preflight(

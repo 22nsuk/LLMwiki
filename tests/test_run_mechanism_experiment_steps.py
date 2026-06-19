@@ -126,7 +126,7 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             self.assertEqual(result.telemetry["baseline_file_count"], 2)
             self.assertEqual(result.telemetry["copied_file_count"], 1)
 
-    def test_prepare_workspace_copy_links_repo_virtualenv_for_executor_dependencies(self) -> None:
+    def test_prepare_workspace_copy_provisions_python_shim_without_live_venv_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             workspace_root = Path(temp_dir) / "workspace-root"
@@ -142,8 +142,13 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             )
 
             workspace_venv = result.workspace_vault / ".venv"
-            self.assertTrue(workspace_venv.is_symlink())
-            self.assertEqual(workspace_venv.resolve(), (vault / ".venv").resolve())
+            workspace_python = workspace_venv / "bin" / "python"
+            self.assertFalse(workspace_venv.is_symlink())
+            self.assertTrue(workspace_python.is_file())
+            self.assertIn(
+                (vault / ".venv" / "bin" / "python").as_posix(),
+                workspace_python.read_text(encoding="utf-8"),
+            )
             self.assertNotIn(".venv/bin/python", result.baseline_file_digests)
 
     def test_prepare_workspace_copy_supports_sparse_manifest_copied_universe(self) -> None:
