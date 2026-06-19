@@ -132,14 +132,15 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "moderate",
         )
 
-    def test_ci_skips_pr_branch_push_wave_and_keeps_pr_checks(self) -> None:
+    def test_ci_skips_pr_branch_push_wave_and_keeps_release_pushes(self) -> None:
         on_section = workflow_on(_workflow())
         push = workflow_mapping(
             on_section.get("push", {}),
             "CI push trigger must be a mapping",
         )
 
-        self.assertEqual(push.get("branches"), ["main"])
+        self.assertEqual(push.get("branches"), ["main", "release/**"])
+        self.assertEqual(push.get("tags"), ["**"])
         self.assertNotIn("branches-ignore", push)
         self.assertIn("pull_request", on_section)
         self.assertIn("workflow_dispatch", on_section)
