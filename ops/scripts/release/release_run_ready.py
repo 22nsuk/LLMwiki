@@ -5,7 +5,7 @@ import argparse
 import datetime as dt
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -27,8 +27,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         release_source_tree_fingerprint,
     )
     from ops.scripts.release.release_run_manifest import (
+        DEFAULT_CLOSEOUT_SUMMARY,
+        DEFAULT_DISTRIBUTION_ZIP,
+        DEFAULT_SOURCE_PACKAGE_SMOKE,
         _file_identity,
         _resolve,
+        _safe_vault_relative_path,
         build_manifest,
         git_clean,
         git_commit,
@@ -54,8 +58,12 @@ else:
         release_source_tree_fingerprint,
     )
     from ops.scripts.release.release_run_manifest import (
+        DEFAULT_CLOSEOUT_SUMMARY,
+        DEFAULT_DISTRIBUTION_ZIP,
+        DEFAULT_SOURCE_PACKAGE_SMOKE,
         _file_identity,
         _resolve,
+        _safe_vault_relative_path,
         build_manifest,
         git_clean,
         git_commit,
@@ -97,6 +105,7 @@ class RunReadyPlanSpec:
     expected_suite: str = ""
     require_full_suite: bool = False
     referenced_file_field: str = ""
+    expected_referenced_file_path: str | None = None
 
 
 PLAN_SPECS = (
@@ -191,6 +200,80 @@ PLAN_SPECS = (
         referenced_file_field="source_zip",
     ),
 )
+
+
+def _make_target_with_vars(
+    target: str,
+    assignments: tuple[tuple[str, str], ...],
+) -> str:
+    suffix = [f"{name}={value}" for name, value in assignments if value]
+    return " ".join([target, *suffix])
+
+
+def _safe_selected_repo_path(vault: Path, path_value: str) -> str:
+    return _safe_vault_relative_path(
+        vault,
+        display_path(vault, _resolve(vault, path_value)),
+    )
+
+
+def _plan_specs_for_inputs(
+    vault: Path,
+    *,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+) -> tuple[RunReadyPlanSpec, ...]:
+    safe_distribution_zip = _safe_selected_repo_path(vault, distribution_zip)
+    safe_source_package_smoke = _safe_selected_repo_path(vault, source_package_smoke)
+    distribution_zip_vars: tuple[tuple[str, str], ...] = (
+        (("RELEASE_CLOSEOUT_DISTRIBUTION_ZIP", safe_distribution_zip),)
+        if safe_distribution_zip
+        and safe_distribution_zip != DEFAULT_DISTRIBUTION_ZIP
+        else ()
+    )
+    source_package_smoke_vars: tuple[tuple[str, str], ...] = (
+        (("SOURCE_PACKAGE_SMOKE_OUT", safe_source_package_smoke),)
+        if safe_source_package_smoke
+        and safe_source_package_smoke != DEFAULT_SOURCE_PACKAGE_SMOKE
+        else ()
+    )
+    specs: list[RunReadyPlanSpec] = []
+    selected_zip_nodes = {
+        "release_distribution_zip_smoke",
+        "source_package_smoke",
+        "source_package_clean_extract",
+    }
+    for spec in PLAN_SPECS:
+        updates: dict[str, Any] = {}
+        if spec.name in selected_zip_nodes:
+            updates["expected_referenced_file_path"] = safe_distribution_zip
+        if spec.name in {
+            "release_distribution_zip_smoke",
+            "source_package_clean_extract",
+        } and distribution_zip_vars:
+            updates["check_target"] = _make_target_with_vars(
+                spec.check_target,
+                distribution_zip_vars,
+            )
+            updates["refresh_target"] = _make_target_with_vars(
+                spec.refresh_target,
+                distribution_zip_vars,
+            )
+        if spec.name == "source_package_smoke":
+            if safe_source_package_smoke != DEFAULT_SOURCE_PACKAGE_SMOKE:
+                updates["path"] = safe_source_package_smoke
+            target_vars = distribution_zip_vars + source_package_smoke_vars
+            if target_vars:
+                updates["check_target"] = _make_target_with_vars(
+                    spec.check_target,
+                    target_vars,
+                )
+                updates["refresh_target"] = _make_target_with_vars(
+                    spec.refresh_target,
+                    target_vars,
+                )
+        specs.append(replace(spec, **updates) if updates else spec)
+    return tuple(specs)
 
 
 def _tail(text: str, *, limit: int = 4000) -> str:
@@ -289,12 +372,25 @@ def _synthetic_preflight(vault: Path, expected_fingerprint: str) -> dict[str, An
     }
 
 
-def _release_steps(make_bin: str) -> list[tuple[str, list[str]]]:
+def _release_steps(
+    make_bin: str,
+    *,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+) -> list[tuple[str, list[str]]]:
     return [
         ("release-test-current", [make_bin, "release-test-current"]),
         ("release-public-current", [make_bin, "release-public-current"]),
         ("release-smoke-full-reuse", [make_bin, "release-smoke-full-reuse"]),
-        ("release-source-package-check", [make_bin, "release-source-package-check"]),
+        (
+            "release-source-package-check",
+            [
+                make_bin,
+                "release-source-package-check",
+                f"RELEASE_CLOSEOUT_DISTRIBUTION_ZIP={distribution_zip}",
+                f"SOURCE_PACKAGE_SMOKE_OUT={source_package_smoke}",
+            ],
+        ),
     ]
 
 
@@ -413,7 +509,11 @@ def _currentness_status(payload: dict[str, Any]) -> str:
 
 
 def _referenced_file_is_current(
-    vault: Path, payload: dict[str, Any], field: str
+    vault: Path,
+    payload: dict[str, Any],
+    field: str,
+    *,
+    expected_path: str | None = None,
 ) -> bool:
     if not field:
         return True
@@ -426,6 +526,11 @@ def _referenced_file_is_current(
         return False
     if Path(path_text).is_absolute():
         return False
+    if expected_path is not None:
+        if not expected_path:
+            return False
+        if _safe_vault_relative_path(vault, path_text) != expected_path:
+            return False
     identity = _file_identity(vault, path_text)
     return bool(identity["exists"]) and identity["sha256"] == sha256
 
@@ -469,7 +574,12 @@ def _semantic_plan_issues(
         summary = summary if isinstance(summary, dict) else {}
         if str(summary.get("public_check_status", "")).strip() != "pass":
             issues.append("summary_status_mismatch")
-    if not _referenced_file_is_current(vault, payload, spec.referenced_file_field):
+    if not _referenced_file_is_current(
+        vault,
+        payload,
+        spec.referenced_file_field,
+        expected_path=spec.expected_referenced_file_path,
+    ):
         issues.append("referenced_file_stale")
     return issues
 
@@ -730,6 +840,9 @@ def _duration_summary(
 def build_run_ready_plan(
     vault: Path,
     *,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+    closeout_summary: str = DEFAULT_CLOSEOUT_SUMMARY,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
@@ -755,13 +868,20 @@ def build_run_ready_plan(
             duration_budget_seconds=duration_budget_seconds,
             command_duration_seconds=command_duration_seconds,
         )
-        for spec in PLAN_SPECS
+        for spec in _plan_specs_for_inputs(
+            vault,
+            distribution_zip=distribution_zip,
+            source_package_smoke=source_package_smoke,
+        )
     )
     authority_alignment = run_manifest_alignment(
         vault,
         DEFAULT_OUT,
         current_revision=revision,
         current_source_tree_fingerprint=fingerprint,
+        distribution_zip=distribution_zip,
+        source_package_smoke=source_package_smoke,
+        closeout_summary=closeout_summary,
     )
     causes = [_plan_cause(node) for node in nodes if not node["can_reuse"]]
     if authority_alignment["alignment_status"] != "current":
@@ -845,12 +965,21 @@ def run_release_ready(
     out_path: str,
     make_bin: str,
     timeout_seconds: int,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
+    source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+    closeout_summary: str = DEFAULT_CLOSEOUT_SUMMARY,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     expected = release_source_tree_fingerprint(vault)
+    safe_distribution_zip = _safe_selected_repo_path(vault, distribution_zip)
+    safe_source_package_smoke = _safe_selected_repo_path(vault, source_package_smoke)
     steps: list[dict[str, Any]] = [_synthetic_preflight(vault, expected)]
-    if steps[-1]["status"] == "pass":
-        for name, command in _release_steps(make_bin):
+    if steps[-1]["status"] == "pass" and safe_distribution_zip and safe_source_package_smoke:
+        for name, command in _release_steps(
+            make_bin,
+            distribution_zip=safe_distribution_zip,
+            source_package_smoke=safe_source_package_smoke,
+        ):
             step = _command_step(
                 vault=vault,
                 name=name,
@@ -865,6 +994,9 @@ def run_release_ready(
         vault,
         expected_source_tree_fingerprint=expected,
         steps=steps,
+        distribution_zip=safe_distribution_zip,
+        source_package_smoke=safe_source_package_smoke,
+        closeout_summary=closeout_summary,
         context=context or RuntimeContext(display_timezone=dt.UTC),
     )
     write_manifest(vault, manifest, out_path)
@@ -890,6 +1022,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--make-bin", default="make")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("--distribution-zip", default=DEFAULT_DISTRIBUTION_ZIP)
+    parser.add_argument("--source-package-smoke", default=DEFAULT_SOURCE_PACKAGE_SMOKE)
+    parser.add_argument("--closeout-summary", default=DEFAULT_CLOSEOUT_SUMMARY)
     return parser.parse_args(argv)
 
 
@@ -897,7 +1032,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     if args.plan:
-        plan = build_run_ready_plan(vault)
+        plan = build_run_ready_plan(
+            vault,
+            distribution_zip=args.distribution_zip,
+            source_package_smoke=args.source_package_smoke,
+            closeout_summary=args.closeout_summary,
+        )
         path = write_run_ready_plan(vault, plan, args.plan_out)
         print(display_path(vault, path))
         print(f"release_run_ready_plan_status={plan['plan_status']}")
@@ -931,6 +1071,9 @@ def main(argv: list[str] | None = None) -> int:
         out_path=args.out,
         make_bin=args.make_bin,
         timeout_seconds=args.timeout_seconds,
+        distribution_zip=args.distribution_zip,
+        source_package_smoke=args.source_package_smoke,
+        closeout_summary=args.closeout_summary,
     )
     print(display_path(vault, (vault / args.out).resolve()))
     print(f"release_run_status={manifest['status']}")

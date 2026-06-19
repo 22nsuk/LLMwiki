@@ -125,13 +125,21 @@ def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -
 
 def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> None:
     preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
+    run_ready_plan_check_line = (
+        "$(MAKE) release-run-ready-plan-check "
+        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+    )
+    run_ready_check_line = (
+        "$(MAKE) release-run-ready-check "
+        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+    )
     test.assertEqual(
         preseal_recipe[:16],
         [
             "$(MAKE) release-auto-promotion-ready-invalidate",
             "$(MAKE) release-auto-promotion-goal-run-id-guard",
-            "$(MAKE) release-run-ready-plan-check",
-            "$(MAKE) release-run-ready-check",
+            run_ready_plan_check_line,
+            run_ready_check_line,
             "$(MAKE) bootstrap-preflight",
             "$(MAKE) registry-preflight",
             "$(MAKE) release-smoke-full-current-check",
@@ -160,6 +168,8 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
     )
     test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
+    test.assertEqual(preseal_recipe.count(run_ready_plan_check_line), 1)
+    test.assertEqual(preseal_recipe.count(run_ready_check_line), 2)
     test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
     test.assertLess(
         preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
@@ -179,12 +189,21 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         preseal_recipe.index(strict_cohort_line),
     )
     preseal_freshness_index = preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check")
+    final_closeout_summary_index = preseal_recipe.index(
+        "$(MAKE) release-closeout-summary-report",
+        preseal_freshness_index,
+    )
     test.assertLess(
         preseal_freshness_index,
-        preseal_recipe.index(
-            "$(MAKE) release-closeout-summary-report",
-            preseal_freshness_index,
-        ),
+        final_closeout_summary_index,
+    )
+    test.assertLess(
+        final_closeout_summary_index,
+        preseal_recipe.index(run_ready_check_line, final_closeout_summary_index),
+    )
+    test.assertLess(
+        preseal_recipe.index(run_ready_check_line, final_closeout_summary_index),
+        preseal_recipe.index("$(MAKE) release-evidence-dashboard-report"),
     )
     test.assertLess(
         preseal_recipe.index(
@@ -435,13 +454,26 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         run_ready_block = _target_block(text, "release-run-ready")
         run_ready_plan_block = _target_block(text, "release-run-ready-plan")
         run_ready_plan_check_block = _target_block(text, "release-run-ready-plan-check")
+        run_ready_check_block = _target_block(text, "release-run-ready-check")
         self.assertIn("$(MAKE) release-run-ready-plan", run_ready_block)
         self.assertIn("ops.scripts.release_run_ready", run_ready_block)
+        self.assertIn('--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"', run_ready_block)
+        self.assertIn('--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"', run_ready_block)
+        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', run_ready_block)
         self.assertIn("--plan", run_ready_plan_block)
         self.assertIn('--plan-out "$(RELEASE_RUN_READY_PLAN_OUT)"', run_ready_plan_block)
+        self.assertIn('--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"', run_ready_plan_block)
+        self.assertIn('--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"', run_ready_plan_block)
+        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', run_ready_plan_block)
         self.assertIn("--require-ready", run_ready_plan_check_block)
         self.assertIn('--plan-out "$(RELEASE_RUN_READY_PLAN_CHECK_OUT)"', run_ready_plan_check_block)
-        self.assertIn("ops.scripts.release_run_manifest", _target_block(text, "release-run-ready-check"))
+        self.assertIn('--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"', run_ready_plan_check_block)
+        self.assertIn('--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"', run_ready_plan_check_block)
+        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', run_ready_plan_check_block)
+        self.assertIn("ops.scripts.release_run_manifest", run_ready_check_block)
+        self.assertIn('--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"', run_ready_check_block)
+        self.assertIn('--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"', run_ready_check_block)
+        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', run_ready_check_block)
 
         self.assertEqual(
             _recipe_lines(text, "release-test-current"),
@@ -565,8 +597,14 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
 
         self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_block)
         self.assertIn("--phase preseal", auto_promotion_preseal_block)
-        self.assertIn("$(MAKE) release-run-ready-plan-check", auto_promotion_preseal_block)
-        self.assertIn("$(MAKE) release-run-ready-check", auto_promotion_preseal_block)
+        self.assertIn(
+            'release-run-ready-plan-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            auto_promotion_preseal_block,
+        )
+        self.assertIn(
+            'release-run-ready-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            auto_promotion_preseal_block,
+        )
         self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_block)
         self.assertIn(
             "$(MAKE) release-evidence-cohort-preseal-refresh",

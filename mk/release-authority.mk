@@ -6,16 +6,16 @@ release-authority-inventory:
 release-run-ready:
 	$(MAKE) release-run-ready-plan
 	$(MAKE) release-auto-promotion-ready-invalidate
-	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --make-bin "$(RELEASE_RUN_READY_MAKE_BIN)" --timeout-seconds "$(RELEASE_RUN_READY_TIMEOUT_SECONDS)"
+	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --make-bin "$(RELEASE_RUN_READY_MAKE_BIN)" --timeout-seconds "$(RELEASE_RUN_READY_TIMEOUT_SECONDS)" --distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"
 
 release-run-ready-plan:
-	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --plan --plan-out "$(RELEASE_RUN_READY_PLAN_OUT)"
+	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --plan --plan-out "$(RELEASE_RUN_READY_PLAN_OUT)" --distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"
 
 release-run-ready-plan-check:
-	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --plan --plan-out "$(RELEASE_RUN_READY_PLAN_CHECK_OUT)" --require-ready
+	$(PYTHON) -m ops.scripts.release_run_ready --vault "$(VAULT)" --plan --plan-out "$(RELEASE_RUN_READY_PLAN_CHECK_OUT)" --require-ready --distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"
 
 release-run-ready-check:
-	$(PYTHON) -m ops.scripts.release_run_manifest --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --check
+	$(PYTHON) -m ops.scripts.release_run_manifest --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --check --distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"
 
 release-sealed-run-ready-plan:
 	$(PYTHON) -m ops.scripts.release_evidence_planner --vault "$(VAULT)" --stage sealed-run-ready --out "$(RELEASE_SEALED_RUN_READY_PLAN_OUT)" --require-ready
@@ -81,8 +81,8 @@ release-auto-promotion-safe-cleanup-finalize:
 release-auto-promotion-preseal:
 	$(MAKE) release-auto-promotion-ready-invalidate
 	$(MAKE) release-auto-promotion-goal-run-id-guard
-	$(MAKE) release-run-ready-plan-check
-	$(MAKE) release-run-ready-check
+	$(MAKE) release-run-ready-plan-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
+	$(MAKE) release-run-ready-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
 	$(MAKE) bootstrap-preflight
 	$(MAKE) registry-preflight
 	$(MAKE) release-smoke-full-current-check
@@ -97,6 +97,7 @@ release-auto-promotion-preseal:
 	$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"
 	$(MAKE) artifact-freshness-refresh-check
 	$(MAKE) release-closeout-summary-report
+	$(MAKE) release-run-ready-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
 	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
 	$(MAKE) release-clean-blocker-ledger

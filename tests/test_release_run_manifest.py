@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import io
 import json
 import tempfile
@@ -61,17 +62,57 @@ class ReleaseRunManifestTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def _write_zip(self) -> None:
+    def _write_zip(self) -> dict[str, object]:
         path = self.vault / "build" / "release" / "LLMwiki-source.zip"
         path.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(path, "w") as archive:
             archive.writestr("LLMwiki/README.md", "hello\n")
+        return {
+            "path": "build/release/LLMwiki-source.zip",
+            "exists": True,
+            "size_bytes": path.stat().st_size,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
 
     def _write_run_inputs(self) -> None:
-        self._write_zip()
+        source_zip = self._write_zip()
         self._write_json(
             "build/source-package-smoke/source-package-smoke.json",
-            {"artifact_kind": "source_package_smoke", "status": "pass"},
+            {
+                "artifact_kind": "source_package_smoke",
+                "status": "pass",
+                "input_fingerprints": {"source_zip": source_zip["sha256"]},
+                "source_zip": source_zip,
+            },
+        )
+
+    def _write_closeout_summary(
+        self,
+        *,
+        generated_at: str = "2026-05-23T12:00:00Z",
+        machine_release_allowed: bool = True,
+        note: str = "stable",
+    ) -> None:
+        self._write_json(
+            "ops/reports/release-closeout-summary.json",
+            {
+                "$schema": "ops/schemas/release-closeout-summary.schema.json",
+                "artifact_kind": "release_closeout_summary",
+                "generated_at": generated_at,
+                "producer": "ops.scripts.release_closeout_summary",
+                "source_command": "python -m ops.scripts.release_closeout_summary --vault . --profile default",
+                "source_revision": "abc123",
+                "source_tree_fingerprint": "fp-current",
+                "input_fingerprints": {"fixture": "same"},
+                "schema_version": 1,
+                "artifact_status": "current",
+                "retention_policy": "canonical_report",
+                "encoding": "utf-8",
+                "currentness": {"status": "current", "checked_at": generated_at},
+                "status": {"result": "pass"},
+                "machine_release_allowed": machine_release_allowed,
+                "note": note,
+            },
         )
 
     def _patch_clean_repo(self, fingerprint: str) -> Any:
@@ -126,7 +167,7 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["git_commit"], "abc123")
         self.assertEqual(manifest["source_tree_fingerprint"], "fp-current")
         self.assertEqual(manifest["failures"], [])
-        self.assertEqual(manifest["schema_version"], 4)
+        self.assertEqual(manifest["schema_version"], 5)
         self.assertIn("release_authority_status", manifest)
         self.assertIn("machine_release_allowed", manifest)
         self.assertIn("step_duration_summary", manifest)
@@ -138,7 +179,16 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertNotIn("payload_status", json.dumps(manifest, ensure_ascii=False))
         self.assertEqual(
             sorted(manifest["input_fingerprints"]),
-            ["distribution_zip", "source_package_smoke"],
+            [
+                "closeout_summary",
+                "distribution_zip",
+                "source_package_smoke",
+                "source_package_smoke_source_zip",
+            ],
+        )
+        self.assertEqual(
+            manifest["input_fingerprints"]["distribution_zip"],
+            manifest["source_package_smoke"]["source_zip_sha256"],
         )
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_manifest(self.vault, manifest, "build/release/release-run-manifest.json").exists())
@@ -257,6 +307,237 @@ class ReleaseRunManifestTests(unittest.TestCase):
             "build/release/LLMwiki-source.zip",
         )
 
+    def test_distribution_zip_path_rejects_invalid_manifest_path(self) -> None:
+        self._write_run_inputs()
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        manifest["distribution_zip"]["path"] = "build/release/LLMwiki-source.zip\"; touch pwned #"
+        self._write_json("build/release/release-run-manifest.json", manifest)
+
+        self.assertEqual(
+            distribution_zip_path_from_manifest(
+                self.vault,
+                "build/release/release-run-manifest.json",
+            ),
+            "",
+        )
+
+    def test_manifest_fails_when_smoked_source_zip_does_not_match_distribution(self) -> None:
+        self._write_run_inputs()
+        smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        smoke["source_zip"]["sha256"] = "0" * 64
+        smoke["input_fingerprints"]["source_zip"] = "0" * 64
+        smoke_path.write_text(json.dumps(smoke, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn("source_package_smoke_source_zip_mismatch", manifest["failures"])
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_manifest_fails_when_smoked_source_zip_path_does_not_match_distribution(self) -> None:
+        self._write_run_inputs()
+        default_zip = self.vault / "build/release/LLMwiki-source.zip"
+        custom_zip = self.vault / "build/release/custom-source.zip"
+        custom_zip.write_bytes(default_zip.read_bytes())
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                distribution_zip="build/release/custom-source.zip",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_path_mismatch",
+            manifest["failures"],
+        )
+        self.assertNotIn(
+            "source_package_smoke_source_zip_mismatch",
+            manifest["failures"],
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_manifest_requires_smoke_source_zip_identity_not_input_fingerprint_only(self) -> None:
+        self._write_run_inputs()
+        smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        smoke.pop("source_zip")
+        smoke_path.write_text(json.dumps(smoke, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_fingerprint_missing",
+            manifest["failures"],
+        )
+        self.assertEqual(manifest["source_package_smoke"]["source_zip_sha256"], "")
+        self.assertEqual(
+            manifest["input_fingerprints"]["source_package_smoke_source_zip"],
+            "",
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_manifest_records_malformed_smoke_source_zip_fingerprint_as_failure(self) -> None:
+        self._write_run_inputs()
+        smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        smoke["source_zip"]["sha256"] = "not-a-sha"
+        smoke["input_fingerprints"]["source_zip"] = "not-a-sha"
+        smoke_path.write_text(json.dumps(smoke, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_fingerprint_invalid",
+            manifest["failures"],
+        )
+        self.assertEqual(manifest["source_package_smoke"]["source_zip_sha256"], "")
+        self.assertEqual(
+            manifest["input_fingerprints"]["source_package_smoke_source_zip"],
+            "",
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+        self.assertTrue(
+            write_manifest(
+                self.vault,
+                manifest,
+                "build/release/release-run-manifest.json",
+            ).exists()
+        )
+
+    def test_manifest_fails_when_smoke_source_zip_fingerprints_disagree(self) -> None:
+        self._write_run_inputs()
+        smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        smoke["input_fingerprints"]["source_zip"] = "0" * 64
+        smoke_path.write_text(json.dumps(smoke, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_fingerprint_mismatch",
+            manifest["failures"],
+        )
+        self.assertNotIn("_source_zip_input_sha256", manifest["source_package_smoke"])
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_manifest_requires_smoke_source_zip_input_fingerprint(self) -> None:
+        self._write_run_inputs()
+        smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        smoke["input_fingerprints"].pop("source_zip")
+        smoke_path.write_text(json.dumps(smoke, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_input_fingerprint_missing",
+            manifest["failures"],
+        )
+        self.assertEqual(
+            manifest["source_package_smoke"]["source_zip_sha256"],
+            manifest["distribution_zip"]["sha256"],
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+        self.assertTrue(
+            write_manifest(
+                self.vault,
+                manifest,
+                "build/release/release-run-manifest.json",
+            ).exists()
+        )
+
+    def test_manifest_records_missing_smoke_source_zip_fingerprint_as_failure(self) -> None:
+        self._write_run_inputs()
+        smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        smoke.pop("source_zip")
+        smoke["input_fingerprints"].pop("source_zip")
+        smoke_path.write_text(json.dumps(smoke, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_fingerprint_missing",
+            manifest["failures"],
+        )
+        self.assertEqual(manifest["source_package_smoke"]["source_zip_sha256"], "")
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+        self.assertTrue(
+            write_manifest(
+                self.vault,
+                manifest,
+                "build/release/release-run-manifest.json",
+            ).exists()
+        )
+
+    def test_manifest_records_rejected_distribution_zip_path_as_schema_valid_failure(self) -> None:
+        self._write_run_inputs()
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                distribution_zip="/tmp/not-in-vault.zip",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn("distribution_zip_path_not_vault_relative", manifest["failures"])
+        self.assertEqual(manifest["distribution_zip"]["path"], "")
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+        self.assertTrue(
+            write_manifest(
+                self.vault,
+                manifest,
+                "build/release/release-run-manifest.json",
+            ).exists()
+        )
+
     def test_manifest_fails_on_source_fingerprint_drift(self) -> None:
         self._write_run_inputs()
 
@@ -272,13 +553,16 @@ class ReleaseRunManifestTests(unittest.TestCase):
 
     def test_check_mode_prints_fingerprint_drift_remediation_context(self) -> None:
         self._write_run_inputs()
-        self._write_json(
-            "build/release/release-run-manifest.json",
-            {
-                "generated_at": "2026-06-03T12:00:00Z",
-                "expected_source_tree_fingerprint": "fp-old",
-                "steps": [],
-            },
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-old",
+                context=fixed_context(),
+            )
+        manifest["generated_at"] = "2026-06-03T12:00:00Z"
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
         )
 
         stdout = io.StringIO()
@@ -316,6 +600,199 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertIn(
             "ops/scripts/release/release_run_manifest.py@2026-06-03T12:02:00Z",
             output,
+        )
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
+    def test_check_mode_reports_input_fingerprint_drift_without_overwriting_manifest(self) -> None:
+        self._write_run_inputs()
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        manifest["input_fingerprints"]["distribution_zip"] = "0" * 64
+        self._write_json("build/release/release-run-manifest.json", manifest)
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("failures=release_run_manifest_input_fingerprint_drift", output)
+        self.assertIn("input_fingerprint_drift=expected:", output)
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
+    def test_check_mode_reports_distribution_zip_path_drift_without_overwriting_manifest(self) -> None:
+        self._write_run_inputs()
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+        default_zip = self.vault / "build" / "release" / "LLMwiki-source.zip"
+        custom_zip = self.vault / "build" / "release" / "custom-source.zip"
+        custom_zip.write_bytes(default_zip.read_bytes())
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--check",
+                    "--distribution-zip",
+                    "build/release/custom-source.zip",
+                ]
+            )
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("release_run_manifest_distribution_zip_path_drift", output)
+        self.assertIn(
+            "distribution_zip_path_drift=expected:build/release/LLMwiki-source.zip;"
+            "current:build/release/custom-source.zip",
+            output,
+        )
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
+    def test_check_mode_rejects_persisted_failure_without_overwriting_manifest(self) -> None:
+        self._write_run_inputs()
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        manifest["status"] = "fail"
+        manifest["failures"] = ["git_worktree_dirty"]
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("release_run_manifest_persisted_not_pass", output)
+        self.assertIn("persisted_release_run_manifest_status=fail", output)
+        self.assertIn(
+            "persisted_release_run_manifest_failures=git_worktree_dirty",
+            output,
+        )
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
+    def test_check_mode_allows_closeout_summary_envelope_refresh_without_overwriting_manifest(
+        self,
+    ) -> None:
+        self._write_run_inputs()
+        self._write_closeout_summary(generated_at="2026-05-23T12:00:00Z")
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+        self._write_closeout_summary(generated_at="2026-05-23T12:05:00Z")
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 0)
+        output = stdout.getvalue()
+        self.assertNotIn("release_run_manifest_input_fingerprint_drift", output)
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
+    def test_check_mode_reports_closeout_summary_semantic_drift_without_overwriting_manifest(
+        self,
+    ) -> None:
+        self._write_run_inputs()
+        self._write_closeout_summary(machine_release_allowed=False, note="old")
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+        self._write_closeout_summary(machine_release_allowed=True, note="new")
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("release_run_manifest_input_fingerprint_drift", output)
+        self.assertIn("closeout_summary", output)
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
+    def test_check_mode_reports_source_revision_drift_without_overwriting_manifest(self) -> None:
+        self._write_run_inputs()
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        manifest["source_revision"] = "old-commit"
+        manifest["git_commit"] = "old-commit"
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("release_run_manifest_source_revision_drift", output)
+        self.assertIn("release_run_manifest_git_commit_drift", output)
+        self.assertIn("source_revision_drift=expected:old-commit;current:abc123", output)
+        self.assertIn("git_commit_drift=expected:old-commit;current:abc123", output)
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
         )
 
     def test_remote_ahead_is_diagnostic_not_run_ready_blocker(self) -> None:

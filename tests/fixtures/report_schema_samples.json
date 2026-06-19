@@ -3944,9 +3944,9 @@
       "public_check_summary": "385d80af67140e1d6e7abd9211f8b24d85056ded4c363d4ae3706616843461ad",
       "release_smoke_full": "0f357dffd9f342a4a44765cf17e765bc1eb2d2ccacf377f99d242761213bf2d0",
       "release_distribution_zip_smoke": "3f159a5b22a6fc864f4311e3d0537763401458bde7e7dce59d13702bf8f1cbaf",
-      "source_package_smoke": "0877fa7bf5d42d932d0929a8066a8d00e5f160d050a9d4519d361fa866a55d17",
+      "source_package_smoke": "9d4bc1f6ecf05f7144fc10f23f62ddda61e93dd796da256715d8237c3b0c6f79",
       "source_package_clean_extract": "11206674977a6b07f703397c7a6eda88bc0a77626eea2a75f126cef9d102457f",
-      "authority_manifest": "c4c3e6ca61e86f718288f38b13ae56d1a61cb84fb853479672d8e26d315f5bb2"
+      "authority_manifest": "1f84c0fc62425060df07dfc345a3668fbcd9402d62065a94d718c6c18690586c"
     },
     "schema_version": 1,
     "artifact_status": "current",
@@ -4118,7 +4118,7 @@
         "status": "pass",
         "source_revision": "abc123",
         "source_tree_fingerprint": "fp-current",
-        "input_fingerprint": "0877fa7bf5d42d932d0929a8066a8d00e5f160d050a9d4519d361fa866a55d17",
+        "input_fingerprint": "9d4bc1f6ecf05f7144fc10f23f62ddda61e93dd796da256715d8237c3b0c6f79",
         "can_reuse": true,
         "issues": [],
         "reason_codes": [],
@@ -4162,7 +4162,7 @@
       "current_source_revision": "abc123",
       "source_tree_fingerprint": "fp-current",
       "current_source_tree_fingerprint": "fp-current",
-      "input_fingerprint": "c4c3e6ca61e86f718288f38b13ae56d1a61cb84fb853479672d8e26d315f5bb2",
+      "input_fingerprint": "1f84c0fc62425060df07dfc345a3668fbcd9402d62065a94d718c6c18690586c",
       "alignment_status": "current",
       "issues": [],
       "recommended_next_target": "release-run-ready"
