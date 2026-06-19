@@ -399,6 +399,38 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertNotIn("_source_zip_input_sha256", manifest["source_package_smoke"])
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
+    def test_manifest_requires_smoke_source_zip_input_fingerprint(self) -> None:
+        self._write_run_inputs()
+        smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        smoke["input_fingerprints"].pop("source_zip")
+        smoke_path.write_text(json.dumps(smoke, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn(
+            "source_package_smoke_source_zip_input_fingerprint_missing",
+            manifest["failures"],
+        )
+        self.assertEqual(
+            manifest["source_package_smoke"]["source_zip_sha256"],
+            manifest["distribution_zip"]["sha256"],
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+        self.assertTrue(
+            write_manifest(
+                self.vault,
+                manifest,
+                "build/release/release-run-manifest.json",
+            ).exists()
+        )
+
     def test_manifest_records_missing_smoke_source_zip_fingerprint_as_failure(self) -> None:
         self._write_run_inputs()
         smoke_path = self.vault / "build/source-package-smoke/source-package-smoke.json"

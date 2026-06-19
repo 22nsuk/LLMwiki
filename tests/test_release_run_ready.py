@@ -31,7 +31,7 @@ RUN_MANIFEST_SCHEMA_PATH = (
 )
 ZERO_SHA256 = "0" * 64
 READY_PLAN_GOLDEN_SHA256 = (
-    "6382fd687f2bf016669090beb9f317304b66a4515683d46967eb33cdff8e08f6"
+    "27f932e646d2f2e74169d9dcc252ccb367a92fba2d2022cb0642d9bbe74b2e91"
 )
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",
@@ -408,7 +408,7 @@ def _release_smoke_payload(
 
 
 def _source_package_smoke_payload(source_zip: dict[str, object]) -> dict[str, object]:
-    return {
+    payload = {
         **_common_envelope(
             schema="ops/schemas/source-package-smoke.schema.json",
             artifact_kind="source_package_smoke",
@@ -427,6 +427,11 @@ def _source_package_smoke_payload(source_zip: dict[str, object]) -> dict[str, ob
         "commands": [],
         "failures": [],
     }
+    payload["input_fingerprints"] = {
+        **payload["input_fingerprints"],
+        "source_zip": str(source_zip["sha256"]),
+    }
+    return payload
 
 
 def _source_package_clean_extract_payload(
@@ -922,6 +927,92 @@ def test_run_ready_plan_aligns_authority_manifest_to_selected_distribution_zip(
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 
+def test_run_ready_plan_rejects_distribution_smoke_for_different_zip_path(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(
+        vault,
+        source_zip_path="build/release/custom-source.zip",
+    )
+    default_zip = _file_identity(vault, "build/release/LLMwiki-source.zip")
+    distribution_smoke_path = (
+        vault / "build" / "release" / "release-distribution-zip-smoke.json"
+    )
+    distribution_smoke = json.loads(
+        distribution_smoke_path.read_text(encoding="utf-8")
+    )
+    distribution_smoke["archive_file"] = default_zip
+    _write_json(
+        vault,
+        "build/release/release-distribution-zip-smoke.json",
+        distribution_smoke,
+    )
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(
+            vault,
+            distribution_zip="build/release/custom-source.zip",
+            context=fixed_context(),
+        )
+
+    distribution_node = next(
+        node
+        for node in plan["nodes"]
+        if node["name"] == "release_distribution_zip_smoke"
+    )
+    expected_target = (
+        "release-package-current-or-refresh "
+        "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/custom-source.zip"
+    )
+    assert plan["plan_status"] == "blocked"
+    assert distribution_node["can_reuse"] is False
+    assert "referenced_file_stale" in distribution_node["issues"]
+    assert distribution_node["refresh_target"] == expected_target
+    assert distribution_node["next_targets"] == [expected_target]
+    assert plan["minimal_next_target"] == expected_target
+    assert expected_target in plan["next_targets"]
+    assert plan["authority_manifest_alignment"]["alignment_status"] == "current"
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_rejects_default_distribution_smoke_for_custom_zip_path(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+    custom_zip = _file_identity(vault, "build/release/custom-source.zip")
+    distribution_smoke_path = (
+        vault / "build" / "release" / "release-distribution-zip-smoke.json"
+    )
+    distribution_smoke = json.loads(
+        distribution_smoke_path.read_text(encoding="utf-8")
+    )
+    distribution_smoke["archive_file"] = custom_zip
+    _write_json(
+        vault,
+        "build/release/release-distribution-zip-smoke.json",
+        distribution_smoke,
+    )
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(vault, context=fixed_context())
+
+    distribution_node = next(
+        node
+        for node in plan["nodes"]
+        if node["name"] == "release_distribution_zip_smoke"
+    )
+    assert plan["plan_status"] == "blocked"
+    assert distribution_node["can_reuse"] is False
+    assert "referenced_file_stale" in distribution_node["issues"]
+    assert distribution_node["refresh_target"] == "release-package-current-or-refresh"
+    assert plan["authority_manifest_alignment"]["alignment_status"] == "current"
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
 def test_run_ready_plan_blocks_on_authority_manifest_distribution_zip_path_drift(
     tmp_path: Path,
 ) -> None:
@@ -940,11 +1031,16 @@ def test_run_ready_plan_blocks_on_authority_manifest_distribution_zip_path_drift
         )
 
     alignment = plan["authority_manifest_alignment"]
+    distribution_node = next(
+        node
+        for node in plan["nodes"]
+        if node["name"] == "release_distribution_zip_smoke"
+    )
     assert plan["plan_status"] == "blocked"
-    assert plan["minimal_next_target"] == "release-run-ready"
     assert alignment["alignment_status"] == "stale"
     assert "input_fingerprint_stale" not in alignment["issues"]
     assert "distribution_zip_path_stale" in alignment["issues"]
+    assert "referenced_file_stale" in distribution_node["issues"]
     assert "distribution_zip_path_stale" in plan["reason_codes"]
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
@@ -1001,6 +1097,37 @@ def test_run_ready_plan_sanitizes_invalid_selected_source_package_smoke_path(
     assert "not_loadable" in source_smoke_node["issues"]
     assert outside_path not in serialized
     assert tmp_path.as_posix() not in serialized
+    assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
+
+
+def test_run_ready_plan_custom_source_smoke_target_includes_output_override(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_plan_schema(vault)
+    _write_current_run_ready_evidence(vault)
+
+    with _patch_plan_repo():
+        plan = build_run_ready_plan(
+            vault,
+            source_package_smoke="tmp/custom-source-package-smoke.json",
+            context=fixed_context(),
+        )
+
+    source_smoke_node = next(
+        node for node in plan["nodes"] if node["name"] == "source_package_smoke"
+    )
+    expected_target = (
+        "release-source-package-smoke-current-or-refresh "
+        "SOURCE_PACKAGE_SMOKE_OUT=tmp/custom-source-package-smoke.json"
+    )
+    assert plan["plan_status"] == "blocked"
+    assert source_smoke_node["path"] == "tmp/custom-source-package-smoke.json"
+    assert source_smoke_node["can_reuse"] is False
+    assert source_smoke_node["refresh_target"] == expected_target
+    assert source_smoke_node["next_targets"] == [expected_target]
+    assert plan["minimal_next_target"] == expected_target
+    assert expected_target in plan["next_targets"]
     assert validate_with_schema(plan, load_schema(PLAN_SCHEMA_PATH)) == []
 
 

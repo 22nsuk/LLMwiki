@@ -498,6 +498,8 @@ def build_manifest(
         failures.append("source_package_smoke_source_zip_fingerprint_missing")
     elif smoke.get("_source_zip_input_sha256_invalid"):
         failures.append("source_package_smoke_source_zip_input_fingerprint_invalid")
+    elif not smoke_source_zip_input_sha256:
+        failures.append("source_package_smoke_source_zip_input_fingerprint_missing")
     elif (
         smoke_source_zip_input_sha256
         and smoke_source_zip_input_sha256 != smoke_source_zip_sha256

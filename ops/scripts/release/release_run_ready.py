@@ -105,6 +105,7 @@ class RunReadyPlanSpec:
     expected_suite: str = ""
     require_full_suite: bool = False
     referenced_file_field: str = ""
+    expected_referenced_file_path: str | None = None
 
 
 PLAN_SPECS = (
@@ -201,20 +202,74 @@ PLAN_SPECS = (
 )
 
 
+def _make_target_with_vars(
+    target: str,
+    assignments: tuple[tuple[str, str], ...],
+) -> str:
+    suffix = [f"{name}={value}" for name, value in assignments if value]
+    return " ".join([target, *suffix])
+
+
 def _plan_specs_for_inputs(
     vault: Path,
     *,
+    distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
     source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
 ) -> tuple[RunReadyPlanSpec, ...]:
-    safe_source_package_smoke = _safe_vault_relative_path(vault, source_package_smoke)
-    if safe_source_package_smoke == DEFAULT_SOURCE_PACKAGE_SMOKE:
-        return PLAN_SPECS
-    return tuple(
-        replace(spec, path=safe_source_package_smoke)
-        if spec.name == "source_package_smoke"
-        else spec
-        for spec in PLAN_SPECS
+    safe_distribution_zip = _safe_vault_relative_path(
+        vault,
+        _file_identity(vault, distribution_zip)["path"],
     )
+    safe_source_package_smoke = _safe_vault_relative_path(vault, source_package_smoke)
+    distribution_zip_vars: tuple[tuple[str, str], ...] = (
+        (("RELEASE_CLOSEOUT_DISTRIBUTION_ZIP", safe_distribution_zip),)
+        if safe_distribution_zip
+        and safe_distribution_zip != DEFAULT_DISTRIBUTION_ZIP
+        else ()
+    )
+    source_package_smoke_vars: tuple[tuple[str, str], ...] = (
+        (("SOURCE_PACKAGE_SMOKE_OUT", safe_source_package_smoke),)
+        if safe_source_package_smoke
+        and safe_source_package_smoke != DEFAULT_SOURCE_PACKAGE_SMOKE
+        else ()
+    )
+    specs: list[RunReadyPlanSpec] = []
+    selected_zip_nodes = {
+        "release_distribution_zip_smoke",
+        "source_package_smoke",
+        "source_package_clean_extract",
+    }
+    for spec in PLAN_SPECS:
+        updates: dict[str, Any] = {}
+        if spec.name in selected_zip_nodes:
+            updates["expected_referenced_file_path"] = safe_distribution_zip
+        if spec.name in {
+            "release_distribution_zip_smoke",
+            "source_package_clean_extract",
+        } and distribution_zip_vars:
+            updates["check_target"] = _make_target_with_vars(
+                spec.check_target,
+                distribution_zip_vars,
+            )
+            updates["refresh_target"] = _make_target_with_vars(
+                spec.refresh_target,
+                distribution_zip_vars,
+            )
+        if spec.name == "source_package_smoke":
+            if safe_source_package_smoke != DEFAULT_SOURCE_PACKAGE_SMOKE:
+                updates["path"] = safe_source_package_smoke
+            target_vars = distribution_zip_vars + source_package_smoke_vars
+            if target_vars:
+                updates["check_target"] = _make_target_with_vars(
+                    spec.check_target,
+                    target_vars,
+                )
+                updates["refresh_target"] = _make_target_with_vars(
+                    spec.refresh_target,
+                    target_vars,
+                )
+        specs.append(replace(spec, **updates) if updates else spec)
+    return tuple(specs)
 
 
 def _tail(text: str, *, limit: int = 4000) -> str:
@@ -450,7 +505,11 @@ def _currentness_status(payload: dict[str, Any]) -> str:
 
 
 def _referenced_file_is_current(
-    vault: Path, payload: dict[str, Any], field: str
+    vault: Path,
+    payload: dict[str, Any],
+    field: str,
+    *,
+    expected_path: str | None = None,
 ) -> bool:
     if not field:
         return True
@@ -463,6 +522,11 @@ def _referenced_file_is_current(
         return False
     if Path(path_text).is_absolute():
         return False
+    if expected_path is not None:
+        if not expected_path:
+            return False
+        if _safe_vault_relative_path(vault, path_text) != expected_path:
+            return False
     identity = _file_identity(vault, path_text)
     return bool(identity["exists"]) and identity["sha256"] == sha256
 
@@ -506,7 +570,12 @@ def _semantic_plan_issues(
         summary = summary if isinstance(summary, dict) else {}
         if str(summary.get("public_check_status", "")).strip() != "pass":
             issues.append("summary_status_mismatch")
-    if not _referenced_file_is_current(vault, payload, spec.referenced_file_field):
+    if not _referenced_file_is_current(
+        vault,
+        payload,
+        spec.referenced_file_field,
+        expected_path=spec.expected_referenced_file_path,
+    ):
         issues.append("referenced_file_stale")
     return issues
 
@@ -797,6 +866,7 @@ def build_run_ready_plan(
         )
         for spec in _plan_specs_for_inputs(
             vault,
+            distribution_zip=distribution_zip,
             source_package_smoke=source_package_smoke,
         )
     )
