@@ -1358,7 +1358,7 @@ def _non_worker_dependency_preflight(
                     (
                         f"executor dependency preflight blocked {request.role}: "
                         "missing workspace virtualenv python at .venv/bin/python; "
-                        "run make dev-install and ensure the mechanism workspace links repo .venv "
+                        "run make dev-install and provide an isolated workspace virtualenv "
                         "before reviewer/validator/auditor execution"
                     )
                 ],

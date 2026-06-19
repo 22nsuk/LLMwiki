@@ -106,19 +106,6 @@ def _copytree_ignore(_dir: str, names: list[str]) -> set[str]:
     return ignored
 
 
-def _link_repo_virtualenv(vault: Path, workspace_vault: Path) -> None:
-    source = vault / ".venv"
-    if not source.is_dir() or not (source / "bin" / "python").exists():
-        return
-    destination = workspace_vault / ".venv"
-    if destination.exists() or destination.is_symlink():
-        return
-    try:
-        destination.symlink_to(source.resolve(), target_is_directory=True)
-    except OSError:
-        return
-
-
 def _is_ignored_candidate_surface(rel_path: str, *, run_id: str) -> bool:
     normalized = rel_path.replace("\\", "/")
     if normalized == f"runs/{run_id}" or normalized.startswith(f"runs/{run_id}/"):
@@ -197,7 +184,6 @@ def _prepare_candidate_report_workspace(
         return workspace_vault
     report_workspace_vault = Path(workspace_root) / "vault"
     shutil.copytree(vault, report_workspace_vault, ignore=_copytree_ignore)
-    _link_repo_virtualenv(vault, report_workspace_vault)
     _overlay_workspace_digest_changes(
         workspace_vault,
         report_workspace_vault,
@@ -599,7 +585,6 @@ def _prepare_workspace_copy(
     workspace_vault = Path(workspace_root) / "vault"
     copy_started = time.monotonic()
     shutil.copytree(vault, workspace_vault, ignore=_copytree_ignore)
-    _link_repo_virtualenv(vault, workspace_vault)
     copy_seconds = round(time.monotonic() - copy_started, 3)
     copied_file_count = _snapshot_repo_file_count(workspace_vault, run_id=run_id)
     return WorkspacePreparation(
@@ -653,7 +638,6 @@ def _prepare_sparse_workspace_copy(
     copy_started = time.monotonic()
     for rel_path in copy_entries:
         _copy_sparse_entry(vault, workspace_vault, rel_path, run_id=run_id)
-    _link_repo_virtualenv(vault, workspace_vault)
     copy_seconds = round(time.monotonic() - copy_started, 3)
     baseline_file_digests = _snapshot_repo_file_digests(workspace_vault, run_id=run_id)
     copied_file_count = _snapshot_repo_file_count(workspace_vault, run_id=run_id)

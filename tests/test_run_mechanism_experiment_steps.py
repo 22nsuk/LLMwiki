@@ -126,7 +126,7 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             self.assertEqual(result.telemetry["baseline_file_count"], 2)
             self.assertEqual(result.telemetry["copied_file_count"], 1)
 
-    def test_prepare_workspace_copy_links_repo_virtualenv_for_executor_dependencies(self) -> None:
+    def test_prepare_workspace_copy_excludes_repo_virtualenv_without_live_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             workspace_root = Path(temp_dir) / "workspace-root"
@@ -142,8 +142,31 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             )
 
             workspace_venv = result.workspace_vault / ".venv"
-            self.assertTrue(workspace_venv.is_symlink())
-            self.assertEqual(workspace_venv.resolve(), (vault / ".venv").resolve())
+            self.assertFalse(workspace_venv.exists())
+            self.assertFalse(workspace_venv.is_symlink())
+            self.assertNotIn(".venv/bin/python", result.baseline_file_digests)
+
+    def test_prepare_sparse_workspace_copy_excludes_repo_virtualenv_without_live_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            workspace_root = Path(temp_dir) / "workspace-root"
+            (vault / "ops" / "scripts").mkdir(parents=True)
+            (vault / "ops" / "scripts" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
+            (vault / ".venv" / "bin").mkdir(parents=True)
+            (vault / ".venv" / "bin" / "python").write_text("# python shim\n", encoding="utf-8")
+
+            result = _prepare_workspace_copy(
+                vault,
+                run_id="run-venv-sparse",
+                workspace_root=workspace_root.as_posix(),
+                mode="sparse_manifest",
+                allowed_apply_roots=["ops/"],
+                primary_targets=["ops/scripts/example.py"],
+            )
+
+            workspace_venv = result.workspace_vault / ".venv"
+            self.assertFalse(workspace_venv.exists())
+            self.assertFalse(workspace_venv.is_symlink())
             self.assertNotIn(".venv/bin/python", result.baseline_file_digests)
 
     def test_prepare_workspace_copy_supports_sparse_manifest_copied_universe(self) -> None:
