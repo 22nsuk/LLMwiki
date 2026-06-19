@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from fnmatch import fnmatchcase
+from pathlib import PurePosixPath
+
 PUBLIC_INCLUDE_FILES = (
     "AGENTS.md",
     "ARCHITECTURE.md",
@@ -52,17 +55,41 @@ PUBLIC_EXCLUDED_SEGMENTS = (
     ".codebase-memory",
     ".cache",
     ".git",
+    ".hypothesis",
     ".idea",
     ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
+    ".venv",
     ".vscode",
     "__pycache__",
 )
 
+PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
+    "*.pyc",
+    "*.pyo",
+    "*.pyd",
+    ".coverage",
+    ".coverage.*",
+    "*.swp",
+    "*.swo",
+    "*~",
+    ".DS_Store",
+    "Thumbs.db",
+)
+
+PUBLIC_EXCLUDED_SEGMENT_GITIGNORE_PATTERNS = tuple(f"{segment}/" for segment in PUBLIC_EXCLUDED_SEGMENTS)
+
 PUBLIC_GITIGNORE_START = "# >>> public-surface-policy >>>"
 PUBLIC_GITIGNORE_END = "# <<< public-surface-policy <<<"
 PUBLIC_GITIGNORE_TEMPLATE = "ops/templates/public-mirror.gitignore"
+
+
+def is_public_excluded_by_local_state(rel_path: str) -> bool:
+    path = PurePosixPath(rel_path)
+    if any(segment in PUBLIC_EXCLUDED_SEGMENTS for segment in path.parts):
+        return True
+    return any(fnmatchcase(path.name, pattern) for pattern in PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS)
 
 
 def render_public_gitignore_block() -> str:
@@ -100,11 +127,14 @@ def render_public_gitignore_block() -> str:
         "!/tools/",
         "!/tools/**",
         "!/uv.lock",
-        "AGENTS.local.md",
-        "ops/manifest.json",
-        "ops/raw-registry.json",
-        "ops/operator/*",
-        "ops/reports/*",
+        "# Re-ignore local/private state opened by the allowlisted prefixes above.",
+        *PUBLIC_EXCLUDED_FILES,
+        "ops/operator/",
+        "ops/operator/**",
+        "ops/reports/",
+        "ops/reports/**",
+        *PUBLIC_EXCLUDED_SEGMENT_GITIGNORE_PATTERNS,
+        *PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS,
         "# Generated ops/operator and ops/reports evidence is local-only.",
         PUBLIC_GITIGNORE_END,
     ]

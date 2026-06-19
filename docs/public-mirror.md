@@ -14,6 +14,11 @@ The source of truth is `ops/scripts/public/public_surface_policy.py`.
 The public mirror `.gitignore` is generated into
 `ops/templates/public-mirror.gitignore`; the repository root `.gitignore` is
 full-vault hygiene only and must not be treated as public export policy.
+Because the generated public mirror template opens allowlisted prefixes after a
+deny-by-default rule, it re-ignores policy-excluded segments, nested local
+environments, bytecode, cache, coverage, editor, and OS state inside those
+prefixes. Do not mirror that generated block back into the repository root
+`.gitignore` without a separate full-vault Git hygiene contract change.
 
 The public mirror includes:
 

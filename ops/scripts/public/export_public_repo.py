@@ -14,10 +14,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.public.public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
-        PUBLIC_EXCLUDED_SEGMENTS,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
         PUBLIC_INCLUDED_REPORT_FILES,
+        is_public_excluded_by_local_state,
         render_public_gitignore_block,
     )
 else:
@@ -26,10 +26,10 @@ else:
     from .public_surface_policy import (
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
-        PUBLIC_EXCLUDED_SEGMENTS,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
         PUBLIC_INCLUDED_REPORT_FILES,
+        is_public_excluded_by_local_state,
         render_public_gitignore_block,
     )
 
@@ -44,7 +44,7 @@ def should_export_public(rel_path: str) -> bool:
         return True
     if any(rel_path.startswith(prefix) for prefix in PUBLIC_EXCLUDED_PREFIXES):
         return False
-    if any(segment in PUBLIC_EXCLUDED_SEGMENTS for segment in Path(rel_path).parts):
+    if is_public_excluded_by_local_state(rel_path):
         return False
     return rel_path in PUBLIC_INCLUDE_FILES or any(
         rel_path.startswith(prefix) for prefix in PUBLIC_INCLUDE_PREFIXES
