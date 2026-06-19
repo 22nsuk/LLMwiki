@@ -397,7 +397,7 @@ def _dependency_module_payloads(
 
 
 def _dependency_preflight_command_payload(python_display: str) -> ExecutorDependencyCommandPayload:
-    argv = [python_display, "-c", "<project-dependency-preflight>"] if python_display else []
+    argv = [python_display, "-I", "-c", "<project-dependency-preflight>"] if python_display else []
     return {
         "argv": argv,
         "project_check_lane": PROJECT_CHECK_LANE,
@@ -1193,8 +1193,19 @@ def _execution_env(workspace_root: Path) -> dict[str, str] | None:
 def _project_dependency_check_script() -> str:
     module_pairs = repr(list(NON_WORKER_PROJECT_CHECK_MODULES))
     return (
-        "import importlib, importlib.metadata, json, sys\n"
+        "import importlib.metadata, json, re, sys\n"
         f"module_pairs = {module_pairs}\n"
+        "metadata_paths = json.loads(sys.argv[1]) if len(sys.argv) > 1 else []\n"
+        "def _key(value):\n"
+        "    return re.sub(r'[-_.]+', '-', value).lower()\n"
+        "versions = {}\n"
+        "if metadata_paths:\n"
+        "    for dist in importlib.metadata.distributions(path=metadata_paths):\n"
+        "        name = dist.metadata.get('Name')\n"
+        "        if name:\n"
+        "            versions[_key(name)] = dist.version\n"
+        "else:\n"
+        "    versions = {dist.metadata['Name'] and _key(dist.metadata['Name']): dist.version for dist in importlib.metadata.distributions() if dist.metadata.get('Name')}\n"
         "payload = {\n"
         "    'python': {'executable': sys.executable, 'version': sys.version.split()[0]},\n"
         "    'modules': [],\n"
@@ -1202,21 +1213,32 @@ def _project_dependency_check_script() -> str:
         "failed = False\n"
         "for module, package in module_pairs:\n"
         "    item = {'import_name': module, 'package': package, 'status': 'available', 'version': '', 'detail': ''}\n"
-        "    try:\n"
-        "        importlib.import_module(module)\n"
-        "    except Exception as exc:\n"
+        "    version = versions.get(_key(package))\n"
+        "    if version is None:\n"
         "        failed = True\n"
         "        item['status'] = 'missing'\n"
-        "        item['detail'] = f'{type(exc).__name__}: {exc}'\n"
+        "        item['detail'] = f'PackageNotFoundError: {package}'\n"
         "    else:\n"
-        "        try:\n"
-        "            item['version'] = importlib.metadata.version(package)\n"
-        "        except importlib.metadata.PackageNotFoundError:\n"
-        "            item['version'] = 'unknown'\n"
+        "        item['version'] = version\n"
         "    payload['modules'].append(item)\n"
         "print(json.dumps(payload, sort_keys=True))\n"
         "sys.exit(1 if failed else 0)\n"
     )
+
+
+def _trusted_dependency_preflight_python() -> Path:
+    return Path(sys.executable or shutil.which("python3") or shutil.which("python") or "python")
+
+
+def _trusted_dependency_preflight_cwd() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _workspace_dependency_metadata_paths(workspace_root: Path) -> list[str]:
+    venv_root = workspace_root / ".venv"
+    candidates = [venv_root / "Lib" / "site-packages"]
+    candidates.extend((venv_root / "lib").glob("python*/site-packages"))
+    return [str(path) for path in candidates if path.is_dir()]
 
 
 def _dependency_preflight_from_probe(
@@ -1332,49 +1354,19 @@ def _non_worker_dependency_preflight(
             _dependency_preflight_template(request.role, request.workspace_root, roots),
             None,
         )
-    python_path = _workspace_virtualenv_python(request.workspace_root)
-    if python_path is None:
-        missing_python = request.workspace_root / ".venv" / "bin" / "python"
-        python_display = _sanitize_path_text(str(missing_python), roots=roots)
-        preflight = _dependency_preflight_payload(
-            role_requires_project_check=True,
-            status="fail",
-            python_path=python_display,
-            python_executable="",
-            python_version="",
-            python_exists=False,
-            required_modules=_dependency_module_payloads(
-                "not_checked",
-                detail="missing workspace virtualenv python",
-            ),
-            returncode=127,
-        )
-        return (
-            preflight,
-            _ExecutionSummary(
-                status="fail",
-                decision="blocked",
-                notes=[
-                    (
-                        f"executor dependency preflight blocked {request.role}: "
-                        "missing workspace virtualenv python at .venv/bin/python; "
-                        "run make dev-install and ensure the mechanism workspace links repo .venv "
-                        "before reviewer/validator/auditor execution"
-                    )
-                ],
-                timed_out=False,
-                timeout_seconds=request.timeout_seconds,
-                termination_reason="completed",
-            ),
-        )
-
-    env = _execution_env(request.workspace_root) or dict(os.environ)
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    command = [str(python_path), "-c", _project_dependency_check_script()]
+    python_path = _trusted_dependency_preflight_python()
+    env = {"PYTHONDONTWRITEBYTECODE": "1"}
+    command = [
+        str(python_path),
+        "-I",
+        "-c",
+        _project_dependency_check_script(),
+        json.dumps(_workspace_dependency_metadata_paths(request.workspace_root)),
+    ]
     try:
         completed = subprocess.run(
             command,
-            cwd=request.workspace_root,
+            cwd=_trusted_dependency_preflight_cwd(),
             env=env,
             text=True,
             capture_output=True,

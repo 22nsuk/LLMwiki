@@ -42,6 +42,21 @@ from tests.minimal_vault_runtime import (
 pytestmark = pytest.mark.slow
 
 
+def _seed_workspace_dependency_metadata(workspace_root: Path) -> None:
+    site_packages = (
+        workspace_root
+        / ".venv"
+        / "lib"
+        / f"python{sys.version_info.major}.{sys.version_info.minor}"
+        / "site-packages"
+    )
+    site_packages.mkdir(parents=True, exist_ok=True)
+    for package, version in (("pytest", "9.0.0"), ("jsonschema", "4.0.0"), ("PyYAML", "6.0.0")):
+        dist_info = site_packages / f"{package}-{version}.dist-info"
+        dist_info.mkdir(exist_ok=True)
+        (dist_info / "METADATA").write_text(f"Name: {package}\nVersion: {version}\n", encoding="utf-8")
+
+
 def _seed_executor_vault(vault: Path) -> None:
     seed_minimal_vault(vault)
     (vault / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
@@ -53,6 +68,7 @@ def _seed_executor_vault(vault: Path) -> None:
         encoding="utf-8",
     )
     (venv_bin / "python").chmod(0o755)
+    _seed_workspace_dependency_metadata(vault)
     (vault / "ops" / "schemas" / "executor-report.schema.json").write_text(
         (REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text(encoding="utf-8"),
         encoding="utf-8",
@@ -857,16 +873,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
             vault.mkdir()
             _seed_executor_vault(vault)
             seed_subagent_profiles(vault, ["validator"])
-            venv_python = vault / ".venv" / "bin" / "python"
-            venv_python.write_text(
+            probe_python = Path(temp_dir) / "probe-python"
+            probe_python.write_text(
                 "#!/bin/sh\n"
-                "printf 'pytest (pytest): ModuleNotFoundError: missing\\n'\n"
-                "printf 'jsonschema (jsonschema): ModuleNotFoundError: missing\\n'\n"
-                "printf 'PyYAML (yaml): ModuleNotFoundError: missing\\n'\n"
+                "printf '{not-json'\n"
                 "exit 1\n",
                 encoding="utf-8",
             )
-            venv_python.chmod(0o755)
+            probe_python.chmod(0o755)
             _write_routing_report(
                 vault,
                 "validator",
@@ -876,7 +890,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 selected_rung=3,
             )
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout") as run:
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout") as run, mock.patch(
+                "ops.scripts.core.codex_exec_executor._trusted_dependency_preflight_python",
+                return_value=probe_python,
+            ):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -906,6 +923,60 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stdout.txt").is_file())
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stderr.txt").is_file())
 
+
+    def test_non_worker_dependency_preflight_ignores_workspace_import_shadowing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            marker = vault / "shadow-executed.txt"
+            (vault / "pytest.py").write_text(
+                f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed', encoding='utf-8')\n",
+                encoding="utf-8",
+            )
+            venv_bin = vault / ".venv" / "bin"
+            venv_bin.mkdir(parents=True)
+            workspace_python = venv_bin / "python"
+            workspace_python.write_text(
+                f"#!/bin/sh\nprintf 'tampered' > {str(vault / 'tampered-python.txt')!r}\nexit 1\n",
+                encoding="utf-8",
+            )
+            workspace_python.chmod(0o755)
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                Path(argv[out_index]).write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": ["validated"]}}, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["diagnostics"]["dependency_preflight"]["status"], "pass")
+            self.assertFalse(marker.exists())
+            self.assertFalse((vault / "tampered-python.txt").exists())
+
     def test_codex_exec_uses_workspace_virtualenv_when_artifact_root_differs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             artifact_root = Path(temp_dir) / "artifact"
@@ -932,6 +1003,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 encoding="utf-8",
             )
             workspace_python.chmod(0o755)
+            _seed_workspace_dependency_metadata(workspace_root)
             (workspace_root / "ops" / "schemas").mkdir(parents=True)
             (workspace_root / "ops" / "schemas" / "executor-report.schema.json").write_text(
                 (REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text(
@@ -1023,6 +1095,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 encoding="utf-8",
             )
             workspace_python.chmod(0o755)
+            _seed_workspace_dependency_metadata(workspace_root)
             (workspace_root / "ops" / "schemas").mkdir(parents=True)
             (workspace_root / "ops" / "schemas" / "executor-report.schema.json").write_text(
                 (REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text(
