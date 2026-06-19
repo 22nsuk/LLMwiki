@@ -555,6 +555,7 @@ def _release_run_manifest_payload(source_zip: dict[str, object]) -> dict[str, ob
             "exists": True,
             "status": "pass",
             "sha256": ZERO_SHA256,
+            "source_zip_sha256": source_zip["sha256"],
         },
         "failures": [],
     }

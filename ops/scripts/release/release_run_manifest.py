@@ -232,13 +232,21 @@ def _status_label(value: object) -> str:
 def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
     identity = _file_identity(vault, path_value)
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path_value))
-    if diagnostics.get("status") != "ok":
+    if diagnostics.get("status") != "ok" or not isinstance(payload, dict):
         payload = {}
+    input_fingerprints = payload.get("input_fingerprints")
+    source_zip = payload.get("source_zip")
+    source_zip_sha256 = ""
+    if isinstance(input_fingerprints, dict):
+        source_zip_sha256 = str(input_fingerprints.get("source_zip", "")).strip()
+    if not source_zip_sha256 and isinstance(source_zip, dict):
+        source_zip_sha256 = str(source_zip.get("sha256", "")).strip()
     return {
         "path": identity["path"],
         "exists": identity["exists"],
         "status": _status_label(payload.get("status")),
         "sha256": identity["sha256"],
+        "source_zip_sha256": source_zip_sha256,
     }
 
 
@@ -382,6 +390,10 @@ def build_manifest(
         failures.append("distribution_zip_missing")
     if not smoke["exists"] or smoke["status"] != "pass":
         failures.append("source_package_smoke_not_pass")
+    elif not smoke["source_zip_sha256"]:
+        failures.append("source_package_smoke_source_zip_fingerprint_missing")
+    elif zip_identity["sha256"] != smoke["source_zip_sha256"]:
+        failures.append("source_package_smoke_source_zip_mismatch")
     failures.extend(
         f"step_failed:{step.get('name', 'unknown')}"
         for step in step_rows
@@ -544,6 +556,20 @@ def main(argv: list[str] | None = None) -> int:
         source_package_smoke=args.source_package_smoke,
         closeout_summary=args.closeout_summary,
     )
+    if args.check:
+        previous_fingerprints = previous_payload.get("input_fingerprints")
+        current_fingerprints = manifest.get("input_fingerprints")
+        if (
+            isinstance(previous_fingerprints, dict)
+            and previous_fingerprints != current_fingerprints
+        ):
+            manifest["failures"] = _unique_failures(
+                [
+                    *manifest.get("failures", []),
+                    "release_run_manifest_input_fingerprint_drift",
+                ]
+            )
+            manifest["status"] = "fail"
     path = write_manifest(vault, manifest, args.out)
     print(display_path(vault, path))
     if args.check:
