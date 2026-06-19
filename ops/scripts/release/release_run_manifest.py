@@ -514,10 +514,24 @@ def _input_fingerprints(payload: dict[str, Any]) -> dict[str, str]:
     return {str(key): str(value) for key, value in input_fingerprints.items()}
 
 
+def _manifest_text_field(payload: dict[str, Any], field: str) -> str:
+    return str(payload.get(field, "")).strip()
+
+
 def _check_manifest(previous_payload: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
     failures = [str(item) for item in manifest.get("failures", []) if str(item)]
     if _input_fingerprints(previous_payload) != _input_fingerprints(manifest):
         failures.append("release_run_manifest_input_fingerprint_drift")
+    if _manifest_text_field(previous_payload, "source_revision") != _manifest_text_field(
+        manifest,
+        "source_revision",
+    ):
+        failures.append("release_run_manifest_source_revision_drift")
+    if _manifest_text_field(previous_payload, "git_commit") != _manifest_text_field(
+        manifest,
+        "git_commit",
+    ):
+        failures.append("release_run_manifest_git_commit_drift")
     return {
         **manifest,
         "status": "pass" if not failures else "fail",
@@ -537,6 +551,50 @@ def _input_fingerprint_drift_line(
     )
 
 
+def _text_field_drift_line(
+    previous_payload: dict[str, Any],
+    manifest: dict[str, Any],
+    *,
+    field: str,
+    label: str,
+) -> str:
+    return (
+        f"{label}=expected:"
+        + _manifest_text_field(previous_payload, field)
+        + ";current:"
+        + _manifest_text_field(manifest, field)
+    )
+
+
+def _check_mode_drift_diagnostic_lines(
+    previous_payload: dict[str, Any],
+    manifest: dict[str, Any],
+    failures: list[str],
+) -> list[str]:
+    lines: list[str] = []
+    if "release_run_manifest_input_fingerprint_drift" in failures:
+        lines.append(_input_fingerprint_drift_line(previous_payload, manifest))
+    if "release_run_manifest_source_revision_drift" in failures:
+        lines.append(
+            _text_field_drift_line(
+                previous_payload,
+                manifest,
+                field="source_revision",
+                label="source_revision_drift",
+            )
+        )
+    if "release_run_manifest_git_commit_drift" in failures:
+        lines.append(
+            _text_field_drift_line(
+                previous_payload,
+                manifest,
+                field="git_commit",
+                label="git_commit_drift",
+            )
+        )
+    return lines
+
+
 def _check_failure_diagnostics(
     vault: Path,
     *,
@@ -551,8 +609,9 @@ def _check_failure_diagnostics(
         "failures=" + ",".join(failures),
     ]
     if "source_tree_fingerprint_drift" not in failures:
-        if "release_run_manifest_input_fingerprint_drift" in failures:
-            lines.append(_input_fingerprint_drift_line(previous_payload, manifest))
+        lines.extend(
+            _check_mode_drift_diagnostic_lines(previous_payload, manifest, failures)
+        )
         return lines
     generated_at = str(previous_payload.get("generated_at", "")).strip()
     change_sample = release_source_tree_change_sample(
@@ -583,8 +642,7 @@ def _check_failure_diagnostics(
     )
     if changed_paths:
         lines.append("changed_after_generated_at=" + ",".join(changed_paths))
-    if "release_run_manifest_input_fingerprint_drift" in failures:
-        lines.append(_input_fingerprint_drift_line(previous_payload, manifest))
+    lines.extend(_check_mode_drift_diagnostic_lines(previous_payload, manifest, failures))
     return lines
 
 

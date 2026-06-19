@@ -463,6 +463,36 @@ class ReleaseRunManifestTests(unittest.TestCase):
             original,
         )
 
+    def test_check_mode_reports_source_revision_drift_without_overwriting_manifest(self) -> None:
+        self._write_run_inputs()
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        manifest["source_revision"] = "old-commit"
+        manifest["git_commit"] = "old-commit"
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        original = (self.vault / "build/release/release-run-manifest.json").read_text(
+            encoding="utf-8"
+        )
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 1)
+        output = stdout.getvalue()
+        self.assertIn("release_run_manifest_source_revision_drift", output)
+        self.assertIn("release_run_manifest_git_commit_drift", output)
+        self.assertIn("source_revision_drift=expected:old-commit;current:abc123", output)
+        self.assertIn("git_commit_drift=expected:old-commit;current:abc123", output)
+        self.assertEqual(
+            (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
+            original,
+        )
+
     def test_remote_ahead_is_diagnostic_not_run_ready_blocker(self) -> None:
         self._write_run_inputs()
 
