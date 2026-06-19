@@ -125,13 +125,21 @@ def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -
 
 def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> None:
     preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
+    run_ready_plan_check_line = (
+        "$(MAKE) release-run-ready-plan-check "
+        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+    )
+    run_ready_check_line = (
+        "$(MAKE) release-run-ready-check "
+        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+    )
     test.assertEqual(
         preseal_recipe[:16],
         [
             "$(MAKE) release-auto-promotion-ready-invalidate",
             "$(MAKE) release-auto-promotion-goal-run-id-guard",
-            "$(MAKE) release-run-ready-plan-check",
-            "$(MAKE) release-run-ready-check",
+            run_ready_plan_check_line,
+            run_ready_check_line,
             "$(MAKE) bootstrap-preflight",
             "$(MAKE) registry-preflight",
             "$(MAKE) release-smoke-full-current-check",
@@ -159,8 +167,8 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
         'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
     )
-    run_ready_check_line = "$(MAKE) release-run-ready-check"
     test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
+    test.assertEqual(preseal_recipe.count(run_ready_plan_check_line), 1)
     test.assertEqual(preseal_recipe.count(run_ready_check_line), 2)
     test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
     test.assertLess(
@@ -589,8 +597,14 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
 
         self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_block)
         self.assertIn("--phase preseal", auto_promotion_preseal_block)
-        self.assertIn("$(MAKE) release-run-ready-plan-check", auto_promotion_preseal_block)
-        self.assertIn("$(MAKE) release-run-ready-check", auto_promotion_preseal_block)
+        self.assertIn(
+            'release-run-ready-plan-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            auto_promotion_preseal_block,
+        )
+        self.assertIn(
+            'release-run-ready-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            auto_promotion_preseal_block,
+        )
         self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_block)
         self.assertIn(
             "$(MAKE) release-evidence-cohort-preseal-refresh",
