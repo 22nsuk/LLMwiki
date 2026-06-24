@@ -884,6 +884,17 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/mechanism/system_log_split.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--events-out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/public/cbm_public_export.py",
       "classification": "user_export",
       "output_options": [
@@ -933,6 +944,18 @@
       "classification": "repo_artifact",
       "output_options": [
         "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/public/review_surface_manifest.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--json-out",
+        "--md-out"
       ],
       "references_resolve_output_path": false,
       "references_resolve_repo_output_path": false,
@@ -1040,6 +1063,17 @@
     },
     {
       "path": "ops/scripts/registry/raw_registry_shard_policy_sync.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/registry/source_substance_cohort_classify.py",
       "classification": "repo_artifact",
       "output_options": [
         "--out"
@@ -1618,6 +1652,17 @@
     },
     {
       "path": "ops/scripts/test/ci_tier_lane_bridge.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/test/generate_release_governance_from_lane_registry.py",
       "classification": "repo_artifact",
       "output_options": [
         "--out"
