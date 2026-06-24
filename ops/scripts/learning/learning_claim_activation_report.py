@@ -14,6 +14,12 @@ from ops.scripts.core.artifact_io_runtime import (
     write_schema_backed_report,
 )
 from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.payload_field_runtime import (
+    bool_at,
+    dict_value,
+    int_at,
+    list_of_dicts,
+)
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
 
@@ -65,69 +71,16 @@ def _sha256_file(path: Path) -> str:
         return ""
 
 
-def _bool_at(payload: dict[str, Any], path: tuple[str, ...]) -> bool:
-    value: Any = payload
-    for key in path:
-        if not isinstance(value, dict):
-            return False
-        value = value.get(key)
-    return bool(value)
-
-
-def _str_at(payload: dict[str, Any], path: tuple[str, ...], default: str = "") -> str:
-    value: Any = payload
-    for key in path:
-        if not isinstance(value, dict):
-            return default
-        value = value.get(key)
-    text = str(value or "").strip()
-    return text or default
-
-
-def _int_at(payload: dict[str, Any], path: tuple[str, ...], default: int = 0) -> int:
-    value: Any = payload
-    for key in path:
-        if not isinstance(value, dict):
-            return default
-        value = value.get(key)
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _float_at(payload: dict[str, Any], path: tuple[str, ...], default: float = 0.0) -> float:
-    value: Any = payload
-    for key in path:
-        if not isinstance(value, dict):
-            return default
-        value = value.get(key)
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _list_of_dicts(value: object) -> list[dict[str, Any]]:
-    if not isinstance(value, list):
-        return []
-    return [item for item in value if isinstance(item, dict)]
-
-
-def _dict_value(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
+def _safe_id(value: str) -> str:
+    lowered = value.strip().lower().replace("-", "_")
+    normalized = HEX_SAFE_RE.sub("_", lowered).strip("_")
+    return normalized or "unknown"
 
 
 def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
-
-
-def _safe_id(value: str) -> str:
-    lowered = value.strip().lower().replace("-", "_")
-    normalized = HEX_SAFE_RE.sub("_", lowered).strip("_")
-    return normalized or "unknown"
 
 
 def _evidence_digest(vault: Path, rel_path: str) -> dict[str, Any]:
@@ -238,7 +191,7 @@ def _blocked_predicates(
         ("learning_claim_unlock_review.machine_policy_decision", machine_payload.get("predicate_results")),
         ("learning_claim_unlock_review.confirmed_policy", machine_payload.get("confirmed_predicate_results")),
     ):
-        for predicate in _list_of_dicts(rows):
+        for predicate in list_of_dicts(rows):
             if str(predicate.get("status", "")).strip() == "pass":
                 continue
             predicates.append(
@@ -300,7 +253,7 @@ def _claim_candidate(
 ) -> dict[str, Any]:
     summary = inputs.scoreboard.get("summary")
     scoreboard_summary = summary if isinstance(summary, dict) else {}
-    learning_likely = _bool_at(inputs.readiness, ("learning_readiness", "likely_to_learn"))
+    learning_likely = bool_at(inputs.readiness, ("learning_readiness", "likely_to_learn"))
     claim_candidate = learning_likely or bool(scoreboard_summary.get("learning_likely"))
     learning_claim_allowed = bool(scoreboard_summary.get("learning_claim_allowed"))
     claim_level = str(scoreboard_summary.get("claim_level", "none")).strip() or "none"
@@ -353,15 +306,27 @@ def _claim_candidate(
     }
 
 
-def _axis(axis: str, status: str, current: str, required: str, repair_target: str) -> dict[str, Any]:
-    return {
+def _axis(
+    axis: str,
+    status: str,
+    current: str,
+    required: str,
+    repair_target: str,
+    *,
+    gate_effect: str = "none",
+    retirement_condition: str = "",
+) -> dict[str, Any]:
+    payload = {
         "axis": axis,
         "status": status,
         "current": current,
         "required": required,
         "repair_target": repair_target,
-        "gate_effect": "none",
+        "gate_effect": gate_effect,
     }
+    if retirement_condition:
+        payload["retirement_condition"] = retirement_condition
+    return payload
 
 
 def _anti_slop_preview_ledger(inputs: ActivationInputs, claim_candidate: dict[str, Any]) -> dict[str, Any]:
@@ -369,7 +334,7 @@ def _anti_slop_preview_ledger(inputs: ActivationInputs, claim_candidate: dict[st
     scoreboard_summary = summary if isinstance(summary, dict) else {}
     anti_slop = inputs.scoreboard.get("anti_slop_score")
     anti_slop_payload = anti_slop if isinstance(anti_slop, dict) else {}
-    bundle_summary = _dict_value(inputs.evidence_bundle.get("summary"))
+    bundle_summary = dict_value(inputs.evidence_bundle.get("summary"))
     axes = [
         _axis(
             "claim_hygiene",
@@ -417,10 +382,10 @@ def _anti_slop_preview_ledger(inputs: ActivationInputs, claim_candidate: dict[st
         _axis(
             "scope_discipline",
             "pass"
-            if _int_at(inputs.readiness, ("queue", "runnable_proposal_count")) <= 1
+            if int_at(inputs.readiness, ("queue", "runnable_proposal_count")) <= 1
             else "warn",
             (
-                f"runnable_proposal_count={_int_at(inputs.readiness, ('queue', 'runnable_proposal_count'))}; "
+                f"runnable_proposal_count={int_at(inputs.readiness, ('queue', 'runnable_proposal_count'))}; "
                 f"can_execute_trial={bool(inputs.readiness.get('can_execute_trial'))}"
             ),
             "Auto-improve learning probes should remain narrow, with at most one runnable proposal.",
@@ -428,10 +393,15 @@ def _anti_slop_preview_ledger(inputs: ActivationInputs, claim_candidate: dict[st
         ),
         _axis(
             "context_efficiency",
-            "warn",
+            "backlog",
             "no dedicated context-efficiency telemetry is bound to the learning claim lane",
             "Claim activation should expose context budget or synopsis reuse pressure before promotion authority uses it.",
             "Add context budget telemetry or a session synopsis digest before making this axis gating.",
+            gate_effect="advisory",
+            retirement_condition=(
+                "Promote to gating only after session synopsis reuse or context budget telemetry "
+                "is bound to learning-claim activation evidence."
+            ),
         ),
         _axis(
             "operator_override_pressure",
@@ -452,7 +422,7 @@ def _anti_slop_preview_ledger(inputs: ActivationInputs, claim_candidate: dict[st
         "gate_effect": "none",
         "status": status,
         "scoreboard_anti_slop_status": str(anti_slop_payload.get("status", "unknown")).strip() or "unknown",
-        "scoreboard_anti_slop_score": _int_at(anti_slop_payload, ("score",), 0),
+        "scoreboard_anti_slop_score": int_at(anti_slop_payload, ("score",), 0),
         "axes": axes,
     }
 
@@ -574,9 +544,9 @@ def _negative_learning_ledger(vault: Path, inputs: ActivationInputs) -> dict[str
             ),
         )
 
-    scoreboard_summary = _dict_value(inputs.scoreboard.get("summary"))
-    confirmed_summary = _dict_value(scoreboard_summary.get("confirmed_evidence_summary"))
-    for diagnostic in _list_of_dicts(confirmed_summary.get("rejected_run_diagnostics")):
+    scoreboard_summary = dict_value(inputs.scoreboard.get("summary"))
+    confirmed_summary = dict_value(scoreboard_summary.get("confirmed_evidence_summary"))
+    for diagnostic in list_of_dicts(confirmed_summary.get("rejected_run_diagnostics")):
         decision = str(diagnostic.get("decision", "")).strip()
         if decision not in {"HOLD", "DISCARD"}:
             continue
@@ -598,9 +568,9 @@ def _negative_learning_ledger(vault: Path, inputs: ActivationInputs) -> dict[str
             repair_target="Repair the rejected confirmed-evidence run before using it as learning proof.",
         )
 
-    for row in _list_of_dicts(inputs.readiness.get("queue", {}).get("blocked_reason_counts")):
+    for row in list_of_dicts(inputs.readiness.get("queue", {}).get("blocked_reason_counts")):
         reason = str(row.get("reason", "unknown")).strip() or "unknown"
-        count = _int_at(row, ("count",), 1)
+        count = int_at(row, ("count",), 1)
         for _index in range(max(1, count)):
             _add_pattern(
                 patterns,

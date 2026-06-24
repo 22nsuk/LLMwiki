@@ -12,6 +12,7 @@ from ops.scripts.core.artifact_io_runtime import (
     write_schema_backed_report,
 )
 from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.payload_field_runtime import bool_at, int_at, str_at
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
 
@@ -99,24 +100,6 @@ def _learning_blocker_ids(readiness: dict[str, Any]) -> list[str]:
     return learning_release_blocker_ids_from_report(readiness)
 
 
-def _bool_at(payload: dict[str, Any], path: tuple[str, ...]) -> bool:
-    value: Any = payload
-    for key in path:
-        if not isinstance(value, dict):
-            return False
-        value = value.get(key)
-    return bool(value)
-
-
-def _string_at(payload: dict[str, Any], path: tuple[str, ...]) -> str:
-    value: Any = payload
-    for key in path:
-        if not isinstance(value, dict):
-            return ""
-        value = value.get(key)
-    return str(value or "").strip()
-
-
 def _float_at(payload: dict[str, Any], path: tuple[str, ...]) -> float:
     value: Any = payload
     for key in path:
@@ -127,18 +110,6 @@ def _float_at(payload: dict[str, Any], path: tuple[str, ...]) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
-
-
-def _int_at(payload: dict[str, Any], path: tuple[str, ...]) -> int:
-    value: Any = payload
-    for key in path:
-        if not isinstance(value, dict):
-            return 0
-        value = value.get(key)
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
 
 
 def _policy_int(policy: dict[str, Any], key: str, default: int) -> int:
@@ -482,31 +453,31 @@ def _auto_policy_readiness_predicates(
         ),
         _predicate_result(
             "auto_improve_can_execute_trial",
-            "pass" if _bool_at(readiness, ("can_execute_trial",)) else "fail",
+            "pass" if bool_at(readiness, ("can_execute_trial",)) else "fail",
             "ops/reports/auto-improve-readiness.json",
             "auto_improve_readiness.can_execute_trial == true",
-            f"can_execute_trial={_bool_at(readiness, ('can_execute_trial',))}",
+            f"can_execute_trial={bool_at(readiness, ('can_execute_trial',))}",
             "Auto-improve execution trial is runnable.",
         ),
         _predicate_result(
             "auto_improve_can_promote_result",
-            "pass" if _bool_at(readiness, ("can_promote_result",)) else "fail",
+            "pass" if bool_at(readiness, ("can_promote_result",)) else "fail",
             "ops/reports/auto-improve-readiness.json",
             "auto_improve_readiness.can_promote_result == true",
-            f"can_promote_result={_bool_at(readiness, ('can_promote_result',))}",
+            f"can_promote_result={bool_at(readiness, ('can_promote_result',))}",
             "Auto-improve result promotion gate is clean.",
         ),
         _predicate_result(
             "learning_readiness_likely",
             "pass"
-            if _string_at(readiness, ("learning_readiness", "status")) == "learning_likely"
-            and _bool_at(readiness, ("learning_readiness", "likely_to_learn"))
+            if str_at(readiness, ("learning_readiness", "status")) == "learning_likely"
+            and bool_at(readiness, ("learning_readiness", "likely_to_learn"))
             else "fail",
             "ops/reports/auto-improve-readiness.json",
             "learning_readiness.status == learning_likely and likely_to_learn == true",
             (
-                f"status={_string_at(readiness, ('learning_readiness', 'status'))}; "
-                f"likely_to_learn={_bool_at(readiness, ('learning_readiness', 'likely_to_learn'))}"
+                f"status={str_at(readiness, ('learning_readiness', 'status'))}; "
+                f"likely_to_learn={bool_at(readiness, ('learning_readiness', 'likely_to_learn'))}"
             ),
             "Learning readiness is in the narrow machine-claimable state.",
         ),
@@ -526,8 +497,8 @@ def _auto_policy_readiness_predicates(
         _predicate_result(
             "runnable_proposal_queue_present",
             "pass"
-            if _bool_at(readiness, ("queue", "ready"))
-            and _int_at(readiness, ("queue", "runnable_proposal_count"))
+            if bool_at(readiness, ("queue", "ready"))
+            and int_at(readiness, ("queue", "runnable_proposal_count"))
             >= thresholds.min_runnable_proposal_count
             else "fail",
             "ops/reports/auto-improve-readiness.json",
@@ -536,8 +507,8 @@ def _auto_policy_readiness_predicates(
                 f"{thresholds.min_runnable_proposal_count}"
             ),
             (
-                f"queue.ready={_bool_at(readiness, ('queue', 'ready'))}; "
-                f"runnable_proposal_count={_int_at(readiness, ('queue', 'runnable_proposal_count'))}"
+                f"queue.ready={bool_at(readiness, ('queue', 'ready'))}; "
+                f"runnable_proposal_count={int_at(readiness, ('queue', 'runnable_proposal_count'))}"
             ),
             "Runnable proposal queue has at least one candidate.",
         ),
@@ -554,11 +525,11 @@ def _auto_policy_metric_predicates(
         _predicate_result(
             "same_eval_run_count_minimum",
             "pass"
-            if _int_at(readiness, (*metrics_path, "same_eval_run_count")) >= thresholds.min_same_eval_runs
+            if int_at(readiness, (*metrics_path, "same_eval_run_count")) >= thresholds.min_same_eval_runs
             else "fail",
             "ops/reports/auto-improve-readiness.json",
             f"learning_readiness.metrics.same_eval_run_count >= {thresholds.min_same_eval_runs}",
-            f"same_eval_run_count={_int_at(readiness, (*metrics_path, 'same_eval_run_count'))}",
+            f"same_eval_run_count={int_at(readiness, (*metrics_path, 'same_eval_run_count'))}",
             "Same-eval evidence has enough repeated comparable runs.",
         ),
         _predicate_result(
@@ -606,8 +577,8 @@ def _auto_policy_metric_predicates(
         _predicate_result(
             "rework_and_escape_budget_clean",
             "pass"
-            if _int_at(readiness, (*metrics_path, "rework_count")) <= thresholds.max_rework_count
-            and _int_at(readiness, (*metrics_path, "defect_escape_pair_count"))
+            if int_at(readiness, (*metrics_path, "rework_count")) <= thresholds.max_rework_count
+            and int_at(readiness, (*metrics_path, "defect_escape_pair_count"))
             <= thresholds.max_defect_escape_pair_count
             else "fail",
             "ops/reports/auto-improve-readiness.json",
@@ -616,8 +587,8 @@ def _auto_policy_metric_predicates(
                 f"defect_escape_pair_count <= {thresholds.max_defect_escape_pair_count}"
             ),
             (
-                f"rework_count={_int_at(readiness, (*metrics_path, 'rework_count'))}; "
-                f"defect_escape_pair_count={_int_at(readiness, (*metrics_path, 'defect_escape_pair_count'))}"
+                f"rework_count={int_at(readiness, (*metrics_path, 'rework_count'))}; "
+                f"defect_escape_pair_count={int_at(readiness, (*metrics_path, 'defect_escape_pair_count'))}"
             ),
             "Shadow learning risk budget is clean for automatic narrow claim unlock.",
         ),
