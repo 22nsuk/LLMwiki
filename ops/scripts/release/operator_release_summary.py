@@ -389,7 +389,7 @@ def _source_zip(vault: Path, batch_manifest: dict[str, Any], load_status: str) -
     content_matches = bool(distribution.get("content_digest_matches_release_manifest"))
     rel_path = str(distribution.get("path", "")).strip()
     expected_sha256 = str(distribution.get("sha256", "")).strip()
-    zip_path = vault / rel_path if rel_path else Path("")
+    zip_path = vault / rel_path if rel_path else Path()
     file_exists = bool(rel_path) and zip_path.is_file()
     actual_sha256 = _sha256_file(zip_path) if file_exists else ""
     file_digest_matches_batch = bool(expected_sha256) and actual_sha256 == expected_sha256

@@ -322,7 +322,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "schema-backed artifacts without treating them as current runtime evidence."
         )
     )
-    ap.add_argument("--vault", type=Path, default=Path("."))
+    ap.add_argument("--vault", type=Path, default=Path())
     ap.add_argument(
         "--path",
         dest="paths",

@@ -19,7 +19,7 @@ pytestmark = pytest.mark.public
 class PublicMirrorBoundaryRuntimeTests(unittest.TestCase):
     def test_public_source_file_is_accepted(self) -> None:
         self.assertEqual(
-            assert_within_public_mirror(Path("."), "docs/README.md"),
+            assert_within_public_mirror(Path(), "docs/README.md"),
             "docs/README.md",
         )
 
@@ -33,9 +33,9 @@ class PublicMirrorBoundaryRuntimeTests(unittest.TestCase):
             "system/system-log.md",
         ):
             with self.subTest(rel_path=rel_path):
-                self.assertFalse(is_within_public_mirror(Path("."), rel_path))
+                self.assertFalse(is_within_public_mirror(Path(), rel_path))
                 with self.assertRaises(PublicMirrorBoundaryError):
-                    assert_within_public_mirror(Path("."), rel_path)
+                    assert_within_public_mirror(Path(), rel_path)
 
     def test_parent_escape_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

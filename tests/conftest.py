@@ -128,7 +128,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         load_registry,
     )
 
-    registry = load_registry(Path("."))
+    registry = load_registry(Path())
     markers = authoritative_markers(registry)
     allowed = allowed_marker_combinations(registry)
     forbidden = forbidden_marker_combinations(registry)

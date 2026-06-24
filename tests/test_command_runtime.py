@@ -36,7 +36,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('ok')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=5,
             backend=backend,
         )
@@ -61,7 +61,7 @@ class CommandRuntimeTests(unittest.TestCase):
         result = run_with_timeout(
             RunWithTimeoutRequest(
                 argv=["python", "-c", "print('ok')"],
-                cwd=Path("."),
+                cwd=Path(),
                 timeout_seconds=5,
                 backend=backend,
             )
@@ -85,7 +85,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "import time; time.sleep(5)"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=1,
             backend=backend,
         )
@@ -114,7 +114,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('ok')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=5,
             backend=backend,
             env={"PATH": "/bin", "PYTHONPATH": "/leak", "CUSTOM": "leak"},
@@ -238,7 +238,7 @@ class CommandRuntimeTests(unittest.TestCase):
         ):
             command_runtime.run_with_timeout(
                 ["python", "-c", "import time; time.sleep(5)"],
-                cwd=Path("."),
+                cwd=Path(),
                 timeout_seconds=30,
                 backend=backend,
             )
@@ -285,7 +285,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('race')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=1,
             backend=backend,
         )
@@ -308,7 +308,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('race')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=1,
             backend=backend,
         )
@@ -331,7 +331,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('race')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=1,
             backend=backend,
         )
@@ -356,7 +356,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('late')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=1,
             backend=backend,
         )
@@ -381,7 +381,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('grace')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=1,
             backend=backend,
         )
@@ -406,7 +406,7 @@ class CommandRuntimeTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('kill')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=1,
             backend=backend,
         )

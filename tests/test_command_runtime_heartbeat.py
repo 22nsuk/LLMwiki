@@ -41,7 +41,7 @@ class CommandRuntimeHeartbeatTests(unittest.TestCase):
 
         result = run_with_timeout(
             ["python", "-c", "print('done')"],
-            cwd=Path("."),
+            cwd=Path(),
             timeout_seconds=5,
             backend=backend,
             heartbeat_interval_seconds=1,
@@ -71,7 +71,7 @@ class CommandRuntimeHeartbeatTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "heartbeat_interval_seconds must be >= 1"):
             run_with_timeout(
                 ["python", "-c", "print('ok')"],
-                cwd=Path("."),
+                cwd=Path(),
                 timeout_seconds=5,
                 backend=backend,
                 heartbeat_interval_seconds=0,
