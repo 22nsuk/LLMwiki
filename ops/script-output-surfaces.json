@@ -612,6 +612,15 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
+      "path": "ops/scripts/mechanism/goal_run_status_artifacts_runtime.py",
+      "classification": "repo_artifact",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": true,
+      "direct_fallback_eligible": false,
+      "reason": "uses repo artifact resolver"
+    },
+    {
       "path": "ops/scripts/mechanism/goal_runtime_certificate_report.py",
       "classification": "repo_artifact",
       "output_options": [

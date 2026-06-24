@@ -7,8 +7,28 @@ from typing import Any
 
 from ops.scripts.core.artifact_io_runtime import write_json_object
 from ops.scripts.core.filesystem_runtime import atomic_write_text
+from ops.scripts.core.output_runtime import resolve_repo_output_path
+from ops.scripts.core.path_runtime import normalize_repo_path_text
 
 from .goal_runtime_resume import mapping_field, resume_metadata_from_report
+
+
+def _resolve_artifact_path(vault: Path, artifacts: Mapping[str, Any], key: str) -> Path:
+    raw_path = str(artifacts[key])
+    normalized = normalize_repo_path_text(raw_path)
+    if (
+        Path(raw_path).is_absolute()
+        or normalized is None
+        or normalized in {".", ".."}
+        or (len(normalized) > 2 and normalized[1] == ":" and normalized[2] == "/")
+        or normalized.startswith("../")
+    ):
+        raise ValueError(f"goal run artifact path must be repo-relative: {key}")
+    return resolve_repo_output_path(
+        vault,
+        normalized,
+        default_relative_path=normalized,
+    )
 
 
 def build_status_markdown(report: Mapping[str, Any]) -> str:
@@ -85,9 +105,9 @@ def write_run_artifacts(
     artifacts = report.get("artifacts")
     if not isinstance(artifacts, dict):
         raise ValueError("goal run status report missing artifacts")
-    status_markdown = vault / str(artifacts["status_markdown_path"])
-    resume_metadata = vault / str(artifacts["resume_metadata_path"])
-    audit_log = vault / str(artifacts["audit_log_path"])
+    status_markdown = _resolve_artifact_path(vault, artifacts, "status_markdown_path")
+    resume_metadata = _resolve_artifact_path(vault, artifacts, "resume_metadata_path")
+    audit_log = _resolve_artifact_path(vault, artifacts, "audit_log_path")
     atomic_write_text(status_markdown, build_status_markdown(report))
     write_json_object(
         resume_metadata,

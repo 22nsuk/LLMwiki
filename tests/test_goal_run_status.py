@@ -688,6 +688,55 @@ class GoalRunStatusTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
 
+    def test_goal_run_status_ignores_prior_artifact_paths_that_escape_vault(self) -> None:
+        self._seed_goal_contract()
+        state_status_path = "runs/goal-20260517-trial/state/goal-run-status.json"
+        state_report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="running",
+                status_report_path=state_status_path,
+                context=fixed_context(),
+            )
+        )
+        state_report["artifacts"]["status_markdown_path"] = "../outside/status.md"
+        state_report["artifacts"]["audit_log_path"] = "/tmp/llmwiki-goal-status-audit.jsonl"
+        state_path = self.vault / state_status_path
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(json.dumps(state_report, sort_keys=True), encoding="utf-8")
+
+        refreshed = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                context=context_at(12, 30),
+            )
+        )
+
+        self.assertEqual(
+            refreshed["artifacts"]["status_markdown_path"],
+            "runs/goal-20260517-trial/status.md",
+        )
+        self.assertEqual(
+            refreshed["artifacts"]["audit_log_path"],
+            "runs/goal-20260517-trial/audit-log.jsonl",
+        )
+
+    def test_write_run_artifacts_rejects_artifact_paths_that_escape_vault(self) -> None:
+        self._seed_goal_contract()
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                context=fixed_context(),
+            )
+        )
+        report["artifacts"]["status_markdown_path"] = "../outside/status.md"
+
+        with self.assertRaisesRegex(ValueError, "repo-relative"):
+            write_run_artifacts(self.vault, report)
+
     def test_goal_run_status_finalization_preserves_prior_run_clock(self) -> None:
         self._seed_goal_contract()
         initial = build_report(

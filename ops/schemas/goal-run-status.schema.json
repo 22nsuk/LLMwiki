@@ -370,11 +370,11 @@
         "checkpoint_command_log_path"
       ],
       "properties": {
-        "status_report_path": { "type": "string", "minLength": 1 },
-        "status_markdown_path": { "type": "string", "minLength": 1 },
-        "audit_log_path": { "type": "string", "minLength": 1 },
-        "resume_metadata_path": { "type": "string", "minLength": 1 },
-        "checkpoint_command_log_path": { "type": "string", "minLength": 1 }
+        "status_report_path": { "$ref": "#/$defs/repo_relative_path" },
+        "status_markdown_path": { "$ref": "#/$defs/repo_relative_path" },
+        "audit_log_path": { "$ref": "#/$defs/repo_relative_path" },
+        "resume_metadata_path": { "$ref": "#/$defs/repo_relative_path" },
+        "checkpoint_command_log_path": { "$ref": "#/$defs/repo_relative_path" }
       }
     },
     "promotion_guard": { "type": "object" },
@@ -389,6 +389,11 @@
     }
   },
   "$defs": {
+    "repo_relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:[/\\\\])(?!.*(?:^|[/\\\\])\\.\\.(?:[/\\\\]|$)).+"
+    },
     "periodic_evidence_checkpoint": {
       "type": "object",
       "additionalProperties": false,
