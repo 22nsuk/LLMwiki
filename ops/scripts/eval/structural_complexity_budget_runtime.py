@@ -114,6 +114,7 @@ DEFAULT_TARGET_PROFILES: dict[str, dict[str, Any]] = {
             "ops/scripts/release/release_evidence_dashboard.py",
             "ops/scripts/release/release_closeout_summary.py",
             "ops/scripts/release/external_report_lifecycle_runtime.py",
+            "ops/scripts/release/release_closeout_gate_runtime.py",
             "ops/scripts/release/release_closeout_fixed_point.py",
             "ops/scripts/release/release_post_seal_attestation.py",
             "ops/scripts/test/test_execution_summary.py",
