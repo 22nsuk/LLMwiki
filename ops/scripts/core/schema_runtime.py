@@ -7,12 +7,11 @@ from dataclasses import dataclass
 from functools import cache
 from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 from .schema_constants_runtime import LOCAL_SCHEMA_ALIASES
 
 try:
-    from jsonschema import ValidationError
     from jsonschema.exceptions import SchemaError
     from jsonschema.validators import validator_for
     from referencing import Registry, Resource
@@ -33,6 +32,14 @@ class SchemaIssue:
     schema_path: str
     validator: str
     message: str
+
+
+class _ValidationErrorLike(Protocol):
+    absolute_schema_path: Iterable[Any]
+    absolute_path: Iterable[Any]
+    validator: str
+    message: str
+    validator_value: object
 
 
 def _normalize_schema_identifier(identifier: str) -> str:
@@ -105,7 +112,7 @@ def _format_absolute_path(base_path: str, segments: Iterable[Any]) -> str:
     return formatted
 
 
-def _format_schema_path(error: ValidationError) -> str:
+def _format_schema_path(error: _ValidationErrorLike) -> str:
     return _format_absolute_path("$", error.absolute_schema_path)
 
 
@@ -116,7 +123,7 @@ def _extract_unexpected_properties(message: str) -> list[str]:
     return UNEXPECTED_PROPERTY_RE.findall(matched.group(1))
 
 
-def _format_issue_message(error: ValidationError, instance_path: str) -> list[str]:
+def _format_issue_message(error: _ValidationErrorLike, instance_path: str) -> list[str]:
     validator = error.validator
     if validator == "required":
         matched = REQUIRED_PROPERTY_RE.search(error.message)
@@ -125,7 +132,13 @@ def _format_issue_message(error: ValidationError, instance_path: str) -> list[st
     if validator == "type":
         return [f"{instance_path}: expected {error.validator_value}"]
     if validator == "enum":
-        return [f"{instance_path}: expected one of {list(error.validator_value)}"]
+        enum_values = error.validator_value
+        rendered = (
+            enum_values
+            if isinstance(enum_values, list)
+            else cast(list[Any], [enum_values])
+        )
+        return [f"{instance_path}: expected one of {rendered}"]
     if validator == "additionalProperties":
         unexpected_properties = _extract_unexpected_properties(error.message)
         if unexpected_properties:
@@ -137,7 +150,9 @@ def _format_issue_message(error: ValidationError, instance_path: str) -> list[st
     if validator == "minItems":
         return [f"{instance_path}: expected at least {error.validator_value} item(s)"]
     if validator == "minProperties":
-        return [f"{instance_path}: expected at least {error.validator_value} propert(ies)"]
+        return [
+            f"{instance_path}: expected at least {error.validator_value} propert(ies)"
+        ]
     if validator == "oneOf":
         return [f"{instance_path}: does not match any allowed schema"]
     if validator == "const":
@@ -156,9 +171,13 @@ def build_validator_for_schema(schema: dict) -> Any:
     return _build_validator(schema)
 
 
-def iter_validator_issues(data: Any, validator: Any, path: str = "$") -> list[SchemaIssue]:
+def iter_validator_issues(
+    data: Any, validator: Any, path: str = "$"
+) -> list[SchemaIssue]:
     issues: list[SchemaIssue] = []
-    errors = sorted(validator.iter_errors(data), key=lambda error: list(error.absolute_path))
+    errors = sorted(
+        validator.iter_errors(data), key=lambda error: list(error.absolute_path)
+    )
     for error in errors:
         instance_path = _format_absolute_path(path, error.absolute_path)
         schema_path = _format_schema_path(error)

@@ -6,6 +6,7 @@
     "$schema",
     "run_id",
     "role",
+    "input_digest",
     "generated_at",
     "executor",
     "status",
@@ -28,6 +29,10 @@
     "role": {
       "type": "string",
       "minLength": 1
+    },
+    "input_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     },
     "generated_at": {
       "type": "string",

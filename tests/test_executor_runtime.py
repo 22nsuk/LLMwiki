@@ -32,7 +32,12 @@ from ops.scripts.core.executor_runtime import (
     run_executor_pipeline,
 )
 from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.workspace_python_identity_runtime import (
+    build_workspace_python_identity,
+    write_workspace_python_identity,
+)
 from tests.cli_test_runtime import invoke_cli_main
+from tests.executor_model_output_test_utils import write_valid_model_output
 from tests.minimal_vault_runtime import (
     REPO_ROOT,
     seed_minimal_vault,
@@ -43,17 +48,32 @@ from tests.minimal_vault_runtime import (
 pytestmark = pytest.mark.slow
 
 
+def _provision_workspace_python_shim(
+    vault: Path,
+    shim_content: str,
+    *,
+    source_python: Path | None = None,
+) -> Path:
+    resolved_source = source_python or Path(sys.executable).resolve()
+    workspace_python = vault / ".venv" / "bin" / "python"
+    workspace_python.parent.mkdir(parents=True, exist_ok=True)
+    workspace_python.write_text(shim_content, encoding="utf-8")
+    workspace_python.chmod(0o755)
+    write_workspace_python_identity(
+        vault,
+        build_workspace_python_identity(source_python=resolved_source, shim_content=shim_content),
+    )
+    return workspace_python
+
+
 def _seed_executor_vault(vault: Path) -> None:
     seed_minimal_vault(vault)
     (vault / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
     (vault / "tests").mkdir(parents=True, exist_ok=True)
     venv_bin = vault / ".venv" / "bin"
     venv_bin.mkdir(parents=True, exist_ok=True)
-    (venv_bin / "python").write_text(
-        f"#!/bin/sh\nexec {json.dumps(sys.executable)} \"$@\"\n",
-        encoding="utf-8",
-    )
-    (venv_bin / "python").chmod(0o755)
+    shim_content = f"#!/bin/sh\nexec {json.dumps(sys.executable)} \"$@\"\n"
+    _provision_workspace_python_shim(vault, shim_content)
     (vault / "ops" / "schemas" / "executor-report.schema.json").write_text(
         (REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text(encoding="utf-8"),
         encoding="utf-8",
@@ -174,11 +194,13 @@ def _write_external_workspace_python_shim(artifact_root: Path, workspace_root: P
         source_python = Path(sys.executable).resolve()
     workspace_python = workspace_root / ".venv" / "bin" / "python"
     workspace_python.parent.mkdir(parents=True, exist_ok=True)
-    workspace_python.write_text(
-        f"#!/bin/sh\nexec {shlex.quote(str(source_python))} \"$@\"\n",
-        encoding="utf-8",
-    )
+    shim_content = f"#!/bin/sh\nexec {shlex.quote(str(source_python))} \"$@\"\n"
+    workspace_python.write_text(shim_content, encoding="utf-8")
     workspace_python.chmod(0o755)
+    write_workspace_python_identity(
+        workspace_root,
+        build_workspace_python_identity(source_python=source_python, shim_content=shim_content),
+    )
     return workspace_python
 
 
@@ -399,13 +421,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             def fake_run(argv: list[str], **_: object) -> object:
                 out_index = argv.index("-o") + 1
-                Path(argv[out_index]).write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": ["ok"]}}, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(Path(argv[out_index]), vault, run_id="run-executor", role="worker", notes=["ok"])
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -487,13 +506,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             def fake_run(argv: list[str], **_: object) -> object:
                 out_index = argv.index("-o") + 1
-                Path(argv[out_index]).write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": ["validated"]}}, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(Path(argv[out_index]), vault, run_id="run-executor", role="validator", notes=["validated"])
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -575,13 +591,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             def fake_run(argv: list[str], **_: object) -> object:
                 out_index = argv.index("-o") + 1
-                Path(argv[out_index]).write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": ["repaired"]}}),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(Path(argv[out_index]), vault, run_id="run-executor", role="worker", notes=["repaired"])
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -638,7 +651,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(
                 hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "71d2e41c4c7a3758038b7fb9cf2797dbd1b1d4d2b3a1e77f64c5c0fa31cd3ff3",
+                "8114d77e44982f2c549493038b5cb6fe35924601f3b38a5bfa186dcf5403a2d7",
             )
             section_positions = [
                 prompt.index(section)
@@ -757,6 +770,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
         request = ExecutorReportRequest(
             run_id="run-executor",
             role="validator",
+            scope_freeze={"run_id": "run-executor", "proposal_id": "proposal-example"},
             routing_report=routing_report,
             routing_report_rel="runs/run-executor/subagent-routing.validator.json",
             scope_freeze_rel="runs/run-executor/scope-freeze.json",
@@ -776,12 +790,16 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
         self.assertEqual(first_bytes, second_bytes)
         self.assertEqual(first_payload["generated_at"], "2026-05-02T01:02:03Z")
+        self.assertEqual(
+            first_payload["input_digest"],
+            second_payload["input_digest"],
+        )
         self.assertEqual(first_payload["result"]["returncode"], 124)
         self.assertTrue(first_payload["result"]["timed_out"])
         self.assertEqual(first_payload["diagnostics"]["notes"], ["validator blocked", "missing dependency evidence"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "9832348ee3e5877a4c033ab0effbcb754b6a8c49e086b377178afb408818e78c",
+            "d9af97f903899ed4a58c67e99aca86b74e3ed982b33bd5e80402bfe85bec3707",
         )
 
     def test_codex_exec_prefers_workspace_virtualenv_on_path(self) -> None:
@@ -792,13 +810,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
             seed_subagent_profiles(vault, ["validator"])
             venv_bin = vault / ".venv" / "bin"
             venv_bin.mkdir(parents=True, exist_ok=True)
-            (venv_bin / "python").write_text(
-                f"#!/bin/sh\n"
-                f"if [ \"${{1:-}}\" = \"-c\" ]; then exec {json.dumps(sys.executable)} \"$@\"; fi\n"
-                "printf 'workspace-python\\n'\n",
-                encoding="utf-8",
+            _provision_workspace_python_shim(
+                vault,
+                (
+                    f"#!/bin/sh\n"
+                    f"if [ \"${{1:-}}\" = \"-c\" ]; then exec {json.dumps(sys.executable)} \"$@\"; fi\n"
+                    "printf 'workspace-python\\n'\n"
+                ),
             )
-            (venv_bin / "python").chmod(0o755)
             (venv_bin / "codex").write_text("#!/bin/sh\n", encoding="utf-8")
             (venv_bin / "codex").chmod(0o755)
             _write_routing_report(
@@ -823,12 +842,12 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 env = kwargs.get("env")
                 self.assertIsInstance(env, dict)
                 captured_env.update(cast(dict[str, str], env))
-                Path(argv[out_index]).write_text(
-                    json.dumps(
-                        {"status": "pass", "diagnostics": {"notes": ["validated"]}},
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                write_valid_model_output(
+                    Path(argv[out_index]),
+                    vault,
+                    run_id="run-executor",
+                    role="validator",
+                    notes=["validated"],
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
@@ -836,7 +855,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 os.environ,
                 {"PATH": f"{venv_bin}{os.pathsep}{outer_codex.parent}"},
             ), mock.patch(
-                "ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run
+                "ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run
             ):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
@@ -885,7 +904,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 selected_rung=3,
             )
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout") as run:
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout") as run:
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -913,15 +932,12 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stdout.txt").is_file())
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stderr.txt").is_file())
 
-    def test_non_worker_dependency_preflight_uses_workspace_python_probe(self) -> None:
+    def test_non_worker_dependency_preflight_uses_trusted_candidate_runner_probe(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             _seed_executor_vault(vault)
             seed_subagent_profiles(vault, ["validator"])
-            venv_python = vault / ".venv" / "bin" / "python"
-            venv_python.write_text("#!/bin/sh\nexit 99\n", encoding="utf-8")
-            venv_python.chmod(0o755)
             _write_routing_report(
                 vault,
                 "validator",
@@ -934,10 +950,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
                 if argv[:3] == ["git", "rev-parse", "HEAD"]:
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
-                self.assertEqual(argv[0], str(venv_python))
-                self.assertEqual(Path(str(kwargs.get("cwd"))), Path(os.sep))
+                trusted_python = (vault / ".venv" / "bin" / "python").resolve()
+                self.assertEqual(argv[0], str(trusted_python))
+                self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
                 payload = {
-                    "python": {"executable": str(venv_python), "version": "3.test"},
+                    "python": {"executable": str(trusted_python), "version": "3.test"},
                     "modules": [
                         {
                             "import_name": "pytest",
@@ -965,15 +982,13 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return subprocess.CompletedProcess(argv, 0, stdout=json.dumps(payload), stderr="")
 
             def fake_run(argv: list[str], **_: object) -> object:
-                Path(argv[argv.index("-o") + 1]).write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": ["validated"]}}),
-                    encoding="utf-8",
-                )
+                out_index = argv.index("-o") + 1
+                write_valid_model_output(Path(argv[out_index]), vault, run_id="run-executor", role="validator", notes=["validated"])
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.subprocess.run", side_effect=fake_preflight),
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
             ):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
@@ -1017,15 +1032,13 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
 
             def fake_run(argv: list[str], **_: object) -> object:
-                Path(argv[argv.index("-o") + 1]).write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": ["validated"]}}),
-                    encoding="utf-8",
-                )
+                out_index = argv.index("-o") + 1
+                write_valid_model_output(Path(argv[out_index]), vault, run_id="run-executor", role="validator", notes=["validated"])
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
             with (
                 mock.patch.dict(os.environ, {"PYTHONPATH": str(vault)}),
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
             ):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
@@ -1120,12 +1133,12 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 captured_env.update(cast(dict[str, str], env))
                 out_index = argv.index("-o") + 1
                 self.assertTrue(Path(argv[out_index]).is_relative_to(workspace_root))
-                Path(argv[out_index]).write_text(
-                    json.dumps(
-                        {"status": "pass", "diagnostics": {"notes": ["validated"]}},
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                write_valid_model_output(
+                    Path(argv[out_index]),
+                    artifact_root,
+                    run_id="run-executor",
+                    role="validator",
+                    notes=["validated"],
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
@@ -1133,7 +1146,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 os.environ,
                 {"PATH": f"{workspace_venv_bin}{os.pathsep}{outer_codex.parent}"},
             ), mock.patch(
-                "ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run
+                "ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run
             ):
                 report = execute_codex_exec_role(
                     artifact_root=artifact_root,
@@ -1195,16 +1208,16 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 self.assertEqual(argv[2:5], ["-s", "read-only", "--skip-git-repo-check"])
                 out_index = argv.index("-o") + 1
                 self.assertTrue(Path(argv[out_index]).is_relative_to(workspace_root))
-                Path(argv[out_index]).write_text(
-                    json.dumps(
-                        {"status": "pass", "diagnostics": {"notes": ["audited"]}},
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                write_valid_model_output(
+                    Path(argv[out_index]),
+                    artifact_root,
+                    run_id="run-executor",
+                    role="provenance-auditor",
+                    notes=["audited"],
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=artifact_root,
                     workspace_root=workspace_root,
@@ -1251,7 +1264,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout") as run,
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout") as run,
             ):
                 report = execute_codex_exec_role(
                     artifact_root=artifact_root,
@@ -1268,7 +1281,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertEqual(report["status"], "fail")
             notes = "\n".join(report["diagnostics"]["notes"])
             self.assertIn("workspace Python trust check", notes)
-            self.assertIn("shim does not match the trusted parent interpreter", notes)
+            self.assertIn("shim content does not match identity manifest", notes)
 
     def test_codex_exec_blocks_workspace_virtualenv_codex_when_no_outer_codex_exists(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1398,13 +1411,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             def fake_run(argv: list[str], **_: object) -> object:
                 out_index = argv.index("-o") + 1
-                Path(argv[out_index]).write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": ["reviewed"]}}, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(Path(argv[out_index]), vault, run_id="run-executor", role="reviewer", notes=["reviewed"])
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1455,16 +1465,16 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     "{}\n",
                     encoding="utf-8",
                 )
-                Path(argv[out_index]).write_text(
-                    json.dumps(
-                        {"status": "pass", "diagnostics": {"notes": ["reviewed"]}},
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                write_valid_model_output(
+                    Path(argv[out_index]),
+                    vault,
+                    run_id="run-executor",
+                    role="reviewer",
+                    notes=["reviewed"],
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1501,17 +1511,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             def fake_run(argv: list[str], **_: object) -> object:
                 out_index = argv.index("-o") + 1
-                Path(argv[out_index]).write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": ["validated"]}}, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(Path(argv[out_index]), vault, run_id="run-executor", role="validator", notes=["validated"])
                 (vault / "ops" / "scripts" / "example.py").write_text(
                     "def subject():\n    return 2\n",
                     encoding="utf-8",
                 )
                 return mock.Mock(returncode=0, stdout="ok\n", stderr="")
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1578,7 +1585,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     termination_reason="timeout",
                 )
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1645,7 +1652,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     termination_reason="completed",
                 )
 
-            with mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+            with mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
                     workspace_root=vault,
@@ -1688,7 +1695,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
             ):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
@@ -1733,7 +1740,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
             ):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
@@ -1786,7 +1793,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
             ):
                 report = execute_codex_exec_role(
                     artifact_root=artifact_root,
@@ -1832,7 +1839,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             with (
                 mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
             ):
                 report = execute_codex_exec_role(
                     artifact_root=vault,
@@ -1887,10 +1894,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 if role == "validator":
                     self.assertEqual(argv[2:4], ["-s", "read-only"])
                     self.assertIn("--skip-git-repo-check", argv)
-                output_path.write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(output_path, vault, run_id="run-executor", role=role, notes=[f"{role} ok"])
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -1902,8 +1906,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
             ):
                 result = run_executor_pipeline(
                     vault,
@@ -1974,10 +1978,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                         "def subject():\n    return 2\n",
                         encoding="utf-8",
                     )
-                output_path.write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(output_path, vault, run_id="run-executor", role=role, notes=[f"{role} ok"])
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -1989,8 +1990,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
             ):
                 run_executor_pipeline(
                     vault,
@@ -2058,12 +2059,12 @@ class ExecutorRuntimeTests(unittest.TestCase):
                         "def subject():\n    return 2\n",
                         encoding="utf-8",
                     )
-                output_path.write_text(
-                    json.dumps(
-                        {"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}},
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                write_valid_model_output(
+                    output_path,
+                    vault,
+                    run_id="run-executor",
+                    role=role,
+                    notes=[f"{role} ok"],
                 )
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
@@ -2075,8 +2076,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
             ):
                 run_executor_pipeline(
                     vault,
@@ -2136,14 +2137,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 events.append(role)
                 if role == "worker":
                     generator_path.write_text("# new generator\n", encoding="utf-8")
-                output_path.write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(output_path, vault, run_id="run-executor", role=role, notes=[f"{role} ok"])
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "refusing to refresh ops/script-output-surfaces.json",
@@ -2207,14 +2205,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
                         encoding="utf-8",
                     )
                     generator_path.write_text("# extra generator change\n", encoding="utf-8")
-                output_path.write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(output_path, vault, run_id="run-executor", role=role, notes=[f"{role} ok"])
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "refusing to refresh ops/script-output-surfaces.json",
@@ -2277,12 +2272,12 @@ class ExecutorRuntimeTests(unittest.TestCase):
                         "def subject():\n    return 2\n",
                         encoding="utf-8",
                     )
-                output_path.write_text(
-                    json.dumps(
-                        {"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}},
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                write_valid_model_output(
+                    output_path,
+                    vault,
+                    run_id="run-executor",
+                    role=role,
+                    notes=[f"{role} ok"],
                 )
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
@@ -2299,8 +2294,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "worker repo-health preflight failed.*ruff check failed",
@@ -2360,14 +2355,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 output_path = Path(argv[out_index])
                 role = output_path.name.replace("-last-message.json", "")
                 executed_roles.append(role)
-                output_path.write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(output_path, vault, run_id="run-executor", role=role, notes=[f"{role} ok"])
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "without modifying any declared primary target",
@@ -2412,18 +2404,15 @@ class ExecutorRuntimeTests(unittest.TestCase):
                         "def subject():\n    return 2\n",
                         encoding="utf-8",
                     )
-                Path(argv[out_index]).write_text(
-                    json.dumps({"status": "pass", "diagnostics": {"notes": ["cli ok"]}}, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                write_valid_model_output(Path(argv[out_index]), vault, run_id="run-executor", role="worker", notes=["cli ok"])
                 return mock.Mock(returncode=0, stdout="cli ok\n", stderr="")
 
             def fake_preflight(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
             ):
                 result = invoke_cli_main(
                     executor_cli_main,
@@ -2480,23 +2469,27 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 out_index = argv.index("-o") + 1
                 output_path = Path(argv[out_index])
                 role = output_path.name.replace("-last-message.json", "")
-                payload = {"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}
                 if role == "worker":
                     (vault / "ops" / "scripts" / "example.py").write_text(
                         "def subject():\n    return 2\n",
                         encoding="utf-8",
                     )
-                if role == "validator":
-                    payload = {"status": "fail", "diagnostics": {"notes": ["validator blocked"]}}
-                output_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+                write_valid_model_output(
+                    output_path,
+                    vault,
+                    run_id="run-executor",
+                    role=role,
+                    notes=["validator blocked"] if role == "validator" else [f"{role} ok"],
+                    status="fail" if role == "validator" else "pass",
+                )
                 return mock.Mock(returncode=0, stdout=f"{role}\n", stderr="")
 
             def fake_preflight(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
             ):
                 result = invoke_cli_main(
                     executor_cli_main,
@@ -2576,24 +2569,28 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 out_index = argv.index("-o") + 1
                 output_path = Path(argv[out_index])
                 role = output_path.name.replace("-last-message.json", "")
-                payload = {"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}
                 returncode = 0
                 if role == "worker":
                     (vault / "ops" / "scripts" / "example.py").write_text(
                         "def subject():\n    return 2\n",
                         encoding="utf-8",
                     )
-                if role == "validator":
-                    payload = {"status": "fail", "diagnostics": {"notes": ["validator blocked"]}}
-                output_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+                write_valid_model_output(
+                    output_path,
+                    vault,
+                    run_id="run-executor",
+                    role=role,
+                    notes=["validator blocked"] if role == "validator" else [f"{role} ok"],
+                    status="fail" if role == "validator" else "pass",
+                )
                 return mock.Mock(returncode=returncode, stdout=f"{role}\n", stderr="")
 
             def fake_preflight(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
                 self.assertRaises(ExecutorRuntimeExecutionError),
             ):
                 run_executor_pipeline(
