@@ -19,8 +19,7 @@ def _resolve_artifact_path(vault: Path, artifacts: Mapping[str, Any], key: str) 
     if (
         Path(raw_path).is_absolute()
         or normalized is None
-        or normalized == "."
-        or normalized == ".."
+        or normalized in {".", ".."}
         or (len(normalized) > 2 and normalized[1] == ":" and normalized[2] == "/")
         or normalized.startswith("../")
     ):

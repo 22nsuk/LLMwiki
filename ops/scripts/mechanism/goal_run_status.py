@@ -415,8 +415,7 @@ def _artifact_path_is_repo_relative(value: str) -> bool:
     return (
         not path.is_absolute()
         and normalized is not None
-        and normalized != "."
-        and normalized != ".."
+        and normalized not in {".", ".."}
         and not (len(normalized) > 2 and normalized[1] == ":" and normalized[2] == "/")
         and not normalized.startswith("../")
         and "/../" not in normalized
