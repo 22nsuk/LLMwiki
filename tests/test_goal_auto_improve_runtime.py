@@ -43,7 +43,7 @@ def test_auto_improve_loop_goal_contract_uses_canonical_session_path() -> None:
 
     run_session.assert_called_once()
     kwargs = run_session.call_args.kwargs
-    assert run_session.call_args.args == (Path("."),)
+    assert run_session.call_args.args == (Path(),)
     assert kwargs["goal_contract_path"] == "ops/reports/codex-goal-contract.json"
     assert kwargs["session_id"] == "goal-session"
     assert kwargs["max_minutes"] == 30
@@ -83,7 +83,7 @@ def test_auto_improve_loop_prints_maintenance_action_next_budget() -> None:
             ]
         )
 
-    action_plan.assert_called_once_with(Path("."), session_id="goal-session")
+    action_plan.assert_called_once_with(Path(), session_id="goal-session")
     write_plan.assert_called_once()
     printed.assert_called_once_with(2)
 
@@ -116,7 +116,7 @@ def test_auto_improve_loop_rejects_maintenance_action_plan_outside_vault(tmp_pat
             ]
         )
 
-    action_plan.assert_called_once_with(Path("."), session_id="goal-session")
+    action_plan.assert_called_once_with(Path(), session_id="goal-session")
     write_plan.assert_not_called()
     assert exc_info.value.code == 8
     assert not outside_path.exists()

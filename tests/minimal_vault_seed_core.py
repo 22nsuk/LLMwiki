@@ -346,7 +346,7 @@ Fake Source
 ## Type
 news-snapshot
 ## Summary
-- x
+Fake Source documents a synthetic fixture used across lint and eval tests. It records a placeholder news snapshot with explicit trace back to raw/fake.pdf for deterministic registry checks.
 ## Why it matters
 - x
 ## Key points
