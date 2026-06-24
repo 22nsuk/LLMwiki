@@ -33,9 +33,9 @@ Pass: No unresolved placeholder markers are found.
 Fail: Placeholder markers appear in narrative sections.
 
 ## EVAL 7: Source page substance
-Question: If the page is a `source--` page, does it contain enough concrete content in both `Key points` and `Limitations / caveats`?
-Pass: The `Key points` section contains four or more bullets and `Limitations / caveats` contains at least one bullet.
-Fail: Either section is missing substance, even if bullets elsewhere in the document make the page look dense.
+Question: If the page is a `source--` page, does it contain source-specific substance rather than title repetition, boilerplate fingerprints, or count-padding?
+Pass: `ops/scripts/eval/source_page_substance_runtime.py` reports `pass: true` (minimum section counts plus semantic checks such as title-independent summary facts, non-boilerplate key points, and non-generic limitations/open questions).
+Fail: The substance runtime reports any failure (for example `summary_repeats_title`, `boilerplate_key_point_pattern`, or `generic_snapshot_caveat`), even when bullet counts alone look sufficient.
 
 ## EVAL 8: Synthesis decisionability
 Question: If the page is a `synthesis--` or `query--` page, does it end in an operational decision or takeaway rather than only summary?

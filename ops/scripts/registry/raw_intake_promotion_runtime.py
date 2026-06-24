@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from .raw_intake_promotion_bridge_runtime import suggest_bridge_sources_for_family
 from .raw_intake_promotion_scaffold_runtime import scaffold_profile_bundle
 from .raw_intake_promotion_shared_runtime import (
@@ -26,8 +28,8 @@ __all__ = [
 ]
 
 
-def render_family_pages(payload: dict) -> dict[str, str]:
-    report = validate_profile_bundle_data(payload)
+def render_family_pages(payload: dict, *, vault: Path | None = None) -> dict[str, str]:
+    report = validate_profile_bundle_data(payload, vault=vault)
     if report["status"] == "fail":
         raise ValueError(f"profile bundle validation failed: {report['errors']}")
 

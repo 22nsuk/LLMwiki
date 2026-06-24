@@ -22,6 +22,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.eval.source_page_substance_runtime import (
+        evaluate_source_page_substance,
+    )
     from ops.scripts.eval.wiki_page_runtime import section_body
 else:
     from ops.scripts.core.artifact_freshness_runtime import (
@@ -34,6 +37,9 @@ else:
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.eval.source_page_substance_runtime import (
+        evaluate_source_page_substance,
+    )
     from ops.scripts.eval.wiki_page_runtime import section_body
 
 
@@ -174,6 +180,10 @@ def _source_quality_for_entry(
             issues.append("key_points_below_min_count")
         if key_point_chars < min_key_point_chars:
             issues.append("key_points_below_min_chars")
+        substance = evaluate_source_page_substance(source_text)
+        if not substance["pass"]:
+            issues.append("source_page_substance_admission_failed")
+            issues.extend(str(item) for item in substance.get("failures", []))
 
     raw_lead = _raw_lead_state(vault, raw_path)
     if raw_lead["status"] in {"ok", "empty"} and raw_lead["char_count"] < min_raw_lead_chars:
@@ -184,6 +194,7 @@ def _source_quality_for_entry(
         "missing_source_page",
         "key_points_below_min_count",
         "key_points_below_min_chars",
+        "source_page_substance_admission_failed",
     }
     has_hard_source_page_issue = any(issue in hard_source_page_issue_names for issue in issues)
     if not issues:
