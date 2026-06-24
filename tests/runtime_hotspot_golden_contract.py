@@ -30,7 +30,7 @@ VOLATILE_FIELD_NAMES = frozenset(
 )
 
 FINGERPRINT_MAP_FIELD_NAMES = frozenset({"input_fingerprints"})
-FINGERPRINT_VALUE_FIELD_NAMES = frozenset({"input_fingerprint", "sha256"})
+FINGERPRINT_VALUE_FIELD_NAMES = frozenset({"input_digest", "input_fingerprint", "sha256"})
 FINGERPRINT_VALUE_FIELD_SUFFIXES = ("_fingerprint", "_sha256")
 ARTIFACT_ENVELOPE_PROPERTY_NAME = "urn:openai:artifact-envelope"
 
@@ -49,7 +49,7 @@ STRUCTURAL_GOLDEN_DIGESTS = {
     "mutation_proposal": "99536d57a2fc8f1a5ceb2fe658cec2f7e75bd4cb3d63b83dc6121c68ea426366",
     "release_evidence_dashboard": "3cdc62c1128d5fad032aa4cc2fda5931805d12964f76b2acdbf0dcd8e6d90d32",
     "release_closeout_summary": "0cf9f6fcd926a9c75a41e1457fb8c6c26f42dc6749042468108d62294df3ac97",
-    "auto_improve_session_bundle": "00e645dd5bcd510f35c4b022d4c155be81a5eb78541c7dc3ebbccef59391a164",
+    "auto_improve_session_bundle": "25ae3d2f32d98b65e959516aefeed6faf0b4d3de648ab96137939b5a74bc01ee",
 }
 
 STRUCTURAL_CONTRACTS: dict[str, dict[str, object]] = {

@@ -13,6 +13,7 @@ from ops.scripts.core.executor_runtime import (
     _worker_source_digest_snapshot,
     run_executor_pipeline,
 )
+from tests.executor_model_output_test_utils import write_valid_model_output
 from tests.minimal_vault_runtime import seed_subagent_profiles
 from tests.test_executor_runtime import (
     _executor_subprocess_completed,
@@ -109,12 +110,12 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                         "\n".join(f"def test_subject_{index}():\n    assert True\n" for index in range(61)),
                         encoding="utf-8",
                     )
-                output_path.write_text(
-                    json.dumps(
-                        {"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}},
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                write_valid_model_output(
+                    output_path,
+                    vault,
+                    run_id="run-executor",
+                    role=role,
+                    notes=[f"{role} ok"],
                 )
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
@@ -124,8 +125,8 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "worker structural complexity preflight blocked",
@@ -198,12 +199,12 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                         f"def new_big_subject():\n{long_body}\n    return value_124\n",
                         encoding="utf-8",
                     )
-                output_path.write_text(
-                    json.dumps(
-                        {"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}},
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                write_valid_model_output(
+                    output_path,
+                    vault,
+                    run_id="run-executor",
+                    role=role,
+                    notes=[f"{role} ok"],
                 )
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
@@ -213,8 +214,8 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 return _executor_subprocess_completed(argv)
 
             with (
-                mock.patch("ops.scripts.core.codex_exec_executor.run_with_timeout", side_effect=fake_run),
-                mock.patch("ops.scripts.core.executor_runtime.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
                 self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "worker structural complexity preflight blocked",

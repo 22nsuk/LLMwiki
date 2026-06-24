@@ -287,6 +287,7 @@ def test_runtime_hotspot_structural_digest_keeps_fingerprint_shape_not_values() 
             ]
         },
         "producer_input_fingerprint": "old-producer-digest",
+        "input_digest": "old-input-digest",
         "public_check_config_fingerprint": "old-config-digest",
         "report_sha256": "old-report-sha",
         "sha256": "old-sha",
@@ -310,6 +311,7 @@ def test_runtime_hotspot_structural_digest_keeps_fingerprint_shape_not_values() 
             ]
         },
         "producer_input_fingerprint": "new-producer-digest",
+        "input_digest": "new-input-digest",
         "public_check_config_fingerprint": "new-config-digest",
         "report_sha256": "new-report-sha",
         "sha256": "new-sha",

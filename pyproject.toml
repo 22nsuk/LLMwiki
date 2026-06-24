@@ -83,6 +83,32 @@ ignore_missing_imports = true
 show_error_codes = true
 warn_unused_ignores = true
 
+[[tool.mypy.overrides]]
+module = [
+  "ops.scripts.core.trusted_candidate_runner",
+  "ops.scripts.core.workspace_python_identity_runtime",
+  "ops.scripts.core.codex_exec_executor",
+  "ops.scripts.core.codex_exec_execution_types_runtime",
+  "ops.scripts.core.codex_exec_execution_result_runtime",
+  "ops.scripts.core.codex_exec_execution_request_runtime",
+  "ops.scripts.core.codex_exec_execution_outcome_runtime",
+  "ops.scripts.core.codex_exec_model_output_runtime",
+  "ops.scripts.core.codex_exec_dependency_preflight_runtime",
+  "ops.scripts.core.codex_exec_dependency_preflight_decision_runtime",
+  "ops.scripts.core.codex_exec_prompt_runtime",
+  "ops.scripts.core.codex_exec_report_runtime",
+  "ops.scripts.core.codex_exec_workspace_runtime",
+  "ops.scripts.core.executor_runtime",
+  "ops.scripts.core.executor_runtime_errors_runtime",
+  "ops.scripts.core.executor_runtime_scope_freeze_runtime",
+  "ops.scripts.core.executor_runtime_worker_preflight_runtime",
+]
+follow_imports = "normal"
+disallow_any_generics = true
+disallow_any_unimported = true
+warn_return_any = true
+strict_optional = true
+
 [tool.setuptools.packages.find]
 include = ["ops*"]
 
