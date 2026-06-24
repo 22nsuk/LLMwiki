@@ -62,7 +62,18 @@ Makefiles, and summarized for operators by `make help`.
 Treat registry surfaces by ownership rather than by name alone: raw registry
 state preserves full-vault source trace and ingest lifecycle, test-lane registry
 state owns Make/CI/pytest lane semantics, and policy registries own runtime
-validation authority. `ops/script-output-surfaces.json` is narrower: it is an
+validation authority.
+
+Operator Make entrypoints are indexed in `ops/make-target-inventory-operator.json`
+and surfaced through `make help`. High-signal targets include `make check`,
+`make test-selectors-sync-check`, `make review-surface-manifest`, `make release-governance-sync-check`,
+`make generated-artifact-runs-compress`, and `make system-log-split`.
+Implementation-only Make recipes use the `_internal-*` prefix and are excluded
+from the operator inventory; public wrappers such as `make runtime-hotspot-goldens-check`
+delegate to them. `docs/REVIEW_SCOPE.md` is the tracked canonical reviewer inventory; the
+companion JSON under `tmp/review-surface-manifest.json` is intentionally
+ephemeral. Anti-slop admission rules for new gates and reports
+live in `docs/anti-slop-admission.md`. `ops/script-output-surfaces.json` is narrower: it is an
 AST-derived material output/fallback registry and should track only scripts with
 `--out`/`*-out`, `resolve_output_path`, `resolve_repo_output_path`, or an
 explicit direct-script fallback marker.
@@ -84,7 +95,9 @@ Use the smallest authoritative lane that proves the change under review.
 `make fast-smoke`, `make runtime-hotspot-smoke`, and focused
 `.venv/bin/python -m pytest ...` commands are the default tight-loop checks.
 `make test` / `make test-fast` are broader batch checks for ordinary Python
-changes. `make test-all` is the non-release full regression lane and should be
+changes. `make test` chains the fast unit lane with `make test-boundary-contract-smoke`, a
+curated public/report_contract slice that catches script bootstrap, lifecycle
+inventory, and selector-registry drift before the full `make public-check` lane. `make test-all` is the non-release full regression lane and should be
 treated as checkpoint-grade work.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.

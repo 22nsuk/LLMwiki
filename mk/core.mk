@@ -8,7 +8,7 @@ DEV_INSTALL_INDEX_URL ?= $(UV_CANONICAL_INDEX_URL)
 UV_EXPORT_DEV_REQUIREMENTS_FLAGS ?= --frozen --extra dev --format requirements-txt --no-hashes --no-emit-project
 STATUS_FLAGS ?=
 
-.PHONY: help dev-install status llm-wiki-status bootstrap-preflight tools-migration-plan subagent-profile-schema compatibility-alias-deprecation
+.PHONY: help dev-install status llm-wiki-status bootstrap-preflight tools-migration-plan subagent-profile-schema compatibility-alias-deprecation system-log-split
 
 help:
 	@printf '%s\n' \
@@ -91,3 +91,6 @@ subagent-profile-schema:
 
 compatibility-alias-deprecation:
 	$(PYTHON) -m ops.scripts.compatibility_alias_deprecation --vault "$(VAULT)" --out "$(COMPATIBILITY_ALIAS_DEPRECATION_OUT)"
+
+system-log-split:
+	$(PYTHON) -m ops.scripts.mechanism.system_log_split --vault "$(VAULT)"

@@ -27,6 +27,14 @@ FAST_SMOKE_TESTS ?= \
 	tests/test_release_smoke.py::ReleaseSmokeTest::test_build_report_uses_runtime_context_and_sanitizes_ephemeral_paths \
 	tests/test_release_smoke.py::ReleaseSmokeTest::test_main_exits_with_report_status_and_prints_written_destination
 
+DEFAULT_TEST_BOUNDARY_TESTS ?= \
+	tests/test_import_fallback_contract.py \
+	tests/test_cli_surface_inventory.py \
+	tests/test_makefile_static_gates.py \
+	tests/test_makefile_fast_smoke_static_gates.py \
+	tests/test_release_status_v2.py \
+	tests/test_remediation_surfaces.py
+
 RUNTIME_HOTSPOT_SMOKE_TESTS ?= \
 	tests/test_auto_improve_readiness_runtime.py \
 	tests/test_auto_improve_readiness_queue_runtime.py \
@@ -92,6 +100,7 @@ REPORT_CONTRACT_CORE_TESTS ?= \
 
 REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_archive_execution_manifest.py \
+	tests/test_anti_slop_admission_runtime.py \
 	tests/test_artifact_freshness_runtime.py \
 	tests/test_artifact_relocation_audit.py \
 	tests/test_auto_improve_iteration_runtime.py \
@@ -102,11 +111,13 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_ci_workflow_static.py \
 	tests/test_clean_fixture_regeneration_guard.py \
 	tests/test_cli_surface_inventory.py \
+	tests/test_codex_exec_model_output_runtime.py \
 	tests/test_command_log_summary_backfill.py \
 	tests/test_compatibility_alias_deprecation.py \
 	tests/test_doc_graph_integrity.py \
 	tests/test_external_report_lifecycle_static.py \
 	tests/test_generated_artifact_retention_clean.py \
+	tests/test_generated_artifact_runs_compression.py \
 	tests/test_goal_runtime_clean_transient.py \
 	tests/test_goal_runtime_closeout.py \
 	tests/test_goal_runtime_fixed_point_check.py \
@@ -118,6 +129,7 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_lint_uplift_plan.py \
 	tests/test_runtime_codehealth_hardening_guards.py \
 	tests/test_make_target_inventory.py \
+	tests/test_make_target_operator_surface_runtime.py \
 	tests/test_makefile_static_gates.py \
 	tests/test_makefile_fast_smoke_static_gates.py \
 	tests/test_makefile_release_orchestration_static_gates.py \
@@ -140,6 +152,7 @@ REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" \
 	tests/test_release_evidence_cohort.py \
 	tests/test_release_evidence_dashboard.py \
 	tests/test_release_smoke.py \
+	tests/test_remediation_surfaces.py \
 	tests/test_report_generation_smoke.py \
 	tests/test_report_schema_sample_regeneration.py \
 	tests/test_report_schemas.py \

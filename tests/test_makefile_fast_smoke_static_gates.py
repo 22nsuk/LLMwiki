@@ -79,6 +79,28 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
         self.assertNotIn("test-report-contract", block)
         self.assertNotIn("test-fast", block)
 
+    def test_default_test_boundary_is_chained_into_make_test(self) -> None:
+        registry = load_registry(REPO_ROOT)
+        text = _makefile_text()
+        development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
+        block = _target_block(text, "test-boundary-contract-smoke")
+        expected_tests = pack_selectors(registry, "default_test_boundary")
+
+        self.assertIn("test-boundary-contract-smoke", _target_block(text, ".PHONY"))
+        self.assertIn("test: test-fast test-boundary-contract-smoke", text)
+        self.assertIn("DEFAULT_TEST_BOUNDARY_TESTS ?=", text)
+        self.assertIn(
+            "`make test` chains the fast unit lane with `make test-boundary-contract-smoke`",
+            development_text,
+        )
+        for test_path in expected_tests:
+            with self.subTest(test_path=test_path):
+                self.assertIn(test_path, text)
+        self.assertIn(
+            "$(PYTHON) -m pytest $(DEFAULT_TEST_BOUNDARY_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            block,
+        )
+
     def test_fast_smoke_selectors_collect_via_supported_pytest_entrypoint(self) -> None:
         text = _makefile_text()
         selectors = _makefile_assignment_items(text, "FAST_SMOKE_TESTS")

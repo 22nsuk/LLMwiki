@@ -233,7 +233,7 @@ def pack_effective_selectors(
     excluded_marks = excluded_markers_from_expr(mark_expr)
     if not excluded_marks:
         return selectors
-    root = (vault or Path(".")).resolve()
+    root = (vault or Path()).resolve()
     kept: list[str] = []
     for selector in selectors:
         module_marks = module_level_pytest_marks(root / selector_test_file(selector))
@@ -381,7 +381,7 @@ def _validate_registry_integrity(registry: dict[str, Any]) -> None:
 
 
 def load_registry(vault: Path | None = None) -> dict[str, Any]:
-    base = (vault or Path(".")).resolve()
+    base = (vault or Path()).resolve()
     payload = json.loads((base / REGISTRY_PATH).read_text(encoding="utf-8"))
     schema = load_schema(base / SCHEMA_PATH)
     validate_or_raise(payload, schema, context=(base / REGISTRY_PATH).as_posix())
