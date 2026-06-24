@@ -10,12 +10,11 @@ import pytest
 from ops.scripts.core.make_target_inventory import build_report, write_report
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 MAKE_TARGET_INVENTORY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "make-target-inventory.schema.json"
 
 
@@ -51,6 +50,9 @@ class MakeTargetInventoryTests(unittest.TestCase):
         self.assertEqual(report["summary"]["target_count"], 2)
         self.assertEqual(report["summary"]["phony_count"], 2)
         self.assertEqual(report["summary"]["module_invocation_count"], 0)
+        self.assertEqual(report["summary"]["anti_slop_violation_count"], 0)
+        self.assertEqual(report["summary"]["internal_target_count"], 0)
+        self.assertEqual(report["summary"]["operator_surface_violation_count"], 0)
         self.assertEqual(report["missing_phony_definitions"], [])
         self.assertEqual(report["non_phony_targets"], [])
         self.assertEqual(report["targets"][0]["module_invocations"], [])
@@ -143,6 +145,13 @@ class MakeTargetInventoryTests(unittest.TestCase):
 
         self.assertEqual(destination, self.vault / "ops" / "reports" / "make-target-inventory.json")
         self.assertTrue(destination.exists())
+
+    def test_repo_make_target_inventory_tracks_internal_targets(self) -> None:
+        report = build_report(REPO_ROOT, context=fixed_context())
+        self.assertGreaterEqual(report["summary"]["internal_target_count"], 4)
+        self.assertEqual(report["operator_surface"]["status"], "pass")
+        self.assertEqual(report["operator_surface"]["violations"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(MAKE_TARGET_INVENTORY_SCHEMA_PATH)), [])
 
 
 if __name__ == "__main__":

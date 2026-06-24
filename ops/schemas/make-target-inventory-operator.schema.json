@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Make Target Inventory Operator",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "description",
+    "operator_entrypoints"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "ops/schemas/make-target-inventory-operator.schema.json"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operator_entrypoints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/operatorEntrypoint"
+      }
+    }
+  },
+  "$defs": {
+    "calendarDate": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "operatorCategory": {
+      "type": "string",
+      "enum": [
+        "setup",
+        "source_checks",
+        "inventory",
+        "report_contract",
+        "public_mirror",
+        "mechanism",
+        "release",
+        "artifact_hygiene",
+        "ci_alignment"
+      ]
+    },
+    "operatorEntrypoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "category",
+        "purpose",
+        "replacement",
+        "deprecated_at",
+        "remove_after"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "$ref": "#/$defs/operatorCategory"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replacement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deprecated_at": {
+          "$ref": "#/$defs/calendarDate"
+        },
+        "remove_after": {
+          "$ref": "#/$defs/calendarDate"
+        },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
+        }
+      }
+    }
+  }
+}

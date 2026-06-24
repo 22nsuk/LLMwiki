@@ -25,7 +25,10 @@
     "phony_targets",
     "targets",
     "missing_phony_definitions",
-    "non_phony_targets"
+    "non_phony_targets",
+    "internal_targets",
+    "operator_surface",
+    "anti_slop_admission"
   ],
   "properties": {
     "$schema": {
@@ -102,14 +105,45 @@
         "phony_count",
         "module_invocation_count",
         "missing_phony_definition_count",
-        "non_phony_target_count"
+        "non_phony_target_count",
+        "anti_slop_violation_count",
+        "internal_target_count",
+        "operator_surface_violation_count"
       ],
       "properties": {
         "target_count": { "type": "integer", "minimum": 0 },
         "phony_count": { "type": "integer", "minimum": 0 },
         "module_invocation_count": { "type": "integer", "minimum": 0 },
         "missing_phony_definition_count": { "type": "integer", "minimum": 0 },
-        "non_phony_target_count": { "type": "integer", "minimum": 0 }
+        "non_phony_target_count": { "type": "integer", "minimum": 0 },
+        "anti_slop_violation_count": { "type": "integer", "minimum": 0 },
+        "internal_target_count": { "type": "integer", "minimum": 0 },
+        "operator_surface_violation_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "internal_targets": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "operator_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "violations"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "field", "message"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "field": { "type": "string", "minLength": 1 },
+              "message": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
       }
     },
     "phony_targets": {
@@ -141,6 +175,65 @@
     "non_phony_targets": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
+    },
+    "anti_slop_admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at",
+        "today",
+        "violations",
+        "operator_inventory",
+        "script_lifecycle"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail"]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "today": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["surface", "field", "message"],
+            "properties": {
+              "surface": { "type": "string", "minLength": 1 },
+              "field": { "type": "string", "minLength": 1 },
+              "message": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "operator_inventory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "present", "schema_error_count"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "present": { "type": "boolean" },
+            "schema_error_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "script_lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "present", "schema_error_count"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "present": { "type": "boolean" },
+            "schema_error_count": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
     }
   }
 }

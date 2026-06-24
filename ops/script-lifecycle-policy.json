@@ -854,6 +854,16 @@
       "replacement": "python -m ops.scripts.mechanism.set_mechanism_run_history"
     },
     {
+      "canonical_module": "ops.scripts.mechanism.system_log_split",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/mechanism/system_log_split.py",
+      "rationale": "Output-producing system-log split helper retained behind the documented Make entrypoint rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make system-log-split"
+    },
+    {
       "canonical_module": "ops.scripts.public.cbm_public_export",
       "console_scripts": [],
       "install_state": "not_installed",
@@ -902,6 +912,16 @@
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.public.public_surface_snapshot"
+    },
+    {
+      "canonical_module": "ops.scripts.public.review_surface_manifest",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/public/review_surface_manifest.py",
+      "rationale": "Operator review-surface manifest generator retained behind the documented Make entrypoint rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make review-surface-manifest"
     },
     {
       "canonical_module": "ops.scripts.public.sync_public_surface_gitignore",
@@ -1002,6 +1022,16 @@
       "rationale": "Registry shard policy sync is a repository maintenance helper retained behind explicit Make check/write targets rather than public CLI exposure.",
       "removal_ready": false,
       "replacement": "make raw-registry-shard-policy-sync-check"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.source_substance_cohort_classify",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/registry/source_substance_cohort_classify.py",
+      "rationale": "Schema-backed source-substance cohort classifier retained behind the canonical module entrypoint rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.source_substance_cohort_classify"
     },
     {
       "canonical_module": "ops.scripts.release.external_report_action_matrix",
@@ -1524,6 +1554,16 @@
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.test.ci_tier_lane_bridge"
+    },
+    {
+      "canonical_module": "ops.scripts.test.generate_release_governance_from_lane_registry",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "test_only",
+      "path": "ops/scripts/test/generate_release_governance_from_lane_registry.py",
+      "rationale": "Lane-registry-backed release governance generator retained behind the Make sync target rather than installed CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make release-governance-sync"
     },
     {
       "canonical_module": "ops.scripts.test.generate_test_mk_selectors",
