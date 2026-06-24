@@ -15,6 +15,7 @@ from ops.scripts.core.artifact_io_runtime import (
     write_schema_backed_report,
 )
 from ops.scripts.core.output_runtime import display_path
+from ops.scripts.core.payload_field_runtime import dict_value
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
 
@@ -75,10 +76,6 @@ def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
-
-
-def _dict_value(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
 
 
 def _same_eval_proposals(mutation_proposals: dict[str, Any]) -> list[dict[str, Any]]:
@@ -299,7 +296,7 @@ def _telemetry_item(
     if allow_artifact_digest_fallback and (not strict_secondary or not axes):
         legacy_strict = bool(legacy_reconstruction.get("parsed_strict_secondary_improvement_present"))
         legacy_axes = _string_list(legacy_reconstruction.get("parsed_secondary_axes"))
-        legacy_evidence = _dict_value(legacy_reconstruction.get("parsed_secondary_axis_evidence"))
+        legacy_evidence = dict_value(legacy_reconstruction.get("parsed_secondary_axis_evidence"))
         strict_secondary = strict_secondary or legacy_strict
         axes = axes or legacy_axes
         if legacy_strict or legacy_axes:
@@ -646,7 +643,7 @@ def _learning_claim_evidence_summary(
     readback: BehaviorDeltaReadback,
     legacy_reconstruction: dict[str, Any],
 ) -> dict[str, Any]:
-    legacy_summary = _dict_value(legacy_reconstruction.get("summary"))
+    legacy_summary = dict_value(legacy_reconstruction.get("summary"))
     return {
         "bundle_sha256": bundle_digest,
         "revocation_status": revocation["status"],

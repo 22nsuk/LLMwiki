@@ -315,11 +315,12 @@
             "operator_override_pressure"
           ]
         },
-        "status": { "type": "string", "enum": ["pass", "warn"] },
+        "status": { "type": "string", "enum": ["pass", "warn", "backlog"] },
         "current": { "type": "string" },
         "required": { "type": "string" },
         "repair_target": { "type": "string" },
-        "gate_effect": { "type": "string", "enum": ["none"] }
+        "gate_effect": { "type": "string", "enum": ["none", "advisory"] },
+        "retirement_condition": { "type": "string" }
       }
     },
     "negative_learning_ledger": {
