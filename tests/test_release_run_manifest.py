@@ -882,6 +882,26 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["ignored_tracked_file_count"], 2)
         self.assertIn("ignored_tracked_files_present", manifest["failures"])
 
+    def test_check_mode_reports_missing_manifest_as_staging_precondition(self) -> None:
+        missing_manifest = self.vault / "build/release/release-run-manifest.json"
+        if missing_manifest.exists():
+            missing_manifest.unlink()
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--out",
+                    "build/release/release-run-manifest.json",
+                    "--check",
+                ]
+            )
+        self.assertEqual(exit_code, 1)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["classification"], "staging_precondition_missing")
+        self.assertEqual(payload["recommended_next_target"], "release-run-ready")
+
 
 if __name__ == "__main__":
     unittest.main()

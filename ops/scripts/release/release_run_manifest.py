@@ -810,7 +810,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, args.out))
         if diagnostics.get("status") != "ok":
-            print(json.dumps({"status": "fail", "reason": diagnostics}, ensure_ascii=False, indent=2))
+            if diagnostics.get("missing"):
+                print(
+                    json.dumps(
+                        {
+                            "status": "fail",
+                            "alignment_status": "missing",
+                            "classification": "staging_precondition_missing",
+                            "issues": ["release_run_manifest_missing"],
+                            "recommended_next_target": "release-run-ready",
+                            "reason": diagnostics,
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+            else:
+                print(json.dumps({"status": "fail", "reason": diagnostics}, ensure_ascii=False, indent=2))
             return 1
         schema_errors = validate_with_schema(payload, load_schema_with_vault_override(vault, SCHEMA_PATH))
         if schema_errors:
