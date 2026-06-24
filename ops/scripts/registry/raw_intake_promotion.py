@@ -45,6 +45,7 @@ def main() -> None:
 
     validate_parser = subparsers.add_parser("validate")
     validate_parser.add_argument("--manifest", required=True)
+    validate_parser.add_argument("--vault", default=".")
     validate_parser.add_argument("--out")
 
     render_parser = subparsers.add_parser("render")
@@ -61,15 +62,18 @@ def main() -> None:
             vault=Path(args.vault).resolve(),
             bridge_limit=args.bridge_limit,
         )
-        destination = resolve_output_path(Path("."), args.out)
+        destination = resolve_output_path(Path(), args.out)
         write_output_text(destination, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
         return
 
     if args.command == "validate":
-        report = validate_profile_bundle(Path(args.manifest))
+        report = validate_profile_bundle(
+            Path(args.manifest),
+            vault=Path(args.vault).resolve(),
+        )
         text = json.dumps(report, ensure_ascii=False, indent=2)
         if args.out:
-            destination = resolve_output_path(Path("."), args.out)
+            destination = resolve_output_path(Path(), args.out)
             write_output_text(destination, text + "\n")
         else:
             print(text)
@@ -77,8 +81,8 @@ def main() -> None:
 
     manifest_path = Path(args.manifest)
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    rendered = render_family_pages(payload)
     vault = Path(args.vault).resolve()
+    rendered = render_family_pages(payload, vault=vault)
     for relative_path, text in rendered.items():
         destination = resolve_repo_artifact_path(vault, relative_path, default_relative_path=relative_path)
         write_output_text(destination, text)

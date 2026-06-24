@@ -8,6 +8,7 @@ from pathlib import Path
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.eval.wiki_eval import evaluate
 from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.test_source_page_substance_runtime import cohort_336_fingerprint_source_text
 
 
 def _fixed_context() -> RuntimeContext:
@@ -59,6 +60,23 @@ class WikiEvalRuntimeTest(unittest.TestCase):
             self.assertEqual(report["status"], "fail")
             synthesis_results = _page_results(report, synthesis_path)
             self.assertFalse(synthesis_results["decisionability"])
+
+    def test_evaluate_rejects_cohort_fingerprint_source_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            cohort_path = vault / "wiki" / "source--weak-cohort-2026-05-29.md"
+            cohort_path.write_text(
+                cohort_336_fingerprint_source_text("Cohort fingerprint source"),
+                encoding="utf-8",
+            )
+
+            report = evaluate(vault, context=_fixed_context())
+
+            self.assertEqual(report["status"], "fail")
+            cohort_results = _page_results(report, cohort_path)
+            self.assertFalse(cohort_results["source_page_substance"])
 
     def test_evaluate_short_circuits_on_duplicate_stems(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

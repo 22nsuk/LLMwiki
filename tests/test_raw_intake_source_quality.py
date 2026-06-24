@@ -52,6 +52,9 @@ def write_source(path: Path, *, summary: str, key_points: list[str]) -> None:
                 "## Key points",
                 *[f"- {item}" for item in key_points],
                 "",
+                "## Limitations / caveats",
+                "- Fixture source page for intake quality CLI coverage only.",
+                "",
             ]
         ),
         encoding="utf-8",
@@ -93,12 +96,14 @@ class RawIntakeSourceQualityTests(unittest.TestCase):
             write_source(
                 vault / "wiki" / "source--quality.md",
                 summary=(
-                    "This source summary is intentionally long enough to satisfy "
-                    "the deterministic source-quality threshold in the CLI writer test."
+                    "Quality route source documents a reviewed source-only seed for the CLI writer test. "
+                    "It keeps enough source-specific detail to satisfy the substance admission gate."
                 ),
                 key_points=[
                     "The first key point has enough substance for the combined key point character budget.",
                     "The second key point keeps the source-only quality gate comfortably above the floor.",
+                    "The third key point records the reviewed source-only posture for this matrix entry.",
+                    "The fourth key point preserves deterministic CLI coverage without template boilerplate.",
                 ],
             )
             matrix_path = vault / "runs" / "matrix.json"

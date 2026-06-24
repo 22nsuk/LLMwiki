@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,6 +27,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
     from ops.scripts.core.source_trace_profile_runtime import (
         source_trace_profile_summary,
+    )
+    from ops.scripts.eval.source_page_substance_runtime import (
+        evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import (
         INDEXISH_PAGES,
@@ -69,6 +71,7 @@ else:
         source_trace_profile_summary,
     )
 
+    from .source_page_substance_runtime import evaluate_source_page_substance
     from .wiki_page_runtime import (
         INDEXISH_PAGES,
         SPECIAL_PAGES,
@@ -302,14 +305,7 @@ def _placeholder_result(stem: str, text: str) -> dict[str, Any]:
 
 
 def _source_page_substance_result(text: str) -> dict[str, Any]:
-    key_points_body = section_body(text, "Key points")
-    limitations_body = section_body(text, "Limitations / caveats")
-    key_points = re.findall(r"^[-*]\s+", key_points_body or "", flags=re.MULTILINE)
-    limitations = re.findall(r"^[-*]\s+", limitations_body or "", flags=re.MULTILINE)
-    return {
-        "eval": "source_page_substance",
-        "pass": len(key_points) >= 4 and len(limitations) >= 1,
-    }
+    return evaluate_source_page_substance(text)
 
 
 def _decisionability_result(text: str) -> dict[str, Any]:

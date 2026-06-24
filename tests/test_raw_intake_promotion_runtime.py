@@ -19,6 +19,10 @@ from ops.scripts.registry.raw_intake_promotion_runtime import (
 from ops.scripts.registry.raw_intake_promotion_shared_runtime import (
     CONCEPT_ANALYSIS_SCAFFOLD_HEADINGS,
 )
+from ops.scripts.registry.raw_intake_promotion_validation_runtime import (
+    validate_profile_bundle_data,
+)
+from tests.test_source_page_substance_runtime import cohort_336_fingerprint_source_text
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -343,6 +347,17 @@ def sample_refresh() -> dict:
     }
 
 
+def family_with_single_source_stem(stem: str) -> dict:
+    family = sample_family()
+    family["synthesis"]["source_stems"] = [stem]
+    family["synthesis"]["bridge_source_stems"] = []
+    family["concept"]["focus_source_stems"] = [stem]
+    family["concept"]["bridge_source_stems"] = []
+    for row in family["synthesis"]["evidence_map"]:
+        row["sources"] = [stem]
+    return family
+
+
 def write_sample_absorption_matrix(matrix_path: Path) -> None:
     matrix_path.write_text(
         json.dumps(
@@ -622,6 +637,47 @@ takeaway
         self.assertIn("[[concept--korea-fx-liquidity-and-spot-dollar-pressure]]", refresh_text)
         self.assertIn("[[source--wgbi-inclusion-and-korea-bond-inflows-fx-stability-2026-04-14]]", refresh_text)
         self.assertNotIn("### 2026-04-21 후속 근거", refresh_text)
+
+    def test_validate_profile_bundle_blocks_cohort_fingerprint_source_substance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            weak_stem = "source--weak-cohort-2026-05-29"
+            wiki = vault / "wiki"
+            wiki.mkdir(parents=True)
+            (wiki / f"{weak_stem}.md").write_text(
+                cohort_336_fingerprint_source_text("Weak cohort source"),
+                encoding="utf-8",
+            )
+            payload = {"families": [family_with_single_source_stem(weak_stem)], "refreshes": []}
+
+            without_vault = validate_profile_bundle_data(payload)
+            with_vault = validate_profile_bundle_data(payload, vault=vault)
+
+            self.assertEqual(without_vault["status"], "pass")
+            self.assertEqual(with_vault["status"], "fail")
+            substance_errors = [
+                item
+                for item in with_vault["errors"]
+                if item["type"] == "source_page_substance_admission_failed"
+            ]
+            self.assertEqual(len(substance_errors), 1)
+            self.assertEqual(substance_errors[0]["source_stem"], weak_stem)
+            self.assertIn("boilerplate_key_point_pattern", substance_errors[0]["failures"])
+
+    def test_render_family_pages_blocks_when_source_substance_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            weak_stem = "source--weak-cohort-2026-06-17"
+            wiki = vault / "wiki"
+            wiki.mkdir(parents=True)
+            (wiki / f"{weak_stem}.md").write_text(
+                cohort_336_fingerprint_source_text("Another weak cohort source"),
+                encoding="utf-8",
+            )
+            payload = {"families": [family_with_single_source_stem(weak_stem)], "refreshes": []}
+
+            with self.assertRaisesRegex(ValueError, "profile bundle validation failed"):
+                render_family_pages(payload, vault=vault)
 
 
 if __name__ == "__main__":

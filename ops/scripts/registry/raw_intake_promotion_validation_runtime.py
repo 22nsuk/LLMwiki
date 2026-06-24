@@ -5,10 +5,14 @@ from pathlib import Path
 from ops.scripts.core.schema_constants_runtime import (
     RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
 )
+from ops.scripts.eval.source_page_substance_runtime import (
+    evaluate_source_page_substance,
+)
 
 from .raw_intake_promotion_shared_runtime import (
     CONCEPT_ANALYSIS_SCAFFOLD_HEADINGS,
     SYNTHESIS_ANALYSIS_SCAFFOLD_HEADINGS,
+    _dedupe,
     _evidence_map_rows,
     _json_load_object,
     _string_list,
@@ -105,7 +109,87 @@ def _missing_list_field_errors(
     ]
 
 
-def validate_profile_bundle_data(payload: dict) -> dict:
+def _profile_source_stem_bindings(payload: dict) -> list[tuple[str, str]]:
+    bindings: list[tuple[str, str]] = []
+    raw_families = payload.get("families")
+    if not isinstance(raw_families, list):
+        return bindings
+    for index, family in enumerate(raw_families):
+        if not isinstance(family, dict):
+            continue
+        family_slug = family.get("family_slug")
+        if not isinstance(family_slug, str) or not family_slug.strip():
+            family_slug = f"family-{index}"
+        synthesis = family.get("synthesis")
+        concept = family.get("concept")
+        synthesis = synthesis if isinstance(synthesis, dict) else {}
+        concept = concept if isinstance(concept, dict) else {}
+        for stem in _dedupe(
+            _string_list(synthesis.get("source_stems"))
+            + _string_list(synthesis.get("bridge_source_stems"))
+            + _string_list(concept.get("focus_source_stems"))
+            + _string_list(concept.get("bridge_source_stems"))
+        ):
+            bindings.append((family_slug, stem))
+
+    raw_refreshes = payload.get("refreshes", [])
+    if not isinstance(raw_refreshes, list):
+        return bindings
+    for index, refresh in enumerate(raw_refreshes):
+        if not isinstance(refresh, dict):
+            continue
+        target_stem = refresh.get("target_stem")
+        if not isinstance(target_stem, str) or not target_stem.strip():
+            target_stem = f"refresh-{index}"
+        synthesis = refresh.get("synthesis")
+        synthesis = synthesis if isinstance(synthesis, dict) else {}
+        for stem in _dedupe(
+            _string_list(synthesis.get("source_stems"))
+            + _string_list(synthesis.get("bridge_source_stems"))
+        ):
+            bindings.append((target_stem, stem))
+    return bindings
+
+
+def _validate_promotion_source_page_substance(
+    vault: Path,
+    payload: dict,
+) -> list[dict]:
+    errors: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for scope_slug, stem in _profile_source_stem_bindings(payload):
+        key = (scope_slug, stem)
+        if key in seen:
+            continue
+        seen.add(key)
+        source_page = f"wiki/{stem}.md"
+        source_path = (vault / source_page).resolve()
+        if not source_path.is_file():
+            errors.append(
+                {
+                    "type": "missing_promotion_source_page",
+                    "family_slug": scope_slug,
+                    "source_stem": stem,
+                    "source_page": source_page,
+                }
+            )
+            continue
+        substance = evaluate_source_page_substance(source_path.read_text(encoding="utf-8", errors="replace"))
+        if substance.get("pass"):
+            continue
+        errors.append(
+            {
+                "type": "source_page_substance_admission_failed",
+                "family_slug": scope_slug,
+                "source_stem": stem,
+                "source_page": source_page,
+                "failures": list(substance.get("failures", [])),
+            }
+        )
+    return errors
+
+
+def validate_profile_bundle_data(payload: dict, *, vault: Path | None = None) -> dict:
     errors: list[dict] = []
     warnings: list[dict] = []
     raw_families = payload.get("families")
@@ -180,6 +264,9 @@ def validate_profile_bundle_data(payload: dict) -> dict:
         errors.extend(synthesis_errors)
         warnings.extend(synthesis_warnings)
 
+    if vault is not None:
+        errors.extend(_validate_promotion_source_page_substance(vault.resolve(), payload))
+
     return {
         "$schema": RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
         "status": "fail" if errors else "pass",
@@ -192,9 +279,9 @@ def validate_profile_bundle_data(payload: dict) -> dict:
     }
 
 
-def validate_profile_bundle(manifest_path: Path) -> dict:
+def validate_profile_bundle(manifest_path: Path, *, vault: Path | None = None) -> dict:
     payload = _json_load_object(manifest_path)
-    report = validate_profile_bundle_data(payload)
+    report = validate_profile_bundle_data(payload, vault=vault)
     report["manifest"] = manifest_path.as_posix()
     return report
 
