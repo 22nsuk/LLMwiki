@@ -31,6 +31,10 @@ from ops.scripts.core.schema_constants_runtime import (
     ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     SHADOW_APPLY_REPORT_SCHEMA_PATH,
 )
+from ops.scripts.core.workspace_python_identity_runtime import (
+    build_workspace_python_identity,
+    write_workspace_python_identity,
+)
 
 from .improvement_observations_runtime import IMPROVEMENT_OBSERVATIONS_FILENAME
 from .mechanism_run_candidate_snapshot_runtime import (
@@ -121,11 +125,13 @@ def _provision_workspace_python_shim(vault: Path, workspace_vault: Path) -> None
         return
     destination.parent.mkdir(parents=True, exist_ok=True)
     source_python = _workspace_python_source(vault)
-    destination.write_text(
-        f"#!/bin/sh\nexec {shlex.quote(str(source_python))} \"$@\"\n",
-        encoding="utf-8",
-    )
+    shim_content = f"#!/bin/sh\nexec {shlex.quote(str(source_python))} \"$@\"\n"
+    destination.write_text(shim_content, encoding="utf-8")
     destination.chmod(0o755)
+    write_workspace_python_identity(
+        workspace_vault,
+        build_workspace_python_identity(source_python=source_python, shim_content=shim_content),
+    )
 
 
 def _is_ignored_candidate_surface(rel_path: str, *, run_id: str) -> bool:
