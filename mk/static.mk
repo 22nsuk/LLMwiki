@@ -20,9 +20,13 @@ UV ?= uv
 UV_CANONICAL_INDEX_URL ?= https://pypi.org/simple
 UV_LOCK_CHECK_INDEX_FLAGS ?= --default-index "$(UV_CANONICAL_INDEX_URL)"
 
-.PHONY: static ruff ruff-strict-preview strict-preview-audit typecheck mypy-strict-preview uv-lock-check local-cache-clean local-tool-state-clean uv-cache-prune
+.PHONY: static static-local lock-freshness-check ruff ruff-strict-preview strict-preview-audit typecheck mypy-strict-preview uv-lock-check local-cache-clean local-tool-state-clean uv-cache-prune
 
-static: uv-lock-check ruff typecheck
+static-local: ruff typecheck
+
+lock-freshness-check: uv-lock-check
+
+static: static-local lock-freshness-check
 
 uv-lock-check:
 	UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)
