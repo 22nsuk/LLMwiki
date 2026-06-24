@@ -268,6 +268,10 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"type_uplift_plan",
             r"allowlist.*meaning",
             r"mypy target",
+            r"strict mypy",
+            r"strict typing",
+            r"runner.*executor",
+            r"trust-label",
         ],
         "evidence_paths": [
             "ops/schemas/strict-type-inventory.schema.json",
@@ -367,7 +371,13 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "action_id": "compatibility_alias_deprecation",
         "priority": "P1",
         "theme": "compatibility alias deprecation inventory",
-        "patterns": [r"Compatibility alias deprecation", r"compatibility_alias_deprecation", r"flat alias"],
+        "patterns": [
+            r"Compatibility alias deprecation",
+            r"compatibility_alias_deprecation",
+            r"flat alias",
+            r"호환 별칭",
+            r"compatibility.*alias",
+        ],
         "evidence_paths": [
             "ops/schemas/compatibility-alias-deprecation.schema.json",
             "ops/scripts/core/compatibility_alias_deprecation.py",
@@ -807,6 +817,9 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"run-local evidence",
             r"obsolete tracked goal",
             r"stale legacy runtime",
+            r"admission gate",
+            r"실질성",
+            r"intake",
         ],
         "evidence_paths": [
             "mk/mechanism.mk",
@@ -835,6 +848,10 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"check-observed",
             r"incremental --changed-only",
             r"long-running gate",
+            r"`runs/`",
+            r"runs/와",
+            r"보존.*압축",
+            r"메타 산출물",
         ],
         "evidence_paths": [
             "ops/scripts/core/artifact_freshness_runtime.py",
@@ -901,6 +918,8 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"function budget",
             r"orchestrator",
             r"hotspot refactor",
+            r"거대 runtime",
+            r"runtime 모듈",
         ],
         "evidence_paths": [
             "ops/reports/function-budget-refactor-proposals.json",

@@ -22,6 +22,16 @@ ARCHIVE_STATUS_RE = re.compile(
     r"`?(closed|superseded|archived)`?\s*$"
 )
 SUPERSEDED_BY_RE = re.compile(r"(?im)^\s*(?:superseded_by|replaced_by)\s*[:=]\s*`?([^`\n]+)`?")
+HEADING_LINE_RE = re.compile(r"^\s*#{1,6}\s")
+PRIORITY_NOTATION_META_RE = re.compile(
+    r"(?i)(?:"
+    r"우선순위\s*표기|"
+    r"priority\s*notation|"
+    r"정식\s*CVSS|"
+    r"not\s+a\s+cvss"
+    r")"
+)
+
 COVERAGE_MARKER_PATTERNS: tuple[tuple[str, str], ...] = (
     ("actual_file_crosscheck", r"actual[-_ ]file|실제\s*파일|파일\s*대조"),
     ("integrated_review", r"integrated|consolidated|통합\s*리뷰|통합\s*검토|종합\s*검토"),
@@ -176,12 +186,21 @@ def matched_actions(text: str) -> list[str]:
     return matches
 
 
+def is_unmatched_recommendation_line(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if not re.search(r"\bP[0-2]\b", line):
+        return False
+    if HEADING_LINE_RE.match(line):
+        return False
+    if PRIORITY_NOTATION_META_RE.search(line):
+        return False
+    return not matched_actions(line)
+
+
 def unmatched_recommendation_count(text: str) -> int:
-    return sum(
-        1
-        for line in text.splitlines()
-        if re.search(r"\bP[0-2]\b", line) and not matched_actions(line)
-    )
+    return sum(1 for line in text.splitlines() if is_unmatched_recommendation_line(line))
 
 
 def coverage_markers(path: Path, text: str) -> list[str]:
