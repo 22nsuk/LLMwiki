@@ -124,7 +124,8 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
 
             self.assertEqual(result.telemetry["mode"], "full_copy")
             self.assertEqual(result.telemetry["baseline_file_count"], 2)
-            self.assertEqual(result.telemetry["copied_file_count"], 2)
+            # Partial copytree leaves one tracked file; .venv/.llmwiki shim surfaces are ignored.
+            self.assertEqual(result.telemetry["copied_file_count"], 1)
 
     def test_prepare_workspace_copy_provisions_python_shim_without_live_venv_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
