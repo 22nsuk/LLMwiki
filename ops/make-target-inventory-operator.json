@@ -1,0 +1,214 @@
+{
+  "$schema": "ops/schemas/make-target-inventory-operator.schema.json",
+  "description": "Operator-facing Make entrypoints indexed for quick navigation.",
+  "operator_entrypoints": [
+    {
+      "target": "dev-install",
+      "category": "setup",
+      "purpose": "Create or refresh the workspace virtualenv and installed CLI entrypoints.",
+      "replacement": "make dev-install",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "status",
+      "category": "setup",
+      "purpose": "Show the current operator status surface and release readiness summary.",
+      "replacement": "make status",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "bootstrap-preflight",
+      "category": "setup",
+      "purpose": "Verify bootstrap prerequisites before deeper maintainer or release lanes.",
+      "replacement": "make bootstrap-preflight",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "check",
+      "category": "source_checks",
+      "purpose": "Run the full-vault maintainer check lane for corpus-backed workspaces.",
+      "replacement": "make check",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "test",
+      "category": "source_checks",
+      "purpose": "Run the default Python batch lane plus boundary-contract smoke before broader public lanes.",
+      "replacement": "make test",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "static",
+      "category": "source_checks",
+      "purpose": "Run static analysis gates for Python sources and packaging lockfiles.",
+      "replacement": "make static",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "local-cache-clean",
+      "category": "source_checks",
+      "purpose": "Remove ignored local caches without touching corpus or release evidence.",
+      "replacement": "make local-cache-clean",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "make-target-inventory",
+      "category": "inventory",
+      "purpose": "Inventory Make targets and cross-check operator anti-slop admission metadata.",
+      "replacement": "make make-target-inventory",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "test-selectors-sync",
+      "category": "inventory",
+      "purpose": "Regenerate selector projections from the test lane registry.",
+      "replacement": "make test-selectors-sync",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "test-selectors-sync-check",
+      "category": "inventory",
+      "purpose": "Fail when generated selector projections are stale against the lane registry.",
+      "replacement": "make test-selectors-sync-check",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "review-surface-manifest",
+      "category": "inventory",
+      "purpose": "Generate the tracked review scope doc and ephemeral navigation manifest.",
+      "replacement": "make review-surface-manifest",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "test-report-contract-core",
+      "category": "report_contract",
+      "purpose": "Run the core report-contract selector pack for schema and generated-artifact edits.",
+      "replacement": "make test-report-contract-core",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "external-report-lifecycle-refresh",
+      "category": "report_contract",
+      "purpose": "Refresh active external-report lifecycle evidence and action matrix surfaces.",
+      "replacement": "make external-report-lifecycle-refresh",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "remediation-backlog",
+      "category": "report_contract",
+      "purpose": "Refresh remediation backlog evidence for active external-report actions.",
+      "replacement": "make remediation-backlog",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "sync-public-policy",
+      "category": "public_mirror",
+      "purpose": "Sync public mirror policy templates and gitignore boundaries.",
+      "replacement": "make sync-public-policy",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "public-check",
+      "category": "public_mirror",
+      "purpose": "Export and verify the public mirror contract with summary evidence.",
+      "replacement": "make public-check",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "public-check-all",
+      "category": "public_mirror",
+      "purpose": "Run the full public mirror pytest lane after export.",
+      "replacement": "make public-check-all",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "cbm-smoke-public",
+      "category": "public_mirror",
+      "purpose": "Smoke-test the optional codebase-memory public export sidecar.",
+      "replacement": "make cbm-smoke-public",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "auto-improve-readiness",
+      "category": "mechanism",
+      "purpose": "Refresh maintainer auto-improve readiness evidence before mechanism runs.",
+      "replacement": "make auto-improve-readiness",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "goal-runtime-run-admission",
+      "category": "mechanism",
+      "purpose": "Check whether a goal-native mechanism run may start under current evidence.",
+      "replacement": "make goal-runtime-run-admission",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "release-evidence-converge",
+      "category": "release",
+      "purpose": "Converge release evidence through closeout phases before run-ready checks.",
+      "replacement": "make release-evidence-converge",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "release-auto-promotion-ready",
+      "category": "release",
+      "purpose": "Verify auto-promotion readiness against current release authority evidence.",
+      "replacement": "make release-auto-promotion-ready",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "release-run-ready",
+      "category": "release",
+      "purpose": "Converge and verify operator release-run-ready evidence.",
+      "replacement": "make release-run-ready",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "generated-artifact-retention-clean",
+      "category": "artifact_hygiene",
+      "purpose": "Apply retention cleanup to generated artifacts under policy control.",
+      "replacement": "make generated-artifact-retention-clean",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "system-log-split",
+      "category": "artifact_hygiene",
+      "purpose": "Split system-log tails into machine-readable events for full-vault maintenance.",
+      "replacement": "make system-log-split",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "release-governance-sync-check",
+      "category": "ci_alignment",
+      "purpose": "Verify release governance CI matrix projections match the lane registry.",
+      "replacement": "make release-governance-sync-check",
+      "deprecated_at": null,
+      "remove_after": null
+    }
+  ]
+}

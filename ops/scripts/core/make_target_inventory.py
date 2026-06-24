@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -9,12 +10,19 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.anti_slop_admission_runtime import (
+        evaluate_anti_slop_admission,
+    )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
     from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
+    )
+    from ops.scripts.core.make_target_operator_surface_runtime import (
+        internal_make_targets,
+        validate_operator_inventory_surface,
     )
     from ops.scripts.core.makefile_runtime import load_makefile_text
     from ops.scripts.core.output_runtime import display_path
@@ -24,10 +32,15 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         MAKE_TARGET_INVENTORY_SCHEMA_PATH,
     )
 else:
+    from .anti_slop_admission_runtime import evaluate_anti_slop_admission
     from .artifact_freshness_runtime import build_canonical_report_envelope
     from .artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
+    )
+    from .make_target_operator_surface_runtime import (
+        internal_make_targets,
+        validate_operator_inventory_surface,
     )
     from .makefile_runtime import load_makefile_text
     from .output_runtime import display_path
@@ -95,9 +108,37 @@ def build_report(
     content, makefile_sources = load_makefile_text(vault)
     phony, targets = _parse_makefile(content)
     target_names = sorted({str(item["name"]) for item in targets})
-    missing_phony_definitions = sorted(set(phony) - set(target_names))
-    non_phony_targets = sorted(set(target_names) - set(phony))
-    status = "fail" if missing_phony_definitions else "attention" if non_phony_targets else "pass"
+    target_name_set = set(target_names)
+    missing_phony_definitions = sorted(set(phony) - target_name_set)
+    non_phony_targets = sorted(target_name_set - set(phony))
+    operator_inventory_path = vault / "ops" / "make-target-inventory-operator.json"
+    operator_inventory: dict[str, Any] = {}
+    if operator_inventory_path.is_file():
+        loaded = json.loads(operator_inventory_path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            operator_inventory = loaded
+    operator_surface_violations = validate_operator_inventory_surface(
+        operator_inventory,
+        makefile_targets=target_name_set,
+    )
+    internal_targets = internal_make_targets(target_name_set)
+    anti_slop_admission = evaluate_anti_slop_admission(
+        vault.resolve(),
+        makefile_targets=target_name_set,
+        context=runtime_context,
+    )
+    anti_slop_violation_count = len(anti_slop_admission["violations"])
+    operator_surface_violation_count = len(operator_surface_violations)
+    if (
+        missing_phony_definitions
+        or anti_slop_admission["status"] == "fail"
+        or operator_surface_violations
+    ):
+        status = "fail"
+    elif non_phony_targets:
+        status = "attention"
+    else:
+        status = "pass"
     return {
         **build_canonical_report_envelope(
             vault,
@@ -109,10 +150,21 @@ def build_report(
             schema_path=MAKE_TARGET_INVENTORY_SCHEMA_PATH,
             source_paths=[
                 "ops/scripts/core/make_target_inventory.py",
+                "ops/scripts/core/anti_slop_admission_runtime.py",
+                "ops/scripts/core/make_target_operator_surface_runtime.py",
+                "ops/make-target-inventory-operator.json",
+                "ops/script-lifecycle-policy.json",
                 "Makefile",
                 *[path for path in makefile_sources if path != "Makefile"],
             ],
-            file_inputs={path: path for path in makefile_sources},
+            file_inputs={
+                path: path
+                for path in (
+                    *makefile_sources,
+                    "ops/make-target-inventory-operator.json",
+                    "ops/script-lifecycle-policy.json",
+                )
+            },
         ),
         "vault": report_path(vault, vault),
         "policy": {
@@ -127,11 +179,20 @@ def build_report(
             "module_invocation_count": sum(len(item["module_invocations"]) for item in targets),
             "missing_phony_definition_count": len(missing_phony_definitions),
             "non_phony_target_count": len(non_phony_targets),
+            "anti_slop_violation_count": anti_slop_violation_count,
+            "internal_target_count": len(internal_targets),
+            "operator_surface_violation_count": operator_surface_violation_count,
         },
         "phony_targets": phony,
         "targets": targets,
         "missing_phony_definitions": missing_phony_definitions,
         "non_phony_targets": non_phony_targets,
+        "internal_targets": internal_targets,
+        "operator_surface": {
+            "status": "fail" if operator_surface_violations else "pass",
+            "violations": operator_surface_violations,
+        },
+        "anti_slop_admission": anti_slop_admission,
     }
 
 

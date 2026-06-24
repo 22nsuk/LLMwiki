@@ -142,6 +142,10 @@ DEFECT_ESCAPE_CLOSURES_SCHEMA_PATH = "ops/schemas/defect-escape-closures.schema.
 REWORK_CLOSURES_SCHEMA_PATH = "ops/schemas/rework-closures.schema.json"
 SUPPLY_CHAIN_PROVENANCE_SCHEMA_PATH = "ops/schemas/supply-chain-provenance.schema.json"
 MAKE_TARGET_INVENTORY_SCHEMA_PATH = "ops/schemas/make-target-inventory.schema.json"
+MAKE_TARGET_INVENTORY_OPERATOR_SCHEMA_PATH = (
+    "ops/schemas/make-target-inventory-operator.schema.json"
+)
+SCRIPT_LIFECYCLE_POLICY_SCHEMA_PATH = "ops/schemas/script-lifecycle-policy.schema.json"
 WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH = "ops/schemas/workflow-dependency-planner.schema.json"
 RELEASE_WORKFLOW_ORDER_GUARD_SCHEMA_PATH = "ops/schemas/release-workflow-order-guard.schema.json"
 FUNCTION_BUDGET_REFACTOR_PROPOSALS_SCHEMA_PATH = "ops/schemas/function-budget-refactor-proposals.schema.json"
