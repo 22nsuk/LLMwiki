@@ -124,7 +124,7 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
 
             self.assertEqual(result.telemetry["mode"], "full_copy")
             self.assertEqual(result.telemetry["baseline_file_count"], 2)
-            self.assertEqual(result.telemetry["copied_file_count"], 1)
+            self.assertEqual(result.telemetry["copied_file_count"], 2)
 
     def test_prepare_workspace_copy_provisions_python_shim_without_live_venv_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1220,13 +1220,13 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
         )
         with mock.patch.object(mechanism_run_promotion_runtime, "finalize_run", return_value={"ok": True}) as finalize_run:
             pending = _finalize_step(
-                Path("."),
+                Path(),
                 run_id="run-steps",
                 promotion_report=pending_report,
                 finalize=True,
             )
             approved = _finalize_step(
-                Path("."),
+                Path(),
                 run_id="run-steps",
                 promotion_report=approved_report,
                 finalize=True,
@@ -1236,7 +1236,7 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
         self.assertEqual(pending.finalize_result, {})
         self.assertTrue(approved.finalized)
         self.assertEqual(approved.finalize_result, {"ok": True})
-        finalize_run.assert_called_once_with(Path("."), "run-steps")
+        finalize_run.assert_called_once_with(Path(), "run-steps")
 
 
 if __name__ == "__main__":

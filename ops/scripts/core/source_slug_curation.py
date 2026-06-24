@@ -207,14 +207,14 @@ def main() -> None:
             bridge_limit=args.bridge_limit,
             context=RuntimeContext.from_policy(policy),
         )
-        destination = resolve_output_path(Path("."), args.out)
+        destination = resolve_output_path(Path(), args.out)
         write_output_text(destination, json.dumps(manifest, ensure_ascii=False, indent=2))
         return
 
     report = validate_manifest(Path(args.manifest))
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.out:
-        destination = resolve_output_path(Path("."), args.out)
+        destination = resolve_output_path(Path(), args.out)
         write_output_text(destination, text)
     else:
         print(text)

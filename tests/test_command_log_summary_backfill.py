@@ -54,6 +54,7 @@ class CommandLogSummaryBackfillTests(unittest.TestCase):
             "$schema": "ops/schemas/executor-report.schema.json",
             "run_id": run_id,
             "role": role,
+            "input_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "generated_at": "2026-06-06T00:00:00Z",
             "executor": {
                 "name": "codex_exec",

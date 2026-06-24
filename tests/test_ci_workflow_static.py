@@ -146,7 +146,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
         self.assertIn("workflow_dispatch", on_section)
 
     def test_ci_matrix_tiers_match_registry_compatibility_contract(self) -> None:
-        registry = load_registry(Path("."))
+        registry = load_registry(Path())
         workflow = _workflow()
 
         test_tier_job = _job(workflow, "test-tier")

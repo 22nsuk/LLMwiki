@@ -222,7 +222,7 @@ def build_report(
     policy_path: str | None = None,
     environment_class: str = "developer",
 ) -> dict[str, Any]:
-    resolved_vault = (vault or Path(".")).resolve()
+    resolved_vault = (vault or Path()).resolve()
     resolved_policy_path = policy_path or "ops/policies/wiki-maintainer-policy.yaml"
     generated_at = _isoformat_z(clock)
     schema_path = "ops/schemas/bootstrap-preflight-report.schema.json"

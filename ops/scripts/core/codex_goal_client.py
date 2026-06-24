@@ -613,7 +613,7 @@ def build_auto_improve_goal_contract(
 
 @dataclass
 class FakeGoalBackend:
-    vault: Path = Path(".")
+    vault: Path = Path()
     name: str = "fake"
     process_persistent: bool = False
     _payload: dict[str, Any] | None = field(default=None, init=False, repr=False)

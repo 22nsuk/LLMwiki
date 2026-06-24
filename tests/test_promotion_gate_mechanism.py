@@ -28,7 +28,7 @@ def _patch_artifact_validation(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _request() -> MechanismGateInputRequest:
     return MechanismGateInputRequest(
-        vault=Path("."),
+        vault=Path(),
         baseline_eval_path="runs/example/baseline-eval.json",
         candidate_eval_path="runs/example/candidate-eval.json",
         baseline_lint_path="runs/example/baseline-lint.json",

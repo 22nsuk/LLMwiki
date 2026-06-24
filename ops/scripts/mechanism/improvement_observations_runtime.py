@@ -124,7 +124,7 @@ def build_improvement_observations(request: ImprovementObservationsBuildRequest)
     generated_at = timestamp(request.context)
     captured = request.captured_at or generated_at
     observation_items = list(request.observations or [])
-    resolved_vault = (request.vault or Path(".")).resolve()
+    resolved_vault = (request.vault or Path()).resolve()
     payload = {
         **_build_envelope(
             resolved_vault,
@@ -396,7 +396,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "or a standalone repo maintenance task."
         )
     )
-    ap.add_argument("--vault", type=Path, default=Path("."))
+    ap.add_argument("--vault", type=Path, default=Path())
     ap.add_argument("--run-id")
     ap.add_argument("--task-id")
     ap.add_argument("--summary")

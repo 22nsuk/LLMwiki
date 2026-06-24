@@ -1112,7 +1112,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "that cannot safely accept top-level envelope fields."
         )
     )
-    ap.add_argument("--vault", type=Path, default=Path("."))
+    ap.add_argument("--vault", type=Path, default=None)
     ap.add_argument(
         "--path",
         dest="paths",
@@ -1128,13 +1128,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    vault = args.vault or Path.cwd()
     written = backfill_archived_run_artifacts(
-        args.vault,
+        vault,
         rel_paths=args.paths,
         policy_path=args.policy_path,
     )
     for rel_path in written:
-        print(display_path(args.vault, args.vault / rel_path))
+        print(display_path(vault, vault / rel_path))
     return 0
 
 

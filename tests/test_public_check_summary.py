@@ -150,7 +150,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
         with patch("ops.scripts.public.public_check_summary.run_with_timeout", fake_run_with_timeout):
             _default_command_runner(
                 ["python", "-m", "pytest"],
-                Path("."),
+                Path(),
                 30,
                 public_python="/workspace/.venv/bin/python",
                 heartbeat_interval_seconds=0,
