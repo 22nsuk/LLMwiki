@@ -86,6 +86,7 @@ WORKSPACE_IGNORE_NAMES = {
     ".coverage",
     ".DS_Store",
     ".git",
+    ".llmwiki",
     ".obsidian",
     ".venv",
     ".idea",
@@ -93,6 +94,7 @@ WORKSPACE_IGNORE_NAMES = {
 }
 WORKSPACE_IGNORE_SUFFIXES = {".pyc", ".pyo"}
 CHANGED_FILES_MANIFEST_IGNORED_PREFIX_REASONS = {
+    ".llmwiki/": "workspace_runtime_surface",
     "ops/reports/": "generated_report_surface",
     "tmp/": "transient_workspace_surface",
 }
