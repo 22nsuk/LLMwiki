@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import os
 import shutil
 import subprocess
+import time
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +21,8 @@ from .gate_effect_vocabulary import (
 from .output_runtime import display_path, resolve_repo_output_path, write_output_text
 
 DEFAULT_OUT = "tmp/generated-artifact-retention-clean.json"
+DEFAULT_COMPRESS_TTL_DAYS = 30
+RUN_COMPRESS_SUFFIXES = (".json", ".txt")
 
 DELETE_CANDIDATE_PATHS = (
     "build/source-package-smoke",
@@ -371,6 +376,83 @@ def _raw_stream_log_parts(filename: str) -> tuple[str, str]:
 def _promoted_run_telemetry(vault: Path, owning_run: str) -> bool:
     payload = _read_json_object(vault / owning_run / "run-telemetry.json")
     return payload.get("decision") == "PROMOTE" and bool(payload.get("finalized", False))
+
+
+def _failed_or_closed_run_telemetry(vault: Path, owning_run: str) -> bool:
+    payload = _read_json_object(vault / owning_run / "run-telemetry.json")
+    if not payload:
+        return False
+    if not bool(payload.get("finalized", False)):
+        return False
+    decision = str(payload.get("decision", "")).strip()
+    return decision != "PROMOTE"
+
+
+def _run_retention_protected(vault: Path, owning_run: str) -> bool:
+    return _promoted_run_telemetry(vault, owning_run) or _failed_or_closed_run_telemetry(vault, owning_run)
+
+
+def _run_dir_for_path(rel_path: str) -> str:
+    parts = Path(rel_path).parts
+    if len(parts) < 2 or parts[0] != "runs":
+        return ""
+    if parts[1] == "archive" and len(parts) >= 3:
+        return f"runs/archive/{parts[2]}"
+    return f"runs/{parts[1]}"
+
+
+def _run_compress_candidates(
+    vault: Path,
+    *,
+    ttl_days: int,
+    now: float | None = None,
+) -> list[dict[str, Any]]:
+    runs_root = vault / "runs"
+    if not runs_root.is_dir():
+        return []
+    cutoff = datetime.fromtimestamp(now or time.time(), tz=UTC) - timedelta(days=ttl_days)
+    candidates: list[dict[str, Any]] = []
+    for path in sorted(runs_root.rglob("*")):
+        if not path.is_file() or path.suffix == ".gz":
+            continue
+        if path.suffix not in RUN_COMPRESS_SUFFIXES:
+            continue
+        rel_path = path.relative_to(vault).as_posix()
+        owning_run = _run_dir_for_path(rel_path)
+        if not owning_run:
+            continue
+        protected = _run_retention_protected(vault, owning_run)
+        mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+        compress_allowed = not protected and mtime <= cutoff
+        candidates.append(
+            {
+                "path": rel_path,
+                "owning_run": owning_run,
+                "exists": True,
+                "mtime": mtime.isoformat().replace("+00:00", "Z"),
+                "protected": protected,
+                "compress_allowed": compress_allowed,
+                "compressed_path": f"{rel_path}.gz",
+            }
+        )
+    return candidates
+
+
+def _apply_run_compression(vault: Path, candidates: list[dict[str, Any]]) -> list[str]:
+    compressed_paths: list[str] = []
+    for item in candidates:
+        if not item.get("compress_allowed"):
+            continue
+        source = vault / str(item["path"])
+        destination = vault / str(item["compressed_path"])
+        if not source.is_file():
+            continue
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with source.open("rb") as raw, gzip.open(destination, "wb") as handle:
+            shutil.copyfileobj(raw, handle)
+        source.unlink()
+        compressed_paths.append(str(item["compressed_path"]))
+    return compressed_paths
 
 
 def _summary_original_path_candidates(rel_path: str, owning_run: str, run_id: str) -> set[str]:
@@ -1020,11 +1102,20 @@ def _retention_summary(
     }
 
 
-def build_report(vault: Path, *, apply: bool = False) -> dict[str, Any]:
+def build_report(
+    vault: Path,
+    *,
+    apply: bool = False,
+    compress_runs: bool = False,
+    compress_ttl_days: int = DEFAULT_COMPRESS_TTL_DAYS,
+) -> dict[str, Any]:
     resolved_vault = vault.resolve()
     run_log_retention = _run_command_log_retention_records(resolved_vault)
     delete_candidates = _delete_candidate_records(resolved_vault, run_log_retention)
     retained = _retained_records(resolved_vault, run_log_retention)
+    run_compress_candidates = (
+        _run_compress_candidates(resolved_vault, ttl_days=compress_ttl_days) if compress_runs else []
+    )
     blockers = _delete_candidate_blockers(delete_candidates)
     active_lock_blocker = _goal_runtime_lock_blocker(resolved_vault)
     if apply and active_lock_blocker is not None:
@@ -1040,6 +1131,9 @@ def build_report(vault: Path, *, apply: bool = False) -> dict[str, Any]:
         blockers.extend(_run_log_apply_blockers(resolved_vault, delete_candidates))
     if apply and not blockers:
         deleted_paths = _delete_allowed_candidates(resolved_vault, delete_candidates)
+    compressed_paths: list[str] = []
+    if apply and compress_runs and not blockers:
+        compressed_paths = _apply_run_compression(resolved_vault, run_compress_candidates)
     status = "fail" if blockers else "attention" if retention_blockers else "pass"
     cleanup_status = "blocked" if blockers else "applied" if apply else "dry_run"
     retention_status = "attention" if retention_blockers else "pass"
@@ -1061,6 +1155,10 @@ def build_report(vault: Path, *, apply: bool = False) -> dict[str, Any]:
         "retained": retained,
         "run_log_retention": run_log_retention,
         "deleted_paths": deleted_paths,
+        "run_compress_candidates": run_compress_candidates,
+        "compressed_paths": compressed_paths,
+        "compress_runs": compress_runs,
+        "compress_ttl_days": compress_ttl_days,
         "blockers": blockers,
         "retention_blockers": retention_blockers,
         "summary": _retention_summary(
@@ -1092,13 +1190,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--compress-runs", action="store_true")
+    parser.add_argument("--compress-ttl-days", type=int, default=DEFAULT_COMPRESS_TTL_DAYS)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_report(vault, apply=args.apply)
+    report = build_report(
+        vault,
+        apply=args.apply,
+        compress_runs=args.compress_runs,
+        compress_ttl_days=args.compress_ttl_days,
+    )
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))
     return 1 if report["status"] == "fail" else 0
