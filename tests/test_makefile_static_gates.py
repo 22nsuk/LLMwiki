@@ -468,7 +468,9 @@ class MakefileStaticGateTests(unittest.TestCase):
                 self.assertEqual(dependencies[:2], ("uv-lock-check", "static"))
                 self.assertIn("registry-preflight-check", dependencies)
                 self.assertNotIn("registry-preflight", dependencies)
-        self.assertEqual(_target_dependencies(text, "static"), ("uv-lock-check", "ruff", "typecheck"))
+        self.assertEqual(_target_dependencies(text, "static"), ("static-local", "lock-freshness-check"))
+        self.assertEqual(_target_dependencies(text, "static-local"), ("ruff", "typecheck"))
+        self.assertEqual(_target_dependencies(text, "lock-freshness-check"), ("uv-lock-check",))
         self.assertEqual(
             _recipe_lines(text, "uv-lock-check"),
             ['UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)'],
@@ -478,6 +480,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             'UV_LOCK_CHECK_INDEX_FLAGS ?= --default-index "$(UV_CANONICAL_INDEX_URL)"',
             text,
         )
+        self.assertIn("static-local", _target_block(text, ".PHONY"))
+        self.assertIn("lock-freshness-check", _target_block(text, ".PHONY"))
         self.assertIn("uv-lock-check", _target_block(text, ".PHONY"))
 
     def test_strict_targets_include_warning_budget_gate(self) -> None:
@@ -548,7 +552,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("TOOL_CACHE_PLATFORM ?=", text)
         self.assertIn("RUFF_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/ruff/$(TOOL_CACHE_PLATFORM)", text)
         self.assertIn("MYPY_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/mypy/$(TOOL_CACHE_PLATFORM)", text)
-        self.assertIn("static: uv-lock-check ruff typecheck", text)
+        self.assertIn("static-local: ruff typecheck", text)
+        self.assertIn("lock-freshness-check: uv-lock-check", text)
+        self.assertIn("static: static-local lock-freshness-check", text)
         self.assertIn(
             'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)',
             _target_block(text, "uv-lock-check"),
@@ -678,6 +684,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         variable_by_pack = {
             "fast_smoke": "FAST_SMOKE_TESTS",
+            "default_test_boundary": "DEFAULT_TEST_BOUNDARY_TESTS",
             "runtime_hotspot_smoke": "RUNTIME_HOTSPOT_SMOKE_TESTS",
             "schema_static_smoke": "SCHEMA_STATIC_SMOKE_TESTS",
             "report_contract_core": "REPORT_CONTRACT_CORE_TESTS",
@@ -712,8 +719,13 @@ class MakefileStaticGateTests(unittest.TestCase):
         test_mk_text = Path("mk/test.mk").read_text(encoding="utf-8")
         self.assertIn("include mk/test-selectors.generated.mk", test_mk_text)
         self.assertIn("test-selectors-sync-check", _target_block(test_mk_text, ".PHONY"))
+        self.assertIn("_internal-test-selectors-sync-check", _target_block(test_mk_text, ".PHONY"))
         self.assertEqual(
             _recipe_lines(test_mk_text, "test-selectors-sync-check"),
+            ["@$(MAKE) _internal-test-selectors-sync-check"],
+        )
+        self.assertEqual(
+            _recipe_lines(test_mk_text, "_internal-test-selectors-sync-check"),
             [
                 (
                     '$(PYTHON) -m ops.scripts.test.generate_test_mk_selectors '
@@ -724,6 +736,7 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         target_by_pack = {
             "fast_smoke": "fast-smoke",
+            "default_test_boundary": "test-boundary-contract-smoke",
             "runtime_hotspot_smoke": "runtime-hotspot-smoke",
             "report_contract_core": "test-report-contract-core",
             "release_sealing_core": "test-release-sealing-core",
@@ -990,7 +1003,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             '$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_CHECK_MARK_EXPR)" $(PYTEST_FLAGS)',
             _target_block(text, "unit-tests-release-check"),
         )
-        self.assertIn("test: test-fast", text)
+        self.assertIn("test: test-fast test-boundary-contract-smoke", text)
         self.assertIn("unit-tests: test-fast", text)
         self.assertIn(
             "release-builder-full: release-builder-full-lane-guard bootstrap-preflight static release-evidence-converge",

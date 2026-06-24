@@ -11,6 +11,9 @@ import pytest
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.core.workflow_dependency_planner import build_report, write_report
+from ops.scripts.test.generate_release_governance_from_lane_registry import (
+    validate_alignment,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -540,7 +543,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         plan = report["changed_path_minimum_plan"]
         self.assertEqual(plan["status"], "attention")
         self.assertEqual(plan["coverage_class"], "conservative")
-        self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
+        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
         self.assertTrue(plan["static_required"])
         self.assertEqual(plan["budget_status"], "within_budget")
         self.assertTrue(plan["final_checkpoint_required"])
@@ -742,14 +745,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
         plan = report["changed_path_minimum_plan"]
         self.assertEqual(plan["coverage_class"], "mixed")
-        self.assertEqual(plan["estimated_duration_seconds"], 360)
+        self.assertEqual(plan["estimated_duration_seconds"], 390)
         self.assertEqual(plan["duration_budget_seconds"], 300)
         self.assertEqual(plan["budget_status"], "over_budget")
         self.assertEqual(
             plan["command_duration_seconds"],
             {
                 "make static": 60,
-                "make test-fast": 120,
+                "make test": 150,
                 "make test-report-contract-core": 180,
             },
         )
@@ -766,12 +769,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
         plan = report["changed_path_minimum_plan"]
-        self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
-        self.assertEqual(plan["estimated_duration_seconds"], 180)
+        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
+        self.assertEqual(plan["estimated_duration_seconds"], 210)
         self.assertEqual(plan["budget_status"], "within_budget")
         self.assertEqual(
             plan["command_duration_seconds"],
-            {"make static": 60, "make test-fast": 120},
+            {"make static": 60, "make test": 150},
         )
         self.assertEqual(
             [item["duration_seconds"] for item in plan["path_recommendations"]],
@@ -795,7 +798,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
         plan = report["changed_path_minimum_plan"]
-        self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
+        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
         self.assertEqual(plan["estimated_duration_seconds"], 180)
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
@@ -823,7 +826,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         plan = report["changed_path_minimum_plan"]
         self.assertEqual(plan["status"], "pass")
         self.assertEqual(plan["coverage_class"], "runtime_source")
-        self.assertEqual(plan["selected_commands"], ["make static", "make test-fast"])
+        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
         self.assertEqual(plan["unknown_paths"], [])
 
     def test_changed_path_minimum_plan_covers_registry_and_generated_currentness_artifacts(
@@ -915,6 +918,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
         self.assertEqual(destination, self.vault / "ops" / "reports" / "workflow-dependency-planner.json")
         self.assertTrue(destination.exists())
+
+
+class ReleaseGovernanceLaneRegistryTests(unittest.TestCase):
+    def test_release_governance_ci_matrix_matches_lane_registry(self) -> None:
+        report = validate_alignment(REPO_ROOT)
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["mismatched_fields"], [])
 
 
 if __name__ == "__main__":

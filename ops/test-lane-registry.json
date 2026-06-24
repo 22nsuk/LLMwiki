@@ -10,7 +10,9 @@
     ],
     "command_duration_seconds": {
       "make static": 60,
+      "make test": 150,
       "make test-fast": 120,
+      "make test-boundary-contract-smoke": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider {path}": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_workflow_dependency_planner.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
@@ -25,7 +27,7 @@
       "rule_id": "unknown_path",
       "commands": [
         "make static",
-        "make test-fast"
+        "make test"
       ],
       "reason": "Unknown paths use the conservative advisory minimum lane.",
       "coverage_class": "conservative",
@@ -61,9 +63,9 @@
         ],
         "commands": [
           "make static",
-          "make test-fast"
+          "make test"
         ],
-        "reason": "Runtime Python changes need static analysis plus the fast pytest lane before release evidence is trusted.",
+        "reason": "Runtime Python changes need static analysis plus the default pytest lane (fast unit tests plus boundary contract smoke) before release evidence is trusted.",
         "coverage_class": "runtime_source",
         "static_required": true,
         "duration_seconds": 180
@@ -424,6 +426,34 @@
       ]
     },
     {
+      "pack_id": "default_test_boundary",
+      "authority": "derived",
+      "status": "derived_from_registry",
+      "semantics": "Curated public/report_contract boundary checks chained into make test so script placement, lifecycle classification, and selector-registry drift fail before the full public lane.",
+      "backing_targets": [
+        "test-boundary-contract-smoke"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "selectors": [
+          "tests/test_import_fallback_contract.py",
+          "tests/test_cli_surface_inventory.py",
+          "tests/test_makefile_static_gates.py",
+          "tests/test_makefile_fast_smoke_static_gates.py",
+          "tests/test_release_status_v2.py",
+          "tests/test_remediation_surfaces.py"
+        ]
+      },
+      "ci_entrypoint": "test-boundary-contract-smoke",
+      "ci_steps": [
+        "make test-boundary-contract-smoke"
+      ],
+      "documented_entrypoints": [
+        "make test",
+        "make test-boundary-contract-smoke"
+      ]
+    },
+    {
       "pack_id": "runtime_hotspot_smoke",
       "authority": "advisory",
       "status": "derived_from_registry",
@@ -697,6 +727,7 @@
         "pytest_mark_expr": "report_contract",
         "selectors": [
           "tests/test_archive_execution_manifest.py",
+          "tests/test_anti_slop_admission_runtime.py",
           "tests/test_artifact_freshness_runtime.py",
           "tests/test_artifact_relocation_audit.py",
           "tests/test_auto_improve_iteration_runtime.py",
@@ -707,11 +738,13 @@
           "tests/test_ci_workflow_static.py",
           "tests/test_clean_fixture_regeneration_guard.py",
           "tests/test_cli_surface_inventory.py",
+          "tests/test_codex_exec_model_output_runtime.py",
           "tests/test_command_log_summary_backfill.py",
           "tests/test_compatibility_alias_deprecation.py",
           "tests/test_doc_graph_integrity.py",
           "tests/test_external_report_lifecycle_static.py",
           "tests/test_generated_artifact_retention_clean.py",
+          "tests/test_generated_artifact_runs_compression.py",
           "tests/test_goal_runtime_clean_transient.py",
           "tests/test_goal_runtime_closeout.py",
           "tests/test_goal_runtime_fixed_point_check.py",
@@ -723,6 +756,7 @@
           "tests/test_lint_uplift_plan.py",
           "tests/test_runtime_codehealth_hardening_guards.py",
           "tests/test_make_target_inventory.py",
+          "tests/test_make_target_operator_surface_runtime.py",
           "tests/test_makefile_static_gates.py",
           "tests/test_makefile_fast_smoke_static_gates.py",
           "tests/test_makefile_release_orchestration_static_gates.py",
@@ -745,6 +779,7 @@
           "tests/test_release_evidence_cohort.py",
           "tests/test_release_evidence_dashboard.py",
           "tests/test_release_smoke.py",
+          "tests/test_remediation_surfaces.py",
           "tests/test_report_generation_smoke.py",
           "tests/test_report_schema_sample_regeneration.py",
           "tests/test_report_schemas.py",
@@ -910,6 +945,11 @@
       "kind": "make_target",
       "name": "fast-smoke",
       "maps_to": "fast_smoke"
+    },
+    {
+      "kind": "make_target",
+      "name": "test-boundary-contract-smoke",
+      "maps_to": "default_test_boundary"
     },
     {
       "kind": "make_target",
@@ -1100,6 +1140,11 @@
       "kind": "documented_entrypoint",
       "name": "make fast-smoke",
       "maps_to": "fast_smoke"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make test-boundary-contract-smoke",
+      "maps_to": "default_test_boundary"
     },
     {
       "kind": "documented_entrypoint",

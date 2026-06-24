@@ -40,12 +40,12 @@ class TestLaneRegistryMarkerFilteringTests(unittest.TestCase):
         self.assertEqual(marks, {"slow", "integration_heavy"})
 
     def test_fast_smoke_effective_selectors_exclude_module_slow_files(self) -> None:
-        registry = load_registry(Path("."))
-        effective = pack_effective_selectors(registry, "fast_smoke", vault=Path("."))
+        registry = load_registry(Path())
+        effective = pack_effective_selectors(registry, "fast_smoke", vault=Path())
 
         for selector in effective:
             module_marks = module_level_pytest_marks(
-                Path(".") / selector.split("::", 1)[0]
+                Path(selector.split("::", 1)[0])
             )
             with self.subTest(selector=selector):
                 self.assertNotIn("slow", module_marks)

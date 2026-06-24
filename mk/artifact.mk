@@ -7,6 +7,8 @@ GENERATED_ARTIFACT_INDEX_CHECK_OUT ?= tmp/generated-artifact-index-check.json
 GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT ?= tmp/generated-artifact-converge-summary.json
 GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT ?= tmp/generated-artifact-converge-summary.before.json
 GENERATED_ARTIFACT_RETENTION_CLEAN_OUT ?= tmp/generated-artifact-retention-clean.json
+GENERATED_ARTIFACT_RETENTION_COMPRESS_RUNS ?=
+GENERATED_ARTIFACT_RETENTION_COMPRESS_TTL_DAYS ?= 30
 GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY ?=
 COMMAND_LOG_SUMMARY_BACKFILL_OUT ?= tmp/command-log-summary-backfill.json
 COMMAND_LOG_SUMMARY_BACKFILL_APPLY ?=
@@ -101,7 +103,10 @@ command-log-summary-backfill:
 	$(PYTHON) -m ops.scripts.command_log_summary_backfill --vault "$(VAULT)" --out "$(COMMAND_LOG_SUMMARY_BACKFILL_OUT)" $(if $(COMMAND_LOG_SUMMARY_BACKFILL_APPLY),--apply,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_ALL),--all,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_INCLUDE_RUN_COMMANDS),--include-run-commands,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_CLOSE_PROMOTED_UNREFERENCED),--close-promoted-unreferenced,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_DELETE_RAW),--delete-raw,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION),--operator-confirmation "$(COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION)",) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID),--run-id "$(COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID)",)
 
 generated-artifact-retention-clean:
-	$(PYTHON) -m ops.scripts.generated_artifact_retention_clean --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_RETENTION_CLEAN_OUT)" $(if $(GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY),--apply,)
+	$(PYTHON) -m ops.scripts.generated_artifact_retention_clean --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_RETENTION_CLEAN_OUT)" $(if $(GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY),--apply,) $(if $(GENERATED_ARTIFACT_RETENTION_COMPRESS_RUNS),--compress-runs,) $(if $(GENERATED_ARTIFACT_RETENTION_COMPRESS_TTL_DAYS),--compress-ttl-days $(GENERATED_ARTIFACT_RETENTION_COMPRESS_TTL_DAYS),)
+
+generated-artifact-runs-compress:
+	$(MAKE) generated-artifact-retention-clean GENERATED_ARTIFACT_RETENTION_COMPRESS_RUNS=1 GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY=$(GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY)
 
 script-output-surfaces:
 	$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)"
