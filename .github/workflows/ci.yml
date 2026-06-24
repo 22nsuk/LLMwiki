@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   test-tier:
-    if: github.event_name != 'workflow_dispatch' || inputs.attestation_only != 'true'
+    if: github.event_name != 'workflow_dispatch' || inputs.attestation_only != true
     name: ${{ matrix.tier }} / py${{ matrix.python-version }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -234,7 +234,7 @@ jobs:
           if-no-files-found: warn
 
   windows-release-smoke:
-    if: github.event_name != 'workflow_dispatch' || inputs.attestation_only != 'true'
+    if: github.event_name != 'workflow_dispatch' || inputs.attestation_only != true
     name: windows-release-smoke / py3.12
     runs-on: windows-latest
     timeout-minutes: 20
@@ -271,7 +271,7 @@ jobs:
           if-no-files-found: error
 
   raw-registry-cross-environment:
-    if: github.event_name != 'workflow_dispatch' || inputs.attestation_only != 'true'
+    if: github.event_name != 'workflow_dispatch' || inputs.attestation_only != true
     name: raw-registry-cross-env / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -318,7 +318,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: raw-registry-cross-environment
-    if: always() && (github.event_name != 'workflow_dispatch' || inputs.attestation_only != 'true')
+    if: always() && (github.event_name != 'workflow_dispatch' || inputs.attestation_only != true)
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
@@ -367,7 +367,7 @@ jobs:
 
   dist-attestation:
     name: dist provenance attestation
-    if: github.event_name == 'workflow_dispatch' && inputs.attestation_only == 'true'
+    if: github.event_name == 'workflow_dispatch' && inputs.attestation_only == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -399,7 +399,7 @@ jobs:
           if-no-files-found: error
 
   supply-chain-gate:
-    if: github.event_name != 'workflow_dispatch' || inputs.attestation_only != 'true'
+    if: github.event_name != 'workflow_dispatch' || inputs.attestation_only != true
     name: supply-chain / py3.12
     runs-on: ubuntu-latest
     timeout-minutes: 10
