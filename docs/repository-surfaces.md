@@ -61,6 +61,11 @@ Python caches and scratch candidate JSON before running the clean
 `review-archive` profile, producing the review archive and schema-backed report
 without turning local diagnostic evidence into release authority.
 
+For full-vault reviewer orientation, use `make review-surface-manifest`.
+`docs/REVIEW_SCOPE.md` is the tracked canonical inventory; the companion JSON at
+`tmp/review-surface-manifest.json` is intentionally ephemeral and must not be
+promoted to `ops/reports/`.
+
 ## Release Source ZIP
 
 The release source ZIP is not the full local vault and not merely a public
