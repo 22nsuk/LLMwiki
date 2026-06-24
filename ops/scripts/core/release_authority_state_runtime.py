@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .payload_field_runtime import dict_value
 from .source_revision_runtime import resolve_source_revision
 from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
@@ -30,10 +31,6 @@ MACHINE_RELEASE_NOT_ALLOWED_REASON_ID = "machine_release_not_allowed"
 
 def _string_value(value: object) -> str:
     return str(value).strip() if value is not None else ""
-
-
-def _dict_value(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
 
 
 def _list_value(value: object) -> list[Any]:
@@ -134,9 +131,9 @@ def _status_classification(
 def release_status_v2_view(payload: dict[str, Any]) -> dict[str, Any]:
     """Return release status axes with explicit legacy fallback diagnostics."""
 
-    status_v2 = _dict_value(payload.get("status_v2"))
-    status_axes = _dict_value(status_v2.get("status_axes"))
-    vocabulary = _dict_value(payload.get("release_authority_vocabulary"))
+    status_v2 = dict_value(payload.get("status_v2"))
+    status_axes = dict_value(status_v2.get("status_axes"))
+    vocabulary = dict_value(payload.get("release_authority_vocabulary"))
     fallback_fields: list[str] = []
     axes: dict[str, str] = {}
     for field in STATUS_V2_AXIS_FIELDS:
@@ -296,8 +293,8 @@ def clean_required_preflight_passes(
 def authoritative_live_rerun_not_run_count(dashboard: dict[str, Any]) -> int:
     count = 0
     for gate in _list_value(dashboard.get("gates")):
-        gate_payload = _dict_value(gate)
-        live_rerun_state = _dict_value(gate_payload.get("live_rerun_state"))
+        gate_payload = dict_value(gate)
+        live_rerun_state = dict_value(gate_payload.get("live_rerun_state"))
         if (
             bool(gate_payload.get("authoritative_for_release"))
             and str(live_rerun_state.get("status", "")).strip() == "not_run"
@@ -309,8 +306,8 @@ def authoritative_live_rerun_not_run_count(dashboard: dict[str, Any]) -> int:
 def authoritative_live_rerun_fail_count(dashboard: dict[str, Any]) -> int:
     count = 0
     for gate in _list_value(dashboard.get("gates")):
-        gate_payload = _dict_value(gate)
-        live_rerun_state = _dict_value(gate_payload.get("live_rerun_state"))
+        gate_payload = dict_value(gate)
+        live_rerun_state = dict_value(gate_payload.get("live_rerun_state"))
         if (
             bool(gate_payload.get("authoritative_for_release"))
             and str(live_rerun_state.get("status", "")).strip() == "fail"
@@ -324,10 +321,10 @@ def release_authority_reports_verified(
     closeout: dict[str, Any],
     dashboard: dict[str, Any],
 ) -> bool:
-    closeout_summary = _dict_value(closeout.get("summary"))
+    closeout_summary = dict_value(closeout.get("summary"))
     closeout_status_view = release_status_v2_view_with_readiness_fallback(closeout)
     release_authority_status = str(closeout_status_view["release_authority_status"])
-    dashboard_summary = _dict_value(dashboard.get("summary"))
+    dashboard_summary = dict_value(dashboard.get("summary"))
     return (
         closeout.get("status") == "pass"
         and closeout_summary.get("live_make_check_status") == "pass"
