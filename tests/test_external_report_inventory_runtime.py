@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.core.policy_runtime import report_path
 from ops.scripts.release.external_report_inventory_runtime import (
     REFERENCE_MANIFEST,
@@ -16,6 +18,12 @@ from ops.scripts.release.external_report_inventory_runtime import (
     reference_manifest_alignment,
     report_type_for_path,
     unmatched_recommendation_count,
+)
+from tests.minimal_vault_runtime import REPO_ROOT
+
+ARCHIVED_REVIEW_REPORT_PATHS = (
+    "external-reports/archive/llmwiki_project_review_report(7).md",
+    "external-reports/archive/llmwiki_project_review_report(8).md",
 )
 
 
@@ -95,12 +103,15 @@ def test_unmatched_recommendation_count_ignores_headings_and_priority_notation_m
 
 
 def test_archived_reports_seven_and_eight_have_no_unmatched_recommendations() -> None:
-    for rel_path in (
-        "external-reports/archive/llmwiki_project_review_report(7).md",
-        "external-reports/archive/llmwiki_project_review_report(8).md",
-    ):
-        text = Path(rel_path).read_text(encoding="utf-8")
-        assert unmatched_recommendation_count(text) == 0, rel_path
+    report_paths = [REPO_ROOT / rel_path for rel_path in ARCHIVED_REVIEW_REPORT_PATHS]
+    if not all(path.is_file() for path in report_paths):
+        pytest.skip(
+            "archived external reports (7)/(8) are local-only and absent in this source tree"
+        )
+
+    for path in report_paths:
+        text = path.read_text(encoding="utf-8")
+        assert unmatched_recommendation_count(text) == 0, report_path(REPO_ROOT, path)
 
 
 def test_active_selector_includes_binary_reports_with_explicit_type(tmp_path: Path) -> None:
