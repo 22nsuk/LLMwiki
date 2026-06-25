@@ -94,10 +94,10 @@ def test_unmatched_recommendation_count_ignores_headings_and_priority_notation_m
     assert unmatched_recommendation_count(text) == 0
 
 
-def test_active_reports_seven_and_eight_have_no_unmatched_recommendations() -> None:
+def test_archived_reports_seven_and_eight_have_no_unmatched_recommendations() -> None:
     for rel_path in (
-        "external-reports/llmwiki_project_review_report(7).md",
-        "external-reports/llmwiki_project_review_report(8).md",
+        "external-reports/archive/llmwiki_project_review_report(7).md",
+        "external-reports/archive/llmwiki_project_review_report(8).md",
     ):
         text = Path(rel_path).read_text(encoding="utf-8")
         assert unmatched_recommendation_count(text) == 0, rel_path
