@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.core.release_authority_state_runtime import (
+    current_release_manifest_pass,
+    release_authority_reports_verified,
     release_status_v2_view_with_readiness_fallback,
 )
 
@@ -255,6 +257,20 @@ _STATUS_DECISION_COMPAT_EXPORTS = (
     supply_chain_external_verification_status,
     uv_lock_canonical_policy_status,
 )
+
+
+def external_report_release_authority_reports_verified(vault: Path) -> bool:
+    closeout = load_json_object(vault / "ops/reports/release-closeout-summary.json")
+    dashboard = load_json_object(vault / "ops/reports/release-evidence-dashboard.json")
+    return release_authority_reports_verified(closeout=closeout, dashboard=dashboard)
+
+
+def external_report_current_release_manifest_pass(
+    vault: Path,
+    rel_path: str,
+    artifact_kind: str,
+) -> bool:
+    return current_release_manifest_pass(vault, rel_path, artifact_kind)
 
 
 def _collect_action_evidence(

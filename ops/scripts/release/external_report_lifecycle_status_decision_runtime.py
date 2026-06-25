@@ -836,11 +836,21 @@ def generated_artifact_tracking_policy_status(
         )
     )
     has_ephemeral_class = "ephemeral" in surface_text
+    tracking_policy = report.get("tracking_policy")
+    tracking_policy_ok = (
+        isinstance(tracking_policy, dict)
+        and str(tracking_policy.get("policy_id", "")).strip() == "generated_artifact_tracking_policy"
+    )
+    currentness = report.get("currentness")
+    currentness_ok = (
+        isinstance(currentness, dict) and str(currentness.get("status", "")).strip() == "current"
+    )
     if (
         existing_count == expected_count
         and report.get("artifact_kind") == "generated_artifact_index_report"
         and report.get("producer") == "ops.scripts.generated_artifact_index"
-        and report.get("status") == "pass"
+        and tracking_policy_ok
+        and currentness_ok
         and explicit_policy
         and has_ephemeral_class
     ):

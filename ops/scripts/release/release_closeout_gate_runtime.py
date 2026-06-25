@@ -13,7 +13,10 @@ from ops.scripts.core.gate_effect_vocabulary import (
     GATE_EFFECT_BLOCKS_PROMOTION,
     canonical_gate_effect,
 )
-from ops.scripts.core.release_currentness_state_runtime import currentness_field
+from ops.scripts.core.release_currentness_state_runtime import (
+    components_match_current_source_tree,
+    currentness_field,
+)
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     producer_input_fingerprint,
     release_source_tree_divergence_diagnostics,
@@ -752,6 +755,12 @@ def source_tree_coherence(
         loaded_components,
         current_source_tree_fingerprint=current_source_tree_fingerprint,
     )
+    components_current = components_match_current_source_tree(
+        loaded_components,
+        current_source_tree_fingerprint=current_source_tree_fingerprint,
+    )
+    if not components_current and status == "pass" and loaded_components:
+        status = "attention"
     return (
         {
             "status": status,

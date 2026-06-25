@@ -151,7 +151,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self.assertEqual(summary["recommended_lane"], "source-action")
         self.assertEqual(summary["recommended_targets"], ["external-report-action-matrix"])
 
-    def test_generated_artifact_policy_status_requires_pass_report_status(self) -> None:
+    def test_generated_artifact_policy_status_requires_tracking_policy_envelope(self) -> None:
         for rel_path, text in {
             "ops/scripts/core/generated_artifact_index.py": (
                 "def tracking_policy():\n"
@@ -199,7 +199,24 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "artifact_kind": "generated_artifact_index_report",
                 "producer": "ops.scripts.generated_artifact_index",
                 "status": "pass",
+                "currentness": {"status": "current"},
+                "tracking_policy": {"policy_id": "generated_artifact_tracking_policy"},
                 "summary": {"archive_candidate_count": 0},
+            },
+        )
+        self.assertEqual(
+            action_statuses(self.vault)["generated_artifact_tracking_policy"],
+            "implemented",
+        )
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {
+                "artifact_kind": "generated_artifact_index_report",
+                "producer": "ops.scripts.generated_artifact_index",
+                "status": "attention",
+                "currentness": {"status": "current"},
+                "tracking_policy": {"policy_id": "generated_artifact_tracking_policy"},
+                "summary": {"archive_candidate_count": 1},
             },
         )
         self.assertEqual(
