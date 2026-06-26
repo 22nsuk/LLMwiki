@@ -911,14 +911,18 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stdout.txt").is_file())
             self.assertTrue((vault / "runs" / "run-executor" / "validator.stderr.txt").is_file())
 
-    def test_non_worker_dependency_preflight_uses_workspace_python_probe(self) -> None:
+    def test_non_worker_dependency_preflight_uses_trusted_parent_python_probe(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             _seed_executor_vault(vault)
             seed_subagent_profiles(vault, ["validator"])
             venv_python = vault / ".venv" / "bin" / "python"
-            venv_python.write_text("#!/bin/sh\nexit 99\n", encoding="utf-8")
+            marker = vault / "preflight-rce-marker"
+            venv_python.write_text(
+                f"#!/bin/sh\nprintf exploited > {shlex.quote(str(marker))}\nexit 99\n",
+                encoding="utf-8",
+            )
             venv_python.chmod(0o755)
             _write_routing_report(
                 vault,
@@ -932,10 +936,13 @@ class ExecutorRuntimeTests(unittest.TestCase):
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
                 if argv[:3] == ["git", "rev-parse", "HEAD"]:
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
-                self.assertEqual(argv[0], str(venv_python))
+                self.assertEqual(Path(argv[0]).resolve(), Path(sys.executable).resolve())
                 self.assertEqual(Path(str(kwargs.get("cwd"))), Path(os.sep))
                 payload = {
-                    "python": {"executable": str(venv_python), "version": "3.test"},
+                    "python": {
+                        "executable": str(Path(sys.executable).resolve()),
+                        "version": "3.test",
+                    },
                     "modules": [
                         {
                             "import_name": "pytest",
@@ -986,13 +993,16 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "pass")
             self.assertEqual(
-                report["diagnostics"]["dependency_preflight"]["python"]["path"],
-                ".venv/bin/python",
+                Path(report["diagnostics"]["dependency_preflight"]["python"]["path"]).resolve(),
+                Path(sys.executable).resolve(),
             )
             self.assertEqual(
-                report["diagnostics"]["dependency_preflight"]["python"]["executable"],
-                ".venv/bin/python",
+                Path(
+                    report["diagnostics"]["dependency_preflight"]["python"]["executable"]
+                ).resolve(),
+                Path(sys.executable).resolve(),
             )
+            self.assertFalse(marker.exists())
 
     def test_external_workspace_python_shim_preserves_artifact_venv_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
