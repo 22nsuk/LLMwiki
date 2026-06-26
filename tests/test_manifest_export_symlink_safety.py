@@ -27,6 +27,7 @@ def _create_symlink_or_skip(test_case: unittest.TestCase, link: Path, target: Pa
 
 class ManifestExportSymlinkSafetyTests(unittest.TestCase):
     def test_release_manifest_excludes_path_matches_manifest_policy(self) -> None:
+        self.assertTrue(release_manifest_excludes_path("AGENTS.local.md"))
         self.assertTrue(release_manifest_excludes_path("runs/run-1/evidence.json"))
         self.assertTrue(release_manifest_excludes_path("ops/raw-registry.json"))
         self.assertTrue(release_manifest_excludes_path("ops/script-output-surfaces.json"))
