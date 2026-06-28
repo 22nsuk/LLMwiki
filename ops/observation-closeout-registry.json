@@ -6,9 +6,9 @@
       "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
       "observation_id": "release_authority_operator_lane_remains_for_matrix_closure",
       "status": "planned",
-      "retained_reason": "The current action matrix has no local source-action, freshness, release-run, or certificate blockers, but still has two operator/external-authority blockers: GitHub governance live evidence and supply-chain Sigstore bundle verification.",
-      "next_action": "Provide current GitHub governance evidence through build/release/github-governance-live-input.json/collaboration-governance and provide a Sigstore bundle with SIGSTORE_BUNDLE_REF=<bundle>, then run operator-evidence-closeout-current-or-refresh.",
-      "exit_condition": "Close when both active action-matrix items have current operator/external evidence or are explicitly retained as accepted operator-only risks.",
+      "retained_reason": "The refreshed action matrix still has release and promotion authority blockers after active-report rebinding, so this operator-lane follow-up must remain visible until authority evidence is current.",
+      "next_action": "Run the release authority readback lane for the refreshed source tree, starting with release-run-ready and release-auto-promotion-ready; if operator evidence is still required afterward, provide it through the operator evidence lane.",
+      "exit_condition": "Close when the action matrix has no release-run, promotion, operator, or artifact-freshness pending actions for the active report set, or when a narrower retained observation replaces this one.",
       "owner_or_lane": "release-authority-operator-lane"
     },
     {
@@ -19,6 +19,51 @@
       "next_action": "Execute the current readiness lane only after a concrete churn/failure signal: auto_improve_readiness summary preparation with focused readiness tests and runtime-hotspot golden coverage.",
       "exit_condition": "Close when those hotspot next lanes are implemented with focused tests and runtime-hotspot golden coverage, or replaced by narrower retained observations in the runtime decomposition plan.",
       "owner_or_lane": "runtime-hotspot-decomposition"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/external-report-remediation-20260620/improvement-observations.json",
+      "observation_id": "c4_strict_preview_mypy_advisory_debt",
+      "status": "open",
+      "retained_reason": "The strict-preview typing debt is intentionally advisory and separate from the active external-report matrix, but it remains an open source-maintenance follow-up until a focused typing lane owns it.",
+      "next_action": "Schedule a dedicated strict-preview typing slice and validate it with the strict preview audit plus focused tests for touched runtime surfaces.",
+      "exit_condition": "Close when the strict-preview typing audit has no remaining advisory debt, or when the debt is replaced by narrower registered observations with concrete owner lanes.",
+      "owner_or_lane": "type-uplift-plan"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/external-report-remediation-20260620/improvement-observations.json",
+      "observation_id": "release_run_pending_operator_verification",
+      "status": "open",
+      "retained_reason": "The refreshed action matrix has current active reports and still requires release-run and promotion authority readback before the active reports can be closed.",
+      "next_action": "Run release-run-ready for the current source tree, then refresh sealed and auto-promotion readiness if the matrix still reports release or promotion pending actions.",
+      "exit_condition": "Close when release-run, sealed-run, and auto-promotion readiness are current for the active report source tree, or when remaining operator-only work is registered under a narrower observation.",
+      "owner_or_lane": "release-run-ready"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260624-current-state-improvement-plan/improvement-observations.json",
+      "observation_id": "preseal_closeout_manifest_fingerprint_drift",
+      "status": "planned",
+      "retained_reason": "The refreshed matrix still reports release-run, sealed-run, and auto-promotion manifest source-identity drift, matching this preseal closeout follow-up.",
+      "next_action": "Complete the release authority sequence for the current tree: release-run-ready, release-auto-promotion-preseal, release-sealed-run-ready, and release-auto-promotion-ready.",
+      "exit_condition": "Close when those staged manifests match the current source revision and source tree fingerprint, or when a later observation supersedes this preseal drift record.",
+      "owner_or_lane": "release-authority-preseal"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-action-matrix-full-clean-20260625/improvement-observations.json",
+      "observation_id": "preseal_closeout_manifest_fingerprint_drift",
+      "status": "planned",
+      "retained_reason": "This later action-matrix clean observation records the same release authority drift and remains valid while release-run, sealed-run, and auto-promotion manifests are source-identity stale.",
+      "next_action": "Rebind release-run evidence, then run release-sealed-run-ready and release-auto-promotion-ready so the action matrix can clear the release and promotion pending actions.",
+      "exit_condition": "Close when the refreshed action matrix no longer reports release-run or promotion readiness pending for the active external reports.",
+      "owner_or_lane": "release-authority-preseal"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-action-matrix-full-clean-20260625/improvement-observations.json",
+      "observation_id": "generated_artifact_index_freshness_oscillation",
+      "status": "planned",
+      "retained_reason": "The refreshed artifact freshness report still has operational attention and the action matrix routes the active reports through artifact-freshness pending evidence.",
+      "next_action": "Use the documented convergence order: external-report-action-matrix, generated-artifact-index-body, then artifact-freshness-refresh-check; escalate to release-evidence-converge if freshness remains attention.",
+      "exit_condition": "Close when generated-artifact index and artifact-freshness evidence are current with no operational attention for the active external-report set.",
+      "owner_or_lane": "generated-artifact-finality-suffix"
     }
   ]
 }
