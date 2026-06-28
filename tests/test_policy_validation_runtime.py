@@ -49,7 +49,12 @@ class PolicyValidationRuntimeTests(unittest.TestCase):
             rule.evaluate(policy)
 
     def test_display_timezone_from_policy_returns_named_timezone(self) -> None:
-        timezone = display_timezone_from_policy(_load_live_policy())
+        policy = _load_live_policy()
+        self.assertIsInstance(
+            policy["runtime_defaults"]["display_timezone"]["utc_offset"],
+            str,
+        )
+        timezone = display_timezone_from_policy(policy)
         sample = dt.datetime(2026, 4, 21, 12, 0, tzinfo=timezone)
 
         self.assertEqual(sample.utcoffset(), dt.timedelta(hours=9))

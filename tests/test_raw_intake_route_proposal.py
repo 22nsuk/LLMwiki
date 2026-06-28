@@ -149,7 +149,7 @@ Stable Identity
 
 ## Source
 - raw 경로: `raw/source.md`
-- 원문 URL: `https://example.test/source`
+- 원문 URL: <https://example.test/source>
 """,
                 encoding="utf-8",
             )
@@ -185,6 +185,135 @@ Stable Identity
                     "matrix_source_url_matches_raw_source_url",
                     "raw_source_url_matches_source_page_url",
                 },
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_identity_audit_fails_when_source_page_title_is_unresolved(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            raw_path = vault / "raw" / "source.md"
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_text(
+                """---
+title: "Stable Identity"
+source: "https://example.test/source"
+---
+
+# Stable Identity
+""",
+                encoding="utf-8",
+            )
+            source_page = vault / "wiki" / "source--stable-identity.md"
+            source_page.write_text(
+                """---
+title: "Stable Identity"
+page_type: "source"
+corpus: "wiki"
+raw_path: "raw/source.md"
+aliases:
+  - "source--stable-identity"
+tags:
+  - "corpus/wiki"
+  - "type/source"
+---
+
+# source--stable-identity
+
+## Source
+- raw 경로: `raw/source.md`
+- 원문 URL: `https://example.test/source`
+""",
+                encoding="utf-8",
+            )
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        title="Stable Identity",
+                        source_url="https://example.test/source",
+                        source_page="wiki/source--stable-identity.md",
+                    )
+                ],
+            )
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            proposal = report["proposals"][0]
+            identity = proposal["identity_audit"]
+            self.assertEqual(report["status"], "fail")
+            self.assertIn("identity_mismatch", proposal["issues"])
+            self.assertEqual(identity["status"], "fail")
+            self.assertIn(
+                {
+                    "name": "matrix_title_matches_source_page_title",
+                    "status": "skipped",
+                    "expected": "Stable Identity",
+                    "observed": "",
+                },
+                identity["checks"],
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_identity_audit_rejects_absolute_source_page_reads(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            vault = temp_root / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            raw_path = vault / "raw" / "source.md"
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_text(
+                """---
+title: "Stable Identity"
+source: "https://example.test/source"
+---
+
+# Stable Identity
+""",
+                encoding="utf-8",
+            )
+            outside_page = temp_root / "outside-source.md"
+            outside_page.write_text(
+                """# outside
+
+## Title
+Stable Identity
+
+## Source
+- raw 경로: `raw/source.md`
+- 원문 URL: `https://example.test/source`
+""",
+                encoding="utf-8",
+            )
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        title="Stable Identity",
+                        source_url="https://example.test/source",
+                        source_page=str(outside_page),
+                    )
+                ],
+            )
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            proposal = report["proposals"][0]
+            identity = proposal["identity_audit"]
+            self.assertEqual(report["status"], "fail")
+            self.assertIn("identity_mismatch", proposal["issues"])
+            self.assertEqual(identity["status"], "fail")
+            self.assertIn(
+                {
+                    "name": "matrix_title_matches_source_page_title",
+                    "status": "skipped",
+                    "expected": "Stable Identity",
+                    "observed": "",
+                },
+                identity["checks"],
             )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 

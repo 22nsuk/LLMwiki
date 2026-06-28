@@ -1983,7 +1983,7 @@ starter_bundles:
 runtime_defaults:
   display_timezone:
     label: KST
-    utc_offset: +09:00
+    utc_offset: "+09:00"
 release_packaging:
   archive_root_name: LLMwiki
   zip_normalization:

@@ -105,9 +105,10 @@ def build_registry(
         spec.path,
         default_relative_path=spec.path,
     )
-    if not source_path.is_file():
-        raise FileNotFoundError(f"closure registry is missing: {display_path(vault, source_path)}")
-    existing = read_json_object(source_path)
+    if source_path.is_file():
+        existing = read_json_object(source_path)
+    else:
+        existing = {"closures": []}
     closures = _closure_items(existing)
     return {
         **build_canonical_report_envelope(
