@@ -106,6 +106,7 @@ class RawIntakeSeedSourceHintsTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "pass")
             self.assertEqual(report["mode"], "write")
+            self.assertEqual(report["summary"]["seed_source_missing_hint_count"], 0)
             self.assertEqual(report["summary"]["written_count"], 1)
             self.assertIn("## Why this is source-only for now", updated)
             self.assertLess(
@@ -177,6 +178,36 @@ See [[source--lonely]].
                 "ops/schemas/raw-intake-seed-source-hints-report.schema.json",
             )
             self.assertEqual(payload["status"], "pass")
+
+    def test_cli_write_fail_on_missing_rechecks_after_backfill(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            launcher = Path(temp_dir) / "launcher"
+            vault.mkdir()
+            launcher.mkdir()
+            seed_minimal_vault(vault)
+            write_seed_source(vault / "wiki" / "source--lonely.md")
+
+            completed = invoke_cli_main(
+                seed_source_hints_main,
+                [
+                    "--vault",
+                    str(vault),
+                    "--out",
+                    "reports/raw-intake/seed-source-hints.json",
+                    "--write",
+                    "--fail-on-missing",
+                ],
+                cwd=launcher,
+            )
+
+            self.assertEqual(completed.exit_code, 0, msg=completed.stderr or completed.stdout)
+            report_path = vault / "reports" / "raw-intake" / "seed-source-hints.json"
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["status"], "pass")
+            self.assertEqual(payload["summary"]["seed_source_missing_hint_count"], 0)
+            self.assertEqual(payload["summary"]["written_count"], 1)
+            self.assertEqual(validate_with_schema(payload, load_schema(SCHEMA_PATH)), [])
 
 
 if __name__ == "__main__":

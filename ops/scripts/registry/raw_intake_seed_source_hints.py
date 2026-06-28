@@ -153,6 +153,7 @@ def build_report(
 
     candidates: list[dict[str, Any]] = []
     write_count = 0
+    missing_count = 0
     for stem, path in sorted(snapshot.pages.items()):
         relative_path = report_path(vault, path)
         frontmatter = snapshot.frontmatters.get(stem)
@@ -171,6 +172,12 @@ def build_report(
         if write:
             written = _write_missing_sections(path, text, missing_sections, suggested_sections)
             write_count += int(written)
+        remaining_missing_sections = (
+            seed_source_missing_sections(path.read_text(encoding="utf-8"))
+            if written
+            else missing_sections
+        )
+        missing_count += int(bool(remaining_missing_sections))
         candidates.append(
             {
                 "page": relative_path,
@@ -182,7 +189,6 @@ def build_report(
             }
         )
 
-    missing_count = len(candidates)
     return {
         **build_canonical_report_envelope(
             vault,
@@ -203,7 +209,7 @@ def build_report(
         ),
         "vault": report_path(vault, vault),
         "mode": "write" if write else "check",
-        "status": "pass" if (missing_count == 0 or write) else "fail",
+        "status": "pass" if missing_count == 0 else "fail",
         "policy": {
             "path": report_path(vault, resolved_policy_path),
             "version": policy.get("version"),

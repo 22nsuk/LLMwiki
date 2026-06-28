@@ -65,8 +65,13 @@ ROUTE_AUDIT_SOURCE_FIELDS = (
     "title",
     "current_domain",
 )
-SOURCE_URL_RE = re.compile(r"https?://[^\s`)]+")
+SOURCE_URL_RE = re.compile(r"https?://[^\s`)<>\]}]+")
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(?P<body>.*?)\n---\s*\n", re.DOTALL)
+SOURCE_PAGE_IDENTITY_CHECKS = {
+    "matrix_title_matches_source_page_title",
+    "matrix_raw_path_matches_source_page_raw_path",
+    "raw_source_url_matches_source_page_url",
+}
 
 
 def _resolved_input_path(vault: Path, path: str | Path) -> Path:
@@ -116,7 +121,15 @@ def _resolved_optional_path(vault: Path, value: str) -> Path | None:
     if not value:
         return None
     path = Path(value)
-    return path if path.is_absolute() else (vault / path).resolve()
+    if path.is_absolute():
+        return None
+    resolved_vault = vault.resolve()
+    resolved = (resolved_vault / path).resolve()
+    try:
+        resolved.relative_to(resolved_vault)
+    except ValueError:
+        return None
+    return resolved
 
 
 def _read_optional_text(path: Path | None) -> str:
@@ -126,7 +139,8 @@ def _read_optional_text(path: Path | None) -> str:
 
 
 def _source_page_title(text: str) -> str:
-    return (section_body(text, "Title") or "").strip().splitlines()[0].strip()
+    title = (section_body(text, "Title") or "").strip()
+    return title.splitlines()[0].strip() if title else ""
 
 
 def _source_page_raw_path(text: str) -> str:
@@ -205,7 +219,13 @@ def _identity_audit(vault: Path | None, entry: dict[str, Any]) -> dict[str, Any]
         _identity_check("raw_source_url_matches_source_page_url", raw_source_url, source_url),
     ]
     statuses = {check["status"] for check in checks}
-    if "fail" in statuses:
+    source_page_blocked = any(
+        check["name"] in SOURCE_PAGE_IDENTITY_CHECKS
+        and check["status"] == "skipped"
+        and bool(check["expected"])
+        for check in checks
+    )
+    if "fail" in statuses or ("pass" in statuses and source_page_blocked):
         status = "fail"
     elif "pass" in statuses:
         status = "pass"
