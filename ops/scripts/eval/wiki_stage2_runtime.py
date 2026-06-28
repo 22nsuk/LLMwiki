@@ -61,6 +61,10 @@ def broad_synthesis_boundary_missing_sections(text: str) -> list[str]:
 
 BACKTICK_AXIS_RE = re.compile(r"`([^`\n]{1,120})`")
 CONTENT_QUALITY_HEADING_RE = re.compile(r"^#{2,6}\s+(.+?)\s*$", re.MULTILINE)
+GENERIC_SYNTHESIS_QUESTION_RE = re.compile(
+    r"(이\s*축의\s*관련\s*source들을\s*함께\s*읽으면\s*어떤\s*공통\s*구조|"
+    r"관련\s*source들을\s*함께\s*읽으면\s*어떤\s*공통\s*구조)"
+)
 
 
 def _backticked_axes(body: str | None) -> list[str]:
@@ -77,10 +81,22 @@ def _backticked_axes(body: str | None) -> list[str]:
     return axes
 
 
+def _watch_maintenance_flags(question: str | None, implications: str | None) -> list[str]:
+    flags: list[str] = []
+    question_text = " ".join((question or "").split())
+    if question_text and GENERIC_SYNTHESIS_QUESTION_RE.search(question_text):
+        flags.append("generic_question")
+    if implications and implications.strip() and not _backticked_axes(implications):
+        flags.append("missing_explicit_future_ingest_axes")
+    return flags
+
+
 def broad_synthesis_watch_advisory(text: str) -> dict:
+    question = section_body(text, "Question")
     exclusions = section_body(text, "What this synthesis excludes")
     tensions = section_body(text, "Tensions / contradictions")
     implications = section_body(text, "Implications for future ingest")
+    future_ingest_axes = _backticked_axes(implications)
     return {
         "boundary_sections_present": [
             heading
@@ -93,7 +109,8 @@ def broad_synthesis_watch_advisory(text: str) -> dict:
         ],
         "exclusion_axes": _backticked_axes(exclusions),
         "tension_axes": _backticked_axes(tensions),
-        "future_ingest_axes": _backticked_axes(implications),
+        "future_ingest_axes": future_ingest_axes,
+        "maintenance_flags": _watch_maintenance_flags(question, implications),
     }
 
 

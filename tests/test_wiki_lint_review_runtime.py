@@ -892,6 +892,46 @@ class WikiLintReviewRuntimeTest(unittest.TestCase):
                 candidate["advisory"]["future_ingest_axes"],
                 ["shipping", "procurement", "macro spillover"],
             )
+            self.assertEqual(candidate["advisory"]["maintenance_flags"], [])
+            self.assertEqual(candidate["review_priority"], "low")
+            self.assertEqual(candidate["priority_reasons"], [])
+
+    def test_watch_candidate_flags_generic_question_and_missing_future_axes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_broad_synthesis_vault(vault, include_boundary_sections=True)
+            synthesis = vault / "wiki" / "synthesis--broad.md"
+            synthesis.write_text(
+                synthesis.read_text(encoding="utf-8")
+                .replace(
+                    "## Question\nquestion",
+                    "## Question\n이 축의 관련 source들을 함께 읽으면 어떤 공통 구조가 드러나는가?",
+                )
+                .replace(
+                    "- tag future source as `shipping`, `procurement`, or `macro spillover`",
+                    "- tag future source as shipping, procurement, or macro spillover",
+                ),
+                encoding="utf-8",
+            )
+
+            candidate = next(
+                item
+                for item in synthesis_review_candidates(vault)
+                if item["page"] == str((vault / "wiki" / "synthesis--broad.md").as_posix())
+            )
+
+            self.assertEqual(candidate["type"], "wiki_synthesis_multi_question_watch_candidate")
+            self.assertEqual(candidate["advisory"]["future_ingest_axes"], [])
+            self.assertEqual(
+                candidate["advisory"]["maintenance_flags"],
+                ["generic_question", "missing_explicit_future_ingest_axes"],
+            )
+            self.assertEqual(candidate["review_priority"], "high")
+            self.assertEqual(
+                candidate["priority_reasons"],
+                ["generic_question", "missing_explicit_future_ingest_axes"],
+            )
 
     def test_synthesis_analysis_template_candidates_flag_promotion_memo_markers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
