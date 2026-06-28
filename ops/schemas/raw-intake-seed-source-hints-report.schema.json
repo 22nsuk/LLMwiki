@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/raw-intake-seed-source-hints-report.schema.json",
+  "title": "Raw Intake Seed Source Hints Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "mode",
+    "status",
+    "policy",
+    "summary",
+    "candidates"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/raw-intake-seed-source-hints-report.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "raw_intake_seed_source_hints_report"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.registry.raw_intake_seed_source_hints"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "stale"] },
+    "retention_policy": { "type": "string", "minLength": 1 },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["check", "write"] },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed_source_missing_hint_count", "written_count"],
+      "properties": {
+        "seed_source_missing_hint_count": { "type": "integer", "minimum": 0 },
+        "written_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/candidate" }
+    }
+  },
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "stem",
+        "missing_sections",
+        "all_inbound_linkers",
+        "suggested_sections",
+        "written"
+      ],
+      "properties": {
+        "page": { "type": "string", "minLength": 1 },
+        "stem": { "type": "string", "minLength": 1 },
+        "missing_sections": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "all_inbound_linkers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "suggested_sections": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/suggestedSection" },
+          "minItems": 1
+        },
+        "written": { "type": "boolean" }
+      }
+    },
+    "suggestedSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heading", "body"],
+      "properties": {
+        "heading": { "type": "string", "minLength": 1 },
+        "body": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

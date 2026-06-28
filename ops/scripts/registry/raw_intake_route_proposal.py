@@ -10,6 +10,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.core.artifact_freshness_runtime import (
@@ -22,6 +24,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.eval.wiki_page_runtime import section_body
 else:
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
@@ -33,6 +36,7 @@ else:
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.eval.wiki_page_runtime import section_body
 
 
 DEFAULT_MATRIX = (
@@ -61,6 +65,8 @@ ROUTE_AUDIT_SOURCE_FIELDS = (
     "title",
     "current_domain",
 )
+SOURCE_URL_RE = re.compile(r"https?://[^\s`)]+")
+FRONTMATTER_RE = re.compile(r"\A---\s*\n(?P<body>.*?)\n---\s*\n", re.DOTALL)
 
 
 def _resolved_input_path(vault: Path, path: str | Path) -> Path:
@@ -83,6 +89,129 @@ def _route_basis(entry: dict[str, Any]) -> dict[str, str]:
         "raw_path": _string_value(entry, "raw_path"),
         "source_page": _string_value(entry, "source_page"),
     }
+
+
+def _frontmatter_value(text: str, field: str) -> str:
+    block_match = FRONTMATTER_RE.match(text)
+    if block_match:
+        try:
+            frontmatter = yaml.safe_load(block_match.group("body")) or {}
+        except yaml.YAMLError:
+            frontmatter = {}
+        if isinstance(frontmatter, dict) and field in frontmatter:
+            value = frontmatter.get(field)
+            return str(value).strip() if value is not None else ""
+
+    pattern = rf'^{re.escape(field)}:\s*(?:"([^"]*)"|\'([^\']*)\'|([^\n#]+))\s*$'
+    match = re.search(pattern, text, flags=re.MULTILINE)
+    if not match:
+        return ""
+    for group in match.groups():
+        if group is not None:
+            return group.strip().strip('"').strip("'")
+    return ""
+
+
+def _resolved_optional_path(vault: Path, value: str) -> Path | None:
+    if not value:
+        return None
+    path = Path(value)
+    return path if path.is_absolute() else (vault / path).resolve()
+
+
+def _read_optional_text(path: Path | None) -> str:
+    if path is None or not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _source_page_title(text: str) -> str:
+    return (section_body(text, "Title") or "").strip().splitlines()[0].strip()
+
+
+def _source_page_raw_path(text: str) -> str:
+    raw_path = _frontmatter_value(text, "raw_path")
+    if raw_path:
+        return raw_path
+    source = section_body(text, "Source") or ""
+    for value in re.findall(r"`([^`]+)`", source):
+        if value.startswith("raw/"):
+            return value.strip()
+    return ""
+
+
+def _source_page_url(text: str) -> str:
+    source = section_body(text, "Source") or ""
+    match = SOURCE_URL_RE.search(source)
+    return match.group(0).strip() if match else ""
+
+
+def _normalize_identity_value(value: str) -> str:
+    text = value.replace('\\"', '"').replace("\\'", "'").replace("\\", "")
+    for quote in ("'", '"', "“", "”", "‘", "’"):
+        text = text.replace(quote, "")
+    return " ".join(text.split()).strip().casefold()
+
+
+def _identity_check(name: str, expected: str, observed: str) -> dict[str, str]:
+    expected_text = str(expected or "").strip()
+    observed_text = str(observed or "").strip()
+    if not expected_text or not observed_text:
+        return {
+            "name": name,
+            "status": "skipped",
+            "expected": expected_text,
+            "observed": observed_text,
+        }
+    return {
+        "name": name,
+        "status": (
+            "pass"
+            if _normalize_identity_value(expected_text) == _normalize_identity_value(observed_text)
+            else "fail"
+        ),
+        "expected": expected_text,
+        "observed": observed_text,
+    }
+
+
+def _identity_audit(vault: Path | None, entry: dict[str, Any]) -> dict[str, Any]:
+    if vault is None:
+        return {"status": "skipped", "checks": []}
+
+    matrix_title = _string_value(entry, "title")
+    matrix_raw_path = _string_value(entry, "raw_path")
+    matrix_source_url = _string_value(entry, "source_url")
+
+    raw_text = _read_optional_text(_resolved_optional_path(vault, matrix_raw_path))
+    source_text = _read_optional_text(
+        _resolved_optional_path(vault, _string_value(entry, "source_page"))
+    )
+    raw_title = _frontmatter_value(raw_text, "title")
+    raw_source_url = _frontmatter_value(raw_text, "source")
+    source_title = _source_page_title(source_text) if source_text else ""
+    source_raw_path = _source_page_raw_path(source_text) if source_text else ""
+    source_url = _source_page_url(source_text) if source_text else ""
+
+    checks = [
+        _identity_check("matrix_title_matches_raw_title", matrix_title, raw_title),
+        _identity_check("matrix_title_matches_source_page_title", matrix_title, source_title),
+        _identity_check(
+            "matrix_raw_path_matches_source_page_raw_path",
+            matrix_raw_path,
+            source_raw_path,
+        ),
+        _identity_check("matrix_source_url_matches_raw_source_url", matrix_source_url, raw_source_url),
+        _identity_check("raw_source_url_matches_source_page_url", raw_source_url, source_url),
+    ]
+    statuses = {check["status"] for check in checks}
+    if "fail" in statuses:
+        status = "fail"
+    elif "pass" in statuses:
+        status = "pass"
+    else:
+        status = "skipped"
+    return {"status": status, "checks": checks}
 
 
 def _route_key(entry: dict[str, Any]) -> str:
@@ -168,7 +297,7 @@ def _route_audit(
     }
 
 
-def _proposal_for_entry(entry: dict[str, Any]) -> dict[str, Any]:
+def _proposal_for_entry(entry: dict[str, Any], *, vault: Path | None = None) -> dict[str, Any]:
     action = _string_value(entry, "proposed_action")
     target = _string_value(entry, "target")
     rationale = _string_value(entry, "rationale")
@@ -193,6 +322,10 @@ def _proposal_for_entry(entry: dict[str, Any]) -> dict[str, Any]:
     if action == "keep_source_only_seed":
         review_reasons.append("source-only seed posture requires future absorption review")
 
+    identity_audit = _identity_audit(vault, entry)
+    if identity_audit["status"] == "fail":
+        issues.append("identity_mismatch")
+
     closeout_status = "fail" if issues else "pass"
     review_gate = "satisfied" if review_status in REVIEWED_ROUTE_STATUSES else "required"
     if closeout_status == "fail":
@@ -214,6 +347,7 @@ def _proposal_for_entry(entry: dict[str, Any]) -> dict[str, Any]:
             target=target,
             confidence=confidence,
         ),
+        "identity_audit": identity_audit,
         "review_gate": review_gate,
         "closeout_status": closeout_status,
         "issues": issues,
@@ -240,7 +374,11 @@ def build_report(
     entries = matrix.get("matrix")
     if not isinstance(entries, list):
         entries = []
-    proposals = [_proposal_for_entry(entry) for entry in entries if isinstance(entry, dict)]
+    proposals = [
+        _proposal_for_entry(entry, vault=vault.resolve())
+        for entry in entries
+        if isinstance(entry, dict)
+    ]
     blocking = [
         {
             "registry_id": proposal["registry_id"],
@@ -254,6 +392,9 @@ def build_report(
     closeout_counts = Counter(proposal["closeout_status"] for proposal in proposals)
     audit_status_counts = Counter(
         proposal["route_audit"]["audit_status"] for proposal in proposals
+    )
+    identity_status_counts = Counter(
+        proposal["identity_audit"]["status"] for proposal in proposals
     )
     status = "fail" if blocking else "pass"
 
@@ -299,6 +440,9 @@ def build_report(
             "audit_manual_override_count": int(
                 audit_status_counts.get("manual_override_recorded", 0)
             ),
+            "identity_pass_count": int(identity_status_counts.get("pass", 0)),
+            "identity_fail_count": int(identity_status_counts.get("fail", 0)),
+            "identity_skipped_count": int(identity_status_counts.get("skipped", 0)),
         },
         "blocking_issues": blocking,
         "proposals": proposals,

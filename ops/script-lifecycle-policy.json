@@ -954,6 +954,16 @@
       "replacement": "make raw-intake-absorption-closeout"
     },
     {
+      "canonical_module": "ops.scripts.registry.raw_intake_seed_source_hints",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "path": "ops/scripts/registry/raw_intake_seed_source_hints.py",
+      "rationale": "Schema-backed raw-intake seed source hint report retained behind Make check/write targets rather than installed CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make raw-intake-seed-source-hints"
+    },
+    {
       "canonical_module": "ops.scripts.registry.raw_intake_source_quality",
       "console_scripts": [],
       "install_state": "not_installed",

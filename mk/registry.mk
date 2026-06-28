@@ -17,9 +17,10 @@ RAW_REGISTRY_CROSS_ENVIRONMENT_EVIDENCE_BUNDLE_DIAGNOSTIC_OUT ?= tmp/raw-registr
 RAW_INTAKE_ABSORPTION_MATRIX ?= runs/run-20260422-raw-intake-registration-and-promotion/absorption/raw-intake-absorption-matrix-2026-04-22.json
 RAW_INTAKE_ROUTE_PROPOSAL_OUT ?= tmp/raw-intake-route-proposal-report.json
 RAW_INTAKE_SOURCE_QUALITY_OUT ?= tmp/raw-intake-source-quality-report.json
+RAW_INTAKE_SEED_SOURCE_HINTS_OUT ?= tmp/raw-intake-seed-source-hints-report.json
 RAW_INTAKE_ABSORPTION_CLOSEOUT_OUT ?= tmp/raw-intake-absorption-closeout-report.json
 
-.PHONY: registry-preflight registry-preflight-check raw-registry-cross-environment-matrix raw-registry-cross-environment-profile-matrices raw-registry-cross-environment-evidence-bundle raw-registry-cross-environment-evidence-bundle-check raw-registry-shard-policy-sync-check raw-registry-shard-policy-sync-write raw-intake-route-proposal raw-intake-source-quality raw-intake-absorption-closeout raw-registry-export raw-registry-export-check manifest sanitize-runs
+.PHONY: registry-preflight registry-preflight-check raw-registry-cross-environment-matrix raw-registry-cross-environment-profile-matrices raw-registry-cross-environment-evidence-bundle raw-registry-cross-environment-evidence-bundle-check raw-registry-shard-policy-sync-check raw-registry-shard-policy-sync-write raw-intake-route-proposal raw-intake-source-quality raw-intake-seed-source-hints raw-intake-seed-source-hints-write raw-intake-absorption-closeout raw-registry-export raw-registry-export-check manifest sanitize-runs
 
 registry-preflight:
 	$(PYTHON) -m ops.scripts.raw_registry_preflight --vault "$(VAULT)" --out "$(RAW_REGISTRY_PREFLIGHT_OUT)" --reproducibility-out "$(RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_OUT)"
@@ -56,6 +57,12 @@ raw-intake-route-proposal:
 
 raw-intake-source-quality:
 	$(PYTHON) -m ops.scripts.raw_intake_source_quality --vault "$(VAULT)" --matrix "$(RAW_INTAKE_ABSORPTION_MATRIX)" --out "$(RAW_INTAKE_SOURCE_QUALITY_OUT)" --fail-on-fail
+
+raw-intake-seed-source-hints:
+	$(PYTHON) -m ops.scripts.registry.raw_intake_seed_source_hints --vault "$(VAULT)" --out "$(RAW_INTAKE_SEED_SOURCE_HINTS_OUT)" --fail-on-missing
+
+raw-intake-seed-source-hints-write:
+	$(PYTHON) -m ops.scripts.registry.raw_intake_seed_source_hints --vault "$(VAULT)" --out "$(RAW_INTAKE_SEED_SOURCE_HINTS_OUT)" --write
 
 raw-intake-absorption-closeout:
 	$(PYTHON) -m ops.scripts.raw_intake_route_proposal --vault "$(VAULT)" --matrix "$(RAW_INTAKE_ABSORPTION_MATRIX)" --out "$(RAW_INTAKE_ABSORPTION_CLOSEOUT_OUT)" --mode absorption_closeout --fail-on-fail
