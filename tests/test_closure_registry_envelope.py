@@ -93,6 +93,28 @@ class ClosureRegistryEnvelopeTests(unittest.TestCase):
             self.assertEqual(validate_with_schema(defect, load_schema(ENVELOPE_SCHEMA)), [])
             self.assertEqual(validate_with_schema(rework, load_schema(ENVELOPE_SCHEMA)), [])
 
+    def test_refresh_registries_creates_empty_public_safe_registries_when_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            written = refresh_registries(vault, context=fixed_context())
+            defect = json.loads(
+                (vault / "ops" / "reports" / "defect-escape-closures.json").read_text(encoding="utf-8")
+            )
+            rework = json.loads((vault / "ops" / "reports" / "rework-closures.json").read_text(encoding="utf-8"))
+
+            self.assertEqual({path.name for path in written}, {"defect-escape-closures.json", "rework-closures.json"})
+            self.assertEqual(defect["closures"], [])
+            self.assertEqual(rework["closures"], [])
+            self.assertEqual(defect["summary"], {"closure_count": 0})
+            self.assertEqual(rework["summary"], {"closure_count": 0, "closed_rework_count": 0})
+            self.assertEqual(validate_with_schema(defect, load_schema(DEFECT_SCHEMA)), [])
+            self.assertEqual(validate_with_schema(rework, load_schema(REWORK_SCHEMA)), [])
+            self.assertEqual(validate_with_schema(defect, load_schema(ENVELOPE_SCHEMA)), [])
+            self.assertEqual(validate_with_schema(rework, load_schema(ENVELOPE_SCHEMA)), [])
+
 
 if __name__ == "__main__":
     unittest.main()
