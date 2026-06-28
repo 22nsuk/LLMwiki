@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from ops.scripts.eval.structural_complexity_budget import main
+from tests.minimal_vault_runtime import mutate_policy
 from tests.test_mechanism_assess import seed_policy
 
 
@@ -162,18 +163,21 @@ class StructuralComplexityBudgetCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             seed_policy(vault)
-            policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
-            policy_text = policy_path.read_text(encoding="utf-8")
-            policy_text = policy_text.replace(
-                "      - ops/scripts/release/release_closeout_summary.py\n",
-                "",
-                1,
+            def move_warn_target_to_resolved(policy: dict) -> None:
+                ratchet = policy["system_refactor_policy"]["complexity_ratchet"]
+                ratchet["warn_targets"] = [
+                    target
+                    for target in ratchet["warn_targets"]
+                    if target != "ops/scripts/release/release_closeout_summary.py"
+                ]
+                ratchet["resolved_targets"] = [
+                    "ops/scripts/release/release_closeout_summary.py"
+                ]
+
+            mutate_policy(
+                vault,
+                move_warn_target_to_resolved,
             )
-            policy_text = policy_text.replace(
-                "    resolved_targets: []",
-                "    resolved_targets:\n      - ops/scripts/release/release_closeout_summary.py",
-            )
-            policy_path.write_text(policy_text, encoding="utf-8")
             stderr = io.StringIO()
             report = {
                 "status": "pass",

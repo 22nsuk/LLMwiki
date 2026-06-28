@@ -9,6 +9,7 @@ from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.mechanism.mutation_proposal_runtime import build_report
 from tests.minimal_vault_runtime import (
+    mutate_policy,
     seed_minimal_vault as seed_minimal_raw_registry_vault,
 )
 from tests.mutation_proposal_test_runtime import (
@@ -2622,24 +2623,16 @@ class MutationProposalPromotionTest(unittest.TestCase):
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
             (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
 
-            policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
-            policy_text = policy_path.read_text(encoding="utf-8")
-            policy_text = policy_text.replace(
-                "  allowed_failure_modes:\n"
-                "    - branch_growth_without_test_growth\n"
-                "    - high_complexity_low_test_pressure\n"
-                "    - schema_change_without_test_guardrails\n"
-                "    - policy_surface_growth_without_eval_gain\n"
-                "    - repeated_same_eval_or_discard\n"
-                "    - repeated_same_eval_after_promote\n"
-                "    - repeated_discard_runs\n"
-                "    - bootstrap_history_insufficient\n",
-                "  allowed_failure_modes:\n"
-                "    - branch_growth_without_test_growth\n"
-                "    - repeated_same_eval_or_discard\n",
-                1,
+            mutate_policy(
+                vault,
+                lambda policy: policy["mutation_proposal"].__setitem__(
+                    "allowed_failure_modes",
+                    [
+                        "branch_growth_without_test_growth",
+                        "repeated_same_eval_or_discard",
+                    ],
+                ),
             )
-            policy_path.write_text(policy_text, encoding="utf-8")
 
             policy, resolved_policy_path = load_policy(vault)
             report = build_report(vault, policy, resolved_policy_path)

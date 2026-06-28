@@ -20,7 +20,7 @@ from ops.scripts.mechanism.finalize_run_runtime import (
 from ops.scripts.mechanism.finalize_run_write_runtime import (
     build_finalize_atomic_updates,
 )
-from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.minimal_vault_runtime import seed_minimal_vault, set_policy_value
 from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
 
 
@@ -290,14 +290,10 @@ class FinalizeRunTests(unittest.TestCase):
             seed_minimal_vault(vault)
             seed_mechanism_run_artifacts(vault, "run-finalize-timezone")
 
-            policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
-            policy_path.write_text(
-                policy_path.read_text(encoding="utf-8").replace(
-                    "  display_timezone:\n    label: KST\n    utc_offset: \"+09:00\"\n",
-                    "  display_timezone:\n    label: UTC\n    utc_offset: \"+00:00\"\n",
-                    1,
-                ),
-                encoding="utf-8",
+            set_policy_value(
+                vault,
+                ["runtime_defaults", "display_timezone"],
+                {"label": "UTC", "utc_offset": "+00:00"},
             )
 
             finalize_run(

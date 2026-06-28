@@ -2,14 +2,39 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.core.subagent_routing_runtime import score_band_name
+from ops.scripts.core.yaml_runtime import parse_simple_yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LIVE_POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
 POLICY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-maintainer-policy.schema.json"
+
+
+def _mutated_live_policy_text(mutator: Callable[[dict[str, Any]], None]) -> str:
+    policy = parse_simple_yaml(LIVE_POLICY_PATH.read_text(encoding="utf-8"))
+    mutator(policy)
+    return yaml.safe_dump(policy, allow_unicode=True, sort_keys=False)
+
+
+def _set_policy_path(policy: dict[str, Any], path: Sequence[str | int], value: Any) -> None:
+    target: Any = policy
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+
+
+def _append_policy_path(policy: dict[str, Any], path: Sequence[str | int], value: Any) -> None:
+    target: Any = policy
+    for key in path:
+        target = target[key]
+    target.append(value)
 
 
 class PolicyRuntimeTest(unittest.TestCase):
@@ -539,13 +564,13 @@ class PolicyRuntimeTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            base_text = LIVE_POLICY_PATH.read_text(encoding="utf-8")
-
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace(
-                    "  output_range: 0-100\n",
-                    "  output_range: 0-120\n",
-                    1,
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("complexity_policy", "scoring", "output_range"),
+                        "0-120",
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -556,10 +581,12 @@ class PolicyRuntimeTest(unittest.TestCase):
                 load_policy(root)
 
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace(
-                    "    formula: complexity_score = round(sum(weight_i * dimension_i) / 5)\n",
-                    "    formula: complexity_score = sum(weight_i * dimension_i)\n",
-                    1,
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("complexity_policy", "scoring", "formula"),
+                        "complexity_score = sum(weight_i * dimension_i)",
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -570,10 +597,12 @@ class PolicyRuntimeTest(unittest.TestCase):
                 load_policy(root)
 
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace(
-                    "  decision_values:\n    - PROMOTE\n    - HOLD\n    - DISCARD\n",
-                    "  decision_values:\n    - PROMOTE\n    - HOLD\n",
-                    1,
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("promotion_policy", "decision_values"),
+                        ["PROMOTE", "HOLD"],
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -584,10 +613,12 @@ class PolicyRuntimeTest(unittest.TestCase):
                 load_policy(root)
 
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace(
-                    "    wrapper_command_timeout_seconds: 5400\n",
-                    "    wrapper_command_timeout_seconds: 1\n",
-                    1,
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("auto_improve_policy", "defaults", "wrapper_command_timeout_seconds"),
+                        1,
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -598,10 +629,12 @@ class PolicyRuntimeTest(unittest.TestCase):
                 load_policy(root)
 
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace(
-                    "    status_values:\n      - pending\n      - recorded\n      - not_required\n",
-                    "    status_values:\n      - pending\n      - recorded\n",
-                    1,
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("promotion_policy", "log_defaults", "status_values"),
+                        ["pending", "recorded"],
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -700,14 +733,14 @@ class PolicyRuntimeTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            policy_text = LIVE_POLICY_PATH.read_text(encoding="utf-8")
-            policy_text = policy_text.replace(
-                "    - DISCARD\n",
-                "    - DISCARD\n    - DEFER\n",
-                1,
-            )
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                policy_text,
+                _mutated_live_policy_text(
+                    lambda policy: _append_policy_path(
+                        policy,
+                        ("promotion_policy", "decision_values"),
+                        "DEFER",
+                    )
+                ),
                 encoding="utf-8",
             )
 
@@ -726,13 +759,14 @@ class PolicyRuntimeTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            policy_text = LIVE_POLICY_PATH.read_text(encoding="utf-8").replace(
-                "      - not_required\n",
-                "      - not_required\n      - skipped\n",
-                1,
-            )
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                policy_text,
+                _mutated_live_policy_text(
+                    lambda policy: _append_policy_path(
+                        policy,
+                        ("promotion_policy", "log_defaults", "status_values"),
+                        "skipped",
+                    )
+                ),
                 encoding="utf-8",
             )
 
@@ -798,13 +832,13 @@ class PolicyRuntimeTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            base_text = LIVE_POLICY_PATH.read_text(encoding="utf-8")
-
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace(
-                    "      model: gpt-5.5\n",
-                    "      model: gpt-4.1\n",
-                    1,
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("subagent_routing_policy", "ladder", 0, "model"),
+                        "gpt-4.1",
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -826,10 +860,14 @@ class PolicyRuntimeTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            base_text = LIVE_POLICY_PATH.read_text(encoding="utf-8")
-
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace('    utc_offset: "+09:00"\n', '    utc_offset: "KST"\n', 1),
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("runtime_defaults", "display_timezone", "utc_offset"),
+                        "KST",
+                    )
+                ),
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(
@@ -839,10 +877,12 @@ class PolicyRuntimeTest(unittest.TestCase):
                 load_policy(root)
 
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace(
-                    '    timestamp_utc: "1980-01-01T00:00:00Z"\n',
-                    '    timestamp_utc: "1970-01-01T00:00:00Z"\n',
-                    1,
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("release_packaging", "zip_normalization", "timestamp_utc"),
+                        "1970-01-01T00:00:00Z",
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -853,7 +893,13 @@ class PolicyRuntimeTest(unittest.TestCase):
                 load_policy(root)
 
             (policies_dir / "wiki-maintainer-policy.yaml").write_text(
-                base_text.replace('    file_mode_octal: "0644"\n', '    file_mode_octal: "xyz"\n', 1),
+                _mutated_live_policy_text(
+                    lambda policy: _set_policy_path(
+                        policy,
+                        ("release_packaging", "zip_normalization", "file_mode_octal"),
+                        "xyz",
+                    )
+                ),
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(
