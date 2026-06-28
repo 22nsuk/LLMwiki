@@ -17,6 +17,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 import pytest
+import yaml
 
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.eval.wiki_manifest import build_manifest
@@ -631,12 +632,13 @@ class ReleaseSmokeTest(unittest.TestCase):
             (vault / "README.md").write_text("readme\n", encoding="utf-8")
 
             policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
+            policy = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
+            policy["release_packaging"]["zip_normalization"] = {
+                "timestamp_utc": "2001-02-03T04:05:06Z",
+                "file_mode_octal": "0600",
+            }
             policy_path.write_text(
-                policy_path.read_text(encoding="utf-8").replace(
-                    "  zip_normalization:\n    timestamp_utc: \"1980-01-01T00:00:00Z\"\n    file_mode_octal: \"0644\"\n",
-                    "  zip_normalization:\n    timestamp_utc: \"2001-02-03T04:05:06Z\"\n    file_mode_octal: \"0600\"\n",
-                    1,
-                ),
+                yaml.safe_dump(policy, sort_keys=False, allow_unicode=True),
                 encoding="utf-8",
             )
 
