@@ -108,7 +108,132 @@ class RawIntakeRouteProposalTests(unittest.TestCase):
             )
             self.assertEqual(first["proposals"][0]["route_basis"]["current_domain"], "domain")
             self.assertEqual(first["proposals"][0]["route_audit"]["audit_status"], "clear")
+            self.assertEqual(first["proposals"][0]["identity_audit"]["status"], "skipped")
+            self.assertEqual(first["summary"]["identity_skipped_count"], 1)
             self.assertEqual(validate_with_schema(first, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_identity_audit_passes_when_raw_and_source_page_match(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            raw_path = vault / "raw" / "source.md"
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_text(
+                """---
+title: "Stable Identity"
+source: "https://example.test/source"
+---
+
+# Stable Identity
+""",
+                encoding="utf-8",
+            )
+            source_page = vault / "wiki" / "source--stable-identity.md"
+            source_page.write_text(
+                """---
+title: "Stable Identity"
+page_type: "source"
+corpus: "wiki"
+raw_path: "raw/source.md"
+aliases:
+  - "source--stable-identity"
+tags:
+  - "corpus/wiki"
+  - "type/source"
+---
+
+# source--stable-identity
+
+## Title
+Stable Identity
+
+## Source
+- raw 경로: `raw/source.md`
+- 원문 URL: `https://example.test/source`
+""",
+                encoding="utf-8",
+            )
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        title="Stable Identity",
+                        source_url="https://example.test/source",
+                        source_page="wiki/source--stable-identity.md",
+                    )
+                ],
+            )
+            matrix_payload = json.loads(matrix_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                validate_with_schema(matrix_payload, load_schema(MATRIX_SCHEMA_PATH)),
+                [],
+            )
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            identity = report["proposals"][0]["identity_audit"]
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["identity_pass_count"], 1)
+            self.assertEqual(identity["status"], "pass")
+            self.assertEqual(
+                {check["name"] for check in identity["checks"] if check["status"] == "pass"},
+                {
+                    "matrix_title_matches_raw_title",
+                    "matrix_title_matches_source_page_title",
+                    "matrix_raw_path_matches_source_page_raw_path",
+                    "matrix_source_url_matches_raw_source_url",
+                    "raw_source_url_matches_source_page_url",
+                },
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_route_identity_audit_fails_title_mismatch_before_closeout(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            raw_path = vault / "raw" / "source.md"
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_text(
+                """---
+title: "Raw Title"
+source: "https://example.test/source"
+---
+
+# Raw Title
+""",
+                encoding="utf-8",
+            )
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(
+                matrix_path,
+                [
+                    matrix_entry(
+                        title="Different Route Title",
+                        source_url="https://example.test/source",
+                    )
+                ],
+            )
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            proposal = report["proposals"][0]
+            identity = proposal["identity_audit"]
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(report["summary"]["blocking_issue_count"], 1)
+            self.assertEqual(report["summary"]["identity_fail_count"], 1)
+            self.assertIn("identity_mismatch", proposal["issues"])
+            self.assertEqual(identity["status"], "fail")
+            self.assertIn(
+                {
+                    "name": "matrix_title_matches_raw_title",
+                    "status": "fail",
+                    "expected": "Different Route Title",
+                    "observed": "Raw Title",
+                },
+                identity["checks"],
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_route_audit_flags_broad_term_matches_before_source_generation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

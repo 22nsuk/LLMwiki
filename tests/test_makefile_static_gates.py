@@ -1922,6 +1922,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
+            "RAW_INTAKE_SEED_SOURCE_HINTS_OUT ?= tmp/raw-intake-seed-source-hints-report.json",
+            text,
+        )
+        self.assertIn(
             "RAW_INTAKE_ABSORPTION_CLOSEOUT_OUT ?= tmp/raw-intake-absorption-closeout-report.json",
             text,
         )
@@ -1931,6 +1935,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("raw-intake-route-proposal", _target_block(text, ".PHONY"))
         self.assertIn("raw-intake-source-quality", _target_block(text, ".PHONY"))
+        self.assertIn("raw-intake-seed-source-hints", _target_block(text, ".PHONY"))
+        self.assertIn("raw-intake-seed-source-hints-write", _target_block(text, ".PHONY"))
         self.assertIn("raw-intake-absorption-closeout", _target_block(text, ".PHONY"))
         self.assertIn(
             "wiki-lint-review-classification", _target_block(text, ".PHONY")
@@ -1942,6 +1948,14 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             "ops.scripts.raw_intake_source_quality",
             _target_block(text, "raw-intake-source-quality"),
+        )
+        self.assertIn(
+            "ops.scripts.registry.raw_intake_seed_source_hints",
+            _target_block(text, "raw-intake-seed-source-hints"),
+        )
+        self.assertIn(
+            "--write",
+            _target_block(text, "raw-intake-seed-source-hints-write"),
         )
         self.assertIn(
             "--mode absorption_closeout --fail-on-fail",

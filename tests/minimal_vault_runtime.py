@@ -318,6 +318,10 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "raw-intake-source-quality-report.schema.json",
+    "raw-intake-seed-source-hints-report.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "raw-intake-seed-source-hints-report.schema.json",
     "raw-intake-final-tree-validation-report.schema.json": REPO_ROOT
     / "ops"
     / "schemas"

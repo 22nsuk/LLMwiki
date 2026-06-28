@@ -108,7 +108,10 @@
         "closeout_fail_count",
         "audit_clear_count",
         "audit_review_required_count",
-        "audit_manual_override_count"
+        "audit_manual_override_count",
+        "identity_pass_count",
+        "identity_fail_count",
+        "identity_skipped_count"
       ],
       "properties": {
         "entry_count": { "type": "integer", "minimum": 0 },
@@ -119,7 +122,10 @@
         "closeout_fail_count": { "type": "integer", "minimum": 0 },
         "audit_clear_count": { "type": "integer", "minimum": 0 },
         "audit_review_required_count": { "type": "integer", "minimum": 0 },
-        "audit_manual_override_count": { "type": "integer", "minimum": 0 }
+        "audit_manual_override_count": { "type": "integer", "minimum": 0 },
+        "identity_pass_count": { "type": "integer", "minimum": 0 },
+        "identity_fail_count": { "type": "integer", "minimum": 0 },
+        "identity_skipped_count": { "type": "integer", "minimum": 0 }
       }
     },
     "blocking_issues": {
@@ -163,6 +169,7 @@
         "confidence",
         "review_status",
         "route_audit",
+        "identity_audit",
         "review_gate",
         "closeout_status",
         "issues",
@@ -179,6 +186,7 @@
         "confidence": { "type": "string" },
         "review_status": { "type": "string" },
         "route_audit": { "$ref": "#/$defs/routeAudit" },
+        "identity_audit": { "$ref": "#/$defs/identityAudit" },
         "review_gate": { "type": "string", "enum": ["satisfied", "required"] },
         "closeout_status": { "type": "string", "enum": ["pass", "fail"] },
         "issues": {
@@ -189,6 +197,29 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         }
+      }
+    },
+    "identityAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checks"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail", "skipped"] },
+        "checks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identityCheck" }
+        }
+      }
+    },
+    "identityCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "expected", "observed"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pass", "fail", "skipped"] },
+        "expected": { "type": "string" },
+        "observed": { "type": "string" }
       }
     },
     "candidateRoute": {

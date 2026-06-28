@@ -83,6 +83,9 @@
         "raw_path": {
           "type": "string"
         },
+        "source_url": {
+          "type": "string"
+        },
         "source_page": {
           "type": "string"
         },
