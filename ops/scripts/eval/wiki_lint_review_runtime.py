@@ -115,6 +115,35 @@ def review_candidates_for(
     return candidates
 
 
+def _synthesis_watch_priority(metrics: dict, advisory: dict) -> tuple[str, list[str]]:
+    value = metrics["value"]
+    threshold = metrics["threshold"]
+    flags = list(advisory.get("maintenance_flags", []))
+    reasons = list(flags)
+
+    high_source_threshold = threshold["source_links"] * 4
+    medium_source_threshold = threshold["source_links"] * 2
+    high_analysis_threshold = threshold["analysis_subsections"] * 2
+    medium_line_threshold = threshold["line_count"] * 2
+
+    if value["source_links"] >= high_source_threshold:
+        reasons.append(f"source_links>={high_source_threshold}")
+    if value["analysis_subsections"] >= high_analysis_threshold:
+        reasons.append(f"analysis_subsections>={high_analysis_threshold}")
+    if value["line_count"] >= medium_line_threshold:
+        reasons.append(f"line_count>={medium_line_threshold}")
+
+    if flags or value["source_links"] >= high_source_threshold:
+        return "high", reasons
+    if (
+        value["source_links"] >= medium_source_threshold
+        or value["analysis_subsections"] >= high_analysis_threshold
+        or value["line_count"] >= medium_line_threshold
+    ):
+        return "medium", reasons
+    return "low", reasons
+
+
 def wiki_synthesis_multi_question_candidates(
     vault: Path,
     pages: dict[str, Path],
@@ -171,7 +200,11 @@ def wiki_synthesis_multi_question_candidates(
             "suggested_action": suggested_action,
         }
         if candidate_type == "wiki_synthesis_multi_question_watch_candidate":
-            candidate["advisory"] = broad_synthesis_watch_advisory(text)
+            advisory = broad_synthesis_watch_advisory(text)
+            review_priority, priority_reasons = _synthesis_watch_priority(metrics, advisory)
+            candidate["advisory"] = advisory
+            candidate["review_priority"] = review_priority
+            candidate["priority_reasons"] = priority_reasons
         candidates.append(candidate)
 
     return candidates
