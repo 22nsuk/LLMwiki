@@ -22,6 +22,7 @@ from tests.mechanism_review_test_utils import (
     write_run_session_context,
     write_session_report,
 )
+from tests.minimal_vault_runtime import mutate_policy
 
 
 class MechanismReviewTest(unittest.TestCase):
@@ -1718,22 +1719,17 @@ class MechanismReviewTest(unittest.TestCase):
             vault = Path(temp_dir)
             seed_review_vault(vault)
 
-            policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
-            policy_text = policy_path.read_text(encoding="utf-8")
-            policy_text = policy_text.replace(
-                "  candidate_types:\n"
-                "    - mechanism_branch_growth_without_test_growth_candidate\n"
-                "    - mechanism_high_complexity_low_test_pressure_candidate\n"
-                "    - mechanism_schema_drift_candidate\n"
-                "    - mechanism_policy_complexity_growth_candidate\n"
-                "    - mechanism_eval_stagnation_candidate\n",
-                "  candidate_types:\n"
-                "    - mechanism_branch_growth_without_test_growth_candidate\n"
-                "    - mechanism_unknown_test_sentinel_candidate\n"
-                "    - mechanism_eval_stagnation_candidate\n",
-                1,
+            mutate_policy(
+                vault,
+                lambda policy: policy["mechanism_review"].__setitem__(
+                    "candidate_types",
+                    [
+                        "mechanism_branch_growth_without_test_growth_candidate",
+                        "mechanism_unknown_test_sentinel_candidate",
+                        "mechanism_eval_stagnation_candidate",
+                    ],
+                ),
             )
-            policy_path.write_text(policy_text, encoding="utf-8")
 
             policy, resolved_policy_path = load_policy(vault)
             with self.assertRaisesRegex(

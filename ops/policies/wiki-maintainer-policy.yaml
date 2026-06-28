@@ -3,348 +3,374 @@ schema_versioning:
   artifact_contract_version: 1
   frontmatter_contract_version: 1
   frontmatter_field_rollouts:
-    - field: created
-      status: optional_before_required
-      severity: warn
-      applies_to_page_types:
-        - source
-        - concept
-        - synthesis
-        - query
-        - lint
-        - index
-        - system-index
-        - system-log
-        - registry
-        - registry-shard
-      introduced_on: "2026-04-18"
-      required_after: null
-      migration: "Backfill from system-log.md or source registration evidence only after review; do not infer dates from filenames alone."
-      rationale: "Surface created-field migration debt before making the field required."
+  - field: created
+    status: optional_before_required
+    severity: warn
+    applies_to_page_types:
+    - source
+    - concept
+    - synthesis
+    - query
+    - lint
+    - index
+    - system-index
+    - system-log
+    - registry
+    - registry-shard
+    introduced_on: '2026-04-18'
+    required_after: null
+    migration: Backfill from system-log.md or source registration evidence only after review; do not infer dates from filenames
+      alone.
+    rationale: Surface created-field migration debt before making the field required.
 page_shape:
   special_page_required_sections:
     wiki/index.md:
-      - Summary
-      - How to use this wiki
-      - Sources
-      - Queries
-      - Concepts
-      - Syntheses
-      - Pending ingest
-      - Related pages
-      - Source trace
+    - Summary
+    - How to use this wiki
+    - Sources
+    - Queries
+    - Concepts
+    - Syntheses
+    - Pending ingest
+    - Related pages
+    - Source trace
     system/system-index.md:
-      - Summary
-      - How to use this system corpus
-      - System pages
-      - System knowledge pages
-      - Content corpus handoff
-      - Ops surface
-      - Related pages
-      - Source trace
+    - Summary
+    - How to use this system corpus
+    - System pages
+    - System knowledge pages
+    - Content corpus handoff
+    - Ops surface
+    - Related pages
+    - Source trace
     system/system-log.md:
-      - Related pages
-      - Source trace
+    - Related pages
+    - Source trace
     system/system-raw-registry.md:
-      - Summary
-      - Registry rules
-      - Registry shards
-      - Pending ingest
-      - Related pages
-      - Source trace
+    - Summary
+    - Registry rules
+    - Registry shards
+    - Pending ingest
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki.md:
-      - Summary
-      - Family shards
-      - Directly listed raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Family shards
+    - Directly listed raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/ai-capability.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/ai-capability-governance-intake-2026-04-21.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/ai-compute-control.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/ai-infra-compute-intake-2026-04-21.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/coffee.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/europe-tech-sovereignty.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/global-policy-and-market-seeds.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/korea-fx.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/korea-macro-domestic-intake-2026-04-21.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/middle-east-followups.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/ai-execution.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/middle-east.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-25.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-26.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-29.md:
-      - Summary
-      - Child registry shards
-      - Compaction notes
-      - Related pages
-      - Source trace
+    - Summary
+    - Child registry shards
+    - Compaction notes
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-06-17.md:
-      - Summary
-      - Family shards
-      - Directly listed raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Family shards
+    - Directly listed raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md:
-      - Summary
-      - Second-order shards
-      - Directly listed raw sources
-      - Related pages
-      - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md:
-      - Summary
+    - Summary
+    - Second-order shards
+    - Directly listed raw sources
+    - Related pages
+    - Source trace
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md:
-      - Summary
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md:
-      - Summary
-      - Second-order shards
-      - Directly listed raw sources
-      - Related pages
-      - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md:
-      - Summary
+    - Summary
+    - Second-order shards
+    - Directly listed raw sources
+    - Related pages
+    - Source trace
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md:
-      - Summary
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md:
-      - Summary
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md:
-      - Summary
-      - Second-order shards
-      - Directly listed raw sources
-      - Related pages
-      - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md:
-      - Summary
+    - Summary
+    - Second-order shards
+    - Directly listed raw sources
+    - Related pages
+    - Source trace
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md:
-      - Summary
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md:
-      - Summary
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md:
-      - Summary
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md
+    : - Summary
       - Registered raw sources
       - Related pages
       - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/system.md:
-      - Summary
-      - Second-order shards
-      - Directly listed raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Second-order shards
+    - Directly listed raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/system-research-papers.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
     system/system-raw-registry/system-runtime-specs-and-snapshots.md:
-      - Summary
-      - Registered raw sources
-      - Related pages
-      - Source trace
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-ai-capability-compute-and-product.md:
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-korea-markets-policy-and-defense.md:
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-middle-east-global-markets-and-source-only.md:
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-semiconductors-ai-capital-and-infrastructure.md:
+    - Summary
+    - Registered raw sources
+    - Related pages
+    - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-06-26.md:
+    - Summary
+    - Family shards
+    - Directly listed raw sources
+    - Related pages
+    - Source trace
   source_required_sections:
-    - Title
-    - Source
-    - Type
-    - Summary
-    - Why it matters
-    - Key points
-    - Limitations / caveats
-    - Related pages
-    - Open questions
-    - Source trace
+  - Title
+  - Source
+  - Type
+  - Summary
+  - Why it matters
+  - Key points
+  - Limitations / caveats
+  - Related pages
+  - Open questions
+  - Source trace
   concept_required_sections:
-    - Summary
-    - Why it matters here
-    - Main body
-    - Scope boundaries
-    - Examples and non-examples
-    - How to reuse this concept
-    - Related pages
-    - Open questions
-    - Source trace
+  - Summary
+  - Why it matters here
+  - Main body
+  - Scope boundaries
+  - Examples and non-examples
+  - How to reuse this concept
+  - Related pages
+  - Open questions
+  - Source trace
   synthesis_required_sections:
-    - Question
-    - Short answer
-    - Evidence considered
-    - Analysis
-    - Decision / takeaway
-    - Follow-up questions
-    - What this synthesis excludes
-    - Tensions / contradictions
-    - Implications for future ingest
+  - Question
+  - Short answer
+  - Evidence considered
+  - Analysis
+  - Decision / takeaway
+  - Follow-up questions
+  - What this synthesis excludes
+  - Tensions / contradictions
+  - Implications for future ingest
   query_required_sections:
-    - Question
-    - Short answer
-    - Evidence considered
-    - Analysis
-    - Decision / takeaway
-    - Follow-up questions
+  - Question
+  - Short answer
+  - Evidence considered
+  - Analysis
+  - Decision / takeaway
+  - Follow-up questions
   lint_required_sections:
-    - Summary
-    - Findings
-    - Recommended fixes
-    - Source trace
-
+  - Summary
+  - Findings
+  - Recommended fixes
+  - Source trace
 frontmatter_contract:
   common_required:
-    - title
-    - page_type
-    - corpus
-    - aliases
-    - tags
+  - title
+  - page_type
+  - corpus
+  - aliases
+  - tags
   common_type_checks:
     title: string
     page_type: string
@@ -369,7 +395,6 @@ frontmatter_contract:
     canonical: boolean
     topic_area: string
     topic_subarea: string
-    primary_lens: string
     jurisdiction_scope: string_array
     concept_role: string
     source_count: integer
@@ -382,13 +407,13 @@ frontmatter_contract:
   metadata_review:
     require_alias_stem: true
     required_tag_templates:
-      - corpus/{corpus}
-      - type/{page_type}
-      - research/{research_mode}
+    - corpus/{corpus}
+    - type/{page_type}
+    - research/{research_mode}
     source_page_slug:
-      ascii_summary_slug_pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      ascii_summary_slug_pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
       disallowed_slug_substrings:
-        - "intake-w-"
+      - intake-w-
     source_registry_required_alignment:
       registry_id: registry_id
       raw_path: storage_path
@@ -398,433 +423,468 @@ frontmatter_contract:
     source_route_advisory:
       enabled: true
       applies_to_page_types:
-        - source
+      - source
       applies_to_corpora:
-        - wiki
+      - wiki
       recommended_fields:
-        - primary_concept
-        - primary_lens
-        - authority_class
-        - route_decision
+      - primary_concept
+      - primary_lens
+      - authority_class
+      - route_decision
       allowed_authority_classes:
-        - primary_evidence
-        - supporting_evidence
-        - background_context
-        - vendor_or_claim
-        - weak_signal
-        - source_only_seed
+      - primary_evidence
+      - supporting_evidence
+      - background_context
+      - vendor_or_claim
+      - weak_signal
+      - source_only_seed
       allowed_route_decisions:
-        - absorb_existing_concept
-        - refresh_existing_synthesis
-        - seed_new_cluster
-        - create_new_concept
-        - create_new_synthesis
-        - keep_source_only_seed
+      - absorb_existing_concept
+      - refresh_existing_synthesis
+      - seed_new_cluster
+      - create_new_concept
+      - create_new_synthesis
+      - keep_source_only_seed
       optional_subtype_field: route_subtype
       body_subtype_markers:
-        - "route subtype:"
-      subtype_value_pattern: "^[a-z0-9][a-z0-9/_-]*$"
+      - 'route subtype:'
+      subtype_value_pattern: ^[a-z0-9][a-z0-9/_-]*$
       severity: review_candidate
-      rollout: "advisory_before_required"
-      rationale: "Surface source routing metadata migration debt without turning legacy source pages into fail gates."
+      rollout: advisory_before_required
+      rationale: Surface source routing metadata migration debt without turning legacy source pages into fail gates.
     concept_taxonomy_advisory:
       enabled: true
       applies_to_page_types:
-        - concept
+      - concept
       recommended_fields:
-        - topic_area
-        - topic_subarea
-        - primary_lens
-        - jurisdiction_scope
-        - concept_role
+      - topic_area
+      - topic_subarea
+      - primary_lens
+      - jurisdiction_scope
+      - concept_role
       allowed_concept_roles:
-        - canonical_lens
-        - routing_map
-        - seed_cluster
-        - warning_candidate
+      - canonical_lens
+      - routing_map
+      - seed_cluster
+      - warning_candidate
       severity: review_candidate
-      rollout: "advisory_before_required"
-      rationale: "Surface concept taxonomy migration debt without turning taxonomy metadata into a fail gate."
+      rollout: advisory_before_required
+      rationale: Surface concept taxonomy migration debt without turning taxonomy metadata into a fail gate.
     content_quality_advisory:
       enabled: true
       applies_to_page_types:
-        - concept
-        - synthesis
+      - concept
+      - synthesis
       recommended_headings:
-        - Core model
-        - Common misread
-        - Key variables
-        - Mechanism
-        - Evidence ladder
-        - Concrete examples
-        - Boundary
+      - Core model
+      - Common misread
+      - Key variables
+      - Mechanism
+      - Evidence ladder
+      - Concrete examples
+      - Boundary
       severity: review_candidate
-      rollout: "all_wiki_concept_synthesis_pages"
-      rationale: "Surface concept/synthesis pages that preserve routing shape but lack wiki-substance scaffolding."
+      rollout: all_wiki_concept_synthesis_pages
+      rationale: Surface concept/synthesis pages that preserve routing shape but lack wiki-substance scaffolding.
   conditional_rules:
     source_type:
       domain-research-paper:
         required:
-          - research_mode
+        - research_mode
         allowed_values:
           research_mode:
-            - experiment
-            - model
-            - reference
+          - experiment
+          - model
+          - reference
   special_pages:
     wiki/index.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: index
         corpus: wiki
         special_role: router
     system/system-index.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: system-index
         corpus: system
         special_role: router
     system/system-log.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: system-log
         corpus: system
         special_role: chronology
     system/system-raw-registry.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry
         corpus: system
         special_role: raw-registry
     system/system-raw-registry/wiki.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/ai-capability.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/ai-capability-governance-intake-2026-04-21.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/ai-compute-control.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/ai-infra-compute-intake-2026-04-21.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/coffee.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/europe-tech-sovereignty.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/global-policy-and-market-seeds.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/korea-fx.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/korea-macro-domestic-intake-2026-04-21.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/middle-east-followups.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/ai-execution.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/middle-east.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-05-25.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-05-26.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-05-29.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-06-17.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md:
-      required:
-        - special_role
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md
+    : required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/system.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/system-research-papers.md:
       required:
-        - special_role
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/system-runtime-specs-and-snapshots.md:
       required:
-        - special_role
+      - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-ai-capability-compute-and-product.md:
+      required:
+      - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-korea-markets-policy-and-defense.md:
+      required:
+      - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-middle-east-global-markets-and-source-only.md:
+      required:
+      - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-semiconductors-ai-capital-and-infrastructure.md:
+      required:
+      - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-06-26.md:
+      required:
+      - special_role
       expected:
         page_type: registry-shard
         corpus: system
@@ -832,15 +892,15 @@ frontmatter_contract:
   prefix_pages:
     source--:
       required:
-        - registry_id
-        - raw_path
-        - source_type
-        - domain
+      - registry_id
+      - raw_path
+      - source_type
+      - domain
       expected:
         page_type: source
     concept--:
       required:
-        - canonical
+      - canonical
       expected:
         page_type: concept
         canonical: true
@@ -856,245 +916,239 @@ frontmatter_contract:
       required: []
       expected:
         page_type: lint
-
 raw_markdown_normalization_contract:
   mutable_extensions:
-    - .md
+  - .md
   immutable_raw_extensions:
-    - .pdf
+  - .pdf
   required_metadata:
-    - title
-    - source
-    - published
-    - created
+  - title
+  - source
+  - published
+  - created
   optional_metadata:
-    - author
-    - description
-    - tags
+  - author
+  - description
+  - tags
   allow_unknown:
-    - published
-    - created
+  - published
+  - created
   disallow_unknown:
-    - title
-    - source
+  - title
+  - source
   metadata_priority:
     title:
-      - frontmatter.title
-      - transport_header.title
-      - first_h1
-      - filename_humanized
+    - frontmatter.title
+    - transport_header.title
+    - first_h1
+    - filename_humanized
     source:
-      - frontmatter.source
-      - transport_header.url_source
-      - capture_url_line
-      - first_absolute_url
+    - frontmatter.source
+    - transport_header.url_source
+    - capture_url_line
+    - first_absolute_url
     published:
-      - frontmatter.published
-      - transport_header.published_time
-      - body_last_updated
-      - source_url_date
-      - unknown
+    - frontmatter.published
+    - transport_header.published_time
+    - body_last_updated
+    - source_url_date
+    - unknown
     created:
-      - frontmatter.created
-      - capture_date_line
-      - unknown
+    - frontmatter.created
+    - capture_date_line
+    - unknown
   removable_noise_classes:
     transport_headers:
-      - "Title:"
-      - "URL Source:"
-      - "Published Time:"
-      - "Number of Pages:"
-      - "Markdown Content:"
+    - 'Title:'
+    - 'URL Source:'
+    - 'Published Time:'
+    - 'Number of Pages:'
+    - 'Markdown Content:'
     cookie_markers:
-      - cookiebot
-      - This website uses cookies
-      - Consent Selection
-      - "[#GPC_"
-      - "[[#IABV2SETTINGS#]]"
-      - "[#IABV2_"
-      - Cookie declaration last updated
+    - cookiebot
+    - This website uses cookies
+    - Consent Selection
+    - '[#GPC_'
+    - '[[#IABV2SETTINGS#]]'
+    - '[#IABV2_'
+    - Cookie declaration last updated
     blob_prefixes:
-      - blob:http://localhost
+    - blob:http://localhost
   manual_review_markers:
-    - replacement_char
+  - replacement_char
   prohibited_mutations:
-    - semantic_body_rewrite
-    - summary_addition
-    - translation_or_paraphrase
-    - evidence_line_deletion
-    - guessed_mojibake_repair
-    - untracked_file_rename
+  - semantic_body_rewrite
+  - summary_addition
+  - translation_or_paraphrase
+  - evidence_line_deletion
+  - guessed_mojibake_repair
+  - untracked_file_rename
   report_fields:
-    - pre_sha256
-    - post_sha256
-    - metadata
-    - removed_noise_classes
-    - manual_review_required
-    - manual_review_reasons
-
+  - pre_sha256
+  - post_sha256
+  - metadata
+  - removed_noise_classes
+  - manual_review_required
+  - manual_review_reasons
 readiness_gate:
   min_related_links: 2
   min_source_trace_items: 1
   max_high_severity_open_questions: 0
   max_medium_severity_open_questions: 3
   allow_warn_for_medium_question_overflow: true
-
 stage2_eval:
   source_count_consistency_enabled: true
   central_research_anchor_enabled: true
   broad_synthesis_boundary_enabled: true
   seed_source_absorption_enabled: true
   content_quality_scaffold_enabled: true
-
 eval_coverage_review:
   cohorts:
-    - cohort_id: stage1_source_substance_coverage
-      stage: stage1
-      path_prefixes:
-        - wiki/source--
-        - system/source--
-      coverage_rules:
-        - source_page_substance
-      min_matching_pages: 1
-      require_nonzero_covered_pages: true
-      suggested_action: review_stage1_source_eval_surface
-    - cohort_id: stage1_synthesis_decisionability_coverage
-      stage: stage1
-      path_prefixes:
-        - wiki/synthesis--
-        - system/synthesis--
-      coverage_rules:
-        - decisionability
-      min_matching_pages: 1
-      require_nonzero_covered_pages: true
-      suggested_action: review_stage1_synthesis_eval_surface
-    - cohort_id: stage1_query_decisionability_coverage
-      stage: stage1
-      path_prefixes:
-        - wiki/query--
-        - system/query--
-      coverage_rules:
-        - decisionability
-      min_matching_pages: 1
-      require_nonzero_covered_pages: true
-      suggested_action: review_stage1_query_eval_surface
-    - cohort_id: stage2_synthesis_source_count_coverage
-      stage: stage2
-      path_prefixes:
-        - wiki/synthesis--
-        - system/synthesis--
-      coverage_rules:
-        - declared_source_count_matches_evidence
-      min_matching_pages: 1
-      require_nonzero_covered_pages: true
-      suggested_action: review_stage2_synthesis_source_count_eval_surface
-    - cohort_id: stage2_research_anchor_source_coverage
-      stage: stage2
-      path_prefixes:
-        - wiki/source--
-      frontmatter_equals:
-        source_type: domain-research-paper
-      coverage_rules:
-        - central_research_source_has_anchor_layer
-      min_matching_pages: 1
-      require_nonzero_covered_pages: false
-      suggested_action: review_stage2_research_anchor_eval_surface
-    - cohort_id: stage2_seed_source_absorption_coverage
-      stage: stage2
-      path_prefixes:
-        - wiki/source--
-      frontmatter_not_equals:
-        source_type: domain-research-paper
-      coverage_rules:
-        - seed_source_has_absorption_hint
-      min_matching_pages: 1
-      require_nonzero_covered_pages: false
-      suggested_action: review_stage2_seed_source_eval_surface
-    - cohort_id: stage2_broad_synthesis_boundary_coverage
-      stage: stage2
-      path_prefixes:
-        - wiki/synthesis--
-      coverage_rules:
-        - broad_synthesis_has_boundary_sections
-      min_matching_pages: 1
-      require_nonzero_covered_pages: false
-      suggested_action: review_stage2_broad_synthesis_eval_surface
-
+  - cohort_id: stage1_source_substance_coverage
+    stage: stage1
+    path_prefixes:
+    - wiki/source--
+    - system/source--
+    coverage_rules:
+    - source_page_substance
+    min_matching_pages: 1
+    require_nonzero_covered_pages: true
+    suggested_action: review_stage1_source_eval_surface
+  - cohort_id: stage1_synthesis_decisionability_coverage
+    stage: stage1
+    path_prefixes:
+    - wiki/synthesis--
+    - system/synthesis--
+    coverage_rules:
+    - decisionability
+    min_matching_pages: 1
+    require_nonzero_covered_pages: true
+    suggested_action: review_stage1_synthesis_eval_surface
+  - cohort_id: stage1_query_decisionability_coverage
+    stage: stage1
+    path_prefixes:
+    - wiki/query--
+    - system/query--
+    coverage_rules:
+    - decisionability
+    min_matching_pages: 1
+    require_nonzero_covered_pages: true
+    suggested_action: review_stage1_query_eval_surface
+  - cohort_id: stage2_synthesis_source_count_coverage
+    stage: stage2
+    path_prefixes:
+    - wiki/synthesis--
+    - system/synthesis--
+    coverage_rules:
+    - declared_source_count_matches_evidence
+    min_matching_pages: 1
+    require_nonzero_covered_pages: true
+    suggested_action: review_stage2_synthesis_source_count_eval_surface
+  - cohort_id: stage2_research_anchor_source_coverage
+    stage: stage2
+    path_prefixes:
+    - wiki/source--
+    frontmatter_equals:
+      source_type: domain-research-paper
+    coverage_rules:
+    - central_research_source_has_anchor_layer
+    min_matching_pages: 1
+    require_nonzero_covered_pages: false
+    suggested_action: review_stage2_research_anchor_eval_surface
+  - cohort_id: stage2_seed_source_absorption_coverage
+    stage: stage2
+    path_prefixes:
+    - wiki/source--
+    frontmatter_not_equals:
+      source_type: domain-research-paper
+    coverage_rules:
+    - seed_source_has_absorption_hint
+    min_matching_pages: 1
+    require_nonzero_covered_pages: false
+    suggested_action: review_stage2_seed_source_eval_surface
+  - cohort_id: stage2_broad_synthesis_boundary_coverage
+    stage: stage2
+    path_prefixes:
+    - wiki/synthesis--
+    coverage_rules:
+    - broad_synthesis_has_boundary_sections
+    min_matching_pages: 1
+    require_nonzero_covered_pages: false
+    suggested_action: review_stage2_broad_synthesis_eval_surface
 doc_audit:
   external_report_extensions:
-    - ".pdf"
-    - ".docx"
-    - ".md"
+  - .pdf
+  - .docx
+  - .md
   router_summary_targets:
-    - page: wiki/index.md
-      summary_section: Summary
-      metrics:
-        - label: news / market / geopolitics sources
-          source:
-            kind: heading_unique_wikilinks
-            heading: News / market / geopolitics
-            heading_level: 3
-        - label: coffee science sources
-          source:
-            kind: heading_unique_wikilinks
-            heading: Coffee science / sensory / brewing
-            heading_level: 3
-        - label: query artifacts
-          source:
-            kind: section_unique_wikilinks
-            section: Queries
-        - label: domain syntheses
-          source:
-            kind: section_unique_wikilinks
-            section: Syntheses
-        - label: canonical concepts
-          source:
-            kind: section_unique_wikilinks
-            section: Concepts
-    - page: system/system-index.md
-      summary_section: Summary
-      metrics:
-        - label: system corpus pages
-          source:
-            kind: page_prefix_count
-            prefix: system/
-        - label: system raw entries
-          source:
-            kind: registry_entry_count
-            filters:
-              corpus: system
-        - label: wiki raw entries
-          source:
-            kind: registry_entry_count
-            filters:
-              corpus: wiki
-    - page: system/system-raw-registry.md
-      summary_section: Summary
-      metrics:
-        - label: total registered paths
-          source:
-            kind: registry_entry_count
-        - label: system corpus entries
-          source:
-            kind: registry_entry_count
-            filters:
-              corpus: system
-        - label: wiki corpus entries
-          source:
-            kind: registry_entry_count
-            filters:
-              corpus: wiki
-        - label: ingested
-          source:
-            kind: registry_entry_count
-            filters:
-              status: ingested
-        - label: registered-not-ingested
-          source:
-            kind: registry_entry_count
-            filters:
-              status: registered-not-ingested
-
+  - page: wiki/index.md
+    summary_section: Summary
+    metrics:
+    - label: news / market / geopolitics sources
+      source:
+        kind: heading_unique_wikilinks
+        heading: News / market / geopolitics
+        heading_level: 3
+    - label: coffee science sources
+      source:
+        kind: heading_unique_wikilinks
+        heading: Coffee science / sensory / brewing
+        heading_level: 3
+    - label: query artifacts
+      source:
+        kind: section_unique_wikilinks
+        section: Queries
+    - label: domain syntheses
+      source:
+        kind: section_unique_wikilinks
+        section: Syntheses
+    - label: canonical concepts
+      source:
+        kind: section_unique_wikilinks
+        section: Concepts
+  - page: system/system-index.md
+    summary_section: Summary
+    metrics:
+    - label: system corpus pages
+      source:
+        kind: page_prefix_count
+        prefix: system/
+    - label: system raw entries
+      source:
+        kind: registry_entry_count
+        filters:
+          corpus: system
+    - label: wiki raw entries
+      source:
+        kind: registry_entry_count
+        filters:
+          corpus: wiki
+  - page: system/system-raw-registry.md
+    summary_section: Summary
+    metrics:
+    - label: total registered paths
+      source:
+        kind: registry_entry_count
+    - label: system corpus entries
+      source:
+        kind: registry_entry_count
+        filters:
+          corpus: system
+    - label: wiki corpus entries
+      source:
+        kind: registry_entry_count
+        filters:
+          corpus: wiki
+    - label: ingested
+      source:
+        kind: registry_entry_count
+        filters:
+          status: ingested
+    - label: registered-not-ingested
+      source:
+        kind: registry_entry_count
+        filters:
+          status: registered-not-ingested
 lint_thresholds:
   broken_wikilink: fail
   duplicate_page_stem: fail
@@ -1144,7 +1198,6 @@ lint_thresholds:
   external_report_reference_mismatch: warn
   raw_registry_source_trace_resolution_warning: warn
   frontmatter_field_pending_required: warn
-
 strict_warning_budget:
   default_profile: release_clean
   profiles:
@@ -1159,29 +1212,25 @@ strict_warning_budget:
           warning_type_budgets:
             unregistered_raw_file: 0
             raw_markdown_blank_published: 0
-
 mutation_policy:
   one_mechanism_per_experiment: true
   default_requires_eval_improvement: true
   prefer_structure_over_prompt_only: true
   require_log_entry: true
-
 equal_score_promotion:
   allowed_artifact_classes:
-    - system_mechanism
+  - system_mechanism
   require_secondary_non_regression: true
   require_any_secondary_improvement: true
   nonempty_line_growth_budget_per_added_test_case: 20
   secondary_axes:
-    - lint
-    - complexity
-    - tests
-
+  - lint
+  - complexity
+  - tests
 behavior_delta:
   required_for_system_mechanism: false
   required_for_auto_improve: true
   required_for_equal_score_promotion: true
-
 complexity_policy:
   dimensions:
     change_surface:
@@ -1208,35 +1257,34 @@ complexity_policy:
     formula: complexity_score = round(sum(weight_i * dimension_i) / 5)
     output_range: 0-100
     notes:
-      - weight 합계는 100이어야 한다.
-      - complexity score는 signoff 설명력과 review surface를 위한 지표이며 equal-score hard gate는 structural metrics로 판정한다.
-      - change_surface 산정은 coarse target의 전체 파일 크기 편향을 완화하기 위해 per-target cap과 semantic complexity evidence를 함께 기록한다.
-      - verification_cost 산정은 테스트 파일 수만 보지 않고 test case density와 contract/risk surface를 함께 반영한다.
+    - weight 합계는 100이어야 한다.
+    - complexity score는 signoff 설명력과 review surface를 위한 지표이며 equal-score hard gate는 structural metrics로 판정한다.
+    - change_surface 산정은 coarse target의 전체 파일 크기 편향을 완화하기 위해 per-target cap과 semantic complexity evidence를 함께 기록한다.
+    - verification_cost 산정은 테스트 파일 수만 보지 않고 test case density와 contract/risk surface를 함께 반영한다.
   risk_overrides:
     high_risk_flags:
-      - schema_change
-      - dependency_change
-      - migration
-      - security_surface
-      - destructive_command
-      - policy_surface
-      - log_append_surface
+    - schema_change
+    - dependency_change
+    - migration
+    - security_surface
+    - destructive_command
+    - policy_surface
+    - log_append_surface
     notes:
-      - high-risk flag는 equal-score path를 자동 차단하지 않는다.
-      - signoff rationale에는 lint/complexity/tests secondary axis 근거를 함께 남긴다.
-
+    - high-risk flag는 equal-score path를 자동 차단하지 않는다.
+    - signoff rationale에는 lint/complexity/tests secondary axis 근거를 함께 남긴다.
 subagent_routing_policy:
   enabled: true
   ladder:
-    - rung: 1
-      model: gpt-5.5
-      reasoning_effort: medium
-    - rung: 2
-      model: gpt-5.5
-      reasoning_effort: high
-    - rung: 3
-      model: gpt-5.5
-      reasoning_effort: xhigh
+  - rung: 1
+    model: gpt-5.5
+    reasoning_effort: medium
+  - rung: 2
+    model: gpt-5.5
+    reasoning_effort: high
+  - rung: 3
+    model: gpt-5.5
+    reasoning_effort: xhigh
   score_bands:
     low:
       max_score: 24
@@ -1251,8 +1299,8 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 1
       allowed_rungs:
-        - 1
-        - 2
+      - 1
+      - 2
       score_band_rungs:
         low: 1
         moderate: 1
@@ -1272,8 +1320,8 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 1
       allowed_rungs:
-        - 1
-        - 2
+      - 1
+      - 2
       score_band_rungs:
         low: 1
         moderate: 1
@@ -1293,9 +1341,9 @@ subagent_routing_policy:
       sandbox_mode: workspace-write
       default_rung: 2
       allowed_rungs:
-        - 1
-        - 2
-        - 3
+      - 1
+      - 2
+      - 3
       score_band_rungs:
         low: 1
         moderate: 2
@@ -1318,8 +1366,8 @@ subagent_routing_policy:
       sandbox_mode: workspace-write
       default_rung: 2
       allowed_rungs:
-        - 2
-        - 3
+      - 2
+      - 3
       score_band_rungs:
         low: 2
         moderate: 2
@@ -1339,8 +1387,8 @@ subagent_routing_policy:
       sandbox_mode: workspace-write
       default_rung: 2
       allowed_rungs:
-        - 2
-        - 3
+      - 2
+      - 3
       score_band_rungs:
         low: 2
         moderate: 2
@@ -1360,7 +1408,7 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
-        - 3
+      - 3
       score_band_rungs:
         low: 3
         moderate: 3
@@ -1371,8 +1419,8 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 2
       allowed_rungs:
-        - 2
-        - 3
+      - 2
+      - 3
       score_band_rungs:
         low: 2
         moderate: 2
@@ -1395,7 +1443,7 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
-        - 3
+      - 3
       score_band_rungs:
         low: 3
         moderate: 3
@@ -1415,7 +1463,7 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
-        - 3
+      - 3
       score_band_rungs:
         low: 3
         moderate: 3
@@ -1426,7 +1474,7 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
-        - 3
+      - 3
       score_band_rungs:
         low: 3
         moderate: 3
@@ -1437,7 +1485,7 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
-        - 3
+      - 3
       score_band_rungs:
         low: 3
         moderate: 3
@@ -1448,7 +1496,7 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
-        - 3
+      - 3
       score_band_rungs:
         low: 3
         moderate: 3
@@ -1459,8 +1507,8 @@ subagent_routing_policy:
       sandbox_mode: read-only
       default_rung: 2
       allowed_rungs:
-        - 2
-        - 3
+      - 2
+      - 3
       score_band_rungs:
         low: 2
         moderate: 2
@@ -1470,13 +1518,12 @@ subagent_routing_policy:
         artifact_heterogeneity:
           threshold: 3
           min_rung: 3
-
 auto_improve_policy:
   enabled: true
   artifact_class: system_mechanism
   session_reports_dir: ops/reports/auto-improve-sessions
   allowed_executors:
-    - codex_exec
+  - codex_exec
   defaults:
     max_proposals: 3
     max_minutes: 90
@@ -1489,72 +1536,71 @@ auto_improve_policy:
     refresh_after_each_run: true
     ordering: priority_desc_proposal_id_asc
   allowed_apply_roots:
-    - ops/
-    - tests/
-    - system/system-log.md
+  - ops/
+  - tests/
+  - system/system-log.md
   apply_mode: live
   workspace_preparation:
     mode: full_copy
     declared_dependencies:
-      - .codex/agents/
-      - .github/
-      - AGENTS.md
-      - ARCHITECTURE.md
-      - CHANGELOG.md
-      - CONTRIBUTING.md
-      - LICENSE
-      - Makefile
-      - README.md
-      - SECURITY.md
-      - THIRD_PARTY_NOTICES.md
-      - docs/
-      - pyproject.toml
-      - pytest.ini
-      - tools/
-      - uv.lock
+    - .codex/agents/
+    - .github/
+    - AGENTS.md
+    - ARCHITECTURE.md
+    - CHANGELOG.md
+    - CONTRIBUTING.md
+    - LICENSE
+    - Makefile
+    - README.md
+    - SECURITY.md
+    - THIRD_PARTY_NOTICES.md
+    - docs/
+    - pyproject.toml
+    - pytest.ini
+    - tools/
+    - uv.lock
   scope_resolution:
     fail_closed_on_missing_tests: true
     test_file_overrides: {}
     test_path_globs:
-      - tests/test_{stem}*.py
-      - tests/test_{target_stem}*.py
+    - tests/test_{stem}*.py
+    - tests/test_{target_stem}*.py
     reviewer_target_prefixes:
-      - ops/policies/
-      - ops/schemas/
-      - system/
+    - ops/policies/
+    - ops/schemas/
+    - system/
     reviewer_score_bands:
-      - high
-      - extreme
+    - high
+    - extreme
     risk_flag_overrides:
       ops/policies/: policy_surface
       ops/schemas/: schema_change
       system/system-log.md: log_append_surface
     auditor_role_map:
       schema_change:
-        - provenance-auditor
+      - provenance-auditor
       dependency_change:
-        - parity-replay-auditor
+      - parity-replay-auditor
       migration:
-        - parity-replay-auditor
+      - parity-replay-auditor
       security_surface:
-        - provenance-auditor
+      - provenance-auditor
       destructive_command:
-        - parity-replay-auditor
+      - parity-replay-auditor
       policy_surface:
-        - valuation-policy-auditor
+      - valuation-policy-auditor
       log_append_surface:
-        - provenance-auditor
+      - provenance-auditor
   dispatch:
     always_roles:
-      - worker
-      - validator
+    - worker
+    - validator
   quarantine:
     pre_promotion_failure_outcomes:
-      - mutation_failed
-      - review_blocked
-      - validation_blocked
-      - repo_health_blocked
-
+    - mutation_failed
+    - review_blocked
+    - validation_blocked
+    - repo_health_blocked
 mechanism_review:
   enabled: true
   max_runs: 20
@@ -1562,49 +1608,49 @@ mechanism_review:
   run_history:
     canonical_source: runs/<run-id>/promotion-report.json#history
     active_statuses:
-      - active
+    - active
     excluded_statuses:
-      - archived
-      - quarantined
+    - archived
+    - quarantined
     buggy_run_default_action: set_history_status
     physical_move_default: false
     notes:
-      - buggy run을 active review history에서 제외할 때는 directory move보다 `set_mechanism_run_history`를 먼저 사용한다.
-      - physical relocation이 필요하더라도 archive/quarantine status를 먼저 기록하고 audit trail을 유지한다.
+    - buggy run을 active review history에서 제외할 때는 directory move보다 `set_mechanism_run_history`를 먼저 사용한다.
+    - physical relocation이 필요하더라도 archive/quarantine status를 먼저 기록하고 audit trail을 유지한다.
   families:
     self_mod_stability:
       tier: core
       objective: iterative self-modification degradation and structural erosion
       metrics:
-        - verbosity_growth
-        - repeat_fail_cluster_rate
-        - branch_growth_without_test_growth
-        - high_complexity_low_test_pressure
+      - verbosity_growth
+      - repeat_fail_cluster_rate
+      - branch_growth_without_test_growth
+      - high_complexity_low_test_pressure
     schema_drift:
       tier: core
       objective: detect schema-touching promotions that are not paired with test guardrails
       metrics:
-        - schema_change_without_test_growth
-        - promoted_schema_change_without_guardrails
+      - schema_change_without_test_growth
+      - promoted_schema_change_without_guardrails
     policy_complexity_growth:
       tier: supporting
       objective: detect policy-surface growth that increases mechanism complexity without improving eval outcomes
       metrics:
-        - policy_surface_growth_without_eval_gain
-        - policy_complexity_score_growth
-        - policy_nonempty_growth
+      - policy_surface_growth_without_eval_gain
+      - policy_complexity_score_growth
+      - policy_nonempty_growth
     contract_regression_signals:
       tier: supporting
       objective: detect repeated non-improvement against current contract-eval surfaces
       metrics:
-        - stage1_same_eval_rate
-        - repeated_discard_runs
+      - stage1_same_eval_rate
+      - repeated_discard_runs
   candidate_types:
-    - mechanism_branch_growth_without_test_growth_candidate
-    - mechanism_high_complexity_low_test_pressure_candidate
-    - mechanism_schema_drift_candidate
-    - mechanism_policy_complexity_growth_candidate
-    - mechanism_eval_stagnation_candidate
+  - mechanism_branch_growth_without_test_growth_candidate
+  - mechanism_high_complexity_low_test_pressure_candidate
+  - mechanism_schema_drift_candidate
+  - mechanism_policy_complexity_growth_candidate
+  - mechanism_eval_stagnation_candidate
   calibration:
     enabled: true
     lookback_runs: 6
@@ -1658,8 +1704,8 @@ mechanism_review:
       min_target_attempts: 2
       shadow_priority_max_delta: 10
       notes:
-        - outcome metrics preview is diagnostic only and does not change mechanism review priority.
-        - priority_delta wiring requires a later explicit policy step after the preview signal stabilizes.
+      - outcome metrics preview is diagnostic only and does not change mechanism review priority.
+      - priority_delta wiring requires a later explicit policy step after the preview signal stabilizes.
   thresholds:
     branch_growth_min_delta: 1
     repeated_branch_growth_runs: 2
@@ -1674,7 +1720,6 @@ mechanism_review:
     stagnation_window: 5
     repeated_same_eval_runs: 3
     repeated_discard_runs: 2
-
 mutation_proposal:
   enabled: true
   max_proposals: 10
@@ -1683,25 +1728,23 @@ mutation_proposal:
   recent_log_overlap_max_age_days: 7
   run_history_input:
     include_statuses:
-      - active
+    - active
   allowed_failure_modes:
-    - branch_growth_without_test_growth
-    - high_complexity_low_test_pressure
-    - schema_change_without_test_guardrails
-    - policy_surface_growth_without_eval_gain
-    - repeated_same_eval_or_discard
-    - repeated_same_eval_after_promote
-    - repeated_discard_runs
-    - bootstrap_history_insufficient
-    - recent_log_overlap_queue_blocked
-    - next_run_failure_repair
-
+  - branch_growth_without_test_growth
+  - high_complexity_low_test_pressure
+  - schema_change_without_test_guardrails
+  - policy_surface_growth_without_eval_gain
+  - repeated_same_eval_or_discard
+  - repeated_same_eval_after_promote
+  - repeated_discard_runs
+  - bootstrap_history_insufficient
+  - recent_log_overlap_queue_blocked
+  - next_run_failure_repair
 refactor_triggers:
   max_page_lines_before_review: 160
   max_heading_count_before_review: 14
   max_candidates_per_family: 1
   require_split_if_multi_question_synthesis: true
-
 content_promotion_review:
   wiki_missing_concept_min_source_links: 3
   wiki_missing_synthesis_min_sources: 3
@@ -1712,19 +1755,18 @@ content_promotion_review:
   wiki_multi_question_min_lines: 55
   research_anchor_min_inbound_links: 5
   research_anchor_required_sections:
-    - What this source adds to the corpus
-    - How strong is the evidence
-    - What this source does not establish
-
+  - What this source adds to the corpus
+  - How strong is the evidence
+  - What this source does not establish
 system_refactor_policy:
   exempt_from_generic_review_candidates:
-    - system/system-log.md
-    - system/system-index.md
-    - system/system-raw-registry.md
-    - system/system-raw-registry/wiki.md
-    - system/system-raw-registry/system.md
-    - system/system-raw-registry/system-research-papers.md
-    - system/system-raw-registry/system-runtime-specs-and-snapshots.md
+  - system/system-log.md
+  - system/system-index.md
+  - system/system-raw-registry.md
+  - system/system-raw-registry/wiki.md
+  - system/system-raw-registry/system.md
+  - system/system-raw-registry/system-research-papers.md
+  - system/system-raw-registry/system-runtime-specs-and-snapshots.md
   index_max_lines_before_review: 250
   raw_registry_summary_max_lines_before_review: 120
   raw_registry_shard_max_lines_before_review: 500
@@ -1740,103 +1782,110 @@ system_refactor_policy:
     profiles:
       runtime:
         include_prefixes:
-          - ops/
-          - tools/
+        - ops/
+        - tools/
         lines: 120
         params: 10
         branches: 18
       tests:
         include_prefixes:
-          - tests/
+        - tests/
         lines: 180
         params: 12
         branches: 12
   complexity_ratchet:
     monitored_profiles:
-      - critical_runtime_orchestrators
-      - high_complexity_helpers
-      - runtime_closeout_orchestrators
-      - release_report_builders
-      - learning_claim_report_builders
+    - critical_runtime_orchestrators
+    - high_complexity_helpers
+    - runtime_closeout_orchestrators
+    - release_report_builders
+    - learning_claim_report_builders
     warn_targets:
-      - ops/scripts/mechanism/auto_improve_runtime.py
-      - ops/scripts/mechanism/mutation_proposal_runtime.py
-      - ops/scripts/mechanism/goal_runtime_run_admission.py
-      - ops/scripts/core/codex_exec_executor.py
-      - ops/scripts/core/artifact_freshness_runtime.py
-      - ops/scripts/eval/wiki_lint_review_runtime.py
-      - ops/scripts/core/policy_validation_runtime.py
-      - ops/scripts/release/release_closeout_batch_manifest.py
-      - ops/scripts/release/release_evidence_dashboard.py
-      - ops/scripts/release/release_closeout_summary.py
-      - ops/scripts/release/external_report_lifecycle_runtime.py
-      - ops/scripts/release/release_smoke.py
-      - ops/scripts/release/release_closeout_fixed_point.py
-      - ops/scripts/release/release_post_seal_attestation.py
-      - ops/scripts/learning/learning_claim_evidence_bundle.py
-      - ops/scripts/learning/learning_claim_unlock_review.py
+    - ops/scripts/mechanism/auto_improve_runtime.py
+    - ops/scripts/mechanism/mutation_proposal_runtime.py
+    - ops/scripts/mechanism/goal_runtime_run_admission.py
+    - ops/scripts/core/codex_exec_executor.py
+    - ops/scripts/core/artifact_freshness_runtime.py
+    - ops/scripts/eval/wiki_lint_review_runtime.py
+    - ops/scripts/core/policy_validation_runtime.py
+    - ops/scripts/release/release_closeout_batch_manifest.py
+    - ops/scripts/release/release_evidence_dashboard.py
+    - ops/scripts/release/release_closeout_summary.py
+    - ops/scripts/release/external_report_lifecycle_runtime.py
+    - ops/scripts/release/release_smoke.py
+    - ops/scripts/release/release_closeout_fixed_point.py
+    - ops/scripts/release/release_post_seal_attestation.py
+    - ops/scripts/learning/learning_claim_evidence_bundle.py
+    - ops/scripts/learning/learning_claim_unlock_review.py
     resolved_targets: []
-
 registry_contract:
   raw_registry_page: system/system-raw-registry.md
   raw_registry_shard_pages:
-    - system/system-raw-registry/wiki.md
-    - system/system-raw-registry/wiki/ai-capability.md
-    - system/system-raw-registry/wiki/ai-capability-governance-intake-2026-04-21.md
-    - system/system-raw-registry/wiki/ai-compute-control.md
-    - system/system-raw-registry/wiki/ai-infra-compute-intake-2026-04-21.md
-    - system/system-raw-registry/wiki/ai-execution.md
-    - system/system-raw-registry/wiki/coffee.md
-    - system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md
-    - system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md
-    - system/system-raw-registry/wiki/europe-tech-sovereignty.md
-    - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md
-    - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md
-    - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md
-    - system/system-raw-registry/wiki/global-policy-and-market-seeds.md
-    - system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md
-    - system/system-raw-registry/wiki/korea-fx.md
-    - system/system-raw-registry/wiki/korea-macro-domestic-intake-2026-04-21.md
-    - system/system-raw-registry/wiki/middle-east.md
-    - system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md
-    - system/system-raw-registry/wiki/middle-east-followups.md
-    - system/system-raw-registry/wiki/raw-intake-2026-05-25.md
-    - system/system-raw-registry/wiki/raw-intake-2026-05-26.md
-    - system/system-raw-registry/wiki/raw-intake-2026-05-29.md
-    - system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md
-    - system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md
-    - system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md
-    - system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md
-    - system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md
-    - system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md
-    - system/system-raw-registry/system.md
-    - system/system-raw-registry/system-research-papers.md
-    - system/system-raw-registry/system-runtime-specs-and-snapshots.md
+  - system/system-raw-registry/system-research-papers.md
+  - system/system-raw-registry/system-runtime-specs-and-snapshots.md
+  - system/system-raw-registry/system.md
+  - system/system-raw-registry/wiki.md
+  - system/system-raw-registry/wiki/ai-capability-governance-intake-2026-04-21.md
+  - system/system-raw-registry/wiki/ai-capability.md
+  - system/system-raw-registry/wiki/ai-compute-control.md
+  - system/system-raw-registry/wiki/ai-execution.md
+  - system/system-raw-registry/wiki/ai-infra-compute-intake-2026-04-21.md
+  - system/system-raw-registry/wiki/coffee.md
+  - system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md
+  - system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md
+  - system/system-raw-registry/wiki/europe-tech-sovereignty.md
+  - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md
+  - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md
+  - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md
+  - system/system-raw-registry/wiki/global-policy-and-market-seeds.md
+  - system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md
+  - system/system-raw-registry/wiki/korea-fx.md
+  - system/system-raw-registry/wiki/korea-macro-domestic-intake-2026-04-21.md
+  - system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md
+  - system/system-raw-registry/wiki/middle-east-followups.md
+  - system/system-raw-registry/wiki/middle-east.md
+  - system/system-raw-registry/wiki/raw-intake-2026-05-25.md
+  - system/system-raw-registry/wiki/raw-intake-2026-05-26.md
+  - system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md
+  - system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md
+  - system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md
+  - system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md
+  - system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md
+  - system/system-raw-registry/wiki/raw-intake-2026-05-29.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-17.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-26-ai-capability-compute-and-product.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-26-korea-markets-policy-and-defense.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-26-middle-east-global-markets-and-source-only.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-26-semiconductors-ai-capital-and-infrastructure.md
+  - system/system-raw-registry/wiki/raw-intake-2026-06-26.md
   raw_registry_shard_by_corpus:
     wiki: system/system-raw-registry/wiki.md
     system: system/system-raw-registry/system.md
   raw_registry_entry_page_corpus:
+    system/system-raw-registry/system-research-papers.md: system
+    system/system-raw-registry/system-runtime-specs-and-snapshots.md: system
+    system/system-raw-registry/system.md: system
     system/system-raw-registry/wiki.md: wiki
-    system/system-raw-registry/wiki/ai-capability.md: wiki
     system/system-raw-registry/wiki/ai-capability-governance-intake-2026-04-21.md: wiki
+    system/system-raw-registry/wiki/ai-capability.md: wiki
     system/system-raw-registry/wiki/ai-compute-control.md: wiki
-    system/system-raw-registry/wiki/ai-infra-compute-intake-2026-04-21.md: wiki
     system/system-raw-registry/wiki/ai-execution.md: wiki
+    system/system-raw-registry/wiki/ai-infra-compute-intake-2026-04-21.md: wiki
     system/system-raw-registry/wiki/coffee.md: wiki
     system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md: wiki
     system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md: wiki
@@ -1848,41 +1897,51 @@ registry_contract:
     system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md: wiki
     system/system-raw-registry/wiki/korea-fx.md: wiki
     system/system-raw-registry/wiki/korea-macro-domestic-intake-2026-04-21.md: wiki
-    system/system-raw-registry/wiki/middle-east.md: wiki
     system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md: wiki
     system/system-raw-registry/wiki/middle-east-followups.md: wiki
+    system/system-raw-registry/wiki/middle-east.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-25.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-26.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-05-29.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29.md: wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md
+    : wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md
+    : wiki
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-ai-product-execution-and-governance.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capability-governance-and-product-cross-domain-market-and-middle-east.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-capital-markets-and-spacex.md: wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md
+    : wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md
+    : wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md
+    : wiki
     system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-ai-infrastructure-buildout-and-financing.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-semiconductor-equity-export-repricing.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-ai-compute-infra-and-semiconductors-server-foundry-memory-and-source-only.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-06-17-defense-physical-ai-health-and-consumer.md: wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md
+    : wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md
+    : wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md
+    : wiki
+    ? system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md
+    : wiki
     system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-global-capital-allocation-and-state-claims.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-war-macro-and-market-repricing.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-middle-east-negotiation-shipping-and-energy.md: wiki
-    system/system-raw-registry/wiki/raw-intake-2026-06-17-geopolitics-middle-east-energy-and-global-markets-institutional-regime-space-and-source-only-seeds.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-06-17-korea-market-fx-and-domestic-policy.md: wiki
-    system/system-raw-registry/system.md: system
-    system/system-raw-registry/system-research-papers.md: system
-    system/system-raw-registry/system-runtime-specs-and-snapshots.md: system
+    system/system-raw-registry/wiki/raw-intake-2026-06-17.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-ai-capability-compute-and-product.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-korea-markets-policy-and-defense.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-middle-east-global-markets-and-source-only.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-26-semiconductors-ai-capital-and-infrastructure.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-06-26.md: wiki
   raw_registry_export: ops/raw-registry.json
   corpus_roots:
     wiki: wiki
     system: system
-
 corpus_routing:
   type_to_corpus:
     news-snapshot: wiki
@@ -1898,15 +1957,14 @@ corpus_routing:
   route_overrides:
     news-snapshot:
       system:
-        description: "Allow news snapshots in system only when they are explicit maintainer-runtime evidence."
+        description: Allow news snapshots in system only when they are explicit maintainer-runtime evidence.
         required_fields:
-          - corpus_route_override
-          - override_reason
+        - corpus_route_override
+        - override_reason
         required_values:
           corpus_route_override: system
         reason_field: override_reason
         reason_min_length: 20
-
 starter_bundles:
   planning_default:
     path: ops/templates
@@ -1917,68 +1975,65 @@ starter_bundles:
     phase: starter
     promotion_report_input_placeholders:
       run_ledger:
-        - runs/<run-id>/run-ledger.json
+      - runs/<run-id>/run-ledger.json
       changed_files_manifest:
-        - runs/<run-id>/changed-files-manifest.json
+      - runs/<run-id>/changed-files-manifest.json
       behavior_delta:
-        - runs/<run-id>/behavior-delta.json
-
+      - runs/<run-id>/behavior-delta.json
 runtime_defaults:
   display_timezone:
     label: KST
-    utc_offset: "+09:00"
-
+    utc_offset: +09:00
 release_packaging:
-  archive_root_name: "LLMwiki"
+  archive_root_name: LLMwiki
   zip_normalization:
-    timestamp_utc: "1980-01-01T00:00:00Z"
-    file_mode_octal: "0644"
-
+    timestamp_utc: '1980-01-01T00:00:00Z'
+    file_mode_octal: '0644'
 promotion_policy:
   decision_values:
-    - PROMOTE
-    - HOLD
-    - DISCARD
+  - PROMOTE
+  - HOLD
+  - DISCARD
   artifact_classes:
     wiki_source:
       kind: page
       root: wiki
       prefixes:
-        - source--
+      - source--
     wiki_concept:
       kind: page
       root: wiki
       prefixes:
-        - concept--
+      - concept--
     wiki_synthesis:
       kind: page
       root: wiki
       prefixes:
-        - synthesis--
+      - synthesis--
     wiki_query:
       kind: page
       root: wiki
       prefixes:
-        - query--
+      - query--
     system_page:
       kind: page
       root: system
       prefixes:
-        - source--
-        - concept--
-        - synthesis--
-        - query--
-        - lint--
+      - source--
+      - concept--
+      - synthesis--
+      - query--
+      - lint--
     system_mechanism:
       kind: mechanism
       allowed_targets:
-        - ops/
-        - AGENTS.md
-        - README.md
-        - Makefile
-        - system/system-index.md
-        - system/system-raw-registry.md
-        - system/system-log.md
+      - ops/
+      - AGENTS.md
+      - README.md
+      - Makefile
+      - system/system-index.md
+      - system/system-raw-registry.md
+      - system/system-log.md
   signoff_defaults:
     wiki_source: not_required
     wiki_concept: not_required
@@ -1989,9 +2044,9 @@ promotion_policy:
   log_defaults:
     page: system/system-log.md
     status_values:
-      - pending
-      - recorded
-      - not_required
+    - pending
+    - recorded
+    - not_required
   decision_rules:
     page_class:
       discard_on_repo_lint_fail: true
@@ -2007,263 +2062,263 @@ promotion_policy:
       promote_only_if_signoff_approved: false
   rule_registry:
     page_class:
-      - primary_target_scope
-      - primary_target_exists
-      - repo_lint_status
-      - current_policy_consistency
-      - primary_target_eval_full_pass
-      - primary_target_stage2_full_pass
-      - signoff_status
+    - primary_target_scope
+    - primary_target_exists
+    - repo_lint_status
+    - current_policy_consistency
+    - primary_target_eval_full_pass
+    - primary_target_stage2_full_pass
+    - signoff_status
     system_mechanism:
-      - primary_target_scope
-      - primary_target_exists
-      - report_consistency
-      - run_ledger_target_coverage
-      - mechanism_report_primary_targets
-      - changed_files_manifest_declared_targets
-      - changed_files_manifest_scope
-      - changed_files_manifest_allowed_apply_roots
-      - changed_files_manifest_nonempty
-      - changed_files_manifest_primary_targets_touched
-      - behavior_delta_presence
-      - candidate_lint_pass
-      - candidate_eval_pass
-      - eval_score_improves
-      - lint_non_regression
-      - lint_improves
-      - structural_complexity_non_regression
-      - structural_complexity_improves
-      - structural_regression_debt
-      - tests_non_regression
-      - tests_increase
-      - complexity_profile_score
-      - risk_flags
-      - equal_score_secondary_eligibility
-      - signoff_status
+    - primary_target_scope
+    - primary_target_exists
+    - report_consistency
+    - run_ledger_target_coverage
+    - mechanism_report_primary_targets
+    - changed_files_manifest_declared_targets
+    - changed_files_manifest_scope
+    - changed_files_manifest_allowed_apply_roots
+    - changed_files_manifest_nonempty
+    - changed_files_manifest_primary_targets_touched
+    - behavior_delta_presence
+    - candidate_lint_pass
+    - candidate_eval_pass
+    - eval_score_improves
+    - lint_non_regression
+    - lint_improves
+    - structural_complexity_non_regression
+    - structural_complexity_improves
+    - structural_regression_debt
+    - tests_non_regression
+    - tests_increase
+    - complexity_profile_score
+    - risk_flags
+    - equal_score_secondary_eligibility
+    - signoff_status
   rule_metadata:
     page_class:
       primary_target_scope:
         artifact_dependencies: []
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Page primary target scope gate emitted {statuses}: {details}"
+        summary_template: 'Page primary target scope gate emitted {statuses}: {details}'
       primary_target_exists:
         artifact_dependencies: []
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Page primary target existence gate emitted {statuses}: {details}"
+        summary_template: 'Page primary target existence gate emitted {statuses}: {details}'
       repo_lint_status:
         artifact_dependencies:
-          - current_lint
+        - current_lint
         reducer: page_repo_lint_status
         severity: blocker
-        summary_template: "Page repo lint gate emitted {statuses}: {details}"
+        summary_template: 'Page repo lint gate emitted {statuses}: {details}'
       current_policy_consistency:
         artifact_dependencies:
-          - current_lint
-          - current_eval
-          - current_stage2
-          - policy
+        - current_lint
+        - current_eval
+        - current_stage2
+        - policy
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Page current-policy consistency gate emitted {statuses}: {details}"
+        summary_template: 'Page current-policy consistency gate emitted {statuses}: {details}'
       primary_target_eval_full_pass:
         artifact_dependencies:
-          - current_eval
+        - current_eval
         reducer: page_primary_eval_status
         severity: blocker
-        summary_template: "Page primary eval full-pass gate emitted {statuses}: {details}"
+        summary_template: 'Page primary eval full-pass gate emitted {statuses}: {details}'
       primary_target_stage2_full_pass:
         artifact_dependencies:
-          - current_stage2
+        - current_stage2
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Page primary Stage 2 full-pass gate emitted {statuses}: {details}"
+        summary_template: 'Page primary Stage 2 full-pass gate emitted {statuses}: {details}'
       signoff_status:
         artifact_dependencies:
-          - signoff
+        - signoff
         reducer: page_signoff_status
         severity: blocker
-        summary_template: "Page signoff status gate emitted {statuses}: {details}"
+        summary_template: 'Page signoff status gate emitted {statuses}: {details}'
     system_mechanism:
       primary_target_scope:
         artifact_dependencies: []
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Primary target scope gate emitted {statuses}: {details}"
+        summary_template: 'Primary target scope gate emitted {statuses}: {details}'
       primary_target_exists:
         artifact_dependencies: []
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Primary target existence gate emitted {statuses}: {details}"
+        summary_template: 'Primary target existence gate emitted {statuses}: {details}'
       report_consistency:
         artifact_dependencies:
-          - baseline_eval_report
-          - candidate_eval_report
-          - baseline_lint_report
-          - candidate_lint_report
-          - baseline_mechanism_report
-          - candidate_mechanism_report
-          - changed_files_manifest
-          - run_ledger
-          - policy
+        - baseline_eval_report
+        - candidate_eval_report
+        - baseline_lint_report
+        - candidate_lint_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
+        - changed_files_manifest
+        - run_ledger
+        - policy
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Report consistency gate emitted {statuses}: {details}"
+        summary_template: 'Report consistency gate emitted {statuses}: {details}'
       run_ledger_target_coverage:
         artifact_dependencies:
-          - run_ledger
+        - run_ledger
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Run-ledger target coverage emitted {statuses}: {details}"
+        summary_template: 'Run-ledger target coverage emitted {statuses}: {details}'
       mechanism_report_primary_targets:
         artifact_dependencies:
-          - baseline_mechanism_report
-          - candidate_mechanism_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Mechanism report primary-target coverage emitted {statuses}: {details}"
+        summary_template: 'Mechanism report primary-target coverage emitted {statuses}: {details}'
       changed_files_manifest_declared_targets:
         artifact_dependencies:
-          - changed_files_manifest
-          - candidate_mechanism_report
+        - changed_files_manifest
+        - candidate_mechanism_report
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Changed-files declared-target gate emitted {statuses}: {details}"
+        summary_template: 'Changed-files declared-target gate emitted {statuses}: {details}'
       changed_files_manifest_scope:
         artifact_dependencies:
-          - changed_files_manifest
+        - changed_files_manifest
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Changed-files declared-scope gate emitted {statuses}: {details}"
+        summary_template: 'Changed-files declared-scope gate emitted {statuses}: {details}'
       changed_files_manifest_allowed_apply_roots:
         artifact_dependencies:
-          - changed_files_manifest
-          - policy
+        - changed_files_manifest
+        - policy
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Changed-files apply-root gate emitted {statuses}: {details}"
+        summary_template: 'Changed-files apply-root gate emitted {statuses}: {details}'
       changed_files_manifest_nonempty:
         artifact_dependencies:
-          - changed_files_manifest
+        - changed_files_manifest
         reducer: none
         severity: warning
-        summary_template: "Changed-files nonempty diagnostic emitted {statuses}: {details}"
+        summary_template: 'Changed-files nonempty diagnostic emitted {statuses}: {details}'
       changed_files_manifest_primary_targets_touched:
         artifact_dependencies:
-          - changed_files_manifest
+        - changed_files_manifest
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Changed-files primary-target touch gate emitted {statuses}: {details}"
+        summary_template: 'Changed-files primary-target touch gate emitted {statuses}: {details}'
       behavior_delta_presence:
         artifact_dependencies:
-          - behavior_delta
-          - policy
+        - behavior_delta
+        - policy
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Behavior-delta presence gate emitted {statuses}: {details}"
+        summary_template: 'Behavior-delta presence gate emitted {statuses}: {details}'
       candidate_lint_pass:
         artifact_dependencies:
-          - candidate_lint_report
+        - candidate_lint_report
         reducer: candidate_lint_status
         severity: blocker
-        summary_template: "Candidate lint gate emitted {statuses}: {details}"
+        summary_template: 'Candidate lint gate emitted {statuses}: {details}'
       candidate_eval_pass:
         artifact_dependencies:
-          - baseline_eval_report
-          - candidate_eval_report
+        - baseline_eval_report
+        - candidate_eval_report
         reducer: candidate_eval_status
         severity: blocker
-        summary_template: "Global eval non-regression guard emitted {statuses}: {details}"
+        summary_template: 'Global eval non-regression guard emitted {statuses}: {details}'
       eval_score_improves:
         artifact_dependencies:
-          - baseline_mechanism_contract_eval_report
-          - candidate_mechanism_contract_eval_report
+        - baseline_mechanism_contract_eval_report
+        - candidate_mechanism_contract_eval_report
         reducer: status_fail_discard
         severity: blocker
-        summary_template: "Mechanism contract eval score comparison emitted {statuses}: {details}"
+        summary_template: 'Mechanism contract eval score comparison emitted {statuses}: {details}'
       lint_non_regression:
         artifact_dependencies:
-          - baseline_lint_report
-          - candidate_lint_report
+        - baseline_lint_report
+        - candidate_lint_report
         reducer: none
         severity: advisory
-        summary_template: "Lint non-regression diagnostic emitted {statuses}: {details}"
+        summary_template: 'Lint non-regression diagnostic emitted {statuses}: {details}'
       lint_improves:
         artifact_dependencies:
-          - baseline_lint_report
-          - candidate_lint_report
+        - baseline_lint_report
+        - candidate_lint_report
         reducer: none
         severity: advisory
-        summary_template: "Lint improvement diagnostic emitted {statuses}: {details}"
+        summary_template: 'Lint improvement diagnostic emitted {statuses}: {details}'
       structural_complexity_non_regression:
         artifact_dependencies:
-          - baseline_mechanism_report
-          - candidate_mechanism_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
         reducer: none
         severity: advisory
-        summary_template: "Structural complexity non-regression diagnostic emitted {statuses}: {details}"
+        summary_template: 'Structural complexity non-regression diagnostic emitted {statuses}: {details}'
       structural_complexity_improves:
         artifact_dependencies:
-          - baseline_mechanism_report
-          - candidate_mechanism_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
         reducer: none
         severity: advisory
-        summary_template: "Structural complexity improvement diagnostic emitted {statuses}: {details}"
+        summary_template: 'Structural complexity improvement diagnostic emitted {statuses}: {details}'
       structural_regression_debt:
         artifact_dependencies:
-          - baseline_mechanism_contract_eval_report
-          - candidate_mechanism_contract_eval_report
-          - baseline_mechanism_report
-          - candidate_mechanism_report
+        - baseline_mechanism_contract_eval_report
+        - candidate_mechanism_contract_eval_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
         reducer: none
         severity: advisory
-        summary_template: "Structural regression debt diagnostic emitted {statuses}: {details}"
+        summary_template: 'Structural regression debt diagnostic emitted {statuses}: {details}'
       tests_non_regression:
         artifact_dependencies:
-          - baseline_mechanism_report
-          - candidate_mechanism_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
         reducer: none
         severity: advisory
-        summary_template: "Test coverage non-regression diagnostic emitted {statuses}: {details}"
+        summary_template: 'Test coverage non-regression diagnostic emitted {statuses}: {details}'
       tests_increase:
         artifact_dependencies:
-          - baseline_mechanism_report
-          - candidate_mechanism_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
         reducer: none
         severity: advisory
-        summary_template: "Test coverage increase diagnostic emitted {statuses}: {details}"
+        summary_template: 'Test coverage increase diagnostic emitted {statuses}: {details}'
       complexity_profile_score:
         artifact_dependencies:
-          - baseline_mechanism_report
-          - candidate_mechanism_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
         reducer: none
         severity: warning
-        summary_template: "Complexity profile score diagnostic emitted {statuses}: {details}"
+        summary_template: 'Complexity profile score diagnostic emitted {statuses}: {details}'
       risk_flags:
         artifact_dependencies:
-          - baseline_mechanism_report
-          - candidate_mechanism_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
         reducer: none
         severity: warning
-        summary_template: "Risk-flag diagnostic emitted {statuses}: {details}"
+        summary_template: 'Risk-flag diagnostic emitted {statuses}: {details}'
       equal_score_secondary_eligibility:
         artifact_dependencies:
-          - baseline_mechanism_contract_eval_report
-          - candidate_mechanism_contract_eval_report
-          - baseline_eval_report
-          - candidate_eval_report
-          - baseline_lint_report
-          - candidate_lint_report
-          - baseline_mechanism_report
-          - candidate_mechanism_report
-          - policy
+        - baseline_mechanism_contract_eval_report
+        - candidate_mechanism_contract_eval_report
+        - baseline_eval_report
+        - candidate_eval_report
+        - baseline_lint_report
+        - candidate_lint_report
+        - baseline_mechanism_report
+        - candidate_mechanism_report
+        - policy
         reducer: equal_score_secondary
         severity: blocker
-        summary_template: "Equal-score secondary eligibility gate emitted {statuses}: {details}"
+        summary_template: 'Equal-score secondary eligibility gate emitted {statuses}: {details}'
       signoff_status:
         artifact_dependencies:
-          - signoff
+        - signoff
         reducer: signoff_status
         severity: blocker
-        summary_template: "Signoff status gate emitted {statuses}: {details}"
+        summary_template: 'Signoff status gate emitted {statuses}: {details}'
