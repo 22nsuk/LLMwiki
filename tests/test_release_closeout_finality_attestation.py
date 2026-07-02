@@ -413,6 +413,7 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         self.assertEqual(report["batch_manifest"]["semantic_release_status"], "clean_pass")
         self.assertEqual(report["batch_manifest"]["sealed_release_status"], "sealed_clean_pass")
 
+    @pytest.mark.release_closeout_regression
     def test_finality_verify_fails_after_tracked_digest_drift(self) -> None:
         self._seed_finality_inputs()
         report = build_report(self.vault, context=fixed_context())

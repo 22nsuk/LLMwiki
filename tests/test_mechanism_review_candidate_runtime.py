@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.mechanism import mechanism_review_candidate_runtime
 from ops.scripts.mechanism.mechanism_candidate_registry_runtime import (
@@ -33,6 +35,8 @@ from tests.mechanism_review_test_utils import (
     write_run_session_context,
     write_session_report,
 )
+
+pytestmark = pytest.mark.fast_smoke
 
 
 def mechanism_snapshot(

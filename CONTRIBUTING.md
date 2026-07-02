@@ -46,7 +46,10 @@ your change type.
 - Prefer Make targets in user-facing docs; use `llm-wiki-*` only for lifecycle
   policy public CLIs.
 - Do not copy private corpus content, raw inventory, live run artifacts, or external report bodies into public surfaces.
-- Run `make sync-public-policy` when adding a public file, public prefix, or durable generated report exception.
+- Run `make sync-derived` after changing sources that drive tracked derived
+  projections; this includes pytest marker registration, selector projections,
+  and public policy templates when adding a public file, public prefix, or
+  durable generated report exception.
 - Update [CHANGELOG.md](./CHANGELOG.md) when a user-visible runtime, release, or public-export contract changes.
 - Review `.codex/agents/` changes together with role intent, rung selection, and routing contracts.
 - Record third-party material and license obligations in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) when needed.

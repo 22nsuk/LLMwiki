@@ -14,7 +14,7 @@ from ops.scripts.release.release_closeout_batch_manifest import (
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 
-pytestmark = pytest.mark.release_sealing
+pytestmark = [pytest.mark.release_sealing, pytest.mark.release_sealing_core]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BATCH_POLICY_PATH = REPO_ROOT / "ops" / "policies" / "release-closeout-batch.json"

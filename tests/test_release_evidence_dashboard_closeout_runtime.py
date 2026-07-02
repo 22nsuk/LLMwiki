@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import pytest
+
 from ops.scripts.release.release_evidence_dashboard_closeout_runtime import (
     closeout_decision_gate,
     closeout_input_status,
 )
 from ops.scripts.release.release_evidence_dashboard_render_runtime import CLOSEOUT_PATH
+
+pytestmark = pytest.mark.runtime_hotspot_smoke
 
 
 def _closeout_payload(**overrides: object) -> dict:

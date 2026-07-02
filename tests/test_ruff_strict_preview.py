@@ -6,6 +6,8 @@ import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "tools" / "ruff_strict_preview.py"
 STRICT_CANDIDATE_SELECT = "PTH201"
@@ -14,6 +16,8 @@ if MODULE_SPEC is None or MODULE_SPEC.loader is None:  # pragma: no cover
     raise RuntimeError(f"failed to load strict Ruff candidate preview helper from {MODULE_PATH}")
 RUFF_STRICT_PREVIEW = importlib.util.module_from_spec(MODULE_SPEC)
 MODULE_SPEC.loader.exec_module(RUFF_STRICT_PREVIEW)
+
+pytestmark = pytest.mark.schema_static_smoke
 
 
 class RuffStrictPreviewTests(unittest.TestCase):

@@ -18,9 +18,6 @@ starter bundle:
   - `open-questions.md`
 - `improvement-observations.json`
   - standalone repo maintenance task follow-up sample
-- `codebase-memory-mcp.cbmignore`
-  - optional `codebase-memory-mcp` public-export index boundary template
-  - copied to the generated export root by `make cbm-export-public`; it is not live state or canonical evidence
 - `mechanism-run/`
   - `system_mechanism` experiment starter
   - `seed.yaml`

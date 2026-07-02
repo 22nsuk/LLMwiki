@@ -43,7 +43,7 @@ from ops.scripts.test.test_execution_summary import (
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 
 def _result(

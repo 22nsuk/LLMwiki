@@ -5,4 +5,6 @@ from tests.test_mutation_proposal_build_report import (
 )
 from tests.test_mutation_proposal_promotion import MutationProposalPromotionTest
 
+__test__ = False
+
 __all__ = ["MutationProposalPromotionTest", "MutationProposalTest"]

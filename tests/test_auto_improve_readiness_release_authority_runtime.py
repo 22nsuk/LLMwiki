@@ -12,7 +12,11 @@ from ops.scripts.mechanism.auto_improve_readiness_release_authority_runtime impo
     promotion_status,
 )
 
-pytestmark = pytest.mark.public
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.fast_smoke,
+    pytest.mark.runtime_hotspot_smoke,
+]
 
 
 def _pass_release_reports() -> dict[str, dict]:

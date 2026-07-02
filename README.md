@@ -35,7 +35,7 @@ otherwise.
 | Surface | Purpose | Main authority | Typical verification |
 | --- | --- | --- | --- |
 | Full local vault | Private operator workspace and canonical corpus operation. | `AGENTS.md` plus `AGENTS.local.md` | Task-specific gates such as `make check` or `make release-check` |
-| Public mirror/export | Corpus-free code/ops runtime for review, CI, and optional CBM indexing. | `ops/scripts/public/public_surface_policy.py` | `make public-check` or `make public-check-all` |
+| Public mirror/export | Corpus-free code/ops runtime for review and CI. | `ops/scripts/public/public_surface_policy.py` | `make public-check` or `make public-check-all` |
 | Release source ZIP | Normalized replay package for release smoke, sealing, and provenance sidecars. | Staged manifests under `build/release/` | `make release-run-ready-check`, `make release-sealed-run-ready-check`, `make release-auto-promotion-ready-check` |
 
 See [docs/repository-surfaces.md](./docs/repository-surfaces.md) for the full
@@ -84,7 +84,7 @@ Use `make help` for the compact, current command index. The main families are:
 | Setup/status | `make dev-install`, `make status`, `make bootstrap-preflight` |
 | Source checks | `make static`, `make ruff-strict-preview`, `make mypy-strict-preview`, `make strict-preview-audit` |
 | Tests/report contracts | `make test`, `make test-all`, `make test-report-contract-core`, `make test-report-contract-all` |
-| Public mirror | `make sync-public-policy`, `make public-check`, `make public-check-all` |
+| Public mirror | `make sync-derived`, `make sync-derived-check`, `make public-check`, `make public-check-all` |
 | Mechanism/goal runtime | `make auto-improve-readiness`, `make goal-runtime-run-admission`, `make release-auto-promotion-ready` |
 | Release | `make changed-path-minimum-plan`, `make release-run-ready`, `make release-post-commit-finalize`, `make release-sealed-run-ready` |
 | Review handoff | `make review-archive-clean`, `make review-archive` |
@@ -97,7 +97,7 @@ Use `make help` for the compact, current command index. The main families are:
 | Public docs/root docs change | `make static` | `make public-check` |
 | Ops script or test change | `make static` | `make test` or a focused pytest selector |
 | Schema, policy, or report-contract change | `make static` | `make test-report-contract-core` |
-| Public export boundary change | `make sync-public-policy` | `make public-check` or `make public-check-all` |
+| Public export boundary change | `make sync-derived` | `make public-check` or `make public-check-all` |
 | Release evidence or package behavior change | `make release-run-ready-check` | `make release-run-ready`; add `make release-sealed-run-ready` when sealing is required |
 | Source review handoff | `make static` | `make review-archive-clean` |
 | Supply-chain artifact change | `make supply-chain-check` | The owning SBOM/provenance target plus relevant release checks |
@@ -143,8 +143,6 @@ and explicitly declared compatibility facades.
   their supported Make entrypoints.
 - [docs/self-improvement-runtime.md](./docs/self-improvement-runtime.md):
   mechanism review, mutation proposal, goal runtime, and promotion.
-- [docs/codebase-memory-mcp.md](./docs/codebase-memory-mcp.md): optional
-  public-safe codebase-memory-mcp sidecar.
 - [ops/README.md](./ops/README.md): compact ops subsystem index.
 - [.codex/agents/README.md](./.codex/agents/README.md): project-scoped subagent
   role surface.
@@ -164,23 +162,6 @@ llm-wiki-improvement-observations
 llm-wiki-planning-gate-validate
 llm-wiki-run-mechanism-experiment
 ```
-
-## Optional codebase-memory-mcp
-
-For code/ops structure exploration (`code/ops 구조 탐색`), a verified operator-local
-`codebase-memory-mcp` binary can index a public-safe export:
-
-```bash
-make cbm-smoke-public
-make cbm-index-public
-make cbm-schema-public
-make cbm-architecture-public
-make cbm-search-public CBM_SEARCH_PATTERN=release_run_ready
-```
-
-This is a graph-first/file-verified hinting workflow. It is not canonical
-evidence, not a release gate, and not a dependency. 기존 `rg` / file read workflow
-remains supported alongside direct file reads.
 
 ## License
 

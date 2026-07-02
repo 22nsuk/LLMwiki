@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import unittest
 
+import pytest
+
 from ops.scripts.core.artifact_freshness_payload_runtime import (
     embed_artifact_envelope_metadata,
 )
@@ -29,6 +31,8 @@ from tests.auto_improve_readiness_test_runtime import (
     AutoImproveReadinessRuntimeFixture,
     fixed_context,
 )
+
+pytestmark = [pytest.mark.fast_smoke, pytest.mark.runtime_hotspot_smoke]
 
 
 class AutoImproveReadinessQueueRuntimeTests(

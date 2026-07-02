@@ -9,7 +9,7 @@ tooling.
 - `policies/`: runtime policy and governance inputs.
 - `schemas/`: JSON Schema contracts for reports, templates, and runtime artifacts.
 - `scripts/`: Python runtime packages organized by domain.
-- `templates/`: reusable starter templates and sidecar templates.
+- `templates/`: reusable starter templates.
 - `reports/`: generated evidence, ignored by default except policy-approved durable files.
 - `test-lane-registry.json`: authority for persistent pytest lanes, derived packs, CI routing, and documentation boundaries.
 
@@ -24,7 +24,7 @@ See [../docs/ops-runtime.md](../docs/ops-runtime.md) for the full runtime map.
 - `release`: release evidence, external report lifecycle, sealing, and summaries.
 - `learning`: learning claim, readiness signoff, remediation, and lesson surfaces.
 - `supply_chain`: provenance, SBOM, advisory, OpenVEX, in-toto, and Sigstore.
-- `public`: public export, public check, and CBM public export.
+- `public`: public export, public check, and public-surface helpers.
 - `test`: test execution summary and lane registry runtime.
 
 ## Primary Make Families
@@ -35,7 +35,8 @@ make dev-install
 make static
 make test-public
 make test-report-contract-core
-make sync-public-policy
+make sync-derived
+make sync-derived-check
 make public-check
 make release-check
 make auto-improve-readiness
@@ -49,20 +50,6 @@ make auto-improve-readiness
 - [../docs/release.md](../docs/release.md)
 - [../docs/self-improvement-runtime.md](../docs/self-improvement-runtime.md)
 
-## Optional codebase-memory-mcp quickstart
-
-```bash
-make cbm-smoke-public
-make cbm-index-public
-make cbm-schema-public
-make cbm-architecture-public
-make cbm-search-public CBM_SEARCH_PATTERN=release_run_ready
-```
-
-Set `CBM_BIN=/path/to/codebase-memory-mcp` when the binary is not on `PATH`.
-This graph-first/file-verified sidecar is optional and never canonical evidence.
-See [../docs/codebase-memory-mcp.md](../docs/codebase-memory-mcp.md).
-
 ## Generated Artifact Rule
 
 Durable schema-backed reports must be written through the shared artifact
@@ -75,5 +62,7 @@ files stay under `tmp/`; release packages and audit sidecars stay under
 - Policy and schema changes need matching runtime and tests.
 - Generated private artifacts are not source of truth.
 - Public-safe code must run without `raw/`, `wiki/`, `system/`, `runs/`, or `external-reports/`.
-- Public boundary changes require `make sync-public-policy`.
+- Public boundary changes and tracked source-derived projections converge through
+  `make sync-derived`; use `make sync-derived-check` for check-only review or CI
+  contexts.
 - Prefer canonical package paths and Make targets over flat compatibility module names in new documentation.

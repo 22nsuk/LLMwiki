@@ -26,7 +26,11 @@ STRUCTURAL_COMPLEXITY_BUDGET_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "stru
 STAGE2_EVAL_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-stage2-eval-report.schema.json"
 MECHANISM_REVIEW_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "mechanism-review-candidates.schema.json"
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 MUTATION_PROPOSAL_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "mutation-proposals.schema.json"
 PROPOSAL_SCOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "proposal-scope.schema.json"
 RUN_TELEMETRY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json"
@@ -138,14 +142,17 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(missing_currentness, schema),
         )
 
+    @pytest.mark.fast_smoke
     def test_sample_eval_report_validates_and_requires_policy_identity(self) -> None:
         self.assert_policy_identity_contract(self.samples["eval"], self.schemas["eval"])
         self.assert_artifact_envelope_contract(self.samples["eval"], self.schemas["eval"])
 
+    @pytest.mark.fast_smoke
     def test_sample_lint_report_validates_and_requires_policy_identity(self) -> None:
         self.assert_policy_identity_contract(self.samples["lint"], self.schemas["lint"])
         self.assert_artifact_envelope_contract(self.samples["lint"], self.schemas["lint"])
 
+    @pytest.mark.fast_smoke
     def test_sample_warning_budget_report_validates_and_requires_policy_identity(self) -> None:
         self.assert_policy_identity_contract(
             self.samples["warning_budget"],
@@ -159,6 +166,7 @@ class ReportSchemaContractTest(unittest.TestCase):
         over_budget["status"] = "fail"
         self.assertEqual(validate_with_schema(over_budget, self.schemas["warning_budget"]), [])
 
+    @pytest.mark.fast_smoke
     def test_sample_structural_complexity_budget_report_validates_and_requires_policy_identity(self) -> None:
         self.assert_policy_identity_contract(
             self.samples["structural_complexity_budget"],
@@ -200,6 +208,7 @@ class ReportSchemaContractTest(unittest.TestCase):
             ),
         )
 
+    @pytest.mark.fast_smoke
     def test_sample_eval_coverage_report_validates_and_requires_policy_identity(self) -> None:
         self.assert_policy_identity_contract(
             self.samples["eval_coverage"],
@@ -210,6 +219,7 @@ class ReportSchemaContractTest(unittest.TestCase):
             self.schemas["eval_coverage"],
         )
 
+    @pytest.mark.fast_smoke
     def test_sample_stage2_eval_report_validates_and_requires_policy_identity(self) -> None:
         self.assert_policy_identity_contract(self.samples["stage2"], self.schemas["stage2"])
         self.assert_artifact_envelope_contract(self.samples["stage2"], self.schemas["stage2"])
@@ -330,6 +340,7 @@ class ReportSchemaContractTest(unittest.TestCase):
                 validate_with_schema(missing_report_path, schema),
             )
 
+    @pytest.mark.fast_smoke
     def test_sample_auto_improve_readiness_report_validates_and_requires_queue_block(self) -> None:
         report = self.samples["auto_improve_readiness_report"]
         schema = self.schemas["auto_improve_readiness_report"]
@@ -806,6 +817,7 @@ class ReportSchemaContractTest(unittest.TestCase):
         self.assertTrue(sample["boundary"]["local_only_generated_artifacts_not_promoted"])
         self.assertEqual(sample["stale_evidence_causes"], [])
 
+    @pytest.mark.fast_smoke
     def test_sample_proposal_scope_report_validates_and_requires_apply_guardrails(self) -> None:
         report = self.samples["proposal_scope"]
         schema = self.schemas["proposal_scope"]

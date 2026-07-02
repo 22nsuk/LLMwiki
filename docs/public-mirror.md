@@ -66,22 +66,16 @@ allowlist exception back into the public mirror.
 
 ```bash
 make help
-make sync-public-policy
+make sync-derived
 make public-export
 make public-check
 ```
 
 Use `make help` for the compact operator index and
-`make sync-public-policy-check` in check-only contexts. These targets sync or
-check `ops/templates/public-mirror.gitignore`, not the full-vault root
-`.gitignore`. Use `make public-check-all` when the exported tree should run all
-tests rather than only the public marker tier. General lane-selection guidance
-lives in [development.md](development.md).
-
-## CBM Export
-
-`make cbm-export-public` builds a separate public-safe export for
-codebase-memory-mcp indexing. It prunes generated evidence directories such as
-`ops/reports/` and `ops/operator/` entirely and writes `CBM-EXPORT-MANIFEST.json`
-plus a root `.cbmignore`. It is intentionally separate from release evidence
-and public-check authority.
+`make sync-derived-check` in check-only contexts. The aggregate includes public
+policy template sync; use `make sync-public-policy` or
+`make sync-public-policy-check` only when debugging that public-specific slice.
+These public policy targets sync or check `ops/templates/public-mirror.gitignore`,
+not the full-vault root `.gitignore`. Use `make public-check-all` when the
+exported tree should run all tests rather than only the public marker tier.
+General lane-selection guidance lives in [development.md](development.md).

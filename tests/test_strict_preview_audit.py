@@ -7,6 +7,8 @@ import unittest
 from collections.abc import Sequence
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "tools" / "strict_preview_audit.py"
 STRICT_CANDIDATE_SELECT = "PTH201"
@@ -16,6 +18,8 @@ if MODULE_SPEC is None or MODULE_SPEC.loader is None:  # pragma: no cover
 STRICT_PREVIEW_AUDIT = importlib.util.module_from_spec(MODULE_SPEC)
 sys.modules[MODULE_SPEC.name] = STRICT_PREVIEW_AUDIT
 MODULE_SPEC.loader.exec_module(STRICT_PREVIEW_AUDIT)
+
+pytestmark = pytest.mark.schema_static_smoke
 
 
 class StrictPreviewAuditTests(unittest.TestCase):

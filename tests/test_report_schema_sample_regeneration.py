@@ -20,7 +20,11 @@ from tools.regenerate_report_schema_samples import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 
 
 def _assert_sample_matches(case: unittest.TestCase, actual: object, expected: object, sample_key: str) -> None:

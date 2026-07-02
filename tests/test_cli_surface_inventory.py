@@ -13,7 +13,12 @@ from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.default_test_boundary,
+]
 
 
 def fixed_context() -> RuntimeContext:
@@ -27,7 +32,6 @@ def _write_lifecycle_policy(vault: Path, *, include_status: bool = True) -> None
     modules = [
         {
             "canonical_module": "ops.scripts.core.sample_cli",
-            "path": "ops/scripts/core/sample_cli.py",
             "lifecycle": "report_generator",
             "install_state": "transitional_installed",
             "console_scripts": ["llmwiki-sample"],
@@ -37,7 +41,6 @@ def _write_lifecycle_policy(vault: Path, *, include_status: bool = True) -> None
         },
         {
             "canonical_module": "ops.scripts.core.retired_report",
-            "path": "ops/scripts/core/retired_report.py",
             "lifecycle": "report_generator",
             "install_state": "not_installed",
             "console_scripts": [],
@@ -50,7 +53,6 @@ def _write_lifecycle_policy(vault: Path, *, include_status: bool = True) -> None
         modules.append(
             {
                 "canonical_module": "ops.scripts.release.status_cli",
-                "path": "ops/scripts/release/status_cli.py",
                 "lifecycle": "make_only",
                 "install_state": "not_installed",
                 "console_scripts": [],

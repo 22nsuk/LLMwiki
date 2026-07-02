@@ -34,7 +34,11 @@ from ops.scripts.release.release_closeout_batch_manifest import (
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 
-pytestmark = [pytest.mark.public, pytest.mark.release_sealing]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.release_sealing,
+    pytest.mark.release_sealing_core,
+]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BATCH_MANIFEST_SCHEMA_PATH = (
@@ -226,6 +230,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
                 archive.writestr(info, path.read_bytes())
         return archive_path
 
+    @pytest.mark.release_closeout_regression
     def test_batch_manifest_finality_points_to_attestation_without_digest_ownership(
         self,
     ) -> None:

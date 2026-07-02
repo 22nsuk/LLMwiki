@@ -38,7 +38,7 @@ from tests.auto_improve_readiness_test_runtime import (
     fixed_context,
 )
 
-pytestmark = pytest.mark.slow
+pytestmark = [pytest.mark.slow, pytest.mark.runtime_hotspot_smoke]
 
 
 class _BlockFlatReadinessAlias(importlib.abc.MetaPathFinder):

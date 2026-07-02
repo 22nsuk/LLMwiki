@@ -7,7 +7,7 @@ import pytest
 from ops.scripts.core.policy_runtime import load_policy
 from tests.minimal_vault_runtime import REPO_ROOT
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 
 class SelectSubagentRungLadderTests(unittest.TestCase):

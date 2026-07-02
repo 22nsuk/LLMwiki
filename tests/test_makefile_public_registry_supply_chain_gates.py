@@ -10,7 +10,12 @@ from tests.makefile_static_helpers import (
     _target_block,
 )
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 
 
 def _assert_supply_chain_make_variables(case: unittest.TestCase, text: str) -> None:

@@ -185,7 +185,8 @@
         "today",
         "violations",
         "operator_inventory",
-        "script_lifecycle"
+        "script_lifecycle",
+        "cli_surface_inventory"
       ],
       "properties": {
         "status": {
@@ -231,6 +232,25 @@
             "path": { "type": "string", "minLength": 1 },
             "present": { "type": "boolean" },
             "schema_error_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "cli_surface_inventory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "module_count",
+            "unclassified_module_count",
+            "unresolved_module_count"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["pass", "fail"]
+            },
+            "module_count": { "type": "integer", "minimum": 0 },
+            "unclassified_module_count": { "type": "integer", "minimum": 0 },
+            "unresolved_module_count": { "type": "integer", "minimum": 0 }
           }
         }
       }

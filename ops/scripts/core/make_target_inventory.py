@@ -152,8 +152,12 @@ def build_report(
                 "ops/scripts/core/make_target_inventory.py",
                 "ops/scripts/core/anti_slop_admission_runtime.py",
                 "ops/scripts/core/make_target_operator_surface_runtime.py",
+                "ops/scripts/core/script_lifecycle_policy.py",
                 "ops/make-target-inventory-operator.json",
                 "ops/script-lifecycle-policy.json",
+                "ops/script-lifecycle-overrides.json",
+                "ops/script-output-surfaces.json",
+                "pyproject.toml",
                 "Makefile",
                 *[path for path in makefile_sources if path != "Makefile"],
             ],
@@ -163,6 +167,9 @@ def build_report(
                     *makefile_sources,
                     "ops/make-target-inventory-operator.json",
                     "ops/script-lifecycle-policy.json",
+                    "ops/script-lifecycle-overrides.json",
+                    "ops/script-output-surfaces.json",
+                    "pyproject.toml",
                 )
             },
         ),
@@ -215,6 +222,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--policy-path")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="validate the live Make target inventory without writing the diagnostic report",
+    )
     return parser.parse_args(argv)
 
 
@@ -222,8 +234,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     report = build_report(vault, policy_path=args.policy_path)
-    destination = write_report(vault, report, args.out)
-    print(display_path(vault, destination))
+    if args.check:
+        print(f"make_target_inventory: status={report['status']}")
+    else:
+        destination = write_report(vault, report, args.out)
+        print(display_path(vault, destination))
     return 0 if report["status"] in {"pass", "attention"} else 1
 
 

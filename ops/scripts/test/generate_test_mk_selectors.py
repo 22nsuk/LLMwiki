@@ -5,8 +5,9 @@ from pathlib import Path
 
 from ops.scripts.test.test_lane_registry_runtime import (
     load_registry,
-    pack_effective_selectors,
+    pack_deselects,
     pack_mark_expr,
+    pack_selection_mode,
     pack_selectors,
 )
 
@@ -27,9 +28,18 @@ PACK_VARIABLES: dict[str, str] = {
     "release_closeout_regression": "RELEASE_CLOSEOUT_REGRESSION_TESTS",
 }
 
-# Hybrid packs prepend a Make-owned marker expression before explicit selectors.
+# Marker-derived packs may reuse Make-owned marker expressions when mk/test.mk
+# already exposes the corresponding lane variable.
 PACK_MARK_EXPR_MAKE_VARIABLES: dict[str, str] = {
+    "fast_smoke": "PYTEST_FAST_SMOKE_MARK_EXPR",
+    "default_test_boundary": "PYTEST_DEFAULT_TEST_BOUNDARY_MARK_EXPR",
+    "runtime_hotspot_smoke": "PYTEST_RUNTIME_HOTSPOT_SMOKE_MARK_EXPR",
+    "schema_static_smoke": "PYTEST_SCHEMA_STATIC_SMOKE_MARK_EXPR",
+    "report_contract_core": "PYTEST_REPORT_CONTRACT_CORE_MARK_EXPR",
     "report_contract_all": "PYTEST_REPORT_CONTRACT_MARK_EXPR",
+    "release_sealing_core": "PYTEST_RELEASE_SEALING_CORE_MARK_EXPR",
+    "subprocess_checks": "PYTEST_SUBPROCESS_MARK_EXPR",
+    "release_closeout_regression": "PYTEST_RELEASE_CLOSEOUT_REGRESSION_MARK_EXPR",
 }
 
 DERIVED_ALIASES: dict[str, str] = {
@@ -54,27 +64,36 @@ def _format_selector_variable(
     return "\n".join(lines)
 
 
+def _format_mark_expr_prefix(mark_expr: str, mark_expr_variable: str | None) -> str:
+    if mark_expr_variable is not None:
+        return f'-m "$({mark_expr_variable})" \\'
+    return f'-m "{mark_expr}" \\'
+
+
 def render_test_selectors_mk(vault: Path) -> str:
     registry = load_registry(vault)
     blocks: list[str] = [GENERATED_HEADER.rstrip()]
 
     for pack_id, variable in PACK_VARIABLES.items():
         mark_expr_variable = PACK_MARK_EXPR_MAKE_VARIABLES.get(pack_id)
+        selection_mode = pack_selection_mode(registry, pack_id)
         mark_expr = pack_mark_expr(registry, pack_id)
-        if mark_expr_variable is not None or mark_expr:
-            selectors = pack_effective_selectors(registry, pack_id, vault=vault)
-        else:
-            selectors = pack_selectors(registry, pack_id)
-        if mark_expr_variable is not None:
-            registry_mark_expr = pack_mark_expr(registry, pack_id)
-            if not registry_mark_expr:
-                raise SystemExit(
-                    f"{pack_id} requires pytest_mark_expr in ops/test-lane-registry.json"
-                )
-            prefix = f'-m "$({mark_expr_variable})" \\'
-            blocks.append(_format_selector_variable(variable, selectors, prefix=prefix))
-        else:
-            blocks.append(_format_selector_variable(variable, selectors))
+        if selection_mode != "marker_expression":
+            raise SystemExit(
+                f"{pack_id} selector projection requires marker_expression mode; "
+                "non-pytest wrapper packs must stay out of PACK_VARIABLES"
+            )
+        if not mark_expr:
+            raise SystemExit(f"{pack_id} requires pytest_mark_expr in ops/test-lane-registry.json")
+        selectors = pack_selectors(registry, pack_id)
+        deselects = pack_deselects(registry, pack_id)
+        if selectors or deselects:
+            raise SystemExit(
+                f"{pack_id} selector projection is marker-derived; remove selectors/deselects "
+                "from ops/test-lane-registry.json"
+            )
+        prefix = _format_mark_expr_prefix(mark_expr, mark_expr_variable)
+        blocks.append(_format_selector_variable(variable, (), prefix=prefix))
         blocks.append("")
 
     for variable, value in DERIVED_ALIASES.items():

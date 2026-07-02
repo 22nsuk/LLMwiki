@@ -11,7 +11,7 @@ from ops.scripts.mechanism.planning_gate_validate import validate_run_dir
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 
 class RunTemplateTests(unittest.TestCase):

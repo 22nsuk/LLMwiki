@@ -6,6 +6,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.mechanism import mechanism_review_runtime
@@ -23,6 +25,8 @@ from tests.mechanism_review_test_utils import (
     write_session_report,
 )
 from tests.minimal_vault_runtime import mutate_policy
+
+pytestmark = pytest.mark.fast_smoke
 
 
 class MechanismReviewTest(unittest.TestCase):

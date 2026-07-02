@@ -23,13 +23,20 @@ complete.
 
 ## Code enforcement
 
-`make make-target-inventory` runs `ops/scripts/core/anti_slop_admission_runtime.py`
+`make make-target-inventory` writes the diagnostic Make inventory report, and
+`make make-target-inventory-check` runs the same live contract without rewriting
+that diagnostic. Both run `ops/scripts/core/anti_slop_admission_runtime.py`
 against `ops/make-target-inventory-operator.json` and `ops/script-lifecycle-policy.json`:
 
 - Operator inventory entries require `purpose` and `replacement`; each `target`
   must exist in the Makefile inventory.
 - Lifecycle modules require `rationale`; `replacement` is required except when
   `lifecycle` is `public_cli`.
+- Runnable script surfaces discovered from pyproject scripts, Make
+  `python -m ops.scripts...` calls, or direct fallback markers must resolve to
+  an `ops/scripts` file and have a lifecycle policy entry.
+- `ops/script-lifecycle-policy.json` is generated; manual lifecycle and
+  replacement decisions live in `ops/script-lifecycle-overrides.json`.
 - `removal_ready: true` requires `remove_after`; expired `remove_after` dates fail
   admission.
 - Schemas reference `gate_effect_vocabulary` via `$ref` rather than inline enums.
@@ -56,10 +63,11 @@ output until removal is safe.
 
 - Gate vocabulary: `ops/scripts/core/gate_effect_vocabulary.py`
 - Script lifecycle intent: `ops/script-lifecycle-policy.json`
-- Make target inventory: `make make-target-inventory` and
+- Make target inventory: `make make-target-inventory`,
+  `make make-target-inventory-check`, and
   `ops/make-target-inventory-operator.json`
-- Lane registry alignment: `ops/test-lane-registry.json` and
-  `make test-selectors-sync-check`
+- Lane registry and derived projection alignment: `ops/test-lane-registry.json`
+  and `make sync-derived-check`
 - Review scope manifest: `docs/REVIEW_SCOPE.md` is the tracked canonical
   reviewer inventory; `tmp/review-surface-manifest.json` is an intentionally
   ephemeral navigation aid from `make review-surface-manifest` and must not be

@@ -293,7 +293,7 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "description": "Public-surface or CI workflow boundaries changed; run static/public policy checks in addition to the relevant evidence refresh.",
         "targets": [
             "static",
-            "sync-public-policy",
+            "sync-derived",
             "test-report-contract-core",
             "generated-artifact-converge",
             "operator-release-summary",

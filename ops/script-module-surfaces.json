@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/script-module-surfaces.schema.json",
   "version": 1,
-  "description": "Contract for ops/scripts module roles. Direct-script entrypoints are sourced from the material output/fallback registry at ops/script-output-surfaces.json (direct_fallback_eligible=true with direct script fallback marker); stable import surfaces listed here must keep __all__ synchronized with exports.",
+  "description": "Generated contract for ops/scripts module surfaces. Stable import paths and exports are discovered from literal __all__ declarations, direct-script entrypoints are derived from the live material output/fallback surface scan, and roles are applied from ops/script-module-surface-overrides.json.",
   "stable_import_surfaces": [
     {
       "path": "ops/scripts/core/candidate_rule_runtime.py",

@@ -23,7 +23,11 @@ from ops.scripts.release.release_evidence_closeout_self_check import (
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 
-pytestmark = [pytest.mark.public, pytest.mark.release_sealing]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.release_sealing,
+    pytest.mark.release_sealing_core,
+]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-evidence-closeout-self-check.schema.json"

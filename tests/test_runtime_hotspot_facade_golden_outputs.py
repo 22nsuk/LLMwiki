@@ -59,7 +59,7 @@ from tests.test_release_evidence_dashboard import (
     fixed_context as dashboard_fixed_context,
 )
 
-pytestmark = pytest.mark.slow
+pytestmark = [pytest.mark.slow, pytest.mark.runtime_hotspot_smoke]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json"

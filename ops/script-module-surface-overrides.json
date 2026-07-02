@@ -1,0 +1,75 @@
+{
+  "$schema": "ops/schemas/script-module-surface-overrides.schema.json",
+  "version": 1,
+  "description": "Manual role overrides applied to the source-derived script module surface registry.",
+  "overrides": [
+    {
+      "path": "ops/scripts/core/candidate_rule_runtime.py",
+      "role": "internal_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/finalize_run.py",
+      "role": "cli_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_candidate_runtime.py",
+      "role": "internal_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_history_runtime.py",
+      "role": "internal_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_runtime.py",
+      "role": "internal_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_session_calibration_runtime.py",
+      "role": "internal_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_run_scaffold_runtime.py",
+      "role": "compatibility_facade"
+    },
+    {
+      "path": "ops/scripts/core/observability_artifacts_runtime.py",
+      "role": "compatibility_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/planning_gate_validate.py",
+      "role": "cli_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/promotion_gate.py",
+      "role": "cli_facade"
+    },
+    {
+      "path": "ops/scripts/registry/raw_intake_promotion_runtime.py",
+      "role": "compatibility_facade"
+    },
+    {
+      "path": "ops/scripts/core/registry_alignment_passes_runtime.py",
+      "role": "compatibility_facade"
+    },
+    {
+      "path": "ops/scripts/core/registry_pass_support_runtime.py",
+      "role": "compatibility_facade"
+    },
+    {
+      "path": "ops/scripts/core/registry_review_candidate_passes_runtime.py",
+      "role": "compatibility_facade"
+    },
+    {
+      "path": "ops/scripts/mechanism/run_mechanism_experiment_runtime.py",
+      "role": "compatibility_facade"
+    },
+    {
+      "path": "ops/scripts/core/validation_check_types_runtime.py",
+      "role": "internal_facade"
+    },
+    {
+      "path": "ops/scripts/eval/wiki_lint_registry_runtime.py",
+      "role": "compatibility_facade"
+    }
+  ]
+}

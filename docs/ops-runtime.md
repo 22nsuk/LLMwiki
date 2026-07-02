@@ -16,7 +16,7 @@ Make orchestration, and helper scripts.
 - `mk/release-authority.mk`: run-ready, sealed-run, and auto-promotion authority.
 - `mk/release-evidence.mk`: release evidence, closeout, archive, and smoke lanes.
 - `mk/release-learning.mk`: learning readiness, remediation, and session evidence.
-- `mk/public.mk`: public export and codebase-memory-mcp sidecar targets.
+- `mk/public.mk`: public export and public-check targets.
 - `mk/supply_chain.mk`: provenance, SBOM, OpenVEX, in-toto, and Sigstore surfaces.
 
 ## Script Layout
@@ -30,7 +30,7 @@ Make orchestration, and helper scripts.
 - `release/`: release evidence, external report lifecycle, sealing, and summaries.
 - `learning/`: learning claim, readiness signoff, remediation, and lesson surfaces.
 - `supply_chain/`: provenance, SBOM, advisory, OpenVEX, in-toto, and Sigstore.
-- `public/`: public export, public check, and CBM public export.
+- `public/`: public export, public check, and public-surface helpers.
 - `test/`: test execution summary and lane registry runtime.
 
 After editable install, lifecycle policy public CLIs are exposed as
@@ -52,6 +52,17 @@ General rule:
   the active authority set;
 - check-only or advisory scratch output lives under `tmp/`;
 - release packages, source-package extracts, and audit packs live under `build/`.
+
+Tracked source-derived projections, such as pytest marker registration, test
+selector projections, public policy templates, script output surfaces, script
+module surface exports/direct-entrypoint flags, release-governance lane
+projections, and report schema sample fixtures, converge through
+`make sync-derived`. The write aggregate also refreshes operator-local
+diagnostics such as Make target inventory. Use
+`make sync-derived-check` when a CI or review context must prove checkable
+tracked projections are current and validate inventory/operator metadata
+without rewriting files. This is separate from `make generated-artifact-converge`,
+which belongs to release/report finality evidence under generated report surfaces.
 
 Operator-facing `current` or reusable-evidence decisions should come from the
 objective lane checks that bind HEAD, source fingerprint, and domain-specific

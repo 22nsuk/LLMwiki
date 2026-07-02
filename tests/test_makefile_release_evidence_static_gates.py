@@ -11,16 +11,158 @@ from pathlib import Path
 import pytest
 
 from tests.makefile_static_helpers import (
+    MakeTargetContract,
+    _assert_assignment_values,
+    _assert_make_target_contracts,
     _makefile_text,
     _recipe_lines,
     _target_block,
 )
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 
 
 REPORT_CONTRACT_CLOSEOUT_POLICY = Path("ops/policies/report-contract-closeout.json")
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+_RELEASE_EVIDENCE_COHORT_ASSIGNMENTS = (
+    ("RELEASE_EVIDENCE_DASHBOARD_OUT", "ops/reports/release-evidence-dashboard.json"),
+    (
+        "RELEASE_EVIDENCE_DASHBOARD_CANDIDATE_OUT",
+        "tmp/release-evidence-dashboard.candidate.json",
+    ),
+    ("RELEASE_LANE_SUMMARY_OUT", "ops/reports/release-lane-summary.json"),
+    (
+        "RELEASE_LANE_SUMMARY_CANDIDATE_OUT",
+        "tmp/release-lane-summary.candidate.json",
+    ),
+    (
+        "RELEASE_CLEAN_BLOCKER_LEDGER_OUT",
+        "ops/reports/release-clean-blocker-ledger.json",
+    ),
+    (
+        "RELEASE_CLEAN_BLOCKER_LEDGER_CANDIDATE_OUT",
+        "tmp/release-clean-blocker-ledger.candidate.json",
+    ),
+    (
+        "RELEASE_RISK_TAXONOMY_MATRIX_OUT",
+        "ops/reports/release-risk-taxonomy-matrix.json",
+    ),
+    (
+        "RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT",
+        "ops/reports/release-risk-taxonomy-matrix.md",
+    ),
+    ("RELEASE_EVIDENCE_COHORT_OUT", "ops/reports/release-evidence-cohort.json"),
+    (
+        "RELEASE_EVIDENCE_COHORT_STAGING_OUT",
+        "tmp/release-evidence-cohort.candidate.json",
+    ),
+    (
+        "RELEASE_EVIDENCE_COHORT_DIAGNOSTIC_OUT",
+        "tmp/release-evidence-cohort-check.json",
+    ),
+    ("RELEASE_EVIDENCE_COHORT_POLICY", "allowed_divergence_with_explicit_risk"),
+    ("RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE", "embedded_currentness"),
+)
+
+_RELEASE_EVIDENCE_COHORT_BASE_COMMAND = (
+    '$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" '
+    '--out "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" '
+    '--profile "$(RELEASE_CLOSEOUT_PROFILE)" '
+    '--cohort-policy "$(RELEASE_EVIDENCE_COHORT_POLICY)" '
+    '--provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)"'
+)
+
+_RELEASE_EVIDENCE_COHORT_CHECK_COMMAND = (
+    '$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" '
+    '--out "$(RELEASE_EVIDENCE_COHORT_DIAGNOSTIC_OUT)" '
+    '--profile "$(RELEASE_CLOSEOUT_PROFILE)" '
+    "--cohort-policy strict_same_fingerprint "
+    '--provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)"'
+)
+
+_RELEASE_EVIDENCE_COHORT_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-evidence-dashboard",
+        phony=True,
+        required_tokens=(
+            '$(PYTHON) -m ops.scripts.release_evidence_dashboard --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_DASHBOARD_CANDIDATE_OUT)"',
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+    MakeTargetContract(
+        "release-evidence-dashboard-report",
+        phony=True,
+        required_tokens=(
+            '$(PYTHON) -m ops.scripts.release_evidence_dashboard --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_DASHBOARD_CANDIDATE_OUT)" --no-fail',
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+    MakeTargetContract(
+        "release-lane-summary",
+        phony=True,
+        required_tokens=(
+            '$(PYTHON) -m ops.scripts.release_lane_summary --vault "$(VAULT)" --out "$(RELEASE_LANE_SUMMARY_CANDIDATE_OUT)"',
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+    MakeTargetContract(
+        "release-clean-blocker-ledger",
+        phony=True,
+        required_tokens=(
+            '$(PYTHON) -m ops.scripts.release_clean_blocker_ledger --vault "$(VAULT)" --out "$(RELEASE_CLEAN_BLOCKER_LEDGER_CANDIDATE_OUT)"',
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+    MakeTargetContract(
+        "release-risk-taxonomy-matrix",
+        phony=True,
+        required_tokens=(
+            '$(PYTHON) -m ops.scripts.release_risk_taxonomy_matrix --vault "$(VAULT)"',
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+    MakeTargetContract(
+        "release-evidence-cohort",
+        phony=True,
+        required_tokens=(
+            _RELEASE_EVIDENCE_COHORT_BASE_COMMAND,
+            "ops.scripts.canonical_artifact_promote",
+        ),
+        forbidden_tokens=("cp ",),
+    ),
+    MakeTargetContract(
+        "release-evidence-cohort-report",
+        phony=True,
+        required_tokens=(
+            _RELEASE_EVIDENCE_COHORT_BASE_COMMAND,
+            "ops.scripts.canonical_artifact_promote",
+        ),
+        forbidden_tokens=("--require-clean-lane", "--fail-on-attention"),
+    ),
+    MakeTargetContract(
+        "release-evidence-cohort-preseal-refresh",
+        phony=True,
+        required_tokens=(
+            "--cohort-policy strict_same_fingerprint",
+            "ops.scripts.canonical_artifact_promote",
+        ),
+        forbidden_tokens=("--require-clean-lane", "--fail-on-attention"),
+    ),
+    MakeTargetContract(
+        "release-evidence-cohort-check",
+        required_tokens=(
+            _RELEASE_EVIDENCE_COHORT_CHECK_COMMAND,
+            "--require-clean-lane",
+        ),
+        forbidden_tokens=('$(RELEASE_EVIDENCE_COHORT_OUT)',),
+    ),
+)
 
 
 def _assert_ordered_subsequence(
@@ -1025,143 +1167,9 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
     def test_release_evidence_cohort_targets_exist(self) -> None:
         text = _makefile_text()
 
-        self.assertIn("release-evidence-cohort", _target_block(text, ".PHONY"))
-        self.assertIn("release-evidence-cohort-report", _target_block(text, ".PHONY"))
-        self.assertIn("release-evidence-cohort-preseal-refresh", _target_block(text, ".PHONY"))
-        self.assertIn("release-evidence-dashboard", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "release-evidence-dashboard-report", _target_block(text, ".PHONY")
-        )
-        self.assertIn("release-lane-summary", _target_block(text, ".PHONY"))
-        self.assertIn("release-clean-blocker-ledger", _target_block(text, ".PHONY"))
-        self.assertIn("release-risk-taxonomy-matrix", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "RELEASE_EVIDENCE_DASHBOARD_OUT ?= ops/reports/release-evidence-dashboard.json",
+        _assert_assignment_values(self, text, _RELEASE_EVIDENCE_COHORT_ASSIGNMENTS)
+        _assert_make_target_contracts(
+            self,
             text,
-        )
-        self.assertIn(
-            "RELEASE_EVIDENCE_DASHBOARD_CANDIDATE_OUT ?= tmp/release-evidence-dashboard.candidate.json",
-            text,
-        )
-        self.assertIn(
-            "RELEASE_LANE_SUMMARY_OUT ?= ops/reports/release-lane-summary.json", text
-        )
-        self.assertIn(
-            "RELEASE_LANE_SUMMARY_CANDIDATE_OUT ?= tmp/release-lane-summary.candidate.json",
-            text,
-        )
-        self.assertIn(
-            "RELEASE_CLEAN_BLOCKER_LEDGER_OUT ?= ops/reports/release-clean-blocker-ledger.json",
-            text,
-        )
-        self.assertIn(
-            "RELEASE_CLEAN_BLOCKER_LEDGER_CANDIDATE_OUT ?= tmp/release-clean-blocker-ledger.candidate.json",
-            text,
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_evidence_dashboard --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_DASHBOARD_CANDIDATE_OUT)"',
-            _target_block(text, "release-evidence-dashboard"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-evidence-dashboard"),
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_evidence_dashboard --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_DASHBOARD_CANDIDATE_OUT)" --no-fail',
-            _target_block(text, "release-evidence-dashboard-report"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-evidence-dashboard-report"),
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_lane_summary --vault "$(VAULT)" --out "$(RELEASE_LANE_SUMMARY_CANDIDATE_OUT)"',
-            _target_block(text, "release-lane-summary"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-lane-summary"),
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_clean_blocker_ledger --vault "$(VAULT)" --out "$(RELEASE_CLEAN_BLOCKER_LEDGER_CANDIDATE_OUT)"',
-            _target_block(text, "release-clean-blocker-ledger"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-clean-blocker-ledger"),
-        )
-        self.assertIn(
-            "RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.json",
-            text,
-        )
-        self.assertIn(
-            "RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.md",
-            text,
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_risk_taxonomy_matrix --vault "$(VAULT)"',
-            _target_block(text, "release-risk-taxonomy-matrix"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-risk-taxonomy-matrix"),
-        )
-        self.assertIn(
-            "RELEASE_EVIDENCE_COHORT_OUT ?= ops/reports/release-evidence-cohort.json",
-            text,
-        )
-        self.assertIn(
-            "RELEASE_EVIDENCE_COHORT_STAGING_OUT ?= tmp/release-evidence-cohort.candidate.json",
-            text,
-        )
-        self.assertIn(
-            "RELEASE_EVIDENCE_COHORT_DIAGNOSTIC_OUT ?= tmp/release-evidence-cohort-check.json",
-            text,
-        )
-        self.assertIn(
-            "RELEASE_EVIDENCE_COHORT_POLICY ?= allowed_divergence_with_explicit_risk",
-            text,
-        )
-        self.assertIn(
-            "RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE ?= embedded_currentness",
-            text,
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy "$(RELEASE_EVIDENCE_COHORT_POLICY)" --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)"',
-            _target_block(text, "release-evidence-cohort"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-evidence-cohort"),
-        )
-        cohort_report_block = _target_block(text, "release-evidence-cohort-report")
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy "$(RELEASE_EVIDENCE_COHORT_POLICY)" --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)"',
-            cohort_report_block,
-        )
-        self.assertIn("ops.scripts.canonical_artifact_promote", cohort_report_block)
-        self.assertNotIn("--require-clean-lane", cohort_report_block)
-        self.assertNotIn("--fail-on-attention", cohort_report_block)
-        preseal_refresh_block = _target_block(text, "release-evidence-cohort-preseal-refresh")
-        self.assertIn(
-            '--cohort-policy strict_same_fingerprint',
-            preseal_refresh_block,
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            preseal_refresh_block,
-        )
-        self.assertNotIn("--require-clean-lane", preseal_refresh_block)
-        self.assertNotIn("--fail-on-attention", preseal_refresh_block)
-        self.assertNotIn("cp ", _target_block(text, "release-evidence-cohort"))
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_DIAGNOSTIC_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy strict_same_fingerprint --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)"',
-            _target_block(text, "release-evidence-cohort-check"),
-        )
-        self.assertIn(
-            "--require-clean-lane", _target_block(text, "release-evidence-cohort-check")
-        )
-        self.assertNotIn(
-            "$(RELEASE_EVIDENCE_COHORT_OUT)",
-            _target_block(text, "release-evidence-cohort-check"),
+            _RELEASE_EVIDENCE_COHORT_TARGET_CONTRACTS,
         )

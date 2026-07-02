@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.core.artifact_io_runtime import (
     SEMANTIC_NOOP_ENVELOPE_FIELDS,
     ReportWriterKernelRequest,
@@ -20,6 +22,8 @@ from ops.scripts.core.artifact_io_runtime import (
     write_schema_backed_report,
     write_schema_validated_json,
 )
+
+pytestmark = pytest.mark.fast_smoke
 
 
 class ArtifactIoRuntimeTests(unittest.TestCase):

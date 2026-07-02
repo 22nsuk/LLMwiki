@@ -11,7 +11,11 @@ from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.test.ci_tier_lane_bridge import build_report
 from tests.minimal_vault_runtime import REPO_ROOT
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 
 
 def fixed_context() -> RuntimeContext:
