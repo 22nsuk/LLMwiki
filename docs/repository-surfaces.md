@@ -16,7 +16,7 @@ target explicitly binds them.
 | Surface | Purpose | Includes | Excludes | Authority | Generate | Verify |
 | --- | --- | --- | --- | --- | --- | --- |
 | Full local vault | Private operator workspace and canonical corpus operation. | Public code/ops plus local `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`, and generated evidence. | Nothing by default, but binary raw is read-only and generated evidence is not hand-edited source. | `AGENTS.md` plus `AGENTS.local.md` for local-only work. | Normal Git checkout plus local operator state. | Task-specific gates such as `make check`, `make release-check`, or the runbook target in use. |
-| Public mirror/export | Corpus-free code/ops runtime for public review, tests, CI, and optional CBM indexing. | `docs/`, `ops/`, `tests/`, `tools/`, `mk/`, `.codex/agents/`, `.github/`, and root public documents/config. | `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`, `ops/operator/`, `ops/reports/`, `tmp/`, and private inventory files. | `ops/scripts/public/public_surface_policy.py`. | `make sync-public-policy` and `make public-export`. | `make sync-public-policy-check`, `make public-check`, or `make public-check-all`. |
+| Public mirror/export | Corpus-free code/ops runtime for public review, tests, and CI. | `docs/`, `ops/`, `tests/`, `tools/`, `mk/`, `.codex/agents/`, `.github/`, and root public documents/config. | `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`, `ops/operator/`, `ops/reports/`, `tmp/`, and private inventory files. | `ops/scripts/public/public_surface_policy.py`. | `make sync-derived` and `make public-export`. | `make sync-derived-check`, `make public-check`, or `make public-check-all`. |
 | Release source ZIP | Normalized source package for release replay, package smoke, sealing, and provenance sidecars. | The policy-approved source package contents and release metadata needed for replay. | Private corpus, local active reports, scratch state, and generated evidence not intentionally packaged as sidecars. | Staged manifests under `build/release/`, especially run-ready, sealed-run-ready, and auto-promotion-ready manifests. | `make release-run-ready`, then `make release-sealed-run-ready` when sealing is required. | `make release-run-ready-check`, `make release-sealed-run-ready-check`, and `make release-auto-promotion-ready-check`. |
 
 ## Full Local Vault
@@ -48,13 +48,9 @@ Root `requirements.txt` and `requirements-dev.txt` are intentionally retired
 and are not public-export inputs.
 
 Use `docs/public-mirror.md` for public boundary details and commands. Use
-`make sync-public-policy` when the public boundary changes, and use
+`make sync-derived` when the public boundary changes, and use
 `make public-export` or `make public-check` when you need materialized export
 evidence.
-
-CBM indexing uses a separate public-safe export built by `make cbm-index-public`
-or the lower-level CBM targets. That export is a navigation aid, not release
-authority.
 
 For source review handoff, use `make review-archive-clean`. It clears local
 Python caches and scratch candidate JSON before running the clean
@@ -146,7 +142,7 @@ When a change affects repository boundaries, check the owner surface first:
 
 - Public membership or export behavior: update
   `ops/scripts/public/public_surface_policy.py`, relevant public docs, and
-  public export tests, then run `make sync-public-policy`.
+  public export tests, then run `make sync-derived`.
 - Release package or authority behavior: update the owning release script,
   schema, Make target, and tests, then use the staged release checks in
   `docs/release.md`.

@@ -107,7 +107,8 @@ public mirror에서 당신의 기본 역할은 **runtime maintainer** 또는 **m
 1. `make dev-install`
 2. `make static`
 3. `make test`; full-suite 요청이면 `make test-all`, focused selector 검증이면 `.venv/bin/python -m pytest tests/...`
-4. 새 public 파일, 새 public prefix, 공개/비공개 경계를 바꾸는 변경이면 `make sync-public-policy`
+4. source-derived projection을 바꾸는 변경이면 `make sync-derived`; check-only 맥락이면 `make sync-derived-check`
+   - 새 public 파일, 새 public prefix, 공개/비공개 경계를 바꾸는 변경은 이 안의 `sync-public-policy`까지 포함해 마무리한다.
 5. 필요하면 `make public-export`
 6. 공개 미러 자체를 재검증할 때 `make public-check`
 
@@ -121,25 +122,6 @@ full local vault가 있을 때만 추가로:
 - repo-shared ladder와 role intent는 유지해야 한다.
 - 실제 rung 선택은 `ops/scripts/core/select_subagent_rung.py`가 맡고, `.toml`은 fallback instruction surface다.
 
-### D. Optional codebase-memory-mcp sidecar
-
-`codebase-memory-mcp`가 operator-local binary 또는 MCP server로 제공되는 세션에서는
-이를 **읽기 우선 code/ops 구조 색인 hint**로 사용할 수 있다.
-
-운영 규칙:
-- 표준 index source는 full-vault root가 아니라 `make cbm-index-public`이 만드는 public-safe export다.
-- repo 수정 후 graph를 신뢰하기 전에는 `make cbm-index-public`로 재색인한다. CBM은 working tree를 자동 감시하지 않는다.
-- snippet/search 결과가 `CBM_PUBLIC_OUT` cache 경로를 반환하면 같은 relative path의 repo 원본 파일로 매핑해 수정한다.
-- 구조/영향 범위 질문에서는 broad grep/read 전에 `cbm-schema-public`, `cbm-architecture-public`, graph/search/trace/detect_changes 계열 query를 먼저 볼 수 있다.
-- 새 세션에서 sidecar 자체가 유효한지 확인해야 하면 `make cbm-smoke-public`로 public-safe export, index, schema, architecture, fixed search probe를 한 번에 검증할 수 있다.
-- graph 결과와 `CALLS`/`WRITES`/`CONFIGURES` 같은 edge는 candidate link, not proof이며, live file read와 Make/Pytest gate로 확인한다.
-- `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`, `ops/operator/`, `ops/reports/`는 index/query 대상이 아니다.
-- `codebase-memory-mcp install`의 자동 agent config/hook 설정이나 blocking hook으로 Read/Grep/Edit workflow를 막지 않는다.
-- 이 sidecar는 dependency, CI/release gate, promotion authority, canonical evidence, 또는 assistant-specific workflow requirement가 아니다.
-- 자세한 사용법은 `docs/codebase-memory-mcp.md`를 본다.
-
----
-
 ## 5. Non-Negotiable Rules
 
 1. public mirror에서 private corpus 존재를 전제로 작업하지 않는다.
@@ -150,7 +132,7 @@ full local vault가 있을 때만 추가로:
 5. contract가 바뀌면 관련 docs / tests / schema / policy를 같이 갱신한다.
 6. `.codex/agents/` 수정 시 role intent, ladder, routing contract를 함께 본다.
 7. 절대경로, temp workspace path, local state leak를 public surface에 남기지 않는다.
-8. 새 public 파일이나 공개 경계를 바꾸는 변경은 `make sync-public-policy`까지 포함해 마무리한다.
+8. 새 public 파일이나 공개 경계를 바꾸는 변경은 `make sync-derived`의 public policy sync까지 포함해 마무리한다.
 9. reusable automation 또는 repo hygiene follow-up을 발견하면 closeout 전에 observation artifact를 남긴다.
    - mechanism run이면 `runs/<run-id>/improvement-observations.json`
    - run과 무관한 standalone maintenance task면 `ops/reports/task-improvement-observations/<task-id>/improvement-observations.json`

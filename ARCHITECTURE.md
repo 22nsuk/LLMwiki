@@ -64,7 +64,6 @@ between the full local vault, public export, and release source ZIP, see
 | What does a report contain? | `ops/schemas/*.json` |
 | How are scripts organized? | `docs/ops-runtime.md` |
 | What may agents do? | `AGENTS.md` and `AGENTS.local.md` |
-| How is CBM used? | `docs/codebase-memory-mcp.md` |
 
 ## Surface Boundaries
 

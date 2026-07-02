@@ -15,7 +15,7 @@ from ops.scripts.public.public_surface_policy import (
 )
 from ops.scripts.public.public_surface_snapshot import build_report
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 
 def fixed_context() -> RuntimeContext:
