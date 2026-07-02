@@ -6,17 +6,117 @@ import unittest
 import pytest
 
 from tests.makefile_static_helpers import (
+    MakeTargetContract,
+    _assert_assignment_values,
+    _assert_make_target_contracts,
     _assert_recipe_contains_tokens,
     _makefile_text,
     _recipe_lines,
     _target_block,
 )
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 
 
 def _phony_targets(text: str) -> list[str]:
     return _target_block(text, ".PHONY").replace(".PHONY:", "").split()
+
+
+_RELEASE_RUN_READY_CURRENT_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-run-ready",
+        phony=True,
+        required_tokens=(
+            "$(MAKE) release-run-ready-plan",
+            "ops.scripts.release_run_ready",
+            '--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+            '--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"',
+            '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-run-ready-plan",
+        phony=True,
+        required_tokens=(
+            "--plan",
+            '--plan-out "$(RELEASE_RUN_READY_PLAN_OUT)"',
+            '--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+            '--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"',
+            '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-run-ready-plan-check",
+        phony=True,
+        required_tokens=(
+            "--require-ready",
+            '--plan-out "$(RELEASE_RUN_READY_PLAN_CHECK_OUT)"',
+            '--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+            '--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"',
+            '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-run-ready-check",
+        phony=True,
+        required_tokens=(
+            "ops.scripts.release_run_manifest",
+            '--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+            '--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"',
+            '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-test-current",
+        exact_recipe=(
+            "$(MAKE) static",
+            "$(MAKE) report-schema-samples-check",
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
+            "$(MAKE) test-execution-summary-current-or-refresh",
+        ),
+        forbidden_tokens=(
+            "$(PYTHON) -m pytest $(PYTEST_SERIAL_FLAGS)",
+            "$(MAKE) generated-artifact-converge",
+        ),
+    ),
+    MakeTargetContract(
+        "release-public-current",
+        exact_recipe=("$(MAKE) public-check-summary-current-or-refresh",),
+    ),
+)
+
+_RELEASE_RUN_READY_ASSIGNMENTS = (
+    ("RELEASE_RUN_READY_PLAN_OUT", "build/release/release-run-ready-plan.json"),
+    ("RELEASE_RUN_READY_PLAN_CHECK_OUT", "tmp/release-run-ready-plan-check.json"),
+)
+
+_RELEASE_SEALED_RUN_READY_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-sealed-run-ready-plan",
+        phony=True,
+        required_tokens=(
+            "ops.scripts.release_evidence_planner",
+            "--stage sealed-run-ready",
+        ),
+    ),
+    MakeTargetContract(
+        "release-sealed-run-ready",
+        required_tokens=(
+            "$(MAKE) release-sealed-run-ready-plan",
+            "$(MAKE) release-evidence-closeout-sealed-sidecars",
+            "ops.scripts.release_sealed_run_manifest",
+        ),
+        forbidden_tokens=(
+            "release-run-ready-ensure",
+            "$(MAKE) release-evidence-closeout-sealed-core-sidecars",
+        ),
+    ),
+)
 
 
 _AUTO_PROMOTION_PHONY_TARGETS = (
@@ -449,76 +549,26 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self,
     ) -> None:
         text = _makefile_text()
-        phony_block = _target_block(text, ".PHONY")
         phony_targets = _phony_targets(text)
 
-        self.assertIn("release-run-ready", phony_block)
-        self.assertIn("release-run-ready-plan", phony_block)
-        self.assertIn("release-run-ready-plan-check", phony_block)
-        self.assertIn("release-run-ready-check", phony_block)
         self.assertNotIn("release-run-ready-ensure", phony_targets)
-        self.assertIn("RELEASE_RUN_READY_PLAN_OUT ?= build/release/release-run-ready-plan.json", text)
-        self.assertIn("RELEASE_RUN_READY_PLAN_CHECK_OUT ?= tmp/release-run-ready-plan-check.json", text)
-
-        run_ready_block = _target_block(text, "release-run-ready")
-        run_ready_plan_block = _target_block(text, "release-run-ready-plan")
-        run_ready_plan_check_block = _target_block(text, "release-run-ready-plan-check")
-        run_ready_check_block = _target_block(text, "release-run-ready-check")
-        self.assertIn("$(MAKE) release-run-ready-plan", run_ready_block)
-        self.assertIn("ops.scripts.release_run_ready", run_ready_block)
-        self.assertIn('--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"', run_ready_block)
-        self.assertIn('--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"', run_ready_block)
-        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', run_ready_block)
-        self.assertIn("--plan", run_ready_plan_block)
-        self.assertIn('--plan-out "$(RELEASE_RUN_READY_PLAN_OUT)"', run_ready_plan_block)
-        self.assertIn('--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"', run_ready_plan_block)
-        self.assertIn('--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"', run_ready_plan_block)
-        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', run_ready_plan_block)
-        self.assertIn("--require-ready", run_ready_plan_check_block)
-        self.assertIn('--plan-out "$(RELEASE_RUN_READY_PLAN_CHECK_OUT)"', run_ready_plan_check_block)
-        self.assertIn('--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"', run_ready_plan_check_block)
-        self.assertIn('--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"', run_ready_plan_check_block)
-        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', run_ready_plan_check_block)
-        self.assertIn("ops.scripts.release_run_manifest", run_ready_check_block)
-        self.assertIn('--distribution-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"', run_ready_check_block)
-        self.assertIn('--source-package-smoke "$(SOURCE_PACKAGE_SMOKE_OUT)"', run_ready_check_block)
-        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', run_ready_check_block)
-
-        self.assertEqual(
-            _recipe_lines(text, "release-test-current"),
-            [
-                "$(MAKE) static",
-                "$(MAKE) report-schema-samples-check",
-                "$(MAKE) test-execution-summary-full-current-or-refresh",
-                "$(MAKE) test-execution-summary-current-or-refresh",
-            ],
+        _assert_assignment_values(self, text, _RELEASE_RUN_READY_ASSIGNMENTS)
+        _assert_make_target_contracts(
+            self,
+            text,
+            _RELEASE_RUN_READY_CURRENT_TARGET_CONTRACTS,
         )
-        self.assertEqual(
-            _recipe_lines(text, "release-public-current"),
-            ["$(MAKE) public-check-summary-current-or-refresh"],
-        )
-        release_test_current_block = _target_block(text, "release-test-current")
-        self.assertNotIn("$(PYTHON) -m pytest $(PYTEST_SERIAL_FLAGS)", release_test_current_block)
-        self.assertNotIn("$(MAKE) generated-artifact-converge", release_test_current_block)
 
     def test_release_sealed_run_ready_targets_use_planner_and_sidecars(self) -> None:
         text = _makefile_text()
         phony_targets = _phony_targets(text)
 
-        self.assertIn("release-sealed-run-ready-plan", _target_block(text, ".PHONY"))
         self.assertNotIn("release-sealed-run-ready-ensure", phony_targets)
-        sealed_plan_block = _target_block(text, "release-sealed-run-ready-plan")
-        self.assertIn("ops.scripts.release_evidence_planner", sealed_plan_block)
-        self.assertIn("--stage sealed-run-ready", sealed_plan_block)
-        sealed_run_ready_block = _target_block(text, "release-sealed-run-ready")
-        self.assertIn("$(MAKE) release-sealed-run-ready-plan", sealed_run_ready_block)
-        self.assertIn("$(MAKE) release-evidence-closeout-sealed-sidecars", sealed_run_ready_block)
-        self.assertNotIn("release-run-ready-ensure", sealed_run_ready_block)
-        self.assertNotIn(
-            "$(MAKE) release-evidence-closeout-sealed-core-sidecars",
-            sealed_run_ready_block,
+        _assert_make_target_contracts(
+            self,
+            text,
+            _RELEASE_SEALED_RUN_READY_TARGET_CONTRACTS,
         )
-        self.assertIn("ops.scripts.release_sealed_run_manifest", sealed_run_ready_block)
 
     def test_release_auto_promotion_preflight_and_preseal_targets_preserve_ordered_gates(
         self,

@@ -5,6 +5,8 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from ops.scripts.core.artifact_freshness_payload_runtime import (
     embed_artifact_envelope_metadata,
 )
@@ -40,6 +42,8 @@ from ops.scripts.mechanism.next_run_repair_queue_runtime import (
     open_carry_forward_decisions,
 )
 from tests.test_mechanism_assess import seed_policy
+
+pytestmark = pytest.mark.runtime_hotspot_smoke
 
 
 def _carry_forward_decision(**overrides: object) -> dict[str, object]:

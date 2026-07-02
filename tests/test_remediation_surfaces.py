@@ -22,7 +22,11 @@ from ops.scripts.test.generate_release_governance_from_lane_registry import (
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.default_test_boundary,
+]
 
 
 class RemediationSurfaceTests(unittest.TestCase):

@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.mechanism.mechanism_review_history_runtime import (
     group_snapshots_by_targets,
@@ -18,6 +20,8 @@ from tests.mechanism_review_test_utils import (
     seed_review_vault,
     write_json,
 )
+
+pytestmark = pytest.mark.fast_smoke
 
 
 class MechanismReviewHistoryRuntimeTests(unittest.TestCase):

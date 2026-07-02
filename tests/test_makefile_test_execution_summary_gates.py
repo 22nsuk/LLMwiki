@@ -18,7 +18,12 @@ from tests.makefile_static_helpers import (
     _target_block,
 )
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

@@ -297,7 +297,11 @@
           "then": {
             "required": [
               "pytest_mark_expr"
-            ]
+            ],
+            "properties": {
+              "selectors": false,
+              "deselects": false
+            }
           }
         },
         {

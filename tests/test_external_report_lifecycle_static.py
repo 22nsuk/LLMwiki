@@ -13,7 +13,7 @@ from ops.scripts.release.external_report_lifecycle_runtime import (
 )
 from tests.minimal_vault_runtime import REPO_ROOT
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 
 def _load_json(path: Path) -> dict:

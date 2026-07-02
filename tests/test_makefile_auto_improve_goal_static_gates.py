@@ -14,7 +14,12 @@ from tests.makefile_static_helpers import (
     _target_block,
 )
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 
 DOCS_SELF_IMPROVEMENT_RUNTIME = Path("docs/self-improvement-runtime.md")
 

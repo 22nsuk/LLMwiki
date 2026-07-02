@@ -18,7 +18,7 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "clean-fixture-regeneration-guard.schema.json"
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 
 def fixed_context() -> RuntimeContext:

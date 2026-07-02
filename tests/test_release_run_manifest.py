@@ -28,7 +28,11 @@ from ops.scripts.release.release_run_manifest import (
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
-pytestmark = pytest.mark.public
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.release_sealing,
+    pytest.mark.release_sealing_core,
+]
 
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-run-manifest.schema.json"

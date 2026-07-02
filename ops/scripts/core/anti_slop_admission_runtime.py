@@ -16,6 +16,7 @@ from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 
 OPERATOR_INVENTORY_PATH = "ops/make-target-inventory-operator.json"
 SCRIPT_LIFECYCLE_POLICY_PATH = "ops/script-lifecycle-policy.json"
+CLI_SURFACE_INVENTORY_SURFACE = "ops/scripts#cli-surface-inventory"
 CALENDAR_DATE_RE = r"^\d{4}-\d{2}-\d{2}$"
 
 
@@ -38,6 +39,13 @@ def _parse_calendar_date(value: object) -> dt.date | None:
 
 def _non_empty(value: object) -> str:
     return str(value or "").strip()
+
+
+def _path_from_canonical_module(canonical_module: str) -> str:
+    module = _non_empty(canonical_module)
+    if not module.startswith("ops.scripts."):
+        return ""
+    return f"{module.replace('.', '/')}.py"
 
 
 def _violation(surface: str, field: str, message: str) -> dict[str, str]:
@@ -112,6 +120,7 @@ def validate_script_lifecycle_admission(
     payload: dict[str, Any],
     *,
     today: dt.date,
+    vault: Path | None = None,
 ) -> list[dict[str, str]]:
     violations: list[dict[str, str]] = []
     modules = payload.get("modules", [])
@@ -130,6 +139,24 @@ def validate_script_lifecycle_admission(
             continue
         canonical = _non_empty(module.get("canonical_module")) or f"modules[{index}]"
         surface = f"{SCRIPT_LIFECYCLE_POLICY_PATH}#{canonical}"
+        derived_path = _path_from_canonical_module(canonical)
+        stored_path = _non_empty(module.get("path"))
+        if stored_path and stored_path != derived_path:
+            violations.append(
+                _violation(
+                    surface,
+                    "path",
+                    f"path `{stored_path}` does not match canonical module path `{derived_path}`",
+                )
+            )
+        if vault is not None and derived_path and not (vault / derived_path).is_file():
+            violations.append(
+                _violation(
+                    surface,
+                    "canonical_module",
+                    f"canonical module path `{derived_path}` does not exist",
+                )
+            )
         if not _non_empty(module.get("rationale")):
             violations.append(_violation(surface, "rationale", "rationale is required"))
         if not _non_empty(module.get("replacement")) and module.get("lifecycle") != "public_cli":
@@ -152,6 +179,43 @@ def validate_script_lifecycle_admission(
     return violations
 
 
+def _cli_surface_inventory_report(
+    vault: Path,
+    *,
+    context: RuntimeContext,
+) -> dict[str, Any]:
+    from ops.scripts.core.cli_surface_inventory import build_report
+
+    return build_report(vault, context=context)
+
+
+def _cli_surface_inventory_violations(report: dict[str, Any]) -> list[dict[str, str]]:
+    violations: list[dict[str, str]] = []
+    for module in report.get("unclassified_modules", []):
+        module_name = _non_empty(module)
+        if not module_name:
+            continue
+        violations.append(
+            _violation(
+                f"{SCRIPT_LIFECYCLE_POLICY_PATH}#{module_name}",
+                "canonical_module",
+                "runnable script surface is missing lifecycle policy classification",
+            )
+        )
+    for module in report.get("unresolved_modules", []):
+        module_name = _non_empty(module)
+        if not module_name:
+            continue
+        violations.append(
+            _violation(
+                f"{CLI_SURFACE_INVENTORY_SURFACE}#{module_name}",
+                "module_path",
+                "runnable script surface could not resolve to an ops/scripts file",
+            )
+        )
+    return violations
+
+
 def evaluate_anti_slop_admission(
     vault: Path,
     *,
@@ -161,6 +225,11 @@ def evaluate_anti_slop_admission(
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     today = runtime_context.today()
     violations: list[dict[str, str]] = []
+    cli_surface_inventory = _cli_surface_inventory_report(
+        vault.resolve(),
+        context=runtime_context,
+    )
+    violations.extend(_cli_surface_inventory_violations(cli_surface_inventory))
 
     lifecycle_path = vault / SCRIPT_LIFECYCLE_POLICY_PATH
     lifecycle_payload = _read_json_object(lifecycle_path)
@@ -175,7 +244,11 @@ def evaluate_anti_slop_admission(
             for error in lifecycle_schema_errors
         )
         violations.extend(
-            validate_script_lifecycle_admission(lifecycle_payload, today=today)
+            validate_script_lifecycle_admission(
+                lifecycle_payload,
+                today=today,
+                vault=vault.resolve(),
+            )
         )
 
     operator_path = vault / OPERATOR_INVENTORY_PATH
@@ -212,5 +285,15 @@ def evaluate_anti_slop_admission(
             "path": SCRIPT_LIFECYCLE_POLICY_PATH,
             "present": lifecycle_path.is_file(),
             "schema_error_count": len(lifecycle_schema_errors),
+        },
+        "cli_surface_inventory": {
+            "status": cli_surface_inventory.get("status", "fail"),
+            "module_count": int(cli_surface_inventory.get("summary", {}).get("module_count", 0)),
+            "unclassified_module_count": int(
+                cli_surface_inventory.get("summary", {}).get("unclassified_module_count", 0)
+            ),
+            "unresolved_module_count": int(
+                cli_surface_inventory.get("summary", {}).get("unresolved_module_count", 0)
+            ),
         },
     }

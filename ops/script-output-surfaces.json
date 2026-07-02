@@ -217,6 +217,17 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/core/script_module_surfaces.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/core/script_output_surfaces.py",
       "classification": "repo_artifact",
       "output_options": [
@@ -902,17 +913,6 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": true,
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
-    },
-    {
-      "path": "ops/scripts/public/cbm_public_export.py",
-      "classification": "user_export",
-      "output_options": [
-        "--out"
-      ],
-      "references_resolve_output_path": false,
-      "references_resolve_repo_output_path": false,
-      "direct_fallback_eligible": true,
-      "reason": "output option is an intentional user export surface"
     },
     {
       "path": "ops/scripts/public/clean_fixture_regeneration_guard.py",

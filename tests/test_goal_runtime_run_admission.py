@@ -21,7 +21,11 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-runtime-run-admission.schema.json"
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.runtime_hotspot_smoke,
+]
 
 
 def fixed_context() -> RuntimeContext:

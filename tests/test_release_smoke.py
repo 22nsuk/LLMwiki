@@ -662,6 +662,7 @@ class ReleaseSmokeTest(unittest.TestCase):
         self.assertEqual(budget["top_offenders"][0]["archive_path"], "LLMwiki/ops/scripts/tool.py")
         self.assertEqual(budget["platform_path_diagnostics"]["status"], "pass")
 
+    @pytest.mark.fast_smoke
     def test_build_smoke_commands_match_release_gate_profiles(self) -> None:
         vault = Path("/tmp/release-vault")
         commands = build_smoke_commands(vault, "/usr/bin/python3", profile=FULL_PROFILE)
@@ -977,6 +978,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             self.assertIn('"summary_mode": "executed"', rendered)
             self.assertIn("requested_archive_path", rendered)
 
+    @pytest.mark.fast_smoke
     def test_run_smoke_commands_captures_returncodes_and_tails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
@@ -1035,6 +1037,7 @@ class ReleaseSmokeTest(unittest.TestCase):
         self.assertTrue(timeout_result["timed_out"])
         self.assertEqual(timeout_result["termination_reason"], "timeout")
 
+    @pytest.mark.fast_smoke
     def test_build_report_uses_runtime_context_and_sanitizes_ephemeral_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -1465,6 +1468,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             self.assertEqual(destination, (vault / FAST_DEFAULT_REPORT_OUT).resolve())
             self.assertEqual(json.loads(destination.read_text(encoding="utf-8")), report)
 
+    @pytest.mark.fast_smoke
     def test_main_exits_with_report_status_and_prints_written_destination(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

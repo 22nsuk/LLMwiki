@@ -12,7 +12,7 @@ from ops.scripts.core.compatibility_alias_deprecation import build_report
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 
 def fixed_context() -> RuntimeContext:

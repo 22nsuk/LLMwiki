@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.mechanism.mutation_proposal_runtime import build_report
@@ -20,6 +22,8 @@ from tests.mutation_proposal_test_runtime import (
     write_json,
     write_json_exact,
 )
+
+pytestmark = pytest.mark.runtime_hotspot_smoke
 
 
 class MutationProposalPromotionTest(unittest.TestCase):

@@ -3,6 +3,9 @@ from __future__ import annotations
 import ast
 import json
 import re
+import subprocess
+import sys
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
@@ -10,8 +13,13 @@ from pathlib import Path
 import pytest
 
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.script_module_surfaces import (
+    build_contract as build_script_module_surface_contract,
+    direct_script_entrypoint_paths,
+    literal_all_exports,
+)
 
-pytestmark = pytest.mark.public
+pytestmark = [pytest.mark.public, pytest.mark.fast_smoke]
 
 
 SCRIPTS_DIR = Path("ops/scripts")
@@ -31,6 +39,7 @@ PUBLIC_CLI_COMMANDS = {
     "llm-wiki-run-mechanism-experiment",
     "llm-wiki-status",
 }
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load_contract() -> dict:
@@ -42,14 +51,7 @@ def _load_lifecycle_policy() -> dict:
 
 
 def _fallback_eligible_paths() -> set[str]:
-    payload = json.loads(SCRIPT_OUTPUT_SURFACES.read_text(encoding="utf-8"))
-    surfaces = payload.get("surfaces", [])
-    return {
-        str(item["path"])
-        for item in surfaces
-        if item.get("direct_fallback_eligible")
-        and "direct script fallback" in Path(item["path"]).read_text(encoding="utf-8")
-    }
+    return direct_script_entrypoint_paths(REPO_ROOT)
 
 
 def _project_scripts() -> dict[str, str]:
@@ -82,21 +84,16 @@ def _script_files() -> set[str]:
     }
 
 
+def _path_from_canonical_module(canonical_module: str) -> str:
+    return f"{canonical_module.replace('.', '/')}.py"
+
+
 def _module_tree(path: Path) -> ast.Module:
     return ast.parse(path.read_text(encoding="utf-8"), filename=path.as_posix())
 
 
 def _literal_all(path: Path) -> list[str] | None:
-    for node in _module_tree(path).body:
-        if not isinstance(node, ast.Assign):
-            continue
-        if not any(isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets):
-            continue
-        value = ast.literal_eval(node.value)
-        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-            raise AssertionError(f"{path.as_posix()} has non-literal __all__")
-        return list(value)
-    return None
+    return literal_all_exports(path.resolve(), vault=REPO_ROOT)
 
 
 def _top_level_bindings(path: Path) -> set[str]:
@@ -123,6 +120,25 @@ def _top_level_bindings(path: Path) -> set[str]:
     return bindings
 
 
+def _run_script_module_surfaces_check(stored: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ops.scripts.script_module_surfaces",
+            "--vault",
+            ".",
+            "--stored",
+            stored.as_posix(),
+            "--check",
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
 class ScriptModuleSurfaceContractTests(unittest.TestCase):
     def test_contract_schema_validates(self) -> None:
         contract = _load_contract()
@@ -130,29 +146,106 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
 
         self.assertEqual(validate_with_schema(contract, schema), [])
 
+    def test_contract_matches_live_source_derived_module_surfaces(self) -> None:
+        contract = _load_contract()
+        expected = build_script_module_surface_contract(
+            REPO_ROOT, stored_contract=contract
+        )
+
+        self.maxDiff = None
+        self.assertEqual(contract, expected)
+
+    def test_contract_check_passes_for_current_registry_without_writing(self) -> None:
+        before = SCRIPT_MODULE_SURFACES.read_bytes()
+
+        result = _run_script_module_surfaces_check(SCRIPT_MODULE_SURFACES)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("ops/script-module-surfaces.json is current", result.stdout)
+        self.assertEqual(SCRIPT_MODULE_SURFACES.read_bytes(), before)
+
+    def test_contract_check_fails_on_stale_exports(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stored = Path(temp_dir) / "script-module-surfaces.json"
+            payload = _load_contract()
+            surface = next(
+                item
+                for item in payload["stable_import_surfaces"]
+                if len(item["exports"]) > 1
+            )
+            surface["exports"] = list(reversed(surface["exports"]))
+            stored.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            result = _run_script_module_surfaces_check(stored)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("script-module-surfaces contract is stale", result.stderr)
+        self.assertIn(surface["path"], result.stderr)
+
+    def test_contract_check_fails_on_stale_direct_entrypoint_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stored = Path(temp_dir) / "script-module-surfaces.json"
+            payload = _load_contract()
+            surface = next(
+                item
+                for item in payload["stable_import_surfaces"]
+                if item["direct_script_entrypoint"]
+            )
+            surface["direct_script_entrypoint"] = False
+            stored.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            result = _run_script_module_surfaces_check(stored)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("script-module-surfaces contract is stale", result.stderr)
+        self.assertIn(surface["path"], result.stderr)
+
+    def test_source_derived_contract_requires_manually_curated_role_for_new_stable_surface(
+        self,
+    ) -> None:
+        contract = _load_contract()
+        removed = contract["stable_import_surfaces"][0]["path"]
+        contract["stable_import_surfaces"] = [
+            item
+            for item in contract["stable_import_surfaces"]
+            if item["path"] != removed
+        ]
+
+        with self.assertRaisesRegex(ValueError, "missing manually curated roles"):
+            build_script_module_surface_contract(REPO_ROOT, stored_contract=contract)
+
     def test_lifecycle_policy_schema_validates(self) -> None:
         policy = _load_lifecycle_policy()
         schema = load_schema(SCRIPT_LIFECYCLE_POLICY_SCHEMA)
 
         self.assertEqual(validate_with_schema(policy, schema), [])
 
-    def test_lifecycle_policy_paths_exist_and_modules_are_unique(self) -> None:
+    def test_lifecycle_policy_modules_are_unique_and_paths_are_derived(self) -> None:
         policy = _load_lifecycle_policy()
         modules = [module["canonical_module"] for module in policy["modules"]]
-        paths = [module["path"] for module in policy["modules"]]
+        paths = [
+            _path_from_canonical_module(module["canonical_module"])
+            for module in policy["modules"]
+        ]
 
         self.assertEqual(len(modules), len(set(modules)))
         self.assertEqual(len(paths), len(set(paths)))
         for module in policy["modules"]:
             with self.subTest(module=module["canonical_module"]):
-                self.assertTrue(module["path"].startswith("ops/scripts/"))
-                self.assertTrue(Path(module["path"]).is_file())
-                self.assertEqual(
-                    Path(module["path"]).with_suffix("").as_posix().replace("/", "."),
-                    module["canonical_module"],
-                )
+                self.assertNotIn("path", module)
+                path = _path_from_canonical_module(module["canonical_module"])
+                self.assertTrue(path.startswith("ops/scripts/"))
+                self.assertTrue(Path(path).is_file())
 
-    def test_lifecycle_policy_install_states_match_console_script_exposure(self) -> None:
+    def test_lifecycle_policy_install_states_match_console_script_exposure(
+        self,
+    ) -> None:
         for module in _load_lifecycle_policy()["modules"]:
             with self.subTest(module=module["canonical_module"]):
                 if module["install_state"] in INSTALLED_POLICY_STATES:
@@ -240,7 +333,9 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
         for surface in contract["stable_import_surfaces"]:
             path = surface["path"]
             with self.subTest(path=path):
-                self.assertEqual(surface["direct_script_entrypoint"], path in entrypoints)
+                self.assertEqual(
+                    surface["direct_script_entrypoint"], path in entrypoints
+                )
                 if path in entrypoints:
                     self.assertEqual(surface["role"], "cli_facade")
 
@@ -271,6 +366,8 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
                 if path in stable:
                     self.assertIsNotNone(_literal_all(Path(path)))
                 elif path in entrypoints:
-                    self.assertIn("direct script fallback", Path(path).read_text(encoding="utf-8"))
+                    self.assertIn(
+                        "direct script fallback", Path(path).read_text(encoding="utf-8")
+                    )
                 else:
                     self.assertIsNone(_literal_all(Path(path)))

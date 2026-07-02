@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 
 REGISTRY_PATH = Path("ops/test-lane-registry.json")
 SCHEMA_PATH = Path("ops/schemas/test-lane-registry.schema.json")
+PYTEST_MARKER_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _non_empty_str(value: object) -> str:
@@ -70,6 +72,26 @@ def marker_semantics(registry: dict[str, Any]) -> dict[str, str]:
         _non_empty_str(lane["marker"]): _non_empty_str(lane["semantics"])
         for lane in persistent_lanes(registry)
     }
+
+
+def simple_pytest_marker_expr(mark_expr: str) -> str:
+    expr = _non_empty_str(mark_expr)
+    if PYTEST_MARKER_NAME_PATTERN.fullmatch(expr):
+        return expr
+    return ""
+
+
+def pytest_marker_docs(registry: dict[str, Any]) -> dict[str, str]:
+    docs = marker_semantics(registry)
+    for pack in derived_packs(registry):
+        selection = pack_selection(pack)
+        if _non_empty_str(selection.get("mode")) != "marker_expression":
+            continue
+        marker = simple_pytest_marker_expr(_non_empty_str(selection.get("pytest_mark_expr")))
+        if not marker or marker in docs:
+            continue
+        docs[marker] = _non_empty_str(pack.get("semantics"))
+    return docs
 
 
 def selection_by_make_target(registry: dict[str, Any]) -> dict[str, str]:
@@ -146,6 +168,11 @@ def forbidden_marker_combinations(registry: dict[str, Any]) -> dict[str, set[str
 def pack_selection(pack: dict[str, Any]) -> dict[str, Any]:
     raw = pack.get("selection", {})
     return raw if isinstance(raw, dict) else {}
+
+
+def pack_selection_mode(registry: dict[str, Any], pack_id: str) -> str:
+    pack = pack_by_id(registry)[pack_id]
+    return _non_empty_str(pack_selection(pack).get("mode"))
 
 
 def pack_selectors(registry: dict[str, Any], pack_id: str) -> tuple[str, ...]:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from ops.scripts.release.release_evidence_dashboard_learning_delta_runtime import (
     learning_delta_guard_gate,
     learning_delta_guard_summary,
@@ -7,6 +9,8 @@ from ops.scripts.release.release_evidence_dashboard_learning_delta_runtime impor
 from ops.scripts.release.release_evidence_dashboard_render_runtime import (
     LEARNING_DELTA_SCOREBOARD_PATH,
 )
+
+pytestmark = pytest.mark.runtime_hotspot_smoke
 
 
 def _scoreboard_payload() -> dict:

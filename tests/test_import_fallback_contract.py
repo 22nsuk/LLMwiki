@@ -14,7 +14,11 @@ from unittest.mock import patch, sentinel
 
 import pytest
 
-pytestmark = pytest.mark.public
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.fast_smoke,
+    pytest.mark.default_test_boundary,
+]
 
 
 SCRIPTS_DIR = Path("ops/scripts")

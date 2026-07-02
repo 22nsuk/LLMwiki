@@ -60,6 +60,7 @@ def fixed_context() -> RuntimeContext:
     )
 
 
+@pytest.mark.fast_smoke
 def test_no_root_ephemeral_test_artifacts() -> None:
     offenders: list[str] = []
     for pattern in ROOT_EPHEMERAL_PATTERNS:
@@ -816,6 +817,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
                 )
             )
 
+    @pytest.mark.fast_smoke
     def test_report_accepts_enveloped_current_json_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

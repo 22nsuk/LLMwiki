@@ -17,7 +17,7 @@ from .schema_runtime import load_schema, validate_with_schema
 DEFAULT_OUT = "ops/script-output-surfaces.json"
 SCHEMA_PATH = "ops/schemas/script-output-surfaces.schema.json"
 PRODUCER = "ops.scripts.script_output_surfaces"
-DIRECT_SCRIPT_FALLBACK_MARKER = "direct " "script " "fallback"
+DIRECT_SCRIPT_FALLBACK_MARKER = " ".join(("direct", "script", "fallback"))
 CLASSIFICATION_VALUES = (
     "repo_artifact",
     "user_export",
@@ -26,7 +26,6 @@ CLASSIFICATION_VALUES = (
 )
 USER_EXPORT_OUTPUT_OPTION_OVERRIDES = frozenset(
     {
-        "ops/scripts/public/cbm_public_export.py",
         "ops/scripts/public/export_public_repo.py",
     }
 )
@@ -44,7 +43,11 @@ NON_PATH_STATUS_OUTPUT_OPTIONS = frozenset(
 
 
 def _script_files(vault: Path) -> list[Path]:
-    return sorted(path for path in (vault / "ops" / "scripts").rglob("*.py") if path.name != "__init__.py")
+    return sorted(
+        path
+        for path in (vault / "ops" / "scripts").rglob("*.py")
+        if path.name != "__init__.py"
+    )
 
 
 def _script_tree(source: str, rel_path: str) -> ast.AST:
@@ -120,11 +123,17 @@ def _classification(
     if references_resolve_repo_output_path:
         return "repo_artifact", "uses repo artifact resolver"
     if rel_path in FIXED_REPO_ARTIFACT_WRITER_OVERRIDES:
-        return "repo_artifact", "writes fixed run artifacts without a configurable output path"
+        return (
+            "repo_artifact",
+            "writes fixed run artifacts without a configurable output path",
+        )
     if output_options:
         if rel_path in USER_EXPORT_OUTPUT_OPTION_OVERRIDES:
             return "user_export", "output option is an intentional user export surface"
-        return "repo_artifact", "output option writes a repo-scoped artifact without the permissive resolver"
+        return (
+            "repo_artifact",
+            "output option writes a repo-scoped artifact without the permissive resolver",
+        )
     return "no_output", "no configurable output path surface detected"
 
 
@@ -154,7 +163,10 @@ def build_registry(
 ) -> dict[str, Any]:
     resolved_vault = vault.resolve()
     del policy_path, context
-    script_paths = [path.relative_to(resolved_vault).as_posix() for path in _script_files(resolved_vault)]
+    script_paths = [
+        path.relative_to(resolved_vault).as_posix()
+        for path in _script_files(resolved_vault)
+    ]
     surfaces: list[dict[str, Any]] = []
     for path in (resolved_vault / item for item in script_paths):
         rel_path = path.relative_to(resolved_vault).as_posix()
@@ -208,7 +220,9 @@ def build_registry(
     }
 
 
-def write_registry(vault: Path, registry: dict[str, Any], out_path: str | None = None) -> Path:
+def write_registry(
+    vault: Path, registry: dict[str, Any], out_path: str | None = None
+) -> Path:
     return write_schema_backed_report(
         SchemaBackedReportWriteRequest(
             vault=vault,
@@ -237,7 +251,9 @@ def _surface_map(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
     }
 
 
-def _registry_check_diagnostics(actual: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
+def _registry_check_diagnostics(
+    actual: dict[str, Any], expected: dict[str, Any]
+) -> dict[str, Any]:
     actual_surfaces = _surface_map(actual)
     expected_surfaces = _surface_map(expected)
     actual_paths = set(actual_surfaces)
@@ -262,7 +278,9 @@ def _registry_is_current(actual: dict[str, Any], expected: dict[str, Any]) -> bo
     )
 
 
-def check_registry(vault: Path, *, policy_path: str | None = None, stored_path: str | None = None) -> int:
+def check_registry(
+    vault: Path, *, policy_path: str | None = None, stored_path: str | None = None
+) -> int:
     registry_path = _resolve_registry_path(vault, stored_path)
     try:
         actual = json.loads(registry_path.read_text(encoding="utf-8"))
@@ -311,7 +329,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Accepted for CLI compatibility; the semantic registry does not use policy state.",
     )
-    parser.add_argument("--out", default=DEFAULT_OUT, help="Output path for the generated registry.")
+    parser.add_argument(
+        "--out", default=DEFAULT_OUT, help="Output path for the generated registry."
+    )
     parser.add_argument(
         "--stored",
         default=None,
@@ -329,8 +349,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     if args.check:
-        return check_registry(vault, policy_path=args.policy, stored_path=args.stored or args.out)
-    destination = write_registry(vault, build_registry(vault, policy_path=args.policy), args.out)
+        return check_registry(
+            vault, policy_path=args.policy, stored_path=args.stored or args.out
+        )
+    destination = write_registry(
+        vault, build_registry(vault, policy_path=args.policy), args.out
+    )
     print(display_path(vault, destination))
     return 0
 

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import datetime as dt
+import io
+import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 import pytest
 
-from ops.scripts.core.make_target_inventory import build_report, write_report
+from ops.scripts.core.make_target_inventory import build_report, main, write_report
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -16,6 +19,7 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
 
 MAKE_TARGET_INVENTORY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "make-target-inventory.schema.json"
+SCRIPT_LIFECYCLE_POLICY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "script-lifecycle-policy.schema.json"
 
 
 def fixed_context() -> RuntimeContext:
@@ -110,6 +114,63 @@ class MakeTargetInventoryTests(unittest.TestCase):
         )
 
     def test_recipe_module_invocations_are_recorded_per_target(self) -> None:
+        (self.vault / "ops" / "scripts" / "core").mkdir(parents=True, exist_ok=True)
+        (self.vault / "ops" / "scripts" / "release").mkdir(parents=True, exist_ok=True)
+        (self.vault / "ops" / "scripts" / "core" / "sample_report.py").write_text(
+            "def main(): pass\n",
+            encoding="utf-8",
+        )
+        (self.vault / "ops" / "scripts" / "release" / "sample_release.py").write_text(
+            "def main(): pass\n",
+            encoding="utf-8",
+        )
+        (self.vault / "ops" / "schemas" / "script-lifecycle-policy.schema.json").write_text(
+            SCRIPT_LIFECYCLE_POLICY_SCHEMA_PATH.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        (self.vault / "ops" / "script-lifecycle-policy.json").write_text(
+            json.dumps(
+                {
+                    "$schema": "ops/schemas/script-lifecycle-policy.schema.json",
+                    "version": 1,
+                    "description": "test",
+                    "lifecycle_values": [
+                        "public_cli",
+                        "make_only",
+                        "report_generator",
+                        "helper",
+                        "test_only",
+                        "legacy_delete",
+                    ],
+                    "install_state_values": [
+                        "public_cli",
+                        "transitional_installed",
+                        "not_installed",
+                    ],
+                    "modules": [
+                        {
+                            "canonical_module": "ops.scripts.core.sample_report",
+                            "console_scripts": [],
+                            "install_state": "not_installed",
+                            "lifecycle": "report_generator",
+                            "rationale": "Sample report fixture.",
+                            "removal_ready": False,
+                            "replacement": "make alpha",
+                        },
+                        {
+                            "canonical_module": "ops.scripts.release.sample_release",
+                            "console_scripts": [],
+                            "install_state": "not_installed",
+                            "lifecycle": "report_generator",
+                            "rationale": "Sample release fixture.",
+                            "removal_ready": False,
+                            "replacement": "make gamma",
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
         (self.vault / "Makefile").write_text(
             ".PHONY: alpha beta\n"
             "alpha beta:\n"
@@ -145,6 +206,25 @@ class MakeTargetInventoryTests(unittest.TestCase):
 
         self.assertEqual(destination, self.vault / "ops" / "reports" / "make-target-inventory.json")
         self.assertTrue(destination.exists())
+
+    def test_check_mode_validates_without_writing_report(self) -> None:
+        out_path = self.vault / "tmp" / "make-target-inventory.json"
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--out",
+                    str(out_path),
+                    "--check",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("make_target_inventory: status=pass", stdout.getvalue())
+        self.assertFalse(out_path.exists())
 
     def test_repo_make_target_inventory_tracks_internal_targets(self) -> None:
         report = build_report(REPO_ROOT, context=fixed_context())

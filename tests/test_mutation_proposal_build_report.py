@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.mechanism.mutation_proposal import main as mutation_proposal_main
@@ -21,6 +23,8 @@ from tests.mutation_proposal_test_runtime import (
     shadow_priority_diagnostics,
     write_json,
 )
+
+pytestmark = pytest.mark.runtime_hotspot_smoke
 
 
 class MutationProposalBuildReportTest(unittest.TestCase):
@@ -2004,6 +2008,7 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 "mechanism review report policy.version does not match current policy",
             ):
                 build_report(vault, policy, policy_path)
+    @pytest.mark.fast_smoke
     def test_missing_artifact_envelope_fails_fast_for_primary_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
@@ -2019,6 +2024,7 @@ class MutationProposalBuildReportTest(unittest.TestCase):
                 "mechanism review report is not current primary evidence: missing_artifact_envelope",
             ):
                 build_report(vault, policy, policy_path)
+    @pytest.mark.fast_smoke
     def test_unknown_currentness_fails_fast_for_primary_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

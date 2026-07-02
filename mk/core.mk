@@ -30,10 +30,15 @@ help:
 		"  make mypy-strict-preview          run strict mypy preview across ops/scripts tests tools" \
 		"  make strict-preview-audit         audit strict Ruff --preview and mypy debt across ops/scripts tests tools" \
 		"" \
-		"Inventory and selectors:" \
+		"Inventory and derived surfaces:" \
+		"  make sync-derived                 regenerate source-derived projections/diagnostics" \
+		"  make sync-derived-check           fail if checkable derived projections are stale" \
+		"  make pytest-markers-sync          regenerate pytest.ini marker registration" \
 		"  make make-target-inventory        inventory Make targets and script surfaces" \
+		"  make make-target-inventory-check  validate Make inventory and operator metadata without writing" \
 		"  make test-selectors-sync          regenerate mk/test-selectors.generated.mk from the lane registry" \
 		"  make test-selectors-sync-check    fail if generated test selector Make variables are stale" \
+		"  make review-surface-manifest      refresh reviewer inventory doc and tmp navigation manifest" \
 		"" \
 		"Report contracts:" \
 		"  make test-report-contract-core   run core report contract tests" \
@@ -44,7 +49,6 @@ help:
 		"  make sync-public-policy           update public mirror policy templates" \
 		"  make public-check                 export and verify the public mirror" \
 		"  make public-check-all             export and run the full public check suite" \
-		"  make cbm-smoke-public             optional CBM sidecar health check" \
 		"" \
 		"Mechanism:" \
 		"  make auto-improve-readiness       refresh maintainer readiness evidence" \

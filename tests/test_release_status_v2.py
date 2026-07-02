@@ -13,7 +13,11 @@ from ops.scripts.release.release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
 
-pytestmark = [pytest.mark.public, pytest.mark.release_sealing]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.release_sealing,
+    pytest.mark.default_test_boundary,
+]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONSUMER_INVENTORY_PATH = (

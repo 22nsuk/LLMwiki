@@ -687,6 +687,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         )
         self.assertEqual(report["snapshot_phase"], "pre_finalization")
 
+    @pytest.mark.release_closeout_regression
     def test_release_smoke_archive_budget_failure_blocks_clean_release(self) -> None:
         self._write_happy_sources()
         self._write_source_report(

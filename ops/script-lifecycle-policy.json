@@ -20,7 +20,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/archive_execution_manifest.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make archive-execution-manifest-apply"
@@ -30,7 +29,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/artifact_freshness_runtime.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make artifact-freshness"
@@ -40,7 +38,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/artifact_relocation_audit.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make artifact-relocation-audit"
@@ -50,7 +47,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/core/backfill_archived_run_artifacts.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make artifact-freshness-stable-contract-debt-refresh"
@@ -60,7 +56,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "helper",
-      "path": "ops/scripts/core/backfill_historical_bootstrap_reports.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.backfill_historical_bootstrap_reports"
@@ -70,7 +65,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/bootstrap_preflight.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make bootstrap-preflight"
@@ -80,7 +74,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/canonical_artifact_promote.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make artifact-freshness"
@@ -90,7 +83,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/cli_surface_inventory.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.cli_surface_inventory"
@@ -100,7 +92,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/command_log_summary_backfill.py",
       "rationale": "Schema-backed local run-artifact maintenance command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make command-log-summary-backfill"
@@ -110,7 +101,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/core/closure_registry_envelope.py",
       "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
       "removal_ready": false,
       "replacement": "make closure-registry-envelope"
@@ -120,7 +110,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/codex_goal_client.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make auto-improve-goal-contract"
@@ -130,7 +119,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/compatibility_alias_deprecation.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make compatibility-alias-deprecation"
@@ -140,7 +128,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/core/execution_lane_guard.py",
       "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
       "removal_ready": false,
       "replacement": "make check-clean-lane-guard"
@@ -150,7 +137,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "helper",
-      "path": "ops/scripts/core/executor.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.executor"
@@ -160,7 +146,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/generated_artifact_converge_summary.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make generated-artifact-converge"
@@ -170,7 +155,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/generated_artifact_index.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make generated-artifact-index-body"
@@ -180,7 +164,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/generated_artifact_retention_clean.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make generated-artifact-retention-clean"
@@ -190,7 +173,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/make_target_inventory.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make make-target-inventory"
@@ -200,7 +182,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/manual_mutate_defect_registry.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make manual-mutate-defect-registry"
@@ -210,7 +191,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/core/observability_routing_provenance_runtime.py",
       "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
       "removal_ready": false,
       "replacement": "make routing-provenance-aggregate"
@@ -220,7 +200,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/core/sanitize_run_artifacts.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make sanitize-runs"
@@ -230,17 +209,24 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/script_output_surfaces.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-closeout-candidate-script-output-surfaces"
+    },
+    {
+      "canonical_module": "ops.scripts.core.script_module_surfaces",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Source-derived module surface contract generator retained behind Make/canonical module invocation rather than installed CLI.",
+      "removal_ready": false,
+      "replacement": "make script-module-surfaces"
     },
     {
       "canonical_module": "ops.scripts.core.select_subagent_rung",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/select_subagent_rung.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.select_subagent_rung"
@@ -250,7 +236,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/source_package_clean_extract.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-source-package-clean-extract-current-check"
@@ -260,7 +245,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/source_slug_curation.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.source_slug_curation"
@@ -270,7 +254,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/subagent_profile_schema.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make subagent-profile-schema"
@@ -280,7 +263,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/tools_migration_plan.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make tools-migration-plan"
@@ -290,7 +272,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/core/workflow_dependency_planner.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make changed-path-minimum-plan"
@@ -300,7 +281,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/doc_graph_integrity.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make doc-graph-integrity"
@@ -310,7 +290,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/function_budget_refactor_proposals.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make function-budget-refactor-proposals"
@@ -320,7 +299,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/lint_uplift_plan.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make lint-uplift-plan"
@@ -330,7 +308,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/eval/report_contract_closeout_runtime.py",
       "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
       "removal_ready": false,
       "replacement": "make report-contract-closeout-precheck"
@@ -340,7 +317,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/structural_complexity_budget.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make complexity-budget"
@@ -350,7 +326,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/type_uplift_plan.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make type-uplift-plan"
@@ -360,7 +335,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/warning_budget.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make warning-budget"
@@ -370,7 +344,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/wiki_eval.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make eval"
@@ -380,7 +353,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/wiki_lint.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make lint"
@@ -390,7 +362,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/wiki_lint_review_classification.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make wiki-lint-review-classification"
@@ -400,7 +371,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/wiki_manifest.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make manifest"
@@ -410,7 +380,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/eval/wiki_stage2_eval.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make stage2-eval"
@@ -420,7 +389,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_claim_activation_report.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-claim-activation-report"
@@ -430,7 +398,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_claim_evidence_bundle.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-claim-evidence-bundle"
@@ -440,7 +407,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_claim_unlock_review.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-claim-unlock-review"
@@ -450,7 +416,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_confirmed_evidence_cohort.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-confirmed-evidence-cohort"
@@ -460,7 +425,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_confirmed_legacy_reconstruction.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-confirmed-legacy-reconstruction"
@@ -470,7 +434,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_delta_scoreboard.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-delta-scoreboard"
@@ -480,7 +443,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_readiness_signoff.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-readiness-signoff"
@@ -490,7 +452,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_readiness_signoff_refresh.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make learning-readiness-signoff-refresh"
@@ -500,7 +461,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/learning_readiness_signoff_revalidation.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-readiness-signoff-revalidation"
@@ -510,7 +470,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/remediation_backlog.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-local-remediation-backlog"
@@ -520,7 +479,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/self_improvement_negative_lessons.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-local-negative-lessons"
@@ -530,7 +488,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/learning/session_synopsis.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-local-session-synopsis"
@@ -540,7 +497,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/auto_improve_loop.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.auto_improve_loop"
@@ -550,7 +506,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/auto_improve_readiness.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make auto-improve-readiness"
@@ -560,7 +515,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/codex_goal_prompt.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make codex-goal-prompt"
@@ -572,7 +526,6 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "path": "ops/scripts/mechanism/finalize_run.py",
       "rationale": "Documented operator command retained as an installed public CLI.",
       "removal_ready": false,
       "replacement": ""
@@ -582,7 +535,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_run_status.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make auto-improve-goal-finalize"
@@ -592,7 +544,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_certificate_report.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-certificate"
@@ -602,7 +553,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_certificate_run_id_guard.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-certificate-run-id-guard"
@@ -612,7 +562,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_clean_transient.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-clean-transient"
@@ -622,7 +571,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_closeout.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-closeout"
@@ -632,7 +580,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-fixed-point-check"
@@ -642,7 +589,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_local_evidence_refresh.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-local-evidence-refresh"
@@ -652,7 +598,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/mechanism/goal_runtime_latest_successful_run.py",
       "rationale": "Make-orchestrated selector retained behind goal-runtime evidence targets, not public console exposure.",
       "removal_ready": false,
       "replacement": "make goal-runtime-latest-successful-run-id"
@@ -662,7 +607,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/mechanism/goal_runtime_lock.py",
       "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
       "removal_ready": false,
       "replacement": "make goal-runtime-lock-check"
@@ -672,7 +616,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-quarantine-preflight"
@@ -682,7 +625,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_run_admission.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-run-admission"
@@ -692,7 +634,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_stale_closeout.py",
       "rationale": "Schema-backed goal-runtime stale evidence closeout command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make goal-runtime-stale-closeout"
@@ -702,7 +643,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_runtime_runner.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make auto-improve-goal-resume"
@@ -712,7 +652,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/goal_worktree_guard.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make auto-improve-goal-preflight"
@@ -724,7 +663,6 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "path": "ops/scripts/mechanism/improvement_observations.py",
       "rationale": "Documented operator command retained as an installed public CLI.",
       "removal_ready": false,
       "replacement": ""
@@ -734,7 +672,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/mechanism_assess.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.mechanism_assess"
@@ -744,7 +681,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/mechanism_contract_eval.py",
       "rationale": "Schema-backed mechanism-local contract eval report command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make mechanism-contract-eval"
@@ -754,7 +690,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/mechanism_navigation_index.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make mechanism-navigation-index"
@@ -764,7 +699,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/mechanism_review.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make mechanism-review"
@@ -774,7 +708,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/mutation_proposal.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make mutation-proposal"
@@ -784,7 +717,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/observation_closeout_lint.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make observation-closeout-lint"
@@ -794,7 +726,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/mechanism/outcome_metrics.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make outcome-metrics"
@@ -806,7 +737,6 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "path": "ops/scripts/mechanism/planning_gate_validate.py",
       "rationale": "Documented operator command retained as an installed public CLI.",
       "removal_ready": false,
       "replacement": ""
@@ -816,7 +746,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/mechanism/promotion_decision_trends.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make promotion-decision-trends"
@@ -826,7 +755,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/promotion_gate.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.promotion_gate"
@@ -838,7 +766,6 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "path": "ops/scripts/mechanism/run_mechanism_experiment.py",
       "rationale": "Documented operator command retained as an installed public CLI.",
       "removal_ready": false,
       "replacement": ""
@@ -848,7 +775,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "helper",
-      "path": "ops/scripts/mechanism/set_mechanism_run_history.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.set_mechanism_run_history"
@@ -858,27 +784,15 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/mechanism/system_log_split.py",
       "rationale": "Output-producing system-log split helper retained behind the documented Make entrypoint rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make system-log-split"
-    },
-    {
-      "canonical_module": "ops.scripts.public.cbm_public_export",
-      "console_scripts": [],
-      "install_state": "not_installed",
-      "lifecycle": "report_generator",
-      "path": "ops/scripts/public/cbm_public_export.py",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
-      "removal_ready": false,
-      "replacement": "make cbm-export-public"
     },
     {
       "canonical_module": "ops.scripts.public.clean_fixture_regeneration_guard",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/public/clean_fixture_regeneration_guard.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make clean-fixture-regeneration-guard"
@@ -888,7 +802,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/public/export_public_repo.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make public-export"
@@ -898,7 +811,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/public/public_check_summary.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make public-check-summary"
@@ -908,7 +820,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/public/public_surface_snapshot.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.public.public_surface_snapshot"
@@ -918,7 +829,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/public/review_surface_manifest.py",
       "rationale": "Operator review-surface manifest generator retained behind the documented Make entrypoint rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make review-surface-manifest"
@@ -928,7 +838,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/public/sync_public_surface_gitignore.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make sync-public-policy"
@@ -938,7 +847,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_intake_promotion.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.registry.raw_intake_promotion"
@@ -948,7 +856,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_intake_route_proposal.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make raw-intake-absorption-closeout"
@@ -958,7 +865,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_intake_seed_source_hints.py",
       "rationale": "Schema-backed raw-intake seed source hint report retained behind Make check/write targets rather than installed CLI exposure.",
       "removal_ready": false,
       "replacement": "make raw-intake-seed-source-hints"
@@ -968,7 +874,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_intake_source_quality.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make raw-intake-source-quality"
@@ -978,7 +883,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_markdown_normalize.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.registry.raw_markdown_normalize"
@@ -988,7 +892,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_registry_cross_environment_evidence_bundle.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make raw-registry-cross-environment-evidence-bundle"
@@ -998,7 +901,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_registry_cross_environment_matrix.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make raw-registry-cross-environment-matrix"
@@ -1008,7 +910,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_registry_export.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make raw-registry-export"
@@ -1018,7 +919,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/raw_registry_preflight.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make registry-preflight"
@@ -1028,7 +928,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/registry/raw_registry_shard_policy_sync.py",
       "rationale": "Registry shard policy sync is a repository maintenance helper retained behind explicit Make check/write targets rather than public CLI exposure.",
       "removal_ready": false,
       "replacement": "make raw-registry-shard-policy-sync-check"
@@ -1038,7 +937,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/registry/source_substance_cohort_classify.py",
       "rationale": "Schema-backed source-substance cohort classifier retained behind the canonical module entrypoint rather than installed CLI.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.registry.source_substance_cohort_classify"
@@ -1048,7 +946,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/external_report_action_matrix.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make external-report-action-matrix"
@@ -1058,7 +955,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/release/freshness_owner_route_converge.py",
       "rationale": "Source-identity freshness convergence helper is retained behind the explicit Make owner lane rather than public CLI exposure.",
       "removal_ready": false,
       "replacement": "make freshness-owner-route-converge"
@@ -1068,7 +964,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/external_report_reference_manifest.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make external-report-reference-manifest"
@@ -1078,7 +973,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/github_governance_live_drift.py",
       "rationale": "Schema-backed operator/live governance evidence command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make collaboration-governance"
@@ -1088,7 +982,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/operator_release_summary.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make operator-release-summary"
@@ -1098,7 +991,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/outcome_provenance_gate_policy.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make outcome-provenance-gate-policy"
@@ -1108,7 +1000,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_audit_pack.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-audit-pack"
@@ -1118,7 +1009,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_authority_inventory.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-authority-inventory"
@@ -1128,7 +1018,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_auto_promotion_preflight.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-auto-promotion-preflight"
@@ -1138,7 +1027,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_auto_promotion_ready.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-auto-promotion-ready"
@@ -1148,7 +1036,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_clean_blocker_ledger.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-clean-blocker-ledger"
@@ -1158,7 +1045,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_clean_lane_evidence_review.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-clean-lane-evidence-review"
@@ -1168,7 +1054,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_closeout_batch_manifest.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-closeout-batch-manifest-promote"
@@ -1178,7 +1063,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_closeout_finality_attestation.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-closeout-finality-attestation"
@@ -1188,7 +1072,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_closeout_fixed_point.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-closeout-fixed-point"
@@ -1198,7 +1081,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_closeout_fixed_point_cost_trend.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-closeout-cost-evidence-ci-artifact"
@@ -1208,7 +1090,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_closeout_sealed_rehearsal_check.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-evidence-closeout-sealed-check"
@@ -1218,7 +1099,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_closeout_summary.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make learning-readiness-signoff-check"
@@ -1228,7 +1108,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_evidence_closeout_self_check.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-evidence-closeout-sealed-core-sidecars"
@@ -1238,7 +1117,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_evidence_cohort.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-evidence-cohort"
@@ -1248,7 +1126,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_evidence_dashboard.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-evidence-dashboard"
@@ -1258,7 +1135,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_evidence_planner.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-auto-promotion-ready-plan"
@@ -1268,7 +1144,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_goal_run_identity_guard.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-auto-promotion-goal-run-id-guard"
@@ -1278,7 +1153,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_lane_summary.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-lane-summary"
@@ -1288,7 +1162,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_post_commit_finalizer.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-authority-settle"
@@ -1298,7 +1171,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_post_seal_attestation.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-post-seal-attestation"
@@ -1308,7 +1180,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_risk_taxonomy_matrix.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-risk-taxonomy-matrix"
@@ -1318,7 +1189,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_run_manifest.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-run-ready-check"
@@ -1328,7 +1198,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_run_ready.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-run-ready"
@@ -1338,7 +1207,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_sealed_post_seal_attestation.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-sealed-post-seal-attestation"
@@ -1348,7 +1216,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_sealed_run_manifest.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-sealed-run-ready"
@@ -1358,7 +1225,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_smoke.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-distribution-zip"
@@ -1368,7 +1234,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_source_ready_commit.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-source-ready-commit"
@@ -1378,7 +1243,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_source_ready_status.py",
       "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
       "removal_ready": false,
       "replacement": "make release-source-ready-status"
@@ -1390,7 +1254,6 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "path": "ops/scripts/release/release_status_surface.py",
       "rationale": "Documented operator command retained as an installed public CLI.",
       "removal_ready": false,
       "replacement": ""
@@ -1400,7 +1263,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/release_workflow_order_guard.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-workflow-order-guard"
@@ -1410,7 +1272,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/review_archive.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make review-archive"
@@ -1420,7 +1281,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/release/source_package_smoke.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make release-source-package-smoke-current-check"
@@ -1430,7 +1290,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/cyclonedx_sbom.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make cyclonedx-sbom"
@@ -1440,7 +1299,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/in_toto_statement.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make in-toto-statement"
@@ -1450,7 +1308,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/openvex_draft.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make openvex-draft"
@@ -1460,7 +1317,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/sbom_export_mapping.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make sbom-export-mapping"
@@ -1470,7 +1326,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/sbom_readiness_gate_runtime.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make sbom-readiness-check"
@@ -1480,7 +1335,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/security_advisories.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make security-advisories"
@@ -1490,7 +1344,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/sigstore_bundle.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make sigstore-bundle"
@@ -1500,7 +1353,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/spdx_sbom.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make spdx-sbom"
@@ -1510,7 +1362,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/supply_chain_artifact_model.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make supply-chain-artifact-model"
@@ -1520,7 +1371,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/supply_chain_artifacts.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make supply-chain-artifacts-cached"
@@ -1530,7 +1380,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/supply_chain_benchmark.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make supply-chain-benchmark"
@@ -1540,7 +1389,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "path": "ops/scripts/supply_chain/supply_chain_gate_runtime.py",
       "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
       "removal_ready": false,
       "replacement": "make supply-chain-check"
@@ -1550,7 +1398,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "path": "ops/scripts/supply_chain/supply_chain_provenance.py",
       "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make supply-chain-provenance"
@@ -1560,7 +1407,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "test_only",
-      "path": "ops/scripts/test/ci_tier_lane_bridge.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.test.ci_tier_lane_bridge"
@@ -1570,17 +1416,24 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "test_only",
-      "path": "ops/scripts/test/generate_release_governance_from_lane_registry.py",
       "rationale": "Lane-registry-backed release governance generator retained behind the Make sync target rather than installed CLI exposure.",
       "removal_ready": false,
       "replacement": "make release-governance-sync"
+    },
+    {
+      "canonical_module": "ops.scripts.test.generate_pytest_ini_markers",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "test_only",
+      "rationale": "Registry-backed pytest marker registration generator retained behind Make sync rather than installed CLI exposure.",
+      "removal_ready": false,
+      "replacement": "make pytest-markers-sync"
     },
     {
       "canonical_module": "ops.scripts.test.generate_test_mk_selectors",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "test_only",
-      "path": "ops/scripts/test/generate_test_mk_selectors.py",
       "rationale": "Registry-backed selector generator retained behind Make sync rather than installed CLI exposure.",
       "removal_ready": false,
       "replacement": "make test-selectors-sync"
@@ -1590,7 +1443,6 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "test_only",
-      "path": "ops/scripts/test/test_execution_summary.py",
       "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
       "removal_ready": false,
       "replacement": "make test-execution-summary-current-check"

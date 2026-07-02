@@ -36,7 +36,11 @@ CODEQL_WORKFLOW = Path(".github/workflows/codeql.yml")
 DEPENDENCY_REVIEW_WORKFLOW = Path(".github/workflows/dependency-review.yml")
 DEPENDABOT_CONFIG = Path(".github/dependabot.yml")
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+]
 
 
 def _workflow() -> dict[str, object]:
@@ -251,7 +255,8 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "if [ -f system/system-index.md ] && [ -f wiki/index.md ] && [ -d raw ]; then",
             text,
         )
-        self.assertIn("          make test-selectors-sync-check", text)
+        self.assertIn("          make sync-derived-check", text)
+        self.assertNotIn("          make test-selectors-sync-check", text)
         self.assertIn("            make check-finalized", text)
         self.assertIn("            make release-smoke-fast", text)
 

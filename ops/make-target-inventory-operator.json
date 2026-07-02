@@ -67,6 +67,30 @@
       "remove_after": null
     },
     {
+      "target": "make-target-inventory-check",
+      "category": "inventory",
+      "purpose": "Validate live Make target inventory and operator anti-slop admission metadata without rewriting diagnostics.",
+      "replacement": "make make-target-inventory-check",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "sync-derived",
+      "category": "inventory",
+      "purpose": "Regenerate tracked source-derived projections from their canonical sources.",
+      "replacement": "make sync-derived",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
+      "target": "sync-derived-check",
+      "category": "inventory",
+      "purpose": "Fail when tracked source-derived projections are stale against their canonical sources.",
+      "replacement": "make sync-derived-check",
+      "deprecated_at": null,
+      "remove_after": null
+    },
+    {
       "target": "test-selectors-sync",
       "category": "inventory",
       "purpose": "Regenerate selector projections from the test lane registry.",
@@ -135,14 +159,6 @@
       "category": "public_mirror",
       "purpose": "Run the full public mirror pytest lane after export.",
       "replacement": "make public-check-all",
-      "deprecated_at": null,
-      "remove_after": null
-    },
-    {
-      "target": "cbm-smoke-public",
-      "category": "public_mirror",
-      "purpose": "Smoke-test the optional codebase-memory public export sidecar.",
-      "replacement": "make cbm-smoke-public",
       "deprecated_at": null,
       "remove_after": null
     },

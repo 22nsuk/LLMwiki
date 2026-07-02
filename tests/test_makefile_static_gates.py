@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import configparser
+import os
 import re
 import subprocess
+import sys
 import tomllib
 import unittest
 from pathlib import Path
@@ -15,12 +17,11 @@ from ops.scripts.test.test_lane_registry_runtime import (
     documentation_authority,
     documentation_out_of_scope,
     load_registry,
-    marker_semantics,
-    pack_by_id,
-    pack_effective_selectors,
     pack_mark_expr,
+    pack_selection_mode,
     pack_selectors,
     pack_summary_suite,
+    pytest_marker_docs,
     selection_by_make_target,
 )
 from tests.makefile_static_helpers import (
@@ -33,13 +34,18 @@ from tests.makefile_static_helpers import (
     _target_dependencies,
 )
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [
+    pytest.mark.public,
+    pytest.mark.report_contract,
+    pytest.mark.report_contract_core,
+    pytest.mark.schema_static_smoke,
+    pytest.mark.default_test_boundary,
+]
 
 
 MAKEFILE = Path("Makefile")
 README = Path("README.md")
 DOCS_DEVELOPMENT = Path("docs/development.md")
-DOCS_CBM = Path("docs/codebase-memory-mcp.md")
 CONFTEST = Path("tests/conftest.py")
 PYTEST_INI = Path("pytest.ini")
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -93,25 +99,45 @@ def _makefile_assignment_items(text: str, variable: str) -> tuple[str, ...]:
     return tuple(items)
 
 
-def _assert_make_selector_variable_matches_pack(
-    case: unittest.TestCase,
-    registry: dict[str, object],
-    text: str,
-    *,
-    variable: str,
-    pack_id: str,
-) -> tuple[str, ...]:
-    pack = pack_by_id(registry)[pack_id]
-    selection = pack.get("selection", {})
-    case.assertIsInstance(selection, dict)
-    assert isinstance(selection, dict)
-    case.assertEqual(selection.get("mode"), "explicit_selectors")
-    items = _makefile_assignment_items(text, variable)
-    case.assertEqual(items, pack_selectors(registry, pack_id))
-    return items
+def _collect_marker_paths(mark_expr: str) -> set[str]:
+    env = os.environ.copy()
+    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "-m",
+            mark_expr,
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise AssertionError(
+            f"pytest collect failed for marker expression {mark_expr!r}.\n"
+            f"stdout:\n{completed.stdout}\n"
+            f"stderr:\n{completed.stderr}"
+        )
+    paths: set[str] = set()
+    for line in completed.stdout.splitlines():
+        path, separator, count_text = line.rpartition(": ")
+        if separator and count_text.isdigit():
+            paths.add(path)
+    return paths
 
 
-def _assert_hybrid_make_selector_variable_matches_pack(
+def _assert_marker_expression_variable_matches_pack(
     case: unittest.TestCase,
     registry: dict[str, object],
     text: str,
@@ -120,27 +146,18 @@ def _assert_hybrid_make_selector_variable_matches_pack(
     pack_id: str,
     mark_expr_variable: str,
 ) -> tuple[str, ...]:
-    pack = pack_by_id(registry)[pack_id]
-    selection = pack.get("selection", {})
-    case.assertIsInstance(selection, dict)
-    assert isinstance(selection, dict)
-    case.assertEqual(selection.get("mode"), "explicit_selectors")
-    case.assertEqual(pack_mark_expr(registry, pack_id), _makefile_assignment_value(text, mark_expr_variable))
-    items = _makefile_assignment_items(text, variable)
-    case.assertGreaterEqual(len(items), 2)
-    case.assertEqual(items[:2], ("-m", f'"$({mark_expr_variable})"'))
-    case.assertEqual(items[2:], pack_effective_selectors(registry, pack_id))
-    return items
-
-
-def _report_contract_marked_test_files() -> tuple[str, ...]:
-    return tuple(
-        sorted(
-            path.as_posix()
-            for path in Path("tests").glob("test_*.py")
-            if "pytest.mark.report_contract" in path.read_text(encoding="utf-8")
-        )
+    case.assertEqual(pack_selection_mode(registry, pack_id), "marker_expression")
+    case.assertEqual(
+        pack_mark_expr(registry, pack_id),
+        _makefile_assignment_value(text, mark_expr_variable),
     )
+    items = _makefile_assignment_items(text, variable)
+    expected_items = (
+        "-m",
+        f'"$({mark_expr_variable})"',
+    )
+    case.assertEqual(items, expected_items)
+    return items
 
 
 def _normalize_whitespace(value: str) -> str:
@@ -179,7 +196,10 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             "$(MAKE) generated-artifact-converge",
         ],
     )
-    case.assertIn("refresh-generated: refresh-generated-core refresh-generated-observability", text)
+    case.assertIn(
+        "refresh-generated: refresh-generated-core refresh-generated-observability",
+        text,
+    )
     case.assertEqual(
         _recipe_lines(text, "generated-artifact-converge"),
         [
@@ -191,6 +211,51 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
     case.assertEqual(
         _recipe_lines(text, "generated-artifact-script-output"),
         ["$(MAKE) script-output-surfaces"],
+    )
+    case.assertEqual(
+        _recipe_lines(text, "sync-derived"),
+        [
+            "$(MAKE) pytest-markers-sync",
+            "$(MAKE) test-selectors-sync",
+            "$(MAKE) sync-public-policy",
+            "$(MAKE) script-output-surfaces",
+            "$(MAKE) script-module-surfaces",
+            "$(MAKE) release-governance-sync",
+            "$(MAKE) make-target-inventory",
+            "$(MAKE) report-schema-samples-regenerate",
+        ],
+    )
+    case.assertEqual(
+        _recipe_lines(text, "sync-derived-check"),
+        [
+            "$(MAKE) pytest-markers-sync-check",
+            "$(MAKE) test-selectors-sync-check",
+            "$(MAKE) sync-public-policy-check",
+            "$(MAKE) script-output-surfaces-check",
+            "$(MAKE) script-module-surfaces-check",
+            "$(MAKE) release-governance-sync-check",
+            "$(MAKE) make-target-inventory-check",
+            "$(MAKE) report-schema-samples-check",
+        ],
+    )
+    case.assertNotIn(
+        "generated-artifact-converge", _target_block(text, "sync-derived-check")
+    )
+    case.assertEqual(
+        _recipe_lines(text, "pytest-markers-sync"),
+        [
+            '$(PYTHON) -m ops.scripts.test.generate_pytest_ini_markers --vault "$(VAULT)"'
+        ],
+    )
+    case.assertEqual(
+        _recipe_lines(text, "pytest-markers-sync-check"),
+        ["@$(MAKE) _internal-pytest-markers-sync-check"],
+    )
+    case.assertEqual(
+        _recipe_lines(text, "_internal-pytest-markers-sync-check"),
+        [
+            '$(PYTHON) -m ops.scripts.test.generate_pytest_ini_markers --vault "$(VAULT)" --check'
+        ],
     )
     case.assertEqual(
         _recipe_lines(text, "generated-artifact-finality-suffix"),
@@ -215,12 +280,19 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
     for phony_target in (
         "refresh-generated-core",
         "refresh-generated-observability",
+        "pytest-markers-sync",
+        "pytest-markers-sync-check",
+        "_internal-pytest-markers-sync-check",
+        "sync-derived",
+        "sync-derived-check",
         "generated-artifact-converge",
         "generated-artifact-script-output",
         "generated-artifact-finality-suffix",
         "command-log-summary-backfill",
         "generated-artifact-retention-clean",
         "script-output-surfaces",
+        "script-module-surfaces",
+        "script-module-surfaces-check",
         "function-budget-refactor-proposals",
         "function-budget-edit-check",
         "outcome-provenance-gate-policy",
@@ -239,6 +311,7 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
         "OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT ?= tmp/outcome-provenance-gate-policy.candidate.json",
         "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
         "SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json",
+        "SCRIPT_MODULE_SURFACES_OUT ?= ops/script-module-surfaces.json",
         "GENERATED_ARTIFACT_RETENTION_CLEAN_OUT ?= tmp/generated-artifact-retention-clean.json",
         "GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY ?=",
         "COMMAND_LOG_SUMMARY_BACKFILL_OUT ?= tmp/command-log-summary-backfill.json",
@@ -262,7 +335,9 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
             case.assertIn(variable, text)
 
 
-def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: str) -> None:
+def _assert_script_surface_and_inventory_targets(
+    case: unittest.TestCase, text: str
+) -> None:
     script_output_block = _target_block(text, "script-output-surfaces")
     case.assertIn(
         '$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)"',
@@ -270,19 +345,41 @@ def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: 
     )
     case.assertNotIn("ops.scripts.canonical_artifact_promote", script_output_block)
     case.assertNotIn("--preserve-existing-on-semantic-match", script_output_block)
-    case.assertNotIn("--semantic-match-includes-source-tree-fingerprint", script_output_block)
+    case.assertNotIn(
+        "--semantic-match-includes-source-tree-fingerprint", script_output_block
+    )
     script_output_check_block = _target_block(text, "script-output-surfaces-check")
     case.assertIn("script-output-surfaces-check", _target_block(text, ".PHONY"))
     case.assertIn("ops.scripts.script_output_surfaces", script_output_check_block)
     case.assertIn('--stored "$(SCRIPT_OUTPUT_SURFACES_OUT)"', script_output_check_block)
     case.assertIn("--check", script_output_check_block)
     case.assertNotIn("SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT", script_output_check_block)
-    case.assertNotIn("ops.scripts.canonical_artifact_promote", script_output_check_block)
+    case.assertNotIn(
+        "ops.scripts.canonical_artifact_promote", script_output_check_block
+    )
+    script_module_block = _target_block(text, "script-module-surfaces")
+    case.assertIn(
+        '$(PYTHON) -m ops.scripts.script_module_surfaces --vault "$(VAULT)" --out "$(SCRIPT_MODULE_SURFACES_OUT)"',
+        script_module_block,
+    )
+    script_module_check_block = _target_block(text, "script-module-surfaces-check")
+    case.assertIn("script-module-surfaces-check", _target_block(text, ".PHONY"))
+    case.assertIn("ops.scripts.script_module_surfaces", script_module_check_block)
+    case.assertIn('--stored "$(SCRIPT_MODULE_SURFACES_OUT)"', script_module_check_block)
+    case.assertIn("--check", script_module_check_block)
+    case.assertNotIn("SCRIPT_MODULE_SURFACES_CANDIDATE_OUT", script_module_check_block)
+    case.assertNotIn(
+        "ops.scripts.canonical_artifact_promote", script_module_check_block
+    )
     retention_clean_block = _target_block(text, "generated-artifact-retention-clean")
     command_log_backfill_block = _target_block(text, "command-log-summary-backfill")
     case.assertIn("command-log-summary-backfill", _target_block(text, ".PHONY"))
-    case.assertIn("ops.scripts.command_log_summary_backfill", command_log_backfill_block)
-    case.assertIn('--out "$(COMMAND_LOG_SUMMARY_BACKFILL_OUT)"', command_log_backfill_block)
+    case.assertIn(
+        "ops.scripts.command_log_summary_backfill", command_log_backfill_block
+    )
+    case.assertIn(
+        '--out "$(COMMAND_LOG_SUMMARY_BACKFILL_OUT)"', command_log_backfill_block
+    )
     case.assertIn("--apply", command_log_backfill_block)
     case.assertIn("--all", command_log_backfill_block)
     case.assertIn("--include-run-commands", command_log_backfill_block)
@@ -291,8 +388,12 @@ def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: 
     case.assertIn("--operator-confirmation", command_log_backfill_block)
     case.assertIn("--run-id", command_log_backfill_block)
     case.assertIn("generated-artifact-retention-clean", _target_block(text, ".PHONY"))
-    case.assertIn("ops.scripts.generated_artifact_retention_clean", retention_clean_block)
-    case.assertIn('--out "$(GENERATED_ARTIFACT_RETENTION_CLEAN_OUT)"', retention_clean_block)
+    case.assertIn(
+        "ops.scripts.generated_artifact_retention_clean", retention_clean_block
+    )
+    case.assertIn(
+        '--out "$(GENERATED_ARTIFACT_RETENTION_CLEAN_OUT)"', retention_clean_block
+    )
     case.assertIn("--apply", retention_clean_block)
     guard_block = _target_block(text, "clean-fixture-regeneration-guard")
     case.assertIn("clean-fixture-regeneration-guard", _target_block(text, ".PHONY"))
@@ -305,13 +406,20 @@ def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: 
         text,
     )
     case.assertIn("make-target-inventory", _target_block(text, ".PHONY"))
+    case.assertIn("make-target-inventory-check", _target_block(text, ".PHONY"))
     case.assertIn(
         '$(PYTHON) -m ops.scripts.make_target_inventory --vault "$(VAULT)" --out "$(MAKE_TARGET_INVENTORY_OUT)"',
         _target_block(text, "make-target-inventory"),
     )
+    case.assertIn(
+        '$(PYTHON) -m ops.scripts.make_target_inventory --vault "$(VAULT)" --check',
+        _target_block(text, "make-target-inventory-check"),
+    )
 
 
-def _assert_workflow_dependency_planner_target(case: unittest.TestCase, text: str) -> None:
+def _assert_workflow_dependency_planner_target(
+    case: unittest.TestCase, text: str
+) -> None:
     case.assertIn("workflow-dependency-planner", _target_block(text, ".PHONY"))
     case.assertIn("workflow-dependency-planner-check", _target_block(text, ".PHONY"))
     planner_block = _target_block(text, "workflow-dependency-planner")
@@ -320,9 +428,13 @@ def _assert_workflow_dependency_planner_target(case: unittest.TestCase, text: st
         planner_block,
     )
     case.assertIn("ops.scripts.canonical_artifact_promote", planner_block)
-    case.assertIn("--schema ops/schemas/workflow-dependency-planner.schema.json", planner_block)
+    case.assertIn(
+        "--schema ops/schemas/workflow-dependency-planner.schema.json", planner_block
+    )
     case.assertIn("--expected-artifact-kind workflow_dependency_planner", planner_block)
-    case.assertIn("--expected-producer ops.scripts.workflow_dependency_planner", planner_block)
+    case.assertIn(
+        "--expected-producer ops.scripts.workflow_dependency_planner", planner_block
+    )
     planner_check_block = _target_block(text, "workflow-dependency-planner-check")
     case.assertIn(
         '$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT)"',
@@ -332,11 +444,18 @@ def _assert_workflow_dependency_planner_target(case: unittest.TestCase, text: st
     for target in ("static", "check", "check-all", "release-check", "release-clean"):
         with case.subTest(target=target):
             case.assertNotIn("workflow-dependency-planner", _target_block(text, target))
-    case.assertNotIn("$(MAKE) workflow-dependency-planner", _target_block(text, "release-evidence-converge"))
-    case.assertNotIn("$(MAKE) workflow-dependency-planner", _target_block(text, "check-finalized"))
+    case.assertNotIn(
+        "$(MAKE) workflow-dependency-planner",
+        _target_block(text, "release-evidence-converge"),
+    )
+    case.assertNotIn(
+        "$(MAKE) workflow-dependency-planner", _target_block(text, "check-finalized")
+    )
 
 
-def _assert_release_workflow_order_guard_target(case: unittest.TestCase, text: str) -> None:
+def _assert_release_workflow_order_guard_target(
+    case: unittest.TestCase, text: str
+) -> None:
     case.assertIn("release-workflow-order-guard", _target_block(text, ".PHONY"))
     order_guard_block = _target_block(text, "release-workflow-order-guard")
     case.assertIn(
@@ -344,34 +463,67 @@ def _assert_release_workflow_order_guard_target(case: unittest.TestCase, text: s
         order_guard_block,
     )
     case.assertIn("ops.scripts.canonical_artifact_promote", order_guard_block)
-    case.assertIn("--schema ops/schemas/release-workflow-order-guard.schema.json", order_guard_block)
-    case.assertIn("--expected-artifact-kind release_workflow_order_guard", order_guard_block)
-    case.assertIn("--expected-producer ops.scripts.release_workflow_order_guard", order_guard_block)
-    case.assertNotIn("$(MAKE) release-workflow-order-guard", _target_block(text, "release-evidence-converge"))
-    case.assertNotIn("$(MAKE) release-workflow-order-guard", _target_block(text, "check-finalized"))
+    case.assertIn(
+        "--schema ops/schemas/release-workflow-order-guard.schema.json",
+        order_guard_block,
+    )
+    case.assertIn(
+        "--expected-artifact-kind release_workflow_order_guard", order_guard_block
+    )
+    case.assertIn(
+        "--expected-producer ops.scripts.release_workflow_order_guard",
+        order_guard_block,
+    )
+    case.assertNotIn(
+        "$(MAKE) release-workflow-order-guard",
+        _target_block(text, "release-evidence-converge"),
+    )
+    case.assertNotIn(
+        "$(MAKE) release-workflow-order-guard", _target_block(text, "check-finalized")
+    )
 
 
-def _assert_function_budget_and_outcome_targets(case: unittest.TestCase, text: str) -> None:
+def _assert_function_budget_and_outcome_targets(
+    case: unittest.TestCase, text: str
+) -> None:
     proposal_block = _target_block(text, "function-budget-refactor-proposals")
     edit_check_block = _target_block(text, "function-budget-edit-check")
-    case.assertIn("function-budget-refactor-proposals: wiki-lint-review-classification", text)
+    case.assertIn(
+        "function-budget-refactor-proposals: wiki-lint-review-classification", text
+    )
     case.assertIn(
         '$(PYTHON) -m ops.scripts.function_budget_refactor_proposals --vault "$(VAULT)" --classification "$(WIKI_LINT_REVIEW_CLASSIFICATION_OUT)" --out "$(FUNCTION_BUDGET_REFACTOR_PROPOSALS_CANDIDATE_OUT)"',
         proposal_block,
     )
-    case.assertIn("--schema ops/schemas/function-budget-refactor-proposals.schema.json", proposal_block)
-    case.assertIn("function-budget-edit-check: function-budget-refactor-proposals", text)
+    case.assertIn(
+        "--schema ops/schemas/function-budget-refactor-proposals.schema.json",
+        proposal_block,
+    )
+    case.assertIn(
+        "function-budget-edit-check: function-budget-refactor-proposals", text
+    )
     case.assertIn("$(MAKE) complexity-budget-touched-check", edit_check_block)
 
     outcome_policy_block = _target_block(text, "outcome-provenance-gate-policy")
-    case.assertIn("outcome-provenance-gate-policy: outcome-metrics routing-provenance-aggregate", text)
+    case.assertIn(
+        "outcome-provenance-gate-policy: outcome-metrics routing-provenance-aggregate",
+        text,
+    )
     case.assertIn(
         '$(PYTHON) -m ops.scripts.outcome_provenance_gate_policy --vault "$(VAULT)" --out "$(OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT)"',
         outcome_policy_block,
     )
-    case.assertIn("--schema ops/schemas/outcome-provenance-gate-policy.schema.json", outcome_policy_block)
-    case.assertIn("--expected-artifact-kind outcome_provenance_gate_policy", outcome_policy_block)
-    case.assertIn("--expected-producer ops.scripts.outcome_provenance_gate_policy", outcome_policy_block)
+    case.assertIn(
+        "--schema ops/schemas/outcome-provenance-gate-policy.schema.json",
+        outcome_policy_block,
+    )
+    case.assertIn(
+        "--expected-artifact-kind outcome_provenance_gate_policy", outcome_policy_block
+    )
+    case.assertIn(
+        "--expected-producer ops.scripts.outcome_provenance_gate_policy",
+        outcome_policy_block,
+    )
 
     promotion_trends_block = _target_block(text, "promotion-decision-trends")
     case.assertIn(
@@ -380,7 +532,9 @@ def _assert_function_budget_and_outcome_targets(case: unittest.TestCase, text: s
     )
 
 
-def _assert_external_report_action_matrix_target(case: unittest.TestCase, text: str) -> None:
+def _assert_external_report_action_matrix_target(
+    case: unittest.TestCase, text: str
+) -> None:
     external_action_block = _target_block(text, "external-report-action-matrix")
     case.assertIn(
         '$(PYTHON) -m ops.scripts.external_report_action_matrix --vault "$(VAULT)" --out "$(EXTERNAL_REPORT_ACTION_MATRIX_OUT)"',
@@ -390,7 +544,9 @@ def _assert_external_report_action_matrix_target(case: unittest.TestCase, text: 
 
 
 class MakefileStaticGateTests(unittest.TestCase):
-    def test_root_makefile_keeps_only_common_variables_and_aggregate_aliases(self) -> None:
+    def test_root_makefile_keeps_only_common_variables_and_aggregate_aliases(
+        self,
+    ) -> None:
         root_text = MAKEFILE.read_text(encoding="utf-8")
         allowed_assignments = {
             "VENV_DIR",
@@ -402,7 +558,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         }
         assignment_names = {
             match.group(1)
-            for match in re.finditer(r"^([A-Z0-9_]+)\s*(?:\?|:)?=", root_text, flags=re.MULTILINE)
+            for match in re.finditer(
+                r"^([A-Z0-9_]+)\s*(?:\?|:)?=", root_text, flags=re.MULTILINE
+            )
         }
 
         self.assertEqual(assignment_names, allowed_assignments)
@@ -420,8 +578,14 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(mk_file=mk_file):
                 self.assertIn(f"include {mk_file}", root_text)
-                self.assertLess(root_text.index(f"include {mk_file}"), root_text.index(".PHONY: check"))
-        self.assertLess(root_text.index("include mk/test.mk"), root_text.index("export PYTEST_DISABLE_PLUGIN_AUTOLOAD"))
+                self.assertLess(
+                    root_text.index(f"include {mk_file}"),
+                    root_text.index(".PHONY: check"),
+                )
+        self.assertLess(
+            root_text.index("include mk/test.mk"),
+            root_text.index("export PYTEST_DISABLE_PLUGIN_AUTOLOAD"),
+        )
 
     def test_help_target_indexes_operator_entrypoints(self) -> None:
         text = _makefile_text()
@@ -431,7 +595,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         for heading in (
             "Setup:",
             "Source checks:",
-            "Inventory and selectors:",
+            "Inventory and derived surfaces:",
             "Report contracts:",
             "Public mirror:",
             "Mechanism:",
@@ -447,9 +611,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             "make local-tool-state-clean",
             "make uv-cache-prune",
             "make strict-preview-audit",
+            "make sync-derived",
+            "make sync-derived-check",
+            "make pytest-markers-sync",
             "make make-target-inventory",
+            "make make-target-inventory-check",
             "make test-selectors-sync",
             "make test-selectors-sync-check",
+            "make review-surface-manifest",
             "make test-report-contract-core",
             "make external-report-lifecycle-refresh",
             "make sync-public-policy",
@@ -468,12 +637,21 @@ class MakefileStaticGateTests(unittest.TestCase):
                 self.assertEqual(dependencies[:2], ("uv-lock-check", "static"))
                 self.assertIn("registry-preflight-check", dependencies)
                 self.assertNotIn("registry-preflight", dependencies)
-        self.assertEqual(_target_dependencies(text, "static"), ("static-local", "lock-freshness-check"))
-        self.assertEqual(_target_dependencies(text, "static-local"), ("ruff", "typecheck"))
-        self.assertEqual(_target_dependencies(text, "lock-freshness-check"), ("uv-lock-check",))
+        self.assertEqual(
+            _target_dependencies(text, "static"),
+            ("static-local", "lock-freshness-check"),
+        )
+        self.assertEqual(
+            _target_dependencies(text, "static-local"), ("ruff", "typecheck")
+        )
+        self.assertEqual(
+            _target_dependencies(text, "lock-freshness-check"), ("uv-lock-check",)
+        )
         self.assertEqual(
             _recipe_lines(text, "uv-lock-check"),
-            ['UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)'],
+            [
+                'UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)'
+            ],
         )
         self.assertIn("UV_CANONICAL_INDEX_URL ?= https://pypi.org/simple", text)
         self.assertIn(
@@ -499,12 +677,16 @@ class MakefileStaticGateTests(unittest.TestCase):
             '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target check-clean',
             _target_block(text, "check-clean-lane-guard"),
         )
-        self.assertIn("release-evidence-converge-lane-guard", _target_block(text, ".PHONY"))
+        self.assertIn(
+            "release-evidence-converge-lane-guard", _target_block(text, ".PHONY")
+        )
         self.assertIn(
             '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-evidence-converge',
             _target_block(text, "release-evidence-converge-lane-guard"),
         )
-        self.assertIn("release-evidence-closeout-lane-guard", _target_block(text, ".PHONY"))
+        self.assertIn(
+            "release-evidence-closeout-lane-guard", _target_block(text, ".PHONY")
+        )
         self.assertIn(
             "release-evidence-closeout-lane-guard is a compatibility alias",
             _target_block(text, "release-evidence-closeout-lane-guard"),
@@ -550,8 +732,12 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("MYPY_TARGETS ?= ops/scripts", text)
         self.assertIn("TOOL_CACHE_ROOT ?= tmp/tool-cache", text)
         self.assertIn("TOOL_CACHE_PLATFORM ?=", text)
-        self.assertIn("RUFF_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/ruff/$(TOOL_CACHE_PLATFORM)", text)
-        self.assertIn("MYPY_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/mypy/$(TOOL_CACHE_PLATFORM)", text)
+        self.assertIn(
+            "RUFF_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/ruff/$(TOOL_CACHE_PLATFORM)", text
+        )
+        self.assertIn(
+            "MYPY_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/mypy/$(TOOL_CACHE_PLATFORM)", text
+        )
         self.assertIn("static-local: ruff typecheck", text)
         self.assertIn("lock-freshness-check: uv-lock-check", text)
         self.assertIn("static: static-local lock-freshness-check", text)
@@ -583,7 +769,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("LOCAL_CACHE_CLEAN_FIND_ROOTS ?= ops tests tools", text)
         self.assertIn("rm -rf $(LOCAL_CACHE_CLEAN_PATHS)", block)
-        self.assertIn("find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type d -name __pycache__", block)
+        self.assertIn(
+            "find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type d -name __pycache__", block
+        )
         self.assertIn("find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type f", block)
         self.assertNotIn("LOCAL_TOOL_STATE_CLEAN_PATHS", block)
         self.assertNotIn(".kiro", block)
@@ -591,7 +779,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("ops/reports", block)
         self.assertNotIn("build/release", block)
 
-    def test_local_tool_state_clean_is_explicit_and_keeps_migration_state_out(self) -> None:
+    def test_local_tool_state_clean_is_explicit_and_keeps_migration_state_out(
+        self,
+    ) -> None:
         text = _makefile_text()
         block = _target_block(text, "local-tool-state-clean")
 
@@ -601,7 +791,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn(".venv", block)
         self.assertNotIn("ops/reports", block)
 
-    def test_uv_cache_prune_keeps_global_uv_cleanup_explicit_and_non_destructive(self) -> None:
+    def test_uv_cache_prune_keeps_global_uv_cleanup_explicit_and_non_destructive(
+        self,
+    ) -> None:
         text = _makefile_text()
         block = _target_block(text, "uv-cache-prune")
 
@@ -631,9 +823,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertNotIn("-n auto --dist=loadfile", text)
-        self.assertIn(
-            "PYTEST_PARALLEL_FLAGS ?= $(PYTEST_LOADFILE_FLAGS)", text
-        )
+        self.assertIn("PYTEST_PARALLEL_FLAGS ?= $(PYTEST_LOADFILE_FLAGS)", text)
         self.assertIn("PYTEST_CACHE_ISOLATION_FLAGS ?= -p no:cacheprovider", text)
         self.assertIn(
             "PYTEST_FLAGS ?= $(PYTEST_PARALLEL_FLAGS) $(PYTEST_CACHE_ISOLATION_FLAGS)",
@@ -648,18 +838,22 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
 
-    def test_pytest_ini_declares_lane_markers(self) -> None:
+    def test_pytest_ini_declares_registry_markers(self) -> None:
         registry = _test_lane_registry()
         pytest_ini_text = PYTEST_INI.read_text(encoding="utf-8")
         marker_docs = _pytest_ini_marker_docs()
 
-        self.assertEqual(set(marker_docs), authoritative_markers(registry))
-        self.assertEqual(marker_docs, marker_semantics(registry))
+        self.assertTrue(authoritative_markers(registry).issubset(set(marker_docs)))
+        self.assertEqual(marker_docs, pytest_marker_docs(registry))
+        self.assertIn("# >>> pytest-marker-registry >>>", pytest_ini_text)
+        self.assertIn("# <<< pytest-marker-registry <<<", pytest_ini_text)
         self.assertNotIn(
             "deprecated compatibility alias for artifact_finalization", pytest_ini_text
         )
 
-    def test_registry_make_target_marker_expressions_match_makefile_variables(self) -> None:
+    def test_registry_make_target_marker_expressions_match_makefile_variables(
+        self,
+    ) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
         variable_by_target = {
@@ -679,47 +873,150 @@ class MakefileStaticGateTests(unittest.TestCase):
                     _normalize_whitespace(selection_by_make_target(registry)[target]),
                 )
 
-    def test_registry_explicit_selector_packs_match_makefile_variables(self) -> None:
+    def test_registry_marker_expression_packs_match_makefile_variables(self) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
-        variable_by_pack = {
-            "fast_smoke": "FAST_SMOKE_TESTS",
-            "default_test_boundary": "DEFAULT_TEST_BOUNDARY_TESTS",
-            "runtime_hotspot_smoke": "RUNTIME_HOTSPOT_SMOKE_TESTS",
-            "schema_static_smoke": "SCHEMA_STATIC_SMOKE_TESTS",
-            "report_contract_core": "REPORT_CONTRACT_CORE_TESTS",
-            "report_contract_all": "REPORT_CONTRACT_ALL_TESTS",
-            "release_sealing_core": "RELEASE_SEALING_CORE_TESTS",
-            "subprocess_checks": "SUBPROCESS_TESTS",
-            "release_closeout_regression": "RELEASE_CLOSEOUT_REGRESSION_TESTS",
-        }
 
-        for pack_id, variable in variable_by_pack.items():
-            with self.subTest(pack_id=pack_id, variable=variable):
-                if pack_id == "report_contract_all":
-                    _assert_hybrid_make_selector_variable_matches_pack(
-                        self,
-                        registry,
-                        text,
-                        variable=variable,
-                        pack_id=pack_id,
-                        mark_expr_variable="PYTEST_REPORT_CONTRACT_MARK_EXPR",
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="FAST_SMOKE_TESTS",
+            pack_id="fast_smoke",
+            mark_expr_variable="PYTEST_FAST_SMOKE_MARK_EXPR",
+        )
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="DEFAULT_TEST_BOUNDARY_TESTS",
+            pack_id="default_test_boundary",
+            mark_expr_variable="PYTEST_DEFAULT_TEST_BOUNDARY_MARK_EXPR",
+        )
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="RUNTIME_HOTSPOT_SMOKE_TESTS",
+            pack_id="runtime_hotspot_smoke",
+            mark_expr_variable="PYTEST_RUNTIME_HOTSPOT_SMOKE_MARK_EXPR",
+        )
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="REPORT_CONTRACT_CORE_TESTS",
+            pack_id="report_contract_core",
+            mark_expr_variable="PYTEST_REPORT_CONTRACT_CORE_MARK_EXPR",
+        )
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="RELEASE_SEALING_CORE_TESTS",
+            pack_id="release_sealing_core",
+            mark_expr_variable="PYTEST_RELEASE_SEALING_CORE_MARK_EXPR",
+        )
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="REPORT_CONTRACT_ALL_TESTS",
+            pack_id="report_contract_all",
+            mark_expr_variable="PYTEST_REPORT_CONTRACT_MARK_EXPR",
+        )
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="SUBPROCESS_TESTS",
+            pack_id="subprocess_checks",
+            mark_expr_variable="PYTEST_SUBPROCESS_MARK_EXPR",
+        )
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="SCHEMA_STATIC_SMOKE_TESTS",
+            pack_id="schema_static_smoke",
+            mark_expr_variable="PYTEST_SCHEMA_STATIC_SMOKE_MARK_EXPR",
+        )
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="RELEASE_CLOSEOUT_REGRESSION_TESTS",
+            pack_id="release_closeout_regression",
+            mark_expr_variable="PYTEST_RELEASE_CLOSEOUT_REGRESSION_MARK_EXPR",
+        )
+
+    def test_core_marker_packs_collect_via_registered_marker_expression(self) -> None:
+        registry = _test_lane_registry()
+
+        for pack_id in (
+            "report_contract_core",
+            "schema_static_smoke",
+            "release_sealing_core",
+        ):
+            with self.subTest(pack_id=pack_id):
+                collected_paths = _collect_marker_paths(pack_mark_expr(registry, pack_id))
+                self.assertTrue(collected_paths)
+                self.assertTrue(
+                    all(
+                        path.startswith("tests/") and path.endswith(".py")
+                        for path in collected_paths
                     )
-                    continue
-                _assert_make_selector_variable_matches_pack(
-                    self,
-                    registry,
-                    text,
-                    variable=variable,
-                    pack_id=pack_id,
                 )
+
+    def test_release_sealing_core_preserves_release_sealing_marker_compatibility(
+        self,
+    ) -> None:
+        env = os.environ.copy()
+        env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "--collect-only",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                "-m",
+                "release_sealing_core and not release_sealing",
+            ],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+
+        self.assertEqual(
+            completed.returncode,
+            5,
+            msg=(
+                "release_sealing_core node IDs must keep their release_sealing marker "
+                "compatibility.\n"
+                f"stdout:\n{completed.stdout}\n"
+                f"stderr:\n{completed.stderr}"
+            ),
+        )
+        self.assertEqual(completed.stdout.strip(), "")
 
     def test_make_dry_run_sees_generated_selector_fragment(self) -> None:
         registry = _test_lane_registry()
         test_mk_text = Path("mk/test.mk").read_text(encoding="utf-8")
         self.assertIn("include mk/test-selectors.generated.mk", test_mk_text)
-        self.assertIn("test-selectors-sync-check", _target_block(test_mk_text, ".PHONY"))
-        self.assertIn("_internal-test-selectors-sync-check", _target_block(test_mk_text, ".PHONY"))
+        self.assertIn(
+            "test-selectors-sync-check", _target_block(test_mk_text, ".PHONY")
+        )
+        self.assertIn(
+            "_internal-test-selectors-sync-check", _target_block(test_mk_text, ".PHONY")
+        )
         self.assertEqual(
             _recipe_lines(test_mk_text, "test-selectors-sync-check"),
             ["@$(MAKE) _internal-test-selectors-sync-check"],
@@ -728,23 +1025,19 @@ class MakefileStaticGateTests(unittest.TestCase):
             _recipe_lines(test_mk_text, "_internal-test-selectors-sync-check"),
             [
                 (
-                    '$(PYTHON) -m ops.scripts.test.generate_test_mk_selectors '
+                    "$(PYTHON) -m ops.scripts.test.generate_test_mk_selectors "
                     '--vault "$(VAULT)" --check'
                 )
             ],
         )
 
-        target_by_pack = {
-            "fast_smoke": "fast-smoke",
-            "default_test_boundary": "test-boundary-contract-smoke",
+        marker_target_by_pack = {
             "runtime_hotspot_smoke": "runtime-hotspot-smoke",
             "report_contract_core": "test-report-contract-core",
             "release_sealing_core": "test-release-sealing-core",
-            "subprocess_checks": "test-subprocess",
         }
-        for pack_id, target in target_by_pack.items():
+        for pack_id, target in marker_target_by_pack.items():
             with self.subTest(pack_id=pack_id, target=target):
-                selector = pack_selectors(registry, pack_id)[0]
                 completed = subprocess.run(
                     ["make", "-n", target],
                     cwd=REPO_ROOT,
@@ -764,7 +1057,72 @@ class MakefileStaticGateTests(unittest.TestCase):
                         f"stderr:\n{completed.stderr}"
                     ),
                 )
-                self.assertIn(selector, completed.stdout)
+                self.assertIn(
+                    f'-m "{pack_mark_expr(registry, pack_id)}"', completed.stdout
+                )
+
+        completed = subprocess.run(
+            ["make", "-n", "test-boundary-contract-smoke"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+
+        self.assertEqual(
+            completed.returncode,
+            0,
+            msg=(
+                "make -n test-boundary-contract-smoke failed.\n"
+                f"stdout:\n{completed.stdout}\n"
+                f"stderr:\n{completed.stderr}"
+            ),
+        )
+        self.assertIn('-m "default_test_boundary"', completed.stdout)
+
+        completed = subprocess.run(
+            ["make", "-n", "test-subprocess"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+
+        self.assertEqual(
+            completed.returncode,
+            0,
+            msg=(
+                "make -n test-subprocess failed.\n"
+                f"stdout:\n{completed.stdout}\n"
+                f"stderr:\n{completed.stderr}"
+            ),
+        )
+        self.assertIn('-m "subprocess"', completed.stdout)
+
+        completed = subprocess.run(
+            ["make", "-n", "fast-smoke"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+
+        self.assertEqual(
+            completed.returncode,
+            0,
+            msg=(
+                "make -n fast-smoke failed.\n"
+                f"stdout:\n{completed.stdout}\n"
+                f"stderr:\n{completed.stderr}"
+            ),
+        )
+        self.assertIn('-m "fast_smoke"', completed.stdout)
 
     def test_registry_make_target_compatibility_entries_exist_in_makefile(self) -> None:
         registry = _test_lane_registry()
@@ -808,9 +1166,13 @@ class MakefileStaticGateTests(unittest.TestCase):
             "`make test-execution-summary-full-current-or-refresh`",
             development_text,
         )
-        self.assertIn("`test-execution-summary-full-refresh-no-converge`", development_text)
+        self.assertIn(
+            "`test-execution-summary-full-refresh-no-converge`", development_text
+        )
         self.assertIn("`make test-all`", development_text)
-        self.assertIn("focused `.venv/bin/python -m pytest tests/...`", development_text)
+        self.assertIn(
+            "focused `.venv/bin/python -m pytest tests/...`", development_text
+        )
         self.assertIn("Bare `pytest` is unsupported.", normalized_development_text)
         self.assertIn("ops/test-lane-registry.json", development_text)
         self.assertIn("mk/test.mk", development_text)
@@ -825,7 +1187,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("SELECTORLESS_PYTEST_GUIDANCE", conftest_text)
         self.assertIn("LLMWIKI_MAKE_PYTEST_ENTRYPOINT", conftest_text)
         self.assertIn("make test-all", conftest_text)
-        self.assertIn("make test-execution-summary-full-current-or-refresh", conftest_text)
+        self.assertIn(
+            "make test-execution-summary-full-current-or-refresh", conftest_text
+        )
         self.assertNotRegex(pytest_ini_text, r"(?im)^pythonpath\s*=")
         for entrypoint in (
             "make fast-smoke",
@@ -847,7 +1211,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(alias=alias):
                 self.assertNotIn(f"- `{alias}`", development_text)
-                self.assertNotIn(alias, compatibility_names(registry, "documented_entrypoint"))
+                self.assertNotIn(
+                    alias, compatibility_names(registry, "documented_entrypoint")
+                )
 
     def test_development_change_type_gates_split_make_ci_proofs(self) -> None:
         registry = _test_lane_registry()
@@ -894,29 +1260,18 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
 
     def test_schema_static_smoke_is_named_windows_ci_target(self) -> None:
+        registry = _test_lane_registry()
         text = _makefile_text()
-        selectors = _makefile_assignment_items(text, "SCHEMA_STATIC_SMOKE_TESTS")
         block = _target_block(text, "test-schema-static-smoke")
 
         self.assertIn("test-schema-static-smoke", _target_block(text, ".PHONY"))
-        self.assertEqual(
-            selectors,
-            (
-                "tests/test_ci_tier_lane_bridge.py",
-                "tests/test_ci_workflow_static.py",
-                "tests/test_makefile_static_gates.py",
-                "tests/test_makefile_fast_smoke_static_gates.py",
-                "tests/test_makefile_release_orchestration_static_gates.py",
-                "tests/test_makefile_release_evidence_static_gates.py",
-                "tests/test_makefile_release_smoke_static_gates.py",
-                "tests/test_makefile_test_execution_summary_gates.py",
-                "tests/test_makefile_auto_improve_goal_static_gates.py",
-                "tests/test_makefile_public_registry_supply_chain_gates.py",
-                "tests/test_report_schema_sample_regeneration.py",
-                "tests/test_report_schemas.py",
-                "tests/test_ruff_strict_preview.py",
-                "tests/test_strict_preview_audit.py",
-            ),
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="SCHEMA_STATIC_SMOKE_TESTS",
+            pack_id="schema_static_smoke",
+            mark_expr_variable="PYTEST_SCHEMA_STATIC_SMOKE_MARK_EXPR",
         )
         self.assertIn(
             "$(PYTHON) -m pytest -q $(SCHEMA_STATIC_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)",
@@ -982,13 +1337,35 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
+            "PYTEST_REPORT_CONTRACT_CORE_MARK_EXPR ?= report_contract_core",
+            text,
+        )
+        self.assertIn(
             "PYTEST_RELEASE_CHECK_MARK_EXPR ?= not report_contract",
+            text,
+        )
+        self.assertIn(
+            "PYTEST_RUNTIME_HOTSPOT_SMOKE_MARK_EXPR ?= runtime_hotspot_smoke",
+            text,
+        )
+        self.assertIn(
+            "PYTEST_RELEASE_SEALING_CORE_MARK_EXPR ?= release_sealing_core",
             text,
         )
         self.assertIn("PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing", text)
         self.assertIn("PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess", text)
+        self.assertIn(
+            "PYTEST_SCHEMA_STATIC_SMOKE_MARK_EXPR ?= schema_static_smoke", text
+        )
+        self.assertIn(
+            "PYTEST_DEFAULT_TEST_BOUNDARY_MARK_EXPR ?= default_test_boundary",
+            text,
+        )
+        self.assertIn(
+            "PYTEST_RELEASE_CLOSEOUT_REGRESSION_MARK_EXPR ?= release_closeout_regression",
+            text,
+        )
         self.assertIn("RELEASE_SEALING_CORE_TESTS ?=", text)
-        self.assertIn("tests/test_release_auto_promotion_preflight.py", text)
         self.assertIn("RELEASE_SEALING_TESTS ?= $(RELEASE_SEALING_CORE_TESTS)", text)
         self.assertIn("SUBPROCESS_TESTS ?=", text)
         self.assertIn(
@@ -1164,15 +1541,32 @@ class MakefileStaticGateTests(unittest.TestCase):
             "tmp/source-package-clean-extract",
         )
         self.assertIn("release-package-current-check", _target_block(text, ".PHONY"))
-        self.assertIn("release-package-current-or-refresh", _target_block(text, ".PHONY"))
-        self.assertIn("release-source-package-smoke-current-check", _target_block(text, ".PHONY"))
-        self.assertIn("release-source-package-smoke-current-or-refresh", _target_block(text, ".PHONY"))
-        self.assertIn("release-source-package-clean-extract", _target_block(text, ".PHONY"))
-        self.assertIn("release-source-package-clean-extract-current-check", _target_block(text, ".PHONY"))
-        self.assertIn("release-source-package-clean-extract-current-or-refresh", _target_block(text, ".PHONY"))
-        self.assertIn("--reuse-if-current", _target_block(text, "release-package-current-check"))
         self.assertIn(
-            '$(MAKE) release-package-current-check',
+            "release-package-current-or-refresh", _target_block(text, ".PHONY")
+        )
+        self.assertIn(
+            "release-source-package-smoke-current-check", _target_block(text, ".PHONY")
+        )
+        self.assertIn(
+            "release-source-package-smoke-current-or-refresh",
+            _target_block(text, ".PHONY"),
+        )
+        self.assertIn(
+            "release-source-package-clean-extract", _target_block(text, ".PHONY")
+        )
+        self.assertIn(
+            "release-source-package-clean-extract-current-check",
+            _target_block(text, ".PHONY"),
+        )
+        self.assertIn(
+            "release-source-package-clean-extract-current-or-refresh",
+            _target_block(text, ".PHONY"),
+        )
+        self.assertIn(
+            "--reuse-if-current", _target_block(text, "release-package-current-check")
+        )
+        self.assertIn(
+            "$(MAKE) release-package-current-check",
             _target_block(text, "release-package-current-or-refresh"),
         )
         self.assertIn(
@@ -1194,7 +1588,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             ),
         )
         self.assertIn(
-            '$(MAKE) release-source-package-smoke-current-check',
+            "$(MAKE) release-source-package-smoke-current-check",
             _target_block(text, "release-source-package-smoke-current-or-refresh"),
         )
         _assert_recipe_contains_tokens(
@@ -1215,16 +1609,27 @@ class MakefileStaticGateTests(unittest.TestCase):
             ),
         )
         self.assertIn(
-            '$(MAKE) release-source-package-clean-extract-current-check',
-            _target_block(text, "release-source-package-clean-extract-current-or-refresh"),
+            "$(MAKE) release-source-package-clean-extract-current-check",
+            _target_block(
+                text, "release-source-package-clean-extract-current-or-refresh"
+            ),
         )
-        self.assertEqual(pack_selectors(registry, "source_package"), ("release-source-package-smoke",))
+        self.assertEqual(
+            pack_selectors(registry, "source_package"),
+            ("release-source-package-smoke",),
+        )
         self.assertEqual(
             pack_summary_suite(registry, "source_package")["summary_target"],
             "build/source-package-smoke/source-package-smoke.json",
         )
-        self.assertIn("$(MAKE) release-package-current-or-refresh", _target_block(text, "release-source-package-check"))
-        self.assertIn("$(MAKE) release-source-package-smoke-current-or-refresh", _target_block(text, "release-source-package-check"))
+        self.assertIn(
+            "$(MAKE) release-package-current-or-refresh",
+            _target_block(text, "release-source-package-check"),
+        )
+        self.assertIn(
+            "$(MAKE) release-source-package-smoke-current-or-refresh",
+            _target_block(text, "release-source-package-check"),
+        )
         self.assertIn(
             "$(MAKE) release-source-package-clean-extract-current-or-refresh",
             _target_block(text, "release-source-package-check"),
@@ -1234,7 +1639,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
 
-        self.assertIn("CI splits registry-backed lanes into parallel jobs", development_text)
+        self.assertIn(
+            "CI splits registry-backed lanes into parallel jobs", development_text
+        )
         self.assertIn(".github/workflows/ci.yml", development_text)
         self.assertIn("ops/test-lane-registry.json", development_text)
         self.assertIn("make help", development_text)
@@ -1256,7 +1663,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(alias=alias):
                 self.assertNotIn(f"- `{alias}`", development_text)
-                self.assertNotIn(alias, compatibility_names(registry, "documented_entrypoint"))
+                self.assertNotIn(
+                    alias, compatibility_names(registry, "documented_entrypoint")
+                )
 
     def test_registry_documents_authority_boundary_for_lane_contract(self) -> None:
         registry = _test_lane_registry()
@@ -1267,7 +1676,12 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         self.assertEqual(
             documentation_authority(registry),
-            ("README.md", "docs/development.md", "ops/README.md", ".github/workflows/ci.yml"),
+            (
+                "README.md",
+                "docs/development.md",
+                "ops/README.md",
+                ".github/workflows/ci.yml",
+            ),
         )
         self.assertEqual(
             documentation_out_of_scope(registry),
@@ -1283,7 +1697,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertNotIn(
             "tests/test_release_workflow_static.py",
-            pack_selectors(registry, "report_contract_core"),
+            _collect_marker_paths(pack_mark_expr(registry, "report_contract_core")),
         )
 
     def test_architecture_public_surface_includes_github_workflows(self) -> None:
@@ -1292,261 +1706,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("- `.github/`", architecture_text)
         self.assertIn("- `docs/`", architecture_text)
 
-    def test_learning_readiness_signoff_make_targets_are_explicit_operator_ux(
-        self,
-    ) -> None:
-        text = _makefile_text()
-
-        self.assertIn("learning-readiness-signoff", _target_block(text, ".PHONY"))
-        self.assertIn("learning-readiness-signoff-refresh", _target_block(text, ".PHONY"))
-        self.assertIn("learning-readiness-signoff-check", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "learning-readiness-signoff-revalidation", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            "learning-readiness-signoff-revalidation-check",
-            _target_block(text, ".PHONY"),
-        )
-        self.assertIn(
-            "learning-readiness-signoff-template", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_OUT ?= ops/reports/learning-readiness-signoff.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REUSE_FROM ?= $(LEARNING_READINESS_SIGNOFF_OUT)",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT ?= ops/reports/learning-readiness-signoff-revalidation.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_CHECK_OUT ?= tmp/learning-readiness-signoff-revalidation-check.json",
-            text,
-        )
-        self.assertIn("LEARNING_READINESS_SIGNOFF_REVALIDATION_WINDOW_DAYS ?= 7", text)
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_COMMAND ?= make release-evidence-converge PYTHON=.venv/bin/python",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_ENVIRONMENT ?= .venv clean release-builder",
-            text,
-        )
-        self.assertIn("LEARNING_READINESS_SIGNOFF_ACCEPTED_BY ?=", text)
-        self.assertIn("LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS ?= 14", text)
-        block = _target_block(text, "learning-readiness-signoff")
-        self.assertIn("ops.scripts.learning_readiness_signoff", block)
-        self.assertIn(
-            '--accepted-by "$(LEARNING_READINESS_SIGNOFF_ACCEPTED_BY)"', block
-        )
-        self.assertIn(
-            '--expiry-days "$(LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS)"', block
-        )
-        self.assertIn('--risk-owner "$(LEARNING_READINESS_SIGNOFF_RISK_OWNER)"', block)
-        self.assertIn(
-            '--revalidation-condition "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_CONDITION)"',
-            block,
-        )
-        self.assertIn(
-            '--rollback-trigger "$(LEARNING_READINESS_SIGNOFF_ROLLBACK_TRIGGER)"', block
-        )
-        refresh_block = _target_block(text, "learning-readiness-signoff-refresh")
-        self.assertIn("ops.scripts.learning_readiness_signoff_refresh", refresh_block)
-        self.assertIn(
-            '--reuse-from "$(LEARNING_READINESS_SIGNOFF_REUSE_FROM)"',
-            refresh_block,
-        )
-        self.assertIn('--out "$(LEARNING_READINESS_SIGNOFF_OUT)"', refresh_block)
-        self.assertNotIn("--accepted-by", refresh_block)
-        self.assertIn(
-            "tmp/learning-readiness-signoff-check-release-closeout-summary.json",
-            _target_block(text, "learning-readiness-signoff-check"),
-        )
-        revalidation_block = _target_block(
-            text, "learning-readiness-signoff-revalidation"
-        )
-        self.assertIn(
-            "ops.scripts.learning_readiness_signoff_revalidation", revalidation_block
-        )
-        self.assertIn(
-            '--window-days "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_WINDOW_DAYS)"',
-            revalidation_block,
-        )
-        self.assertIn(
-            '--required-command "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_COMMAND)"',
-            revalidation_block,
-        )
-        self.assertIn(
-            '--required-environment "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_ENVIRONMENT)"',
-            revalidation_block,
-        )
-        self.assertIn(
-            "--fail-on-due",
-            _target_block(text, "learning-readiness-signoff-revalidation-check"),
-        )
-        self.assertIn(
-            '--out "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_CHECK_OUT)"',
-            _target_block(text, "learning-readiness-signoff-revalidation-check"),
-        )
-        self.assertIn(
-            "$(PYTHON) -m json.tool ops/templates/learning-readiness-signoff.json",
-            _target_block(text, "learning-readiness-signoff-template"),
-        )
-
-    def test_learning_claim_bundle_delta_scoreboard_and_tmp_clean_alias_are_explicit(
-        self,
-    ) -> None:
-        text = _makefile_text()
-
-        self.assertIn("learning-claim-evidence-bundle", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "learning-confirmed-legacy-reconstruction", _target_block(text, ".PHONY")
-        )
-        self.assertIn("public-check-summary", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "PUBLIC_CHECK_SUMMARY_OUT ?= ops/reports/public-check-summary.json", text
-        )
-        self.assertIn(
-            "LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT ?= ops/reports/learning-claim-evidence-bundle.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_OUT ?= ops/reports/learning-confirmed-legacy-reconstruction.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_CONFIRMED_EVIDENCE_COHORT_OUT ?= ops/reports/learning-confirmed-evidence-cohort.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY ?= ops/policies/learning-claim-confirmed-improvement.json",
-            text,
-        )
-        bundle_block = _target_block(text, "learning-claim-evidence-bundle")
-        legacy_block = _target_block(text, "learning-confirmed-legacy-reconstruction")
-        self.assertIn(
-            "ops.scripts.learning_confirmed_legacy_reconstruction", legacy_block
-        )
-        self.assertIn(
-            "ops/schemas/learning-confirmed-legacy-reconstruction.schema.json",
-            legacy_block,
-        )
-        self.assertEqual(
-            bundle_block.splitlines()[0],
-            "learning-claim-evidence-bundle: learning-confirmed-legacy-reconstruction",
-        )
-        self.assertNotIn(
-            "$(MAKE) learning-confirmed-legacy-reconstruction", bundle_block
-        )
-        self.assertIn("ops.scripts.learning_claim_evidence_bundle", bundle_block)
-        self.assertIn(
-            "ops/schemas/learning-claim-evidence-bundle.schema.json", bundle_block
-        )
-        cohort_block = _target_block(text, "learning-confirmed-evidence-cohort")
-        self.assertEqual(
-            cohort_block.splitlines()[0],
-            "learning-confirmed-evidence-cohort: learning-claim-evidence-bundle",
-        )
-        self.assertIn("ops.scripts.learning_confirmed_evidence_cohort", cohort_block)
-        self.assertIn(
-            "ops/schemas/learning-confirmed-evidence-cohort.schema.json", cohort_block
-        )
-        self.assertIn(
-            '--evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)"', cohort_block
-        )
-        self.assertIn(
-            '--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"',
-            cohort_block,
-        )
-        public_check_block = _target_block(text, "public-check-summary")
-        self.assertIn("ops.scripts.public_check_summary", public_check_block)
-        self.assertIn(
-            "ops/schemas/public-check-summary.schema.json", public_check_block
-        )
-        self.assertIn("ops.scripts.canonical_artifact_promote", public_check_block)
-        unlock_block = _target_block(text, "learning-claim-unlock-review")
-        self.assertEqual(
-            unlock_block.splitlines()[0],
-            "learning-claim-unlock-review: learning-confirmed-evidence-cohort",
-        )
-        self.assertIn(
-            '--evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)"', unlock_block
-        )
-        self.assertIn(
-            '--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"',
-            unlock_block,
-        )
-        self.assertIn("learning-delta-scoreboard", _target_block(text, ".PHONY"))
-        self.assertIn("tmp-clean", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "LEARNING_DELTA_SCOREBOARD_OUT ?= ops/reports/learning-delta-scoreboard.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_CLAIM_ACTIVATION_REPORT_OUT ?= ops/reports/learning_claim_activation_report.json",
-            text,
-        )
-        self.assertIn(
-            "SESSION_SYNOPSIS_OUT ?= ops/reports/session-synopsis.json",
-            text,
-        )
-        self.assertIn(
-            "SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT ?= ops/reports/self-improvement-negative-lessons.json",
-            text,
-        )
-        self.assertIn(
-            "REMEDIATION_BACKLOG_OUT ?= ops/reports/remediation-backlog.json",
-            text,
-        )
-        block = _target_block(text, "learning-delta-scoreboard")
-        self.assertEqual(
-            block.splitlines()[0],
-            "learning-delta-scoreboard: learning-claim-unlock-review",
-        )
-        self.assertIn("ops.scripts.learning_delta_scoreboard", block)
-        self.assertIn("ops/schemas/learning-delta-scoreboard.schema.json", block)
-        activation_block = _target_block(text, "learning-claim-activation-report")
-        self.assertEqual(
-            activation_block.splitlines()[0],
-            "learning-claim-activation-report: learning-delta-scoreboard",
-        )
-        self.assertIn("ops.scripts.learning_claim_activation_report", activation_block)
-        self.assertIn(
-            "ops/schemas/learning-claim-activation-report.schema.json",
-            activation_block,
-        )
-        synopsis_block = _target_block(text, "session-synopsis")
-        self.assertEqual(
-            synopsis_block.splitlines()[0],
-            "session-synopsis: learning-claim-activation-report",
-        )
-        self.assertIn("ops.scripts.session_synopsis", synopsis_block)
-        self.assertIn("ops/schemas/session-synopsis.schema.json", synopsis_block)
-        negative_lessons_block = _target_block(text, "self-improvement-negative-lessons")
-        self.assertEqual(
-            negative_lessons_block.splitlines()[0],
-            "self-improvement-negative-lessons: session-synopsis",
-        )
-        self.assertIn("ops.scripts.self_improvement_negative_lessons", negative_lessons_block)
-        self.assertIn(
-            "ops/schemas/self-improvement-negative-lessons.schema.json",
-            negative_lessons_block,
-        )
-        backlog_block = _target_block(text, "remediation-backlog")
-        self.assertEqual(
-            backlog_block.splitlines()[0],
-            "remediation-backlog: self-improvement-negative-lessons session-synopsis",
-        )
-        self.assertIn("ops.scripts.remediation_backlog", backlog_block)
-        self.assertIn("ops/schemas/remediation-backlog.schema.json", backlog_block)
-        self.assertIn("tmp-clean: tmp-json-clean", text)
-        tmp_json_clean_block = _target_block(text, "tmp-json-clean")
-        self.assertIn("find tmp -mindepth 1 -delete", tmp_json_clean_block)
-        self.assertNotIn("goal-worktree-guard.json", tmp_json_clean_block)
-
     def test_report_contract_targets_collect_schema_and_generated_artifact_checks(
         self,
     ) -> None:
@@ -1554,7 +1713,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         core_block = _target_block(text, "test-report-contract-core")
         all_block = _target_block(text, "test-report-contract-all")
-        expected_all_test_files = _report_contract_marked_test_files()
 
         self.assertIn("test-report-contract-core", _target_block(text, ".PHONY"))
         self.assertIn("test-report-contract-all", _target_block(text, ".PHONY"))
@@ -1566,26 +1724,29 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("push:refs/tags/*", ci_block)
         self.assertIn("$(MAKE) test-report-contract-all", ci_block)
         self.assertIn("$(MAKE) test-report-contract-core", ci_block)
-        self.assertIn("$(MAKE) external-report-reference-manifest-release-check", ci_block)
+        self.assertIn(
+            "$(MAKE) external-report-reference-manifest-release-check", ci_block
+        )
         self.assertIn("REPORT_CONTRACT_CORE_TESTS ?=", text)
         self.assertNotIn("REPORT_CONTRACT_EXTENDED_TESTS", text)
         self.assertIn("REPORT_CONTRACT_TESTS ?=", text)
         self.assertIn("REPORT_CONTRACT_TESTS ?= $(REPORT_CONTRACT_CORE_TESTS)", text)
-        core_items = _assert_make_selector_variable_matches_pack(
+        _assert_marker_expression_variable_matches_pack(
             self,
             registry,
             text,
             variable="REPORT_CONTRACT_CORE_TESTS",
             pack_id="report_contract_core",
+            mark_expr_variable="PYTEST_REPORT_CONTRACT_CORE_MARK_EXPR",
         )
-        all_items = _makefile_assignment_items(text, "REPORT_CONTRACT_ALL_TESTS")
-        self.assertEqual(
-            all_items[:2],
-            ("-m", '"$(PYTEST_REPORT_CONTRACT_MARK_EXPR)"'),
+        _assert_marker_expression_variable_matches_pack(
+            self,
+            registry,
+            text,
+            variable="REPORT_CONTRACT_ALL_TESTS",
+            pack_id="report_contract_all",
+            mark_expr_variable="PYTEST_REPORT_CONTRACT_MARK_EXPR",
         )
-        self.assertEqual(tuple(sorted(all_items[2:])), expected_all_test_files)
-        core_files = {selector.split("::", 1)[0] for selector in core_items}
-        self.assertTrue(core_files.issubset(set(all_items[2:])))
         self.assertIn(
             "$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             core_block,
@@ -1614,17 +1775,12 @@ class MakefileStaticGateTests(unittest.TestCase):
             r"(?<![A-Za-z0-9_.-])report-contract-summary(?![A-Za-z0-9_.-])",
         )
         self.assertIn(
-            "REPORT_CONTRACT_SUMMARY_MARK_EXPR ?= $(PYTEST_REPORT_CONTRACT_MARK_EXPR)", text
-        )
-        self.assertIn(
             "REPORT_CONTRACT_SUMMARY_DESELECT_POLICY ?= ops/policies/report-contract-deselections.json",
             text,
         )
-        self.assertIn(
-            'REPORT_CONTRACT_SUMMARY_TESTS ?= -m "$(REPORT_CONTRACT_SUMMARY_MARK_EXPR)" $(REPORT_CONTRACT_TESTS)',
-            text,
-        )
-        self.assertNotIn("--deselect=tests/test_", text)
+        self.assertIn("REPORT_CONTRACT_SUMMARY_TESTS ?= $(REPORT_CONTRACT_TESTS)", text)
+        self.assertNotIn("--deselect=tests/test_", core_block)
+        self.assertNotIn("--deselect=tests/test_", all_block)
         self.assertIn(
             "$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             core_block,
@@ -1640,7 +1796,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
 
         block = _target_block(text, "dev-install")
-        self.assertIn("DEV_LOCKED_REQUIREMENTS ?= tmp/locked-requirements.dev.txt", text)
+        self.assertIn(
+            "DEV_LOCKED_REQUIREMENTS ?= tmp/locked-requirements.dev.txt", text
+        )
         self.assertIn("DEV_INSTALL_INDEX_URL ?= $(UV_CANONICAL_INDEX_URL)", text)
         self.assertIn(
             "UV_EXPORT_DEV_REQUIREMENTS_FLAGS ?= --frozen --extra dev --format requirements-txt --no-hashes --no-emit-project",
@@ -1662,7 +1820,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('"$(VENV_PYTHON)" -m pip install -e ".[dev]"', block)
 
     def test_legacy_root_requirements_files_are_retired(self) -> None:
-        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        pyproject = tomllib.loads(
+            (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        )
 
         self.assertIn("dev", pyproject["project"]["optional-dependencies"])
         self.assertFalse((REPO_ROOT / "requirements.txt").exists())
@@ -1702,7 +1862,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         block = _target_block(text, "run-mechanism-experiment-linux-tmp")
 
         self.assertIn("MECHANISM_RUN_ARGS ?=", text)
-        self.assertIn("run-mechanism-experiment-linux-tmp", _target_block(text, ".PHONY"))
+        self.assertIn(
+            "run-mechanism-experiment-linux-tmp", _target_block(text, ".PHONY")
+        )
         self.assertIn(
             'TMPDIR=/tmp TEMP=/tmp TMP=/tmp $(PYTHON) -m ops.scripts.run_mechanism_experiment --vault "$(VAULT)" $(MECHANISM_RUN_ARGS)',
             block,
@@ -1715,13 +1877,17 @@ class MakefileStaticGateTests(unittest.TestCase):
             "RUFF_STRICT_PREVIEW_RULES ?= PTH201",
             text,
         )
-        self.assertIn("RUFF_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)", text)
+        self.assertIn(
+            "RUFF_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)", text
+        )
         self.assertIn(
             '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)" --cache-dir "$(RUFF_CACHE_DIR)" --exit-zero',
             _target_block(text, "ruff-strict-preview"),
         )
 
-    def test_strict_preview_audit_target_expands_all_public_runtime_targets(self) -> None:
+    def test_strict_preview_audit_target_expands_all_public_runtime_targets(
+        self,
+    ) -> None:
         text = _makefile_text()
 
         self.assertIn("STRICT_PREVIEW_AUDIT_TARGETS ?= ops/scripts tests tools", text)
@@ -1731,7 +1897,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('--targets "$(STRICT_PREVIEW_AUDIT_TARGETS)"', block)
         self.assertIn('--ruff-select "$(RUFF_STRICT_PREVIEW_RULES)"', block)
         self.assertIn('--ruff-cache-dir "$(RUFF_CACHE_DIR)"', block)
-        self.assertIn('--mypy-flags "$(MYPY_CACHE_FLAGS) $(MYPY_STRICT_PREVIEW_FLAGS)"', block)
+        self.assertIn(
+            '--mypy-flags "$(MYPY_CACHE_FLAGS) $(MYPY_STRICT_PREVIEW_FLAGS)"', block
+        )
         self.assertNotIn("--fail-on-attention", block)
 
     def test_mypy_strict_preview_target_uses_full_scope_targets(self) -> None:
@@ -1749,162 +1917,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(PYTHON) -m mypy --config-file pyproject.toml $(MYPY_CACHE_FLAGS) $(MYPY_STRICT_PREVIEW_FLAGS) $(MYPY_STRICT_PREVIEW_TARGETS)",
             _target_block(text, "mypy-strict-preview"),
         )
-
-    def test_codebase_memory_mcp_targets_are_optional_public_export_sidecar(self) -> None:
-        text = _makefile_text()
-        phony = _target_block(text, ".PHONY")
-        for target in (
-            "cbm-require-bin",
-            "cbm-safe-local-paths",
-            "cbm-export-public",
-            "cbm-index-public",
-            "cbm-list-projects-public",
-            "cbm-schema-public",
-            "cbm-architecture-public",
-            "cbm-search-public",
-            "cbm-smoke-public",
-            "cbm-reset-local",
-        ):
-            with self.subTest(target=target):
-                self.assertIn(target, phony)
-
-        for assignment in (
-            "CBM_BIN ?= codebase-memory-mcp",
-            "CBM_CACHE_ROOT ?= $(if $(XDG_CACHE_HOME),$(XDG_CACHE_HOME),$(HOME)/.cache)",
-            "CBM_PUBLIC_OUT ?= $(CBM_CACHE_ROOT)/llmwiki/codebase-memory-mcp/public-surface",
-            "CBM_CACHE_DIR ?= $(CBM_CACHE_ROOT)/codebase-memory-mcp/llmwiki-public",
-            "CBM_IGNORE_TEMPLATE ?= ops/templates/codebase-memory-mcp.cbmignore",
-            "CBM_PROJECT_NAME ?= $(subst /,-,$(patsubst /%,%,$(CBM_PUBLIC_OUT)))",
-            "CBM_SMOKE_PATTERN ?= cbm_public_export",
-            "CBM_EXPORT_FLAGS ?= --summary",
-            "CBM_SEARCH_PATTERN ?= $(CBM_SMOKE_PATTERN)",
-            "CBM_SEARCH_LIMIT ?= 10",
-        ):
-            self.assertIn(assignment, text)
-
-        safe_paths_block = _target_block(text, "cbm-safe-local-paths")
-        for token in (
-            "--check-local-paths",
-            '--cache-dir "$(CBM_CACHE_DIR)"',
-            '--cache-root "$(CBM_CACHE_ROOT)"',
-        ):
-            with self.subTest(target="cbm-safe-local-paths", token=token):
-                self.assertIn(token, safe_paths_block)
-
-        export_block = _target_block(text, "cbm-export-public")
-        self.assertEqual(export_block.splitlines()[0], "cbm-export-public: cbm-safe-local-paths")
-        for token in (
-            "ops.scripts.cbm_public_export",
-            '--vault "$(VAULT)"',
-            '--out "$(CBM_PUBLIC_OUT)"',
-            '--cbmignore-template "$(CBM_IGNORE_TEMPLATE)"',
-            "$(CBM_EXPORT_FLAGS)",
-        ):
-            self.assertIn(token, export_block)
-
-        self.assertEqual(
-            _target_block(text, "cbm-index-public").splitlines()[0],
-            "cbm-index-public: cbm-require-bin cbm-export-public",
-        )
-        self.assertIn(
-            '\'{"project":"$(CBM_PROJECT_NAME)"}\'',
-            _target_block(text, "cbm-schema-public"),
-        )
-        self.assertIn(
-            '\'{"project":"$(CBM_PROJECT_NAME)"}\'',
-            _target_block(text, "cbm-architecture-public"),
-        )
-        search_block = _target_block(text, "cbm-search-public")
-        self.assertIn('"pattern":"$(CBM_SEARCH_PATTERN)"', search_block)
-        self.assertIn('"limit":$(CBM_SEARCH_LIMIT)', search_block)
-        self.assertIn(
-            "make cbm-smoke-public             optional CBM sidecar health check",
-            _target_block(text, "help"),
-        )
-        smoke_block = _target_block(text, "cbm-smoke-public")
-        self.assertEqual(smoke_block.splitlines()[0], "cbm-smoke-public: cbm-index-public")
-        for token in (
-            "get_graph_schema",
-            "get_architecture",
-            "search_code",
-            '"pattern":"$(CBM_SMOKE_PATTERN)"',
-        ):
-            with self.subTest(target="cbm-smoke-public", token=token):
-                self.assertIn(token, smoke_block)
-        for release_gate in ("check", "check-finalized", "release-check", "release-source-ready"):
-            with self.subTest(release_gate=release_gate):
-                self.assertNotIn("cbm-", _target_block(text, release_gate))
-        self.assertEqual(
-            _target_block(text, "cbm-reset-local").splitlines()[0],
-            "cbm-reset-local: cbm-safe-local-paths",
-        )
-
-    def test_codebase_memory_mcp_onboarding_is_documented_in_public_entrypoints(self) -> None:
-        agents_text = Path("AGENTS.md").read_text(encoding="utf-8")
-        readme_text = README.read_text(encoding="utf-8")
-        ops_readme_text = Path("ops/README.md").read_text(encoding="utf-8")
-        cbm_docs_text = DOCS_CBM.read_text(encoding="utf-8")
-
-        for token in (
-            "Optional codebase-memory-mcp sidecar",
-            "make cbm-index-public",
-            "make cbm-smoke-public",
-            "cbm-schema-public",
-            "cbm-architecture-public",
-            "detect_changes",
-            "make cbm-index-public`로 재색인",
-            "`CBM_PUBLIC_OUT` cache 경로",
-            "candidate link, not proof",
-            "assistant-specific workflow requirement",
-        ):
-            with self.subTest(surface="AGENTS.md", token=token):
-                self.assertIn(token, agents_text)
-
-        for token in (
-            "code/ops 구조 탐색",
-            "make cbm-index-public",
-            "make cbm-schema-public",
-            "make cbm-architecture-public",
-            "make cbm-smoke-public",
-            "make cbm-search-public",
-            "graph-first/file-verified",
-            "기존 `rg` / file read workflow",
-        ):
-            with self.subTest(surface="README.md", token=token):
-                self.assertIn(token, readme_text)
-
-        for token in (
-            "Optional codebase-memory-mcp quickstart",
-            "make cbm-index-public",
-            "make cbm-schema-public",
-            "make cbm-architecture-public",
-            "make cbm-smoke-public",
-            "make cbm-search-public",
-            "graph-first/file-verified",
-        ):
-            with self.subTest(surface="ops/README.md", token=token):
-                self.assertIn(token, ops_readme_text)
-
-        for token in (
-            "CBM_BIN=/path/to/codebase-memory-mcp",
-            "make cbm-smoke-public",
-            "make cbm-search-public",
-            "Do not run `codebase-memory-mcp install`",
-            "not a dependency",
-            "assistant-specific",
-            "CBM-EXPORT-MANIFEST.json",
-            "compact",
-            "new worker does not yet know",
-            "exact string is already known",
-            "ops/reports/",
-            "Re-run `make cbm-index-public` after repo edits",
-            "cache export paths",
-            "Map them back to the same relative path in the repo",
-            "candidate links, not proof",
-            "detect_changes",
-        ):
-            with self.subTest(surface="docs/codebase-memory-mcp.md", token=token):
-                self.assertIn(token, cbm_docs_text)
 
     def test_raw_intake_and_review_classification_targets_exist(self) -> None:
         text = _makefile_text()
@@ -1936,11 +1948,11 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("raw-intake-route-proposal", _target_block(text, ".PHONY"))
         self.assertIn("raw-intake-source-quality", _target_block(text, ".PHONY"))
         self.assertIn("raw-intake-seed-source-hints", _target_block(text, ".PHONY"))
-        self.assertIn("raw-intake-seed-source-hints-write", _target_block(text, ".PHONY"))
-        self.assertIn("raw-intake-absorption-closeout", _target_block(text, ".PHONY"))
         self.assertIn(
-            "wiki-lint-review-classification", _target_block(text, ".PHONY")
+            "raw-intake-seed-source-hints-write", _target_block(text, ".PHONY")
         )
+        self.assertIn("raw-intake-absorption-closeout", _target_block(text, ".PHONY"))
+        self.assertIn("wiki-lint-review-classification", _target_block(text, ".PHONY"))
         self.assertIn(
             "ops.scripts.raw_intake_route_proposal",
             _target_block(text, "raw-intake-route-proposal"),
@@ -1965,6 +1977,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "ops.scripts.wiki_lint_review_classification",
             _target_block(text, "wiki-lint-review-classification"),
         )
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

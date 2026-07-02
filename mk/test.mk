@@ -12,23 +12,29 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD ?= 1
 LLMWIKI_MAKE_PYTEST_ENTRYPOINT ?= 1
 PYTHONDONTWRITEBYTECODE ?= 1
 PYTEST_FAST_MARK_EXPR ?= not slow and not integration and not integration_heavy and not public and not report_contract and not release_sealing and not subprocess
-PYTEST_FAST_SMOKE_MARK_EXPR ?= not slow and not integration_heavy
+PYTEST_FAST_SMOKE_MARK_EXPR ?= fast_smoke
+PYTEST_DEFAULT_TEST_BOUNDARY_MARK_EXPR ?= default_test_boundary
+PYTEST_RUNTIME_HOTSPOT_SMOKE_MARK_EXPR ?= runtime_hotspot_smoke
+PYTEST_SCHEMA_STATIC_SMOKE_MARK_EXPR ?= schema_static_smoke
 PYTEST_RELEASE_CHECK_MARK_EXPR ?= not report_contract
 PYTEST_SLOW_MARK_EXPR ?= slow and not integration and not integration_heavy and not public
 PYTEST_INTEGRATION_MARK_EXPR ?= integration and not integration_heavy and not public
 PYTEST_INTEGRATION_HEAVY_MARK_EXPR ?= integration_heavy and not public
 PYTEST_PUBLIC_MARK_EXPR ?= public
+PYTEST_REPORT_CONTRACT_CORE_MARK_EXPR ?= report_contract_core
 PYTEST_REPORT_CONTRACT_MARK_EXPR ?= report_contract
+PYTEST_RELEASE_SEALING_CORE_MARK_EXPR ?= release_sealing_core
 PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing
 PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess
+PYTEST_RELEASE_CLOSEOUT_REGRESSION_MARK_EXPR ?= release_closeout_regression
 CI_REPORT_CONTRACT_EVENT_NAME ?= $(GITHUB_EVENT_NAME)
 CI_REPORT_CONTRACT_REF ?= $(GITHUB_REF)
-# Explicit pytest selector lists are generated from ops/test-lane-registry.json
-# into mk/test-selectors.generated.mk (see: make test-selectors-sync).
+# Pytest marker registration and selector variables are generated from
+# ops/test-lane-registry.json (see: make pytest-markers-sync and
+# make test-selectors-sync).
 include mk/test-selectors.generated.mk
 
-REPORT_CONTRACT_SUMMARY_MARK_EXPR ?= $(PYTEST_REPORT_CONTRACT_MARK_EXPR)
-REPORT_CONTRACT_SUMMARY_TESTS ?= -m "$(REPORT_CONTRACT_SUMMARY_MARK_EXPR)" $(REPORT_CONTRACT_TESTS)
+REPORT_CONTRACT_SUMMARY_TESTS ?= $(REPORT_CONTRACT_TESTS)
 TEST_EXECUTION_SUMMARY_OUT ?= ops/reports/test-execution-summary.json
 TEST_EXECUTION_SUMMARY_CANDIDATE_OUT ?= tmp/test-execution-summary.candidate.json
 TEST_EXECUTION_SUMMARY_CHECK_OUT ?= tmp/test-execution-summary-check.json
@@ -56,8 +62,17 @@ RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regressi
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT ?= tmp/release-closeout-finality-verify-ci.json
 
-.PHONY: fast-smoke runtime-hotspot-smoke test-boundary-contract-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact ci-report-contract-tier test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess test-selectors-sync test-selectors-sync-check _internal-test-selectors-sync-check release-governance-sync _internal-release-governance-sync-check release-governance-sync-check report-schema-samples-check report-schema-samples-regenerate _internal-report-schema-samples-check runtime-hotspot-goldens-check _internal-runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout report-contract-closeout-generated-artifacts test-execution-summary-fast test-execution-summary-report-contract test-execution-summary test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-reuse test-execution-summary-full test-execution-summary-full-body test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke runtime-hotspot-smoke test-boundary-contract-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact ci-report-contract-tier test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-subprocess pytest-markers-sync pytest-markers-sync-check _internal-pytest-markers-sync-check test-selectors-sync test-selectors-sync-check _internal-test-selectors-sync-check release-governance-sync _internal-release-governance-sync-check release-governance-sync-check report-schema-samples-check report-schema-samples-regenerate _internal-report-schema-samples-check runtime-hotspot-goldens-check _internal-runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout report-contract-closeout-generated-artifacts test-execution-summary-fast test-execution-summary-report-contract test-execution-summary test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-reuse test-execution-summary-full test-execution-summary-full-body test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 .PHONY: test-schema-static-smoke release-closeout-finality-verify-ci-artifact
+
+pytest-markers-sync:
+	$(PYTHON) -m ops.scripts.test.generate_pytest_ini_markers --vault "$(VAULT)"
+
+pytest-markers-sync-check:
+	@$(MAKE) _internal-pytest-markers-sync-check
+
+_internal-pytest-markers-sync-check:
+	$(PYTHON) -m ops.scripts.test.generate_pytest_ini_markers --vault "$(VAULT)" --check
 
 test-selectors-sync:
 	$(PYTHON) -m ops.scripts.test.generate_test_mk_selectors --vault "$(VAULT)"
@@ -78,7 +93,7 @@ _internal-release-governance-sync-check:
 	$(PYTHON) -m ops.scripts.test.generate_release_governance_from_lane_registry --vault "$(VAULT)" --check --json
 
 fast-smoke:
-	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
+	$(PYTHON) -m pytest $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
 
 test-boundary-contract-smoke:
 	$(PYTHON) -m pytest $(DEFAULT_TEST_BOUNDARY_TESTS) $(PYTEST_SERIAL_FLAGS)

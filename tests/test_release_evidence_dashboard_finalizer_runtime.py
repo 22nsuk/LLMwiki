@@ -5,6 +5,8 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.release.release_evidence_dashboard_finalizer_runtime import (
     finalizer_duration_signal,
 )
@@ -12,6 +14,8 @@ from ops.scripts.release.release_evidence_dashboard_render_runtime import (
     FIXED_POINT_COST_TREND_PATH,
     FIXED_POINT_PATH,
 )
+
+pytestmark = pytest.mark.runtime_hotspot_smoke
 
 
 def _write_json(path: Path, payload: dict) -> None:

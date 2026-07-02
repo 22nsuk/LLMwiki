@@ -17,7 +17,7 @@ from ops.scripts.core.gate_effect_vocabulary import GATE_EFFECTS
 from ops.scripts.core.make_target_inventory import build_report
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema
-from tests.minimal_vault_runtime import REPO_ROOT
+from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -42,8 +42,19 @@ class AntiSlopAdmissionRuntimeTests(unittest.TestCase):
         report = build_report(REPO_ROOT, context=fixed_context())
 
         self.assertEqual(report["anti_slop_admission"]["status"], "pass")
+        self.assertEqual(report["anti_slop_admission"]["cli_surface_inventory"]["status"], "pass")
+        self.assertEqual(
+            report["anti_slop_admission"]["cli_surface_inventory"]["unclassified_module_count"],
+            0,
+        )
+        self.assertEqual(
+            report["anti_slop_admission"]["cli_surface_inventory"]["unresolved_module_count"],
+            0,
+        )
         self.assertEqual(report["summary"]["anti_slop_violation_count"], 0)
         self.assertIn("make-target-inventory", report["phony_targets"])
+        self.assertIn("sync-derived", report["phony_targets"])
+        self.assertIn("sync-derived-check", report["phony_targets"])
 
     def test_expired_remove_after_fails_operator_inventory(self) -> None:
         payload = {
@@ -124,6 +135,132 @@ class AntiSlopAdmissionRuntimeTests(unittest.TestCase):
         violations = validate_script_lifecycle_admission(payload, today=dt.date(2026, 6, 20))
 
         self.assertEqual(violations, [])
+
+    def test_lifecycle_admission_derives_module_path_from_canonical_module(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            module_path = vault / "ops" / "scripts" / "core" / "sample.py"
+            module_path.parent.mkdir(parents=True)
+            module_path.write_text("def main(): pass\n", encoding="utf-8")
+            payload = {
+                "modules": [
+                    {
+                        "canonical_module": "ops.scripts.core.sample",
+                        "rationale": "Sample module.",
+                        "replacement": "make sample",
+                        "lifecycle": "helper",
+                        "removal_ready": False,
+                    }
+                ]
+            }
+
+            violations = validate_script_lifecycle_admission(
+                payload,
+                today=dt.date(2026, 6, 20),
+                vault=vault,
+            )
+
+        self.assertEqual(violations, [])
+
+    def test_lifecycle_admission_rejects_legacy_path_that_does_not_match_module(self) -> None:
+        payload = {
+            "modules": [
+                {
+                    "canonical_module": "ops.scripts.core.sample",
+                    "path": "ops/scripts/release/sample.py",
+                    "rationale": "Sample module.",
+                    "replacement": "make sample",
+                    "lifecycle": "helper",
+                    "removal_ready": False,
+                }
+            ]
+        }
+
+        violations = validate_script_lifecycle_admission(
+            payload,
+            today=dt.date(2026, 6, 20),
+        )
+
+        self.assertEqual(len(violations), 1)
+        self.assertEqual(violations[0]["field"], "path")
+
+    def test_make_inventory_fails_when_script_surface_is_missing_lifecycle_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(
+                vault,
+                schema_names=[
+                    "make-target-inventory.schema.json",
+                    "make-target-inventory-operator.schema.json",
+                    "script-lifecycle-policy.schema.json",
+                ],
+            )
+            (vault / "ops" / "schemas" / "script-lifecycle-policy.schema.json").write_text(
+                SCRIPT_LIFECYCLE_SCHEMA.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            script_path = vault / "ops" / "scripts" / "core" / "missing_lifecycle.py"
+            script_path.parent.mkdir(parents=True, exist_ok=True)
+            script_path.write_text("def main(): pass\n", encoding="utf-8")
+            (vault / "Makefile").write_text(
+                ".PHONY: missing-lifecycle\n"
+                "missing-lifecycle:\n"
+                "\t$(PYTHON) -m ops.scripts.core.missing_lifecycle\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-output-surfaces.json").write_text(
+                '{"surfaces":[]}\n',
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-lifecycle-policy.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/script-lifecycle-policy.schema.json",
+                        "version": 1,
+                        "description": "test",
+                        "lifecycle_values": [
+                            "public_cli",
+                            "make_only",
+                            "report_generator",
+                            "helper",
+                            "test_only",
+                            "legacy_delete",
+                        ],
+                        "install_state_values": [
+                            "public_cli",
+                            "transitional_installed",
+                            "not_installed",
+                        ],
+                        "modules": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["anti_slop_admission"]["status"], "fail")
+        self.assertEqual(
+            report["anti_slop_admission"]["cli_surface_inventory"]["unclassified_module_count"],
+            1,
+        )
+        self.assertEqual(
+            report["anti_slop_admission"]["violations"],
+            [
+                {
+                    "surface": (
+                        "ops/script-lifecycle-policy.json#"
+                        "ops.scripts.core.missing_lifecycle"
+                    ),
+                    "field": "canonical_module",
+                    "message": (
+                        "runnable script surface is missing lifecycle policy classification"
+                    ),
+                }
+            ],
+        )
 
     def test_gate_effect_vocabulary_schema_matches_python_constants(self) -> None:
         schema = json.loads(GATE_EFFECT_VOCABULARY_SCHEMA.read_text(encoding="utf-8"))

@@ -198,6 +198,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_report(self.vault, report).exists())
 
+    @pytest.mark.release_closeout_regression
     def test_clean_extract_fails_when_zip_smoke_archive_budget_fails(self) -> None:
         extract_root = self.vault / "tmp" / "source-package-check" / "extract" / "LLMwiki"
         source_zip = self._write_source_zip(extract_root.name)

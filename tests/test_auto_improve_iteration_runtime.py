@@ -201,6 +201,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
 
         self.assertEqual(candidates, [])
 
+    @pytest.mark.report_contract_core
     def test_run_telemetry_preservation_contract_matches_schema_surface(self) -> None:
         schema = load_schema(
             REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json"

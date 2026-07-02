@@ -16,7 +16,7 @@ from ops.scripts.test.generate_release_governance_from_lane_registry import (
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -65,7 +65,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "external-report-action-matrix generated-artifact-index generated-artifact-index-body artifact-freshness "
             "release-closeout-summary-report release-closeout-fixed-point "
             "tmp-json-clean release-closeout-finality-verify "
-            "operator-release-summary report-contract-closeout workflow-dependency-planner\n"
+            "operator-release-summary report-contract-closeout workflow-dependency-planner sync-derived\n"
             "static: ruff typecheck\n"
             "\t@echo static\n"
             "ruff:\n"
@@ -116,6 +116,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "\t@echo finality\n"
             "workflow-dependency-planner:\n"
             "\t@echo planner\n"
+            "sync-derived:\n"
+            "\t@echo sync derived\n"
             "report-contract-closeout:\n"
             "\t$(MAKE) test-execution-summary-report-contract\n"
             "\t$(MAKE) generated-artifact-converge\n",
@@ -849,24 +851,22 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(
             plan["selected_commands"],
             [
-                "make script-output-surfaces-check",
+                "make sync-derived-check",
                 "make static",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
-                "make report-schema-samples-check",
             ],
         )
         self.assertEqual(
             plan["command_duration_seconds"],
             {
-                "make script-output-surfaces-check": 30,
                 "make static": 60,
+                "make sync-derived-check": 120,
                 "make workflow-dependency-planner-check": 60,
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
-                "make report-schema-samples-check": 30,
             },
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 210)
+        self.assertEqual(plan["estimated_duration_seconds"], 270)
         self.assertEqual(plan["budget_status"], "within_budget")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 

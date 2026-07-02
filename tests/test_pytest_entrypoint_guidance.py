@@ -11,7 +11,7 @@ from types import ModuleType
 
 import pytest
 
-pytestmark = [pytest.mark.public, pytest.mark.report_contract]
+pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
