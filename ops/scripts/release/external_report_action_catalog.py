@@ -475,7 +475,15 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "action_id": "source_package_distribution_binding",
         "priority": "P0",
         "theme": "source package and distribution ZIP binding",
-        "patterns": [r"source package", r"source ZIP", r"distribution ZIP", r"archive profile", r"package mode"],
+        "patterns": [
+            r"source package",
+            r"source ZIP",
+            r"distribution ZIP",
+            r"release ZIP.*AGENTS\.local\.md",
+            r"AGENTS\.local\.md.*release ZIP",
+            r"archive profile",
+            r"package mode",
+        ],
         "evidence_paths": [
             "ops/reports/source-package-clean-extract.json",
             "ops/reports/release-smoke-report.json",
@@ -918,6 +926,8 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"function budget",
             r"orchestrator",
             r"hotspot refactor",
+            r"large test",
+            r"대형 테스트",
             r"거대 runtime",
             r"runtime 모듈",
         ],
@@ -934,6 +944,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "theme": "generated artifact tracking and churn policy",
         "patterns": [
             r"generated artifact",
+            r"generated evidence",
             r"commit churn",
             r"decision-grade",
             r"ephemeral",
