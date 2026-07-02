@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Protocol
 
 from ops.scripts.core.workspace_python_identity_runtime import (
+    build_workspace_python_identity,
     verify_workspace_python_shim,
 )
 
@@ -39,7 +40,7 @@ def workspace_virtualenv_bin(workspace_root: Path) -> Path | None:
 def trusted_workspace_python_source(artifact_root: Path) -> Path:
     repo_python = artifact_root / ".venv" / "bin" / "python"
     if repo_python.exists():
-        return repo_python
+        return repo_python.resolve()
     return Path(sys.executable).resolve()
 
 
@@ -147,9 +148,16 @@ def external_workspace_python_issue(
     *,
     workspace_python: Path,
 ) -> str:
+    expected_identity = None
+    if not same_path(request.workspace_root, request.artifact_root):
+        expected_identity = build_workspace_python_identity(
+            source_python=trusted_workspace_python_source(request.artifact_root),
+            shim_content=expected_external_workspace_python_shim(request.artifact_root),
+        )
     identity_issue = verify_workspace_python_shim(
         request.workspace_root,
         workspace_python=workspace_python,
+        expected_identity=expected_identity,
     )
     if identity_issue and identity_issue != "missing workspace python identity manifest":
         return identity_issue
