@@ -1551,7 +1551,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.auto_improve_loop"
     },

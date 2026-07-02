@@ -208,6 +208,50 @@ class ScriptLifecyclePolicyTests(unittest.TestCase):
             "python -m ops.scripts.core.helper_only",
         )
 
+    def test_makefile_module_scan_ignores_non_recipe_mentions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "ops" / "scripts" / "core").mkdir(parents=True)
+            (vault / "mk").mkdir()
+            (vault / "pyproject.toml").write_text(
+                "[project]\nname = 'sample'\n",
+                encoding="utf-8",
+            )
+            (vault / "Makefile").write_text("include mk/core.mk\n", encoding="utf-8")
+            (vault / "mk" / "core.mk").write_text(
+                "# python -m ops.scripts.core.documented_only\n"
+                "VARIABLE := python -m ops.scripts.core.variable_only\n"
+                "sample-report:\n"
+                "\tpython -m ops.scripts.core.recipe_report --out tmp/sample.json\n",
+                encoding="utf-8",
+            )
+            for name in ("documented_only", "variable_only", "recipe_report"):
+                (vault / "ops" / "scripts" / "core" / f"{name}.py").write_text(
+                    "def main(): pass\n",
+                    encoding="utf-8",
+                )
+
+            policy = build_policy(vault, overrides={"overrides": []})
+
+        modules = {item["canonical_module"]: item for item in policy["modules"]}
+        self.assertEqual(
+            modules["ops.scripts.core.recipe_report"]["replacement"],
+            "make sample-report",
+        )
+        self.assertEqual(modules["ops.scripts.core.recipe_report"]["lifecycle"], "make_only")
+        self.assertIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.recipe_report"]["rationale"],
+        )
+        self.assertNotIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.documented_only"]["rationale"],
+        )
+        self.assertNotIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.variable_only"]["rationale"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

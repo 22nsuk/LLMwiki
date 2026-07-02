@@ -210,6 +210,40 @@ class CliSurfaceInventoryTests(unittest.TestCase):
             [],
         )
 
+    def test_inventory_ignores_non_recipe_makefile_mentions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "ops" / "scripts" / "core").mkdir(parents=True)
+            (vault / "mk").mkdir()
+            (vault / "pyproject.toml").write_text(
+                "[project]\nname = 'sample'\n",
+                encoding="utf-8",
+            )
+            (vault / "Makefile").write_text("include mk/core.mk\n", encoding="utf-8")
+            (vault / "mk" / "core.mk").write_text(
+                "# python -m ops.scripts.core.documented_only\n"
+                "VARIABLE := python -m ops.scripts.core.variable_only\n"
+                "sample:\n"
+                "\tpython -m ops.scripts.core.sample_cli --help\n",
+                encoding="utf-8",
+            )
+            for name in ("documented_only", "variable_only", "sample_cli"):
+                (vault / "ops" / "scripts" / "core" / f"{name}.py").write_text(
+                    "def main(): pass\n",
+                    encoding="utf-8",
+                )
+            (vault / "ops" / "script-output-surfaces.json").write_text(
+                '{"surfaces":[]}\n',
+                encoding="utf-8",
+            )
+            _write_lifecycle_policy(vault, include_status=False)
+
+            report = build_report(vault, context=fixed_context())
+
+        modules = {item["module"]: item for item in report["modules"]}
+        self.assertEqual(set(modules), {"ops.scripts.core.sample_cli"})
+        self.assertEqual(modules["ops.scripts.core.sample_cli"]["make_targets"], ["sample"])
+
     def test_inventory_fails_when_lifecycle_policy_omits_surface_module(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

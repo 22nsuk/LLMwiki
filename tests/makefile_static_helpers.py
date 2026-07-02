@@ -25,6 +25,21 @@ def _makefile_text() -> str:
     return text
 
 
+def _pytest_collect_nodeid_path_counts(stdout: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for line in stdout.splitlines():
+        stripped = line.strip()
+        path, separator, count_text = stripped.rpartition(": ")
+        if separator and path.endswith(".py") and count_text.isdigit():
+            counts[path] = counts.get(path, 0) + int(count_text)
+            continue
+        path, separator, _node_id = stripped.partition("::")
+        if not separator or not path.endswith(".py"):
+            continue
+        counts[path] = counts.get(path, 0) + 1
+    return counts
+
+
 def _target_block(text: str, target: str) -> str:
     if target == ".PHONY":
         matches = list(

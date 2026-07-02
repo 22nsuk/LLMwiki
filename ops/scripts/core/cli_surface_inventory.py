@@ -79,20 +79,30 @@ def _makefile_script_module_targets(vault: Path) -> dict[str, list[str]]:
     for path in [vault / "Makefile", *sorted((vault / "mk").glob("*.mk"))]:
         if path.is_file():
             for line in path.read_text().splitlines():
-                if line and not line.startswith(("\t", " ")):
-                    stripped = line.strip()
-                    if (
-                        not stripped or stripped.startswith(("#", ".PHONY:")) or "?=" in line or ":=" in line or "+=" in line or (line.count("=") == 1 and ":" not in line)
-                    ):
-                        current_targets = []
-                    elif ":" in line:
-                        current_targets = [
-                            item.strip()
-                            for item in line.split(":", 1)[0].split()
-                            if item.strip()
-                        ]
-                for module in SCRIPT_MODULE_RE.findall(line):
-                    modules.setdefault(module, set()).update(current_targets)
+                if line.startswith("\t"):
+                    if not current_targets:
+                        continue
+                    for module in SCRIPT_MODULE_RE.findall(line):
+                        modules.setdefault(module, set()).update(current_targets)
+                    continue
+
+                stripped = line.strip()
+                is_assignment = (
+                    "?=" in line
+                    or ":=" in line
+                    or "+=" in line
+                    or (line.count("=") == 1 and ":" not in line)
+                )
+                if not stripped or stripped.startswith(("#", ".PHONY:")) or is_assignment:
+                    current_targets = []
+                elif ":" in line:
+                    current_targets = [
+                        item.strip()
+                        for item in line.split(":", 1)[0].split()
+                        if item.strip()
+                    ]
+                else:
+                    current_targets = []
     return {
         module: sorted(target for target in targets if target)
         for module, targets in sorted(modules.items())

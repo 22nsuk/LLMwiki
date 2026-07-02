@@ -15,6 +15,7 @@ from ops.scripts.test.test_lane_registry_runtime import (
 )
 from tests.makefile_static_helpers import (
     _makefile_text,
+    _pytest_collect_nodeid_path_counts,
     _target_block,
 )
 
@@ -63,12 +64,7 @@ def _collect_marker_path_counts(mark_expr: str, *, failure_label: str) -> dict[s
             f"stderr:\n{completed.stderr}"
         )
 
-    collected_by_path: dict[str, int] = {}
-    for line in completed.stdout.splitlines():
-        path, separator, count_text = line.rpartition(": ")
-        if separator and count_text.isdigit():
-            collected_by_path[path] = int(count_text)
-    return collected_by_path
+    return _pytest_collect_nodeid_path_counts(completed.stdout)
 
 
 def _assert_collected_paths_self_declare_marker(

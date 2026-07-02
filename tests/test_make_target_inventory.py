@@ -10,7 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from ops.scripts.core.make_target_inventory import build_report, main, write_report
+from ops.scripts.core.make_target_inventory import (
+    build_report,
+    main,
+    validate_report,
+    write_report,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -207,6 +212,16 @@ class MakeTargetInventoryTests(unittest.TestCase):
         self.assertEqual(destination, self.vault / "ops" / "reports" / "make-target-inventory.json")
         self.assertTrue(destination.exists())
 
+    def test_validate_report_uses_vault_schema_override(self) -> None:
+        schema_path = self.vault / "ops" / "schemas" / "make-target-inventory.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        schema["required"] = [*schema["required"], "fixture_required_field"]
+        schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2), encoding="utf-8")
+        report = build_report(self.vault, context=fixed_context())
+
+        with self.assertRaisesRegex(ValueError, "fixture_required_field"):
+            validate_report(self.vault, report)
+
     def test_check_mode_validates_without_writing_report(self) -> None:
         out_path = self.vault / "tmp" / "make-target-inventory.json"
         stdout = io.StringIO()
@@ -224,6 +239,25 @@ class MakeTargetInventoryTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertIn("make_target_inventory: status=pass", stdout.getvalue())
+        self.assertFalse(out_path.exists())
+
+    def test_check_mode_validates_schema_without_writing_report(self) -> None:
+        schema_path = self.vault / "ops" / "schemas" / "make-target-inventory.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        schema["required"] = [*schema["required"], "fixture_required_field"]
+        schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2), encoding="utf-8")
+        out_path = self.vault / "tmp" / "make-target-inventory.json"
+
+        with self.assertRaisesRegex(ValueError, "fixture_required_field"):
+            main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--out",
+                    str(out_path),
+                    "--check",
+                ]
+            )
         self.assertFalse(out_path.exists())
 
     def test_repo_make_target_inventory_tracks_internal_targets(self) -> None:
