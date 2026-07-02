@@ -6,16 +6,16 @@
       "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
       "observation_id": "release_authority_operator_lane_remains_for_matrix_closure",
       "status": "planned",
-      "retained_reason": "The refreshed action matrix still has release and promotion authority blockers after active-report rebinding, so this operator-lane follow-up must remain visible until authority evidence is current.",
-      "next_action": "Run the release authority readback lane for the refreshed source tree, starting with release-run-ready and release-auto-promotion-ready; if operator evidence is still required afterward, provide it through the operator evidence lane.",
-      "exit_condition": "Close when the action matrix has no release-run, promotion, operator, or artifact-freshness pending actions for the active report set, or when a narrower retained observation replaces this one.",
+      "retained_reason": "P1/P2/P3 left source actions implemented, but the current source patch changed the source tree fingerprint and the matrix still reports release, promotion, artifact-freshness, and supply-chain operator evidence pending for the active report set.",
+      "next_action": "After committing source changes, rerun release-run-ready, release-sealed-run-ready, release-auto-promotion-ready, and external-report-action-matrix; provide Sigstore bundle evidence only through SIGSTORE_BUNDLE_REF and operator-evidence-closeout-current-or-refresh.",
+      "exit_condition": "Close when the action matrix has no release-run, promotion, operator, or artifact-freshness pending actions for the active report set, or when remaining operator-only work is registered under a narrower observation.",
       "owner_or_lane": "release-authority-operator-lane"
     },
     {
       "path": "ops/reports/task-improvement-observations/task-20260613-backlog-centered-improvement-execution/improvement-observations.json",
       "observation_id": "hotspot_decomposition_next_lanes_remain",
       "status": "planned",
-      "retained_reason": "The runtime decomposition plan still lists a concrete next-safe move for auto_improve_readiness after the mutation proposal and auto_improve maintenance completion splits, so hotspot cleanup remains actionable but must stay lane-sized.",
+      "retained_reason": "The runtime decomposition plan still lists a concrete next-safe move for auto_improve_readiness, but this is an independent maintenance backlog rather than a release-authority or active-report closure blocker.",
       "next_action": "Execute the current readiness lane only after a concrete churn/failure signal: auto_improve_readiness summary preparation with focused readiness tests and runtime-hotspot golden coverage.",
       "exit_condition": "Close when those hotspot next lanes are implemented with focused tests and runtime-hotspot golden coverage, or replaced by narrower retained observations in the runtime decomposition plan.",
       "owner_or_lane": "runtime-hotspot-decomposition"
@@ -24,7 +24,7 @@
       "path": "ops/reports/task-improvement-observations/external-report-remediation-20260620/improvement-observations.json",
       "observation_id": "c4_strict_preview_mypy_advisory_debt",
       "status": "open",
-      "retained_reason": "The strict-preview typing debt is intentionally advisory and separate from the active external-report matrix, but it remains an open source-maintenance follow-up until a focused typing lane owns it.",
+      "retained_reason": "The strict-preview typing debt is intentionally advisory and remains a maintenance backlog lane separate from release authority, operator evidence, and active external-report closure.",
       "next_action": "Schedule a dedicated strict-preview typing slice and validate it with the strict preview audit plus focused tests for touched runtime surfaces.",
       "exit_condition": "Close when the strict-preview typing audit has no remaining advisory debt, or when the debt is replaced by narrower registered observations with concrete owner lanes.",
       "owner_or_lane": "type-uplift-plan"
@@ -33,37 +33,28 @@
       "path": "ops/reports/task-improvement-observations/external-report-remediation-20260620/improvement-observations.json",
       "observation_id": "release_run_pending_operator_verification",
       "status": "open",
-      "retained_reason": "The refreshed action matrix has current active reports and still requires release-run and promotion authority readback before the active reports can be closed.",
-      "next_action": "Run release-run-ready for the current source tree, then refresh sealed and auto-promotion readiness if the matrix still reports release or promotion pending actions.",
-      "exit_condition": "Close when release-run, sealed-run, and auto-promotion readiness are current for the active report source tree, or when remaining operator-only work is registered under a narrower observation.",
+      "retained_reason": "P1/P2 rebound release and promotion evidence for the prior source fingerprint, P3 confirmed supply-chain external verification remains operator-pending without a bundle, and the current source patch requires release authority readback again.",
+      "next_action": "After committing source changes, run release-run-ready, release-sealed-run-ready, release-auto-promotion-ready, and external-report-action-matrix; run sigstore-bundle only when SIGSTORE_BUNDLE_REF is available.",
+      "exit_condition": "Close when release-run, sealed-run, and auto-promotion readiness are current for the active report source tree and any remaining operator-only work is registered under a narrower observation.",
       "owner_or_lane": "release-run-ready"
     },
     {
       "path": "ops/reports/task-improvement-observations/task-20260624-current-state-improvement-plan/improvement-observations.json",
       "observation_id": "preseal_closeout_manifest_fingerprint_drift",
       "status": "planned",
-      "retained_reason": "The refreshed matrix still reports release-run, sealed-run, and auto-promotion manifest source-identity drift, matching this preseal closeout follow-up.",
-      "next_action": "Complete the release authority sequence for the current tree: release-run-ready, release-auto-promotion-preseal, release-sealed-run-ready, and release-auto-promotion-ready.",
-      "exit_condition": "Close when those staged manifests match the current source revision and source tree fingerprint, or when a later observation supersedes this preseal drift record.",
+      "retained_reason": "The current matrix still reports release-run, sealed-run, and auto-promotion manifest source-identity drift after the latest source patch, but this is release-authority sequencing work rather than source repair.",
+      "next_action": "Complete the release authority sequence for the current tree: release-run-ready, release-sealed-run-ready, and release-auto-promotion-ready; patch preseal ordering only if the drift reproduces after explicit rebind.",
+      "exit_condition": "Close when staged manifests match the current source revision and source tree fingerprint, or when a later observation supersedes this preseal drift record.",
       "owner_or_lane": "release-authority-preseal"
     },
     {
       "path": "ops/reports/task-improvement-observations/task-action-matrix-full-clean-20260625/improvement-observations.json",
       "observation_id": "preseal_closeout_manifest_fingerprint_drift",
       "status": "planned",
-      "retained_reason": "This later action-matrix clean observation records the same release authority drift and remains valid while release-run, sealed-run, and auto-promotion manifests are source-identity stale.",
-      "next_action": "Rebind release-run evidence, then run release-sealed-run-ready and release-auto-promotion-ready so the action matrix can clear the release and promotion pending actions.",
-      "exit_condition": "Close when the refreshed action matrix no longer reports release-run or promotion readiness pending for the active external reports.",
+      "retained_reason": "This later action-matrix clean observation records the same release authority sequencing risk and remains valid while release-run, sealed-run, and auto-promotion manifests are source-identity stale after source edits.",
+      "next_action": "Rebind release-run evidence for the current source tree, then run release-sealed-run-ready and release-auto-promotion-ready so the action matrix can clear release and promotion pending actions.",
+      "exit_condition": "Close when the refreshed action matrix no longer reports release-run or promotion readiness pending for the active external reports, or when a narrower release-authority observation replaces it.",
       "owner_or_lane": "release-authority-preseal"
-    },
-    {
-      "path": "ops/reports/task-improvement-observations/task-action-matrix-full-clean-20260625/improvement-observations.json",
-      "observation_id": "generated_artifact_index_freshness_oscillation",
-      "status": "planned",
-      "retained_reason": "The refreshed artifact freshness report still has operational attention and the action matrix routes the active reports through artifact-freshness pending evidence.",
-      "next_action": "Use the documented convergence order: external-report-action-matrix, generated-artifact-index-body, then artifact-freshness-refresh-check; escalate to release-evidence-converge if freshness remains attention.",
-      "exit_condition": "Close when generated-artifact index and artifact-freshness evidence are current with no operational attention for the active external-report set.",
-      "owner_or_lane": "generated-artifact-finality-suffix"
     }
   ]
 }
