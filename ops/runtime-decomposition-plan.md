@@ -25,7 +25,7 @@ package and schema.
 | Mechanism loop | `ops/scripts/mechanism/` | `mk/mechanism.mk` | mechanism review, mutation proposal, goal runtime, promotion experiments |
 | Release | `ops/scripts/release/` | `mk/release.mk` | release evidence, external report lifecycle, sealing, closeout summaries |
 | Learning | `ops/scripts/learning/` | `mk/release.mk` | learning claims, readiness signoff, remediation backlog, negative lessons |
-| Public export | `ops/scripts/public/` | `mk/public.mk` | public mirror, public check, CBM public export |
+| Public export | `ops/scripts/public/` | `mk/public.mk` | public mirror, public check, public-surface helpers |
 | Supply chain | `ops/scripts/supply_chain/` | `mk/supply_chain.mk` | provenance, SBOM, advisory, OpenVEX, in-toto, Sigstore |
 
 ## How To Trace A Change

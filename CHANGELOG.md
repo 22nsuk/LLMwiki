@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-07 — Source-derived sync convergence
+
+- Added `make sync-derived` and `make sync-derived-check` as the single operator
+  entrypoints for tracked source-derived projections, and moved CI's fast-tier
+  stale projection check to the new aggregate.
+- Added registry-derived pytest marker registration and converted the
+  `schema_static_smoke` selector pack to a non-persistent marker-owned pack.
+- Added a non-writing `make-target-inventory-check` lane and wired it into
+  `sync-derived-check` for write/check parity on Make inventory diagnostics.
+- Converted the `release_closeout_regression` selector pack to a function-marker
+  owned pack, removing another hand-maintained selector list.
+- Converted the curated `fast_smoke` precheck to a marker-owned pack and removed
+  stale compatibility-alias deselects so the generated selector stays pure `-m`.
+- Converted the default `make test` boundary pack to the
+  `default_test_boundary` marker so the boundary chain no longer carries a
+  duplicated explicit selector list.
+- Converted the remaining projected explicit selector packs
+  `runtime_hotspot_smoke`, `report_contract_core`, and `release_sealing_core`
+  to marker-owned packs, preserving nodeid parity with their prior selector
+  lists, and keeping the `release_sealing_core` node IDs co-marked with
+  `release_sealing` for compatibility.
+- Removed the obsolete explicit-selector fallback from the generated selector
+  projection path, so `PACK_VARIABLES` can only expose marker-owned pytest
+  packs; the remaining explicit packs are release/source-package wrapper lanes.
+- Reduced script lifecycle policy drift by deriving module paths from
+  `canonical_module`, keeping legacy `path` schema-compatible but no longer
+  storing it in the policy registry.
+- Added `make script-module-surfaces` and `make script-module-surfaces-check`
+  to derive stable import exports and direct-entrypoint flags from source while
+  keeping module `role` as the manually curated contract field.
+- Removed the low-use optional codebase-memory-mcp sidecar targets, export
+  helper, template, and docs while retaining local `.codebase-memory` public
+  leak protection.
+- Wired CLI surface inventory coverage into anti-slop admission so
+  `make-target-inventory-check` and `sync-derived-check` fail when pyproject,
+  Make, or direct fallback script surfaces are missing lifecycle policy entries.
+
 ## 2026-06 — Runtime decomposition, release evidence, and public mirror hygiene
 
 - Continued the runtime-codehealth-hardening sprint: extracted readiness remediation,

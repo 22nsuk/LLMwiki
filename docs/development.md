@@ -66,17 +66,22 @@ validation authority.
 
 Operator Make entrypoints are indexed in `ops/make-target-inventory-operator.json`
 and surfaced through `make help`. High-signal targets include `make check`,
-`make test-selectors-sync-check`, `make review-surface-manifest`, `make release-governance-sync-check`,
-`make generated-artifact-runs-compress`, and `make system-log-split`.
+`make sync-derived`, `make sync-derived-check`, `make make-target-inventory-check`,
+`make review-surface-manifest`, `make generated-artifact-runs-compress`, and
+`make system-log-split`.
 Implementation-only Make recipes use the `_internal-*` prefix and are excluded
 from the operator inventory; public wrappers such as `make runtime-hotspot-goldens-check`
 delegate to them. `docs/REVIEW_SCOPE.md` is the tracked canonical reviewer inventory; the
 companion JSON under `tmp/review-surface-manifest.json` is intentionally
 ephemeral. Anti-slop admission rules for new gates and reports
-live in `docs/anti-slop-admission.md`. `ops/script-output-surfaces.json` is narrower: it is an
-AST-derived material output/fallback registry and should track only scripts with
-`--out`/`*-out`, `resolve_output_path`, `resolve_repo_output_path`, or an
-explicit direct-script fallback marker.
+live in `docs/anti-slop-admission.md`. `ops/script-output-surfaces.json` is
+narrower: it is an AST-derived material output/fallback registry and should
+track only scripts with `--out`/`*-out`, `resolve_output_path`,
+`resolve_repo_output_path`, or an explicit direct-script fallback marker.
+`ops/script-module-surfaces.json` keeps manually curated module `role` values,
+while `make script-module-surfaces` derives stable import exports from literal
+`__all__` declarations and direct-entrypoint flags from the live material
+output/fallback scan.
 
 Goal-runtime Codex execution has a separate outer-tool contract: the operator
 Codex CLI must resolve outside the repository `.venv`, while Python and pytest
@@ -124,11 +129,12 @@ and report-contract summaries when their source-tree fingerprints still match,
 so clean release runs do not replay the same expensive suite more than once.
 To avoid source-tree fingerprint loops, stabilize mutation-prone generated and
 check surfaces before refreshing expensive summaries. Finish code, docs,
-generator, policy, and schema edits first; then run the stabilizers that can
-mutate or prove generated surfaces, such as `make report-schema-samples-check`,
-`make script-output-surfaces-check`, `make script-output-surfaces` when the check
-reports a stale material output/fallback registry, targeted generated-artifact
-converge targets, and `make static`. `test-execution-summary-full` runs
+generator, policy, and schema edits first; then run `make sync-derived` when
+tracked source-derived projections should be regenerated, including pytest
+marker registration and selector projections, or `make sync-derived-check` in
+check-only contexts. Keep targeted
+`generated-artifact-converge` work for release/report finality surfaces, then
+run `make static`. `test-execution-summary-full` runs
 `make full-pytest-generated-preflight` before the expensive full suite, so stale
 schema samples, script output surfaces, and runtime hotspot golden digests fail
 early with the owning repair target. After that point, do not edit source or
@@ -215,15 +221,15 @@ rebase produces jobs that reach checkout.
 
 | Change type | Minimum local check | Extra check |
 | --- | --- | --- |
-| Docs only | `make test-public` | `make sync-public-policy-check` if public boundaries changed |
+| Docs only | `make test-public` | `make sync-derived-check` if tracked source-derived projections or public boundary templates may be stale |
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
-| CLI output/path surface | `make script-output-surfaces-check` | Run `make script-output-surfaces` only when the check reports a stale material output/fallback registry, then rerun the check before committing |
+| CLI output/path surface | `make sync-derived-check` | Run `make sync-derived` when the check reports a stale tracked source-derived projection, then rerun the check before committing |
 | Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | proves planner recommendations and changed-path minimums |
 | Registry/Make/CI lane-contract proof | `make test-report-contract-core` | proves registry/Make/CI lane-contract parity after lane selector, CI routing, or report-contract semantics changed |
 | Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | Before and after structural edits, prefer `make function-budget-edit-check STRUCTURAL_COMPLEXITY_BUDGET_TARGETS="path/to/file.py"` (or `CHANGED_FILES_MANIFEST=<manifest>`); it refreshes function-budget proposals and then runs the touched complexity ratchet. Without touched inputs, `complexity-budget-touched-check` skips and the ratchet stays inactive |
 | Dependency input | `make uv-lock-check` | `make static` after any intentional lock refresh |
-| Schema/report contract | `make test-report-contract-core` | regenerate artifacts, then rerun the focused schema/report tests |
-| Public export policy | `make sync-public-policy` | `make public-check` |
+| Schema/report contract | `make test-report-contract-core` | `make sync-derived`, then rerun the focused schema/report tests |
+| Public export policy | `make sync-derived` | `make public-check` |
 | Release evidence | `make changed-path-minimum-plan`, then `make release-run-ready-plan-check` and `make release-run-ready-check` | Run `make release-evidence-converge` when generated report payloads are stale; run `make release-run-ready` from the committed tree before release; after a source-ready commit run `make release-post-commit-finalize` for check-only HEAD readback, or `make release-authority-settle` when staged authority manifests should be rewritten for unattended promotion |
 | Sealed release evidence | `make release-sealed-run-ready-check` | `make release-sealed-run-ready`; its planner requires current passing run-ready and auto-promotion preseal evidence and reports the minimal next action |
 | Auto-promotion evidence | `make release-auto-promotion-ready-check` | Run with `GOAL_RUN_ID=<goal-run-id>` when a run id is known or let `make release-auto-promotion-goal-run-id-guard` infer it from matching current verified `goal-run-status` and `goal-runtime-certificate` evidence; after stale generated evidence is converged, prefer `make release-authority-settle` to rewrite staged authority for unattended promotion, or run `make release-auto-promotion-preflight`, `make release-run-ready`, `make release-auto-promotion-preseal`, `make release-sealed-run-ready`, then `make release-auto-promotion-ready` when stepping through failures manually; preflight/preseal keep missing verified runtime evidence as final promotion blockers instead of creating runtime-trial evidence, preseal uses `make release-auto-promotion-safe-cleanup-cleanup-only`, and Stage 3 directly verifies the goal-runtime certificate while reusing the sealed operator summary generated by the sealed stage |
