@@ -115,6 +115,9 @@ include = ["ops*"]
 [tool.setuptools.package-data]
 ops = [
   "script-lifecycle-policy.json",
+  "script-lifecycle-overrides.json",
+  "script-flat-import-aliases.json",
+  "script-module-surface-overrides.json",
   "script-module-surfaces.json",
   "script-output-surfaces.json",
   "evals/*.md",

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Script Module Surface Overrides",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "version",
+    "description",
+    "overrides"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "ops/schemas/script-module-surface-overrides.schema.json"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/moduleSurfaceOverride"
+      }
+    }
+  },
+  "$defs": {
+    "moduleSurfaceOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "role"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^ops/scripts/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+\\.py$"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "cli_facade",
+            "compatibility_facade",
+            "internal_facade"
+          ]
+        }
+      }
+    }
+  }
+}

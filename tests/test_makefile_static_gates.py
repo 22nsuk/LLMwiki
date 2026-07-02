@@ -219,6 +219,7 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             "$(MAKE) test-selectors-sync",
             "$(MAKE) sync-public-policy",
             "$(MAKE) script-output-surfaces",
+            "$(MAKE) script-lifecycle-policy",
             "$(MAKE) script-module-surfaces",
             "$(MAKE) release-governance-sync",
             "$(MAKE) make-target-inventory",
@@ -232,6 +233,7 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             "$(MAKE) test-selectors-sync-check",
             "$(MAKE) sync-public-policy-check",
             "$(MAKE) script-output-surfaces-check",
+            "$(MAKE) script-lifecycle-policy-check",
             "$(MAKE) script-module-surfaces-check",
             "$(MAKE) release-governance-sync-check",
             "$(MAKE) make-target-inventory-check",
@@ -293,6 +295,8 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         "script-output-surfaces",
         "script-module-surfaces",
         "script-module-surfaces-check",
+        "script-lifecycle-policy",
+        "script-lifecycle-policy-check",
         "function-budget-refactor-proposals",
         "function-budget-edit-check",
         "outcome-provenance-gate-policy",
@@ -312,6 +316,9 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
         "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
         "SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json",
         "SCRIPT_MODULE_SURFACES_OUT ?= ops/script-module-surfaces.json",
+        "SCRIPT_LIFECYCLE_POLICY_OUT ?= ops/script-lifecycle-policy.json",
+        "SCRIPT_LIFECYCLE_OVERRIDES ?= ops/script-lifecycle-overrides.json",
+        "SCRIPT_MODULE_SURFACE_OVERRIDES ?= ops/script-module-surface-overrides.json",
         "GENERATED_ARTIFACT_RETENTION_CLEAN_OUT ?= tmp/generated-artifact-retention-clean.json",
         "GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY ?=",
         "COMMAND_LOG_SUMMARY_BACKFILL_OUT ?= tmp/command-log-summary-backfill.json",
@@ -359,18 +366,43 @@ def _assert_script_surface_and_inventory_targets(
     )
     script_module_block = _target_block(text, "script-module-surfaces")
     case.assertIn(
-        '$(PYTHON) -m ops.scripts.script_module_surfaces --vault "$(VAULT)" --out "$(SCRIPT_MODULE_SURFACES_OUT)"',
+        '$(PYTHON) -m ops.scripts.script_module_surfaces --vault "$(VAULT)" --out "$(SCRIPT_MODULE_SURFACES_OUT)" --overrides "$(SCRIPT_MODULE_SURFACE_OVERRIDES)"',
         script_module_block,
     )
     script_module_check_block = _target_block(text, "script-module-surfaces-check")
     case.assertIn("script-module-surfaces-check", _target_block(text, ".PHONY"))
     case.assertIn("ops.scripts.script_module_surfaces", script_module_check_block)
     case.assertIn('--stored "$(SCRIPT_MODULE_SURFACES_OUT)"', script_module_check_block)
+    case.assertIn(
+        '--overrides "$(SCRIPT_MODULE_SURFACE_OVERRIDES)"',
+        script_module_check_block,
+    )
     case.assertIn("--check", script_module_check_block)
     case.assertNotIn("SCRIPT_MODULE_SURFACES_CANDIDATE_OUT", script_module_check_block)
     case.assertNotIn(
         "ops.scripts.canonical_artifact_promote", script_module_check_block
     )
+    script_lifecycle_block = _target_block(text, "script-lifecycle-policy")
+    case.assertIn("script-lifecycle-policy", _target_block(text, ".PHONY"))
+    case.assertIn(
+        '$(PYTHON) -m ops.scripts.core.script_lifecycle_policy --vault "$(VAULT)" --out "$(SCRIPT_LIFECYCLE_POLICY_OUT)" --overrides "$(SCRIPT_LIFECYCLE_OVERRIDES)"',
+        script_lifecycle_block,
+    )
+    script_lifecycle_check_block = _target_block(text, "script-lifecycle-policy-check")
+    case.assertIn("script-lifecycle-policy-check", _target_block(text, ".PHONY"))
+    case.assertIn(
+        "ops.scripts.core.script_lifecycle_policy",
+        script_lifecycle_check_block,
+    )
+    case.assertIn(
+        '--stored "$(SCRIPT_LIFECYCLE_POLICY_OUT)"',
+        script_lifecycle_check_block,
+    )
+    case.assertIn(
+        '--overrides "$(SCRIPT_LIFECYCLE_OVERRIDES)"',
+        script_lifecycle_check_block,
+    )
+    case.assertIn("--check", script_lifecycle_check_block)
     retention_clean_block = _target_block(text, "generated-artifact-retention-clean")
     command_log_backfill_block = _target_block(text, "command-log-summary-backfill")
     case.assertIn("command-log-summary-backfill", _target_block(text, ".PHONY"))

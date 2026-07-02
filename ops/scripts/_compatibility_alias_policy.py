@@ -24,6 +24,7 @@ LIFECYCLE_RETAINED_REASONS = {
     "test_only": "test_only_legacy_module_compatibility",
     "legacy_delete": "legacy_delete_pending_removal",
 }
+FLAT_IMPORT_ALIASES_PATH = "ops/script-flat-import-aliases.json"
 
 
 def _read_json_object(path: Path) -> dict[str, Any]:
@@ -68,16 +69,45 @@ def _lifecycle_retained_reason(module: dict[str, Any]) -> str:
     return LIFECYCLE_RETAINED_REASONS.get(lifecycle, "lifecycle_policy_compatibility")
 
 
+def _flat_import_alias_modules(vault: Path) -> set[str]:
+    aliases = _read_json_object(vault / FLAT_IMPORT_ALIASES_PATH)
+    modules: set[str] = set()
+    for item in aliases.get("aliases", []):
+        if not isinstance(item, dict):
+            continue
+        module = str(item.get("canonical_module", "")).strip()
+        if module:
+            modules.add(module)
+    return modules
+
+
+def _retains_lifecycle_flat_alias(
+    module: dict[str, Any], *, flat_alias_modules: set[str]
+) -> bool:
+    canonical_module = str(module.get("canonical_module", ""))
+    install_state = str(module.get("install_state", ""))
+    return (
+        install_state in {"public_cli", "transitional_installed"}
+        or canonical_module in flat_alias_modules
+    )
+
+
 def discover_flat_reexport_targets(script_root: Path) -> dict[str, FlatReexportTarget]:
     """Return policy-backed flat import aliases that remain part of the contract."""
     resolved_script_root = script_root.resolve()
     vault = _script_vault_root(resolved_script_root)
     available_by_module = _available_flat_targets(resolved_script_root)
     retained_by_stem: dict[str, FlatReexportTarget] = {}
+    flat_alias_modules = _flat_import_alias_modules(vault)
 
     lifecycle_policy = _read_json_object(vault / "ops" / "script-lifecycle-policy.json")
     for module in lifecycle_policy.get("modules", []):
         if not isinstance(module, dict):
+            continue
+        if not _retains_lifecycle_flat_alias(
+            module,
+            flat_alias_modules=flat_alias_modules,
+        ):
             continue
         canonical_module = str(module.get("canonical_module", ""))
         target = available_by_module.get(canonical_module)

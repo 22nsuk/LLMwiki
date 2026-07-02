@@ -29,16 +29,14 @@ SCRIPT_LIFECYCLE_POLICY = Path("ops/script-lifecycle-policy.json")
 SCRIPT_LIFECYCLE_POLICY_SCHEMA = Path("ops/schemas/script-lifecycle-policy.schema.json")
 SCRIPT_MODULE_SURFACES = Path("ops/script-module-surfaces.json")
 SCRIPT_MODULE_SURFACES_SCHEMA = Path("ops/schemas/script-module-surfaces.schema.json")
+SCRIPT_MODULE_SURFACE_OVERRIDES = Path("ops/script-module-surface-overrides.json")
+SCRIPT_MODULE_SURFACE_OVERRIDES_SCHEMA = Path(
+    "ops/schemas/script-module-surface-overrides.schema.json"
+)
+SCRIPT_FLAT_IMPORT_ALIASES = Path("ops/script-flat-import-aliases.json")
 MAKE_FILES = [Path("Makefile"), *sorted(Path("mk").glob("*.mk"))]
 CONSOLE_SCRIPT_PREFIX = "llm-wiki-"
 INSTALLED_POLICY_STATES = {"public_cli", "transitional_installed"}
-PUBLIC_CLI_COMMANDS = {
-    "llm-wiki-finalize-run",
-    "llm-wiki-improvement-observations",
-    "llm-wiki-planning-gate-validate",
-    "llm-wiki-run-mechanism-experiment",
-    "llm-wiki-status",
-}
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -48,6 +46,10 @@ def _load_contract() -> dict:
 
 def _load_lifecycle_policy() -> dict:
     return json.loads(SCRIPT_LIFECYCLE_POLICY.read_text(encoding="utf-8"))
+
+
+def _load_module_surface_overrides() -> dict:
+    return json.loads(SCRIPT_MODULE_SURFACE_OVERRIDES.read_text(encoding="utf-8"))
 
 
 def _fallback_eligible_paths() -> set[str]:
@@ -146,11 +148,15 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
 
         self.assertEqual(validate_with_schema(contract, schema), [])
 
+    def test_module_surface_overrides_schema_validates(self) -> None:
+        overrides = _load_module_surface_overrides()
+        schema = load_schema(SCRIPT_MODULE_SURFACE_OVERRIDES_SCHEMA)
+
+        self.assertEqual(validate_with_schema(overrides, schema), [])
+
     def test_contract_matches_live_source_derived_module_surfaces(self) -> None:
         contract = _load_contract()
-        expected = build_script_module_surface_contract(
-            REPO_ROOT, stored_contract=contract
-        )
+        expected = build_script_module_surface_contract(REPO_ROOT)
 
         self.maxDiff = None
         self.assertEqual(contract, expected)
@@ -209,16 +215,22 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
     def test_source_derived_contract_requires_manually_curated_role_for_new_stable_surface(
         self,
     ) -> None:
-        contract = _load_contract()
-        removed = contract["stable_import_surfaces"][0]["path"]
-        contract["stable_import_surfaces"] = [
+        overrides = _load_module_surface_overrides()
+        removed = overrides["overrides"][0]["path"]
+        overrides["overrides"] = [
             item
-            for item in contract["stable_import_surfaces"]
+            for item in overrides["overrides"]
             if item["path"] != removed
         ]
 
         with self.assertRaisesRegex(ValueError, "missing manually curated roles"):
-            build_script_module_surface_contract(REPO_ROOT, stored_contract=contract)
+            build_script_module_surface_contract(REPO_ROOT, overrides=overrides)
+
+    def test_empty_explicit_module_surface_overrides_do_not_fall_back_to_repo_file(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(ValueError, "missing manually curated roles"):
+            build_script_module_surface_contract(REPO_ROOT, overrides={})
 
     def test_lifecycle_policy_schema_validates(self) -> None:
         policy = _load_lifecycle_policy()
@@ -253,7 +265,7 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
                 else:
                     self.assertEqual(module["console_scripts"], [])
 
-    def test_lifecycle_policy_installed_surface_is_public_cli_allowlist(self) -> None:
+    def test_lifecycle_policy_installed_surface_matches_pyproject_scripts(self) -> None:
         policy = _load_lifecycle_policy()
         public_commands = {
             command
@@ -267,9 +279,8 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
             if module["install_state"] == "transitional_installed"
         ]
 
-        self.assertEqual(public_commands, PUBLIC_CLI_COMMANDS)
+        self.assertEqual(public_commands, set(_project_scripts()))
         self.assertEqual(transitional_modules, [])
-        self.assertEqual(set(_project_scripts()), PUBLIC_CLI_COMMANDS)
 
     def test_not_installed_lifecycle_entries_have_replacement_paths(self) -> None:
         for module in _load_lifecycle_policy()["modules"]:
@@ -295,6 +306,9 @@ class ScriptModuleSurfaceContractTests(unittest.TestCase):
         package_data = pyproject["tool"]["setuptools"]["package-data"]["ops"]
 
         self.assertIn("script-lifecycle-policy.json", package_data)
+        self.assertIn("script-lifecycle-overrides.json", package_data)
+        self.assertIn("script-flat-import-aliases.json", package_data)
+        self.assertIn("script-module-surface-overrides.json", package_data)
 
     def test_stable_import_surfaces_match_literal_all_exports(self) -> None:
         contract = _load_contract()

@@ -86,7 +86,7 @@
       "properties": {
         "canonical_module": {
           "type": "string",
-          "pattern": "^ops\\.scripts\\.[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+$"
+          "pattern": "^ops\\.scripts(\\.[A-Za-z0-9_]+)+$"
         },
         "path": {
           "type": "string",

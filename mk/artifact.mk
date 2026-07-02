@@ -1,5 +1,8 @@
 SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json
 SCRIPT_MODULE_SURFACES_OUT ?= ops/script-module-surfaces.json
+SCRIPT_LIFECYCLE_POLICY_OUT ?= ops/script-lifecycle-policy.json
+SCRIPT_LIFECYCLE_OVERRIDES ?= ops/script-lifecycle-overrides.json
+SCRIPT_MODULE_SURFACE_OVERRIDES ?= ops/script-module-surface-overrides.json
 CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json
 CLOSURE_REGISTRY_ENVELOPE_REGISTRY ?= all
 GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json
@@ -43,7 +46,7 @@ RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.jso
 RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT ?= tmp/release-risk-taxonomy-matrix.candidate.json
 RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.md
 
-.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-output-surfaces-clean-regenerate manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
+.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
@@ -73,6 +76,7 @@ sync-derived:
 	$(MAKE) test-selectors-sync
 	$(MAKE) sync-public-policy
 	$(MAKE) script-output-surfaces
+	$(MAKE) script-lifecycle-policy
 	$(MAKE) script-module-surfaces
 	$(MAKE) release-governance-sync
 	$(MAKE) make-target-inventory
@@ -83,6 +87,7 @@ sync-derived-check:
 	$(MAKE) test-selectors-sync-check
 	$(MAKE) sync-public-policy-check
 	$(MAKE) script-output-surfaces-check
+	$(MAKE) script-lifecycle-policy-check
 	$(MAKE) script-module-surfaces-check
 	$(MAKE) release-governance-sync-check
 	$(MAKE) make-target-inventory-check
@@ -137,10 +142,16 @@ script-output-surfaces-check:
 	$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --stored "$(SCRIPT_OUTPUT_SURFACES_OUT)" --check
 
 script-module-surfaces:
-	$(PYTHON) -m ops.scripts.script_module_surfaces --vault "$(VAULT)" --out "$(SCRIPT_MODULE_SURFACES_OUT)"
+	$(PYTHON) -m ops.scripts.script_module_surfaces --vault "$(VAULT)" --out "$(SCRIPT_MODULE_SURFACES_OUT)" --overrides "$(SCRIPT_MODULE_SURFACE_OVERRIDES)"
 
 script-module-surfaces-check:
-	$(PYTHON) -m ops.scripts.script_module_surfaces --vault "$(VAULT)" --stored "$(SCRIPT_MODULE_SURFACES_OUT)" --check
+	$(PYTHON) -m ops.scripts.script_module_surfaces --vault "$(VAULT)" --stored "$(SCRIPT_MODULE_SURFACES_OUT)" --overrides "$(SCRIPT_MODULE_SURFACE_OVERRIDES)" --check
+
+script-lifecycle-policy:
+	$(PYTHON) -m ops.scripts.core.script_lifecycle_policy --vault "$(VAULT)" --out "$(SCRIPT_LIFECYCLE_POLICY_OUT)" --overrides "$(SCRIPT_LIFECYCLE_OVERRIDES)"
+
+script-lifecycle-policy-check:
+	$(PYTHON) -m ops.scripts.core.script_lifecycle_policy --vault "$(VAULT)" --stored "$(SCRIPT_LIFECYCLE_POLICY_OUT)" --overrides "$(SCRIPT_LIFECYCLE_OVERRIDES)" --check
 
 clean-fixture-regeneration-guard:
 	$(PYTHON) -m ops.scripts.clean_fixture_regeneration_guard --vault "$(VAULT)" --out "$(CLEAN_FIXTURE_REGENERATION_GUARD_OUT)"

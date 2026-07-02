@@ -35,6 +35,8 @@ against `ops/make-target-inventory-operator.json` and `ops/script-lifecycle-poli
 - Runnable script surfaces discovered from pyproject scripts, Make
   `python -m ops.scripts...` calls, or direct fallback markers must resolve to
   an `ops/scripts` file and have a lifecycle policy entry.
+- `ops/script-lifecycle-policy.json` is generated; manual lifecycle and
+  replacement decisions live in `ops/script-lifecycle-overrides.json`.
 - `removal_ready: true` requires `remove_after`; expired `remove_after` dates fail
   admission.
 - Schemas reference `gate_effect_vocabulary` via `$ref` rather than inline enums.

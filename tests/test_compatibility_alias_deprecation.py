@@ -13,6 +13,10 @@ from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
+SCRIPT_FLAT_IMPORT_ALIASES = Path("ops/script-flat-import-aliases.json")
+SCRIPT_FLAT_IMPORT_ALIASES_SCHEMA = Path(
+    "ops/schemas/script-flat-import-aliases.schema.json"
+)
 
 
 def fixed_context() -> RuntimeContext:
@@ -23,6 +27,14 @@ def fixed_context() -> RuntimeContext:
 
 
 class CompatibilityAliasDeprecationTests(unittest.TestCase):
+    def test_flat_import_alias_registry_schema_validates(self) -> None:
+        payload = json.loads(SCRIPT_FLAT_IMPORT_ALIASES.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            validate_with_schema(payload, load_schema(SCRIPT_FLAT_IMPORT_ALIASES_SCHEMA)),
+            [],
+        )
+
     def test_inventory_retains_aliases_until_migration_window_closes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
@@ -86,6 +98,28 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
                                 "replacement": "python -m ops.scripts.test.lane_runtime",
                                 "removal_ready": False,
                                 "rationale": "fixture lifecycle contract",
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-lifecycle-overrides.json").write_text(
+                json.dumps(
+                    {
+                        "overrides": []
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-flat-import-aliases.json").write_text(
+                json.dumps(
+                    {
+                        "aliases": [
+                            {
+                                "canonical_module": "ops.scripts.test.lane_runtime",
                             }
                         ]
                     }
@@ -160,6 +194,60 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
             validate_with_schema(report, load_schema("ops/schemas/compatibility-alias-deprecation.schema.json")),
             [],
         )
+
+    def test_lifecycle_override_does_not_create_flat_reexport_alias(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "ops" / "scripts").mkdir(parents=True)
+            (vault / "ops" / "scripts" / "core").mkdir()
+            (vault / "ops").mkdir(exist_ok=True)
+            (vault / "ops" / "scripts" / "__init__.py").write_text(
+                "class _ReexportFinder: pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "core" / "new_runtime.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-lifecycle-policy.json").write_text(
+                json.dumps(
+                    {
+                        "modules": [
+                            {
+                                "canonical_module": "ops.scripts.core.new_runtime",
+                                "lifecycle": "helper",
+                                "install_state": "not_installed",
+                                "console_scripts": [],
+                                "replacement": "python -m ops.scripts.core.new_runtime",
+                                "removal_ready": False,
+                                "rationale": "fixture lifecycle contract",
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-lifecycle-overrides.json").write_text(
+                json.dumps(
+                    {
+                        "overrides": [
+                            {
+                                "canonical_module": "ops.scripts.core.new_runtime",
+                                "lifecycle": "helper",
+                                "replacement": "python -m ops.scripts.core.new_runtime",
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+        aliases = {(item["alias_type"], item["name"]) for item in report["aliases"]}
+        self.assertNotIn(("flat_import_reexport", "ops.scripts.new_runtime"), aliases)
 
 
 if __name__ == "__main__":

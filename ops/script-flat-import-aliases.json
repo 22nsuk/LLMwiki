@@ -1,0 +1,481 @@
+{
+  "$schema": "ops/schemas/script-flat-import-aliases.schema.json",
+  "version": 1,
+  "description": "Explicit compatibility window for legacy ops.scripts.<stem> flat import re-exports. Lifecycle overrides do not create flat aliases; add a module here only when retaining an existing flat import surface is intentional.",
+  "aliases": [
+    {
+      "canonical_module": "ops.scripts.core.archive_execution_manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.core.artifact_freshness_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.artifact_relocation_audit"
+    },
+    {
+      "canonical_module": "ops.scripts.core.backfill_archived_run_artifacts"
+    },
+    {
+      "canonical_module": "ops.scripts.core.backfill_historical_bootstrap_reports"
+    },
+    {
+      "canonical_module": "ops.scripts.core.bootstrap_preflight"
+    },
+    {
+      "canonical_module": "ops.scripts.core.canonical_artifact_promote"
+    },
+    {
+      "canonical_module": "ops.scripts.core.cli_surface_inventory"
+    },
+    {
+      "canonical_module": "ops.scripts.core.command_log_summary_backfill"
+    },
+    {
+      "canonical_module": "ops.scripts.core.closure_registry_envelope"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_goal_client"
+    },
+    {
+      "canonical_module": "ops.scripts.core.compatibility_alias_deprecation"
+    },
+    {
+      "canonical_module": "ops.scripts.core.execution_lane_guard"
+    },
+    {
+      "canonical_module": "ops.scripts.core.executor"
+    },
+    {
+      "canonical_module": "ops.scripts.core.generated_artifact_converge_summary"
+    },
+    {
+      "canonical_module": "ops.scripts.core.generated_artifact_index"
+    },
+    {
+      "canonical_module": "ops.scripts.core.generated_artifact_retention_clean"
+    },
+    {
+      "canonical_module": "ops.scripts.core.make_target_inventory"
+    },
+    {
+      "canonical_module": "ops.scripts.core.manual_mutate_defect_registry"
+    },
+    {
+      "canonical_module": "ops.scripts.core.observability_routing_provenance_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.sanitize_run_artifacts"
+    },
+    {
+      "canonical_module": "ops.scripts.core.script_output_surfaces"
+    },
+    {
+      "canonical_module": "ops.scripts.core.script_module_surfaces"
+    },
+    {
+      "canonical_module": "ops.scripts.core.select_subagent_rung"
+    },
+    {
+      "canonical_module": "ops.scripts.core.source_package_clean_extract"
+    },
+    {
+      "canonical_module": "ops.scripts.core.source_slug_curation"
+    },
+    {
+      "canonical_module": "ops.scripts.core.subagent_profile_schema"
+    },
+    {
+      "canonical_module": "ops.scripts.core.tools_migration_plan"
+    },
+    {
+      "canonical_module": "ops.scripts.core.workflow_dependency_planner"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.doc_graph_integrity"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.function_budget_refactor_proposals"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.lint_uplift_plan"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.report_contract_closeout_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.structural_complexity_budget"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.type_uplift_plan"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.warning_budget"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_eval"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_lint"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_lint_review_classification"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_stage2_eval"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_claim_activation_report"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_claim_evidence_bundle"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_claim_unlock_review"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_confirmed_evidence_cohort"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_confirmed_legacy_reconstruction"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_delta_scoreboard"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_readiness_signoff"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_readiness_signoff_refresh"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_readiness_signoff_revalidation"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.remediation_backlog"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.self_improvement_negative_lessons"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.session_synopsis"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_loop"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.codex_goal_prompt"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.finalize_run"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_run_status"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_certificate_report"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_certificate_run_id_guard"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_clean_transient"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_closeout"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_fixed_point_check"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_local_evidence_refresh"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_latest_successful_run"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_lock"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_quarantine_preflight"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_run_admission"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_stale_closeout"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_runner"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_worktree_guard"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.improvement_observations"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_assess"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_contract_eval"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_navigation_index"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_review"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mutation_proposal"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.observation_closeout_lint"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.outcome_metrics"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.planning_gate_validate"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_decision_trends"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_gate"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.run_mechanism_experiment"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.set_mechanism_run_history"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.system_log_split"
+    },
+    {
+      "canonical_module": "ops.scripts.public.clean_fixture_regeneration_guard"
+    },
+    {
+      "canonical_module": "ops.scripts.public.export_public_repo"
+    },
+    {
+      "canonical_module": "ops.scripts.public.public_check_summary"
+    },
+    {
+      "canonical_module": "ops.scripts.public.public_surface_snapshot"
+    },
+    {
+      "canonical_module": "ops.scripts.public.review_surface_manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.public.sync_public_surface_gitignore"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_promotion"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_route_proposal"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_seed_source_hints"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_source_quality"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_markdown_normalize"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_registry_cross_environment_evidence_bundle"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_registry_cross_environment_matrix"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_registry_export"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_registry_preflight"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_registry_shard_policy_sync"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.source_substance_cohort_classify"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_action_matrix"
+    },
+    {
+      "canonical_module": "ops.scripts.release.freshness_owner_route_converge"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_reference_manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.release.github_governance_live_drift"
+    },
+    {
+      "canonical_module": "ops.scripts.release.operator_release_summary"
+    },
+    {
+      "canonical_module": "ops.scripts.release.outcome_provenance_gate_policy"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_audit_pack"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_authority_inventory"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_auto_promotion_preflight"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_auto_promotion_ready"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_clean_blocker_ledger"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_clean_lane_evidence_review"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_batch_manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_finality_attestation"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_fixed_point"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_fixed_point_cost_trend"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_sealed_rehearsal_check"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_summary"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_closeout_self_check"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_cohort"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_dashboard"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_planner"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_goal_run_identity_guard"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_lane_summary"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_post_commit_finalizer"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_post_seal_attestation"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_risk_taxonomy_matrix"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_run_manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_run_ready"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_sealed_post_seal_attestation"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_sealed_run_manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_smoke"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_source_ready_commit"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_source_ready_status"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_status_surface"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_workflow_order_guard"
+    },
+    {
+      "canonical_module": "ops.scripts.release.review_archive"
+    },
+    {
+      "canonical_module": "ops.scripts.release.source_package_smoke"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.cyclonedx_sbom"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.in_toto_statement"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.openvex_draft"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.sbom_export_mapping"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.sbom_readiness_gate_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.security_advisories"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.sigstore_bundle"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.spdx_sbom"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.supply_chain_artifact_model"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.supply_chain_artifacts"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.supply_chain_benchmark"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.supply_chain_gate_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.supply_chain_provenance"
+    },
+    {
+      "canonical_module": "ops.scripts.test.ci_tier_lane_bridge"
+    },
+    {
+      "canonical_module": "ops.scripts.test.generate_release_governance_from_lane_registry"
+    },
+    {
+      "canonical_module": "ops.scripts.test.generate_pytest_ini_markers"
+    },
+    {
+      "canonical_module": "ops.scripts.test.generate_test_mk_selectors"
+    },
+    {
+      "canonical_module": "ops.scripts.test.test_execution_summary"
+    }
+  ]
+}

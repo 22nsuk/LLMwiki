@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Script Lifecycle Overrides",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "version",
+    "description",
+    "overrides"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "ops/schemas/script-lifecycle-overrides.schema.json"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/moduleOverride"
+      }
+    }
+  },
+  "$defs": {
+    "lifecycle": {
+      "type": "string",
+      "enum": [
+        "public_cli",
+        "make_only",
+        "report_generator",
+        "helper",
+        "test_only",
+        "legacy_delete"
+      ]
+    },
+    "moduleOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_module"
+      ],
+      "properties": {
+        "canonical_module": {
+          "type": "string",
+          "pattern": "^ops\\.scripts(\\.[A-Za-z0-9_]+)+$"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/lifecycle"
+        },
+        "replacement": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

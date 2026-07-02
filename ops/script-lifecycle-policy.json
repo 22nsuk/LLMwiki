@@ -1,11 +1,7 @@
 {
   "$schema": "ops/schemas/script-lifecycle-policy.schema.json",
-  "description": "Lifecycle intent for runnable ops.scripts surfaces. This separates installed public CLI exposure from direct script fallback, Make orchestration, and legacy helper entrypoints.",
-  "install_state_values": [
-    "public_cli",
-    "transitional_installed",
-    "not_installed"
-  ],
+  "version": 1,
+  "description": "Generated lifecycle policy for ops/scripts surfaces. Module entries are derived from the live ops/scripts tree, pyproject.toml console scripts, Make recipe module references, and direct fallback inventory; human-owned lifecycle guidance lives in ops/script-lifecycle-overrides.json.",
   "lifecycle_values": [
     "public_cli",
     "make_only",
@@ -14,31 +10,117 @@
     "test_only",
     "legacy_delete"
   ],
+  "install_state_values": [
+    "public_cli",
+    "transitional_installed",
+    "not_installed"
+  ],
   "modules": [
+    {
+      "canonical_module": "ops.scripts._compatibility_alias_policy",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts._compatibility_alias_policy"
+    },
+    {
+      "canonical_module": "ops.scripts.core._compatibility_alias_import_codemod",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core._compatibility_alias_import_codemod"
+    },
+    {
+      "canonical_module": "ops.scripts.core.anti_slop_admission_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.anti_slop_admission_runtime"
+    },
     {
       "canonical_module": "ops.scripts.core.archive_execution_manifest",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make archive-execution-manifest-apply"
+    },
+    {
+      "canonical_module": "ops.scripts.core.artifact_envelope_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.artifact_envelope_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.artifact_freshness_debt_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.artifact_freshness_debt_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.artifact_freshness_mtime_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.artifact_freshness_mtime_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.artifact_freshness_payload_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.artifact_freshness_payload_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.artifact_freshness_runtime",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make artifact-freshness"
+    },
+    {
+      "canonical_module": "ops.scripts.core.artifact_freshness_schema_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.artifact_freshness_schema_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.artifact_io_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.artifact_io_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.artifact_relocation_audit",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make artifact-relocation-audit"
     },
@@ -47,7 +129,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make artifact-freshness-stable-contract-debt-refresh"
     },
@@ -56,25 +138,43 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "helper",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.backfill_historical_bootstrap_reports"
+    },
+    {
+      "canonical_module": "ops.scripts.core.behavior_delta_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.behavior_delta_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.bootstrap_preflight",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make bootstrap-preflight"
+    },
+    {
+      "canonical_module": "ops.scripts.core.candidate_rule_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.candidate_rule_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.canonical_artifact_promote",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make artifact-freshness"
     },
@@ -83,43 +183,178 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.cli_surface_inventory"
-    },
-    {
-      "canonical_module": "ops.scripts.core.command_log_summary_backfill",
-      "console_scripts": [],
-      "install_state": "not_installed",
-      "lifecycle": "report_generator",
-      "rationale": "Schema-backed local run-artifact maintenance command retained behind Make/canonical module invocation rather than installed CLI.",
-      "removal_ready": false,
-      "replacement": "make command-log-summary-backfill"
     },
     {
       "canonical_module": "ops.scripts.core.closure_registry_envelope",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make closure-registry-envelope"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_dependency_preflight_decision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_dependency_preflight_decision_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_dependency_preflight_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_dependency_preflight_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_execution_outcome_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_execution_outcome_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_execution_request_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_execution_request_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_execution_result_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_execution_result_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_execution_types_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_execution_types_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_executor",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_executor"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_integrity_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_integrity_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_model_output_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_model_output_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_prompt_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_prompt_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_report_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_report_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_sanitize_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_sanitize_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.codex_exec_workspace_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.codex_exec_workspace_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.codex_goal_client",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make auto-improve-goal-contract"
+    },
+    {
+      "canonical_module": "ops.scripts.core.command_log_summary_backfill",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make command-log-summary-backfill"
+    },
+    {
+      "canonical_module": "ops.scripts.core.command_log_summary_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.command_log_summary_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.command_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.command_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.compatibility_alias_deprecation",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make compatibility-alias-deprecation"
     },
@@ -128,7 +363,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make check-clean-lane-guard"
     },
@@ -137,16 +372,97 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "helper",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.executor"
+    },
+    {
+      "canonical_module": "ops.scripts.core.executor_noop_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.executor_noop_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.executor_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.executor_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.executor_runtime_errors_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.executor_runtime_errors_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.executor_runtime_scope_freeze_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.executor_runtime_scope_freeze_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.executor_runtime_worker_preflight_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.executor_runtime_worker_preflight_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.experiment_telemetry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.experiment_telemetry_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.filesystem_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.filesystem_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.frontmatter_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.frontmatter_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.gate_effect_vocabulary",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.gate_effect_vocabulary"
     },
     {
       "canonical_module": "ops.scripts.core.generated_artifact_converge_summary",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make generated-artifact-converge"
     },
@@ -155,7 +471,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make generated-artifact-index-body"
     },
@@ -164,70 +480,412 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make generated-artifact-retention-clean"
+    },
+    {
+      "canonical_module": "ops.scripts.core.generated_artifact_semantic_digest",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.generated_artifact_semantic_digest"
+    },
+    {
+      "canonical_module": "ops.scripts.core.learning_claim_state_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.learning_claim_state_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.make_target_inventory",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make make-target-inventory"
+    },
+    {
+      "canonical_module": "ops.scripts.core.make_target_operator_surface_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.make_target_operator_surface_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.makefile_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.makefile_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.manual_mutate_defect_registry",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make manual-mutate-defect-registry"
+    },
+    {
+      "canonical_module": "ops.scripts.core.observability_artifact_fingerprint_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.observability_artifact_fingerprint_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.observability_artifacts_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.observability_artifacts_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.observability_artifacts_shared_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.observability_artifacts_shared_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.observability_decision_metrics_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.observability_decision_metrics_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.observability_routing_provenance_runtime",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make routing-provenance-aggregate"
+    },
+    {
+      "canonical_module": "ops.scripts.core.output_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.output_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.path_classification_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.path_classification_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.path_portability_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.path_portability_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.path_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.path_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.payload_field_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.payload_field_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.policy_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.policy_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.policy_validation_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.policy_validation_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.promotion_decision_registry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.promotion_decision_registry_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.proposal_scope_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.proposal_scope_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.public_mirror_boundary_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.public_mirror_boundary_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.python_function_budget_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.python_function_budget_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.registry_alignment_passes_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.registry_alignment_passes_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.registry_diagnostics_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.registry_diagnostics_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.registry_exceptions_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.registry_exceptions_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.registry_pass_support_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.registry_pass_support_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.registry_review_candidate_passes_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.registry_review_candidate_passes_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.release_authority_state_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.release_authority_state_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.release_currentness_state_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.release_currentness_state_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.release_risk_state_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.release_risk_state_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.report_bucket_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.report_bucket_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.request_coercion_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.request_coercion_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.rule_registry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.rule_registry_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.run_artifact_envelope_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.run_artifact_envelope_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.run_id_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.run_id_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.runtime_context",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.runtime_context"
+    },
+    {
+      "canonical_module": "ops.scripts.core.runtime_event_logging_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.runtime_event_logging_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.sanitize_run_artifacts",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make sanitize-runs"
     },
     {
-      "canonical_module": "ops.scripts.core.script_output_surfaces",
+      "canonical_module": "ops.scripts.core.schema_constants_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.schema_constants_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.schema_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.schema_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.script_bootstrap_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.script_bootstrap_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.script_lifecycle_policy",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
-      "replacement": "make goal-runtime-closeout-candidate-script-output-surfaces"
+      "replacement": "make script-lifecycle-policy"
     },
     {
       "canonical_module": "ops.scripts.core.script_module_surfaces",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Source-derived module surface contract generator retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make script-module-surfaces"
+    },
+    {
+      "canonical_module": "ops.scripts.core.script_output_surfaces",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make goal-runtime-closeout-candidate-script-output-surfaces"
     },
     {
       "canonical_module": "ops.scripts.core.select_subagent_rung",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.select_subagent_rung"
     },
@@ -236,52 +894,169 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-source-package-clean-extract-current-check"
+    },
+    {
+      "canonical_module": "ops.scripts.core.source_page_naming_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.source_page_naming_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.source_revision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.source_revision_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.source_slug_curation",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.core.source_slug_curation"
+    },
+    {
+      "canonical_module": "ops.scripts.core.source_trace_profile_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.source_trace_profile_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.source_trace_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.source_trace_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.source_tree_fingerprint_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.source_tree_fingerprint_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.stale_report_resolution_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.stale_report_resolution_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.starter_bundle_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.starter_bundle_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.subagent_profile_schema",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make subagent-profile-schema"
+    },
+    {
+      "canonical_module": "ops.scripts.core.subagent_routing_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.subagent_routing_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.tools_migration_plan",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make tools-migration-plan"
+    },
+    {
+      "canonical_module": "ops.scripts.core.trusted_candidate_runner",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.trusted_candidate_runner"
+    },
+    {
+      "canonical_module": "ops.scripts.core.validation_check_types_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.validation_check_types_runtime"
     },
     {
       "canonical_module": "ops.scripts.core.workflow_dependency_planner",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make changed-path-minimum-plan"
+    },
+    {
+      "canonical_module": "ops.scripts.core.workspace_python_identity_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.workspace_python_identity_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.yaml_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.yaml_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.complexity_ratchet_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.complexity_ratchet_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.doc_graph_integrity",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make doc-graph-integrity"
     },
@@ -290,7 +1065,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make function-budget-refactor-proposals"
     },
@@ -299,7 +1074,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make lint-uplift-plan"
     },
@@ -308,88 +1083,223 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make report-contract-closeout-precheck"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.source_page_substance_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.source_page_substance_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.structural_complexity_budget",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make complexity-budget"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.structural_complexity_budget_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.structural_complexity_budget_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.type_uplift_plan",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make type-uplift-plan"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.uplift_promotion_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.uplift_promotion_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.warning_budget",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make warning-budget"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.warning_budget_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.warning_budget_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_doc_audit_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_doc_audit_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.wiki_eval",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make eval"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_eval_coverage",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_eval_coverage"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_eval_coverage_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_eval_coverage_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.wiki_lint",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make lint"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_lint_page_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_lint_page_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_lint_registry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_lint_registry_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.wiki_lint_review_classification",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make wiki-lint-review-classification"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_lint_review_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_lint_review_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.wiki_manifest",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_page_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_page_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_quality_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_quality_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_snapshot_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_snapshot_runtime"
     },
     {
       "canonical_module": "ops.scripts.eval.wiki_stage2_eval",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make stage2-eval"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wiki_stage2_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wiki_stage2_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.eval.wikilink_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.eval.wikilink_runtime"
     },
     {
       "canonical_module": "ops.scripts.learning.learning_claim_activation_report",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-claim-activation-report"
     },
@@ -398,16 +1308,25 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-claim-evidence-bundle"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_claim_model",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.learning.learning_claim_model"
     },
     {
       "canonical_module": "ops.scripts.learning.learning_claim_unlock_review",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-claim-unlock-review"
     },
@@ -416,7 +1335,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-confirmed-evidence-cohort"
     },
@@ -425,7 +1344,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-confirmed-legacy-reconstruction"
     },
@@ -434,16 +1353,43 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-delta-scoreboard"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_delta_scoreboard_anti_slop_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.learning.learning_delta_scoreboard_anti_slop_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_delta_scoreboard_constants",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.learning.learning_delta_scoreboard_constants"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_delta_scoreboard_unlock_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.learning.learning_delta_scoreboard_unlock_runtime"
     },
     {
       "canonical_module": "ops.scripts.learning.learning_readiness_signoff",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-readiness-signoff"
     },
@@ -452,7 +1398,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-readiness-signoff-refresh"
     },
@@ -461,16 +1407,34 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-readiness-signoff-revalidation"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_readiness_signoff_state",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.learning.learning_readiness_signoff_state"
+    },
+    {
+      "canonical_module": "ops.scripts.learning.learning_readiness_vocabulary",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.learning.learning_readiness_vocabulary"
     },
     {
       "canonical_module": "ops.scripts.learning.remediation_backlog",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-local-remediation-backlog"
     },
@@ -479,7 +1443,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-local-negative-lessons"
     },
@@ -488,36 +1452,369 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-local-session-synopsis"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism._auto_improve_maintenance_completion_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism._auto_improve_maintenance_completion_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism._mutation_proposal_next_run_repair_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism._mutation_proposal_next_run_repair_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism._mutation_proposal_render_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism._mutation_proposal_render_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_error_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_error_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_execute_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_execute_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_execution_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_execution_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_iteration_persistence_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_iteration_persistence_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_iteration_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_iteration_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_iteration_telemetry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_iteration_telemetry_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_learning_preflight_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_learning_preflight_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.auto_improve_loop",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.auto_improve_loop"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_loop_decision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_loop_decision_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_maintenance_decision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_maintenance_decision_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_next_run_decision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_next_run_decision_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_outcome_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_outcome_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_promotion_stop_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_promotion_stop_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_queue_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_queue_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.auto_improve_readiness",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make auto-improve-readiness"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_constants_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_constants_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_learning_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_learning_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_loader_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_loader_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_next_run_repair_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_next_run_repair_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_payload_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_payload_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_queue_models_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_queue_models_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_queue_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_queue_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_queue_telemetry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_queue_telemetry_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_release_authority_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_release_authority_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_remediation_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_remediation_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_readiness_worktree_guard_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_readiness_worktree_guard_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_route_scaffold_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_route_scaffold_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_session_completion_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_session_completion_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_session_report_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_session_report_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_session_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_session_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_session_start_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_session_start_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.auto_improve_value_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.auto_improve_value_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.codex_goal_prompt",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make codex-goal-prompt"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.current_target_path_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.current_target_path_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.failure_taxonomy_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.failure_taxonomy_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.finalize_run",
@@ -526,25 +1823,115 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "rationale": "Documented operator command retained as an installed public CLI.",
+      "rationale": "Generated from pyproject.toml console-script exposure.",
       "removal_ready": false,
       "replacement": ""
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.finalize_run_artifact_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.finalize_run_artifact_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.finalize_run_errors_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.finalize_run_errors_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.finalize_run_log_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.finalize_run_log_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.finalize_run_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.finalize_run_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.finalize_run_state_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.finalize_run_state_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.finalize_run_write_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.finalize_run_write_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_contract_digest_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.goal_contract_digest_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_run_status",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make auto-improve-goal-finalize"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_run_status_artifacts_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.goal_run_status_artifacts_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_backoff",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.goal_runtime_backoff"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_certificate",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.goal_runtime_certificate"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_certificate_report",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-certificate"
     },
@@ -553,7 +1940,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-certificate-run-id-guard"
     },
@@ -562,7 +1949,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-clean-transient"
     },
@@ -571,7 +1958,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-closeout"
     },
@@ -580,79 +1967,106 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-fixed-point-check"
     },
     {
-      "canonical_module": "ops.scripts.mechanism.goal_runtime_local_evidence_refresh",
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_json_loader_runtime",
       "console_scripts": [],
       "install_state": "not_installed",
-      "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
-      "replacement": "make goal-runtime-local-evidence-refresh"
+      "replacement": "python -m ops.scripts.mechanism.goal_runtime_json_loader_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_latest_successful_run",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Make-orchestrated selector retained behind goal-runtime evidence targets, not public console exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-latest-successful-run-id"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_local_evidence_refresh",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make goal-runtime-local-evidence-refresh"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_lock",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-lock-check"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_maintenance",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.goal_runtime_maintenance"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_quarantine_preflight",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-quarantine-preflight"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_resume",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.goal_runtime_resume"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_run_admission",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make goal-runtime-run-admission"
-    },
-    {
-      "canonical_module": "ops.scripts.mechanism.goal_runtime_stale_closeout",
-      "console_scripts": [],
-      "install_state": "not_installed",
-      "lifecycle": "report_generator",
-      "rationale": "Schema-backed goal-runtime stale evidence closeout command retained behind Make/canonical module invocation rather than installed CLI.",
-      "removal_ready": false,
-      "replacement": "make goal-runtime-stale-closeout"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_runtime_runner",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make auto-improve-goal-resume"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.goal_runtime_stale_closeout",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make goal-runtime-stale-closeout"
     },
     {
       "canonical_module": "ops.scripts.mechanism.goal_worktree_guard",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make auto-improve-goal-preflight"
     },
@@ -663,34 +2077,61 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "rationale": "Documented operator command retained as an installed public CLI.",
+      "rationale": "Generated from pyproject.toml console-script exposure.",
       "removal_ready": false,
       "replacement": ""
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.improvement_observations_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.improvement_observations_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.mechanism_assess",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.mechanism_assess"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_candidate_registry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_candidate_registry_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.mechanism_contract_eval",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed mechanism-local contract eval report command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make mechanism-contract-eval"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_contract_eval_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_contract_eval_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.mechanism_navigation_index",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make mechanism-navigation-index"
     },
@@ -699,25 +2140,259 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make mechanism-review"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_review_candidate_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_review_candidate_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_review_history_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_review_history_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_review_outcome_metrics_calibration_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_review_outcome_metrics_calibration_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_review_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_review_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_review_session_calibration_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_review_session_calibration_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_candidate_snapshot_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_candidate_snapshot_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_capture_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_capture_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_common_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_common_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_ledger_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_ledger_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_mutation_step_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_mutation_step_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_promotion_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_promotion_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_repo_health_step_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_repo_health_step_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_scaffold_resolution_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_scaffold_resolution_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_scaffold_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_scaffold_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_scaffold_templates_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_scaffold_templates_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_validation_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_validation_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mechanism_run_workspace_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mechanism_run_workspace_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.mutation_proposal",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make mutation-proposal"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mutation_proposal_bootstrap_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mutation_proposal_bootstrap_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mutation_proposal_candidate_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mutation_proposal_candidate_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mutation_proposal_loader_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mutation_proposal_loader_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mutation_proposal_promotion_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mutation_proposal_promotion_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mutation_proposal_queue_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mutation_proposal_queue_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mutation_proposal_recent_log_overlap_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mutation_proposal_recent_log_overlap_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.mutation_proposal_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.mutation_proposal_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.next_run_repair_queue_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.next_run_repair_queue_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.noop_repair_classifier_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.noop_repair_classifier_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.observation_closeout_lint",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make observation-closeout-lint"
     },
@@ -726,9 +2401,45 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make outcome-metrics"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.planning_gate_artifact_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.planning_gate_artifact_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.planning_gate_phase_checks_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.planning_gate_phase_checks_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.planning_gate_phase_state_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.planning_gate_phase_state_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.planning_gate_report_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.planning_gate_report_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.planning_gate_validate",
@@ -737,16 +2448,34 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "rationale": "Documented operator command retained as an installed public CLI.",
+      "rationale": "Generated from pyproject.toml console-script exposure.",
       "removal_ready": false,
       "replacement": ""
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.planning_gate_validate_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.planning_gate_validate_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.post_mutation_generated_artifact_convergence_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.post_mutation_generated_artifact_convergence_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.promotion_decision_trends",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make promotion-decision-trends"
     },
@@ -755,9 +2484,72 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.promotion_gate"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_gate_common_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.promotion_gate_common_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_gate_mechanism_finalize_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.promotion_gate_mechanism_finalize_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_gate_mechanism_report_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.promotion_gate_mechanism_report_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_gate_mechanism_rule_registry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.promotion_gate_mechanism_rule_registry_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_gate_mechanism_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.promotion_gate_mechanism_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_gate_mechanism_state_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.promotion_gate_mechanism_state_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.promotion_gate_page_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.promotion_gate_page_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.run_mechanism_experiment",
@@ -766,25 +2558,43 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "rationale": "Documented operator command retained as an installed public CLI.",
+      "rationale": "Generated from pyproject.toml console-script exposure.",
       "removal_ready": false,
       "replacement": ""
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.run_mechanism_experiment_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.run_mechanism_experiment_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.set_mechanism_run_history",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "helper",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.mechanism.set_mechanism_run_history"
+    },
+    {
+      "canonical_module": "ops.scripts.mechanism.structural_complexity_scope_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.mechanism.structural_complexity_scope_runtime"
     },
     {
       "canonical_module": "ops.scripts.mechanism.system_log_split",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Output-producing system-log split helper retained behind the documented Make entrypoint rather than installed CLI.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make system-log-split"
     },
@@ -793,7 +2603,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make clean-fixture-regeneration-guard"
     },
@@ -802,7 +2612,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make public-export"
     },
@@ -811,16 +2621,25 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make public-check-summary"
+    },
+    {
+      "canonical_module": "ops.scripts.public.public_surface_policy",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.public.public_surface_policy"
     },
     {
       "canonical_module": "ops.scripts.public.public_surface_snapshot",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.public.public_surface_snapshot"
     },
@@ -829,7 +2648,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Operator review-surface manifest generator retained behind the documented Make entrypoint rather than installed CLI.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make review-surface-manifest"
     },
@@ -838,7 +2657,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make sync-public-policy"
     },
@@ -847,16 +2666,61 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.registry.raw_intake_promotion"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_promotion_bridge_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.raw_intake_promotion_bridge_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_promotion_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.raw_intake_promotion_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_promotion_scaffold_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.raw_intake_promotion_scaffold_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_promotion_shared_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.raw_intake_promotion_shared_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_intake_promotion_validation_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.raw_intake_promotion_validation_runtime"
     },
     {
       "canonical_module": "ops.scripts.registry.raw_intake_route_proposal",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make raw-intake-absorption-closeout"
     },
@@ -865,7 +2729,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed raw-intake seed source hint report retained behind Make check/write targets rather than installed CLI exposure.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make raw-intake-seed-source-hints"
     },
@@ -874,7 +2738,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make raw-intake-source-quality"
     },
@@ -883,16 +2747,25 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.registry.raw_markdown_normalize"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_markdown_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.raw_markdown_runtime"
     },
     {
       "canonical_module": "ops.scripts.registry.raw_registry_cross_environment_evidence_bundle",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make raw-registry-cross-environment-evidence-bundle"
     },
@@ -901,7 +2774,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make raw-registry-cross-environment-matrix"
     },
@@ -910,7 +2783,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make raw-registry-export"
     },
@@ -919,16 +2792,25 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make registry-preflight"
+    },
+    {
+      "canonical_module": "ops.scripts.registry.raw_registry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.raw_registry_runtime"
     },
     {
       "canonical_module": "ops.scripts.registry.raw_registry_shard_policy_sync",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Registry shard policy sync is a repository maintenance helper retained behind explicit Make check/write targets rather than public CLI exposure.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make raw-registry-shard-policy-sync-check"
     },
@@ -937,43 +2819,178 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed source-substance cohort classifier retained behind the canonical module entrypoint rather than installed CLI.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.registry.source_substance_cohort_classify"
+    },
+    {
+      "canonical_module": "ops.scripts.release.advisory_lifecycle_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.advisory_lifecycle_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.auto_promotion_learning_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.auto_promotion_learning_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.auto_promotion_manifest_sections",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.auto_promotion_manifest_sections"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_action_catalog",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_action_catalog"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_action_lifecycle_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_action_lifecycle_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.external_report_action_matrix",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make external-report-action-matrix"
     },
     {
-      "canonical_module": "ops.scripts.release.freshness_owner_route_converge",
+      "canonical_module": "ops.scripts.release.external_report_inventory_runtime",
       "console_scripts": [],
       "install_state": "not_installed",
-      "lifecycle": "make_only",
-      "rationale": "Source-identity freshness convergence helper is retained behind the explicit Make owner lane rather than public CLI exposure.",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
-      "replacement": "make freshness-owner-route-converge"
+      "replacement": "python -m ops.scripts.release.external_report_inventory_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_lifecycle_maintainability_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_lifecycle_maintainability_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_lifecycle_operator_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_lifecycle_operator_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_lifecycle_profile_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_lifecycle_profile_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_lifecycle_reason_decision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_lifecycle_reason_decision_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_lifecycle_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_lifecycle_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_lifecycle_status_decision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_lifecycle_status_decision_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_lifecycle_status_loader_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_lifecycle_status_loader_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.external_report_reference_manifest",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make external-report-reference-manifest"
+    },
+    {
+      "canonical_module": "ops.scripts.release.external_report_release_verification_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.external_report_release_verification_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.finality_current_diagnostics",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.finality_current_diagnostics"
+    },
+    {
+      "canonical_module": "ops.scripts.release.freshness_owner_route_converge",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make freshness-owner-route-converge"
     },
     {
       "canonical_module": "ops.scripts.release.github_governance_live_drift",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed operator/live governance evidence command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make collaboration-governance"
     },
@@ -982,7 +2999,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make operator-release-summary"
     },
@@ -991,7 +3008,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make outcome-provenance-gate-policy"
     },
@@ -1000,7 +3017,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-audit-pack"
     },
@@ -1009,16 +3026,25 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-authority-inventory"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_authority_vocabulary",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_authority_vocabulary"
     },
     {
       "canonical_module": "ops.scripts.release.release_auto_promotion_preflight",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-auto-promotion-preflight"
     },
@@ -1027,16 +3053,25 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-auto-promotion-ready"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_auto_promotion_ready_goal_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_auto_promotion_ready_goal_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.release_clean_blocker_ledger",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-clean-blocker-ledger"
     },
@@ -1045,7 +3080,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-clean-lane-evidence-review"
     },
@@ -1054,16 +3089,34 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-closeout-batch-manifest-promote"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_batch_manifest_zip_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_closeout_batch_manifest_zip_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_envelope_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_closeout_envelope_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.release_closeout_finality_attestation",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-closeout-finality-attestation"
     },
@@ -1072,7 +3125,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-closeout-fixed-point"
     },
@@ -1081,34 +3134,97 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-closeout-cost-evidence-ci-artifact"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_gate_decision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_closeout_gate_decision_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_gate_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_closeout_gate_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_render_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_closeout_render_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_risk_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_closeout_risk_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.release_closeout_sealed_rehearsal_check",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-evidence-closeout-sealed-check"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_simple_source_decision_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_closeout_simple_source_decision_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_closeout_source_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_closeout_source_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.release_closeout_summary",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make learning-readiness-signoff-check"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_dependency_reproducibility_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_dependency_reproducibility_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.release_evidence_closeout_self_check",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-evidence-closeout-sealed-core-sidecars"
     },
@@ -1117,7 +3233,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-evidence-cohort"
     },
@@ -1126,25 +3242,79 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-evidence-dashboard"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_dashboard_closeout_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_evidence_dashboard_closeout_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_dashboard_finalizer_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_evidence_dashboard_finalizer_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_dashboard_learning_delta_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_evidence_dashboard_learning_delta_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_dashboard_render_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_evidence_dashboard_render_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_evidence_dashboard_status_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_evidence_dashboard_status_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.release_evidence_planner",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-auto-promotion-ready-plan"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_freshness_gate_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_freshness_gate_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.release_goal_run_identity_guard",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-auto-promotion-goal-run-id-guard"
     },
@@ -1153,16 +3323,25 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-lane-summary"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_live_artifact_attestation",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_live_artifact_attestation"
     },
     {
       "canonical_module": "ops.scripts.release.release_post_commit_finalizer",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-authority-settle"
     },
@@ -1171,25 +3350,43 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-post-seal-attestation"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_remote_sync_governance",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_remote_sync_governance"
     },
     {
       "canonical_module": "ops.scripts.release.release_risk_taxonomy_matrix",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-risk-taxonomy-matrix"
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_risk_taxonomy_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_risk_taxonomy_runtime"
     },
     {
       "canonical_module": "ops.scripts.release.release_run_manifest",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-run-ready-check"
     },
@@ -1198,7 +3395,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-run-ready"
     },
@@ -1207,7 +3404,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-sealed-post-seal-attestation"
     },
@@ -1216,7 +3413,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-sealed-run-ready"
     },
@@ -1225,7 +3422,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-distribution-zip"
     },
@@ -1234,7 +3431,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-source-ready-commit"
     },
@@ -1243,7 +3440,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Schema-backed or output-producing command retained behind Make/canonical module invocation rather than installed CLI.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-source-ready-status"
     },
@@ -1254,16 +3451,25 @@
       ],
       "install_state": "public_cli",
       "lifecycle": "public_cli",
-      "rationale": "Documented operator command retained as an installed public CLI.",
+      "rationale": "Generated from pyproject.toml console-script exposure.",
       "removal_ready": false,
       "replacement": ""
+    },
+    {
+      "canonical_module": "ops.scripts.release.release_status_v2",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_status_v2"
     },
     {
       "canonical_module": "ops.scripts.release.release_workflow_order_guard",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-workflow-order-guard"
     },
@@ -1272,7 +3478,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make review-archive"
     },
@@ -1281,16 +3487,25 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make release-source-package-smoke-current-check"
+    },
+    {
+      "canonical_module": "ops.scripts.supply_chain.ci_install_proof_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.supply_chain.ci_install_proof_runtime"
     },
     {
       "canonical_module": "ops.scripts.supply_chain.cyclonedx_sbom",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make cyclonedx-sbom"
     },
@@ -1299,7 +3514,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make in-toto-statement"
     },
@@ -1308,7 +3523,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make openvex-draft"
     },
@@ -1317,7 +3532,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make sbom-export-mapping"
     },
@@ -1326,7 +3541,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make sbom-readiness-check"
     },
@@ -1335,7 +3550,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make security-advisories"
     },
@@ -1344,7 +3559,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make sigstore-bundle"
     },
@@ -1353,7 +3568,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make spdx-sbom"
     },
@@ -1362,7 +3577,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make supply-chain-artifact-model"
     },
@@ -1371,7 +3586,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make supply-chain-artifacts-cached"
     },
@@ -1380,7 +3595,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make supply-chain-benchmark"
     },
@@ -1389,7 +3604,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "make_only",
-      "rationale": "Make-orchestrated command retained behind repository targets, not public console exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make supply-chain-check"
     },
@@ -1398,7 +3613,7 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "report_generator",
-      "rationale": "Console script exposure removed after lifecycle taxonomy; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make supply-chain-provenance"
     },
@@ -1407,46 +3622,108 @@
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "test_only",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.test.ci_tier_lane_bridge"
-    },
-    {
-      "canonical_module": "ops.scripts.test.generate_release_governance_from_lane_registry",
-      "console_scripts": [],
-      "install_state": "not_installed",
-      "lifecycle": "test_only",
-      "rationale": "Lane-registry-backed release governance generator retained behind the Make sync target rather than installed CLI exposure.",
-      "removal_ready": false,
-      "replacement": "make release-governance-sync"
     },
     {
       "canonical_module": "ops.scripts.test.generate_pytest_ini_markers",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "test_only",
-      "rationale": "Registry-backed pytest marker registration generator retained behind Make sync rather than installed CLI exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make pytest-markers-sync"
+    },
+    {
+      "canonical_module": "ops.scripts.test.generate_release_governance_from_lane_registry",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "test_only",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make release-governance-sync"
     },
     {
       "canonical_module": "ops.scripts.test.generate_test_mk_selectors",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "test_only",
-      "rationale": "Registry-backed selector generator retained behind Make sync rather than installed CLI exposure.",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make test-selectors-sync"
+    },
+    {
+      "canonical_module": "ops.scripts.test.test_execution_aggregate_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.test_execution_aggregate_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.test.test_execution_command_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.test_execution_command_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.test.test_execution_deselection_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.test_execution_deselection_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.test.test_execution_evidence_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.test_execution_evidence_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.test.test_execution_reuse_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.test_execution_reuse_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.test.test_execution_selection_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.test_execution_selection_runtime"
     },
     {
       "canonical_module": "ops.scripts.test.test_execution_summary",
       "console_scripts": [],
       "install_state": "not_installed",
       "lifecycle": "test_only",
-      "rationale": "Console script exposure removed after direct-only and legacy surface review; retained behind the documented Make or canonical module entrypoint.",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make test-execution-summary-current-check"
+    },
+    {
+      "canonical_module": "ops.scripts.test.test_lane_registry_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.test_lane_registry_runtime"
     }
-  ],
-  "version": 1
+  ]
 }

@@ -8,6 +8,10 @@ publication_target:
     - "codex/*"
 required_status_checks:
   ci_workflow: CI
+  # BEGIN MANAGED ci_matrix: ops/scripts/test/generate_release_governance_from_lane_registry.py
+  # Tier source: ops/test-lane-registry.json compatibility_layers(kind=ci_tier)
+  # Python versions source: constant in ops/scripts/test/generate_release_governance_from_lane_registry.py::SUPPORTED_PYTHON_VERSIONS
+  # Regenerate/check with: make release-governance-sync
   ci_matrix:
     python_versions:
       - "3.12"
@@ -56,6 +60,7 @@ required_status_checks:
         python-version: "3.13"
       - tier: public
         python-version: "3.14"
+  # END MANAGED ci_matrix
   singleton_checks:
     - "windows-release-smoke / py3.12"
     - "raw-registry-cross-env / linux-c-utf8"

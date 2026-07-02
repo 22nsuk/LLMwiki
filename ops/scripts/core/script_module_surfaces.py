@@ -21,12 +21,14 @@ from .script_output_surfaces import (
 )
 
 DEFAULT_OUT = "ops/script-module-surfaces.json"
+DEFAULT_OVERRIDES = "ops/script-module-surface-overrides.json"
 SCHEMA_PATH = "ops/schemas/script-module-surfaces.schema.json"
+OVERRIDES_SCHEMA_PATH = "ops/schemas/script-module-surface-overrides.schema.json"
 DESCRIPTION = (
-    "Contract for ops/scripts module roles. Stable import paths are discovered from "
-    "literal __all__ declarations, exports are derived from those declarations, and "
-    "direct-script entrypoints are derived from the live material output/fallback "
-    "surface scan. Role remains the manually curated field."
+    "Generated contract for ops/scripts module surfaces. Stable import paths and "
+    "exports are discovered from literal __all__ declarations, direct-script "
+    "entrypoints are derived from the live material output/fallback surface scan, "
+    "and roles are applied from ops/script-module-surface-overrides.json."
 )
 
 
@@ -96,7 +98,7 @@ def direct_script_entrypoint_paths(vault: Path) -> set[str]:
     return paths
 
 
-def _read_contract(path: Path) -> dict[str, Any]:
+def _read_json_object(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -106,9 +108,23 @@ def _read_contract(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _role_by_path(contract: Mapping[str, Any]) -> dict[str, str]:
+def _read_overrides(vault: Path, override_path: str | None = None) -> dict[str, Any]:
+    path = Path(override_path or DEFAULT_OVERRIDES)
+    if not path.is_absolute():
+        path = vault / path
+    overrides = _read_json_object(path)
+    schema_errors = validate_with_schema(overrides, load_schema(vault / OVERRIDES_SCHEMA_PATH))
+    if schema_errors:
+        raise ScriptModuleSurfaceError(
+            "script module surface overrides schema validation failed:\n"
+            + "\n".join(schema_errors[:10])
+        )
+    return overrides
+
+
+def _role_by_path(overrides: Mapping[str, Any]) -> dict[str, str]:
     roles: dict[str, str] = {}
-    for item in contract.get("stable_import_surfaces", []):
+    for item in overrides.get("overrides", []):
         if not isinstance(item, dict):
             continue
         path = str(item.get("path", ""))
@@ -117,16 +133,16 @@ def _role_by_path(contract: Mapping[str, Any]) -> dict[str, str]:
             continue
         if path in roles:
             raise ScriptModuleSurfaceError(
-                f"duplicate script module surface path: {path}"
+                f"duplicate script module surface override path: {path}"
             )
         roles[path] = role
     return roles
 
 
-def _ordered_paths(contract: Mapping[str, Any], derived_paths: set[str]) -> list[str]:
+def _ordered_paths(overrides: Mapping[str, Any], derived_paths: set[str]) -> list[str]:
     ordered: list[str] = []
     seen: set[str] = set()
-    for item in contract.get("stable_import_surfaces", []):
+    for item in overrides.get("overrides", []):
         if not isinstance(item, dict):
             continue
         path = str(item.get("path", ""))
@@ -138,11 +154,11 @@ def _ordered_paths(contract: Mapping[str, Any], derived_paths: set[str]) -> list
 
 
 def build_contract(
-    vault: Path, *, stored_contract: Mapping[str, Any] | None = None
+    vault: Path, *, overrides: Mapping[str, Any] | None = None
 ) -> dict[str, Any]:
     resolved_vault = vault.resolve()
-    contract = stored_contract or _read_contract(resolved_vault / DEFAULT_OUT)
-    roles = _role_by_path(contract)
+    override_payload = overrides if overrides is not None else _read_overrides(resolved_vault)
+    roles = _role_by_path(override_payload)
     exports_by_path = _literal_all_by_path(resolved_vault)
     derived_paths = set(exports_by_path)
     missing_roles = sorted(derived_paths - set(roles))
@@ -150,6 +166,12 @@ def build_contract(
         raise ScriptModuleSurfaceError(
             "script-module-surfaces is missing manually curated roles for: "
             + ", ".join(missing_roles)
+        )
+    extra_roles = sorted(set(roles) - derived_paths)
+    if extra_roles:
+        raise ScriptModuleSurfaceError(
+            "script-module-surface overrides reference modules without literal __all__: "
+            + ", ".join(extra_roles)
         )
     direct_entrypoints = direct_script_entrypoint_paths(resolved_vault)
     surfaces = [
@@ -159,7 +181,7 @@ def build_contract(
             "direct_script_entrypoint": path in direct_entrypoints,
             "exports": exports_by_path[path],
         }
-        for path in _ordered_paths(contract, derived_paths)
+        for path in _ordered_paths(override_payload, derived_paths)
     ]
     invalid_direct_roles = [
         str(item["path"])
@@ -244,7 +266,9 @@ def _contract_is_current(actual: dict[str, Any], expected: dict[str, Any]) -> bo
     )
 
 
-def check_contract(vault: Path, *, stored_path: str | None = None) -> int:
+def check_contract(
+    vault: Path, *, stored_path: str | None = None, overrides_path: str | None = None
+) -> int:
     contract_path = _resolve_contract_path(vault, stored_path)
     try:
         actual = json.loads(contract_path.read_text(encoding="utf-8"))
@@ -276,7 +300,10 @@ def check_contract(vault: Path, *, stored_path: str | None = None) -> int:
         return 1
 
     try:
-        expected = build_contract(vault, stored_contract=actual)
+        expected = build_contract(
+            vault,
+            overrides=_read_overrides(vault, overrides_path),
+        )
     except (OSError, SyntaxError, UnicodeDecodeError, ValueError) as exc:
         print(
             "script-module-surfaces check failed while deriving live module surfaces: "
@@ -319,6 +346,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=SCRIPT_OUTPUT_SURFACES_OUT,
         help="Accepted for CLI compatibility; live derivation rebuilds this registry from source.",
     )
+    parser.add_argument(
+        "--overrides",
+        default=DEFAULT_OVERRIDES,
+        help="Override path that provides manually curated module roles.",
+    )
     return parser.parse_args(argv)
 
 
@@ -327,8 +359,16 @@ def main(argv: list[str] | None = None) -> int:
     del args.script_output_surfaces
     vault = Path(args.vault).resolve()
     if args.check:
-        return check_contract(vault, stored_path=args.stored or args.out)
-    destination = write_contract(vault, build_contract(vault), args.out)
+        return check_contract(
+            vault,
+            stored_path=args.stored or args.out,
+            overrides_path=args.overrides,
+        )
+    destination = write_contract(
+        vault,
+        build_contract(vault, overrides=_read_overrides(vault, args.overrides)),
+        args.out,
+    )
     print(display_path(vault, destination))
     return 0
 

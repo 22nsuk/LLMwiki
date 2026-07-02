@@ -85,7 +85,7 @@ class ImportFallbackContractTests(unittest.TestCase):
             self.assertIs(canonical.run_with_timeout, sentinel.run_with_timeout)
 
     def test_flat_script_reexport_omits_unclassified_helpers(self) -> None:
-        self.assertIsNone(importlib.util.find_spec("ops.scripts.artifact_io_runtime"))
+        self.assertIsNone(importlib.util.find_spec("ops.scripts.filesystem_runtime"))
 
     def test_flat_script_reexport_names_are_unambiguous(self) -> None:
         modules_by_stem: dict[str, list[str]] = {}

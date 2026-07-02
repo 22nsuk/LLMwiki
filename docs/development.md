@@ -78,10 +78,16 @@ live in `docs/anti-slop-admission.md`. `ops/script-output-surfaces.json` is
 narrower: it is an AST-derived material output/fallback registry and should
 track only scripts with `--out`/`*-out`, `resolve_output_path`,
 `resolve_repo_output_path`, or an explicit direct-script fallback marker.
-`ops/script-module-surfaces.json` keeps manually curated module `role` values,
-while `make script-module-surfaces` derives stable import exports from literal
-`__all__` declarations and direct-entrypoint flags from the live material
-output/fallback scan.
+`ops/script-lifecycle-policy.json` and `ops/script-module-surfaces.json` are
+tracked projections refreshed by `make sync-derived`. Their small override
+files keep only the manual judgments: lifecycle/replacement guidance in
+`ops/script-lifecycle-overrides.json`, and module surface roles in
+`ops/script-module-surface-overrides.json`. Legacy flat import re-exports are
+retained separately in `ops/script-flat-import-aliases.json`, so changing script
+lifecycle guidance does not create a new `ops.scripts.<stem>` import surface.
+The generators derive console-script exposure from `pyproject.toml`, Make recipe
+module references, material output/fallback surfaces, literal `__all__` exports,
+and direct-entrypoint flags.
 
 Goal-runtime Codex execution has a separate outer-tool contract: the operator
 Codex CLI must resolve outside the repository `.venv`, while Python and pytest

@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/script-module-surfaces.schema.json",
   "version": 1,
-  "description": "Contract for ops/scripts module roles. Stable import paths are discovered from literal __all__ declarations, exports are derived from those declarations, and direct-script entrypoints are derived from the live material output/fallback surface scan. Role remains the manually curated field.",
+  "description": "Generated contract for ops/scripts module surfaces. Stable import paths and exports are discovered from literal __all__ declarations, direct-script entrypoints are derived from the live material output/fallback surface scan, and roles are applied from ops/script-module-surface-overrides.json.",
   "stable_import_surfaces": [
     {
       "path": "ops/scripts/core/candidate_rule_runtime.py",
