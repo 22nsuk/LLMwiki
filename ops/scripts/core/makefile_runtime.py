@@ -147,8 +147,11 @@ def _makefile_assignments(lines: list[str]) -> dict[str, list[str]]:
             value = value.rstrip()[:-1] + " " + lines[index].strip()
             index += 1
         variable = assignment_match.group("name")
-        if assignment_match.group("operator") == "+=":
+        operator = assignment_match.group("operator")
+        if operator == "+=":
             assignments.setdefault(variable, []).append(value)
+        elif operator == "?=":
+            assignments.setdefault(variable, [value])
         else:
             assignments[variable] = [value]
     return assignments

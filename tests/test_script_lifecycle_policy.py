@@ -224,10 +224,14 @@ class ScriptLifecyclePolicyTests(unittest.TestCase):
                 "USED_COMMAND ?= python -m ops.scripts.core.variable_used --flag\n"
                 "ASSIGNMENT_CONTINUED ?= python \\\n"
                 "    -m ops.scripts.core.assignment_continued --flag\n"
+                "OVERRIDE_COMMAND = python -m ops.scripts.core.override_used --flag\n"
+                "OVERRIDE_COMMAND ?= python -m ops.scripts.core.default_ignored --flag\n"
                 "sample-report:\n"
                 "\tpython -m ops.scripts.core.recipe_report --out tmp/sample.json\n"
                 "variable-report:\n"
                 "\t$(USED_COMMAND)\n"
+                "override-report:\n"
+                "\t$(OVERRIDE_COMMAND)\n"
                 "assignment-continuation-report:\n"
                 "\t$(ASSIGNMENT_CONTINUED)\n"
                 "inline-report: ; python -m ops.scripts.core.inline_report --out tmp/inline.json\n"
@@ -246,6 +250,8 @@ class ScriptLifecyclePolicyTests(unittest.TestCase):
                 "recipe_report",
                 "variable_used",
                 "assignment_continued",
+                "override_used",
+                "default_ignored",
                 "inline_report",
                 "continued_report",
                 "late_variable",
@@ -277,6 +283,10 @@ class ScriptLifecyclePolicyTests(unittest.TestCase):
             "make assignment-continuation-report",
         )
         self.assertEqual(
+            modules["ops.scripts.core.override_used"]["replacement"],
+            "make override-report",
+        )
+        self.assertEqual(
             modules["ops.scripts.core.inline_report"]["replacement"],
             "make inline-report",
         )
@@ -299,6 +309,10 @@ class ScriptLifecyclePolicyTests(unittest.TestCase):
         self.assertNotIn(
             "makefile_module_invocations",
             modules["ops.scripts.core.commented_only"]["rationale"],
+        )
+        self.assertNotIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.default_ignored"]["rationale"],
         )
 
 
