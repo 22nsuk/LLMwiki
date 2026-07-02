@@ -35,6 +35,20 @@ class CompatibilityAliasImportCodemodTests(unittest.TestCase):
 }
 """,
         )
+        self._write(
+            "ops/script-flat-import-aliases.json",
+            """{
+  "aliases": [
+    {
+      "canonical_module": "ops.scripts.core.artifact_io_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.runtime_context"
+    }
+  ]
+}
+""",
+        )
         self._write("ops/scripts/core/runtime_context.py", "class RuntimeContext:\n    pass\n")
         self._write(
             "ops/scripts/core/artifact_io_runtime.py",
