@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import re
 import sys
 import tomllib
 from pathlib import Path
@@ -12,9 +11,11 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.makefile_runtime import makefile_script_module_targets
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.runtime_context import RuntimeContext
 else:
+    from .makefile_runtime import makefile_script_module_targets
     from .output_runtime import display_path
     from .runtime_context import RuntimeContext
 
@@ -22,9 +23,6 @@ else:
 DEFAULT_OUT = "tmp/cli-surface-inventory.json"
 PRODUCER = "ops.scripts.cli_surface_inventory"
 SCRIPT_LIFECYCLE_POLICY_PATH = "ops/script-lifecycle-policy.json"
-SCRIPT_MODULE_RE = re.compile(
-    r"-m\s+(ops\.scripts\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\b"
-)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -73,42 +71,6 @@ def _pyproject_script_targets(vault: Path) -> dict[str, list[str]]:
     return targets
 
 
-def _makefile_script_module_targets(vault: Path) -> dict[str, list[str]]:
-    modules: dict[str, set[str]] = {}
-    current_targets: list[str] = []
-    for path in [vault / "Makefile", *sorted((vault / "mk").glob("*.mk"))]:
-        if path.is_file():
-            for line in path.read_text().splitlines():
-                if line.startswith("\t"):
-                    if not current_targets:
-                        continue
-                    for module in SCRIPT_MODULE_RE.findall(line):
-                        modules.setdefault(module, set()).update(current_targets)
-                    continue
-
-                stripped = line.strip()
-                is_assignment = (
-                    "?=" in line
-                    or ":=" in line
-                    or "+=" in line
-                    or (line.count("=") == 1 and ":" not in line)
-                )
-                if not stripped or stripped.startswith(("#", ".PHONY:")) or is_assignment:
-                    current_targets = []
-                elif ":" in line:
-                    current_targets = [
-                        item.strip()
-                        for item in line.split(":", 1)[0].split()
-                        if item.strip()
-                    ]
-                else:
-                    current_targets = []
-    return {
-        module: sorted(target for target in targets if target)
-        for module, targets in sorted(modules.items())
-    }
-
-
 def _direct_fallback_modules(vault: Path) -> list[str]:
     registry = _read_json(vault / "ops" / "script-output-surfaces.json")
     modules: list[str] = []
@@ -148,7 +110,7 @@ def build_report(vault: Path, *, context: RuntimeContext | None = None) -> dict[
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     resolved_vault = vault.resolve()
     pyproject_scripts = _pyproject_script_targets(resolved_vault)
-    makefile_modules = _makefile_script_module_targets(resolved_vault)
+    makefile_modules = makefile_script_module_targets(resolved_vault)
     direct_fallback_modules = _direct_fallback_modules(resolved_vault)
     groups = {
         "pyproject_scripts": sorted(pyproject_scripts),

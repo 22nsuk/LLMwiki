@@ -28,7 +28,12 @@ def fixed_context() -> RuntimeContext:
     )
 
 
-def _write_lifecycle_policy(vault: Path, *, include_status: bool = True) -> None:
+def _write_lifecycle_policy(
+    vault: Path,
+    *,
+    include_status: bool = True,
+    extra_modules: list[dict[str, object]] | None = None,
+) -> None:
     modules = [
         {
             "canonical_module": "ops.scripts.core.sample_cli",
@@ -61,6 +66,7 @@ def _write_lifecycle_policy(vault: Path, *, include_status: bool = True) -> None
                 "rationale": "sample fixture lifecycle",
             }
         )
+    modules.extend(extra_modules or [])
     (vault / "ops").mkdir(exist_ok=True)
     (vault / "ops" / "script-lifecycle-policy.json").write_text(
         json.dumps(
@@ -223,11 +229,25 @@ class CliSurfaceInventoryTests(unittest.TestCase):
             (vault / "mk" / "core.mk").write_text(
                 "# python -m ops.scripts.core.documented_only\n"
                 "VARIABLE := python -m ops.scripts.core.variable_only\n"
+                "USED_COMMAND ?= python -m ops.scripts.core.variable_used --flag\n"
                 "sample:\n"
-                "\tpython -m ops.scripts.core.sample_cli --help\n",
+                "\tpython -m ops.scripts.core.sample_cli --help\n"
+                "variable:\n"
+                "\t$(USED_COMMAND)\n"
+                "inline: ; python -m ops.scripts.core.inline_cli --help\n"
+                "continued:\n"
+                "\tpython \\\n"
+                "    -m ops.scripts.core.continued_cli --help\n",
                 encoding="utf-8",
             )
-            for name in ("documented_only", "variable_only", "sample_cli"):
+            for name in (
+                "documented_only",
+                "variable_only",
+                "sample_cli",
+                "variable_used",
+                "inline_cli",
+                "continued_cli",
+            ):
                 (vault / "ops" / "scripts" / "core" / f"{name}.py").write_text(
                     "def main(): pass\n",
                     encoding="utf-8",
@@ -236,13 +256,47 @@ class CliSurfaceInventoryTests(unittest.TestCase):
                 '{"surfaces":[]}\n',
                 encoding="utf-8",
             )
-            _write_lifecycle_policy(vault, include_status=False)
+            _write_lifecycle_policy(
+                vault,
+                include_status=False,
+                extra_modules=[
+                    {
+                        "canonical_module": f"ops.scripts.core.{name}",
+                        "lifecycle": "make_only",
+                        "install_state": "not_installed",
+                        "console_scripts": [],
+                        "replacement": f"make {target}",
+                        "removal_ready": False,
+                        "rationale": "sample fixture lifecycle",
+                    }
+                    for name, target in (
+                        ("variable_used", "variable"),
+                        ("inline_cli", "inline"),
+                        ("continued_cli", "continued"),
+                    )
+                ],
+            )
 
             report = build_report(vault, context=fixed_context())
 
         modules = {item["module"]: item for item in report["modules"]}
-        self.assertEqual(set(modules), {"ops.scripts.core.sample_cli"})
+        self.assertEqual(
+            set(modules),
+            {
+                "ops.scripts.core.sample_cli",
+                "ops.scripts.core.variable_used",
+                "ops.scripts.core.inline_cli",
+                "ops.scripts.core.continued_cli",
+            },
+        )
         self.assertEqual(modules["ops.scripts.core.sample_cli"]["make_targets"], ["sample"])
+        self.assertEqual(
+            modules["ops.scripts.core.variable_used"]["make_targets"], ["variable"]
+        )
+        self.assertEqual(modules["ops.scripts.core.inline_cli"]["make_targets"], ["inline"])
+        self.assertEqual(
+            modules["ops.scripts.core.continued_cli"]["make_targets"], ["continued"]
+        )
 
     def test_inventory_fails_when_lifecycle_policy_omits_surface_module(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
