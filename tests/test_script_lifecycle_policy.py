@@ -208,6 +208,113 @@ class ScriptLifecyclePolicyTests(unittest.TestCase):
             "python -m ops.scripts.core.helper_only",
         )
 
+    def test_makefile_module_scan_ignores_non_recipe_mentions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "ops" / "scripts" / "core").mkdir(parents=True)
+            (vault / "mk").mkdir()
+            (vault / "pyproject.toml").write_text(
+                "[project]\nname = 'sample'\n",
+                encoding="utf-8",
+            )
+            (vault / "Makefile").write_text("include mk/core.mk\n", encoding="utf-8")
+            (vault / "mk" / "core.mk").write_text(
+                "# python -m ops.scripts.core.documented_only\n"
+                "VARIABLE := python -m ops.scripts.core.variable_only\n"
+                "USED_COMMAND ?= python -m ops.scripts.core.variable_used --flag\n"
+                "ASSIGNMENT_CONTINUED ?= python \\\n"
+                "    -m ops.scripts.core.assignment_continued --flag\n"
+                "OVERRIDE_COMMAND = python -m ops.scripts.core.override_used --flag\n"
+                "OVERRIDE_COMMAND ?= python -m ops.scripts.core.default_ignored --flag\n"
+                "sample-report:\n"
+                "\tpython -m ops.scripts.core.recipe_report --out tmp/sample.json\n"
+                "variable-report:\n"
+                "\t$(USED_COMMAND)\n"
+                "override-report:\n"
+                "\t$(OVERRIDE_COMMAND)\n"
+                "assignment-continuation-report:\n"
+                "\t$(ASSIGNMENT_CONTINUED)\n"
+                "inline-report: ; python -m ops.scripts.core.inline_report --out tmp/inline.json\n"
+                "continued-report:\n"
+                "\tpython \\\n"
+                "    -m ops.scripts.core.continued_report --out tmp/continued.json\n"
+                "late-variable-report:\n"
+                "\t$(LATE_COMMAND)\n"
+                "commented-inline-report: ; # python -m ops.scripts.core.commented_only\n"
+                "LATE_COMMAND ?= python -m ops.scripts.core.late_variable --flag\n",
+                encoding="utf-8",
+            )
+            for name in (
+                "documented_only",
+                "variable_only",
+                "recipe_report",
+                "variable_used",
+                "assignment_continued",
+                "override_used",
+                "default_ignored",
+                "inline_report",
+                "continued_report",
+                "late_variable",
+                "commented_only",
+            ):
+                (vault / "ops" / "scripts" / "core" / f"{name}.py").write_text(
+                    "def main(): pass\n",
+                    encoding="utf-8",
+                )
+
+            policy = build_policy(vault, overrides={"overrides": []})
+
+        modules = {item["canonical_module"]: item for item in policy["modules"]}
+        self.assertEqual(
+            modules["ops.scripts.core.recipe_report"]["replacement"],
+            "make sample-report",
+        )
+        self.assertEqual(modules["ops.scripts.core.recipe_report"]["lifecycle"], "make_only")
+        self.assertIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.recipe_report"]["rationale"],
+        )
+        self.assertEqual(
+            modules["ops.scripts.core.variable_used"]["replacement"],
+            "make variable-report",
+        )
+        self.assertEqual(
+            modules["ops.scripts.core.assignment_continued"]["replacement"],
+            "make assignment-continuation-report",
+        )
+        self.assertEqual(
+            modules["ops.scripts.core.override_used"]["replacement"],
+            "make override-report",
+        )
+        self.assertEqual(
+            modules["ops.scripts.core.inline_report"]["replacement"],
+            "make inline-report",
+        )
+        self.assertEqual(
+            modules["ops.scripts.core.continued_report"]["replacement"],
+            "make continued-report",
+        )
+        self.assertEqual(
+            modules["ops.scripts.core.late_variable"]["replacement"],
+            "make late-variable-report",
+        )
+        self.assertNotIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.documented_only"]["rationale"],
+        )
+        self.assertNotIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.variable_only"]["rationale"],
+        )
+        self.assertNotIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.commented_only"]["rationale"],
+        )
+        self.assertNotIn(
+            "makefile_module_invocations",
+            modules["ops.scripts.core.default_ignored"]["rationale"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

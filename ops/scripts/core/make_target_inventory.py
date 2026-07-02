@@ -31,6 +31,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.schema_constants_runtime import (
         MAKE_TARGET_INVENTORY_SCHEMA_PATH,
     )
+    from ops.scripts.core.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_or_raise,
+    )
 else:
     from .anti_slop_admission_runtime import evaluate_anti_slop_admission
     from .artifact_freshness_runtime import build_canonical_report_envelope
@@ -47,6 +51,7 @@ else:
     from .policy_runtime import load_policy, report_path
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import MAKE_TARGET_INVENTORY_SCHEMA_PATH
+    from .schema_runtime import load_schema_with_vault_override, validate_or_raise
 
 
 DEFAULT_OUT = "tmp/make-target-inventory.json"
@@ -217,6 +222,15 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> P
     )
 
 
+def validate_report(vault: Path, report: dict[str, Any]) -> None:
+    schema = load_schema_with_vault_override(vault, MAKE_TARGET_INVENTORY_SCHEMA_PATH)
+    validate_or_raise(
+        report,
+        schema,
+        context="Make target inventory schema validation failed",
+    )
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate a schema-backed Make target inventory")
     parser.add_argument("--vault", default=".")
@@ -235,6 +249,7 @@ def main(argv: list[str] | None = None) -> int:
     vault = Path(args.vault).resolve()
     report = build_report(vault, policy_path=args.policy_path)
     if args.check:
+        validate_report(vault, report)
         print(f"make_target_inventory: status={report['status']}")
     else:
         destination = write_report(vault, report, args.out)

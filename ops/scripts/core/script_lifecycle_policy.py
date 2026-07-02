@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 import tomllib
 from collections.abc import Mapping
@@ -13,6 +12,7 @@ from .artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
+from .makefile_runtime import makefile_script_module_targets
 from .output_runtime import display_path
 from .schema_runtime import load_schema, validate_with_schema
 from .script_output_surfaces import (
@@ -39,9 +39,6 @@ LIFECYCLE_VALUES = (
     "legacy_delete",
 )
 INSTALL_STATE_VALUES = ("public_cli", "transitional_installed", "not_installed")
-SCRIPT_MODULE_RE = re.compile(
-    r"-m\s+(ops\.scripts\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\b"
-)
 OVERRIDE_FIELDS = {"lifecycle", "replacement"}
 
 
@@ -138,31 +135,8 @@ def _project_scripts_by_module(vault: Path) -> dict[str, list[str]]:
 
 def _makefile_script_module_targets(vault: Path) -> dict[str, list[str]]:
     modules: dict[str, set[str]] = {}
-    current_targets: list[str] = []
-    for path in [vault / "Makefile", *sorted((vault / "mk").glob("*.mk"))]:
-        if not path.is_file():
-            continue
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line and not line.startswith(("\t", " ")):
-                stripped = line.strip()
-                is_assignment = (
-                    "?=" in line
-                    or ":=" in line
-                    or "+=" in line
-                    or (line.count("=") == 1 and ":" not in line)
-                )
-                if not stripped or stripped.startswith(("#", ".PHONY:")) or is_assignment:
-                    current_targets = []
-                elif ":" in line:
-                    current_targets = [
-                        item.strip()
-                        for item in line.split(":", 1)[0].split()
-                        if item.strip()
-                    ]
-            for module in SCRIPT_MODULE_RE.findall(line):
-                modules.setdefault(_canonical_module(vault, module), set()).update(
-                    current_targets
-                )
+    for module, targets in makefile_script_module_targets(vault).items():
+        modules.setdefault(_canonical_module(vault, module), set()).update(targets)
     return {
         module: sorted(target for target in targets if target)
         for module, targets in sorted(modules.items())

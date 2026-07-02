@@ -29,6 +29,7 @@ from tests.makefile_static_helpers import (
     _assert_recipe_contains_tokens,
     _makefile_assignment_value,
     _makefile_text,
+    _pytest_collect_nodeid_path_counts,
     _recipe_lines,
     _target_block,
     _target_dependencies,
@@ -130,10 +131,7 @@ def _collect_marker_paths(mark_expr: str) -> set[str]:
             f"stderr:\n{completed.stderr}"
         )
     paths: set[str] = set()
-    for line in completed.stdout.splitlines():
-        path, separator, count_text = line.rpartition(": ")
-        if separator and count_text.isdigit():
-            paths.add(path)
+    paths.update(_pytest_collect_nodeid_path_counts(completed.stdout))
     return paths
 
 
@@ -1037,7 +1035,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 f"stderr:\n{completed.stderr}"
             ),
         )
-        self.assertEqual(completed.stdout.strip(), "")
+        self.assertEqual(_pytest_collect_nodeid_path_counts(completed.stdout), {})
 
     def test_make_dry_run_sees_generated_selector_fragment(self) -> None:
         registry = _test_lane_registry()
