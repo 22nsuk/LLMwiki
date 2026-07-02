@@ -83,6 +83,18 @@ def test_coverage_markers_and_action_matching_are_catalog_backed(tmp_path: Path)
     assert "script_output_surfaces_currentness" in matched_actions(text)
 
 
+def test_catalog_patterns_cover_sanitized_operator_review_terms() -> None:
+    assert "source_package_distribution_binding" in matched_actions(
+        "P0 release ZIP includes AGENTS.local.md"
+    )
+    assert "generated_artifact_tracking_policy" in matched_actions(
+        "P2 generated evidence retention should be tightened"
+    )
+    assert "maintainability_hotspot_refactor_backlog" in matched_actions(
+        "P2 large test file should be decomposed"
+    )
+
+
 def test_unmatched_recommendation_count_ignores_headings_and_priority_notation_meta() -> None:
     text = "\n".join(
         [

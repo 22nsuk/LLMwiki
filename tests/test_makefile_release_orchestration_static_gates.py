@@ -133,6 +133,10 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
         "$(MAKE) release-run-ready-check "
         'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
     )
+    run_ready_refresh_line = (
+        "$(MAKE) release-run-ready "
+        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+    )
     test.assertEqual(
         preseal_recipe[:16],
         [
@@ -169,7 +173,8 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
     )
     test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
     test.assertEqual(preseal_recipe.count(run_ready_plan_check_line), 1)
-    test.assertEqual(preseal_recipe.count(run_ready_check_line), 2)
+    test.assertEqual(preseal_recipe.count(run_ready_check_line), 1)
+    test.assertEqual(preseal_recipe.count(run_ready_refresh_line), 1)
     test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
     test.assertLess(
         preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
@@ -199,11 +204,11 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
     )
     test.assertLess(
         final_closeout_summary_index,
-        preseal_recipe.index(run_ready_check_line, final_closeout_summary_index),
+        preseal_recipe.index(preseal_fixed_point_line),
     )
     test.assertLess(
-        preseal_recipe.index(run_ready_check_line, final_closeout_summary_index),
-        preseal_recipe.index("$(MAKE) release-evidence-dashboard-report"),
+        preseal_recipe.index(preseal_fixed_point_line),
+        preseal_recipe.index(run_ready_refresh_line),
     )
     test.assertLess(
         preseal_recipe.index(
@@ -221,6 +226,10 @@ def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> 
     )
     test.assertLess(
         preseal_recipe.index(preseal_fixed_point_line),
+        preseal_recipe.index(run_ready_refresh_line),
+    )
+    test.assertLess(
+        preseal_recipe.index(run_ready_refresh_line),
         preseal_recipe.index(strict_cohort_line),
     )
     test.assertLess(
@@ -603,6 +612,10 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         )
         self.assertIn(
             'release-run-ready-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            auto_promotion_preseal_block,
+        )
+        self.assertIn(
+            'release-run-ready RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
             auto_promotion_preseal_block,
         )
         self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_block)
