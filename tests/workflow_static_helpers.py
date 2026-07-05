@@ -8,7 +8,7 @@ from typing import cast
 
 import yaml
 
-from ops.workflow_action_pin_catalog import (
+from ops.scripts.core.workflow_action_pin_catalog import (
     PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
     PINNED_CHECKOUT_ACTION,
     PINNED_CI_CHECKOUT_ACTION,

@@ -1016,6 +1016,15 @@
       "replacement": "python -m ops.scripts.core.validation_check_types_runtime"
     },
     {
+      "canonical_module": "ops.scripts.core.workflow_action_pin_catalog",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.workflow_action_pin_catalog"
+    },
+    {
       "canonical_module": "ops.scripts.core.workflow_action_pins",
       "console_scripts": [],
       "install_state": "not_installed",

@@ -8,8 +8,9 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-
-from ops.workflow_action_pin_catalog import WORKFLOW_ACTION_PIN_RULES
+    from ops.scripts.core.workflow_action_pin_catalog import WORKFLOW_ACTION_PIN_RULES
+else:
+    from .workflow_action_pin_catalog import WORKFLOW_ACTION_PIN_RULES
 
 USES_LINE_RE = re.compile(
     r"^(?P<prefix>\s*(?:-\s*)?uses:\s*)(?P<quote>['\"]?)"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -19,7 +20,7 @@ class SyncDerivedConvergenceTests(unittest.TestCase):
         before_status = _git_status_porcelain()
 
         completed = subprocess.run(
-            ["make", "sync-derived", "PYTHON=.venv/bin/python"],
+            ["make", "sync-derived", f"PYTHON={sys.executable}"],
             cwd=REPO_ROOT,
             env=env,
             capture_output=True,
