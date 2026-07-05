@@ -21,6 +21,13 @@
       "role": "release-closeout-post-check-finalizer-strict-dry-run"
     }
   ],
+  "recipe_command_roles": [
+    {
+      "target": "release-post-commit-finalize",
+      "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode verify",
+      "role": "release-post-commit-finalizer-verify"
+    }
+  ],
   "expected_subsequences": [
     {
       "id": "release_evidence_converge_finalizer_sequence",
@@ -132,9 +139,10 @@
         "sync-public-policy-check",
         "public-check-summary-current-check",
         "artifact-freshness-check",
+        "release-post-commit-finalizer-verify",
         "release-closeout-finality-verify"
       ],
-      "details": "release-post-commit-finalize must stay a focused HEAD-bound suffix: current/check-only surfaces first, post-commit readback before the terminal finality verify."
+      "details": "release-post-commit-finalize must stay a focused HEAD-bound suffix: current/check-only surfaces first, post-commit readback verify after freshness checks, then terminal finality verify."
     },
     {
       "id": "check_finalized_post_check_sequence",
@@ -195,7 +203,7 @@
       "id": "release_post_commit_finalizer_sequence",
       "target": "release-post-commit-finalize",
       "role": "release-closeout-finality-verify",
-      "reason": "finality_verify_must_be_last_make_invocation"
+      "reason": "finality_verify_must_be_last_invocation"
     },
     {
       "id": "release_authority_post_ready_finality_sequence",

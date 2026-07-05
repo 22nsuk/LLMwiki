@@ -8,6 +8,7 @@
     "version",
     "target_recipe_order",
     "role_overrides",
+    "recipe_command_roles",
     "expected_subsequences",
     "terminal_checks",
     "first_role_checks",
@@ -28,6 +29,11 @@
     "role_overrides": {
       "type": "array",
       "items": { "$ref": "#/$defs/role_override" }
+    },
+    "recipe_command_roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/recipe_command_role" }
     },
     "expected_subsequences": {
       "type": "array",
@@ -117,6 +123,16 @@
       "properties": {
         "target": { "$ref": "#/$defs/make_target" },
         "raw_args_contains": { "$ref": "#/$defs/non_empty_string" },
+        "role": { "$ref": "#/$defs/make_target" }
+      }
+    },
+    "recipe_command_role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "raw_line_contains", "role"],
+      "properties": {
+        "target": { "$ref": "#/$defs/make_target" },
+        "raw_line_contains": { "$ref": "#/$defs/non_empty_string" },
         "role": { "$ref": "#/$defs/make_target" }
       }
     },

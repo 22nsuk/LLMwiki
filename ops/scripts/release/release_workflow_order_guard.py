@@ -157,24 +157,51 @@ def _direct_recipe_invocations(
 ) -> list[dict[str, Any]]:
     active = False
     invocations: list[dict[str, Any]] = []
+    command_roles = [
+        item
+        for item in _spec_entries(workflow_order_spec, "recipe_command_roles")
+        if str(item.get("target", "")).strip() == target
+    ]
     for line_no, raw_line in enumerate(makefile_text.splitlines(), start=1):
         if raw_line.startswith("\t"):
             if not active:
                 continue
-            for match in MAKE_RECIPE_RE.finditer(raw_line):
-                raw_args = match.group("args").strip()
+            recipe_events: list[tuple[int, dict[str, Any]]] = []
+            for command_role in command_roles:
+                raw_line_contains = str(command_role.get("raw_line_contains", "")).strip()
+                match_index = raw_line.find(raw_line_contains) if raw_line_contains else -1
+                if match_index < 0:
+                    continue
+                role = str(command_role.get("role", "")).strip()
+                recipe_events.append(
+                    (
+                        match_index,
+                        {
+                            "line": line_no,
+                            "target": role,
+                            "role": role,
+                            "raw_args": raw_line.strip(),
+                        },
+                    )
+                )
+            for make_match in MAKE_RECIPE_RE.finditer(raw_line):
+                raw_args = make_match.group("args").strip()
                 make_target = _first_make_target(raw_args.split())
                 if make_target is None:
                     continue
-                invocations.append(
-                    {
-                        "order": len(invocations) + 1,
-                        "line": line_no,
-                        "target": make_target,
-                        "role": _invocation_role(make_target, raw_args, workflow_order_spec),
-                        "raw_args": raw_args,
-                    }
+                recipe_events.append(
+                    (
+                        make_match.start(),
+                        {
+                            "line": line_no,
+                            "target": make_target,
+                            "role": _invocation_role(make_target, raw_args, workflow_order_spec),
+                            "raw_args": raw_args,
+                        },
+                    )
                 )
+            for _event_index, event in sorted(recipe_events, key=lambda item: item[0]):
+                invocations.append({**event, "order": len(invocations) + 1})
             continue
 
         target_match = TARGET_RE.match(raw_line.rstrip())

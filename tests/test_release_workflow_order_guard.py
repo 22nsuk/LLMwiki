@@ -23,6 +23,7 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-workflow-order-guard.sche
 SPEC_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-workflow-order-guard-spec.schema.json"
 SPEC_PATH = REPO_ROOT / "ops" / "policies" / "release-workflow-order-guard.json"
 CRITICAL_GUARD_ARRAYS = (
+    "recipe_command_roles",
     "expected_subsequences",
     "terminal_checks",
     "first_role_checks",
@@ -31,8 +32,8 @@ CRITICAL_GUARD_ARRAYS = (
 )
 
 
-def _make_recipe(*targets: str) -> str:
-    return "".join(f"\t$(MAKE) {target}\n" for target in targets)
+def _make_recipe(*roles: str) -> str:
+    return "".join(_recipe_line_for_role(role) for role in roles)
 
 
 def _workflow_order_spec() -> dict[str, object]:
@@ -53,14 +54,44 @@ def _sequence_roles(check_id: str) -> tuple[str, ...]:
     raise AssertionError(f"missing workflow order sequence: {check_id}")
 
 
-def _make_targets_for_sequence(check_id: str) -> tuple[str, ...]:
+def _role_overrides() -> dict[str, str]:
     spec = _workflow_order_spec()
-    override_by_role = {
+    return {
         str(override["role"]): f"{override['target']} {override['raw_args_contains']}"
         for override in spec["role_overrides"]
         if isinstance(override, dict)
     }
-    return tuple(override_by_role.get(role, role) for role in _sequence_roles(check_id))
+
+
+def _recipe_command_roles() -> dict[str, dict[str, str]]:
+    spec = _workflow_order_spec()
+    return {
+        str(command_role["role"]): {
+            "target": str(command_role["target"]),
+            "raw_line_contains": str(command_role["raw_line_contains"]),
+        }
+        for command_role in spec["recipe_command_roles"]
+        if isinstance(command_role, dict)
+    }
+
+
+def _recipe_line_for_role(role: str) -> str:
+    override = _role_overrides().get(role)
+    if override is not None:
+        return f"\t$(MAKE) {override}\n"
+    command_role = _recipe_command_roles().get(role)
+    if command_role is not None:
+        if role != "release-post-commit-finalizer-verify":
+            raise AssertionError(f"missing fixture recipe line for command role: {role}")
+        line = (
+            '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" '
+            '--mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" '
+            '--out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention'
+        )
+        if command_role["raw_line_contains"] not in line:
+            raise AssertionError(f"fixture line does not match command role: {role}")
+        return f"\t{line}\n"
+    return f"\t$(MAKE) {role}\n"
 
 
 def _terminal_roles() -> dict[str, str]:
@@ -78,7 +109,7 @@ def _forbidden_targets(check_id: str) -> set[str]:
     raise AssertionError(f"missing forbidden target check: {check_id}")
 
 
-CHECK_FINALIZED_TARGETS = _make_targets_for_sequence("check_finalized_post_check_sequence")
+CHECK_FINALIZED_TARGETS = _sequence_roles("check_finalized_post_check_sequence")
 CHECK_FINALIZED_LINES = _make_recipe(
     "auto-improve-readiness-report-body",
     "generated-artifact-converge",
@@ -90,7 +121,7 @@ CHECK_FINALIZED_MISORDER_LINES = _make_recipe(
     CHECK_FINALIZED_TARGETS[2],
     CHECK_FINALIZED_TARGETS[4],
 )
-RELEASE_SOURCE_READY_TARGETS = _make_targets_for_sequence(
+RELEASE_SOURCE_READY_TARGETS = _sequence_roles(
     "release_source_ready_transaction_sequence"
 )
 RELEASE_SOURCE_READY_LINES = _make_recipe(*RELEASE_SOURCE_READY_TARGETS)
@@ -101,9 +132,9 @@ RELEASE_SOURCE_READY_MISORDER_LINES = _make_recipe(
     RELEASE_SOURCE_READY_TARGETS[1],
 )
 RELEASE_SOURCE_READY_PREPARE_LINES = _make_recipe(
-    *_make_targets_for_sequence("release_source_ready_prepare_sequence")
+    *_sequence_roles("release_source_ready_prepare_sequence")
 )
-RELEASE_SOURCE_READY_POST_VERIFY_TARGETS = _make_targets_for_sequence(
+RELEASE_SOURCE_READY_POST_VERIFY_TARGETS = _sequence_roles(
     "release_source_ready_post_verify_sequence"
 )
 RELEASE_SOURCE_READY_POST_VERIFY_LINES = _make_recipe(*RELEASE_SOURCE_READY_POST_VERIFY_TARGETS)
@@ -115,7 +146,7 @@ RELEASE_SOURCE_READY_POST_VERIFY_MISORDER_LINES = _make_recipe(
     "release-closeout-fixed-point",
     RELEASE_SOURCE_READY_POST_VERIFY_TARGETS[1],
 )
-RELEASE_CONVERGE_PREFLIGHT_TARGETS = _make_targets_for_sequence(
+RELEASE_CONVERGE_PREFLIGHT_TARGETS = _sequence_roles(
     "release_converge_preflight_sequence"
 )
 RELEASE_CONVERGE_PREFLIGHT_LINES = _make_recipe(*RELEASE_CONVERGE_PREFLIGHT_TARGETS)
@@ -131,22 +162,22 @@ RELEASE_CONVERGE_ALL_LINES = _make_recipe(
     "release-converge-post",
 )
 RELEASE_EVIDENCE_CONVERGE_LINES = _make_recipe(
-    *_make_targets_for_sequence("release_evidence_converge_finalizer_sequence")
+    *_sequence_roles("release_evidence_converge_finalizer_sequence")
 )
 RELEASE_FINALITY_RESETTLE_LINES = _make_recipe(
-    *_make_targets_for_sequence("release_finality_resettle_sequence")
+    *_sequence_roles("release_finality_resettle_sequence")
 )
 RELEASE_TERMINAL_FINALITY_LINES = _make_recipe(
-    *_make_targets_for_sequence("release_terminal_finality_sequence")
+    *_sequence_roles("release_terminal_finality_sequence")
 )
 RELEASE_AUTHORITY_POST_READY_FINALITY_LINES = _make_recipe(
-    *_make_targets_for_sequence("release_authority_post_ready_finality_sequence")
+    *_sequence_roles("release_authority_post_ready_finality_sequence")
 )
 RELEASE_AUTHORITY_SETTLE_LINES = _make_recipe(
-    *_make_targets_for_sequence("release_authority_settle_sequence")
+    *_sequence_roles("release_authority_settle_sequence")
 )
 RELEASE_POST_COMMIT_FINALIZE_LINES = _make_recipe(
-    *_make_targets_for_sequence("release_post_commit_finalizer_sequence")
+    *_sequence_roles("release_post_commit_finalizer_sequence")
 )
 RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
     "check",
@@ -483,6 +514,19 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-source-ready-status",
             _sequence_roles("release_source_ready_post_verify_sequence"),
         )
+        self.assertEqual(
+            _recipe_command_roles()["release-post-commit-finalizer-verify"]["target"],
+            "release-post-commit-finalize",
+        )
+        post_commit_roles = _sequence_roles("release_post_commit_finalizer_sequence")
+        self.assertLess(
+            post_commit_roles.index("artifact-freshness-check"),
+            post_commit_roles.index("release-post-commit-finalizer-verify"),
+        )
+        self.assertLess(
+            post_commit_roles.index("release-post-commit-finalizer-verify"),
+            post_commit_roles.index("release-closeout-finality-verify"),
+        )
         self.assertTrue(
             {
                 "goal-runtime-local-evidence-refresh",
@@ -772,6 +816,34 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(
             check["violations"][0]["reason"],
             "unexpected_repeated_post_commit_target",
+        )
+
+    def test_guard_fails_when_post_commit_verify_runs_before_currentness_checks(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        freshness_line = "\t$(MAKE) artifact-freshness-check\n"
+        verify_line = _recipe_line_for_role("release-post-commit-finalizer-verify")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                freshness_line + verify_line,
+                verify_line + freshness_line,
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(
+            check["violations"][0]["expected_role"],
+            "release-post-commit-finalizer-verify",
         )
 
     def test_guard_fails_when_post_commit_finalizer_calls_authority_cleanup(
