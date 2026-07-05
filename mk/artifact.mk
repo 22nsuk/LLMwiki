@@ -42,11 +42,12 @@ WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST ?=
 CHANGED_PATH_MINIMUM_PLAN_OUT ?= tmp/changed-path-minimum-plan.json
 RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= ops/reports/release-workflow-order-guard.json
 RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json
+RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT ?= tmp/release-workflow-order-guard-check.json
 RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.json
 RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT ?= tmp/release-risk-taxonomy-matrix.candidate.json
 RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.md
 
-.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
+.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-workflow-order-guard-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
@@ -75,10 +76,12 @@ sync-derived:
 	$(MAKE) pytest-markers-sync
 	$(MAKE) test-selectors-sync
 	$(MAKE) sync-public-policy
+	$(MAKE) workflow-action-pins-sync
 	$(MAKE) script-output-surfaces
 	$(MAKE) script-lifecycle-policy
 	$(MAKE) script-module-surfaces
 	$(MAKE) release-governance-sync
+	$(MAKE) release-workflow-order-guard
 	$(MAKE) make-target-inventory
 	$(MAKE) report-schema-samples-regenerate
 
@@ -86,12 +89,20 @@ sync-derived-check:
 	$(MAKE) pytest-markers-sync-check
 	$(MAKE) test-selectors-sync-check
 	$(MAKE) sync-public-policy-check
+	$(MAKE) workflow-action-pins-sync-check
 	$(MAKE) script-output-surfaces-check
 	$(MAKE) script-lifecycle-policy-check
 	$(MAKE) script-module-surfaces-check
 	$(MAKE) release-governance-sync-check
+	$(MAKE) release-workflow-order-guard-check
 	$(MAKE) make-target-inventory-check
 	$(MAKE) report-schema-samples-check
+
+workflow-action-pins-sync:
+	$(PYTHON) -m ops.scripts.core.workflow_action_pins --vault "$(VAULT)" --write
+
+workflow-action-pins-sync-check:
+	$(PYTHON) -m ops.scripts.core.workflow_action_pins --vault "$(VAULT)" --check
 
 # Keep the canonical freshness report current before queue/readiness consumers read it.
 refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics promotion-decision-trends artifact-freshness mechanism-review mutation-proposal
@@ -183,6 +194,9 @@ changed-path-minimum-plan:
 release-workflow-order-guard:
 	$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_OUT)" --schema ops/schemas/release-workflow-order-guard.schema.json --expected-artifact-kind release_workflow_order_guard --expected-producer ops.scripts.release_workflow_order_guard
+
+release-workflow-order-guard-check:
+	$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_OUT)" --check --check-out "$(RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT)"
 
 release-risk-taxonomy-matrix:
 	$(PYTHON) -m ops.scripts.release_risk_taxonomy_matrix --vault "$(VAULT)" --out "$(RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT)" --markdown-out "$(RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT)"

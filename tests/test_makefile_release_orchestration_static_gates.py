@@ -384,6 +384,16 @@ def _assert_release_targets_do_not_spawn_runtime_trials(
                     stack.append(match.group(1))
 
 
+def _make_invocation_targets(recipe_lines: list[str]) -> list[str]:
+    targets: list[str] = []
+    for line in recipe_lines:
+        targets.extend(
+            match.group(1)
+            for match in re.finditer(r"\$\(MAKE\)\s+([A-Za-z0-9_.-]+)", line)
+        )
+    return targets
+
+
 class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
     def test_release_converge_targets_preserve_preflight_post_and_all_surface_flow(
         self,
@@ -716,26 +726,66 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertIn("release-authority-post-ready-finality-current-or-refresh", phony_block)
         self.assertIn("release-authority-archive-candidate-gate", phony_block)
         self.assertIn("release-terminal-finality", phony_block)
-        self.assertEqual(
-            _recipe_lines(text, "release-authority-archive-candidate-gate"),
-            [
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "release-authority-archive-candidate-gate",
+            (
                 "$(MAKE) external-report-action-matrix",
                 "$(MAKE) generated-artifact-index-body",
                 "$(MAKE) archive-execution-manifest-check",
-            ],
+            ),
         )
-        self.assertEqual(
-            _recipe_lines(text, "release-authority-post-ready-finality"),
-            [
-                "$(MAKE) artifact-freshness-refresh-check",
-                '$(MAKE) release-closeout-batch-manifest-promote RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-                '$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-                "$(MAKE) tmp-json-clean",
-                '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
-                "$(MAKE) tmp-json-clean",
-                "$(MAKE) release-closeout-finality-verify",
-            ],
+        post_ready_finality_recipe = _recipe_lines(
+            text,
+            "release-authority-post-ready-finality",
+        )
+        post_ready_promote_line = (
+            '$(MAKE) release-closeout-batch-manifest-promote '
+            'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
+            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+        )
+        post_ready_fixed_point_line = (
+            '$(MAKE) release-closeout-fixed-point '
+            'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
+            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+        )
+        post_ready_replay_line = (
+            '$(MAKE) release-closeout-batch-manifest-replay-verify '
+            'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
+            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
+        )
+        post_ready_strict_finalizer_line = (
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run "
+            "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
+        )
+        for required_line in (
+            "$(MAKE) artifact-freshness-refresh-check",
+            post_ready_promote_line,
+            post_ready_fixed_point_line,
+            "$(MAKE) tmp-json-clean",
+            post_ready_replay_line,
+            post_ready_strict_finalizer_line,
+            "$(MAKE) release-closeout-finality-verify",
+        ):
+            with self.subTest(target="release-authority-post-ready-finality", line=required_line):
+                self.assertIn(required_line, post_ready_finality_recipe)
+        self.assertEqual(post_ready_finality_recipe[-1], "$(MAKE) release-closeout-finality-verify")
+        self.assertLess(
+            post_ready_finality_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
+            post_ready_finality_recipe.index(post_ready_promote_line),
+        )
+        self.assertLess(
+            post_ready_finality_recipe.index(post_ready_promote_line),
+            post_ready_finality_recipe.index(post_ready_fixed_point_line),
+        )
+        self.assertLess(
+            post_ready_finality_recipe.index(post_ready_fixed_point_line),
+            post_ready_finality_recipe.index(post_ready_replay_line),
+        )
+        self.assertLess(
+            post_ready_finality_recipe.index(post_ready_replay_line),
+            post_ready_finality_recipe.index(post_ready_strict_finalizer_line),
         )
         post_ready_current_check = _target_block(
             text,
@@ -767,9 +817,11 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             "$(MAKE) release-authority-post-ready-finality",
             current_or_refresh_block,
         )
-        self.assertEqual(
-            _recipe_lines(text, "release-authority-settle"),
-            [
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "release-authority-settle",
+            (
                 "$(MAKE) release-finality-resettle-current-or-refresh",
                 "$(MAKE) release-auto-promotion-goal-run-id-verified-check",
                 "$(MAKE) release-auto-promotion-preflight",
@@ -786,22 +838,24 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-sealed-run-ready-check || exit $$?; \\",
                 "$(MAKE) release-auto-promotion-ready-check || exit $$?; \\",
                 '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \\',
-                "fi; \\",
                 "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\",
-                "if [ $$status -ne 0 ]; then exit $$status; fi",
-            ],
+            ),
         )
-        settle_block = _recipe_lines(text, "release-authority-settle")
-        verified_goal_index = settle_block.index(
-            "$(MAKE) release-auto-promotion-goal-run-id-verified-check"
+        settle_targets = _make_invocation_targets(
+            _recipe_lines(text, "release-authority-settle")
         )
-        run_ready_index = settle_block.index("$(MAKE) release-run-ready")
-        ready_index = settle_block.index("$(MAKE) release-auto-promotion-ready || status=$$?; \\")
-        archive_gate_index = settle_block.index(
-            "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\"
+        self.assertEqual(
+            settle_targets[-1],
+            "release-authority-post-ready-finality-current-or-refresh",
         )
-        finality_index = settle_block.index(
-            "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\"
+        verified_goal_index = settle_targets.index(
+            "release-auto-promotion-goal-run-id-verified-check"
+        )
+        run_ready_index = settle_targets.index("release-run-ready")
+        ready_index = settle_targets.index("release-auto-promotion-ready")
+        archive_gate_index = settle_targets.index("release-authority-archive-candidate-gate")
+        finality_index = settle_targets.index(
+            "release-authority-post-ready-finality-current-or-refresh"
         )
         self.assertLess(verified_goal_index, run_ready_index)
         self.assertLess(ready_index, archive_gate_index)

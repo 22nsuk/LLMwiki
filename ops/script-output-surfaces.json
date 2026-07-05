@@ -306,6 +306,15 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
+      "path": "ops/scripts/core/workflow_action_pins.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "no configurable output path surface detected"
+    },
+    {
       "path": "ops/scripts/core/workflow_dependency_planner.py",
       "classification": "repo_artifact",
       "output_options": [
@@ -1509,6 +1518,7 @@
       "path": "ops/scripts/release/release_workflow_order_guard.py",
       "classification": "repo_artifact",
       "output_options": [
+        "--check-out",
         "--out"
       ],
       "references_resolve_output_path": false,
