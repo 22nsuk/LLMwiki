@@ -1,0 +1,329 @@
+{
+  "$schema": "ops/schemas/release-workflow-order-guard-spec.schema.json",
+  "version": 1,
+  "target_recipe_order": [
+    "release-evidence-converge",
+    "release-converge-preflight",
+    "check-finalized",
+    "release-finality-resettle",
+    "release-terminal-finality",
+    "release-authority-post-ready-finality",
+    "release-authority-settle",
+    "release-source-ready",
+    "release-source-ready-prepare",
+    "release-source-ready-post-verify",
+    "release-post-commit-finalize"
+  ],
+  "role_overrides": [
+    {
+      "target": "release-closeout-post-check-finalizer-dry-run",
+      "raw_args_contains": "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+      "role": "release-closeout-post-check-finalizer-strict-dry-run"
+    }
+  ],
+  "expected_subsequences": [
+    {
+      "id": "release_evidence_converge_finalizer_sequence",
+      "target": "release-evidence-converge",
+      "roles": [
+        "release-evidence-converge-lane-guard",
+        "refresh-generated-core",
+        "bootstrap-preflight",
+        "registry-preflight",
+        "static",
+        "report-schema-samples-check",
+        "release-smoke-full",
+        "release-source-package-check",
+        "test-execution-summary-report-contract-refresh",
+        "test-execution-summary-full-refresh",
+        "test-execution-summary-current-or-refresh",
+        "release-freshness-sensitive-evidence-refresh",
+        "public-check-summary",
+        "remediation-backlog",
+        "learning-readiness-signoff-revalidation",
+        "release-evidence-cohort-report",
+        "release-evidence-dashboard-report",
+        "release-lane-summary",
+        "release-clean-blocker-ledger",
+        "release-closeout-post-check-finalizer-dry-run",
+        "release-closeout-fixed-point",
+        "operator-release-summary",
+        "generated-artifact-converge",
+        "release-closeout-fixed-point",
+        "tmp-json-clean",
+        "release-closeout-finality-verify"
+      ],
+      "details": "release-evidence-converge must run preflight/static/package/test evidence, freshness and learning refreshes, release evidence summaries, then the fixed-point finalizer sequence ending in finality verification."
+    },
+    {
+      "id": "release_converge_preflight_sequence",
+      "target": "release-converge-preflight",
+      "roles": [
+        "generated-artifact-script-output",
+        "report-schema-samples-regenerate",
+        "goal-runtime-local-evidence-refresh",
+        "test-execution-summary-report-contract-refresh-no-smoke"
+      ],
+      "details": "release-converge-preflight must refresh the narrow script-output surface before report-contract summaries or smoke evidence can read it."
+    },
+    {
+      "id": "release_finality_resettle_sequence",
+      "target": "release-finality-resettle",
+      "roles": [
+        "workflow-dependency-planner",
+        "release-authority-sealed-preflight",
+        "release-terminal-finality"
+      ],
+      "details": "release-finality-resettle must refresh planning and sealed rehearsal authority before handing off to the terminal finality lane."
+    },
+    {
+      "id": "release_terminal_finality_sequence",
+      "target": "release-terminal-finality",
+      "roles": [
+        "generated-artifact-finality-suffix",
+        "release-closeout-summary-report",
+        "release-closeout-fixed-point",
+        "tmp-json-clean",
+        "release-closeout-post-check-finalizer-strict-dry-run",
+        "tmp-json-clean",
+        "release-closeout-finality-verify"
+      ],
+      "details": "release-terminal-finality must settle freshness/index/matrix through the finality suffix, refresh fixed-point once, run a strict dry-run currentness check, then make finality verification terminal."
+    },
+    {
+      "id": "release_authority_post_ready_finality_sequence",
+      "target": "release-authority-post-ready-finality",
+      "roles": [
+        "artifact-freshness-refresh-check",
+        "release-closeout-batch-manifest-promote",
+        "release-closeout-fixed-point",
+        "tmp-json-clean",
+        "release-closeout-batch-manifest-replay-verify",
+        "release-closeout-post-check-finalizer-strict-dry-run",
+        "tmp-json-clean",
+        "release-closeout-finality-verify"
+      ],
+      "details": "release-authority-post-ready-finality must bind the promoted batch manifest and distribution ZIP before strict replay, dry-run finalizer, and terminal finality verification."
+    },
+    {
+      "id": "release_authority_settle_sequence",
+      "target": "release-authority-settle",
+      "roles": [
+        "release-finality-resettle-current-or-refresh",
+        "release-auto-promotion-goal-run-id-verified-check",
+        "release-auto-promotion-preflight",
+        "release-run-ready",
+        "release-auto-promotion-preseal",
+        "release-sealed-run-ready",
+        "release-auto-promotion-ready",
+        "release-authority-archive-candidate-gate",
+        "release-authority-post-ready-finality-current-or-refresh"
+      ],
+      "details": "release-authority-settle must verify the goal run, run preflight/run/preseal/sealed readiness in order, archive the candidate gate after auto-promotion readiness, and finish with post-ready finality current-or-refresh."
+    },
+    {
+      "id": "release_post_commit_finalizer_sequence",
+      "target": "release-post-commit-finalize",
+      "roles": [
+        "script-output-surfaces-check",
+        "release-smoke-fast-current-check",
+        "test-execution-summary-current-check",
+        "test-execution-summary-full-current-check",
+        "sync-public-policy-check",
+        "public-check-summary-current-check",
+        "artifact-freshness-check",
+        "release-closeout-finality-verify"
+      ],
+      "details": "release-post-commit-finalize must stay a focused HEAD-bound suffix: current/check-only surfaces first, post-commit readback before the terminal finality verify."
+    },
+    {
+      "id": "check_finalized_post_check_sequence",
+      "target": "check-finalized",
+      "roles": [
+        "release-closeout-post-check-finalizer-dry-run",
+        "release-closeout-fixed-point",
+        "tmp-json-clean",
+        "release-closeout-post-check-finalizer-strict-dry-run",
+        "release-closeout-finality-verify"
+      ],
+      "details": "check-finalized must make post-check canonical refresh self-contained instead of relying on operator memory."
+    },
+    {
+      "id": "release_source_ready_transaction_sequence",
+      "target": "release-source-ready",
+      "roles": [
+        "release-source-ready-prepare",
+        "release-source-ready-commit",
+        "release-post-commit-finalize",
+        "release-source-ready-post-verify"
+      ],
+      "details": "release-source-ready must prepare all mutating evidence before committing, create one release-source-ready commit, converge post-commit evidence, then run a write-free post-verify lane."
+    },
+    {
+      "id": "release_source_ready_prepare_sequence",
+      "target": "release-source-ready-prepare",
+      "roles": [
+        "release-source-ready-snapshot",
+        "release-converge-all-surfaces"
+      ],
+      "details": "release-source-ready-prepare must snapshot the starting HEAD before mutating convergence."
+    },
+    {
+      "id": "release_source_ready_post_verify_sequence",
+      "target": "release-source-ready-post-verify",
+      "roles": [
+        "release-check-all-surfaces",
+        "release-source-ready-status"
+      ],
+      "details": "release-source-ready-post-verify must stay write-free: check all surfaces, then print the source-ready versus sealed machine-release authority summary."
+    }
+  ],
+  "terminal_checks": [
+    {
+      "id": "release_evidence_converge_finalizer_sequence",
+      "target": "release-evidence-converge",
+      "role": "release-closeout-finality-verify",
+      "reason": "finality_verify_must_be_terminal"
+    },
+    {
+      "id": "release_terminal_finality_sequence",
+      "target": "release-terminal-finality",
+      "role": "release-closeout-finality-verify",
+      "reason": "finality_verify_must_be_terminal"
+    },
+    {
+      "id": "release_post_commit_finalizer_sequence",
+      "target": "release-post-commit-finalize",
+      "role": "release-closeout-finality-verify",
+      "reason": "finality_verify_must_be_last_make_invocation"
+    },
+    {
+      "id": "release_authority_post_ready_finality_sequence",
+      "target": "release-authority-post-ready-finality",
+      "role": "release-closeout-finality-verify",
+      "reason": "finality_verify_must_be_terminal"
+    },
+    {
+      "id": "release_authority_settle_sequence",
+      "target": "release-authority-settle",
+      "role": "release-authority-post-ready-finality-current-or-refresh",
+      "reason": "post_ready_finality_must_be_terminal"
+    },
+    {
+      "id": "check_finalized_finality_terminal",
+      "target": "check-finalized",
+      "role": "release-closeout-finality-verify",
+      "reason": "finality_verify_must_be_terminal",
+      "details": "check-finalized must end with release-closeout-finality-verify after any canonical refreshes."
+    },
+    {
+      "id": "release_source_ready_transaction_sequence",
+      "target": "release-source-ready",
+      "role": "release-source-ready-post-verify",
+      "reason": "release_source_ready_post_verify_must_be_terminal"
+    },
+    {
+      "id": "release_source_ready_post_verify_sequence",
+      "target": "release-source-ready-post-verify",
+      "role": "release-source-ready-status",
+      "reason": "release_source_ready_status_must_be_terminal"
+    }
+  ],
+  "first_role_checks": [
+    {
+      "id": "release_converge_preflight_sequence",
+      "target": "release-converge-preflight",
+      "role": "generated-artifact-script-output",
+      "reason": "script_output_surface_refresh_must_start_preflight"
+    }
+  ],
+  "repetition_budgets": [
+    {
+      "id": "release_evidence_converge_repetition_budget",
+      "target": "release-evidence-converge",
+      "allowed_repeated_targets": [
+        "auto-improve-readiness-report-body",
+        "generated-artifact-converge",
+        "release-closeout-fixed-point",
+        "release-closeout-summary-report",
+        "tmp-json-clean"
+      ],
+      "violation_reason": "unexpected_repeated_closeout_target",
+      "details": "Repeated release evidence converge refresh targets must stay explicit and bounded. Fixed-point owns iterative convergence; new repeated Make targets need an intentional contract update."
+    },
+    {
+      "id": "release_post_commit_finalizer_repetition_budget",
+      "target": "release-post-commit-finalize",
+      "allowed_repeated_targets": [],
+      "forbidden_targets": [
+        "release-auto-promotion-ready-invalidate",
+        "release-authority-settle",
+        "release-authority-sealed-preflight",
+        "release-evidence-converge",
+        "release-evidence-dashboard-report",
+        "release-clean-blocker-ledger",
+        "generated-artifact-converge",
+        "generated-artifact-script-output",
+        "release-finality-resettle",
+        "test-execution-summary-full-current-or-refresh",
+        "test-execution-summary-full-refresh",
+        "test-execution-summary-current-or-refresh"
+      ],
+      "violation_reason": "unexpected_repeated_post_commit_target",
+      "forbidden_violation_reason": "forbidden_post_commit_target",
+      "expected_order_label": "each post-commit Make target at most once",
+      "details": "Post-commit finalization must not reintroduce an outer writer loop, full-suite refresh, or staged release-authority cleanup. Fixed-point owns digest iteration and staged authority lanes own their own refreshes."
+    }
+  ],
+  "forbidden_target_checks": [
+    {
+      "id": "release_finality_resettle_sequence",
+      "target": "release-finality-resettle",
+      "forbidden_targets": [
+        "release-evidence-converge"
+      ],
+      "violation_reason": "resettle_lane_must_not_call_full_converge"
+    },
+    {
+      "id": "release_terminal_finality_sequence",
+      "target": "release-terminal-finality",
+      "forbidden_targets": [
+        "release-evidence-converge"
+      ],
+      "violation_reason": "terminal_finality_lane_must_not_call_full_converge"
+    },
+    {
+      "id": "release_source_ready_post_verify_sequence",
+      "target": "release-source-ready-post-verify",
+      "forbidden_targets": [
+        "auto-improve-readiness-worktree-guard",
+        "goal-runtime-local-evidence-refresh",
+        "generated-artifact-converge",
+        "remediation-backlog",
+        "release-closeout-fixed-point",
+        "release-source-ready-amend",
+        "release-source-ready-final-guard-amend"
+      ],
+      "violation_reason": "post_verify_must_be_write_free"
+    }
+  ],
+  "source_paths": {
+    "static": [
+      "ops/scripts/release/release_workflow_order_guard.py",
+      "ops/scripts/core/workflow_dependency_planner.py",
+      "ops/scripts/release/release_closeout_fixed_point.py",
+      "ops/policies/release-workflow-order-guard.json",
+      "ops/schemas/release-workflow-order-guard-spec.schema.json",
+      "ops/policies/release-closeout-fixed-point.json"
+    ],
+    "include_makefile_sources": true
+  },
+  "file_inputs": {
+    "static": {
+      "workflow_order_spec": "ops/policies/release-workflow-order-guard.json",
+      "workflow_order_spec_schema": "ops/schemas/release-workflow-order-guard-spec.schema.json",
+      "fixed_point_policy": "ops/policies/release-closeout-fixed-point.json"
+    },
+    "include_makefile_sources": true
+  }
+}

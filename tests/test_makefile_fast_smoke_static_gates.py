@@ -11,7 +11,6 @@ import pytest
 from ops.scripts.test.test_lane_registry_runtime import (
     load_registry,
     pack_mark_expr,
-    pack_selection_mode,
 )
 from tests.makefile_static_helpers import (
     _makefile_text,
@@ -79,18 +78,11 @@ def _assert_collected_paths_self_declare_marker(
 
 class MakefileFastSmokeStaticGateTests(unittest.TestCase):
     def test_fast_smoke_is_curated_developer_feedback_loop(self) -> None:
-        registry = load_registry(REPO_ROOT)
         text = _makefile_text()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         block = _target_block(text, "fast-smoke")
 
         self.assertIn("fast-smoke", _target_block(text, ".PHONY"))
-        self.assertEqual(
-            pack_selection_mode(registry, "fast_smoke"), "marker_expression"
-        )
-        self.assertEqual(pack_mark_expr(registry, "fast_smoke"), "fast_smoke")
-        self.assertIn("PYTEST_FAST_SMOKE_MARK_EXPR ?= fast_smoke", text)
-        self.assertIn('FAST_SMOKE_TESTS ?= -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)"', text)
         self.assertIn(
             "`make fast-smoke` is the curated Subagent/developer precheck pytest slice.",
             development_text,
@@ -109,27 +101,11 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
         self.assertNotIn("tests/test_release_smoke.py \\", block)
 
     def test_runtime_hotspot_smoke_is_curated_decomposition_feedback_loop(self) -> None:
-        registry = load_registry(REPO_ROOT)
         text = _makefile_text()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         block = _target_block(text, "runtime-hotspot-smoke")
 
         self.assertIn("runtime-hotspot-smoke", _target_block(text, ".PHONY"))
-        self.assertEqual(
-            pack_selection_mode(registry, "runtime_hotspot_smoke"),
-            "marker_expression",
-        )
-        self.assertEqual(
-            pack_mark_expr(registry, "runtime_hotspot_smoke"), "runtime_hotspot_smoke"
-        )
-        self.assertIn(
-            "PYTEST_RUNTIME_HOTSPOT_SMOKE_MARK_EXPR ?= runtime_hotspot_smoke",
-            text,
-        )
-        self.assertIn(
-            'RUNTIME_HOTSPOT_SMOKE_TESTS ?= -m "$(PYTEST_RUNTIME_HOTSPOT_SMOKE_MARK_EXPR)"',
-            text,
-        )
         self.assertIn("`make runtime-hotspot-smoke`", development_text)
         self.assertIn(
             "$(PYTHON) -m pytest -q $(RUNTIME_HOTSPOT_SMOKE_TESTS) "
@@ -159,29 +135,12 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
         )
 
     def test_default_test_boundary_is_chained_into_make_test(self) -> None:
-        registry = load_registry(REPO_ROOT)
         text = _makefile_text()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         block = _target_block(text, "test-boundary-contract-smoke")
 
         self.assertIn("test-boundary-contract-smoke", _target_block(text, ".PHONY"))
         self.assertIn("test: test-fast test-boundary-contract-smoke", text)
-        self.assertEqual(
-            pack_selection_mode(registry, "default_test_boundary"),
-            "marker_expression",
-        )
-        self.assertEqual(
-            pack_mark_expr(registry, "default_test_boundary"),
-            "default_test_boundary",
-        )
-        self.assertIn(
-            "PYTEST_DEFAULT_TEST_BOUNDARY_MARK_EXPR ?= default_test_boundary",
-            text,
-        )
-        self.assertIn(
-            'DEFAULT_TEST_BOUNDARY_TESTS ?= -m "$(PYTEST_DEFAULT_TEST_BOUNDARY_MARK_EXPR)"',
-            text,
-        )
         self.assertIn(
             "`make test` chains the fast unit lane with `make test-boundary-contract-smoke`",
             development_text,

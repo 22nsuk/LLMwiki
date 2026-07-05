@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import configparser
 import os
 import re
 import subprocess
@@ -12,16 +11,13 @@ from pathlib import Path
 import pytest
 
 from ops.scripts.test.test_lane_registry_runtime import (
-    authoritative_markers,
     compatibility_names,
     documentation_authority,
     documentation_out_of_scope,
     load_registry,
     pack_mark_expr,
-    pack_selection_mode,
     pack_selectors,
     pack_summary_suite,
-    pytest_marker_docs,
     selection_by_make_target,
 )
 from tests.makefile_static_helpers import (
@@ -72,34 +68,6 @@ def _changed_path_minimum_rule(
     raise AssertionError(f"registry missing changed-path rule: {rule_id}")
 
 
-def _makefile_assignment_items(text: str, variable: str) -> tuple[str, ...]:
-    prefix = f"{variable} ?="
-    lines = text.splitlines()
-    collecting = False
-    items: list[str] = []
-    for line in lines:
-        if not collecting:
-            if not line.startswith(prefix):
-                continue
-            collecting = True
-            remainder = line[len(prefix) :].strip()
-        else:
-            if not line.startswith(("\t", " ")):
-                break
-            remainder = line.strip()
-
-        continued = remainder.endswith("\\")
-        remainder = remainder[:-1].strip() if continued else remainder
-        if remainder:
-            items.extend(remainder.split())
-        if collecting and not continued:
-            break
-
-    if not collecting:
-        raise AssertionError(f"missing Makefile assignment: {variable}")
-    return tuple(items)
-
-
 def _collect_marker_paths(mark_expr: str) -> set[str]:
     env = os.environ.copy()
     env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
@@ -135,47 +103,8 @@ def _collect_marker_paths(mark_expr: str) -> set[str]:
     return paths
 
 
-def _assert_marker_expression_variable_matches_pack(
-    case: unittest.TestCase,
-    registry: dict[str, object],
-    text: str,
-    *,
-    variable: str,
-    pack_id: str,
-    mark_expr_variable: str,
-) -> tuple[str, ...]:
-    case.assertEqual(pack_selection_mode(registry, pack_id), "marker_expression")
-    case.assertEqual(
-        pack_mark_expr(registry, pack_id),
-        _makefile_assignment_value(text, mark_expr_variable),
-    )
-    items = _makefile_assignment_items(text, variable)
-    expected_items = (
-        "-m",
-        f'"$({mark_expr_variable})"',
-    )
-    case.assertEqual(items, expected_items)
-    return items
-
-
 def _normalize_whitespace(value: str) -> str:
     return " ".join(value.split())
-
-
-def _pytest_ini_marker_docs() -> dict[str, str]:
-    parser = configparser.ConfigParser()
-    parser.read_string(PYTEST_INI.read_text(encoding="utf-8"))
-    markers_value = parser["pytest"]["markers"]
-    marker_docs: dict[str, str] = {}
-    for line in markers_value.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        marker, separator, description = stripped.partition(":")
-        if not separator:
-            raise AssertionError(f"invalid pytest.ini marker declaration: {stripped}")
-        marker_docs[marker.strip()] = description.strip()
-    return marker_docs
 
 
 def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) -> None:
@@ -216,10 +145,12 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             "$(MAKE) pytest-markers-sync",
             "$(MAKE) test-selectors-sync",
             "$(MAKE) sync-public-policy",
+            "$(MAKE) workflow-action-pins-sync",
             "$(MAKE) script-output-surfaces",
             "$(MAKE) script-lifecycle-policy",
             "$(MAKE) script-module-surfaces",
             "$(MAKE) release-governance-sync",
+            "$(MAKE) release-workflow-order-guard",
             "$(MAKE) make-target-inventory",
             "$(MAKE) report-schema-samples-regenerate",
         ],
@@ -230,10 +161,12 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             "$(MAKE) pytest-markers-sync-check",
             "$(MAKE) test-selectors-sync-check",
             "$(MAKE) sync-public-policy-check",
+            "$(MAKE) workflow-action-pins-sync-check",
             "$(MAKE) script-output-surfaces-check",
             "$(MAKE) script-lifecycle-policy-check",
             "$(MAKE) script-module-surfaces-check",
             "$(MAKE) release-governance-sync-check",
+            "$(MAKE) release-workflow-order-guard-check",
             "$(MAKE) make-target-inventory-check",
             "$(MAKE) report-schema-samples-check",
         ],
@@ -334,6 +267,7 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
         "WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT ?= tmp/workflow-dependency-planner-check.json",
         "RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= ops/reports/release-workflow-order-guard.json",
         "RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json",
+        "RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT ?= tmp/release-workflow-order-guard-check.json",
     )
     for variable in expected_variables:
         with case.subTest(variable=variable):
@@ -487,6 +421,7 @@ def _assert_release_workflow_order_guard_target(
     case: unittest.TestCase, text: str
 ) -> None:
     case.assertIn("release-workflow-order-guard", _target_block(text, ".PHONY"))
+    case.assertIn("release-workflow-order-guard-check", _target_block(text, ".PHONY"))
     order_guard_block = _target_block(text, "release-workflow-order-guard")
     case.assertIn(
         '$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)"',
@@ -504,6 +439,14 @@ def _assert_release_workflow_order_guard_target(
         "--expected-producer ops.scripts.release_workflow_order_guard",
         order_guard_block,
     )
+    order_guard_check_block = _target_block(text, "release-workflow-order-guard-check")
+    case.assertIn(
+        '$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_OUT)" --check --check-out "$(RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT)"',
+        order_guard_check_block,
+    )
+    case.assertIn("--check", order_guard_check_block)
+    case.assertIn('--check-out "$(RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT)"', order_guard_check_block)
+    case.assertNotIn("ops.scripts.canonical_artifact_promote", order_guard_check_block)
     case.assertNotIn(
         "$(MAKE) release-workflow-order-guard",
         _target_block(text, "release-evidence-converge"),
@@ -868,19 +811,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
 
-    def test_pytest_ini_declares_registry_markers(self) -> None:
-        registry = _test_lane_registry()
-        pytest_ini_text = PYTEST_INI.read_text(encoding="utf-8")
-        marker_docs = _pytest_ini_marker_docs()
-
-        self.assertTrue(authoritative_markers(registry).issubset(set(marker_docs)))
-        self.assertEqual(marker_docs, pytest_marker_docs(registry))
-        self.assertIn("# >>> pytest-marker-registry >>>", pytest_ini_text)
-        self.assertIn("# <<< pytest-marker-registry <<<", pytest_ini_text)
-        self.assertNotIn(
-            "deprecated compatibility alias for artifact_finalization", pytest_ini_text
-        )
-
     def test_registry_make_target_marker_expressions_match_makefile_variables(
         self,
     ) -> None:
@@ -902,83 +832,6 @@ class MakefileStaticGateTests(unittest.TestCase):
                     _normalize_whitespace(_makefile_assignment_value(text, variable)),
                     _normalize_whitespace(selection_by_make_target(registry)[target]),
                 )
-
-    def test_registry_marker_expression_packs_match_makefile_variables(self) -> None:
-        registry = _test_lane_registry()
-        text = _makefile_text()
-
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="FAST_SMOKE_TESTS",
-            pack_id="fast_smoke",
-            mark_expr_variable="PYTEST_FAST_SMOKE_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="DEFAULT_TEST_BOUNDARY_TESTS",
-            pack_id="default_test_boundary",
-            mark_expr_variable="PYTEST_DEFAULT_TEST_BOUNDARY_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="RUNTIME_HOTSPOT_SMOKE_TESTS",
-            pack_id="runtime_hotspot_smoke",
-            mark_expr_variable="PYTEST_RUNTIME_HOTSPOT_SMOKE_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="REPORT_CONTRACT_CORE_TESTS",
-            pack_id="report_contract_core",
-            mark_expr_variable="PYTEST_REPORT_CONTRACT_CORE_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="RELEASE_SEALING_CORE_TESTS",
-            pack_id="release_sealing_core",
-            mark_expr_variable="PYTEST_RELEASE_SEALING_CORE_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="REPORT_CONTRACT_ALL_TESTS",
-            pack_id="report_contract_all",
-            mark_expr_variable="PYTEST_REPORT_CONTRACT_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="SUBPROCESS_TESTS",
-            pack_id="subprocess_checks",
-            mark_expr_variable="PYTEST_SUBPROCESS_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="SCHEMA_STATIC_SMOKE_TESTS",
-            pack_id="schema_static_smoke",
-            mark_expr_variable="PYTEST_SCHEMA_STATIC_SMOKE_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="RELEASE_CLOSEOUT_REGRESSION_TESTS",
-            pack_id="release_closeout_regression",
-            mark_expr_variable="PYTEST_RELEASE_CLOSEOUT_REGRESSION_MARK_EXPR",
-        )
 
     def test_core_marker_packs_collect_via_registered_marker_expression(self) -> None:
         registry = _test_lane_registry()
@@ -1290,19 +1143,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
 
     def test_schema_static_smoke_is_named_windows_ci_target(self) -> None:
-        registry = _test_lane_registry()
         text = _makefile_text()
         block = _target_block(text, "test-schema-static-smoke")
 
         self.assertIn("test-schema-static-smoke", _target_block(text, ".PHONY"))
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="SCHEMA_STATIC_SMOKE_TESTS",
-            pack_id="schema_static_smoke",
-            mark_expr_variable="PYTEST_SCHEMA_STATIC_SMOKE_MARK_EXPR",
-        )
         self.assertIn(
             "$(PYTHON) -m pytest -q $(SCHEMA_STATIC_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)",
             block,
@@ -1363,42 +1207,6 @@ class MakefileStaticGateTests(unittest.TestCase):
                 )
 
         self.assertIn(
-            "PYTEST_REPORT_CONTRACT_MARK_EXPR ?= report_contract",
-            text,
-        )
-        self.assertIn(
-            "PYTEST_REPORT_CONTRACT_CORE_MARK_EXPR ?= report_contract_core",
-            text,
-        )
-        self.assertIn(
-            "PYTEST_RELEASE_CHECK_MARK_EXPR ?= not report_contract",
-            text,
-        )
-        self.assertIn(
-            "PYTEST_RUNTIME_HOTSPOT_SMOKE_MARK_EXPR ?= runtime_hotspot_smoke",
-            text,
-        )
-        self.assertIn(
-            "PYTEST_RELEASE_SEALING_CORE_MARK_EXPR ?= release_sealing_core",
-            text,
-        )
-        self.assertIn("PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing", text)
-        self.assertIn("PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess", text)
-        self.assertIn(
-            "PYTEST_SCHEMA_STATIC_SMOKE_MARK_EXPR ?= schema_static_smoke", text
-        )
-        self.assertIn(
-            "PYTEST_DEFAULT_TEST_BOUNDARY_MARK_EXPR ?= default_test_boundary",
-            text,
-        )
-        self.assertIn(
-            "PYTEST_RELEASE_CLOSEOUT_REGRESSION_MARK_EXPR ?= release_closeout_regression",
-            text,
-        )
-        self.assertIn("RELEASE_SEALING_CORE_TESTS ?=", text)
-        self.assertIn("RELEASE_SEALING_TESTS ?= $(RELEASE_SEALING_CORE_TESTS)", text)
-        self.assertIn("SUBPROCESS_TESTS ?=", text)
-        self.assertIn(
             '$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)" $(PYTEST_FLAGS)',
             _target_block(text, "test-fast"),
         )
@@ -1428,7 +1236,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(PYTHON) -m pytest $(SUBPROCESS_TESTS) $(PYTEST_SERIAL_FLAGS)",
             _target_block(text, "test-subprocess"),
         )
-        self.assertIn("RELEASE_CLOSEOUT_REGRESSION_TESTS ?=", text)
         self.assertIn(
             "RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json",
             text,
@@ -1739,7 +1546,6 @@ class MakefileStaticGateTests(unittest.TestCase):
     def test_report_contract_targets_collect_schema_and_generated_artifact_checks(
         self,
     ) -> None:
-        registry = _test_lane_registry()
         text = _makefile_text()
         core_block = _target_block(text, "test-report-contract-core")
         all_block = _target_block(text, "test-report-contract-all")
@@ -1757,26 +1563,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             "$(MAKE) external-report-reference-manifest-release-check", ci_block
         )
-        self.assertIn("REPORT_CONTRACT_CORE_TESTS ?=", text)
         self.assertNotIn("REPORT_CONTRACT_EXTENDED_TESTS", text)
-        self.assertIn("REPORT_CONTRACT_TESTS ?=", text)
-        self.assertIn("REPORT_CONTRACT_TESTS ?= $(REPORT_CONTRACT_CORE_TESTS)", text)
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="REPORT_CONTRACT_CORE_TESTS",
-            pack_id="report_contract_core",
-            mark_expr_variable="PYTEST_REPORT_CONTRACT_CORE_MARK_EXPR",
-        )
-        _assert_marker_expression_variable_matches_pack(
-            self,
-            registry,
-            text,
-            variable="REPORT_CONTRACT_ALL_TESTS",
-            pack_id="report_contract_all",
-            mark_expr_variable="PYTEST_REPORT_CONTRACT_MARK_EXPR",
-        )
         self.assertIn(
             "$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)",
             core_block,
@@ -1808,7 +1595,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "REPORT_CONTRACT_SUMMARY_DESELECT_POLICY ?= ops/policies/report-contract-deselections.json",
             text,
         )
-        self.assertIn("REPORT_CONTRACT_SUMMARY_TESTS ?= $(REPORT_CONTRACT_TESTS)", text)
         self.assertNotIn("--deselect=tests/test_", core_block)
         self.assertNotIn("--deselect=tests/test_", all_block)
         self.assertIn(

@@ -10,78 +10,143 @@ import pytest
 
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.release.release_workflow_order_guard import build_report, write_report
+from ops.scripts.release.release_workflow_order_guard import (
+    build_report,
+    check_report,
+    write_report,
+)
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-workflow-order-guard.schema.json"
+SPEC_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-workflow-order-guard-spec.schema.json"
+SPEC_PATH = REPO_ROOT / "ops" / "policies" / "release-workflow-order-guard.json"
+CRITICAL_GUARD_ARRAYS = (
+    "expected_subsequences",
+    "terminal_checks",
+    "first_role_checks",
+    "repetition_budgets",
+    "forbidden_target_checks",
+)
 
 
 def _make_recipe(*targets: str) -> str:
     return "".join(f"\t$(MAKE) {target}\n" for target in targets)
 
 
+def _workflow_order_spec() -> dict[str, object]:
+    payload = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise AssertionError("workflow order spec must be a JSON object")
+    return payload
+
+
+def _cloned_workflow_order_spec() -> dict[str, object]:
+    return json.loads(json.dumps(_workflow_order_spec()))
+
+
+def _sequence_roles(check_id: str) -> tuple[str, ...]:
+    for entry in _workflow_order_spec()["expected_subsequences"]:
+        if isinstance(entry, dict) and entry.get("id") == check_id:
+            return tuple(str(role) for role in entry["roles"])
+    raise AssertionError(f"missing workflow order sequence: {check_id}")
+
+
+def _make_targets_for_sequence(check_id: str) -> tuple[str, ...]:
+    spec = _workflow_order_spec()
+    override_by_role = {
+        str(override["role"]): f"{override['target']} {override['raw_args_contains']}"
+        for override in spec["role_overrides"]
+        if isinstance(override, dict)
+    }
+    return tuple(override_by_role.get(role, role) for role in _sequence_roles(check_id))
+
+
+def _terminal_roles() -> dict[str, str]:
+    roles: dict[str, str] = {}
+    for entry in _workflow_order_spec()["terminal_checks"]:
+        if isinstance(entry, dict):
+            roles[str(entry["target"])] = str(entry["role"])
+    return roles
+
+
+def _forbidden_targets(check_id: str) -> set[str]:
+    for entry in _workflow_order_spec()["forbidden_target_checks"]:
+        if isinstance(entry, dict) and entry.get("id") == check_id:
+            return {str(target) for target in entry["forbidden_targets"]}
+    raise AssertionError(f"missing forbidden target check: {check_id}")
+
+
+CHECK_FINALIZED_TARGETS = _make_targets_for_sequence("check_finalized_post_check_sequence")
 CHECK_FINALIZED_LINES = _make_recipe(
     "auto-improve-readiness-report-body",
     "generated-artifact-converge",
-    "release-closeout-post-check-finalizer-dry-run",
-    "release-closeout-fixed-point",
-    "tmp-json-clean",
-    "release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
-    "release-closeout-finality-verify",
+    *CHECK_FINALIZED_TARGETS,
 )
 CHECK_FINALIZED_MISORDER_LINES = _make_recipe(
-    "release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
-    "release-closeout-fixed-point",
-    "tmp-json-clean",
-    "release-closeout-finality-verify",
+    CHECK_FINALIZED_TARGETS[3],
+    CHECK_FINALIZED_TARGETS[1],
+    CHECK_FINALIZED_TARGETS[2],
+    CHECK_FINALIZED_TARGETS[4],
 )
-RELEASE_SOURCE_READY_LINES = _make_recipe(
-    "release-source-ready-prepare",
-    "release-source-ready-commit",
-    "release-post-commit-finalize",
-    "release-source-ready-post-verify",
+RELEASE_SOURCE_READY_TARGETS = _make_targets_for_sequence(
+    "release_source_ready_transaction_sequence"
 )
+RELEASE_SOURCE_READY_LINES = _make_recipe(*RELEASE_SOURCE_READY_TARGETS)
 RELEASE_SOURCE_READY_MISORDER_LINES = _make_recipe(
-    "release-source-ready-prepare",
-    "release-post-commit-finalize",
-    "release-source-ready-post-verify",
-    "release-source-ready-commit",
+    RELEASE_SOURCE_READY_TARGETS[0],
+    RELEASE_SOURCE_READY_TARGETS[2],
+    RELEASE_SOURCE_READY_TARGETS[3],
+    RELEASE_SOURCE_READY_TARGETS[1],
 )
 RELEASE_SOURCE_READY_PREPARE_LINES = _make_recipe(
-    "release-source-ready-snapshot",
-    "release-converge-all-surfaces",
+    *_make_targets_for_sequence("release_source_ready_prepare_sequence")
 )
-RELEASE_SOURCE_READY_POST_VERIFY_LINES = _make_recipe(
-    "release-check-all-surfaces",
-    "release-source-ready-status",
+RELEASE_SOURCE_READY_POST_VERIFY_TARGETS = _make_targets_for_sequence(
+    "release_source_ready_post_verify_sequence"
 )
+RELEASE_SOURCE_READY_POST_VERIFY_LINES = _make_recipe(*RELEASE_SOURCE_READY_POST_VERIFY_TARGETS)
 RELEASE_SOURCE_READY_POST_VERIFY_MISORDER_LINES = _make_recipe(
-    "release-check-all-surfaces",
+    RELEASE_SOURCE_READY_POST_VERIFY_TARGETS[0],
     "goal-runtime-local-evidence-refresh",
     "generated-artifact-converge",
     "remediation-backlog",
     "release-closeout-fixed-point",
-    "release-source-ready-status",
+    RELEASE_SOURCE_READY_POST_VERIFY_TARGETS[1],
 )
-RELEASE_CONVERGE_PREFLIGHT_LINES = _make_recipe(
-    "generated-artifact-script-output",
-    "report-schema-samples-regenerate",
-    "goal-runtime-local-evidence-refresh",
-    "test-execution-summary-report-contract-refresh-no-smoke",
+RELEASE_CONVERGE_PREFLIGHT_TARGETS = _make_targets_for_sequence(
+    "release_converge_preflight_sequence"
 )
+RELEASE_CONVERGE_PREFLIGHT_LINES = _make_recipe(*RELEASE_CONVERGE_PREFLIGHT_TARGETS)
 RELEASE_CONVERGE_PREFLIGHT_MISORDER_LINES = _make_recipe(
-    "report-schema-samples-regenerate",
-    "generated-artifact-script-output",
-    "goal-runtime-local-evidence-refresh",
-    "test-execution-summary-report-contract-refresh-no-smoke",
+    RELEASE_CONVERGE_PREFLIGHT_TARGETS[1],
+    RELEASE_CONVERGE_PREFLIGHT_TARGETS[0],
+    *RELEASE_CONVERGE_PREFLIGHT_TARGETS[2:],
 )
 RELEASE_CONVERGE_ALL_LINES = _make_recipe(
     "release-converge",
     "sync-public-policy",
     "public-check-all",
     "release-converge-post",
+)
+RELEASE_EVIDENCE_CONVERGE_LINES = _make_recipe(
+    *_make_targets_for_sequence("release_evidence_converge_finalizer_sequence")
+)
+RELEASE_FINALITY_RESETTLE_LINES = _make_recipe(
+    *_make_targets_for_sequence("release_finality_resettle_sequence")
+)
+RELEASE_TERMINAL_FINALITY_LINES = _make_recipe(
+    *_make_targets_for_sequence("release_terminal_finality_sequence")
+)
+RELEASE_AUTHORITY_POST_READY_FINALITY_LINES = _make_recipe(
+    *_make_targets_for_sequence("release_authority_post_ready_finality_sequence")
+)
+RELEASE_AUTHORITY_SETTLE_LINES = _make_recipe(
+    *_make_targets_for_sequence("release_authority_settle_sequence")
+)
+RELEASE_POST_COMMIT_FINALIZE_LINES = _make_recipe(
+    *_make_targets_for_sequence("release_post_commit_finalizer_sequence")
 )
 RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
     "check",
@@ -90,7 +155,18 @@ RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
     "release-evidence-closeout",
     "release-finality-resettle",
     "release-terminal-finality",
+    "release-authority-post-ready-finality",
+    "release-authority-settle",
     "release-authority-sealed-preflight",
+    "release-finality-resettle-current-or-refresh",
+    "release-auto-promotion-goal-run-id-verified-check",
+    "release-auto-promotion-preflight",
+    "release-run-ready",
+    "release-auto-promotion-preseal",
+    "release-sealed-run-ready",
+    "release-auto-promotion-ready",
+    "release-authority-archive-candidate-gate",
+    "release-authority-post-ready-finality-current-or-refresh",
     "release-converge-preflight",
     "release-source-ready",
     "release-source-ready-snapshot",
@@ -132,6 +208,10 @@ RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
     "external-report-action-matrix",
     "release-closeout-post-check-finalizer-dry-run",
     "release-closeout-fixed-point",
+    "release-closeout-batch-manifest-promote",
+    "release-closeout-batch-manifest-replay-verify",
+    "artifact-freshness-refresh-check",
+    "operator-release-summary",
     "tmp-json-clean",
     "release-closeout-finality-verify",
 )
@@ -142,31 +222,17 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "check-finalized: check\n"
     "{check_finalized_lines}"
     "release-evidence-converge:\n"
-    "\t$(MAKE) auto-improve-readiness-report-body\n"
-    "\t$(MAKE) generated-artifact-converge\n"
-    "\t$(MAKE) release-closeout-summary-report\n"
-    "\t$(MAKE) release-evidence-dashboard-report\n"
-    "\t$(MAKE) release-lane-summary\n"
-    "\t$(MAKE) release-clean-blocker-ledger\n"
-    "\t$(MAKE) generated-artifact-converge\n"
-    "\t$(MAKE) release-closeout-post-check-finalizer-dry-run\n"
-    "\t$(MAKE) release-closeout-fixed-point\n"
-    "\t$(MAKE) tmp-json-clean\n"
-    "\t$(MAKE) release-closeout-finality-verify\n"
+    "{release_evidence_converge_lines}"
     "release-evidence-closeout: release-evidence-converge\n"
     "\t@echo compatibility alias\n"
     "release-finality-resettle:\n"
-    "\t$(MAKE) workflow-dependency-planner\n"
-    "\t$(MAKE) release-authority-sealed-preflight\n"
-    "\t$(MAKE) release-terminal-finality\n"
+    "{release_finality_resettle_lines}"
     "release-terminal-finality:\n"
-    "\t$(MAKE) generated-artifact-finality-suffix\n"
-    "\t$(MAKE) release-closeout-summary-report\n"
-    "\t$(MAKE) release-closeout-fixed-point\n"
-    "\t$(MAKE) tmp-json-clean\n"
-    "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
-    "\t$(MAKE) tmp-json-clean\n"
-    "\t$(MAKE) release-closeout-finality-verify\n"
+    "{release_terminal_finality_lines}"
+    "release-authority-post-ready-finality:\n"
+    "{release_authority_post_ready_finality_lines}"
+    "release-authority-settle:\n"
+    "{release_authority_settle_lines}"
     "release-source-ready:\n"
     "{release_source_ready_lines}"
     "release-source-ready-prepare:\n"
@@ -190,15 +256,26 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "release-source-ready-commit:\n"
     "\t@true\n"
     "release-post-commit-finalize:\n"
-    "\t$(MAKE) script-output-surfaces-check\n"
-    "\t$(MAKE) release-smoke-fast-current-check\n"
-    "\t$(MAKE) test-execution-summary-current-check\n"
-    "\t$(MAKE) test-execution-summary-full-current-check\n"
-    "\t$(MAKE) sync-public-policy-check\n"
-    "\t$(MAKE) public-check-summary-current-check\n"
-    "\t$(MAKE) artifact-freshness-check\n"
-    "\t$(MAKE) release-closeout-finality-verify\n"
+    "{release_post_commit_finalize_lines}"
     "release-source-ready-status:\n"
+    "\t@true\n"
+    "release-finality-resettle-current-or-refresh:\n"
+    "\t@true\n"
+    "release-auto-promotion-goal-run-id-verified-check:\n"
+    "\t@true\n"
+    "release-auto-promotion-preflight:\n"
+    "\t@true\n"
+    "release-run-ready:\n"
+    "\t@true\n"
+    "release-auto-promotion-preseal:\n"
+    "\t@true\n"
+    "release-sealed-run-ready:\n"
+    "\t@true\n"
+    "release-auto-promotion-ready:\n"
+    "\t@true\n"
+    "release-authority-archive-candidate-gate:\n"
+    "\t@true\n"
+    "release-authority-post-ready-finality-current-or-refresh:\n"
     "\t@true\n"
     "release-check-all-surfaces:\n"
     "\t@true\n"
@@ -250,6 +327,14 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "\t@true\n"
     "artifact-freshness:\n"
     "\t@true\n"
+    "release-closeout-batch-manifest-promote:\n"
+    "\t@true\n"
+    "release-closeout-batch-manifest-replay-verify:\n"
+    "\t@true\n"
+    "artifact-freshness-refresh-check:\n"
+    "\t@true\n"
+    "operator-release-summary:\n"
+    "\t@true\n"
     "report-schema-samples-regenerate:\n"
     "\t@true\n"
     "test-execution-summary-report-contract-refresh-no-smoke:\n"
@@ -266,6 +351,11 @@ def _workflow_order_guard_makefile_text(
 ) -> str:
     return RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE.format(
         phony=" ".join(RELEASE_WORKFLOW_ORDER_PHONY_TARGETS),
+        release_evidence_converge_lines=RELEASE_EVIDENCE_CONVERGE_LINES,
+        release_finality_resettle_lines=RELEASE_FINALITY_RESETTLE_LINES,
+        release_terminal_finality_lines=RELEASE_TERMINAL_FINALITY_LINES,
+        release_authority_post_ready_finality_lines=RELEASE_AUTHORITY_POST_READY_FINALITY_LINES,
+        release_authority_settle_lines=RELEASE_AUTHORITY_SETTLE_LINES,
         check_finalized_lines=(
             CHECK_FINALIZED_MISORDER_LINES
             if misorder_check_finalized
@@ -288,6 +378,7 @@ def _workflow_order_guard_makefile_text(
             if misorder_release_converge_preflight
             else RELEASE_CONVERGE_PREFLIGHT_LINES
         ),
+        release_post_commit_finalize_lines=RELEASE_POST_COMMIT_FINALIZE_LINES,
     )
 
 
@@ -305,6 +396,8 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.vault.mkdir()
         seed_minimal_vault(self.vault)
         self._copy_support_file("ops/schemas/release-workflow-order-guard.schema.json")
+        self._copy_support_file("ops/schemas/release-workflow-order-guard-spec.schema.json")
+        self._copy_support_file("ops/policies/release-workflow-order-guard.json")
         self._write_fixed_point_policy()
         self._write_makefile()
 
@@ -340,6 +433,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def _write_workflow_order_spec(self, payload: dict[str, object]) -> None:
+        path = self.vault / "ops" / "policies" / "release-workflow-order-guard.json"
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
     def _write_makefile(
         self,
         *,
@@ -357,6 +454,85 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+
+    def test_spec_keeps_critical_release_safety_roles(self) -> None:
+        spec = _workflow_order_spec()
+        role_overrides = {
+            str(entry["role"]): str(entry["target"])
+            for entry in spec["role_overrides"]
+            if isinstance(entry, dict)
+        }
+
+        self.assertEqual(
+            role_overrides["release-closeout-post-check-finalizer-strict-dry-run"],
+            "release-closeout-post-check-finalizer-dry-run",
+        )
+        self.assertEqual(
+            _terminal_roles()["release-terminal-finality"],
+            "release-closeout-finality-verify",
+        )
+        self.assertEqual(
+            _terminal_roles()["release-source-ready"],
+            "release-source-ready-post-verify",
+        )
+        self.assertIn(
+            "release-closeout-post-check-finalizer-strict-dry-run",
+            _sequence_roles("release_terminal_finality_sequence"),
+        )
+        self.assertIn(
+            "release-source-ready-status",
+            _sequence_roles("release_source_ready_post_verify_sequence"),
+        )
+        self.assertTrue(
+            {
+                "goal-runtime-local-evidence-refresh",
+                "generated-artifact-converge",
+                "remediation-backlog",
+                "release-closeout-fixed-point",
+            }.issubset(
+                _forbidden_targets("release_source_ready_post_verify_sequence")
+            )
+        )
+
+    def test_spec_schema_rejects_empty_critical_guard_arrays(self) -> None:
+        schema = load_schema(SPEC_SCHEMA_PATH)
+
+        for key in CRITICAL_GUARD_ARRAYS:
+            with self.subTest(key=key):
+                spec = _cloned_workflow_order_spec()
+                spec[key] = []
+
+                errors = validate_with_schema(spec, schema)
+
+                self.assertIn(f"$.{key}: expected at least 1 item(s)", errors)
+
+    def test_spec_schema_rejects_unsensible_check_ids_and_targets(self) -> None:
+        schema = load_schema(SPEC_SCHEMA_PATH)
+        spec = _cloned_workflow_order_spec()
+        spec["expected_subsequences"][0]["id"] = "release terminal finality"
+        spec["terminal_checks"][0]["target"] = "release terminal finality"
+
+        errors = validate_with_schema(spec, schema)
+
+        self.assertTrue(
+            any("$.expected_subsequences[0].id" in error for error in errors),
+            errors,
+        )
+        self.assertTrue(
+            any("$.terminal_checks[0].target" in error for error in errors),
+            errors,
+        )
+
+    def test_guard_rejects_spec_with_empty_critical_guard_array(self) -> None:
+        spec = _cloned_workflow_order_spec()
+        spec["terminal_checks"] = []
+        self._write_workflow_order_spec(spec)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"invalid release workflow order spec.*\$\.terminal_checks: expected at least 1 item",
+        ):
+            build_report(self.vault, context=fixed_context())
 
     def test_guard_passes_for_current_closeout_sequence_and_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())
@@ -395,6 +571,39 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertIn("release-post-commit-finalize", {item["target"] for item in report["target_recipes"]})
         self.assertIn("release-converge-preflight", {item["target"] for item in report["target_recipes"]})
         self.assertTrue(write_report(self.vault, report).exists())
+
+    def test_check_mode_validates_live_candidate_when_canonical_report_is_missing(
+        self,
+    ) -> None:
+        check_out = "tmp/release-workflow-order-guard-check.json"
+
+        result = check_report(
+            self.vault,
+            check_out=check_out,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(result, 0)
+        self.assertTrue((self.vault / check_out).exists())
+        self.assertFalse((self.vault / "ops/reports/release-workflow-order-guard.json").exists())
+
+    def test_check_mode_passes_when_canonical_report_is_semantically_current(
+        self,
+    ) -> None:
+        write_report(self.vault, build_report(self.vault, context=fixed_context()))
+
+        result = check_report(self.vault, context=fixed_context())
+
+        self.assertEqual(result, 0)
+
+    def test_check_mode_fails_when_canonical_report_is_semantically_stale(self) -> None:
+        report = build_report(self.vault, context=fixed_context())
+        report["summary"]["check_count"] = 0
+        write_report(self.vault, report)
+
+        result = check_report(self.vault, context=fixed_context())
+
+        self.assertEqual(result, 1)
 
     def test_guard_fails_when_check_finalized_skips_initial_dry_run(self) -> None:
         self._write_makefile(misorder_check_finalized=True)
@@ -453,10 +662,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         makefile.write_text(
             makefile.read_text(encoding="utf-8").replace(
                 "\t$(MAKE) release-closeout-finality-verify\n"
-                "release-source-ready:\n",
+                "release-authority-post-ready-finality:\n",
                 "\t$(MAKE) release-closeout-finality-verify\n"
                 "\t$(MAKE) external-report-action-matrix\n"
-                "release-source-ready:\n",
+                "release-authority-post-ready-finality:\n",
             ),
             encoding="utf-8",
         )

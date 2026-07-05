@@ -1016,6 +1016,15 @@
       "replacement": "python -m ops.scripts.core.validation_check_types_runtime"
     },
     {
+      "canonical_module": "ops.scripts.core.workflow_action_pins",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make workflow-action-pins-sync"
+    },
+    {
       "canonical_module": "ops.scripts.core.workflow_dependency_planner",
       "console_scripts": [],
       "install_state": "not_installed",
