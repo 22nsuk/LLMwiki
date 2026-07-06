@@ -38,6 +38,11 @@ mode and fails if checked-in fixtures are stale. `make
 report-schema-samples-regenerate` first runs the clean fixture regeneration
 guard, then rewrites the sample fixtures.
 
+The fixture remains a committed report-contract oracle. The generator owns a
+coverage table that distinguishes self-contained sample builders from
+fixture-seeded samples so schema changes expose which payloads are regenerated
+and which are still preserved from the checked-in fixture.
+
 Run these targets when changing report schemas, schema-backed report producers,
 or fixture generation rules. After regeneration, run the relevant
 report-contract tests, normally `make test-report-contract-core` for the public
