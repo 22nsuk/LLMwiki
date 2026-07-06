@@ -25,11 +25,36 @@
     {
       "target": "release-post-commit-finalize",
       "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode snapshot --out \"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)\"",
+      "argv_equals": [
+        "$(PYTHON)",
+        "-m",
+        "ops.scripts.release.release_post_commit_finalizer",
+        "--vault",
+        "$(VAULT)",
+        "--mode",
+        "snapshot",
+        "--out",
+        "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"
+      ],
       "role": "release-post-commit-finalizer-snapshot"
     },
     {
       "target": "release-post-commit-finalize",
       "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode verify --previous \"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)\"",
+      "argv_equals": [
+        "$(PYTHON)",
+        "-m",
+        "ops.scripts.release.release_post_commit_finalizer",
+        "--vault",
+        "$(VAULT)",
+        "--mode",
+        "verify",
+        "--previous",
+        "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)",
+        "--out",
+        "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)",
+        "--fail-on-attention"
+      ],
       "role": "release-post-commit-finalizer-verify"
     }
   ],

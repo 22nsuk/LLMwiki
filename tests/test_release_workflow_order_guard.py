@@ -63,12 +63,15 @@ def _role_overrides() -> dict[str, str]:
     }
 
 
-def _recipe_command_roles() -> dict[str, dict[str, str]]:
+def _recipe_command_roles() -> dict[str, dict[str, object]]:
     spec = _workflow_order_spec()
     return {
         str(command_role["role"]): {
             "target": str(command_role["target"]),
             "raw_line_contains": str(command_role["raw_line_contains"]),
+            "argv_equals": [
+                str(arg) for arg in command_role.get("argv_equals", [])
+            ],
         }
         for command_role in spec["recipe_command_roles"]
         if isinstance(command_role, dict)
@@ -108,7 +111,7 @@ def _recipe_line_for_role(role: str) -> str:
         line = command_lines.get(role)
         if line is None:
             raise AssertionError(f"missing fixture recipe line for command role: {role}")
-        if command_role["raw_line_contains"] not in line:
+        if str(command_role["raw_line_contains"]) not in line:
             raise AssertionError(f"fixture line does not match command role: {role}")
         return f"\t{line}\n"
     return f"\t$(MAKE) {role}\n"
@@ -544,14 +547,53 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         )
         self.assertIn(
             '--out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
-            _recipe_command_roles()["release-post-commit-finalizer-snapshot"][
-                "raw_line_contains"
-            ],
+            str(
+                _recipe_command_roles()["release-post-commit-finalizer-snapshot"][
+                    "raw_line_contains"
+                ]
+            ),
         )
         self.assertIn(
             '--previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
+            str(
+                _recipe_command_roles()["release-post-commit-finalizer-verify"][
+                    "raw_line_contains"
+                ]
+            ),
+        )
+        self.assertEqual(
+            _recipe_command_roles()["release-post-commit-finalizer-snapshot"][
+                "argv_equals"
+            ],
+            [
+                "$(PYTHON)",
+                "-m",
+                "ops.scripts.release.release_post_commit_finalizer",
+                "--vault",
+                "$(VAULT)",
+                "--mode",
+                "snapshot",
+                "--out",
+                "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)",
+            ],
+        )
+        self.assertEqual(
             _recipe_command_roles()["release-post-commit-finalizer-verify"][
-                "raw_line_contains"
+                "argv_equals"
+            ],
+            [
+                "$(PYTHON)",
+                "-m",
+                "ops.scripts.release.release_post_commit_finalizer",
+                "--vault",
+                "$(VAULT)",
+                "--mode",
+                "verify",
+                "--previous",
+                "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)",
+                "--out",
+                "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)",
+                "--fail-on-attention",
             ],
         )
         self.assertEqual(
@@ -924,6 +966,43 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             check["violations"],
         )
 
+    def test_guard_fails_when_raw_command_runs_before_post_commit_snapshot(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-post-commit-finalize:\n",
+                "release-post-commit-finalize:\n"
+                '\t$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" '
+                '--stored "ops/script-output-surfaces.json" --check\n',
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        post_commit_recipe = next(
+            item
+            for item in report["target_recipes"]
+            if item["target"] == "release-post-commit-finalize"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(post_commit_recipe["invocations"][0]["role"], "raw-recipe-command")
+        self.assertIn(
+            {
+                "expected_role": "release-post-commit-finalizer-snapshot",
+                "reason": "snapshot_must_start_post_commit_finalize",
+            },
+            check["violations"],
+        )
+
     def test_guard_fails_when_post_commit_snapshot_writes_noncanonical_path(
         self,
     ) -> None:
@@ -953,6 +1032,45 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             {
                 "expected_role": "release-post-commit-finalizer-snapshot",
                 "reason": "missing_or_out_of_order",
+            },
+            check["violations"],
+        )
+
+    def test_guard_fails_when_post_commit_snapshot_output_is_overridden(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        snapshot_line = _recipe_line_for_role("release-post-commit-finalizer-snapshot")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                snapshot_line,
+                snapshot_line.replace(
+                    "\n",
+                    ' --out "tmp/wrong-release-post-commit-finalization.snapshot.json"\n',
+                ),
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        post_commit_recipe = next(
+            item
+            for item in report["target_recipes"]
+            if item["target"] == "release-post-commit-finalize"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(post_commit_recipe["invocations"][0]["role"], "raw-recipe-command")
+        self.assertIn(
+            {
+                "expected_role": "release-post-commit-finalizer-snapshot",
+                "reason": "snapshot_must_start_post_commit_finalize",
             },
             check["violations"],
         )

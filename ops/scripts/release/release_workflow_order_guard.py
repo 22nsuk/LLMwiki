@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -77,6 +78,7 @@ SOURCE_COMMAND = (
 )
 RELEASE_CONVERGE_TARGET = "release-evidence-converge"
 CHECK_FINALIZED_TARGET = "check-finalized"
+RAW_RECIPE_COMMAND_ROLE = "raw-recipe-command"
 
 
 @dataclass(frozen=True)
@@ -150,6 +152,46 @@ def _target_dependencies(makefile_text: str) -> dict[str, list[str]]:
     return dependencies
 
 
+def _recipe_argv(raw_line: str) -> list[str]:
+    try:
+        return shlex.split(raw_line.strip())
+    except ValueError:
+        return []
+
+
+def _command_role_match_index(raw_line: str, command_role: dict[str, Any]) -> int:
+    raw_line_contains = str(command_role.get("raw_line_contains", "")).strip()
+    match_index = raw_line.find(raw_line_contains) if raw_line_contains else -1
+    if match_index < 0:
+        return -1
+    argv_equals = _string_list(command_role.get("argv_equals"))
+    if argv_equals and _recipe_argv(raw_line) != argv_equals:
+        return -1
+    return match_index
+
+
+def _first_role_targets(workflow_order_spec: dict[str, Any]) -> set[str]:
+    return {
+        str(entry.get("target", "")).strip()
+        for entry in _spec_entries(workflow_order_spec, "first_role_checks")
+        if str(entry.get("target", "")).strip()
+    }
+
+
+def _raw_recipe_command_event(line_no: int, raw_line: str) -> dict[str, Any]:
+    return {
+        "line": line_no,
+        "target": RAW_RECIPE_COMMAND_ROLE,
+        "role": RAW_RECIPE_COMMAND_ROLE,
+        "raw_args": raw_line.strip(),
+    }
+
+
+def _is_ignorable_recipe_line(raw_line: str) -> bool:
+    stripped = raw_line.strip()
+    return not stripped or stripped.startswith("#")
+
+
 def _direct_recipe_invocations(
     makefile_text: str,
     target: str,
@@ -162,14 +204,14 @@ def _direct_recipe_invocations(
         for item in _spec_entries(workflow_order_spec, "recipe_command_roles")
         if str(item.get("target", "")).strip() == target
     ]
+    raw_sensitive = target in _first_role_targets(workflow_order_spec)
     for line_no, raw_line in enumerate(makefile_text.splitlines(), start=1):
         if raw_line.startswith("\t"):
             if not active:
                 continue
             recipe_events: list[tuple[int, dict[str, Any]]] = []
             for command_role in command_roles:
-                raw_line_contains = str(command_role.get("raw_line_contains", "")).strip()
-                match_index = raw_line.find(raw_line_contains) if raw_line_contains else -1
+                match_index = _command_role_match_index(raw_line, command_role)
                 if match_index < 0:
                     continue
                 role = str(command_role.get("role", "")).strip()
@@ -200,6 +242,8 @@ def _direct_recipe_invocations(
                         },
                     )
                 )
+            if raw_sensitive and not recipe_events and not _is_ignorable_recipe_line(raw_line):
+                recipe_events.append((0, _raw_recipe_command_event(line_no, raw_line)))
             for _event_index, event in sorted(recipe_events, key=lambda item: item[0]):
                 invocations.append({**event, "order": len(invocations) + 1})
             continue

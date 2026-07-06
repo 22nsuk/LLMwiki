@@ -111,6 +111,11 @@
       "items": { "$ref": "#/$defs/non_empty_string" },
       "uniqueItems": true
     },
+    "string_sequence": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/non_empty_string" }
+    },
     "ordered_non_empty_make_target_list": {
       "type": "array",
       "minItems": 1,
@@ -133,6 +138,7 @@
       "properties": {
         "target": { "$ref": "#/$defs/make_target" },
         "raw_line_contains": { "$ref": "#/$defs/non_empty_string" },
+        "argv_equals": { "$ref": "#/$defs/string_sequence" },
         "role": { "$ref": "#/$defs/make_target" }
       }
     },
