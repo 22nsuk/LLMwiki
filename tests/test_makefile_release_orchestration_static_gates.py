@@ -726,6 +726,10 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertIn("release-authority-post-ready-finality-current-or-refresh", phony_block)
         self.assertIn("release-authority-archive-candidate-gate", phony_block)
         self.assertIn("release-terminal-finality", phony_block)
+        archive_candidate_gate_recipe = _recipe_lines(
+            text,
+            "release-authority-archive-candidate-gate",
+        )
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -735,6 +739,14 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) generated-artifact-index-body",
                 "$(MAKE) archive-execution-manifest-check",
             ),
+        )
+        self.assertLess(
+            archive_candidate_gate_recipe.index("$(MAKE) external-report-action-matrix"),
+            archive_candidate_gate_recipe.index("$(MAKE) generated-artifact-index-body"),
+        )
+        self.assertLess(
+            archive_candidate_gate_recipe.index("$(MAKE) generated-artifact-index-body"),
+            archive_candidate_gate_recipe.index("$(MAKE) archive-execution-manifest-check"),
         )
         post_ready_finality_recipe = _recipe_lines(
             text,
@@ -841,8 +853,17 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\",
             ),
         )
+        settle_recipe = _recipe_lines(text, "release-authority-settle")
+        finality_or_refresh_line = (
+            "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\"
+        )
+        final_status_propagation_line = "if [ $$status -ne 0 ]; then exit $$status; fi"
+        self.assertEqual(
+            settle_recipe[settle_recipe.index(finality_or_refresh_line) + 1],
+            final_status_propagation_line,
+        )
         settle_targets = _make_invocation_targets(
-            _recipe_lines(text, "release-authority-settle")
+            settle_recipe
         )
         self.assertEqual(
             settle_targets[-1],

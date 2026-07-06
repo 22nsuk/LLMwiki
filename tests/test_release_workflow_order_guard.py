@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -23,7 +24,7 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-workflow-order-guard.sche
 SPEC_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-workflow-order-guard-spec.schema.json"
 SPEC_PATH = REPO_ROOT / "ops" / "policies" / "release-workflow-order-guard.json"
 CRITICAL_GUARD_ARRAYS = (
-    "recipe_command_roles",
+    "protected_recipes",
     "expected_subsequences",
     "terminal_checks",
     "first_role_checks",
@@ -63,34 +64,41 @@ def _role_overrides() -> dict[str, str]:
     }
 
 
-def _recipe_command_roles() -> dict[str, dict[str, str]]:
+def _protected_recipe_lines(target: str | None = None) -> dict[str, dict[str, str]]:
     spec = _workflow_order_spec()
     return {
-        str(command_role["role"]): {
-            "target": str(command_role["target"]),
-            "raw_line_contains": str(command_role["raw_line_contains"]),
+        str(line["role"]): {
+            "target": str(line["target"]),
+            "raw_line": str(line["raw_line"]),
         }
-        for command_role in spec["recipe_command_roles"]
-        if isinstance(command_role, dict)
+        for protected_recipe in spec["protected_recipes"]
+        if isinstance(protected_recipe, dict)
+        if target is None or protected_recipe.get("target") == target
+        for line in protected_recipe.get("expected_lines", [])
+        if isinstance(line, dict)
+    }
+
+
+def _first_role_checks() -> dict[str, dict[str, str]]:
+    spec = _workflow_order_spec()
+    return {
+        str(entry["id"]): {
+            "target": str(entry["target"]),
+            "role": str(entry["role"]),
+            "reason": str(entry["reason"]),
+        }
+        for entry in spec["first_role_checks"]
+        if isinstance(entry, dict)
     }
 
 
 def _recipe_line_for_role(role: str) -> str:
+    protected_line = _protected_recipe_lines().get(role)
+    if protected_line is not None:
+        return f"\t{protected_line['raw_line']}\n"
     override = _role_overrides().get(role)
     if override is not None:
         return f"\t$(MAKE) {override}\n"
-    command_role = _recipe_command_roles().get(role)
-    if command_role is not None:
-        if role != "release-post-commit-finalizer-verify":
-            raise AssertionError(f"missing fixture recipe line for command role: {role}")
-        line = (
-            '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" '
-            '--mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" '
-            '--out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention'
-        )
-        if command_role["raw_line_contains"] not in line:
-            raise AssertionError(f"fixture line does not match command role: {role}")
-        return f"\t{line}\n"
     return f"\t$(MAKE) {role}\n"
 
 
@@ -486,6 +494,26 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def _replace_post_commit_recipe(self, replacement: str) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-post-commit-finalize:\n" + RELEASE_POST_COMMIT_FINALIZE_LINES,
+                replacement,
+            ),
+            encoding="utf-8",
+        )
+
+    def _protected_post_commit_recipe_check(
+        self,
+        report: dict[str, Any],
+    ) -> dict[str, Any]:
+        return next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_protected_recipe"
+        )
+
     def test_spec_keeps_critical_release_safety_roles(self) -> None:
         spec = _workflow_order_spec()
         role_overrides = {
@@ -514,11 +542,37 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-source-ready-status",
             _sequence_roles("release_source_ready_post_verify_sequence"),
         )
+        protected_lines = _protected_recipe_lines("release-post-commit-finalize")
         self.assertEqual(
-            _recipe_command_roles()["release-post-commit-finalizer-verify"]["target"],
-            "release-post-commit-finalize",
+            list(protected_lines),
+            list(_sequence_roles("release_post_commit_finalizer_sequence")),
+        )
+        preflight_protected_lines = _protected_recipe_lines("release-converge-preflight")
+        self.assertEqual(
+            list(preflight_protected_lines),
+            list(_sequence_roles("release_converge_preflight_sequence")),
+        )
+        self.assertIn(
+            '--out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
+            protected_lines["release-post-commit-finalizer-snapshot"]["raw_line"],
+        )
+        self.assertIn(
+            '--previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
+            protected_lines["release-post-commit-finalizer-verify"]["raw_line"],
+        )
+        self.assertEqual(
+            _first_role_checks()["release_post_commit_finalizer_sequence"],
+            {
+                "target": "release-post-commit-finalize",
+                "role": "release-post-commit-finalizer-snapshot",
+                "reason": "snapshot_must_start_post_commit_finalize",
+            },
         )
         post_commit_roles = _sequence_roles("release_post_commit_finalizer_sequence")
+        self.assertLess(
+            post_commit_roles.index("release-post-commit-finalizer-snapshot"),
+            post_commit_roles.index("script-output-surfaces-check"),
+        )
         self.assertLess(
             post_commit_roles.index("artifact-freshness-check"),
             post_commit_roles.index("release-post-commit-finalizer-verify"),
@@ -602,12 +656,18 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             if item["id"] == "release_post_commit_finalizer_sequence"
         )
         self.assertEqual(post_commit_sequence["status"], "pass")
-        post_commit_budget = next(
+        protected_post_commit_recipe = next(
             item
             for item in report["checks"]
-            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+            if item["id"] == "release_post_commit_finalizer_protected_recipe"
         )
-        self.assertEqual(post_commit_budget["status"], "pass")
+        self.assertEqual(protected_post_commit_recipe["status"], "pass")
+        protected_preflight_recipe = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_converge_preflight_protected_recipe"
+        )
+        self.assertEqual(protected_preflight_recipe["status"], "pass")
         preflight_check = next(item for item in report["checks"] if item["id"] == "release_converge_preflight_sequence")
         self.assertEqual(preflight_check["status"], "pass")
         self.assertIn("release-finality-resettle", {item["target"] for item in report["target_recipes"]})
@@ -764,114 +824,214 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "unexpected_repeated_closeout_target",
         )
 
-    def test_guard_fails_when_post_commit_finalizer_reintroduces_full_refresh(
-        self,
-    ) -> None:
-        makefile = self.vault.joinpath("Makefile")
-        makefile.write_text(
-            makefile.read_text(encoding="utf-8").replace(
-                "\t$(MAKE) test-execution-summary-full-current-check\n",
-                "\t$(MAKE) test-execution-summary-full-current-or-refresh\n",
-            ),
-            encoding="utf-8",
+    def test_guard_fails_when_post_commit_protected_recipe_drifts(self) -> None:
+        canonical_recipe = (
+            "release-post-commit-finalize:\n" + RELEASE_POST_COMMIT_FINALIZE_LINES
         )
-
-        report = build_report(self.vault, context=fixed_context())
-
-        check = next(
-            item
-            for item in report["checks"]
-            if item["id"] == "release_post_commit_finalizer_repetition_budget"
-        )
-        self.assertEqual(report["status"], "fail")
-        self.assertEqual(check["status"], "fail")
-        self.assertEqual(
-            check["violations"][0]["reason"],
-            "forbidden_post_commit_target",
-        )
-
-    def test_guard_fails_when_post_commit_finalizer_repeats_writer_cluster(
-        self,
-    ) -> None:
-        makefile = self.vault.joinpath("Makefile")
-        makefile.write_text(
-            makefile.read_text(encoding="utf-8").replace(
-                "\t$(MAKE) artifact-freshness-check\n",
-                "\t$(MAKE) artifact-freshness-check\n"
-                "\t$(MAKE) artifact-freshness-check\n",
-            ),
-            encoding="utf-8",
-        )
-
-        report = build_report(self.vault, context=fixed_context())
-
-        check = next(
-            item
-            for item in report["checks"]
-            if item["id"] == "release_post_commit_finalizer_repetition_budget"
-        )
-        self.assertEqual(report["status"], "fail")
-        self.assertEqual(check["status"], "fail")
-        self.assertEqual(check["violations"][0]["target"], "artifact-freshness-check")
-        self.assertEqual(
-            check["violations"][0]["reason"],
-            "unexpected_repeated_post_commit_target",
-        )
-
-    def test_guard_fails_when_post_commit_verify_runs_before_currentness_checks(
-        self,
-    ) -> None:
-        makefile = self.vault.joinpath("Makefile")
-        freshness_line = "\t$(MAKE) artifact-freshness-check\n"
+        snapshot_line = _recipe_line_for_role("release-post-commit-finalizer-snapshot")
         verify_line = _recipe_line_for_role("release-post-commit-finalizer-verify")
-        makefile.write_text(
-            makefile.read_text(encoding="utf-8").replace(
-                freshness_line + verify_line,
-                verify_line + freshness_line,
-            ),
-            encoding="utf-8",
+        post_commit_tail = _make_recipe(
+            *_sequence_roles("release_post_commit_finalizer_sequence")[1:]
         )
-
-        report = build_report(self.vault, context=fixed_context())
-
-        check = next(
-            item
-            for item in report["checks"]
-            if item["id"] == "release_post_commit_finalizer_sequence"
-        )
-        self.assertEqual(report["status"], "fail")
-        self.assertEqual(check["status"], "fail")
-        self.assertEqual(
-            check["violations"][0]["expected_role"],
-            "release-post-commit-finalizer-verify",
-        )
-
-    def test_guard_fails_when_post_commit_finalizer_calls_authority_cleanup(
-        self,
-    ) -> None:
-        makefile = self.vault.joinpath("Makefile")
-        makefile.write_text(
-            makefile.read_text(encoding="utf-8").replace(
-                "release-post-commit-finalize:\n",
+        cases = [
+            (
+                "extra target before snapshot",
                 "release-post-commit-finalize:\n"
-                "\t$(MAKE) release-auto-promotion-ready-invalidate\n",
+                "\t$(MAKE) release-check-all-surfaces\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}",
+                {"protected_recipe_line_count_mismatch", "protected_recipe_line_mismatch"},
             ),
-            encoding="utf-8",
-        )
+            (
+                "raw command before snapshot",
+                "release-post-commit-finalize:\n"
+                '\t$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" '
+                '--stored "ops/script-output-surfaces.json" --check\n'
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}",
+                {"protected_recipe_line_count_mismatch", "protected_recipe_line_mismatch"},
+            ),
+            (
+                "blank inside recipe",
+                canonical_recipe.replace(snapshot_line, snapshot_line + "\n"),
+                {"protected_recipe_line_count_mismatch", "protected_recipe_line_mismatch"},
+            ),
+            (
+                "comment inside recipe",
+                canonical_recipe.replace(snapshot_line, snapshot_line + "# comment\n"),
+                {"protected_recipe_line_count_mismatch", "protected_recipe_line_mismatch"},
+            ),
+            (
+                "command substitution in make args",
+                canonical_recipe.replace(
+                    "\t$(MAKE) script-output-surfaces-check\n",
+                    "\t$(MAKE) script-output-surfaces-check "
+                    'FOO=$$(rm "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)")\n',
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "make shell function in make args",
+                canonical_recipe.replace(
+                    "\t$(MAKE) script-output-surfaces-check\n",
+                    "\t$(MAKE) script-output-surfaces-check "
+                    'FOO=$(shell rm "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)")\n',
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "backtick substitution in make args",
+                canonical_recipe.replace(
+                    "\t$(MAKE) script-output-surfaces-check\n",
+                    "\t$(MAKE) script-output-surfaces-check "
+                    'FOO=`rm "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"`\n',
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "continued make recipe fragment",
+                canonical_recipe.replace(
+                    "\t$(MAKE) script-output-surfaces-check\n",
+                    "\t$(MAKE) script-output-surfaces-check \\\n"
+                    '; rm "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"\n',
+                ),
+                {"protected_recipe_line_count_mismatch", "protected_recipe_line_mismatch"},
+            ),
+            (
+                "lowercase make variable",
+                canonical_recipe.replace(
+                    "\t$(MAKE) script-output-surfaces-check\n",
+                    "\t$(make) script-output-surfaces-check\n",
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "redirection on make invocation",
+                canonical_recipe.replace(
+                    "\t$(MAKE) script-output-surfaces-check\n",
+                    "\t$(MAKE) script-output-surfaces-check "
+                    '> "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"\n',
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "inline header recipe",
+                'release-post-commit-finalize: ; rm "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"\n',
+                {
+                    "protected_recipe_inline_recipe_forbidden",
+                    "protected_recipe_line_count_mismatch",
+                },
+            ),
+            (
+                "prerequisite on protected recipe",
+                "release-post-commit-finalize: release-post-commit-prerequisite\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}"
+                "release-post-commit-prerequisite:\n"
+                "\t@true\n",
+                {"protected_recipe_prerequisites_forbidden"},
+            ),
+            (
+                "duplicate protected recipe",
+                "release-post-commit-finalize:\n"
+                f"{snapshot_line}"
+                "release-post-commit-finalize:\n"
+                f"{post_commit_tail}",
+                {"protected_recipe_definition_count_mismatch"},
+            ),
+            (
+                "empty inline duplicate override",
+                f"{canonical_recipe}release-post-commit-finalize: ;\n",
+                {
+                    "protected_recipe_definition_count_mismatch",
+                    "protected_recipe_inline_recipe_forbidden",
+                },
+            ),
+            (
+                "double-colon protected recipe",
+                "release-post-commit-finalize::\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}",
+                {"protected_recipe_double_colon_rule"},
+            ),
+            (
+                "mixed single and double colon protected recipe",
+                f"{canonical_recipe}release-post-commit-finalize::\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}",
+                {
+                    "protected_recipe_definition_count_mismatch",
+                    "protected_recipe_double_colon_rule",
+                },
+            ),
+            (
+                "multi-target protected recipe",
+                "alias release-post-commit-finalize:\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}",
+                {"protected_recipe_multi_target_rule"},
+            ),
+            (
+                "target-specific assignment",
+                "release-post-commit-finalize: PYTHON := python3\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}",
+                {"protected_recipe_prerequisites_forbidden"},
+            ),
+            (
+                "snapshot writes noncanonical path",
+                canonical_recipe.replace(
+                    '"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
+                    '"tmp/wrong-release-post-commit-finalization.snapshot.json"',
+                    1,
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "snapshot output overridden",
+                canonical_recipe.replace(
+                    snapshot_line,
+                    snapshot_line.replace(
+                        "\n",
+                        ' --out "tmp/wrong-release-post-commit-finalization.snapshot.json"\n',
+                    ),
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "verify before freshness check",
+                canonical_recipe.replace(
+                    "\t$(MAKE) artifact-freshness-check\n" + verify_line,
+                    verify_line + "\t$(MAKE) artifact-freshness-check\n",
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "verify reads noncanonical snapshot",
+                canonical_recipe.replace(
+                    verify_line,
+                    verify_line.replace(
+                        '"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
+                        '"tmp/wrong-release-post-commit-finalization.snapshot.json"',
+                    ),
+                ),
+                {"protected_recipe_line_mismatch"},
+            ),
+            (
+                "post-finality raw command after separator",
+                canonical_recipe
+                + "\n"
+                + '\t$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" '
+                + '--stored "ops/script-output-surfaces.json" --check\n',
+                {"protected_recipe_line_count_mismatch"},
+            ),
+        ]
 
-        report = build_report(self.vault, context=fixed_context())
+        for name, replacement, expected_reasons in cases:
+            with self.subTest(name=name):
+                self._write_makefile()
+                self._replace_post_commit_recipe(replacement)
 
-        check = next(
-            item
-            for item in report["checks"]
-            if item["id"] == "release_post_commit_finalizer_repetition_budget"
-        )
-        self.assertEqual(report["status"], "fail")
-        self.assertEqual(check["status"], "fail")
-        self.assertEqual(
-            check["violations"][0]["reason"],
-            "forbidden_post_commit_target",
-        )
+                report = build_report(self.vault, context=fixed_context())
+
+                check = self._protected_post_commit_recipe_check(report)
+                reasons = {str(item["reason"]) for item in check["violations"]}
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(check["status"], "fail")
+                self.assertTrue(expected_reasons <= reasons, check)
 
     def test_guard_fails_when_release_source_ready_status_is_not_terminal(self) -> None:
         self._write_makefile(misorder_release_source_ready=True)
@@ -926,6 +1086,39 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 violation.get("reason") == "script_output_surface_refresh_must_start_preflight"
                 for violation in check["violations"]
             )
+        )
+
+    def test_guard_fails_when_release_converge_preflight_runs_raw_before_refresh(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-converge-preflight:\n",
+                "release-converge-preflight:\n"
+                '\t$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" '
+                '--stored "ops/script-output-surfaces.json" --check\n',
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_converge_preflight_protected_recipe"
+        )
+        reasons = {str(item["reason"]) for item in check["violations"]}
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(
+            {
+                "protected_recipe_line_count_mismatch",
+                "protected_recipe_line_mismatch",
+            }
+            <= reasons,
+            check,
         )
 
 
