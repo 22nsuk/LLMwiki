@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import shlex
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,7 +30,6 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         validate_or_raise,
     )
     from ops.scripts.core.workflow_dependency_planner import (
-        MAKE_RECIPE_RE,
         TARGET_RE,
         _first_make_target,
         build_report as build_workflow_dependency_report,
@@ -58,7 +57,6 @@ else:
         validate_or_raise,
     )
     from ops.scripts.core.workflow_dependency_planner import (
-        MAKE_RECIPE_RE,
         TARGET_RE,
         _first_make_target,
         build_report as build_workflow_dependency_report,
@@ -78,7 +76,7 @@ SOURCE_COMMAND = (
 )
 RELEASE_CONVERGE_TARGET = "release-evidence-converge"
 CHECK_FINALIZED_TARGET = "check-finalized"
-RAW_RECIPE_COMMAND_ROLE = "raw-recipe-command"
+MAKE_RECIPE_RE = re.compile(r"\$\(MAKE\)\s+(?P<args>[^\n;&|]+)")
 
 
 @dataclass(frozen=True)
@@ -95,6 +93,7 @@ class _WorkflowOrderInputs:
     planner_report: dict[str, Any]
     rule_kinds_by_target: dict[str, set[str]]
     invocations_by_target: dict[str, list[dict[str, Any]]]
+    protected_recipe_observations: dict[str, _ProtectedRecipeObservation]
 
 
 @dataclass(frozen=True)
@@ -104,6 +103,27 @@ class _TargetRule:
     inline_recipe: str
     has_inline_recipe: bool
     is_double_colon: bool
+
+
+@dataclass
+class _RecipeDefinition:
+    line: int
+    rule: _TargetRule
+    body_lines: list[tuple[int, str]]
+
+
+@dataclass(frozen=True)
+class _ProtectedExpectedRecipeLine:
+    role: str
+    target: str
+    raw_line: str
+
+
+@dataclass(frozen=True)
+class _ProtectedRecipeObservation:
+    expected_lines: list[_ProtectedExpectedRecipeLine]
+    invocations: list[dict[str, Any]]
+    violations: list[dict[str, Any]]
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -194,118 +214,17 @@ def _target_rule_kinds(makefile_text: str) -> dict[str, set[str]]:
     return rule_kinds
 
 
-def _recipe_argv(raw_line: str) -> list[str]:
-    try:
-        return shlex.split(raw_line.strip())
-    except ValueError:
-        return []
-
-
-def _command_role_match(raw_line: str, command_role: dict[str, Any]) -> tuple[int, int] | None:
-    raw_line_contains = str(command_role.get("raw_line_contains", "")).strip()
-    match_index = raw_line.find(raw_line_contains) if raw_line_contains else -1
-    if match_index < 0:
-        return None
-    argv_equals = _string_list(command_role.get("argv_equals"))
-    if not argv_equals:
-        return match_index, match_index + len(raw_line_contains)
-    stripped = raw_line.strip()
-    if _recipe_argv(stripped) != argv_equals:
-        return None
-    start = raw_line.find(stripped)
-    return start, start + len(stripped)
-
-
-def _is_ignorable_recipe_line(raw_line: str) -> bool:
-    stripped = raw_line.strip()
-    return not stripped or stripped.startswith("#")
-
-
-def _first_unmodelled_recipe_fragment_index(
-    raw_line: str,
-    spans: list[tuple[int, int]],
-) -> int | None:
-    if _is_ignorable_recipe_line(raw_line):
-        return None
-    covered = [False] * len(raw_line)
-    for start, end in spans:
-        for index in range(max(start, 0), min(end, len(covered))):
-            covered[index] = True
-    for index, char in enumerate(raw_line):
-        if covered[index]:
-            continue
-        if char.isspace() or char in ";|&@+-":
-            continue
-        return index
-    return None
-
-
-def _make_command_segment(raw_args: str) -> tuple[str, int]:
-    redirection_indexes = [
-        index for index, char in enumerate(raw_args) if char in "<>"
-    ]
-    if not redirection_indexes:
-        return raw_args.strip(), len(raw_args)
-    redirection_index = min(redirection_indexes)
-    return raw_args[:redirection_index].strip(), redirection_index
-
-
-def _first_role_targets(workflow_order_spec: dict[str, Any]) -> set[str]:
-    return {
-        str(entry.get("target", "")).strip()
-        for entry in _spec_entries(workflow_order_spec, "first_role_checks")
-        if str(entry.get("target", "")).strip()
-    }
-
-
-def _raw_recipe_command_event(line_no: int, raw_line: str) -> dict[str, Any]:
-    return {
-        "line": line_no,
-        "target": RAW_RECIPE_COMMAND_ROLE,
-        "role": RAW_RECIPE_COMMAND_ROLE,
-        "raw_args": raw_line.strip(),
-    }
-
-
 def _recipe_line_events(
     raw_line: str,
     line_no: int,
-    command_roles: list[dict[str, Any]],
     workflow_order_spec: dict[str, Any],
-    *,
-    observe_raw_recipe_commands: bool,
 ) -> list[dict[str, Any]]:
     recipe_events: list[tuple[int, dict[str, Any]]] = []
-    modelled_spans: list[tuple[int, int]] = []
-    command_only_roles = {
-        str(command_role.get("role", "")).strip()
-        for command_role in command_roles
-        if str(command_role.get("role", "")).strip()
-    }
-    for command_role in command_roles:
-        match = _command_role_match(raw_line, command_role)
-        if match is None:
-            continue
-        start, end = match
-        role = str(command_role.get("role", "")).strip()
-        modelled_spans.append((start, end))
-        recipe_events.append(
-            (
-                start,
-                {
-                    "line": line_no,
-                    "target": role,
-                    "role": role,
-                    "raw_args": raw_line.strip(),
-                },
-            )
-        )
     for make_match in MAKE_RECIPE_RE.finditer(raw_line):
-        raw_args, raw_args_span_len = _make_command_segment(make_match.group("args"))
+        raw_args = make_match.group("args").strip()
         make_target = _first_make_target(raw_args.split())
-        if make_target is None or make_target in command_only_roles:
+        if make_target is None:
             continue
-        modelled_spans.append((make_match.start(), make_match.start("args") + raw_args_span_len))
         recipe_events.append(
             (
                 make_match.start(),
@@ -317,27 +236,226 @@ def _recipe_line_events(
                 },
             )
         )
-    if observe_raw_recipe_commands:
-        raw_index = _first_unmodelled_recipe_fragment_index(raw_line, modelled_spans)
-        if raw_index is not None:
-            recipe_events.append((raw_index, _raw_recipe_command_event(line_no, raw_line)))
     return [event for _event_index, event in sorted(recipe_events, key=lambda item: item[0])]
+
+
+def _protected_recipe_entries(workflow_order_spec: dict[str, Any]) -> list[dict[str, Any]]:
+    return _spec_entries(workflow_order_spec, "protected_recipes")
+
+
+def _protected_recipe_targets(workflow_order_spec: dict[str, Any]) -> set[str]:
+    return {
+        str(entry.get("target", "")).strip()
+        for entry in _protected_recipe_entries(workflow_order_spec)
+        if str(entry.get("target", "")).strip()
+    }
+
+
+def _protected_expected_lines(entry: dict[str, Any]) -> list[_ProtectedExpectedRecipeLine]:
+    expected_lines: list[_ProtectedExpectedRecipeLine] = []
+    for line_entry in entry.get("expected_lines", []):
+        if not isinstance(line_entry, dict):
+            continue
+        role = str(line_entry.get("role", "")).strip()
+        target = str(line_entry.get("target", role)).strip() or role
+        raw_line = str(line_entry.get("raw_line", "")).strip()
+        if role and target and raw_line:
+            expected_lines.append(
+                _ProtectedExpectedRecipeLine(
+                    role=role,
+                    target=target,
+                    raw_line=raw_line,
+                )
+            )
+    return expected_lines
+
+
+def _recipe_definitions(makefile_text: str, target: str) -> list[_RecipeDefinition]:
+    lines = makefile_text.splitlines()
+    definitions: list[_RecipeDefinition] = []
+    index = 0
+    while index < len(lines):
+        raw_line = lines[index]
+        if raw_line.startswith("\t"):
+            index += 1
+            continue
+        target_rule = _target_rule(raw_line)
+        if target_rule is None or target not in target_rule.targets:
+            index += 1
+            continue
+
+        rule_line = index + 1
+        body_lines: list[tuple[int, str]] = []
+        index += 1
+        while index < len(lines):
+            next_line = lines[index]
+            if not next_line.startswith("\t") and _target_rule(next_line) is not None:
+                break
+            body_lines.append((index + 1, next_line))
+            index += 1
+
+        while body_lines and not body_lines[-1][1].strip():
+            body_lines.pop()
+        definitions.append(
+            _RecipeDefinition(
+                line=rule_line,
+                rule=target_rule,
+                body_lines=body_lines,
+            )
+        )
+    return definitions
+
+
+def _protected_recipe_invocation(
+    line_no: int,
+    expected_line: _ProtectedExpectedRecipeLine,
+) -> dict[str, Any]:
+    return {
+        "line": line_no,
+        "target": expected_line.target,
+        "role": expected_line.role,
+        "raw_args": expected_line.raw_line,
+    }
+
+
+def _observe_protected_recipe(
+    makefile_text: str,
+    entry: dict[str, Any],
+) -> _ProtectedRecipeObservation:
+    target = str(entry["target"])
+    expected_lines = _protected_expected_lines(entry)
+    definitions = _recipe_definitions(makefile_text, target)
+    violations: list[dict[str, Any]] = []
+
+    if len(definitions) != 1:
+        violations.append(
+            {
+                "target": target,
+                "expected_count": 1,
+                "observed_count": len(definitions),
+                "reason": "protected_recipe_definition_count_mismatch",
+            }
+        )
+
+    definition = definitions[0] if definitions else None
+    if definition is None:
+        return _ProtectedRecipeObservation(
+            expected_lines=expected_lines,
+            invocations=[],
+            violations=violations,
+        )
+
+    for recipe_definition in definitions:
+        if recipe_definition.rule.targets != {target}:
+            violations.append(
+                {
+                    "target": target,
+                    "line": recipe_definition.line,
+                    "reason": "protected_recipe_multi_target_rule",
+                }
+            )
+        if recipe_definition.rule.is_double_colon:
+            violations.append(
+                {
+                    "target": target,
+                    "line": recipe_definition.line,
+                    "reason": "protected_recipe_double_colon_rule",
+                }
+            )
+        if recipe_definition.rule.deps:
+            violations.append(
+                {
+                    "target": target,
+                    "line": recipe_definition.line,
+                    "reason": "protected_recipe_prerequisites_forbidden",
+                }
+            )
+        if recipe_definition.rule.has_inline_recipe:
+            violations.append(
+                {
+                    "target": target,
+                    "line": recipe_definition.line,
+                    "reason": "protected_recipe_inline_recipe_forbidden",
+                }
+            )
+
+    body_lines = definition.body_lines
+    if len(body_lines) != len(expected_lines):
+        violations.append(
+            {
+                "target": target,
+                "expected_count": len(expected_lines),
+                "observed_count": len(body_lines),
+                "reason": "protected_recipe_line_count_mismatch",
+            }
+        )
+
+    invocations: list[dict[str, Any]] = []
+    for index, expected_line in enumerate(expected_lines):
+        if index >= len(body_lines):
+            violations.append(
+                {
+                    "target": target,
+                    "expected_role": expected_line.role,
+                    "expected_line": expected_line.raw_line,
+                    "reason": "protected_recipe_line_missing",
+                }
+            )
+            continue
+
+        line_no, raw_line = body_lines[index]
+        expected_physical_line = f"\t{expected_line.raw_line}"
+        if raw_line != expected_physical_line:
+            violations.append(
+                {
+                    "target": target,
+                    "line": line_no,
+                    "expected_role": expected_line.role,
+                    "expected_line": expected_line.raw_line,
+                    "observed_line": raw_line.strip(),
+                    "reason": "protected_recipe_line_mismatch",
+                }
+            )
+            continue
+        invocations.append(_protected_recipe_invocation(line_no, expected_line))
+
+    for line_no, raw_line in body_lines[len(expected_lines) :]:
+        violations.append(
+            {
+                "target": target,
+                "line": line_no,
+                "observed_line": raw_line.strip(),
+                "reason": "protected_recipe_unexpected_line",
+            }
+        )
+
+    return _ProtectedRecipeObservation(
+        expected_lines=expected_lines,
+        invocations=[
+            {**invocation, "order": order}
+            for order, invocation in enumerate(invocations, start=1)
+        ],
+        violations=violations,
+    )
+
+
+def _protected_recipe_observations(
+    makefile_text: str,
+    workflow_order_spec: dict[str, Any],
+) -> dict[str, _ProtectedRecipeObservation]:
+    return {
+        str(entry["target"]): _observe_protected_recipe(makefile_text, entry)
+        for entry in _protected_recipe_entries(workflow_order_spec)
+    }
 
 
 def _direct_recipe_invocations(
     makefile_text: str,
     target: str,
     workflow_order_spec: dict[str, Any],
-    *,
-    observe_raw_recipe_commands: bool = False,
 ) -> list[dict[str, Any]]:
     active = False
     invocations: list[dict[str, Any]] = []
-    command_roles = [
-        item
-        for item in _spec_entries(workflow_order_spec, "recipe_command_roles")
-        if str(item.get("target", "")).strip() == target
-    ]
     current_definition_active = False
     current_definition_has_recipe = False
     current_definition_is_double_colon = False
@@ -370,9 +488,7 @@ def _direct_recipe_invocations(
                 _recipe_line_events(
                     raw_line,
                     line_no,
-                    command_roles,
                     workflow_order_spec,
-                    observe_raw_recipe_commands=observe_raw_recipe_commands,
                 )
             )
             continue
@@ -393,9 +509,7 @@ def _direct_recipe_invocations(
                     _recipe_line_events(
                         f"\t{target_rule.inline_recipe}",
                         line_no,
-                        command_roles,
                         workflow_order_spec,
-                        observe_raw_recipe_commands=observe_raw_recipe_commands,
                     )
                 )
     close_current_definition()
@@ -415,7 +529,6 @@ def _recipe_invocations(
     workflow_order_spec: dict[str, Any],
 ) -> list[dict[str, Any]]:
     dependencies = _target_dependencies(makefile_text)
-    observe_raw_recipe_commands = target in _first_role_targets(workflow_order_spec)
     visited: set[str] = set()
     invocations: list[dict[str, Any]] = []
 
@@ -429,7 +542,6 @@ def _recipe_invocations(
             makefile_text,
             active_target,
             workflow_order_spec,
-            observe_raw_recipe_commands=observe_raw_recipe_commands,
         ):
             invocations.append({**invocation, "order": len(invocations) + 1})
 
@@ -679,6 +791,38 @@ def _check_repetition_budget(
     )
 
 
+def _check_protected_recipe(
+    entry: dict[str, Any],
+    observations: dict[str, _ProtectedRecipeObservation],
+) -> dict[str, Any]:
+    target = str(entry["target"])
+    observation = observations.get(target)
+    expected_order = [
+        expected_line.role
+        for expected_line in _protected_expected_lines(entry)
+    ]
+    if observation is None:
+        return _check(
+            str(entry["id"]),
+            expected_order=expected_order,
+            observed_order=[],
+            violations=[
+                {
+                    "target": target,
+                    "reason": "protected_recipe_observation_missing",
+                }
+            ],
+            details=str(entry.get("details", "")),
+        )
+    return _check(
+        str(entry["id"]),
+        expected_order=expected_order,
+        observed_order=[str(item["role"]) for item in observation.invocations],
+        violations=observation.violations,
+        details=str(entry.get("details", "")),
+    )
+
+
 def _fixed_point_writer_specs(policy: dict[str, Any]) -> list[dict[str, Any]]:
     writers = policy.get("writers")
     if not isinstance(writers, list):
@@ -905,8 +1049,17 @@ def _workflow_order_inputs(
     fixed_point_policy = _load_json(resolved_vault / FIXED_POINT_POLICY_PATH)
     writers = _fixed_point_writer_specs(fixed_point_policy)
     rule_kinds_by_target = _target_rule_kinds(makefile_text)
+    protected_recipe_observations = _protected_recipe_observations(
+        makefile_text,
+        workflow_order_spec,
+    )
+    protected_recipe_targets = _protected_recipe_targets(workflow_order_spec)
     invocations_by_target = {
-        target: _recipe_invocations(makefile_text, target, workflow_order_spec)
+        target: (
+            protected_recipe_observations[target].invocations
+            if target in protected_recipe_targets
+            else _recipe_invocations(makefile_text, target, workflow_order_spec)
+        )
         for target in _string_list(workflow_order_spec.get("target_recipe_order"))
     }
     planner_report = build_workflow_dependency_report(
@@ -928,6 +1081,7 @@ def _workflow_order_inputs(
         planner_report=planner_report,
         rule_kinds_by_target=rule_kinds_by_target,
         invocations_by_target=invocations_by_target,
+        protected_recipe_observations=protected_recipe_observations,
     )
 
 
@@ -935,6 +1089,9 @@ def _release_workflow_order_checks(inputs: _WorkflowOrderInputs) -> list[dict[st
     invocations = inputs.invocations_by_target
     checks: list[dict[str, Any]] = []
     checks_by_id: dict[str, dict[str, Any]] = {}
+    for entry in _protected_recipe_entries(inputs.workflow_order_spec):
+        checks.append(_check_protected_recipe(entry, inputs.protected_recipe_observations))
+
     for entry in _spec_entries(inputs.workflow_order_spec, "expected_subsequences"):
         check = _check_spec_subsequence(entry, invocations)
         checks.append(check)

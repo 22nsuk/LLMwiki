@@ -8,7 +8,7 @@
     "version",
     "target_recipe_order",
     "role_overrides",
-    "recipe_command_roles",
+    "protected_recipes",
     "expected_subsequences",
     "terminal_checks",
     "first_role_checks",
@@ -30,10 +30,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/role_override" }
     },
-    "recipe_command_roles": {
+    "protected_recipes": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/recipe_command_role" }
+      "items": { "$ref": "#/$defs/protected_recipe" }
     },
     "expected_subsequences": {
       "type": "array",
@@ -111,11 +111,6 @@
       "items": { "$ref": "#/$defs/non_empty_string" },
       "uniqueItems": true
     },
-    "string_sequence": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "#/$defs/non_empty_string" }
-    },
     "ordered_non_empty_make_target_list": {
       "type": "array",
       "minItems": 1,
@@ -131,15 +126,29 @@
         "role": { "$ref": "#/$defs/make_target" }
       }
     },
-    "recipe_command_role": {
+    "protected_recipe": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["target", "raw_line_contains", "role"],
+      "required": ["id", "target", "expected_lines", "details"],
       "properties": {
+        "id": { "$ref": "#/$defs/check_id" },
         "target": { "$ref": "#/$defs/make_target" },
-        "raw_line_contains": { "$ref": "#/$defs/non_empty_string" },
-        "argv_equals": { "$ref": "#/$defs/string_sequence" },
-        "role": { "$ref": "#/$defs/make_target" }
+        "expected_lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/protected_recipe_line" }
+        },
+        "details": { "type": "string" }
+      }
+    },
+    "protected_recipe_line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "target", "raw_line"],
+      "properties": {
+        "role": { "$ref": "#/$defs/make_target" },
+        "target": { "$ref": "#/$defs/make_target" },
+        "raw_line": { "$ref": "#/$defs/non_empty_string" }
       }
     },
     "expected_subsequence": {

@@ -21,41 +21,90 @@
       "role": "release-closeout-post-check-finalizer-strict-dry-run"
     }
   ],
-  "recipe_command_roles": [
+  "protected_recipes": [
     {
+      "id": "release_post_commit_finalizer_protected_recipe",
       "target": "release-post-commit-finalize",
-      "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode snapshot --out \"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)\"",
-      "argv_equals": [
-        "$(PYTHON)",
-        "-m",
-        "ops.scripts.release.release_post_commit_finalizer",
-        "--vault",
-        "$(VAULT)",
-        "--mode",
-        "snapshot",
-        "--out",
-        "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"
+      "expected_lines": [
+        {
+          "role": "release-post-commit-finalizer-snapshot",
+          "target": "release-post-commit-finalizer-snapshot",
+          "raw_line": "$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode snapshot --out \"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)\""
+        },
+        {
+          "role": "script-output-surfaces-check",
+          "target": "script-output-surfaces-check",
+          "raw_line": "$(MAKE) script-output-surfaces-check"
+        },
+        {
+          "role": "release-smoke-fast-current-check",
+          "target": "release-smoke-fast-current-check",
+          "raw_line": "$(MAKE) release-smoke-fast-current-check"
+        },
+        {
+          "role": "test-execution-summary-current-check",
+          "target": "test-execution-summary-current-check",
+          "raw_line": "$(MAKE) test-execution-summary-current-check"
+        },
+        {
+          "role": "test-execution-summary-full-current-check",
+          "target": "test-execution-summary-full-current-check",
+          "raw_line": "$(MAKE) test-execution-summary-full-current-check"
+        },
+        {
+          "role": "sync-public-policy-check",
+          "target": "sync-public-policy-check",
+          "raw_line": "$(MAKE) sync-public-policy-check"
+        },
+        {
+          "role": "public-check-summary-current-check",
+          "target": "public-check-summary-current-check",
+          "raw_line": "$(MAKE) public-check-summary-current-check"
+        },
+        {
+          "role": "artifact-freshness-check",
+          "target": "artifact-freshness-check",
+          "raw_line": "$(MAKE) artifact-freshness-check"
+        },
+        {
+          "role": "release-post-commit-finalizer-verify",
+          "target": "release-post-commit-finalizer-verify",
+          "raw_line": "$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode verify --previous \"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)\" --out \"$(RELEASE_POST_COMMIT_FINALIZATION_OUT)\" --fail-on-attention"
+        },
+        {
+          "role": "release-closeout-finality-verify",
+          "target": "release-closeout-finality-verify",
+          "raw_line": "$(MAKE) release-closeout-finality-verify"
+        }
       ],
-      "role": "release-post-commit-finalizer-snapshot"
+      "details": "release-post-commit-finalize is protected as one exact physical recipe: no prerequisites, inline recipe, duplicate rule, double-colon form, continuation, raw shell fragment, command substitution, or extra Make arguments."
     },
     {
-      "target": "release-post-commit-finalize",
-      "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode verify --previous \"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)\"",
-      "argv_equals": [
-        "$(PYTHON)",
-        "-m",
-        "ops.scripts.release.release_post_commit_finalizer",
-        "--vault",
-        "$(VAULT)",
-        "--mode",
-        "verify",
-        "--previous",
-        "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)",
-        "--out",
-        "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)",
-        "--fail-on-attention"
+      "id": "release_converge_preflight_protected_recipe",
+      "target": "release-converge-preflight",
+      "expected_lines": [
+        {
+          "role": "generated-artifact-script-output",
+          "target": "generated-artifact-script-output",
+          "raw_line": "$(MAKE) generated-artifact-script-output"
+        },
+        {
+          "role": "report-schema-samples-regenerate",
+          "target": "report-schema-samples-regenerate",
+          "raw_line": "$(MAKE) report-schema-samples-regenerate"
+        },
+        {
+          "role": "goal-runtime-local-evidence-refresh",
+          "target": "goal-runtime-local-evidence-refresh",
+          "raw_line": "$(MAKE) goal-runtime-local-evidence-refresh"
+        },
+        {
+          "role": "test-execution-summary-report-contract-refresh-no-smoke",
+          "target": "test-execution-summary-report-contract-refresh-no-smoke",
+          "raw_line": "$(MAKE) test-execution-summary-report-contract-refresh-no-smoke"
+        }
       ],
-      "role": "release-post-commit-finalizer-verify"
+      "details": "release-converge-preflight is protected as one exact physical recipe so no raw or unmodelled work can run before script-output surfaces refresh."
     }
   ],
   "expected_subsequences": [
@@ -296,30 +345,6 @@
       ],
       "violation_reason": "unexpected_repeated_closeout_target",
       "details": "Repeated release evidence converge refresh targets must stay explicit and bounded. Fixed-point owns iterative convergence; new repeated Make targets need an intentional contract update."
-    },
-    {
-      "id": "release_post_commit_finalizer_repetition_budget",
-      "target": "release-post-commit-finalize",
-      "allowed_repeated_targets": [],
-      "forbidden_targets": [
-        "release-auto-promotion-ready-invalidate",
-        "release-authority-settle",
-        "release-authority-sealed-preflight",
-        "release-evidence-converge",
-        "release-evidence-dashboard-report",
-        "release-clean-blocker-ledger",
-        "generated-artifact-converge",
-        "generated-artifact-script-output",
-        "release-finality-resettle",
-        "raw-recipe-command",
-        "test-execution-summary-full-current-or-refresh",
-        "test-execution-summary-full-refresh",
-        "test-execution-summary-current-or-refresh"
-      ],
-      "violation_reason": "unexpected_repeated_post_commit_target",
-      "forbidden_violation_reason": "forbidden_post_commit_target",
-      "expected_order_label": "each post-commit Make target at most once",
-      "details": "Post-commit finalization must not reintroduce an outer writer loop, full-suite refresh, or staged release-authority cleanup. Fixed-point owns digest iteration and staged authority lanes own their own refreshes."
     }
   ],
   "forbidden_target_checks": [
