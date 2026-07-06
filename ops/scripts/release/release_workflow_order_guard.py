@@ -196,6 +196,8 @@ def _direct_recipe_invocations(
     makefile_text: str,
     target: str,
     workflow_order_spec: dict[str, Any],
+    *,
+    observe_raw_recipe_commands: bool = False,
 ) -> list[dict[str, Any]]:
     active = False
     invocations: list[dict[str, Any]] = []
@@ -204,7 +206,6 @@ def _direct_recipe_invocations(
         for item in _spec_entries(workflow_order_spec, "recipe_command_roles")
         if str(item.get("target", "")).strip() == target
     ]
-    raw_sensitive = target in _first_role_targets(workflow_order_spec)
     for line_no, raw_line in enumerate(makefile_text.splitlines(), start=1):
         if raw_line.startswith("\t"):
             if not active:
@@ -242,7 +243,11 @@ def _direct_recipe_invocations(
                         },
                     )
                 )
-            if raw_sensitive and not recipe_events and not _is_ignorable_recipe_line(raw_line):
+            if (
+                observe_raw_recipe_commands
+                and not recipe_events
+                and not _is_ignorable_recipe_line(raw_line)
+            ):
                 recipe_events.append((0, _raw_recipe_command_event(line_no, raw_line)))
             for _event_index, event in sorted(recipe_events, key=lambda item: item[0]):
                 invocations.append({**event, "order": len(invocations) + 1})
@@ -262,6 +267,7 @@ def _recipe_invocations(
     workflow_order_spec: dict[str, Any],
 ) -> list[dict[str, Any]]:
     dependencies = _target_dependencies(makefile_text)
+    observe_raw_recipe_commands = target in _first_role_targets(workflow_order_spec)
     visited: set[str] = set()
     invocations: list[dict[str, Any]] = []
 
@@ -275,6 +281,7 @@ def _recipe_invocations(
             makefile_text,
             active_target,
             workflow_order_spec,
+            observe_raw_recipe_commands=observe_raw_recipe_commands,
         ):
             invocations.append({**invocation, "order": len(invocations) + 1})
 

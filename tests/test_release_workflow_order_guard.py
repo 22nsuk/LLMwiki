@@ -132,6 +132,13 @@ def _forbidden_targets(check_id: str) -> set[str]:
     raise AssertionError(f"missing forbidden target check: {check_id}")
 
 
+def _repetition_forbidden_targets(check_id: str) -> set[str]:
+    for entry in _workflow_order_spec()["repetition_budgets"]:
+        if isinstance(entry, dict) and entry.get("id") == check_id:
+            return {str(target) for target in entry.get("forbidden_targets", [])}
+    raise AssertionError(f"missing repetition budget: {check_id}")
+
+
 CHECK_FINALIZED_TARGETS = _sequence_roles("check_finalized_post_check_sequence")
 CHECK_FINALIZED_LINES = _make_recipe(
     "auto-improve-readiness-report-body",
@@ -627,6 +634,12 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 _forbidden_targets("release_source_ready_post_verify_sequence")
             )
         )
+        self.assertIn(
+            "raw-recipe-command",
+            _repetition_forbidden_targets(
+                "release_post_commit_finalizer_repetition_budget"
+            ),
+        )
 
     def test_spec_schema_rejects_empty_critical_guard_arrays(self) -> None:
         schema = load_schema(SPEC_SCHEMA_PATH)
@@ -1003,6 +1016,61 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             check["violations"],
         )
 
+    def test_guard_fails_when_post_commit_prerequisite_runs_raw_command(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8")
+            .replace(
+                "release-post-commit-finalize:\n",
+                "release-post-commit-finalize: release-post-commit-prerequisite\n",
+            )
+            .replace(
+                "release-source-ready-status:\n",
+                "release-post-commit-prerequisite:\n"
+                '\t$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" '
+                '--stored "ops/script-output-surfaces.json" --check\n'
+                "release-source-ready-status:\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        sequence_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        budget_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        post_commit_recipe = next(
+            item
+            for item in report["target_recipes"]
+            if item["target"] == "release-post-commit-finalize"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(post_commit_recipe["invocations"][0]["role"], "raw-recipe-command")
+        self.assertIn(
+            {
+                "expected_role": "release-post-commit-finalizer-snapshot",
+                "reason": "snapshot_must_start_post_commit_finalize",
+            },
+            sequence_check["violations"],
+        )
+        self.assertIn(
+            {
+                "target": "raw-recipe-command",
+                "count": 1,
+                "reason": "forbidden_post_commit_target",
+            },
+            budget_check["violations"],
+        )
+
     def test_guard_fails_when_post_commit_snapshot_writes_noncanonical_path(
         self,
     ) -> None:
@@ -1073,6 +1141,39 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "reason": "snapshot_must_start_post_commit_finalize",
             },
             check["violations"],
+        )
+
+    def test_guard_fails_when_raw_command_runs_after_post_commit_snapshot(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        snapshot_line = _recipe_line_for_role("release-post-commit-finalizer-snapshot")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                snapshot_line,
+                snapshot_line
+                + '\t$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" '
+                '--stored "ops/script-output-surfaces.json" --check\n',
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        budget_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(budget_check["status"], "fail")
+        self.assertIn(
+            {
+                "target": "raw-recipe-command",
+                "count": 1,
+                "reason": "forbidden_post_commit_target",
+            },
+            budget_check["violations"],
         )
 
     def test_guard_fails_when_post_commit_verify_runs_before_currentness_checks(

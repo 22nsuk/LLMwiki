@@ -311,6 +311,7 @@
         "generated-artifact-converge",
         "generated-artifact-script-output",
         "release-finality-resettle",
+        "raw-recipe-command",
         "test-execution-summary-full-current-or-refresh",
         "test-execution-summary-full-refresh",
         "test-execution-summary-current-or-refresh"
