@@ -279,6 +279,16 @@ def _normalize_sample_vault_text_newlines(vault: Path) -> None:
             handle.write(normalized)
 
 
+def _stable_json_text(payload: dict) -> str:
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+
+def _write_stable_json_file(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(_stable_json_text(payload))
+
+
 def seed_openvex_sample_vault(vault: Path) -> None:
     seed_minimal_vault(vault)
     seed_dependency_inputs(vault)
@@ -326,22 +336,14 @@ def build_supply_chain_schema_samples() -> dict[str, dict]:
             vault, context=fixed_context()
         )
         provenance_path = vault / SUPPLY_CHAIN_PROVENANCE_REPORT_PATH
-        provenance_path.parent.mkdir(parents=True, exist_ok=True)
-        provenance_path.write_text(
-            json.dumps(provenance, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        _write_stable_json_file(provenance_path, provenance)
         mapping = build_sbom_export_mapping_report(
             vault,
             context=fixed_context(),
             provenance_report=provenance,
         )
         mapping_path = vault / SBOM_EXPORT_MAPPING_REPORT_PATH
-        mapping_path.parent.mkdir(parents=True, exist_ok=True)
-        mapping_path.write_text(
-            json.dumps(mapping, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        _write_stable_json_file(mapping_path, mapping)
         gate = build_supply_chain_gate_report(
             vault,
             fixed_context(),
@@ -373,10 +375,9 @@ def build_openvex_schema_sample(cyclonedx_sample: dict) -> dict:
         vault = Path(temp_dir) / "vault"
         vault.mkdir()
         seed_openvex_sample_vault(vault)
-        (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
-        (vault / "ops" / "reports" / "cyclonedx-bom.json").write_text(
-            json.dumps(cyclonedx_sample, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+        _write_stable_json_file(
+            vault / "ops" / "reports" / "cyclonedx-bom.json",
+            cyclonedx_sample,
         )
         _normalize_sample_vault_text_newlines(vault)
         return build_openvex_draft(
@@ -492,9 +493,7 @@ def _write_readiness_sample_report(
         },
         **payload,
     }
-    path.write_text(
-        json.dumps(enveloped, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    _write_stable_json_file(path, enveloped)
 
 
 def _write_goal_worktree_guard_sample_report(vault: Path) -> None:
@@ -542,20 +541,13 @@ def _write_goal_worktree_guard_sample_report(vault: Path) -> None:
         "status": "pass",
     }
     path = vault / "ops" / "reports" / "goal-worktree-guard.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    _write_stable_json_file(path, payload)
 
 
 def _seed_readiness_release_contract_reports(vault: Path) -> None:
     artifact_freshness = build_artifact_freshness_schema_sample_for_vault(vault)
     artifact_path = vault / ARTIFACT_FRESHNESS_REPORT_PATH
-    artifact_path.parent.mkdir(parents=True, exist_ok=True)
-    artifact_path.write_text(
-        json.dumps(artifact_freshness, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    _write_stable_json_file(artifact_path, artifact_freshness)
     _write_readiness_sample_report(
         vault,
         "ops/reports/test-execution-summary.json",
@@ -757,9 +749,7 @@ def regenerate_report_schema_samples(
     payload.update(
         _build_self_contained_sample_updates(include_openvex=include_openvex)
     )
-    fixture_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    _write_stable_json_file(fixture_path, payload)
     return payload
 
 

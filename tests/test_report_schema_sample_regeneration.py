@@ -15,6 +15,7 @@ from tools.regenerate_report_schema_samples import (
     SAMPLE_GENERATION_SELF_CONTAINED,
     _assert_sample_coverage_matches_payload,
     _normalize_sample_vault_text_newlines,
+    _write_stable_json_file,
     build_auto_improve_readiness_schema_sample,
     build_openvex_schema_sample,
     build_release_run_ready_plan_schema_sample,
@@ -251,6 +252,17 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
             _normalize_sample_vault_text_newlines(vault)
 
             self.assertEqual(path.read_bytes(), b"print('one')\nprint('two')\n")
+
+    def test_stable_json_writer_uses_lf_bytes_for_input_fingerprints(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "nested" / "sample.json"
+
+            _write_stable_json_file(path, {"lines": ["one", "two"]})
+
+            raw = path.read_bytes()
+
+        self.assertIn(b'\n  "lines": [\n', raw)
+        self.assertNotIn(b"\r\n", raw)
 
 
 if __name__ == "__main__":
