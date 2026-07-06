@@ -1310,6 +1310,231 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             check["violations"],
         )
 
+    def test_guard_models_empty_inline_post_commit_recipe_override(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-post-commit-finalize:\n" + RELEASE_POST_COMMIT_FINALIZE_LINES,
+                "release-post-commit-finalize:\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}"
+                "release-post-commit-finalize: ;\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        post_commit_recipe = next(
+            item
+            for item in report["target_recipes"]
+            if item["target"] == "release-post-commit-finalize"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(post_commit_recipe["invocations"], [])
+        self.assertIn(
+            {
+                "expected_role": "release-post-commit-finalizer-snapshot",
+                "reason": "missing_or_out_of_order",
+            },
+            check["violations"],
+        )
+
+    def test_guard_fails_when_make_invocation_redirects_snapshot_output(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "\t$(MAKE) script-output-surfaces-check\n",
+                "\t$(MAKE) script-output-surfaces-check "
+                '> "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"\n',
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        budget_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        post_commit_recipe = next(
+            item
+            for item in report["target_recipes"]
+            if item["target"] == "release-post-commit-finalize"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(
+            [item["role"] for item in post_commit_recipe["invocations"][:3]],
+            [
+                "release-post-commit-finalizer-snapshot",
+                "script-output-surfaces-check",
+                "raw-recipe-command",
+            ],
+        )
+        self.assertIn(
+            {
+                "target": "raw-recipe-command",
+                "count": 1,
+                "reason": "forbidden_post_commit_target",
+            },
+            budget_check["violations"],
+        )
+
+    def test_guard_rejects_make_target_spoofing_command_only_snapshot_role(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        snapshot_line = _recipe_line_for_role("release-post-commit-finalizer-snapshot")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8")
+            .replace(
+                snapshot_line,
+                "\t$(MAKE) release-post-commit-finalizer-snapshot\n",
+            )
+            .replace(
+                "release-source-ready-status:\n",
+                "release-post-commit-finalizer-snapshot:\n"
+                "\t@true\n"
+                "release-source-ready-status:\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        sequence_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        budget_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        post_commit_recipe = next(
+            item
+            for item in report["target_recipes"]
+            if item["target"] == "release-post-commit-finalize"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(post_commit_recipe["invocations"][0]["role"], "raw-recipe-command")
+        self.assertIn(
+            {
+                "expected_role": "release-post-commit-finalizer-snapshot",
+                "reason": "snapshot_must_start_post_commit_finalize",
+            },
+            sequence_check["violations"],
+        )
+        self.assertIn(
+            {
+                "target": "raw-recipe-command",
+                "count": 1,
+                "reason": "forbidden_post_commit_target",
+            },
+            budget_check["violations"],
+        )
+
+    def test_guard_preserves_double_colon_post_commit_recipe_order(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-post-commit-finalize:\n" + RELEASE_POST_COMMIT_FINALIZE_LINES,
+                "release-post-commit-finalize::\n"
+                '\t$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" '
+                '--stored "ops/script-output-surfaces.json" --check\n'
+                "release-post-commit-finalize::\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        sequence_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        budget_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_repetition_budget"
+        )
+        post_commit_recipe = next(
+            item
+            for item in report["target_recipes"]
+            if item["target"] == "release-post-commit-finalize"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(post_commit_recipe["invocations"][0]["role"], "raw-recipe-command")
+        self.assertEqual(
+            post_commit_recipe["invocations"][1]["role"],
+            "release-post-commit-finalizer-snapshot",
+        )
+        self.assertIn(
+            {
+                "expected_role": "release-post-commit-finalizer-snapshot",
+                "reason": "snapshot_must_start_post_commit_finalize",
+            },
+            sequence_check["violations"],
+        )
+        self.assertIn(
+            {
+                "target": "raw-recipe-command",
+                "count": 1,
+                "reason": "forbidden_post_commit_target",
+            },
+            budget_check["violations"],
+        )
+
+    def test_guard_fails_when_post_commit_mixes_single_and_double_colon_rules(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-post-commit-finalize:\n" + RELEASE_POST_COMMIT_FINALIZE_LINES,
+                "release-post-commit-finalize:\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}"
+                "release-post-commit-finalize::\n"
+                f"{RELEASE_POST_COMMIT_FINALIZE_LINES}",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item for item in report["checks"] if item["id"] == "make_target_rule_kind_conflicts"
+        )
+        post_commit_sequence = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(post_commit_sequence["status"], "pass")
+        self.assertEqual(check["status"], "fail")
+        self.assertIn(
+            {
+                "target": "release-post-commit-finalize",
+                "reason": "mixed_single_and_double_colon_rules",
+            },
+            check["violations"],
+        )
+
     def test_guard_fails_when_post_commit_verify_runs_before_currentness_checks(
         self,
     ) -> None:

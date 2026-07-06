@@ -93,7 +93,17 @@ class _WorkflowOrderInputs:
     fixed_point_policy: dict[str, Any]
     writers: list[dict[str, Any]]
     planner_report: dict[str, Any]
+    rule_kinds_by_target: dict[str, set[str]]
     invocations_by_target: dict[str, list[dict[str, Any]]]
+
+
+@dataclass(frozen=True)
+class _TargetRule:
+    targets: set[str]
+    deps: list[str]
+    inline_recipe: str
+    has_inline_recipe: bool
+    is_double_colon: bool
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -130,18 +140,28 @@ def _load_workflow_order_spec(
     return spec, resolved_path
 
 
-def _target_match_parts(raw_line: str) -> tuple[set[str], list[str], str] | None:
+def _target_rule(raw_line: str) -> _TargetRule | None:
     target_match = TARGET_RE.match(raw_line.rstrip())
     if target_match is None:
         return None
     targets = {item.strip() for item in target_match.group(1).split() if item.strip()}
-    deps_text, _separator, inline_recipe = target_match.group("deps").partition(";")
+    raw_deps = target_match.group("deps")
+    is_double_colon = raw_deps.startswith(":")
+    if is_double_colon:
+        raw_deps = raw_deps[1:].lstrip()
+    deps_text, separator, inline_recipe = raw_deps.partition(";")
     deps = [
         token.strip()
         for token in deps_text.split()
         if token.strip() and not token.strip().startswith("$")
     ]
-    return targets, deps, inline_recipe.strip()
+    return _TargetRule(
+        targets=targets,
+        deps=deps,
+        inline_recipe=inline_recipe.strip(),
+        has_inline_recipe=bool(separator),
+        is_double_colon=is_double_colon,
+    )
 
 
 def _target_dependencies(makefile_text: str) -> dict[str, list[str]]:
@@ -149,16 +169,29 @@ def _target_dependencies(makefile_text: str) -> dict[str, list[str]]:
     for raw_line in makefile_text.splitlines():
         if raw_line.startswith("\t"):
             continue
-        target_parts = _target_match_parts(raw_line)
-        if target_parts is None:
+        target_rule = _target_rule(raw_line)
+        if target_rule is None:
             continue
-        targets, deps, _inline_recipe = target_parts
-        for target in targets:
+        for target in target_rule.targets:
             dependencies.setdefault(target, [])
-            for dep in deps:
+            for dep in target_rule.deps:
                 if dep not in dependencies[target]:
                     dependencies[target].append(dep)
     return dependencies
+
+
+def _target_rule_kinds(makefile_text: str) -> dict[str, set[str]]:
+    rule_kinds: dict[str, set[str]] = {}
+    for raw_line in makefile_text.splitlines():
+        if raw_line.startswith("\t"):
+            continue
+        target_rule = _target_rule(raw_line)
+        if target_rule is None:
+            continue
+        rule_kind = "::" if target_rule.is_double_colon else ":"
+        for target in target_rule.targets:
+            rule_kinds.setdefault(target, set()).add(rule_kind)
+    return rule_kinds
 
 
 def _recipe_argv(raw_line: str) -> list[str]:
@@ -207,6 +240,16 @@ def _first_unmodelled_recipe_fragment_index(
     return None
 
 
+def _make_command_segment(raw_args: str) -> tuple[str, int]:
+    redirection_indexes = [
+        index for index, char in enumerate(raw_args) if char in "<>"
+    ]
+    if not redirection_indexes:
+        return raw_args.strip(), len(raw_args)
+    redirection_index = min(redirection_indexes)
+    return raw_args[:redirection_index].strip(), redirection_index
+
+
 def _first_role_targets(workflow_order_spec: dict[str, Any]) -> set[str]:
     return {
         str(entry.get("target", "")).strip()
@@ -234,6 +277,11 @@ def _recipe_line_events(
 ) -> list[dict[str, Any]]:
     recipe_events: list[tuple[int, dict[str, Any]]] = []
     modelled_spans: list[tuple[int, int]] = []
+    command_only_roles = {
+        str(command_role.get("role", "")).strip()
+        for command_role in command_roles
+        if str(command_role.get("role", "")).strip()
+    }
     for command_role in command_roles:
         match = _command_role_match(raw_line, command_role)
         if match is None:
@@ -253,11 +301,11 @@ def _recipe_line_events(
             )
         )
     for make_match in MAKE_RECIPE_RE.finditer(raw_line):
-        raw_args = make_match.group("args").strip()
+        raw_args, raw_args_span_len = _make_command_segment(make_match.group("args"))
         make_target = _first_make_target(raw_args.split())
-        if make_target is None:
+        if make_target is None or make_target in command_only_roles:
             continue
-        modelled_spans.append(make_match.span())
+        modelled_spans.append((make_match.start(), make_match.start("args") + raw_args_span_len))
         recipe_events.append(
             (
                 make_match.start(),
@@ -292,18 +340,25 @@ def _direct_recipe_invocations(
     ]
     current_definition_active = False
     current_definition_has_recipe = False
+    current_definition_is_double_colon = False
     current_definition_events: list[dict[str, Any]] = []
-    last_recipe_events: list[dict[str, Any]] | None = None
+    single_colon_recipe_events: list[dict[str, Any]] | None = None
+    double_colon_recipe_events: list[dict[str, Any]] = []
 
     def close_current_definition() -> None:
         nonlocal current_definition_active
         nonlocal current_definition_has_recipe
+        nonlocal current_definition_is_double_colon
         nonlocal current_definition_events
-        nonlocal last_recipe_events
+        nonlocal single_colon_recipe_events
         if current_definition_active and current_definition_has_recipe:
-            last_recipe_events = list(current_definition_events)
+            if current_definition_is_double_colon:
+                double_colon_recipe_events.extend(current_definition_events)
+            else:
+                single_colon_recipe_events = list(current_definition_events)
         current_definition_active = False
         current_definition_has_recipe = False
+        current_definition_is_double_colon = False
         current_definition_events = []
 
     for line_no, raw_line in enumerate(makefile_text.splitlines(), start=1):
@@ -322,28 +377,34 @@ def _direct_recipe_invocations(
             )
             continue
 
-        target_parts = _target_match_parts(raw_line)
-        if target_parts is None:
+        target_rule = _target_rule(raw_line)
+        if target_rule is None:
             close_current_definition()
             active = False
             continue
         close_current_definition()
-        targets, _deps, inline_recipe = target_parts
-        active = target in targets
+        active = target in target_rule.targets
         current_definition_active = active
-        if active and inline_recipe:
+        current_definition_is_double_colon = target_rule.is_double_colon
+        if active and target_rule.has_inline_recipe:
             current_definition_has_recipe = True
-            current_definition_events.extend(
-                _recipe_line_events(
-                    f"\t{inline_recipe}",
-                    line_no,
-                    command_roles,
-                    workflow_order_spec,
-                    observe_raw_recipe_commands=observe_raw_recipe_commands,
+            if target_rule.inline_recipe:
+                current_definition_events.extend(
+                    _recipe_line_events(
+                        f"\t{target_rule.inline_recipe}",
+                        line_no,
+                        command_roles,
+                        workflow_order_spec,
+                        observe_raw_recipe_commands=observe_raw_recipe_commands,
+                    )
                 )
-            )
     close_current_definition()
-    for event in last_recipe_events or []:
+    selected_events = (
+        double_colon_recipe_events
+        if double_colon_recipe_events
+        else single_colon_recipe_events or []
+    )
+    for event in selected_events:
         invocations.append({**event, "order": len(invocations) + 1})
     return invocations
 
@@ -776,6 +837,25 @@ def _check_planner_fixed_point_writer_order(
     )
 
 
+def _check_target_rule_kind_conflicts(inputs: _WorkflowOrderInputs) -> dict[str, Any]:
+    targets = _string_list(inputs.workflow_order_spec.get("target_recipe_order"))
+    violations = [
+        {
+            "target": target,
+            "reason": "mixed_single_and_double_colon_rules",
+        }
+        for target in targets
+        if {":", "::"}.issubset(inputs.rule_kinds_by_target.get(target, set()))
+    ]
+    return _check(
+        "make_target_rule_kind_conflicts",
+        expected_order=["no mixed single-colon and double-colon target rules"],
+        observed_order=[violation["target"] for violation in violations],
+        violations=violations,
+        details="Modeled Make targets must not mix ':' and '::' rule forms because GNU make rejects that target shape.",
+    )
+
+
 def _status_from_checks(checks: list[dict[str, Any]]) -> str:
     if any(check["status"] == "fail" for check in checks):
         return "fail"
@@ -824,6 +904,7 @@ def _workflow_order_inputs(
     makefile_text, makefile_sources = load_makefile_text(resolved_vault)
     fixed_point_policy = _load_json(resolved_vault / FIXED_POINT_POLICY_PATH)
     writers = _fixed_point_writer_specs(fixed_point_policy)
+    rule_kinds_by_target = _target_rule_kinds(makefile_text)
     invocations_by_target = {
         target: _recipe_invocations(makefile_text, target, workflow_order_spec)
         for target in _string_list(workflow_order_spec.get("target_recipe_order"))
@@ -845,6 +926,7 @@ def _workflow_order_inputs(
         fixed_point_policy=fixed_point_policy,
         writers=writers,
         planner_report=planner_report,
+        rule_kinds_by_target=rule_kinds_by_target,
         invocations_by_target=invocations_by_target,
     )
 
@@ -893,6 +975,7 @@ def _release_workflow_order_checks(inputs: _WorkflowOrderInputs) -> list[dict[st
                 inputs.planner_report,
                 inputs.writers,
             ),
+            _check_target_rule_kind_conflicts(inputs),
         ]
     )
     return checks
