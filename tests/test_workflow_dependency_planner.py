@@ -818,7 +818,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(plan["coverage_class"], "public_boundary")
                 self.assertEqual(plan["selected_commands"], ["make static", "make public-check"])
 
-    def test_changed_path_minimum_plan_matches_root_tools_python(self) -> None:
+    def test_changed_path_minimum_plan_matches_report_schema_sample_generator(self) -> None:
         report = build_report(
             self.vault,
             changed_paths=["tools/regenerate_report_schema_samples.py"],
@@ -827,8 +827,18 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
         plan = report["changed_path_minimum_plan"]
         self.assertEqual(plan["status"], "pass")
-        self.assertEqual(plan["coverage_class"], "runtime_source")
-        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
+        self.assertEqual(plan["coverage_class"], "report_schema_sample_generation")
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "make report-schema-samples-check",
+                (
+                    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q "
+                    "-p no:cacheprovider tests/test_report_schema_sample_regeneration.py"
+                ),
+            ],
+        )
         self.assertEqual(plan["unknown_paths"], [])
 
     def test_changed_path_minimum_plan_covers_registry_and_generated_currentness_artifacts(

@@ -56,6 +56,21 @@
         "duration_seconds": 300
       },
       {
+        "rule_id": "report_schema_sample_generator",
+        "path_patterns": [
+          "tools/regenerate_report_schema_samples.py"
+        ],
+        "commands": [
+          "make static",
+          "make report-schema-samples-check",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_report_schema_sample_regeneration.py"
+        ],
+        "reason": "Report schema sample generator changes need static analysis, fixture convergence, and focused report-contract generator coverage.",
+        "coverage_class": "report_schema_sample_generation",
+        "static_required": true,
+        "duration_seconds": 180
+      },
+      {
         "rule_id": "python_runtime_source",
         "path_patterns": [
           "ops/scripts/**/*.py",

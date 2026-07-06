@@ -6,6 +6,7 @@ import difflib
 import json
 import sys
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
@@ -22,17 +23,23 @@ from ops.scripts.supply_chain.openvex_draft import build_openvex_draft
 from ops.scripts.supply_chain.sbom_export_mapping import (
     build_report as build_sbom_export_mapping_report,
 )
+from ops.scripts.supply_chain.sbom_readiness_gate_runtime import (
+    build_gate_report as build_sbom_readiness_gate_report,
+)
+from ops.scripts.supply_chain.supply_chain_gate_runtime import (
+    build_gate_report as build_supply_chain_gate_report,
+)
 from ops.scripts.supply_chain.supply_chain_provenance import (
     build_report as build_supply_chain_provenance_report,
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
-from tests.test_release_run_ready import (
+from tests.release_run_ready_sample_runtime import (
     _copy_plan_schema,
     _patch_plan_repo,
     _write_current_run_ready_evidence,
     fixed_context as fixed_run_ready_context,
 )
-from tests.test_supply_chain_provenance import (
+from tests.supply_chain_sample_runtime import (
     LOCKED_CI_INSTALL_SNIPPET,
     seed_dependency_inputs,
     seed_source_package_evidence,
@@ -43,6 +50,8 @@ OPENVEX_SAMPLE_ID = "urn:uuid:12345678-1234-4234-9234-123456789abd"
 CYCLONEDX_SAMPLE_SERIAL_NUMBER = "urn:uuid:12345678-1234-4234-9234-123456789abc"
 ARTIFACT_FRESHNESS_REPORT_PATH = "ops/reports/artifact-freshness-report.json"
 ARTIFACT_FRESHNESS_SCHEMA_PATH = "ops/schemas/artifact-freshness-report.schema.json"
+SUPPLY_CHAIN_PROVENANCE_REPORT_PATH = "ops/reports/supply-chain-provenance.json"
+SBOM_EXPORT_MAPPING_REPORT_PATH = "ops/reports/sbom-export-mapping.json"
 READINESS_SAMPLE_REPORT_SPECS = {
     "ops/reports/outcome-metrics.json": (
         "ops/schemas/outcome-metrics.schema.json",
@@ -89,10 +98,157 @@ READINESS_SAMPLE_REPORT_SPECS = {
         "release_closeout_post_check_finalizer",
     ),
 }
+SAMPLE_GENERATION_SELF_CONTAINED = "self_contained_builder"
+SAMPLE_GENERATION_FIXTURE_SEED = "fixture_seed"
+
+
+@dataclass(frozen=True)
+class ReportSchemaSampleCoverage:
+    sample_key: str
+    generation: str
+    builder: str
+    dependencies: tuple[str, ...] = ()
+
+
+REPORT_SCHEMA_SAMPLE_COVERAGE = (
+    ReportSchemaSampleCoverage("eval", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage("eval_coverage", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage("lint", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage("warning_budget", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage(
+        "structural_complexity_budget", SAMPLE_GENERATION_FIXTURE_SEED, ""
+    ),
+    ReportSchemaSampleCoverage("stage2", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage("mechanism_review", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage("mutation_proposal", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage("proposal_scope", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage("run_telemetry", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage(
+        "generated_artifact_convergence", SAMPLE_GENERATION_FIXTURE_SEED, ""
+    ),
+    ReportSchemaSampleCoverage(
+        "run_artifact_fingerprint", SAMPLE_GENERATION_FIXTURE_SEED, ""
+    ),
+    ReportSchemaSampleCoverage("timeout_failure", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage(
+        "shadow_apply_report", SAMPLE_GENERATION_FIXTURE_SEED, ""
+    ),
+    ReportSchemaSampleCoverage(
+        "rollback_rehearsal_report", SAMPLE_GENERATION_FIXTURE_SEED, ""
+    ),
+    ReportSchemaSampleCoverage("behavior_delta", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage(
+        "promotion_decision_trends", SAMPLE_GENERATION_FIXTURE_SEED, ""
+    ),
+    ReportSchemaSampleCoverage(
+        "routing_provenance_aggregate", SAMPLE_GENERATION_FIXTURE_SEED, ""
+    ),
+    ReportSchemaSampleCoverage(
+        "auto_improve_session", SAMPLE_GENERATION_FIXTURE_SEED, ""
+    ),
+    ReportSchemaSampleCoverage("outcome_metrics", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage(
+        "supply_chain_provenance",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_supply_chain_schema_samples",
+    ),
+    ReportSchemaSampleCoverage(
+        "supply_chain_gate_report",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_supply_chain_gate_report",
+        dependencies=("supply_chain_provenance",),
+    ),
+    ReportSchemaSampleCoverage(
+        "sbom_export_mapping",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_supply_chain_schema_samples",
+        dependencies=("supply_chain_provenance",),
+    ),
+    ReportSchemaSampleCoverage(
+        "auto_improve_readiness_report",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_auto_improve_readiness_schema_sample",
+    ),
+    ReportSchemaSampleCoverage("runtime_event", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage(
+        "sbom_readiness_gate_report",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_sbom_readiness_gate_report",
+        dependencies=("sbom_export_mapping",),
+    ),
+    ReportSchemaSampleCoverage(
+        "cyclonedx_bom",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_supply_chain_schema_samples",
+        dependencies=("supply_chain_provenance", "sbom_export_mapping"),
+    ),
+    ReportSchemaSampleCoverage(
+        "openvex_draft",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_openvex_schema_sample",
+        dependencies=("cyclonedx_bom",),
+    ),
+    ReportSchemaSampleCoverage("review_archive", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage(
+        "artifact_freshness_report",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_artifact_freshness_schema_sample",
+    ),
+    ReportSchemaSampleCoverage(
+        "release_run_ready_plan",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_release_run_ready_plan_schema_sample",
+    ),
+)
 
 
 def load_report_schema_samples(fixture_path: Path = FIXTURE_PATH) -> dict:
     return json.loads(fixture_path.read_text(encoding="utf-8"))
+
+
+def report_schema_sample_coverage_table() -> tuple[ReportSchemaSampleCoverage, ...]:
+    return REPORT_SCHEMA_SAMPLE_COVERAGE
+
+
+def self_contained_report_schema_sample_keys() -> tuple[str, ...]:
+    return tuple(
+        entry.sample_key
+        for entry in REPORT_SCHEMA_SAMPLE_COVERAGE
+        if entry.generation == SAMPLE_GENERATION_SELF_CONTAINED
+    )
+
+
+def self_contained_report_schema_sample_update_keys(
+    *,
+    include_openvex: bool = True,
+) -> tuple[str, ...]:
+    return tuple(
+        sample_key
+        for sample_key in self_contained_report_schema_sample_keys()
+        if include_openvex or sample_key != "openvex_draft"
+    )
+
+
+def seed_preserved_report_schema_sample_keys() -> tuple[str, ...]:
+    return tuple(
+        entry.sample_key
+        for entry in REPORT_SCHEMA_SAMPLE_COVERAGE
+        if entry.generation == SAMPLE_GENERATION_FIXTURE_SEED
+    )
+
+
+def _assert_sample_coverage_matches_payload(payload: dict) -> None:
+    coverage_keys = [entry.sample_key for entry in REPORT_SCHEMA_SAMPLE_COVERAGE]
+    payload_keys = list(payload)
+    if coverage_keys == payload_keys:
+        return
+    missing_from_coverage = sorted(set(payload_keys) - set(coverage_keys))
+    missing_from_payload = sorted(set(coverage_keys) - set(payload_keys))
+    raise ValueError(
+        "report schema sample coverage table does not match fixture keys: "
+        f"missing_from_coverage={missing_from_coverage}, "
+        f"missing_from_payload={missing_from_payload}"
+    )
 
 
 def fixed_context() -> RuntimeContext:
@@ -145,9 +301,13 @@ def seed_openvex_sample_vault(vault: Path) -> None:
 def seed_supply_chain_sample_vault(vault: Path) -> None:
     seed_openvex_sample_vault(vault)
     (vault / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
-    (vault / "ops" / "scripts" / "example.py").write_text("print('ok')\n", encoding="utf-8")
+    (vault / "ops" / "scripts" / "example.py").write_text(
+        "print('ok')\n", encoding="utf-8"
+    )
     (vault / "ops" / "operator").mkdir(parents=True, exist_ok=True)
-    (vault / "ops" / "operator" / "operator-release-summary.json").write_text("{}", encoding="utf-8")
+    (vault / "ops" / "operator" / "operator-release-summary.json").write_text(
+        "{}", encoding="utf-8"
+    )
     (vault / "ops" / "script-output-surfaces.json").write_text("{}", encoding="utf-8")
     (vault / "tests" / "test_example.py").parent.mkdir(parents=True, exist_ok=True)
     (vault / "tests" / "test_example.py").write_text(
@@ -162,11 +322,35 @@ def build_supply_chain_schema_samples() -> dict[str, dict]:
         vault.mkdir()
         seed_supply_chain_sample_vault(vault)
         _normalize_sample_vault_text_newlines(vault)
-        provenance = build_supply_chain_provenance_report(vault, context=fixed_context())
+        provenance = build_supply_chain_provenance_report(
+            vault, context=fixed_context()
+        )
+        provenance_path = vault / SUPPLY_CHAIN_PROVENANCE_REPORT_PATH
+        provenance_path.parent.mkdir(parents=True, exist_ok=True)
+        provenance_path.write_text(
+            json.dumps(provenance, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
         mapping = build_sbom_export_mapping_report(
             vault,
             context=fixed_context(),
             provenance_report=provenance,
+        )
+        mapping_path = vault / SBOM_EXPORT_MAPPING_REPORT_PATH
+        mapping_path.parent.mkdir(parents=True, exist_ok=True)
+        mapping_path.write_text(
+            json.dumps(mapping, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        gate = build_supply_chain_gate_report(
+            vault,
+            fixed_context(),
+            provenance_report=provenance,
+        )
+        readiness_gate = build_sbom_readiness_gate_report(
+            vault,
+            context=fixed_context(),
+            mapping_report=mapping,
         )
         cyclonedx = build_bom(
             vault,
@@ -177,20 +361,21 @@ def build_supply_chain_schema_samples() -> dict[str, dict]:
         cyclonedx["serialNumber"] = CYCLONEDX_SAMPLE_SERIAL_NUMBER
         return {
             "supply_chain_provenance": provenance,
+            "supply_chain_gate_report": gate,
             "sbom_export_mapping": mapping,
+            "sbom_readiness_gate_report": readiness_gate,
             "cyclonedx_bom": cyclonedx,
         }
 
 
-def build_openvex_schema_sample(cyclonedx_sample: dict | None = None) -> dict:
+def build_openvex_schema_sample(cyclonedx_sample: dict) -> dict:
     with tempfile.TemporaryDirectory() as temp_dir:
         vault = Path(temp_dir) / "vault"
         vault.mkdir()
         seed_openvex_sample_vault(vault)
-        samples = load_report_schema_samples() if cyclonedx_sample is None else {"cyclonedx_bom": cyclonedx_sample}
         (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
         (vault / "ops" / "reports" / "cyclonedx-bom.json").write_text(
-            json.dumps(samples["cyclonedx_bom"], ensure_ascii=False, indent=2) + "\n",
+            json.dumps(cyclonedx_sample, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
         _normalize_sample_vault_text_newlines(vault)
@@ -227,7 +412,9 @@ def _artifact_freshness_zero_summary() -> dict[str, int]:
 
 
 def build_artifact_freshness_schema_sample_for_vault(vault: Path) -> dict:
-    policy, resolved_policy_path = load_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
+    policy, resolved_policy_path = load_policy(
+        vault, "ops/policies/wiki-maintainer-policy.yaml"
+    )
     return {
         **build_canonical_report_envelope(
             vault,
@@ -278,8 +465,12 @@ def build_artifact_freshness_schema_sample() -> dict:
         return build_artifact_freshness_schema_sample_for_vault(vault)
 
 
-def _write_readiness_sample_report(vault: Path, relative_path: str, payload: dict) -> None:
-    policy, resolved_policy_path = load_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
+def _write_readiness_sample_report(
+    vault: Path, relative_path: str, payload: dict
+) -> None:
+    policy, resolved_policy_path = load_policy(
+        vault, "ops/policies/wiki-maintainer-policy.yaml"
+    )
     schema_path, artifact_kind = READINESS_SAMPLE_REPORT_SPECS[relative_path]
     path = vault / relative_path
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -301,11 +492,15 @@ def _write_readiness_sample_report(vault: Path, relative_path: str, payload: dic
         },
         **payload,
     }
-    path.write_text(json.dumps(enveloped, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(enveloped, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def _write_goal_worktree_guard_sample_report(vault: Path) -> None:
-    _policy, resolved_policy_path = load_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
+    _policy, resolved_policy_path = load_policy(
+        vault, "ops/policies/wiki-maintainer-policy.yaml"
+    )
     payload = {
         **build_canonical_report_envelope(
             vault,
@@ -348,7 +543,9 @@ def _write_goal_worktree_guard_sample_report(vault: Path) -> None:
     }
     path = vault / "ops" / "reports" / "goal-worktree-guard.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def _seed_readiness_release_contract_reports(vault: Path) -> None:
@@ -529,19 +726,40 @@ def build_release_run_ready_plan_schema_sample() -> dict:
             return build_run_ready_plan(vault, context=fixed_run_ready_context())
 
 
+def _build_self_contained_sample_updates(*, include_openvex: bool = True) -> dict:
+    updates = build_supply_chain_schema_samples()
+    updates["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
+    updates["auto_improve_readiness_report"] = (
+        build_auto_improve_readiness_schema_sample()
+    )
+    updates["release_run_ready_plan"] = build_release_run_ready_plan_schema_sample()
+    if include_openvex:
+        updates["openvex_draft"] = build_openvex_schema_sample(updates["cyclonedx_bom"])
+    expected_keys = set(
+        self_contained_report_schema_sample_update_keys(include_openvex=include_openvex)
+    )
+    if set(updates) != expected_keys:
+        raise ValueError(
+            "self-contained report schema sample updates do not match coverage table: "
+            f"missing_updates={sorted(expected_keys - set(updates))}, "
+            f"unexpected_updates={sorted(set(updates) - expected_keys)}"
+        )
+    return updates
+
+
 def regenerate_report_schema_samples(
     fixture_path: Path = FIXTURE_PATH,
     *,
     include_openvex: bool = True,
 ) -> dict:
     payload = load_report_schema_samples(fixture_path)
-    payload.update(build_supply_chain_schema_samples())
-    payload["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
-    payload["auto_improve_readiness_report"] = build_auto_improve_readiness_schema_sample()
-    payload["release_run_ready_plan"] = build_release_run_ready_plan_schema_sample()
-    if include_openvex:
-        payload["openvex_draft"] = build_openvex_schema_sample(payload["cyclonedx_bom"])
-    fixture_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _assert_sample_coverage_matches_payload(payload)
+    payload.update(
+        _build_self_contained_sample_updates(include_openvex=include_openvex)
+    )
+    fixture_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     return payload
 
 
@@ -551,12 +769,10 @@ def candidate_report_schema_samples(
     include_openvex: bool = True,
 ) -> dict:
     payload = load_report_schema_samples(fixture_path)
-    payload.update(build_supply_chain_schema_samples())
-    payload["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
-    payload["auto_improve_readiness_report"] = build_auto_improve_readiness_schema_sample()
-    payload["release_run_ready_plan"] = build_release_run_ready_plan_schema_sample()
-    if include_openvex:
-        payload["openvex_draft"] = build_openvex_schema_sample(payload["cyclonedx_bom"])
+    _assert_sample_coverage_matches_payload(payload)
+    payload.update(
+        _build_self_contained_sample_updates(include_openvex=include_openvex)
+    )
     return payload
 
 
@@ -609,7 +825,10 @@ def main(argv: list[str] | None = None) -> int:
             include_openvex=not args.skip_openvex,
         )
         if diff:
-            print("report schema samples are stale; run tools/regenerate_report_schema_samples.py", file=sys.stderr)
+            print(
+                "report schema samples are stale; run tools/regenerate_report_schema_samples.py",
+                file=sys.stderr,
+            )
             print("\n".join(diff[:200]), file=sys.stderr)
             return 1
         return 0
