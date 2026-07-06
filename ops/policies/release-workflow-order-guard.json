@@ -24,12 +24,12 @@
   "recipe_command_roles": [
     {
       "target": "release-post-commit-finalize",
-      "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode snapshot",
+      "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode snapshot --out \"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)\"",
       "role": "release-post-commit-finalizer-snapshot"
     },
     {
       "target": "release-post-commit-finalize",
-      "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode verify",
+      "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode verify --previous \"$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)\"",
       "role": "release-post-commit-finalizer-verify"
     }
   ],
@@ -244,6 +244,13 @@
     }
   ],
   "first_role_checks": [
+    {
+      "id": "release_post_commit_finalizer_sequence",
+      "target": "release-post-commit-finalize",
+      "role": "release-post-commit-finalizer-snapshot",
+      "reason": "snapshot_must_start_post_commit_finalize",
+      "details": "release-post-commit-finalize must capture the post-commit baseline before any currentness check or writer can run."
+    },
     {
       "id": "release_converge_preflight_sequence",
       "target": "release-converge-preflight",
