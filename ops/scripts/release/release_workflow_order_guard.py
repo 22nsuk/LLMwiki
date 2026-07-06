@@ -130,20 +130,29 @@ def _load_workflow_order_spec(
     return spec, resolved_path
 
 
+def _target_match_parts(raw_line: str) -> tuple[set[str], list[str], str] | None:
+    target_match = TARGET_RE.match(raw_line.rstrip())
+    if target_match is None:
+        return None
+    targets = {item.strip() for item in target_match.group(1).split() if item.strip()}
+    deps_text, _separator, inline_recipe = target_match.group("deps").partition(";")
+    deps = [
+        token.strip()
+        for token in deps_text.split()
+        if token.strip() and not token.strip().startswith("$")
+    ]
+    return targets, deps, inline_recipe.strip()
+
+
 def _target_dependencies(makefile_text: str) -> dict[str, list[str]]:
     dependencies: dict[str, list[str]] = {}
     for raw_line in makefile_text.splitlines():
         if raw_line.startswith("\t"):
             continue
-        target_match = TARGET_RE.match(raw_line.rstrip())
-        if target_match is None:
+        target_parts = _target_match_parts(raw_line)
+        if target_parts is None:
             continue
-        targets = [item.strip() for item in target_match.group(1).split() if item.strip()]
-        deps = [
-            token.strip()
-            for token in target_match.group("deps").split()
-            if token.strip() and not token.strip().startswith("$")
-        ]
+        targets, deps, _inline_recipe = target_parts
         for target in targets:
             dependencies.setdefault(target, [])
             for dep in deps:
@@ -159,15 +168,43 @@ def _recipe_argv(raw_line: str) -> list[str]:
         return []
 
 
-def _command_role_match_index(raw_line: str, command_role: dict[str, Any]) -> int:
+def _command_role_match(raw_line: str, command_role: dict[str, Any]) -> tuple[int, int] | None:
     raw_line_contains = str(command_role.get("raw_line_contains", "")).strip()
     match_index = raw_line.find(raw_line_contains) if raw_line_contains else -1
     if match_index < 0:
-        return -1
+        return None
     argv_equals = _string_list(command_role.get("argv_equals"))
-    if argv_equals and _recipe_argv(raw_line) != argv_equals:
-        return -1
-    return match_index
+    if not argv_equals:
+        return match_index, match_index + len(raw_line_contains)
+    stripped = raw_line.strip()
+    if _recipe_argv(stripped) != argv_equals:
+        return None
+    start = raw_line.find(stripped)
+    return start, start + len(stripped)
+
+
+def _is_ignorable_recipe_line(raw_line: str) -> bool:
+    stripped = raw_line.strip()
+    return not stripped or stripped.startswith("#")
+
+
+def _first_unmodelled_recipe_fragment_index(
+    raw_line: str,
+    spans: list[tuple[int, int]],
+) -> int | None:
+    if _is_ignorable_recipe_line(raw_line):
+        return None
+    covered = [False] * len(raw_line)
+    for start, end in spans:
+        for index in range(max(start, 0), min(end, len(covered))):
+            covered[index] = True
+    for index, char in enumerate(raw_line):
+        if covered[index]:
+            continue
+        if char.isspace() or char in ";|&@+-":
+            continue
+        return index
+    return None
 
 
 def _first_role_targets(workflow_order_spec: dict[str, Any]) -> set[str]:
@@ -187,9 +224,56 @@ def _raw_recipe_command_event(line_no: int, raw_line: str) -> dict[str, Any]:
     }
 
 
-def _is_ignorable_recipe_line(raw_line: str) -> bool:
-    stripped = raw_line.strip()
-    return not stripped or stripped.startswith("#")
+def _recipe_line_events(
+    raw_line: str,
+    line_no: int,
+    command_roles: list[dict[str, Any]],
+    workflow_order_spec: dict[str, Any],
+    *,
+    observe_raw_recipe_commands: bool,
+) -> list[dict[str, Any]]:
+    recipe_events: list[tuple[int, dict[str, Any]]] = []
+    modelled_spans: list[tuple[int, int]] = []
+    for command_role in command_roles:
+        match = _command_role_match(raw_line, command_role)
+        if match is None:
+            continue
+        start, end = match
+        role = str(command_role.get("role", "")).strip()
+        modelled_spans.append((start, end))
+        recipe_events.append(
+            (
+                start,
+                {
+                    "line": line_no,
+                    "target": role,
+                    "role": role,
+                    "raw_args": raw_line.strip(),
+                },
+            )
+        )
+    for make_match in MAKE_RECIPE_RE.finditer(raw_line):
+        raw_args = make_match.group("args").strip()
+        make_target = _first_make_target(raw_args.split())
+        if make_target is None:
+            continue
+        modelled_spans.append(make_match.span())
+        recipe_events.append(
+            (
+                make_match.start(),
+                {
+                    "line": line_no,
+                    "target": make_target,
+                    "role": _invocation_role(make_target, raw_args, workflow_order_spec),
+                    "raw_args": raw_args,
+                },
+            )
+        )
+    if observe_raw_recipe_commands:
+        raw_index = _first_unmodelled_recipe_fragment_index(raw_line, modelled_spans)
+        if raw_index is not None:
+            recipe_events.append((raw_index, _raw_recipe_command_event(line_no, raw_line)))
+    return [event for _event_index, event in sorted(recipe_events, key=lambda item: item[0])]
 
 
 def _direct_recipe_invocations(
@@ -206,58 +290,61 @@ def _direct_recipe_invocations(
         for item in _spec_entries(workflow_order_spec, "recipe_command_roles")
         if str(item.get("target", "")).strip() == target
     ]
+    current_definition_active = False
+    current_definition_has_recipe = False
+    current_definition_events: list[dict[str, Any]] = []
+    last_recipe_events: list[dict[str, Any]] | None = None
+
+    def close_current_definition() -> None:
+        nonlocal current_definition_active
+        nonlocal current_definition_has_recipe
+        nonlocal current_definition_events
+        nonlocal last_recipe_events
+        if current_definition_active and current_definition_has_recipe:
+            last_recipe_events = list(current_definition_events)
+        current_definition_active = False
+        current_definition_has_recipe = False
+        current_definition_events = []
+
     for line_no, raw_line in enumerate(makefile_text.splitlines(), start=1):
         if raw_line.startswith("\t"):
             if not active:
                 continue
-            recipe_events: list[tuple[int, dict[str, Any]]] = []
-            for command_role in command_roles:
-                match_index = _command_role_match_index(raw_line, command_role)
-                if match_index < 0:
-                    continue
-                role = str(command_role.get("role", "")).strip()
-                recipe_events.append(
-                    (
-                        match_index,
-                        {
-                            "line": line_no,
-                            "target": role,
-                            "role": role,
-                            "raw_args": raw_line.strip(),
-                        },
-                    )
+            current_definition_has_recipe = True
+            current_definition_events.extend(
+                _recipe_line_events(
+                    raw_line,
+                    line_no,
+                    command_roles,
+                    workflow_order_spec,
+                    observe_raw_recipe_commands=observe_raw_recipe_commands,
                 )
-            for make_match in MAKE_RECIPE_RE.finditer(raw_line):
-                raw_args = make_match.group("args").strip()
-                make_target = _first_make_target(raw_args.split())
-                if make_target is None:
-                    continue
-                recipe_events.append(
-                    (
-                        make_match.start(),
-                        {
-                            "line": line_no,
-                            "target": make_target,
-                            "role": _invocation_role(make_target, raw_args, workflow_order_spec),
-                            "raw_args": raw_args,
-                        },
-                    )
-                )
-            if (
-                observe_raw_recipe_commands
-                and not recipe_events
-                and not _is_ignorable_recipe_line(raw_line)
-            ):
-                recipe_events.append((0, _raw_recipe_command_event(line_no, raw_line)))
-            for _event_index, event in sorted(recipe_events, key=lambda item: item[0]):
-                invocations.append({**event, "order": len(invocations) + 1})
+            )
             continue
 
-        target_match = TARGET_RE.match(raw_line.rstrip())
-        if target_match is None:
+        target_parts = _target_match_parts(raw_line)
+        if target_parts is None:
+            close_current_definition()
             active = False
             continue
-        active = target in {item.strip() for item in target_match.group(1).split() if item.strip()}
+        close_current_definition()
+        targets, _deps, inline_recipe = target_parts
+        active = target in targets
+        current_definition_active = active
+        if active and inline_recipe:
+            current_definition_has_recipe = True
+            current_definition_events.extend(
+                _recipe_line_events(
+                    f"\t{inline_recipe}",
+                    line_no,
+                    command_roles,
+                    workflow_order_spec,
+                    observe_raw_recipe_commands=observe_raw_recipe_commands,
+                )
+            )
+    close_current_definition()
+    for event in last_recipe_events or []:
+        invocations.append({**event, "order": len(invocations) + 1})
     return invocations
 
 
