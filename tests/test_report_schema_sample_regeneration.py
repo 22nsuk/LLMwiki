@@ -20,6 +20,8 @@ from tools.regenerate_report_schema_samples import (
     build_openvex_schema_sample,
     build_release_run_ready_plan_schema_sample,
     build_supply_chain_schema_samples,
+    candidate_report_schema_samples,
+    check_report_schema_samples,
     report_schema_sample_coverage_table,
     seed_preserved_report_schema_sample_keys,
     self_contained_report_schema_sample_keys,
@@ -118,6 +120,41 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "missing_from_coverage"):
             _assert_sample_coverage_matches_payload(samples)
+
+    def test_candidate_regenerates_missing_self_contained_key_in_coverage_order(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fixture = Path(temp_dir) / "report_schema_samples.json"
+            payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+            payload.pop("artifact_freshness_report")
+            _write_stable_json_file(fixture, payload)
+
+            candidate = candidate_report_schema_samples(fixture)
+
+        self.assertIn("artifact_freshness_report", candidate)
+        self.assertEqual(
+            list(candidate),
+            [entry.sample_key for entry in report_schema_sample_coverage_table()],
+        )
+        _assert_sample_coverage_matches_payload(candidate)
+
+    def test_check_reports_fixture_key_order_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fixture = Path(temp_dir) / "report_schema_samples.json"
+            payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+            sample_keys = list(payload)
+            reordered_payload = {
+                sample_keys[1]: payload[sample_keys[1]],
+                sample_keys[0]: payload[sample_keys[0]],
+                **{sample_key: payload[sample_key] for sample_key in sample_keys[2:]},
+            }
+            _write_stable_json_file(fixture, reordered_payload)
+
+            diff = check_report_schema_samples(fixture)
+
+        self.assertTrue(diff)
+        self.assertIn(f'"{sample_keys[0]}"', "\n".join(diff))
 
     def test_generator_does_not_import_test_case_modules(self) -> None:
         source = (

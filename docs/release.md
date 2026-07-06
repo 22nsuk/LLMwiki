@@ -193,11 +193,12 @@ surface comparison; this document owns release evidence and staged authority.
   `make release-evidence-converge` or the owning evidence refresh target first
   when stale generated reports are the blocker.
 - `make changed-path-minimum-plan`: advisory changed-path cost planner. It reads
-  `ops/test-lane-registry.json` and an optional
-  `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST`, emits minimal suggested
-  commands and deterministic duration-budget status, and always marks the final
-  full release proof as still required through the registry-owned explicit
-  checkpoint command, currently `make release-run-ready`.
+  `ops/test-lane-registry.json` and the current git diff by default. Set
+  `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST` to use an explicit
+  manifest instead. It emits minimal suggested commands and deterministic
+  duration-budget status, and always marks the final full release proof as still
+  required through the registry-owned explicit checkpoint command, currently
+  `make release-run-ready`.
 - `make release-evidence-converge`: authoritative clean release evidence convergence.
 - `make release-evidence-closeout-sealed`: check-only sealed packaging lane for an
   already source-ready tree. It must not run mutating source/evidence convergence;
@@ -706,21 +707,25 @@ fingerprints, accepted risk, gate attention, or learning blockers.
 
   1. Finish all source, code, documentation, policy, schema, fixture, and test
      edits.
-  2. Validate the changed surface. If a CLI option, output path, or direct
-     script writer surface changed, include `make script-output-surfaces-check`
-     before committing; refresh `make script-output-surfaces` only when the
-     check reports a stale material output/fallback registry.
-  3. Commit the source-ready change before mutating canonical generated
+  2. Refresh tracked source-derived projections with `make sync-derived` when
+     marker, selector, public policy, script surface, governance, workflow
+     order, Make inventory, action-pin, or schema sample projections are
+     affected. In check-only contexts, use `make sync-derived-check`.
+  3. Validate the changed surface with its focused owner test. Direct
+     `script-output-surfaces*` or `report-schema-samples*` targets are narrow
+     repair/debug slices; the routine closeout path is the aggregate sync target
+     plus focused tests.
+  4. Commit the source-ready change before mutating canonical generated
      evidence.
-  4. Run the narrow generated convergence lane that matches the blocker:
+  5. Run the narrow generated convergence lane that matches the blocker:
      `make generated-artifact-converge` for generated-artifact feedback, or
      `make freshness-source-identity-converge` for source revision/tree
      fingerprint resettle. Do not jump to broad release convergence unless the
      owner route still requires it.
-  5. Run `make artifact-freshness-refresh-check`.
-  6. When finality-tracked reports changed, run
+  6. Run `make artifact-freshness-refresh-check`.
+  7. When finality-tracked reports changed, run
      `make release-finality-resettle-current-or-refresh`.
-  7. Run the release/operator authority lane only after freshness and finality
+  8. Run the release/operator authority lane only after freshness and finality
      are stable, for example `make release-run-ready` or
      `make release-authority-settle`.
      `release-authority-settle` first checks that the selected goal run is
@@ -733,7 +738,7 @@ fingerprints, accepted risk, gate attention, or learning blockers.
      finality. This happens even when promotion readiness is blocked, so the
      active matrix reflects the newest blocker state and archive/source-action
      candidates stop the run before another finality seal.
-  8. Finish with `make release-post-commit-finalize` so HEAD readback,
+  9. Finish with `make release-post-commit-finalize` so HEAD readback,
      script-output surface checking, artifact freshness checking, and terminal
      finality verification use the committed tree.
 

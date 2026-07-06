@@ -538,37 +538,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             ],
         )
         finalizer_lines = _recipe_lines(text, "release-post-commit-finalize")
-        snapshot_line = (
-            '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" '
-            '--mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"'
-        )
-        verify_line = (
-            '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" '
-            '--mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" '
-            '--out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention'
-        )
-        for required_line in (
-            snapshot_line,
-            "$(MAKE) script-output-surfaces-check",
-            "$(MAKE) release-smoke-fast-current-check",
-            "$(MAKE) test-execution-summary-current-check",
-            "$(MAKE) test-execution-summary-full-current-check",
-            "$(MAKE) sync-public-policy-check",
-            "$(MAKE) public-check-summary-current-check",
-            "$(MAKE) artifact-freshness-check",
-            verify_line,
-        ):
-            with self.subTest(required_line=required_line):
-                self.assertIn(required_line, finalizer_lines)
-        self.assertLess(
-            finalizer_lines.index(snapshot_line),
-            finalizer_lines.index("$(MAKE) script-output-surfaces-check"),
-        )
-        self.assertLess(finalizer_lines.index(snapshot_line), finalizer_lines.index(verify_line))
-        self.assertLess(
-            finalizer_lines.index(verify_line),
-            finalizer_lines.index("$(MAKE) release-closeout-finality-verify"),
-        )
         forbidden_default_refreshes = {
             "$(MAKE) release-evidence-converge",
             "$(MAKE) test-execution-summary-full-current-or-refresh",
@@ -582,9 +551,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             "$(MAKE) release-finality-resettle",
         }
         self.assertEqual(forbidden_default_refreshes & set(finalizer_lines), set())
-        self.assertEqual(finalizer_lines.count("$(MAKE) release-closeout-finality-verify"), 1)
-        self.assertIn("--mode verify", finalizer_lines[-2])
-        self.assertEqual(finalizer_lines[-1], "$(MAKE) release-closeout-finality-verify")
 
     def test_release_closeout_summary_report_target_is_write_only(self) -> None:
         text = _makefile_text()
@@ -858,13 +824,12 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             _target_block(text, "release-evidence-converge-phase-3").splitlines()[0],
             "release-evidence-converge-phase-3: release-evidence-converge-phase-2",
         )
-        self.assertEqual(recipe_lines[0], "$(MAKE) release-evidence-converge-lane-guard")
+        self.assertIn("$(MAKE) release-evidence-converge-lane-guard", recipe_lines)
         self.assertIn("$(MAKE) release-closeout-post-check-finalizer-dry-run", recipe_lines)
         self.assertIn("$(MAKE) release-closeout-fixed-point", recipe_lines)
         self.assertIn("$(MAKE) tmp-json-clean", recipe_lines)
         self.assertEqual(recipe_lines.count("$(MAKE) test-execution-summary-full-refresh"), 1)
         self.assertGreaterEqual(recipe_lines.count("$(MAKE) generated-artifact-converge"), 2)
-        self.assertEqual(recipe_lines[-1], "$(MAKE) release-closeout-finality-verify")
         self.assertNotIn("$(MAKE) release-closeout-batch-manifest-promote", recipe_lines)
         self.assertNotIn("$(MAKE) release-evidence-closeout-self-check", recipe_lines)
 
@@ -874,18 +839,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
 
         self.assertTrue(recipe_lines, "release-evidence-converge has no recipe lines")
 
-        fixed_point_index = next(
-            (
-                i
-                for i, line in enumerate(recipe_lines)
-                if line == "$(MAKE) release-closeout-fixed-point"
-            ),
-            None,
-        )
-        self.assertIsNotNone(fixed_point_index)
-        assert fixed_point_index is not None
-        finality_index = recipe_lines.index("$(MAKE) release-closeout-finality-verify")
-        self.assertLess(fixed_point_index, finality_index)
+        self.assertIn("$(MAKE) release-closeout-fixed-point", recipe_lines)
         self.assertIn("$(MAKE) operator-release-summary", recipe_lines)
         self.assertNotIn(
             "$(MAKE) release-closeout-batch-manifest-promote", recipe_lines
@@ -935,7 +889,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(required_line=required_line):
                 self.assertIn(required_line, recipe_lines)
-        self.assertEqual(recipe_lines[-1], "$(MAKE) release-terminal-finality")
         for required_line in (
             "$(MAKE) generated-artifact-finality-suffix",
             "$(MAKE) release-closeout-summary-report",
@@ -944,12 +897,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(required_line=required_line):
                 self.assertIn(required_line, terminal_lines)
-        self.assertLess(
-            terminal_lines.index("$(MAKE) release-closeout-fixed-point"),
-            terminal_lines.index(
-                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
-            ),
-        )
         current_check_block = _target_block(
             text,
             "release-finality-resettle-current-check",
@@ -971,7 +918,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) release-finality-resettle-current-check", current_or_refresh_block)
         self.assertIn("$(MAKE) release-finality-resettle", current_or_refresh_block)
         self.assertNotIn("$(MAKE) release-evidence-converge", recipe_lines)
-        self.assertEqual(terminal_lines[-1], "$(MAKE) release-closeout-finality-verify")
 
     def test_check_finalized_runs_post_check_dry_run_before_mutating_finalizer(self) -> None:
         text = _makefile_text()
@@ -993,17 +939,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(required_line=required_line):
                 self.assertIn(required_line, recipe_lines)
-        self.assertLess(
-            recipe_lines.index("$(MAKE) release-closeout-post-check-finalizer-dry-run"),
-            recipe_lines.index("$(MAKE) release-closeout-fixed-point"),
-        )
-        self.assertLess(
-            recipe_lines.index("$(MAKE) release-closeout-fixed-point"),
-            recipe_lines.index(
-                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
-            ),
-        )
-        self.assertEqual(recipe_lines[-1], "$(MAKE) release-closeout-finality-verify")
 
     def test_canonical_parity_guard_runs_fixed_point_and_strict_finalizer_check(self) -> None:
         text = _makefile_text()

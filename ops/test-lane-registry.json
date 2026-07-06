@@ -58,17 +58,35 @@
       {
         "rule_id": "report_schema_sample_generator",
         "path_patterns": [
-          "tools/regenerate_report_schema_samples.py"
+          "tools/regenerate_report_schema_samples.py",
+          "tests/release_run_ready_sample_runtime.py",
+          "tests/supply_chain_sample_runtime.py"
         ],
         "commands": [
           "make static",
           "make report-schema-samples-check",
-          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_report_schema_sample_regeneration.py"
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_report_schema_sample_regeneration.py",
+          "make test-report-contract-core"
         ],
-        "reason": "Report schema sample generator changes need static analysis, fixture convergence, and focused report-contract generator coverage.",
+        "reason": "Report schema sample generator and helper changes need static analysis, fixture convergence, focused generator coverage, and schema-contract validation.",
         "coverage_class": "report_schema_sample_generation",
         "static_required": true,
-        "duration_seconds": 180
+        "duration_seconds": 300
+      },
+      {
+        "rule_id": "workflow_dependency_planner_source",
+        "path_patterns": [
+          "ops/scripts/core/workflow_dependency_planner.py"
+        ],
+        "commands": [
+          "make static",
+          "make workflow-dependency-planner-check",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_workflow_dependency_planner.py"
+        ],
+        "reason": "Workflow dependency planner source changes need manifest-backed planner diagnostics and the focused planner contract test.",
+        "coverage_class": "workflow_dependency_planner",
+        "static_required": true,
+        "duration_seconds": 150
       },
       {
         "rule_id": "python_runtime_source",

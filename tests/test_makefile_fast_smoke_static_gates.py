@@ -95,10 +95,6 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
         self.assertNotIn("eval", block)
         self.assertNotIn("stage2-eval", block)
         self.assertNotIn("release-smoke", block)
-        self.assertNotIn("tests/test_report_generation_smoke.py", block)
-        self.assertNotIn("tests/test_mutation_proposal.py \\", block)
-        self.assertNotIn("tests/test_artifact_freshness_runtime.py \\", block)
-        self.assertNotIn("tests/test_release_smoke.py \\", block)
 
     def test_runtime_hotspot_smoke_is_curated_decomposition_feedback_loop(self) -> None:
         text = _makefile_text()

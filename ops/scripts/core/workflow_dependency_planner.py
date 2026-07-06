@@ -4,6 +4,7 @@ import argparse
 import fnmatch
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -167,6 +168,22 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
             "release-closeout-fixed-point",
             "tmp-json-clean",
             "release-closeout-finality-verify",
+        ],
+        "expensive": False,
+        "reusable": True,
+    },
+    {
+        "rule_id": "runtime_python_source_change",
+        "path_patterns": [
+            "ops/scripts/**/*.py",
+        ],
+        "workflow_id": "runtime_python_source_validation",
+        "recommended_lane": "runtime-source",
+        "reason_code": "runtime_python_source_changed",
+        "description": "Ops runtime Python source changed; run static analysis and the default pytest lane before relying on generated or release evidence.",
+        "targets": [
+            "static",
+            "test",
         ],
         "expensive": False,
         "reusable": True,
@@ -528,12 +545,23 @@ def _missing_dependencies(targets: set[str], edges: list[dict[str, str]]) -> lis
 
 
 def _unknown_change_paths(
-    changed_paths: list[str], workflow_rules: list[dict[str, Any]]
+    changed_paths: list[str],
+    workflow_rules: list[dict[str, Any]],
+    changed_path_minimum_plan: dict[str, Any],
 ) -> list[str]:
+    minimum_unknown_paths = {
+        str(path) for path in changed_path_minimum_plan.get("unknown_paths", [])
+    }
+    minimum_known_paths = {
+        str(item["path"])
+        for item in changed_path_minimum_plan.get("path_recommendations", [])
+        if str(item.get("path", "")) and str(item["path"]) not in minimum_unknown_paths
+    }
     return [
         path
         for path in changed_paths
-        if not any(_matches_rule(path, rule) for rule in workflow_rules)
+        if path not in minimum_known_paths
+        and not any(_matches_rule(path, rule) for rule in workflow_rules)
     ]
 
 
@@ -542,8 +570,14 @@ def _test_lane_registry(vault: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _format_command(command: str, path: str) -> str:
-    return command.replace("{path}", path)
+def _format_command(
+    command: str,
+    path: str,
+    *,
+    changed_files_manifest: str | None = None,
+) -> str:
+    manifest = changed_files_manifest or "<changed-files-manifest>"
+    return command.replace("{path}", path).replace("{changed_files_manifest}", manifest)
 
 
 def _changed_path_minimum_rules(registry: dict[str, Any]) -> dict[str, Any]:
@@ -634,6 +668,8 @@ def _selected_command_duration_seconds(
 def _changed_path_minimum_plan(
     changed_paths: list[str],
     registry: dict[str, Any],
+    *,
+    changed_files_manifest: str | None = None,
 ) -> dict[str, Any]:
     config = _changed_path_minimum_rules(registry)
     rules = [item for item in config.get("rules", []) if isinstance(item, dict)]
@@ -668,7 +704,14 @@ def _changed_path_minimum_plan(
         command_templates = [
             str(command) for command in rule.get("commands", []) if str(command).strip()
         ]
-        commands = [_format_command(command, path) for command in command_templates]
+        commands = [
+            _format_command(
+                command,
+                path,
+                changed_files_manifest=changed_files_manifest,
+            )
+            for command in command_templates
+        ]
         duration_seconds = int(rule.get("duration_seconds", 0) or 0)
         path_recommendations.append(
             {
@@ -861,11 +904,31 @@ def _read_changed_paths(vault: Path, changed_files_manifest: str | None) -> list
     return paths
 
 
+def _read_git_changed_paths(vault: Path) -> list[str]:
+    paths: list[str] = []
+    for command in (
+        ["git", "diff", "--name-only", "HEAD", "--"],
+        ["git", "ls-files", "--others", "--exclude-standard"],
+    ):
+        result = subprocess.run(
+            command,
+            cwd=vault,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            continue
+        paths.extend(line.strip() for line in result.stdout.splitlines() if line.strip())
+    return paths
+
+
 def build_report(
     vault: Path,
     *,
     changed_paths: list[str] | None = None,
     changed_files_manifest: str | None = None,
+    changed_paths_from_git: bool = False,
     policy_path: str | None = None,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
@@ -875,15 +938,25 @@ def build_report(
     makefile_text, makefile_sources = load_makefile_text(resolved_vault)
     targets, phony, dependency_edges = _parse_makefile(makefile_text)
     manifest_paths = _read_changed_paths(resolved_vault, changed_files_manifest)
-    selected_paths = sorted({*(changed_paths or []), *manifest_paths})
+    git_paths = (
+        []
+        if changed_files_manifest or not changed_paths_from_git
+        else _read_git_changed_paths(resolved_vault)
+    )
+    selected_paths = sorted({*(changed_paths or []), *manifest_paths, *git_paths})
     workflow_rules = _workflow_rules(resolved_vault)
     test_lane_registry = _test_lane_registry(resolved_vault)
     changed_path_minimum_plan = _changed_path_minimum_plan(
         selected_paths,
         test_lane_registry,
+        changed_files_manifest=changed_files_manifest,
     )
     missing_dependencies = _missing_dependencies(targets, dependency_edges)
-    unknown_change_paths = _unknown_change_paths(selected_paths, workflow_rules)
+    unknown_change_paths = _unknown_change_paths(
+        selected_paths,
+        workflow_rules,
+        changed_path_minimum_plan,
+    )
     selected_workflows = _selected_workflows(selected_paths, workflow_rules)
     evidence_dag = _evidence_dag(resolved_vault)
     status = "fail" if missing_dependencies else "attention" if unknown_change_paths else "pass"
@@ -983,6 +1056,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--changed-path", action="append", default=[])
     parser.add_argument("--changed-files-manifest")
+    parser.add_argument(
+        "--changed-paths-from-git",
+        action="store_true",
+        help="Use the current git working-tree diff when no manifest is supplied.",
+    )
     return parser.parse_args(argv)
 
 
@@ -993,6 +1071,7 @@ def main(argv: list[str] | None = None) -> int:
         vault,
         changed_paths=list(args.changed_path),
         changed_files_manifest=args.changed_files_manifest,
+        changed_paths_from_git=args.changed_paths_from_git,
         policy_path=args.policy_path,
     )
     destination = write_report(vault, report, args.out)

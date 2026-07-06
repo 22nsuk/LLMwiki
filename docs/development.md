@@ -100,6 +100,14 @@ intentionally smaller than lint/eval, integration-heavy generator smoke, and
 full release smoke. `make runtime-hotspot-smoke` is the focused runtime
 decomposition check for hotspot façade refactors before a broader batch gate.
 
+For ordinary source maintenance, use this loop: edit the source contract,
+refresh tracked projections with `make sync-derived` when generated source
+surfaces are affected, then run the focused test that owns the changed surface.
+Use `make sync-derived-check` in review or CI contexts where files must not be
+rewritten. Avoid adding a one-off sync-check or literal parity assertion when
+the same currentness is already covered by the aggregate sync target, a
+generator unit test, or a declarative guard spec.
+
 ## Cost-Aware Test Use
 
 Use the smallest authoritative lane that proves the change under review.
@@ -225,16 +233,21 @@ rebase produces jobs that reach checkout.
 
 ## Change-Type Gates
 
+Use the table as a minimum local closeout plan. For source-derived surfaces,
+the write path is source edit -> `make sync-derived` -> focused owner test; the
+check-only path replaces the write step with `make sync-derived-check`.
+
 | Change type | Minimum local check | Extra check |
 | --- | --- | --- |
-| Docs only | `make test-public` | `make sync-derived-check` if tracked source-derived projections or public boundary templates may be stale |
-| Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
-| CLI output/path surface | `make sync-derived-check` | Run `make sync-derived` when the check reports a stale tracked source-derived projection, then rerun the check before committing |
-| Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | proves planner recommendations and changed-path minimums |
-| Registry/Make/CI lane-contract proof | `make test-report-contract-core` | proves registry/Make/CI lane-contract parity after lane selector, CI routing, or report-contract semantics changed |
+| Docs only | focused doc/static test when one owns the edited surface | `make sync-derived-check` if tracked source-derived projections or public boundary templates may be stale |
+| Python runtime | `make static` | focused `.venv/bin/python -m pytest ...`; finish with `make test` for shared runtime or lane-contract changes |
+| Source-derived projection | `make sync-derived` | focused generator/contract pytest for the projection; use `make sync-derived-check` only in check-only contexts |
+| CLI output/path surface | `make sync-derived` | focused script surface tests such as script output/lifecycle/module-surface contracts, then `make sync-derived-check` before committing |
+| Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | proves planner recommendations and changed-path minimums from the current git diff; set `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST=<manifest>` to override the diff input |
+| Registry/Make/CI lane-contract proof | `make sync-derived` + focused generator/static pytest | `make test-report-contract-core` after lane selector, CI routing, governance, workflow-order, or report-contract semantics changed |
 | Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | Before and after structural edits, prefer `make function-budget-edit-check STRUCTURAL_COMPLEXITY_BUDGET_TARGETS="path/to/file.py"` (or `CHANGED_FILES_MANIFEST=<manifest>`); it refreshes function-budget proposals and then runs the touched complexity ratchet. Without touched inputs, `complexity-budget-touched-check` skips and the ratchet stays inactive |
 | Dependency input | `make uv-lock-check` | `make static` after any intentional lock refresh |
-| Schema/report contract | `make test-report-contract-core` | `make sync-derived`, then rerun the focused schema/report tests |
+| Schema/report contract | `make sync-derived` + focused schema/report pytest | `make test-report-contract-core` when report-contract semantics, lane selectors, or generated samples changed |
 | Public export policy | `make sync-derived` | `make public-check` |
 | Release evidence | `make changed-path-minimum-plan`, then `make release-run-ready-plan-check` and `make release-run-ready-check` | Run `make release-evidence-converge` when generated report payloads are stale; run `make release-run-ready` from the committed tree before release; after a source-ready commit run `make release-post-commit-finalize` for check-only HEAD readback, or `make release-authority-settle` when staged authority manifests should be rewritten for unattended promotion |
 | Sealed release evidence | `make release-sealed-run-ready-check` | `make release-sealed-run-ready`; its planner requires current passing run-ready and auto-promotion preseal evidence and reports the minimal next action |

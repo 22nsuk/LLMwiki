@@ -739,15 +739,34 @@ def _build_self_contained_sample_updates(*, include_openvex: bool = True) -> dic
     return updates
 
 
+def _report_schema_samples_with_self_contained_updates(
+    fixture_path: Path = FIXTURE_PATH,
+    *,
+    include_openvex: bool = True,
+) -> dict:
+    seed_payload = load_report_schema_samples(fixture_path)
+    updates = _build_self_contained_sample_updates(include_openvex=include_openvex)
+    payload = {}
+    for entry in REPORT_SCHEMA_SAMPLE_COVERAGE:
+        if entry.sample_key in updates:
+            payload[entry.sample_key] = updates[entry.sample_key]
+        elif entry.sample_key in seed_payload:
+            payload[entry.sample_key] = seed_payload[entry.sample_key]
+    for sample_key, sample in seed_payload.items():
+        if sample_key not in payload:
+            payload[sample_key] = sample
+    _assert_sample_coverage_matches_payload(payload)
+    return payload
+
+
 def regenerate_report_schema_samples(
     fixture_path: Path = FIXTURE_PATH,
     *,
     include_openvex: bool = True,
 ) -> dict:
-    payload = load_report_schema_samples(fixture_path)
-    _assert_sample_coverage_matches_payload(payload)
-    payload.update(
-        _build_self_contained_sample_updates(include_openvex=include_openvex)
+    payload = _report_schema_samples_with_self_contained_updates(
+        fixture_path,
+        include_openvex=include_openvex,
     )
     _write_stable_json_file(fixture_path, payload)
     return payload
@@ -758,12 +777,10 @@ def candidate_report_schema_samples(
     *,
     include_openvex: bool = True,
 ) -> dict:
-    payload = load_report_schema_samples(fixture_path)
-    _assert_sample_coverage_matches_payload(payload)
-    payload.update(
-        _build_self_contained_sample_updates(include_openvex=include_openvex)
+    return _report_schema_samples_with_self_contained_updates(
+        fixture_path,
+        include_openvex=include_openvex,
     )
-    return payload
 
 
 def check_report_schema_samples(
@@ -776,10 +793,10 @@ def check_report_schema_samples(
         fixture_path,
         include_openvex=include_openvex,
     )
-    if candidate == expected:
+    expected_text = _stable_json_text(expected).splitlines()
+    candidate_text = _stable_json_text(candidate).splitlines()
+    if expected_text == candidate_text:
         return []
-    expected_text = json.dumps(expected, ensure_ascii=False, indent=2).splitlines()
-    candidate_text = json.dumps(candidate, ensure_ascii=False, indent=2).splitlines()
     return list(
         difflib.unified_diff(
             expected_text,

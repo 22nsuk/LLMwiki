@@ -186,10 +186,10 @@ workflow-dependency-planner:
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_OUT)" --schema ops/schemas/workflow-dependency-planner.schema.json --expected-artifact-kind workflow_dependency_planner --expected-producer ops.scripts.workflow_dependency_planner
 
 workflow-dependency-planner-check:
-	$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT)" $(if $(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST),--changed-files-manifest "$(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST)",)
+	$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT)" $(if $(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST),--changed-files-manifest "$(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST)",--changed-paths-from-git)
 
 changed-path-minimum-plan:
-	$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(CHANGED_PATH_MINIMUM_PLAN_OUT)" $(if $(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST),--changed-files-manifest "$(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST)",)
+	$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(CHANGED_PATH_MINIMUM_PLAN_OUT)" $(if $(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST),--changed-files-manifest "$(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST)",--changed-paths-from-git)
 
 release-workflow-order-guard:
 	$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)"

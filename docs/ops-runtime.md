@@ -64,6 +64,20 @@ tracked projections are current and validate inventory/operator metadata
 without rewriting files. This is separate from `make generated-artifact-converge`,
 which belongs to release/report finality evidence under generated report surfaces.
 
+When adding or changing an ops script, treat the script source, `pyproject.toml`
+console-script exposure, Make recipe references, and small override files as
+the human-owned contract. `make sync-derived` regenerates the tracked lifecycle,
+module-surface, output-surface, selector, governance, action-pin, public-policy,
+Make-inventory, and schema-sample projections from those sources. New generic
+`ops/scripts/**/*.py` changes are also known to the workflow dependency planner
+as runtime source changes and should pair `make static` with the default
+`make test` lane unless a narrower changed-path minimum applies.
+
+Static Make/CI tests should keep structural invariants and wiring checks only.
+Exact generated content or protected release recipe order belongs in the
+generator unit test, the `make sync-derived` no-op convergence check, or the
+declarative release workflow order guard spec.
+
 Operator-facing `current` or reusable-evidence decisions should come from the
 objective lane checks that bind HEAD, source fingerprint, and domain-specific
 currentness. Self-declared current fields are diagnostic metadata, not
