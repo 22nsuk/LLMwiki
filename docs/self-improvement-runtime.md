@@ -221,14 +221,20 @@ When a self-improvement run changes report producers or canonical evidence,
 close the generated-artifact order explicitly:
 
 ```bash
-make report-schema-samples-check
+make sync-derived
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/<focused-owner-test>.py
 make generated-artifact-converge
 make release-smoke-full-reuse
 make goal-runtime-closeout
 ```
 
-This order keeps schema samples, reusable release smoke, and goal closeout from
-drifting apart. Release promotion still requires the separate
+This order keeps tracked source-derived projections, the focused owner test,
+reusable release smoke, and goal closeout from drifting apart. Use
+`make sync-derived-check` instead of `make sync-derived` in check-only review
+contexts. `make report-schema-samples-check` and
+`make report-schema-samples-regenerate` remain focused fixture repair slices,
+but routine producer/schema changes should flow through the aggregate sync
+target. Release promotion still requires the separate
 `make release-run-ready`, `make release-sealed-run-ready`, and
 `make release-auto-promotion-ready` manifest authorities for the committed tree.
 

@@ -105,12 +105,13 @@ public mirror에서 당신의 기본 역할은 **runtime maintainer** 또는 **m
 
 기본 gate:
 1. `make dev-install`
-2. `make static`
-3. `make test`; full-suite 요청이면 `make test-all`, focused selector 검증이면 `.venv/bin/python -m pytest tests/...`
-4. source-derived projection을 바꾸는 변경이면 `make sync-derived`; check-only 맥락이면 `make sync-derived-check`
+2. source-derived projection을 바꾸는 변경이면 먼저 `make sync-derived`; check-only 맥락이면 `make sync-derived-check`
    - 새 public 파일, 새 public prefix, 공개/비공개 경계를 바꾸는 변경은 이 안의 `sync-public-policy`까지 포함해 마무리한다.
-5. 필요하면 `make public-export`
-6. 공개 미러 자체를 재검증할 때 `make public-check`
+3. `make static`
+4. 변경 surface를 소유한 focused test를 먼저 실행한다. focused selector 검증이면 `.venv/bin/python -m pytest tests/...`를 사용한다.
+5. `make test`; full-suite 요청이면 `make test-all`
+6. 필요하면 `make public-export`
+7. 공개 미러 자체를 재검증할 때 `make public-check`
 
 full local vault가 있을 때만 추가로:
 - `make check`

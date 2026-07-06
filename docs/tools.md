@@ -43,7 +43,9 @@ coverage table that distinguishes self-contained sample builders from
 fixture-seeded samples so schema changes expose which payloads are regenerated
 and which are still preserved from the checked-in fixture.
 
-Run these targets when changing report schemas, schema-backed report producers,
-or fixture generation rules. After regeneration, run the relevant
-report-contract tests, normally `make test-report-contract-core` for the public
-core lane.
+Routine report schema or schema-backed producer changes should use
+`make sync-derived`, then the focused owner test for the changed surface. Use
+`make report-schema-samples-check` and `make report-schema-samples-regenerate`
+when isolating fixture drift or debugging the sample generator itself. After
+regeneration, run the relevant report-contract tests, normally
+`make test-report-contract-core` for public core lane changes.

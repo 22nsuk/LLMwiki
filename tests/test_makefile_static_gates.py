@@ -265,6 +265,7 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
         "WORKFLOW_DEPENDENCY_PLANNER_OUT ?= ops/reports/workflow-dependency-planner.json",
         "WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT ?= tmp/workflow-dependency-planner.candidate.json",
         "WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT ?= tmp/workflow-dependency-planner-check.json",
+        "WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST ?=",
         "RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= ops/reports/release-workflow-order-guard.json",
         "RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json",
         "RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT ?= tmp/release-workflow-order-guard-check.json",
@@ -404,7 +405,11 @@ def _assert_workflow_dependency_planner_target(
         '$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT)"',
         planner_check_block,
     )
+    case.assertIn("--changed-paths-from-git", planner_check_block)
+    case.assertNotIn("--changed-paths-from-git", planner_block)
     case.assertNotIn("canonical_artifact_promote", planner_check_block)
+    changed_path_plan_block = _target_block(text, "changed-path-minimum-plan")
+    case.assertIn("--changed-paths-from-git", changed_path_plan_block)
     for target in ("static", "check", "check-all", "release-check", "release-clean"):
         with case.subTest(target=target):
             case.assertNotIn("workflow-dependency-planner", _target_block(text, target))
@@ -1114,7 +1119,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn(
             "| Registry/Make/CI lane-contract proof | "
-            "`make test-report-contract-core` |",
+            "`make sync-derived` + focused generator/static pytest | "
+            "`make test-report-contract-core`",
             development_text,
         )
         self.assertNotIn(

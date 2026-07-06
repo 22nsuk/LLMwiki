@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -263,6 +264,72 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                     [step["target"] for step in workflow["steps"]],
                 )
                 self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+
+    def test_generic_runtime_script_path_selects_validation_and_minimums(
+        self,
+    ) -> None:
+        changed_path = "ops/scripts/core/artifact_io_runtime.py"
+
+        report = build_report(
+            self.vault,
+            changed_paths=[changed_path],
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+        workflow = next(
+            item
+            for item in report["selected_workflows"]
+            if item["workflow_id"] == "runtime_python_source_validation"
+        )
+        self.assertEqual(workflow["recommended_lane"], "runtime-source")
+        self.assertEqual(workflow["matched_paths"], [changed_path])
+        self.assertEqual(workflow["matched_rules"], ["runtime_python_source_change"])
+        self.assertEqual(
+            [step["target"] for step in workflow["steps"]],
+            ["static", "test"],
+        )
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "runtime_source")
+        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
+        self.assertEqual(
+            [item["matched_rule_id"] for item in plan["path_recommendations"]],
+            ["python_runtime_source"],
+        )
+        self.assertEqual(
+            validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
+            [],
+        )
+
+    def test_planner_source_uses_focused_changed_path_minimum(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["ops/scripts/core/workflow_dependency_planner.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "workflow_dependency_planner")
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "make workflow-dependency-planner-check",
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+            ],
+        )
+        self.assertEqual(
+            [item["matched_rule_id"] for item in plan["path_recommendations"]],
+            ["workflow_dependency_planner_source"],
+        )
+        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+        self.assertEqual(
+            validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
+            [],
+        )
 
     def test_canonical_release_script_path_selects_release_evidence_converge(self) -> None:
         report = build_report(
@@ -747,14 +814,15 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
         plan = report["changed_path_minimum_plan"]
         self.assertEqual(plan["coverage_class"], "mixed")
-        self.assertEqual(plan["estimated_duration_seconds"], 390)
+        self.assertEqual(plan["estimated_duration_seconds"], 330)
         self.assertEqual(plan["duration_budget_seconds"], 300)
         self.assertEqual(plan["budget_status"], "over_budget")
         self.assertEqual(
             plan["command_duration_seconds"],
             {
                 "make static": 60,
-                "make test": 150,
+                "make workflow-dependency-planner-check": 60,
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
                 "make test-report-contract-core": 180,
             },
         )
@@ -771,16 +839,29 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
         plan = report["changed_path_minimum_plan"]
-        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
-        self.assertEqual(plan["estimated_duration_seconds"], 210)
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "make test",
+                "make workflow-dependency-planner-check",
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+            ],
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 300)
         self.assertEqual(plan["budget_status"], "within_budget")
         self.assertEqual(
             plan["command_duration_seconds"],
-            {"make static": 60, "make test": 150},
+            {
+                "make static": 60,
+                "make workflow-dependency-planner-check": 60,
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
+                "make test": 150,
+            },
         )
         self.assertEqual(
             [item["duration_seconds"] for item in plan["path_recommendations"]],
-            [180, 180],
+            [180, 150],
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
@@ -800,8 +881,16 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
         plan = report["changed_path_minimum_plan"]
-        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
-        self.assertEqual(plan["estimated_duration_seconds"], 180)
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "make test",
+                "make workflow-dependency-planner-check",
+                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+            ],
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 330)
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_path_minimum_plan_matches_public_docs(self) -> None:
@@ -814,32 +903,66 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 )
 
                 plan = report["changed_path_minimum_plan"]
+                self.assertEqual(report["status"], "pass")
+                self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
                 self.assertEqual(plan["status"], "pass")
                 self.assertEqual(plan["coverage_class"], "public_boundary")
                 self.assertEqual(plan["selected_commands"], ["make static", "make public-check"])
 
-    def test_changed_path_minimum_plan_matches_report_schema_sample_generator(self) -> None:
+    def test_registry_covered_paths_are_not_workflow_unknown(self) -> None:
         report = build_report(
             self.vault,
-            changed_paths=["tools/regenerate_report_schema_samples.py"],
+            changed_paths=[
+                "docs/development.md",
+                "ops/test-lane-registry.json",
+                "tests/release_run_ready_sample_runtime.py",
+            ],
             context=fixed_context(),
         )
 
-        plan = report["changed_path_minimum_plan"]
-        self.assertEqual(plan["status"], "pass")
-        self.assertEqual(plan["coverage_class"], "report_schema_sample_generation")
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+        self.assertEqual(report["changed_path_minimum_plan"]["status"], "pass")
         self.assertEqual(
-            plan["selected_commands"],
-            [
-                "make static",
-                "make report-schema-samples-check",
-                (
-                    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q "
-                    "-p no:cacheprovider tests/test_report_schema_sample_regeneration.py"
-                ),
-            ],
+            validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
+            [],
         )
-        self.assertEqual(plan["unknown_paths"], [])
+
+    def test_changed_path_minimum_plan_matches_report_schema_sample_generator(self) -> None:
+        changed_paths = [
+            "tools/regenerate_report_schema_samples.py",
+            "tests/release_run_ready_sample_runtime.py",
+            "tests/supply_chain_sample_runtime.py",
+        ]
+
+        for changed_path in changed_paths:
+            with self.subTest(changed_path=changed_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[changed_path],
+                    context=fixed_context(),
+                )
+
+                plan = report["changed_path_minimum_plan"]
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(
+                    plan["coverage_class"],
+                    "report_schema_sample_generation",
+                )
+                self.assertEqual(
+                    plan["selected_commands"],
+                    [
+                        "make static",
+                        "make report-schema-samples-check",
+                        (
+                            "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m "
+                            "pytest -q -p no:cacheprovider "
+                            "tests/test_report_schema_sample_regeneration.py"
+                        ),
+                        "make test-report-contract-core",
+                    ],
+                )
+                self.assertEqual(plan["unknown_paths"], [])
 
     def test_changed_path_minimum_plan_covers_registry_and_generated_currentness_artifacts(
         self,
@@ -906,6 +1029,16 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def test_changed_files_manifest_is_consumed(self) -> None:
         manifest = self.vault / "tmp" / "changed-files.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            ["git", "init"],
+            cwd=self.vault,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        untracked_doc = self.vault / "docs" / "development.md"
+        untracked_doc.parent.mkdir(parents=True, exist_ok=True)
+        untracked_doc.write_text("untracked doc\n", encoding="utf-8")
         manifest.write_text(
             json.dumps({"changed_files": [{"path": "external-reports/review.md"}]}),
             encoding="utf-8",
@@ -914,12 +1047,62 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         report = build_report(
             self.vault,
             changed_files_manifest="tmp/changed-files.json",
+            changed_paths_from_git=True,
             context=fixed_context(),
         )
 
         self.assertEqual(report["selected_change_paths"], ["external-reports/review.md"])
         self.assertIn("changed_files_manifest", report["input_fingerprints"])
         self.assertEqual(report["selected_workflows"][0]["workflow_id"], "external_report_reference_closeout")
+
+    def test_changed_paths_from_git_reads_untracked_paths(self) -> None:
+        subprocess.run(
+            ["git", "init"],
+            cwd=self.vault,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "add", "."],
+            cwd=self.vault,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=LLMwiki Test",
+                "-c",
+                "user.email=llmwiki-test@example.invalid",
+                "commit",
+                "-m",
+                "baseline",
+            ],
+            cwd=self.vault,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        changed_path = self.vault / "docs" / "development.md"
+        changed_path.parent.mkdir(parents=True, exist_ok=True)
+        changed_path.write_text("untracked doc\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], ["docs/development.md"])
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+        self.assertEqual(
+            report["changed_path_minimum_plan"]["selected_commands"],
+            ["make static", "make public-check"],
+        )
 
     def test_write_report_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())
