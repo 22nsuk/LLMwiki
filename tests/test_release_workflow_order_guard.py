@@ -81,13 +81,20 @@ def _recipe_line_for_role(role: str) -> str:
         return f"\t$(MAKE) {override}\n"
     command_role = _recipe_command_roles().get(role)
     if command_role is not None:
-        if role != "release-post-commit-finalizer-verify":
+        command_lines = {
+            "release-post-commit-finalizer-snapshot": (
+                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" '
+                '--mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"'
+            ),
+            "release-post-commit-finalizer-verify": (
+                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" '
+                '--mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" '
+                '--out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention'
+            ),
+        }
+        line = command_lines.get(role)
+        if line is None:
             raise AssertionError(f"missing fixture recipe line for command role: {role}")
-        line = (
-            '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" '
-            '--mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" '
-            '--out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention'
-        )
         if command_role["raw_line_contains"] not in line:
             raise AssertionError(f"fixture line does not match command role: {role}")
         return f"\t{line}\n"
@@ -518,7 +525,15 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             _recipe_command_roles()["release-post-commit-finalizer-verify"]["target"],
             "release-post-commit-finalize",
         )
+        self.assertEqual(
+            _recipe_command_roles()["release-post-commit-finalizer-snapshot"]["target"],
+            "release-post-commit-finalize",
+        )
         post_commit_roles = _sequence_roles("release_post_commit_finalizer_sequence")
+        self.assertLess(
+            post_commit_roles.index("release-post-commit-finalizer-snapshot"),
+            post_commit_roles.index("script-output-surfaces-check"),
+        )
         self.assertLess(
             post_commit_roles.index("artifact-freshness-check"),
             post_commit_roles.index("release-post-commit-finalizer-verify"),
@@ -816,6 +831,34 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(
             check["violations"][0]["reason"],
             "unexpected_repeated_post_commit_target",
+        )
+
+    def test_guard_fails_when_post_commit_snapshot_runs_after_currentness_checks(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        snapshot_line = _recipe_line_for_role("release-post-commit-finalizer-snapshot")
+        first_currentness_line = "\t$(MAKE) script-output-surfaces-check\n"
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                snapshot_line + first_currentness_line,
+                first_currentness_line + snapshot_line,
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_post_commit_finalizer_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(
+            check["violations"][0]["expected_role"],
+            "script-output-surfaces-check",
         )
 
     def test_guard_fails_when_post_commit_verify_runs_before_currentness_checks(

@@ -560,6 +560,10 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(required_line=required_line):
                 self.assertIn(required_line, finalizer_lines)
+        self.assertLess(
+            finalizer_lines.index(snapshot_line),
+            finalizer_lines.index("$(MAKE) script-output-surfaces-check"),
+        )
         self.assertLess(finalizer_lines.index(snapshot_line), finalizer_lines.index(verify_line))
         self.assertLess(
             finalizer_lines.index(verify_line),

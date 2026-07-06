@@ -24,6 +24,11 @@
   "recipe_command_roles": [
     {
       "target": "release-post-commit-finalize",
+      "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode snapshot",
+      "role": "release-post-commit-finalizer-snapshot"
+    },
+    {
+      "target": "release-post-commit-finalize",
       "raw_line_contains": "ops.scripts.release.release_post_commit_finalizer --vault \"$(VAULT)\" --mode verify",
       "role": "release-post-commit-finalizer-verify"
     }
@@ -132,6 +137,7 @@
       "id": "release_post_commit_finalizer_sequence",
       "target": "release-post-commit-finalize",
       "roles": [
+        "release-post-commit-finalizer-snapshot",
         "script-output-surfaces-check",
         "release-smoke-fast-current-check",
         "test-execution-summary-current-check",
@@ -142,7 +148,7 @@
         "release-post-commit-finalizer-verify",
         "release-closeout-finality-verify"
       ],
-      "details": "release-post-commit-finalize must stay a focused HEAD-bound suffix: current/check-only surfaces first, post-commit readback verify after freshness checks, then terminal finality verify."
+      "details": "release-post-commit-finalize must stay a focused HEAD-bound suffix: snapshot first, current/check-only surfaces next, post-commit readback verify after freshness checks, then terminal finality verify."
     },
     {
       "id": "check_finalized_post_check_sequence",
