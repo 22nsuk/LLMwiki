@@ -150,7 +150,7 @@ report-schema-samples-check:
 _internal-report-schema-samples-check:
 	$(PYTHON) tools/regenerate_report_schema_samples.py --check
 
-report-schema-samples-regenerate: clean-fixture-regeneration-guard
+report-schema-samples-regenerate:
 	$(PYTHON) tools/regenerate_report_schema_samples.py
 
 runtime-hotspot-goldens-check:

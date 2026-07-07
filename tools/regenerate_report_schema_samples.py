@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import difflib
 import json
 import sys
 import tempfile
@@ -45,7 +44,9 @@ from tests.supply_chain_sample_runtime import (
     seed_source_package_evidence,
 )
 
-FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
+SEED_FIXTURE_PATH = (
+    REPO_ROOT / "tests" / "fixtures" / "report_schema_sample_seeds.json"
+)
 OPENVEX_SAMPLE_ID = "urn:uuid:12345678-1234-4234-9234-123456789abd"
 CYCLONEDX_SAMPLE_SERIAL_NUMBER = "urn:uuid:12345678-1234-4234-9234-123456789abc"
 ARTIFACT_FRESHNESS_REPORT_PATH = "ops/reports/artifact-freshness-report.json"
@@ -202,10 +203,6 @@ REPORT_SCHEMA_SAMPLE_COVERAGE = (
 )
 
 
-def load_report_schema_samples(fixture_path: Path = FIXTURE_PATH) -> dict:
-    return json.loads(fixture_path.read_text(encoding="utf-8"))
-
-
 def report_schema_sample_coverage_table() -> tuple[ReportSchemaSampleCoverage, ...]:
     return REPORT_SCHEMA_SAMPLE_COVERAGE
 
@@ -218,15 +215,8 @@ def self_contained_report_schema_sample_keys() -> tuple[str, ...]:
     )
 
 
-def self_contained_report_schema_sample_update_keys(
-    *,
-    include_openvex: bool = True,
-) -> tuple[str, ...]:
-    return tuple(
-        sample_key
-        for sample_key in self_contained_report_schema_sample_keys()
-        if include_openvex or sample_key != "openvex_draft"
-    )
+def self_contained_report_schema_sample_update_keys() -> tuple[str, ...]:
+    return self_contained_report_schema_sample_keys()
 
 
 def seed_preserved_report_schema_sample_keys() -> tuple[str, ...]:
@@ -235,6 +225,30 @@ def seed_preserved_report_schema_sample_keys() -> tuple[str, ...]:
         for entry in REPORT_SCHEMA_SAMPLE_COVERAGE
         if entry.generation == SAMPLE_GENERATION_FIXTURE_SEED
     )
+
+
+def _assert_seed_sample_coverage_matches_payload(payload: dict) -> None:
+    seed_keys = list(seed_preserved_report_schema_sample_keys())
+    payload_keys = list(payload)
+    if seed_keys == payload_keys:
+        return
+    missing_from_seed = sorted(set(seed_keys) - set(payload_keys))
+    unexpected_seed_keys = sorted(set(payload_keys) - set(seed_keys))
+    raise ValueError(
+        "report schema sample seed fixture does not match fixture_seed coverage keys: "
+        f"missing_from_seed={missing_from_seed}, "
+        f"unexpected_seed_keys={unexpected_seed_keys}"
+    )
+
+
+def load_report_schema_sample_seeds(
+    seed_fixture_path: Path = SEED_FIXTURE_PATH,
+) -> dict:
+    payload = json.loads(seed_fixture_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise TypeError(f"expected report schema sample seed object: {seed_fixture_path}")
+    _assert_seed_sample_coverage_matches_payload(payload)
+    return payload
 
 
 def _assert_sample_coverage_matches_payload(payload: dict) -> None:
@@ -718,18 +732,15 @@ def build_release_run_ready_plan_schema_sample() -> dict:
             return build_run_ready_plan(vault, context=fixed_run_ready_context())
 
 
-def _build_self_contained_sample_updates(*, include_openvex: bool = True) -> dict:
+def _build_self_contained_sample_updates() -> dict:
     updates = build_supply_chain_schema_samples()
     updates["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
     updates["auto_improve_readiness_report"] = (
         build_auto_improve_readiness_schema_sample()
     )
     updates["release_run_ready_plan"] = build_release_run_ready_plan_schema_sample()
-    if include_openvex:
-        updates["openvex_draft"] = build_openvex_schema_sample(updates["cyclonedx_bom"])
-    expected_keys = set(
-        self_contained_report_schema_sample_update_keys(include_openvex=include_openvex)
-    )
+    updates["openvex_draft"] = build_openvex_schema_sample(updates["cyclonedx_bom"])
+    expected_keys = set(self_contained_report_schema_sample_update_keys())
     if set(updates) != expected_keys:
         raise ValueError(
             "self-contained report schema sample updates do not match coverage table: "
@@ -740,109 +751,89 @@ def _build_self_contained_sample_updates(*, include_openvex: bool = True) -> dic
 
 
 def _report_schema_samples_with_self_contained_updates(
-    fixture_path: Path = FIXTURE_PATH,
     *,
-    include_openvex: bool = True,
+    seed_fixture_path: Path = SEED_FIXTURE_PATH,
 ) -> dict:
-    seed_payload = load_report_schema_samples(fixture_path)
-    updates = _build_self_contained_sample_updates(include_openvex=include_openvex)
+    seed_payload = load_report_schema_sample_seeds(seed_fixture_path)
+    updates = _build_self_contained_sample_updates()
     payload = {}
     for entry in REPORT_SCHEMA_SAMPLE_COVERAGE:
         if entry.sample_key in updates:
             payload[entry.sample_key] = updates[entry.sample_key]
-        elif entry.sample_key in seed_payload:
+        elif entry.generation == SAMPLE_GENERATION_FIXTURE_SEED:
             payload[entry.sample_key] = seed_payload[entry.sample_key]
-    for sample_key, sample in seed_payload.items():
-        if sample_key not in payload:
-            payload[sample_key] = sample
     _assert_sample_coverage_matches_payload(payload)
     return payload
 
 
 def regenerate_report_schema_samples(
-    fixture_path: Path = FIXTURE_PATH,
     *,
-    include_openvex: bool = True,
+    out_path: Path | None = None,
+    seed_fixture_path: Path = SEED_FIXTURE_PATH,
 ) -> dict:
     payload = _report_schema_samples_with_self_contained_updates(
-        fixture_path,
-        include_openvex=include_openvex,
+        seed_fixture_path=seed_fixture_path,
     )
-    _write_stable_json_file(fixture_path, payload)
+    if out_path is not None:
+        _write_stable_json_file(out_path, payload)
     return payload
 
 
 def candidate_report_schema_samples(
-    fixture_path: Path = FIXTURE_PATH,
     *,
-    include_openvex: bool = True,
+    seed_fixture_path: Path = SEED_FIXTURE_PATH,
 ) -> dict:
     return _report_schema_samples_with_self_contained_updates(
-        fixture_path,
-        include_openvex=include_openvex,
+        seed_fixture_path=seed_fixture_path,
     )
 
 
 def check_report_schema_samples(
-    fixture_path: Path = FIXTURE_PATH,
     *,
-    include_openvex: bool = True,
+    seed_fixture_path: Path = SEED_FIXTURE_PATH,
 ) -> list[str]:
-    expected = load_report_schema_samples(fixture_path)
-    candidate = candidate_report_schema_samples(
-        fixture_path,
-        include_openvex=include_openvex,
-    )
-    expected_text = _stable_json_text(expected).splitlines()
-    candidate_text = _stable_json_text(candidate).splitlines()
-    if expected_text == candidate_text:
-        return []
-    return list(
-        difflib.unified_diff(
-            expected_text,
-            candidate_text,
-            fromfile=str(fixture_path),
-            tofile="generated-candidate",
-            lineterm="",
-        )
-    )
+    candidate_report_schema_samples(seed_fixture_path=seed_fixture_path)
+    return []
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", default=str(FIXTURE_PATH))
+    parser.add_argument("--seed-fixture", default=str(SEED_FIXTURE_PATH))
     parser.add_argument(
-        "--skip-openvex",
-        action="store_true",
-        help="Leave the openvex_draft sample untouched.",
+        "--out",
+        default=None,
+        help="Optional debug output path for the generated full candidate.",
     )
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Fail if regenerated samples differ from the checked-in fixture.",
+        help="Fail if the seed fixture cannot produce the generated sample candidate.",
     )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    if args.check:
-        diff = check_report_schema_samples(
-            Path(args.fixture),
-            include_openvex=not args.skip_openvex,
+    try:
+        if args.check:
+            check_report_schema_samples(seed_fixture_path=Path(args.seed_fixture))
+            return 0
+        regenerate_report_schema_samples(
+            out_path=Path(args.out) if args.out else None,
+            seed_fixture_path=Path(args.seed_fixture),
         )
-        if diff:
-            print(
-                "report schema samples are stale; run tools/regenerate_report_schema_samples.py",
-                file=sys.stderr,
-            )
-            print("\n".join(diff[:200]), file=sys.stderr)
-            return 1
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        print(
+            "report schema sample generation failed: "
+            f"{type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    if args.out:
+        print(args.out)
+    else:
+        print("report schema samples generated from seed fixture")
         return 0
-    regenerate_report_schema_samples(
-        Path(args.fixture),
-        include_openvex=not args.skip_openvex,
-    )
     return 0
 
 

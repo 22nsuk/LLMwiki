@@ -184,6 +184,45 @@ class AntiSlopAdmissionRuntimeTests(unittest.TestCase):
         self.assertEqual(len(violations), 1)
         self.assertEqual(violations[0]["field"], "path")
 
+    def test_make_inventory_derives_script_lifecycle_when_stored_policy_is_absent(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(
+                vault,
+                schema_names=[
+                    "make-target-inventory.schema.json",
+                    "make-target-inventory-operator.schema.json",
+                    "script-lifecycle-policy.schema.json",
+                ],
+            )
+            script_path = vault / "ops" / "scripts" / "core" / "derived_lifecycle.py"
+            script_path.parent.mkdir(parents=True, exist_ok=True)
+            script_path.write_text("def main(): pass\n", encoding="utf-8")
+            (vault / "Makefile").write_text(
+                ".PHONY: derived-lifecycle\n"
+                "derived-lifecycle:\n"
+                "\t$(PYTHON) -m ops.scripts.core.derived_lifecycle\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-output-surfaces.json").write_text(
+                '{"surfaces":[]}\n',
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+        self.assertEqual(report["anti_slop_admission"]["status"], "pass")
+        self.assertFalse(report["anti_slop_admission"]["script_lifecycle"]["present"])
+        self.assertEqual(
+            report["anti_slop_admission"]["cli_surface_inventory"][
+                "unclassified_module_count"
+            ],
+            0,
+        )
+
     def test_make_inventory_fails_when_script_surface_is_missing_lifecycle_policy(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

@@ -14,7 +14,6 @@ _internal-sync-derived:
 	$(MAKE) release-governance-sync
 	$(MAKE) release-workflow-order-guard
 	$(MAKE) make-target-inventory
-	$(MAKE) report-schema-samples-regenerate
 
 _internal-sync-derived-check:
 	$(MAKE) pytest-markers-sync-check
@@ -27,4 +26,3 @@ _internal-sync-derived-check:
 	$(MAKE) release-governance-sync-check
 	$(MAKE) release-workflow-order-guard-check
 	$(MAKE) make-target-inventory-check
-	$(MAKE) report-schema-samples-check

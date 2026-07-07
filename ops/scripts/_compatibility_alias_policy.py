@@ -25,6 +25,7 @@ LIFECYCLE_RETAINED_REASONS = {
     "legacy_delete": "legacy_delete_pending_removal",
 }
 FLAT_IMPORT_ALIASES_PATH = "ops/script-flat-import-aliases.json"
+SCRIPT_LIFECYCLE_POLICY_PATH = "ops/script-lifecycle-policy.json"
 
 
 def _read_json_object(path: Path) -> dict[str, Any]:
@@ -92,6 +93,15 @@ def _retains_lifecycle_flat_alias(
     )
 
 
+def _lifecycle_policy(vault: Path) -> dict[str, Any]:
+    stored_policy = _read_json_object(vault / SCRIPT_LIFECYCLE_POLICY_PATH)
+    if stored_policy:
+        return stored_policy
+    from ops.scripts.core.script_lifecycle_policy import load_script_lifecycle_policy
+
+    return load_script_lifecycle_policy(vault)
+
+
 def discover_flat_reexport_targets(script_root: Path) -> dict[str, FlatReexportTarget]:
     """Return policy-backed flat import aliases that remain part of the contract."""
     resolved_script_root = script_root.resolve()
@@ -100,7 +110,7 @@ def discover_flat_reexport_targets(script_root: Path) -> dict[str, FlatReexportT
     retained_by_stem: dict[str, FlatReexportTarget] = {}
     flat_alias_modules = _flat_import_alias_modules(vault)
 
-    lifecycle_policy = _read_json_object(vault / "ops" / "script-lifecycle-policy.json")
+    lifecycle_policy = _lifecycle_policy(vault)
     for module in lifecycle_policy.get("modules", []):
         if not isinstance(module, dict):
             continue

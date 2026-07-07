@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +14,10 @@ from hypothesis import HealthCheck, settings
 
 from ops.scripts.test.test_execution_command_runtime import PYTEST_OPTION_VALUE_FLAGS
 from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.report_contract_test_runtime import (
+    ReportPayloadMap,
+    load_generated_report_payload_map,
+)
 from tests.runtime_test_context import frozen_context as build_frozen_context
 
 BARE_PYTEST_GUIDANCE = (
@@ -93,6 +97,18 @@ def fresh_vault(tmp_path: Path) -> Iterator[Path]:
     """Yield an isolated seeded vault directory for one test function."""
     seed_minimal_vault(tmp_path)
     yield tmp_path
+
+
+@pytest.fixture(scope="session")
+def report_schema_sample_payload_factory() -> Callable[[], ReportPayloadMap]:
+    return load_generated_report_payload_map
+
+
+@pytest.fixture
+def report_schema_sample_payloads(
+    report_schema_sample_payload_factory: Callable[[], ReportPayloadMap],
+) -> ReportPayloadMap:
+    return report_schema_sample_payload_factory()
 
 
 def pytest_configure(config: pytest.Config) -> None:

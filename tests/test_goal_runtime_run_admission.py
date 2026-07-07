@@ -539,9 +539,9 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         source_target = self.vault / "ops" / "scripts" / "mechanism" / "small_runtime.py"
         source_target.parent.mkdir(parents=True, exist_ok=True)
         source_target.write_text("def run() -> None:\n    return None\n", encoding="utf-8")
-        fixture_target = self.vault / "tests" / "fixtures" / "report_schema_samples.json"
-        fixture_target.parent.mkdir(parents=True, exist_ok=True)
-        fixture_target.write_text(
+        seed_target = self.vault / "tests" / "fixtures" / "report_schema_sample_seeds.json"
+        seed_target.parent.mkdir(parents=True, exist_ok=True)
+        seed_target.write_text(
             "\n".join(f'"sample_{index}": true' for index in range(1000)) + "\n",
             encoding="utf-8",
         )
@@ -556,7 +556,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
                             "ops/scripts/mechanism/small_runtime.py",
                         ],
                         "supporting_targets": [
-                            "tests/fixtures/report_schema_samples.json",
+                            "tests/fixtures/report_schema_sample_seeds.json",
                         ],
                     }
                 ],
@@ -588,7 +588,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             check["observed"]["raw_target_paths"],
             [
                 "ops/scripts/mechanism/small_runtime.py",
-                "tests/fixtures/report_schema_samples.json",
+                "tests/fixtures/report_schema_sample_seeds.json",
             ],
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])

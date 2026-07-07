@@ -1,0 +1,1577 @@
+{
+  "eval": {
+    "$schema": "ops/schemas/eval-report.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "artifact_kind": "wiki_eval_report",
+    "producer": "ops.scripts.wiki_eval",
+    "source_command": "python -m ops.scripts.eval.wiki_eval",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-eval-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-15T00:00:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "pass",
+    "max_score": 1,
+    "total_score": 1,
+    "pages": [
+      {
+        "page": "wiki/source--sample.md",
+        "score": 1,
+        "max_score": 1,
+        "results": []
+      }
+    ]
+  },
+  "eval_coverage": {
+    "$schema": "ops/schemas/wiki-eval-coverage-report.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "artifact_kind": "wiki_eval_coverage_report",
+    "producer": "ops.scripts.wiki_eval_coverage_runtime",
+    "source_command": "python -m ops.scripts.eval.wiki_eval_coverage",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-eval-coverage-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-15T00:00:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "pass",
+    "summary": {
+      "cohorts_evaluated": 1,
+      "cohorts_with_matching_pages": 1,
+      "coverage_gap_count": 0
+    },
+    "cohorts": [
+      {
+        "cohort_id": "stage1_source_substance_coverage",
+        "stage": "stage1",
+        "coverage_rules": [
+          "source_page_substance"
+        ],
+        "inactive_rules": [],
+        "matching_page_count": 1,
+        "covered_page_count": 1,
+        "configured_rule_count": 1,
+        "active_rule_count": 1,
+        "gap_reasons": [],
+        "matching_pages_sample": [
+          "wiki/source--sample.md"
+        ],
+        "covered_pages_sample": [
+          "wiki/source--sample.md"
+        ]
+      }
+    ],
+    "review_candidates": []
+  },
+  "lint": {
+    "$schema": "ops/schemas/lint-report.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "artifact_kind": "wiki_lint_report",
+    "producer": "ops.scripts.wiki_lint",
+    "source_command": "python -m ops.scripts.eval.wiki_lint",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-lint-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-15T00:00:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "pass",
+    "errors": [],
+    "warnings": [],
+    "review_candidates": [],
+    "watchlist": [],
+    "stats": {
+      "error_count": 0,
+      "warning_count": 0,
+      "review_candidate_count": 0,
+      "watchlist_count": 0
+    }
+  },
+  "warning_budget": {
+    "$schema": "ops/schemas/warning-budget-report.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "profile": "release_clean",
+    "status": "pass",
+    "sources": {
+      "raw_registry_preflight": {
+        "status": "pass",
+        "warning_count": 0,
+        "warning_type_counts": {}
+      },
+      "wiki_lint": {
+        "status": "pass",
+        "warning_count": 0,
+        "warning_type_counts": {}
+      }
+    },
+    "checks": [
+      {
+        "id": "raw_registry_preflight.unregistered_raw_file",
+        "source": "raw_registry_preflight",
+        "metric": "warning_type",
+        "warning_type": "unregistered_raw_file",
+        "actual": 0,
+        "budget": 0,
+        "status": "pass"
+      },
+      {
+        "id": "raw_registry_preflight.raw_markdown_blank_published",
+        "source": "raw_registry_preflight",
+        "metric": "warning_type",
+        "warning_type": "raw_markdown_blank_published",
+        "actual": 0,
+        "budget": 0,
+        "status": "pass"
+      },
+      {
+        "id": "wiki_lint.unregistered_raw_file",
+        "source": "wiki_lint",
+        "metric": "warning_type",
+        "warning_type": "unregistered_raw_file",
+        "actual": 0,
+        "budget": 0,
+        "status": "pass"
+      },
+      {
+        "id": "wiki_lint.raw_markdown_blank_published",
+        "source": "wiki_lint",
+        "metric": "warning_type",
+        "warning_type": "raw_markdown_blank_published",
+        "actual": 0,
+        "budget": 0,
+        "status": "pass"
+      }
+    ],
+    "summary": {
+      "source_count": 2,
+      "source_fail_count": 0,
+      "check_count": 4,
+      "failed_check_count": 0
+    }
+  },
+  "structural_complexity_budget": {
+    "$schema": "ops/schemas/structural-complexity-budget-report.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-21T01:30:00Z",
+    "artifact_kind": "structural_complexity_budget_report",
+    "producer": "ops.scripts.structural_complexity_budget_runtime",
+    "source_command": "python -m ops.scripts.eval.structural_complexity_budget",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-structural-complexity-budget-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-21T01:30:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "attention",
+    "profiles": {
+      "critical_runtime_orchestrators": {
+        "target_count": 1,
+        "budgets": {
+          "nonempty_line_count_total": 140,
+          "python_function_count": 10,
+          "python_branch_node_count": 18
+        },
+        "notes": [
+          "Deterministic preview budget for critical orchestration runtimes."
+        ]
+      }
+    },
+    "targets": [
+      {
+        "path": "ops/scripts/sample_runtime.py",
+        "profile": "critical_runtime_orchestrators",
+        "status": "warn",
+        "metrics": {
+          "nonempty_line_count_total": 165,
+          "python_function_count": 8,
+          "python_branch_node_count": 21,
+          "markdown_heading_count": 0,
+          "test_case_count": 0
+        },
+        "budget": {
+          "nonempty_line_count_total": 140,
+          "python_function_count": 10,
+          "python_branch_node_count": 18
+        },
+        "budget_deltas": {
+          "nonempty_line_count_total": 25,
+          "python_function_count": -2,
+          "python_branch_node_count": 3
+        },
+        "over_budget_metrics": [
+          "nonempty_line_count_total",
+          "python_branch_node_count"
+        ],
+        "no_headroom_metrics": [],
+        "low_headroom_metrics": [],
+        "function_budget_candidate_count": 1
+      }
+    ],
+    "function_budget_candidates": [
+      {
+        "type": "python_function_budget_candidate",
+        "page": "ops/scripts/sample_runtime.py",
+        "symbol": "sample_runtime.orchestrate",
+        "line": 10,
+        "profile": "runtime",
+        "triggered_budgets": [
+          "function_lines",
+          "branch_node_count"
+        ],
+        "value": {
+          "function_lines": 145,
+          "parameter_count": 3,
+          "branch_node_count": 21
+        },
+        "threshold": {
+          "function_lines": 120,
+          "parameter_count": 10,
+          "branch_node_count": 18
+        },
+        "suggested_action": "review_for_function_split_or_interface_object"
+      }
+    ],
+    "diagnostics": {
+      "unreadable_targets": [],
+      "python_parse_failures": [],
+      "function_budget_top_n": {
+        "top_n": 10,
+        "total_candidate_count": 1,
+        "monitored_candidate_count": 1,
+        "unmonitored_candidate_count": 0,
+        "candidates": [
+          {
+            "type": "python_function_budget_candidate",
+            "page": "ops/scripts/sample_runtime.py",
+            "symbol": "sample_runtime.orchestrate",
+            "line": 10,
+            "profile": "runtime",
+            "triggered_budgets": [
+              "function_lines",
+              "branch_node_count"
+            ],
+            "value": {
+              "function_lines": 145,
+              "parameter_count": 3,
+              "branch_node_count": 21
+            },
+            "threshold": {
+              "function_lines": 120,
+              "parameter_count": 10,
+              "branch_node_count": 18
+            },
+            "suggested_action": "review_for_function_split_or_interface_object",
+            "monitored": true
+          }
+        ]
+      },
+      "function_budget_monitoring": {
+        "status": "pass",
+        "gate_effect": "preview",
+        "total_candidate_count": 1,
+        "monitored_candidate_count": 1,
+        "unmonitored_candidate_count": 0,
+        "monitored_target_count": 1,
+        "summary": "function budget candidates are covered by monitored target profiles"
+      }
+    },
+    "summary": {
+      "profile_count": 1,
+      "target_count": 1,
+      "targets_with_attention_count": 1,
+      "targets_with_failure_count": 0,
+      "function_budget_candidate_count": 1
+    }
+  },
+  "stage2": {
+    "$schema": "ops/schemas/wiki-stage2-eval-report.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "artifact_kind": "wiki_stage2_eval_report",
+    "producer": "ops.scripts.wiki_stage2_eval",
+    "source_command": "python -m ops.scripts.eval.wiki_stage2_eval",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-stage2-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-15T00:00:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "pass",
+    "max_score": 1,
+    "total_score": 1,
+    "pages": [
+      {
+        "page": "wiki/source--sample.md",
+        "score": 1,
+        "max_score": 1,
+        "results": [
+          {
+            "eval": "seed_source_has_absorption_hint",
+            "pass": true,
+            "detail": {}
+          }
+        ]
+      }
+    ]
+  },
+  "mechanism_review": {
+    "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "artifact_kind": "mechanism_review_candidates_report",
+    "producer": "ops.scripts.mechanism_review_runtime",
+    "source_command": "python -m ops.scripts.mechanism.mechanism_review",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-mechanism-review-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-15T00:00:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "pass",
+    "summary": {
+      "runs_discovered": 0,
+      "runs_considered": 0,
+      "runs_excluded": 0,
+      "runs_skipped": 0,
+      "candidates_emitted": 0
+    },
+    "diagnostics": {
+      "skipped_runs": [],
+      "excluded_runs": [],
+      "bootstrap": {
+        "status": "ready",
+        "summary": "frozen sample fixture keeps schema contract coverage independent from live run history.",
+        "recommended_next_step": "continue narrow one-mechanism experiments",
+        "trend_candidate_requirements": [
+          {
+            "candidate_type": "mechanism_eval_stagnation_candidate",
+            "evaluation_min_runs": 2,
+            "full_window_runs": 5
+          }
+        ],
+        "target_groups_under_min_history": []
+      },
+      "session_calibration": {
+        "enabled": true,
+        "status": "no_candidates",
+        "candidate_count": 0,
+        "candidates_with_session_context": 0,
+        "candidates_with_rollups": 0,
+        "candidates_without_session_context": 0,
+        "runs_with_session_context": 0,
+        "sessions_considered": 0,
+        "sessions_with_rollups": 0,
+        "validation_blocked_sessions": 0,
+        "review_blocked_sessions": 0,
+        "mutation_failed_sessions": 0,
+        "validator_dispatch_sessions": 0,
+        "reviewer_dispatch_sessions": 0,
+        "high_risk_routing_sessions": 0,
+        "total_priority_delta": 0,
+        "boosted_candidates": 0,
+        "lowered_candidates": 0,
+        "unchanged_candidates": 0,
+        "by_family": []
+      },
+      "outcome_metrics_calibration": {
+        "enabled": true,
+        "status": "no_candidates",
+        "mode": "audit_only",
+        "gate_effect": "none",
+        "source_report": "ops/reports/outcome-metrics.json",
+        "recent_window": 20,
+        "candidate_count": 0,
+        "candidates_with_outcome_context": 0,
+        "target_count": 0,
+        "thresholds": {
+          "high_rework_count": 1,
+          "hold_or_discard_moving_average": 0.25,
+          "rollback_signal_ratio": 0.2,
+          "defect_escape_pair_count": 1
+        },
+        "global_signals": {
+          "attempt_count": 0,
+          "recent_attempt_count": 0,
+          "moving_averages": {
+            "hold": 0,
+            "discard": 0,
+            "rollback_signal": 0
+          },
+          "rework_count": 0,
+          "rollback_signal_count": 0,
+          "defect_escape_pair_count": 0
+        },
+        "target_signals": [],
+        "family_signals": [],
+        "high_rework_targets": [],
+        "defect_escape_pairs": [],
+        "shadow_priority": {
+          "status": "disabled",
+          "gate_effect": "none",
+          "min_attempts_considered": 10,
+          "min_target_attempts": 2,
+          "shadow_priority_max_delta": 10,
+          "attempts_considered": 0,
+          "current_order": [],
+          "shadow_order": [],
+          "order_changed": false,
+          "ordering_deltas": []
+        },
+        "evidence_gaps": [],
+        "notes": [
+          "audit-only preview: outcome metrics are reported for calibration review and do not change candidate priority."
+        ]
+      },
+      "candidate_blockers": []
+    },
+    "candidates": []
+  },
+  "mutation_proposal": {
+    "$schema": "ops/schemas/mutation-proposals.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "artifact_kind": "mutation_proposals_report",
+    "producer": "ops.scripts.mutation_proposal_runtime",
+    "source_command": "python -m ops.scripts.mechanism.mutation_proposal",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-mutation-proposal-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-15T00:00:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "pass",
+    "summary": {
+      "source_candidates_read": 0,
+      "log_entries_scanned": 0,
+      "proposals_emitted": 0,
+      "blocked_proposals": 0,
+      "next_run_repair_proposals": 0,
+      "queue_pressure_summary": "no proposals emitted"
+    },
+    "diagnostics": {
+      "source_mechanism_review_report": "ops/reports/mechanism-review-candidates.json",
+      "skipped_candidates": [],
+      "evidence_gaps": [],
+      "empty_queue_blockers": [
+        {
+          "blocker_type": "source",
+          "reason": "proposal_queue_empty_without_specific_blocker",
+          "detail": "frozen sample fixture has no proposals",
+          "source": "sample_fixture"
+        }
+      ],
+      "family_session_calibration": {
+        "enabled": true,
+        "status": "no_proposals",
+        "proposal_count": 0,
+        "blocked_proposal_count": 0,
+        "by_family": []
+      },
+      "next_run_decision_queue": {
+        "session_reports_scanned": 0,
+        "decisions_considered": 0,
+        "open_carry_forward_decisions": 0,
+        "repair_proposals_emitted": 0,
+        "decision_counts": {},
+        "action_counts": {},
+        "selected_target_proposal_ids": []
+      },
+      "queue_selection": {
+        "available_proposal_count": 0,
+        "selected_proposal_count": 0,
+        "selection_mode": "standard",
+        "repair_priority_suppressed_count": 0,
+        "runnable_available_count": 0,
+        "blocked_available_count": 0,
+        "selected_runnable_count": 0,
+        "selected_blocked_count": 0,
+        "blocked_reason_counts": []
+      },
+      "recent_log_overlap": {
+        "dedupe_window": 5,
+        "max_age_days": 7,
+        "section_ordering": "timestamp",
+        "scanned_log_headings": [],
+        "matches": []
+      }
+    },
+    "proposals": []
+  },
+  "proposal_scope": {
+    "$schema": "ops/schemas/proposal-scope.schema.json",
+    "run_id": "run-20260415-example",
+    "proposal_id": "repeated_same_eval_or_discard__example",
+    "source_candidate_id": "mechanism_eval_stagnation_candidate__example",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "runnable",
+    "inputs": {
+      "primary_targets": [
+        "ops/scripts/example.py"
+      ],
+      "supporting_targets": [
+        "tests/test_example.py"
+      ]
+    },
+    "resolution": {
+      "test_files": [
+        "tests/test_example.py"
+      ],
+      "risk_flags": [],
+      "blocked_by": []
+    },
+    "apply_guardrails": {
+      "allowed_apply_roots": [
+        "ops/",
+        "tests/",
+        "system/system-log.md"
+      ]
+    },
+    "dispatch": {
+      "worker": true,
+      "validator": true,
+      "reviewer": false,
+      "auditors": []
+    }
+  },
+  "run_telemetry": {
+    "$schema": "ops/schemas/run-telemetry.schema.json",
+    "session_id": "auto-improve-2026-04-15",
+    "run_id": "run-20260415-example",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "proposal_id": "repeated_same_eval_or_discard__example",
+    "source_candidate_id": "mechanism_eval_stagnation_candidate__example",
+    "proposal_snapshot": "runs/run-20260415-example/proposal-snapshot.json",
+    "scope_freeze": "runs/run-20260415-example/scope-freeze.json",
+    "routing_reports": [
+      "runs/run-20260415-example/subagent-routing.worker.json"
+    ],
+    "executor_reports": [
+      "runs/run-20260415-example/worker-executor-report.json"
+    ],
+    "primary_targets": [
+      "ops/scripts/example.py"
+    ],
+    "supporting_targets": [
+      "tests/test_example.py"
+    ],
+    "test_files": [
+      "tests/test_example.py"
+    ],
+    "phase_durations": {
+      "routing": 1.25,
+      "execution": 12.5
+    },
+    "workspace_preparation": {
+      "mode": "full_copy",
+      "baseline_file_count": 42,
+      "copied_file_count": 42,
+      "phase_durations": {
+        "digest": 0.75,
+        "copy": 1.5,
+        "total": 2.25
+      }
+    },
+    "post_mutation_generated_artifact_convergence": {
+      "artifact": "runs/run-20260415-example/generated-artifact-convergence.json",
+      "phase": "post_mutation_generated_artifact_convergence",
+      "status": "refreshed",
+      "refreshed_targets": [
+        "ops/reports/raw-registry-preflight-report.json"
+      ],
+      "artifacts": [
+        "ops/reports/raw-registry-preflight-report.json",
+        "ops/reports/raw-registry-preflight-reproducibility.json"
+      ]
+    },
+    "failure_taxonomy": "",
+    "command_timeouts": {
+      "mutation_command": {
+        "timed_out": false,
+        "timeout_seconds": 5400,
+        "termination_reason": "completed",
+        "launch_succeeded": true,
+        "signal_sent": "none",
+        "final_state_observed": "communicate",
+        "stdout_received": true,
+        "stderr_received": true
+      },
+      "repo_health": {
+        "timed_out": false,
+        "timeout_seconds": 5400,
+        "termination_reason": "completed",
+        "launch_succeeded": true,
+        "signal_sent": "none",
+        "final_state_observed": "communicate",
+        "stdout_received": true,
+        "stderr_received": true
+      }
+    },
+    "behavior_delta": "runs/run-20260415-example/behavior-delta.json",
+    "apply_mode": "canary_only",
+    "apply_status": "canary_ready",
+    "live_applied": false,
+    "shadow_apply_report": "runs/run-20260415-example/shadow-apply-report.json",
+    "decision": "PROMOTE",
+    "decision_record": {
+      "decision_id": "decision:run-20260415-example:sample",
+      "subject_id": "run-20260415-example",
+      "subject_kind": "system_mechanism",
+      "decision": "PROMOTE",
+      "decision_stage": "promotion_gate",
+      "is_terminal": true,
+      "policy_version": 1,
+      "source_rule": "default_promote",
+      "source_pass": "system_mechanism",
+      "actor": "promotion_gate",
+      "reason_code": "no_blocking_rule_triggered",
+      "reason_detail": "sample canonical promotion decision",
+      "evidence_refs": [],
+      "decided_at": "2026-04-15T00:00:00Z",
+      "effective_at": "2026-04-15T00:00:00Z",
+      "supersedes": [],
+      "reducer_key": "promotion_decision_registry_v1",
+      "precedence_key": "0010:PROMOTE",
+      "dedupe_key": "run-20260415-example:promotion_gate",
+      "finalizable": true,
+      "finalize_blockers": [],
+      "ledger_event_type": "promotion_evaluated",
+      "ledger_partition_key": "run-20260415-example"
+    },
+    "finalized": true,
+    "finalize_result": {
+      "run_id": "run-20260415-example"
+    }
+  },
+  "generated_artifact_convergence": {
+    "$schema": "ops/schemas/generated-artifact-convergence.schema.json",
+    "run_id": "run-20260415-example",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "phase": "post_mutation_generated_artifact_convergence",
+    "status": "refreshed",
+    "selected_targets": [
+      "ops/reports/raw-registry-preflight-report.json",
+      "ops/scripts/example.py"
+    ],
+    "refreshed_targets": [
+      "ops/reports/raw-registry-preflight-report.json"
+    ],
+    "artifacts": [
+      "ops/reports/raw-registry-preflight-report.json",
+      "ops/reports/raw-registry-preflight-reproducibility.json"
+    ],
+    "summary": {
+      "selected_target_count": 2,
+      "refreshed_target_count": 1,
+      "artifact_count": 2
+    },
+    "details": [
+      {
+        "target": "ops/reports/raw-registry-preflight-report.json",
+        "status": "pass",
+        "artifacts": [
+          "ops/reports/raw-registry-preflight-report.json",
+          "ops/reports/raw-registry-preflight-reproducibility.json"
+        ],
+        "reproducibility_status": "pass",
+        "reproducibility_diff_status": "match"
+      }
+    ]
+  },
+  "run_artifact_fingerprint": {
+    "$schema": "ops/schemas/run-artifact-fingerprint.schema.json",
+    "scope": "run",
+    "run_id": "run-20260415-example",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "repo_provenance_snapshot": {
+      "report_path": "ops/reports/supply-chain-provenance.json",
+      "report_sha256": "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "report_generated_at": "2026-04-15T00:00:00Z",
+      "report_status": "pass",
+      "exists_at_run_start": true
+    },
+    "summary": {
+      "artifact_count": 1,
+      "schema_backed_count": 1,
+      "total_size_bytes": 512
+    },
+    "artifacts": [
+      {
+        "path": "runs/run-20260415-example/run-telemetry.json",
+        "artifact_role": "run_telemetry",
+        "schema": "ops/schemas/run-telemetry.schema.json",
+        "size_bytes": 512,
+        "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    ]
+  },
+  "timeout_failure": {
+    "$schema": "ops/schemas/timeout-failure.schema.json",
+    "run_id": "run-20260415-example",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "phase": "executor",
+    "role": "worker",
+    "command": {
+      "argv": [
+        "codex",
+        "exec",
+        "-"
+      ]
+    },
+    "result": {
+      "returncode": -15,
+      "timed_out": true,
+      "timeout_seconds": 1800,
+      "termination_reason": "timeout",
+      "launch_succeeded": true,
+      "signal_sent": "sigterm",
+      "final_state_observed": "drain_after_signal",
+      "stdout_received": true,
+      "stderr_received": true
+    },
+    "artifacts": {
+      "prompt": "runs/run-20260415-example/worker-prompt.md",
+      "output_last_message": "runs/run-20260415-example/worker-last-message.json",
+      "stdout": "runs/run-20260415-example/worker.stdout.txt",
+      "stderr": "runs/run-20260415-example/worker.stderr.txt",
+      "routing_report": "runs/run-20260415-example/subagent-routing.worker.json",
+      "scope_freeze": "runs/run-20260415-example/scope-freeze.json"
+    },
+    "diagnostics": {
+      "notes": [
+        "codex exec timed out after 1800 seconds"
+      ]
+    }
+  },
+  "shadow_apply_report": {
+    "$schema": "ops/schemas/shadow-apply-report.schema.json",
+    "mode": "shadow",
+    "status": "ready_for_live_apply",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "source_manifest": {
+      "schema": "ops/schemas/changed-files-manifest.schema.json",
+      "run_id": "run-20260415-example"
+    },
+    "guard": {
+      "allowed_apply_roots": [
+        "ops/",
+        "tests/"
+      ],
+      "changed_paths": [
+        "ops/scripts/example.py",
+        "tests/test_example.py"
+      ],
+      "invalid_paths": [],
+      "disallowed_paths": []
+    },
+    "summary": {
+      "total_changed_files": 2,
+      "added": 0,
+      "modified": 2,
+      "deleted": 0
+    },
+    "files": [
+      {
+        "path": "ops/scripts/example.py",
+        "change_type": "modified",
+        "live_exists": true,
+        "workspace_exists": true,
+        "would_write": true,
+        "would_delete": false
+      },
+      {
+        "path": "tests/test_example.py",
+        "change_type": "modified",
+        "live_exists": true,
+        "workspace_exists": true,
+        "would_write": true,
+        "would_delete": false
+      }
+    ]
+  },
+  "rollback_rehearsal_report": {
+    "$schema": "ops/schemas/rollback-rehearsal-report.schema.json",
+    "mode": "rollback_rehearsal",
+    "status": "pass",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "source_shadow_apply_report": "runs/run-20260415-example/shadow-apply-report.json",
+    "source_manifest": {
+      "schema": "ops/schemas/changed-files-manifest.schema.json",
+      "run_id": "run-20260415-example"
+    },
+    "guard": {
+      "allowed_apply_roots": [
+        "ops/",
+        "tests/"
+      ],
+      "changed_paths": [
+        "ops/scripts/example.py",
+        "tests/test_example.py"
+      ],
+      "invalid_paths": [],
+      "disallowed_paths": []
+    },
+    "summary": {
+      "total_changed_files": 2,
+      "apply_verified": 2,
+      "rollback_verified": 2,
+      "failed": 0
+    },
+    "files": [
+      {
+        "path": "ops/scripts/example.py",
+        "change_type": "modified",
+        "live_exists_before": true,
+        "workspace_exists": true,
+        "apply_verified": true,
+        "rollback_verified": true,
+        "diagnostics": []
+      },
+      {
+        "path": "tests/test_example.py",
+        "change_type": "modified",
+        "live_exists_before": true,
+        "workspace_exists": true,
+        "apply_verified": true,
+        "rollback_verified": true,
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  },
+  "behavior_delta": {
+    "$schema": "ops/schemas/behavior-delta.schema.json",
+    "run_id": "run-20260415-example",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "primary_targets": [
+      "ops/scripts/example.py"
+    ],
+    "supporting_targets": [],
+    "test_files": [
+      "tests/test_example.py"
+    ],
+    "inputs": {
+      "baseline_eval_report": "runs/run-20260415-example/baseline-eval.json",
+      "candidate_eval_report": "runs/run-20260415-example/candidate-eval.json",
+      "baseline_lint_report": "runs/run-20260415-example/baseline-lint.json",
+      "candidate_lint_report": "runs/run-20260415-example/candidate-lint.json",
+      "baseline_mechanism_report": "runs/run-20260415-example/baseline-mechanism-assessment.json",
+      "candidate_mechanism_report": "runs/run-20260415-example/candidate-mechanism-assessment.json",
+      "changed_files_manifest": "runs/run-20260415-example/changed-files-manifest.json"
+    },
+    "summary": {
+      "behavior_changed": true,
+      "changed_file_count": 1,
+      "delta_count": 1,
+      "intended_change_count": 1,
+      "unexpected_change_count": 0,
+      "unknown_intent_count": 0,
+      "coverage_gap_count": 0,
+      "contract_touch_count": 1,
+      "high_risk_delta_count": 0,
+      "regression_count": 0,
+      "risk_level": "medium"
+    },
+    "deltas": [
+      {
+        "id": "behavior-delta-001",
+        "target": "ops/scripts/example.py",
+        "change_type": "runtime_surface",
+        "manifest_change_type": "modified",
+        "intent": "intended",
+        "semantic_class": "api_surface_changed",
+        "expected_direction": "unknown",
+        "contract_touches": [
+          "runtime_logic"
+        ],
+        "behavior": "modified runtime_surface file; added Python symbols: helper",
+        "evidence": [
+          "runs/run-20260415-example/changed-files-manifest.json",
+          "tests/test_example.py"
+        ],
+        "coverage_status": "covered",
+        "risk": "medium",
+        "details": {
+          "added_symbols": [
+            "helper"
+          ],
+          "removed_symbols": [],
+          "symbol_count_delta": 1,
+          "file_exists_in_baseline": true,
+          "file_exists_in_candidate": true
+        }
+      }
+    ],
+    "diagnostics": {
+      "notes": [
+        "v2-v4 behavior delta remains deterministic: intent is derived from declared run scope, contract touches from path policy, and regression_count is only populated by explicit future policy annotations."
+      ],
+      "skipped_files": []
+    }
+  },
+  "promotion_decision_trends": {
+    "$schema": "ops/schemas/promotion-decision-trends.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "summary": {
+      "runs_discovered": 1,
+      "promotion_reports_considered": 1,
+      "finalized_count": 1,
+      "recent_window": 20
+    },
+    "decision_counts": {
+      "PROMOTE": 1
+    },
+    "artifact_class_counts": {
+      "runtime_contract": 1
+    },
+    "recent_runs": [
+      {
+        "run_id": "run-20260415-example",
+        "observed_at": "2026-04-15T00:00:00Z",
+        "decision": "PROMOTE",
+        "decision_record": {
+          "decision_id": "decision:run-20260415-example:sample",
+          "subject_id": "run-20260415-example",
+          "subject_kind": "runtime_contract",
+          "decision": "PROMOTE",
+          "decision_stage": "promotion_gate",
+          "is_terminal": true,
+          "policy_version": 1,
+          "source_rule": "default_promote",
+          "source_pass": "system_mechanism",
+          "actor": "promotion_gate",
+          "reason_code": "no_blocking_rule_triggered",
+          "reason_detail": "sample canonical promotion decision",
+          "evidence_refs": [],
+          "decided_at": "2026-04-15T00:00:00Z",
+          "effective_at": "2026-04-15T00:00:00Z",
+          "supersedes": [],
+          "reducer_key": "promotion_decision_registry_v1",
+          "precedence_key": "0010:PROMOTE",
+          "dedupe_key": "run-20260415-example:promotion_gate",
+          "finalizable": true,
+          "finalize_blockers": [],
+          "ledger_event_type": "promotion_evaluated",
+          "ledger_partition_key": "run-20260415-example"
+        },
+        "artifact_class": "runtime_contract",
+        "primary_targets": [
+          "ops/scripts/example.py"
+        ],
+        "finalized": true,
+        "promotion_report": "runs/run-20260415-example/promotion-report.json"
+      }
+    ]
+  },
+  "routing_provenance_aggregate": {
+    "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
+    "session_id": "auto-improve-2026-04-15",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "source_session_report": "ops/reports/auto-improve-sessions/auto-improve-2026-04-15.json",
+    "summary": {
+      "run_count": 1,
+      "routing_report_count": 1,
+      "executor_report_count": 1,
+      "telemetry_report_count": 1,
+      "promotion_report_count": 1,
+      "artifact_fingerprint_count": 1
+    },
+    "audit_rollup": {
+      "routing": {
+        "report_count": 1,
+        "role_counts": {
+          "worker": 1
+        },
+        "selected_rung_counts": {
+          "2": 1
+        },
+        "score_band_counts": {
+          "low": 1
+        },
+        "sandbox_mode_counts": {
+          "workspace-write": 1
+        },
+        "model_counts": {
+          "gpt-5.5": 1
+        },
+        "reasoning_effort_counts": {
+          "high": 1
+        },
+        "risk_flag_counts": {}
+      },
+      "executor": {
+        "report_count": 1,
+        "role_counts": {
+          "worker": 1
+        },
+        "status_counts": {
+          "pass": 1
+        },
+        "blocking_role_counts": {},
+        "returncode_counts": {
+          "0": 1
+        }
+      },
+      "telemetry": {
+        "report_count": 1,
+        "failure_taxonomy_counts": {},
+        "phase_totals_seconds": {
+          "routing": 1.25,
+          "execution": 12.5
+        },
+        "phase_max_seconds": {
+          "routing": 1.25,
+          "execution": 12.5
+        }
+      },
+      "coverage": {
+        "run_count": 1,
+        "runs_with_routing": 1,
+        "runs_with_executor": 1,
+        "runs_with_telemetry": 1,
+        "runs_with_promotion_report": 1,
+        "runs_with_artifact_fingerprint": 1
+      },
+      "loop_health": {
+        "attempt_count": 1,
+        "rework_count": 0,
+        "rollback_signal_count": 0,
+        "rollback_rehearsal_coverage_count": 1,
+        "defect_escape_count": 0,
+        "finalized_run_count": 1,
+        "executor_failure_count": 0,
+        "routing_report_parse_gap_count": 0,
+        "executor_report_parse_gap_count": 0,
+        "moving_averages": {
+          "hold": 0.0,
+          "discard": 0.0,
+          "rollback_signal": 0.0
+        },
+        "coverage_ratios": {
+          "routing": 1.0,
+          "executor": 1.0,
+          "telemetry": 1.0,
+          "promotion_report": 1.0,
+          "artifact_fingerprint": 1.0
+        },
+        "health_flags": []
+      }
+    },
+    "runs": [
+      {
+        "run_id": "run-20260415-example",
+        "proposal_id": "repeated_same_eval_or_discard__example",
+        "source_candidate_id": "mechanism_eval_stagnation_candidate__example",
+        "decision": "PROMOTE",
+        "outcome": "promoted",
+        "primary_targets": [
+          "ops/scripts/example.py"
+        ],
+        "supporting_targets": [
+          "tests/test_example.py"
+        ],
+        "test_files": [
+          "tests/test_example.py"
+        ],
+        "risk_flags": [],
+        "roles": [
+          "worker"
+        ],
+        "artifacts": {
+          "proposal_snapshot": "runs/run-20260415-example/proposal-snapshot.json",
+          "scope_freeze": "runs/run-20260415-example/scope-freeze.json",
+          "routing_reports": [
+            "runs/run-20260415-example/subagent-routing.worker.json"
+          ],
+          "executor_reports": [
+            "runs/run-20260415-example/worker-executor-report.json"
+          ],
+          "run_telemetry": "runs/run-20260415-example/run-telemetry.json",
+          "promotion_report": "runs/run-20260415-example/promotion-report.json",
+          "run_artifact_fingerprint": "runs/run-20260415-example/run-artifact-fingerprint.json"
+        }
+      }
+    ]
+  },
+  "auto_improve_session": {
+    "$schema": "ops/schemas/auto-improve-session.schema.json",
+    "session_id": "auto-improve-2026-04-15",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "status": "complete",
+    "budget": {
+      "max_proposals": 3,
+      "max_minutes": 90,
+      "max_consecutive_failures": 2
+    },
+    "executor": {
+      "name": "codex_exec"
+    },
+    "attempted_proposal_ids": [
+      "repeated_same_eval_or_discard__example"
+    ],
+    "quarantined_proposal_ids": [],
+    "run_ids": [
+      "run-20260415-example"
+    ],
+    "iterations": [
+      {
+        "index": 1,
+        "proposal_id": "repeated_same_eval_or_discard__example",
+        "source_candidate_id": "mechanism_eval_stagnation_candidate__example",
+        "run_id": "run-20260415-example",
+        "status": "complete",
+        "decision": "PROMOTE",
+        "outcome": "promoted",
+        "failure_taxonomy": "",
+        "proposal_snapshot": "runs/run-20260415-example/proposal-snapshot.json",
+        "scope_freeze": "runs/run-20260415-example/scope-freeze.json",
+        "routing_reports": [
+          "runs/run-20260415-example/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/run-20260415-example/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/run-20260415-example/run-telemetry.json",
+        "promotion_report": "runs/run-20260415-example/promotion-report.json",
+        "quarantined": false,
+        "primary_targets": [
+          "ops/scripts/example.py"
+        ]
+      }
+    ],
+    "learning_summary": {
+      "attempt_count": 1,
+      "rework_count": 0,
+      "rollback_signal_count": 0,
+      "defect_escape_pair_count": 0,
+      "session_context_status": "session_context_available",
+      "evidence_gaps": []
+    },
+    "loop_state": {
+      "consecutive_failures": 0,
+      "last_outcome": "promoted",
+      "last_decision": "PROMOTE",
+      "last_run_id": "run-20260415-example",
+      "last_blocking_reason": "",
+      "blocking_reason_counts": {},
+      "repeated_blocker_stop": false,
+      "repeated_blocker_reason": "",
+      "remediation_backlog_path": "ops/reports/remediation-backlog.json",
+      "updated_at": "2026-04-15T00:00:00Z"
+    },
+    "rollups": {
+      "iterations": {
+        "count": 1,
+        "outcome_counts": {
+          "promoted": 1
+        },
+        "decision_counts": {
+          "PROMOTE": 1
+        },
+        "status_counts": {
+          "complete": 1
+        },
+        "quarantined_proposal_count": 0
+      },
+      "routing": {
+        "report_count": 1,
+        "role_counts": {
+          "worker": 1
+        },
+        "selected_rung_counts": {
+          "2": 1
+        },
+        "score_band_counts": {
+          "low": 1
+        },
+        "sandbox_mode_counts": {
+          "workspace-write": 1
+        },
+        "model_counts": {
+          "gpt-5.5": 1
+        },
+        "reasoning_effort_counts": {
+          "high": 1
+        },
+        "risk_flag_counts": {}
+      },
+      "executor": {
+        "report_count": 1,
+        "role_counts": {
+          "worker": 1
+        },
+        "status_counts": {
+          "pass": 1
+        },
+        "blocking_role_counts": {},
+        "returncode_counts": {
+          "0": 1
+        }
+      },
+      "telemetry": {
+        "report_count": 1,
+        "failure_taxonomy_counts": {},
+        "phase_totals_seconds": {
+          "routing": 1.25,
+          "execution": 12.5
+        },
+        "phase_max_seconds": {
+          "routing": 1.25,
+          "execution": 12.5
+        }
+      },
+      "outcome_metrics": {
+        "attempt_count": 1,
+        "recent_window": 20,
+        "recent_attempt_count": 1,
+        "rework_count": 0,
+        "rollback_signal_count": 0,
+        "rollback_rehearsal_coverage_count": 0,
+        "moving_averages": {
+          "hold": 0,
+          "discard": 0,
+          "rollback_signal": 0
+        },
+        "operator_effort_proxy": {
+          "phase_totals_seconds": {
+            "routing": 1.25,
+            "execution": 12.5
+          },
+          "executor_report_count": 1,
+          "reviewer_dispatch_count": 0,
+          "validator_dispatch_count": 0,
+          "auditor_dispatch_count": 0,
+          "hold_count": 0
+        },
+        "rework_keys": [],
+        "defect_escape_proxy": {
+          "count": 0,
+          "pairs": []
+        }
+      }
+    },
+    "queue_snapshot": [
+      "repeated_same_eval_or_discard__example"
+    ],
+    "path": "ops/reports/auto-improve-sessions/auto-improve-2026-04-15.json",
+    "stop_reason": "proposal_budget_exhausted",
+    "completion_class": "bounded_success_after_promotion"
+  },
+  "outcome_metrics": {
+    "$schema": "ops/schemas/outcome-metrics.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "artifact_kind": "outcome_metrics_report",
+    "producer": "ops.scripts.observability_decision_metrics_runtime",
+    "source_command": "python -m ops.scripts.mechanism.outcome_metrics",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-outcome-metrics-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-15T00:00:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "summary": {
+      "attempts_considered": 1,
+      "recent_window": 20,
+      "recent_attempt_count": 1,
+      "session_reports_considered": 1
+    },
+    "metrics": {
+      "attempt_count": 1,
+      "recent_window": 20,
+      "recent_attempt_count": 1,
+      "rework_count": 0,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 0,
+      "moving_averages": {
+        "hold": 0,
+        "discard": 0,
+        "rollback_signal": 0
+      },
+      "operator_effort_proxy": {
+        "phase_totals_seconds": {
+          "routing": 1.25,
+          "execution": 12.5
+        },
+        "executor_report_count": 1,
+        "reviewer_dispatch_count": 0,
+        "validator_dispatch_count": 0,
+        "auditor_dispatch_count": 0,
+        "hold_count": 0
+      },
+      "rework_keys": [],
+      "defect_escape_proxy": {
+        "count": 0,
+        "pairs": []
+      }
+    },
+    "recent_attempts": [
+      {
+        "run_id": "run-20260415-example",
+        "session_id": "auto-improve-2026-04-15",
+        "proposal_id": "repeated_same_eval_or_discard__example",
+        "source_candidate_id": "mechanism_eval_stagnation_candidate__example",
+        "observed_at": "2026-04-15T00:00:00Z",
+        "decision": "PROMOTE",
+        "outcome": "promoted",
+        "primary_targets": [
+          "ops/scripts/example.py"
+        ],
+        "rework_key": "proposal:repeated_same_eval_or_discard__example",
+        "rollback_rehearsal_covered": false,
+        "rollback_signal": false,
+        "run_telemetry": "runs/run-20260415-example/run-telemetry.json",
+        "promotion_report": "runs/run-20260415-example/promotion-report.json"
+      }
+    ]
+  },
+  "runtime_event": {
+    "$schema": "ops/schemas/runtime-event.schema.json",
+    "ts": "2026-04-15T00:00:00Z",
+    "run_id": "run-20260415-example",
+    "session_id": "auto-improve-2026-04-15",
+    "phase": "queue_blocked",
+    "component": "auto_improve_readiness",
+    "decision": "warn",
+    "decision_reason": "recent_log_overlap",
+    "artifact_path": "ops/reports/auto-improve-readiness.json",
+    "duration_ms": 12,
+    "policy_version": 1,
+    "proposal_id": "repeated_same_eval_or_discard__example",
+    "candidate_id": "mechanism_eval_stagnation_candidate__example",
+    "blocker": "recent_log_overlap",
+    "blocker_kind": "hard"
+  },
+  "review_archive": {
+    "$schema": "ops/schemas/review-archive-report.schema.json",
+    "vault": ".",
+    "generated_at": "2026-04-15T00:00:00Z",
+    "artifact_kind": "review_archive_report",
+    "producer": "ops.scripts.review_archive",
+    "source_command": "python -m ops.scripts.release.review_archive --vault . --archive-out build/review/llm-wiki-vnext-review.zip --out ops/reports/review-archive-report.json --profile clean",
+    "source_revision": "unknown",
+    "source_tree_fingerprint": "sample-review-archive-fingerprint",
+    "input_fingerprints": {
+      "policy": "sample-policy",
+      "schema": "sample-schema",
+      "artifact_envelope_schema": "sample-envelope-schema",
+      "source_paths": "sample-source-paths"
+    },
+    "schema_version": 1,
+    "artifact_status": "current",
+    "retention_policy": "canonical_report",
+    "encoding": "utf-8",
+    "currentness": {
+      "status": "current",
+      "checked_at": "2026-04-15T00:00:00Z"
+    },
+    "policy": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 1
+    },
+    "profile": "clean",
+    "status": "pass",
+    "archive_path": "build/review/llm-wiki-vnext-review.zip",
+    "archive_file": {
+      "path": "build/review/llm-wiki-vnext-review.zip",
+      "exists": true,
+      "size_bytes": 123,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "packed_file_count": 1,
+    "manifest": {
+      "files": [
+        {
+          "path": "README.md",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "size_bytes": 42130
+        }
+      ]
+    },
+    "manifest_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "archive_manifest": {
+      "files": [
+        {
+          "path": "README.md",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "size_bytes": 42130
+        }
+      ]
+    },
+    "archive_manifest_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "archive_timestamp_normalization": {
+      "status": "pass",
+      "timestamp_semantics": "normalized_archive_timestamp",
+      "expected_timestamp_utc": "1980-01-01T00:00:00Z",
+      "observed_timestamp_count": 1,
+      "observed_min_timestamp_utc": "1980-01-01T00:00:00Z",
+      "observed_max_timestamp_utc": "1980-01-01T00:00:00Z",
+      "mismatch_count": 0,
+      "mismatch_paths": []
+    },
+    "current_snapshot_representativeness": {
+      "status": "representative",
+      "representative_of_current_tree": true,
+      "representative_of_current_zip": true,
+      "checked_at": "2026-04-15T00:00:00Z",
+      "current_manifest_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "archive_manifest_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "next_action": "none"
+    },
+    "snapshot_hygiene": {
+      "profile": "clean",
+      "status": "pass",
+      "enforced": true,
+      "forbidden_count": 0,
+      "forbidden_paths": [],
+      "rules": [
+        "tmp/**/*.candidate.json",
+        "public-surface __pycache__ directories",
+        "public-surface *.pyc files"
+      ],
+      "summary": "clean profile enforced; forbidden_count=0"
+    },
+    "exclusion_policy": "public_surface_policy",
+    "excluded_prefixes": [
+      "wiki/",
+      "raw/",
+      "runs/"
+    ],
+    "excluded_files": [
+      "AGENTS.local.md"
+    ]
+  }
+}

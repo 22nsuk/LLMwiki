@@ -12,12 +12,11 @@ from tests.report_contract_test_runtime import (
     ReportPayload,
     ReportPayloadMap,
     ReportSchemaMap,
-    load_report_payload_map,
+    load_generated_report_payload_map,
 )
 from tests.run_mechanism_experiment_test_utils import mutation_proposal_report
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 EVAL_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "eval-report.schema.json"
 EVAL_COVERAGE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-eval-coverage-report.schema.json"
 LINT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "lint-report.schema.json"
@@ -66,7 +65,7 @@ class ReportSchemaContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.samples = load_report_payload_map(FIXTURE_PATH)
+        cls.samples = load_generated_report_payload_map()
         cls.schemas = {
             "eval": load_schema(EVAL_SCHEMA_PATH),
             "eval_coverage": load_schema(EVAL_COVERAGE_SCHEMA_PATH),

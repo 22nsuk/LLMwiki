@@ -249,6 +249,47 @@ class CompatibilityAliasDeprecationTests(unittest.TestCase):
         aliases = {(item["alias_type"], item["name"]) for item in report["aliases"]}
         self.assertNotIn(("flat_import_reexport", "ops.scripts.new_runtime"), aliases)
 
+    def test_flat_reexport_uses_derived_lifecycle_when_stored_policy_is_absent(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "ops" / "scripts" / "core").mkdir(parents=True)
+            (vault / "ops").mkdir(exist_ok=True)
+            (vault / "Makefile").write_text("", encoding="utf-8")
+            (vault / "pyproject.toml").write_text(
+                "[project]\n"
+                "name = 'sample'\n"
+                "[project.scripts]\n"
+                "llmwiki-public = 'ops.scripts.core.public_runtime:main'\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "__init__.py").write_text(
+                "class _ReexportFinder: pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "core" / "public_runtime.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-output-surfaces.json").write_text(
+                '{"surfaces":[]}\n',
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-module-surfaces.json").write_text(
+                '{"stable_import_surfaces":[]}\n',
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-flat-import-aliases.json").write_text(
+                '{"aliases":[]}\n',
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+        aliases = {(item["alias_type"], item["name"]) for item in report["aliases"]}
+        self.assertIn(("flat_import_reexport", "ops.scripts.public_runtime"), aliases)
+
 
 if __name__ == "__main__":
     unittest.main()

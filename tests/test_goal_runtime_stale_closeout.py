@@ -15,10 +15,10 @@ from ops.scripts.mechanism.goal_runtime_stale_closeout import (
     build_report,
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.report_contract_test_runtime import load_generated_report_payload_map
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-runtime-stale-closeout.schema.json"
-SAMPLES_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
 
@@ -53,7 +53,7 @@ class GoalRuntimeStaleCloseoutTests(unittest.TestCase):
         )
 
     def _sample_session(self, *, session_id: str, rel_path: str) -> dict:
-        payload = json.loads(SAMPLES_PATH.read_text(encoding="utf-8"))["auto_improve_session"]
+        payload = load_generated_report_payload_map()["auto_improve_session"]
         payload["session_id"] = session_id
         payload["path"] = rel_path
         payload["status"] = "running"

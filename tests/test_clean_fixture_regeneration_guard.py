@@ -50,7 +50,7 @@ class CleanFixtureRegenerationGuardTests(unittest.TestCase):
                 vault=self.vault,
                 git_status_lines=(
                     " M ops/reports/auto-improve-readiness.json",
-                    " M tests/fixtures/report_schema_samples.json",
+                    " M ops/script-output-surfaces.json",
                 ),
                 context=fixed_context(),
             )
@@ -63,7 +63,7 @@ class CleanFixtureRegenerationGuardTests(unittest.TestCase):
         )
         self.assertEqual(
             report["dirty_public_surface_paths"],
-            ["tests/fixtures/report_schema_samples.json"],
+            ["ops/script-output-surfaces.json"],
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 

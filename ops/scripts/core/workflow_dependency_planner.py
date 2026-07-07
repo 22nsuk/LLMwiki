@@ -231,7 +231,10 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "rule_id": "report_contract_or_test_fingerprint_change",
         "path_patterns": [
             "tests/test_*.py",
-            "tests/fixtures/report_schema_samples.json",
+            "tests/fixtures/report_schema_sample*.json",
+            "tests/report_contract_test_runtime.py",
+            "tests/release_run_ready_sample_runtime.py",
+            "tests/supply_chain_sample_runtime.py",
             "ops/policies/wiki-maintainer-policy.yaml",
             "ops/schemas/*.schema.json",
             "tools/regenerate_report_schema_samples.py",

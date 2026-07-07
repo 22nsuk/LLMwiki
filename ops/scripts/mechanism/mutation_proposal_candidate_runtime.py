@@ -24,7 +24,6 @@ REPEATED_DISCARD_METRIC = "repeated_discard_runs"
 STAGE1_SAME_EVAL_METRIC = "stage1_same_eval_rate"
 REPEATED_SAME_EVAL_AFTER_PROMOTE_FAILURE_MODE = "repeated_same_eval_after_promote"
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
-REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
 SAME_EVAL_ADJACENT_SUPPORTING_TARGETS_BY_PRIMARY = {
     "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py": [
@@ -478,12 +477,6 @@ def _generated_supporting_targets(vault: Path, targets: list[str]) -> list[str]:
             and (vault / SCRIPT_OUTPUT_SURFACES_TARGET).is_file()
         ):
             generated.append(SCRIPT_OUTPUT_SURFACES_TARGET)
-        if (
-            normalized_target.startswith("ops/schemas/")
-            and normalized_target.endswith(".schema.json")
-            and (vault / REPORT_SCHEMA_SAMPLES_TARGET).is_file()
-        ):
-            generated.append(REPORT_SCHEMA_SAMPLES_TARGET)
     return dedupe_preserve_order(generated)
 
 

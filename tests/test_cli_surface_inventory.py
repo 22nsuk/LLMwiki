@@ -216,6 +216,44 @@ class CliSurfaceInventoryTests(unittest.TestCase):
             [],
         )
 
+    def test_inventory_derives_lifecycle_policy_when_stored_json_is_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "ops" / "scripts" / "core").mkdir(parents=True)
+            (vault / "mk").mkdir()
+            (vault / "pyproject.toml").write_text(
+                "[project]\n"
+                "name = 'sample'\n"
+                "[project.scripts]\n"
+                "llmwiki-sample = 'ops.scripts.core.sample_cli:main'\n",
+                encoding="utf-8",
+            )
+            (vault / "Makefile").write_text("include mk/core.mk\n", encoding="utf-8")
+            (vault / "mk" / "core.mk").write_text(
+                "sample:\n\tpython -m ops.scripts.core.sample_cli --help\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "scripts" / "core" / "sample_cli.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-output-surfaces.json").write_text(
+                '{"surfaces":[]}\n',
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["summary"]["lifecycle_policy_module_count"], 1)
+        self.assertEqual(report["summary"]["unclassified_module_count"], 0)
+        modules = {item["module"]: item for item in report["modules"]}
+        self.assertEqual(modules["ops.scripts.core.sample_cli"]["lifecycle"], "public_cli")
+        self.assertEqual(
+            modules["ops.scripts.core.sample_cli"]["install_state"],
+            "public_cli",
+        )
+
     def test_inventory_ignores_non_recipe_makefile_mentions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

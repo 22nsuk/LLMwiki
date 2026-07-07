@@ -45,6 +45,12 @@ FOCUSED_DERIVED_SURFACES_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_derived_surfaces.py",
 )
+FOCUSED_COMPATIBILITY_ALIAS_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_compatibility_alias_deprecation.py",
+)
+DELETED_LEGACY_REPORT_SCHEMA_SAMPLES_PATH = "tests/fixtures/report_schema_samples.json"
+REPORT_SCHEMA_SAMPLE_SEEDS_PATH = "tests/fixtures/report_schema_sample_seeds.json"
 RUNTIME_HOTSPOT_SMOKE_COMMAND = "make runtime-hotspot-smoke"
 FOCUSED_PYTEST_PREFIX = FOCUSED_PYTEST_TEMPLATE.partition("{path}")[0]
 
@@ -354,7 +360,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def test_changed_path_selects_report_contract_closeout(self) -> None:
         for changed_path in [
             "tests/test_report_schemas.py",
+            DELETED_LEGACY_REPORT_SCHEMA_SAMPLES_PATH,
+            REPORT_SCHEMA_SAMPLE_SEEDS_PATH,
+            "tests/report_contract_test_runtime.py",
+            "tests/release_run_ready_sample_runtime.py",
+            "tests/supply_chain_sample_runtime.py",
             "ops/policies/wiki-maintainer-policy.yaml",
+            "tools/regenerate_report_schema_samples.py",
         ]:
             with self.subTest(changed_path=changed_path):
                 report = build_report(
@@ -781,6 +793,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertIn(FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_DERIVED_SURFACES_TEST_COMMAND, pytest_commands)
+        self.assertIn(FOCUSED_COMPATIBILITY_ALIAS_TEST_COMMAND, pytest_commands)
         for command in pytest_commands:
             with self.subTest(command=command):
                 self.assertNotIn("uv run python -m pytest", command)
@@ -1135,6 +1148,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def test_changed_path_minimum_plan_matches_report_schema_sample_generator(self) -> None:
         changed_paths = [
             "tools/regenerate_report_schema_samples.py",
+            DELETED_LEGACY_REPORT_SCHEMA_SAMPLES_PATH,
+            REPORT_SCHEMA_SAMPLE_SEEDS_PATH,
+            "tests/report_contract_test_runtime.py",
             "tests/release_run_ready_sample_runtime.py",
             "tests/supply_chain_sample_runtime.py",
         ]
@@ -1164,10 +1180,38 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                             "tests/test_report_schema_sample_regeneration.py"
                         ),
                         "make test-report-contract-core",
-                        "make sync-derived-check",
                     ],
                 )
                 self.assertEqual(plan["unknown_paths"], [])
+
+    def test_changed_path_minimum_plan_routes_pytest_harness(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["tests/conftest.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "pytest_harness")
+        self.assertEqual(plan["unknown_paths"], [])
+        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
+
+    def test_changed_path_minimum_plan_routes_compatibility_alias_policy(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["ops/scripts/_compatibility_alias_policy.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "compatibility_alias_policy")
+        self.assertEqual(plan["unknown_paths"], [])
+        self.assertEqual(
+            plan["selected_commands"],
+            ["make static", FOCUSED_COMPATIBILITY_ALIAS_TEST_COMMAND],
+        )
 
     def test_changed_path_minimum_plan_matches_derived_surfaces_manifest(self) -> None:
         changed_paths = [
