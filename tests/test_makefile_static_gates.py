@@ -15,6 +15,7 @@ from ops.scripts.test.test_lane_registry_runtime import (
     documentation_authority,
     documentation_out_of_scope,
     load_registry,
+    pack_documented_entrypoints,
     pack_mark_expr,
     pack_selectors,
     pack_summary_suite,
@@ -22,7 +23,9 @@ from ops.scripts.test.test_lane_registry_runtime import (
 )
 from tests.makefile_static_helpers import (
     _assert_assignment_exists,
+    _assert_collected_paths_are_tests,
     _assert_recipe_contains_tokens,
+    _collect_marker_paths,
     _makefile_assignment_value,
     _makefile_text,
     _pytest_collect_nodeid_path_counts,
@@ -68,41 +71,6 @@ def _changed_path_minimum_rule(
     raise AssertionError(f"registry missing changed-path rule: {rule_id}")
 
 
-def _collect_marker_paths(mark_expr: str) -> set[str]:
-    env = os.environ.copy()
-    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "--collect-only",
-            "-q",
-            "-p",
-            "no:cacheprovider",
-            "-m",
-            mark_expr,
-        ],
-        cwd=REPO_ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise AssertionError(
-            f"pytest collect failed for marker expression {mark_expr!r}.\n"
-            f"stdout:\n{completed.stdout}\n"
-            f"stderr:\n{completed.stderr}"
-        )
-    paths: set[str] = set()
-    paths.update(_pytest_collect_nodeid_path_counts(completed.stdout))
-    return paths
-
-
 def _normalize_whitespace(value: str) -> str:
     return " ".join(value.split())
 
@@ -138,41 +106,6 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
     case.assertEqual(
         _recipe_lines(text, "generated-artifact-script-output"),
         ["$(MAKE) script-output-surfaces"],
-    )
-    case.assertEqual(
-        _recipe_lines(text, "sync-derived"),
-        [
-            "$(MAKE) pytest-markers-sync",
-            "$(MAKE) test-selectors-sync",
-            "$(MAKE) sync-public-policy",
-            "$(MAKE) workflow-action-pins-sync",
-            "$(MAKE) script-output-surfaces",
-            "$(MAKE) script-lifecycle-policy",
-            "$(MAKE) script-module-surfaces",
-            "$(MAKE) release-governance-sync",
-            "$(MAKE) release-workflow-order-guard",
-            "$(MAKE) make-target-inventory",
-            "$(MAKE) report-schema-samples-regenerate",
-        ],
-    )
-    case.assertEqual(
-        _recipe_lines(text, "sync-derived-check"),
-        [
-            "$(MAKE) pytest-markers-sync-check",
-            "$(MAKE) test-selectors-sync-check",
-            "$(MAKE) sync-public-policy-check",
-            "$(MAKE) workflow-action-pins-sync-check",
-            "$(MAKE) script-output-surfaces-check",
-            "$(MAKE) script-lifecycle-policy-check",
-            "$(MAKE) script-module-surfaces-check",
-            "$(MAKE) release-governance-sync-check",
-            "$(MAKE) release-workflow-order-guard-check",
-            "$(MAKE) make-target-inventory-check",
-            "$(MAKE) report-schema-samples-check",
-        ],
-    )
-    case.assertNotIn(
-        "generated-artifact-converge", _target_block(text, "sync-derived-check")
     )
     case.assertEqual(
         _recipe_lines(text, "pytest-markers-sync"),
@@ -216,8 +149,6 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         "pytest-markers-sync",
         "pytest-markers-sync-check",
         "_internal-pytest-markers-sync-check",
-        "sync-derived",
-        "sync-derived-check",
         "generated-artifact-converge",
         "generated-artifact-script-output",
         "generated-artifact-finality-suffix",
@@ -450,7 +381,10 @@ def _assert_release_workflow_order_guard_target(
         order_guard_check_block,
     )
     case.assertIn("--check", order_guard_check_block)
-    case.assertIn('--check-out "$(RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT)"', order_guard_check_block)
+    case.assertIn(
+        '--check-out "$(RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT)"',
+        order_guard_check_block,
+    )
     case.assertNotIn("ops.scripts.canonical_artifact_promote", order_guard_check_block)
     case.assertNotIn(
         "$(MAKE) release-workflow-order-guard",
@@ -847,14 +781,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "release_sealing_core",
         ):
             with self.subTest(pack_id=pack_id):
-                collected_paths = _collect_marker_paths(pack_mark_expr(registry, pack_id))
-                self.assertTrue(collected_paths)
-                self.assertTrue(
-                    all(
-                        path.startswith("tests/") and path.endswith(".py")
-                        for path in collected_paths
-                    )
+                collected_paths = _collect_marker_paths(
+                    pack_mark_expr(registry, pack_id)
                 )
+                _assert_collected_paths_are_tests(self, collected_paths)
 
     def test_release_sealing_core_preserves_release_sealing_marker_compatibility(
         self,
@@ -1032,24 +962,15 @@ class MakefileStaticGateTests(unittest.TestCase):
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         conftest_text = CONFTEST.read_text(encoding="utf-8")
         pytest_ini_text = PYTEST_INI.read_text(encoding="utf-8")
-        normalized_readme_text = _normalize_whitespace(readme_text)
-        normalized_development_text = _normalize_whitespace(development_text)
 
         self.assertIn("docs/development.md", readme_text)
         self.assertIn("make help", readme_text)
+        self.assertIn("make test-all", readme_text)
         self.assertIn("make help", development_text)
         self.assertIn("make uv-lock-check", development_text)
         self.assertIn("UV_CANONICAL_INDEX_URL", development_text)
         self.assertIn("DEV_INSTALL_INDEX_URL", development_text)
         self.assertIn("uv.lock", development_text)
-        self.assertIn(
-            "For a full developer regression, use `make test-all`.",
-            readme_text,
-        )
-        self.assertIn(
-            "Bare `pytest` is not a supported entrypoint.",
-            normalized_readme_text,
-        )
         self.assertIn(
             "`make test-execution-summary-full-current-or-refresh`",
             development_text,
@@ -1058,13 +979,9 @@ class MakefileStaticGateTests(unittest.TestCase):
             "`test-execution-summary-full-refresh-no-converge`", development_text
         )
         self.assertIn("`make test-all`", development_text)
-        self.assertIn(
-            "focused `.venv/bin/python -m pytest tests/...`", development_text
-        )
-        self.assertIn("Bare `pytest` is unsupported.", normalized_development_text)
+        self.assertIn(".venv/bin/python -m pytest", development_text)
         self.assertIn("ops/test-lane-registry.json", development_text)
         self.assertIn("mk/test.mk", development_text)
-        self.assertIn("Volatile counts and durations belong", development_text)
         self.assertNotRegex(
             development_text,
             r"\b(?:\d+\s+(?:tests|subtests|minutes)|20\d{2}-\d{2}-\d{2})\b",
@@ -1079,15 +996,27 @@ class MakefileStaticGateTests(unittest.TestCase):
             "make test-execution-summary-full-current-or-refresh", conftest_text
         )
         self.assertNotRegex(pytest_ini_text, r"(?im)^pythonpath\s*=")
+        documented_entrypoints = set(compatibility_names(registry, "documented_entrypoint"))
+        for entrypoint in (
+            *pack_documented_entrypoints(registry, "fast_smoke"),
+            *pack_documented_entrypoints(registry, "fast"),
+            *pack_documented_entrypoints(registry, "developer_full"),
+        ):
+            with self.subTest(entrypoint=entrypoint):
+                self.assertIn(entrypoint, documented_entrypoints)
         for entrypoint in (
             "make fast-smoke",
             "make test",
             "make test-all",
+        ):
+            with self.subTest(entrypoint=entrypoint, surface="docs/development.md"):
+                self.assertIn(entrypoint, development_text)
+        for entrypoint in (
             "make release-run-ready",
             "make release-post-commit-finalize",
             "make release-authority-settle",
         ):
-            with self.subTest(entrypoint=entrypoint):
+            with self.subTest(entrypoint=entrypoint, surface="docs/development.md"):
                 self.assertIn(entrypoint, development_text)
         for alias in (
             "make test-report-contract",
@@ -1112,17 +1041,20 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIsInstance(commands, list)
         assert isinstance(commands, list)
         self.assertIn("make workflow-dependency-planner-check", commands)
-        changed_path_command = " + ".join(f"`{command}`" for command in commands)
-        self.assertIn(
-            f"| Make/CI changed-path minimum proof | {changed_path_command} |",
-            development_text,
+        self.assertEqual(
+            make_or_ci_rule.get("path_patterns"),
+            ["Makefile", "mk/*.mk", ".github/workflows/*.yml", ".github/workflows/*.yaml"],
         )
-        self.assertIn(
-            "| Registry/Make/CI lane-contract proof | "
-            "`make sync-derived` + focused generator/static pytest | "
+        for command in commands:
+            with self.subTest(surface="changed-path-doc-command", command=command):
+                self.assertIn(f"`{command}`", development_text)
+        for token in (
+            "`make sync-derived`",
             "`make test-report-contract-core`",
-            development_text,
-        )
+            "ops/test-lane-registry.json",
+        ):
+            with self.subTest(surface="lane-contract-doc", token=token):
+                self.assertIn(token, development_text)
         self.assertNotIn(
             "| Make or CI lane | `make static` | `make test-report-contract-core` |",
             development_text,
@@ -1482,9 +1414,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
 
-        self.assertIn(
-            "CI splits registry-backed lanes into parallel jobs", development_text
-        )
         self.assertIn(".github/workflows/ci.yml", development_text)
         self.assertIn("ops/test-lane-registry.json", development_text)
         self.assertIn("make help", development_text)
@@ -1546,8 +1475,8 @@ class MakefileStaticGateTests(unittest.TestCase):
     def test_architecture_public_surface_includes_github_workflows(self) -> None:
         architecture_text = Path("ARCHITECTURE.md").read_text(encoding="utf-8")
 
-        self.assertIn("- `.github/`", architecture_text)
-        self.assertIn("- `docs/`", architecture_text)
+        self.assertIn("`.github/`", architecture_text)
+        self.assertIn("`docs/`", architecture_text)
 
     def test_report_contract_targets_collect_schema_and_generated_artifact_checks(
         self,

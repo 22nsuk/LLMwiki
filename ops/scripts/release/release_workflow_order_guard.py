@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -93,6 +94,7 @@ class _WorkflowOrderInputs:
     planner_report: dict[str, Any]
     rule_kinds_by_target: dict[str, set[str]]
     invocations_by_target: dict[str, list[dict[str, Any]]]
+    expanded_invocations_by_target: dict[str, list[dict[str, Any]]]
     protected_recipe_observations: dict[str, _ProtectedRecipeObservation]
 
 
@@ -135,6 +137,16 @@ def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _string_dict(value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(key).strip(): str(item).strip()
+        for key, item in value.items()
+        if str(key).strip() and str(item).strip()
+    }
 
 
 def _spec_entries(spec: dict[str, Any], key: str) -> list[dict[str, Any]]:
@@ -309,18 +321,69 @@ def _recipe_definitions(makefile_text: str, target: str) -> list[_RecipeDefiniti
 def _protected_recipe_invocation(
     line_no: int,
     expected_line: _ProtectedExpectedRecipeLine,
+    workflow_order_spec: dict[str, Any],
+    protected_target: str,
+    violations: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    parsed_events = _recipe_line_events(
+        f"\t{expected_line.raw_line}",
+        line_no,
+        workflow_order_spec,
+    )
+    if not parsed_events:
+        return {
+            "line": line_no,
+            "target": expected_line.target,
+            "role": expected_line.role,
+            "raw_args": expected_line.raw_line,
+        }
+    if len(parsed_events) != 1:
+        violations.append(
+            {
+                "target": protected_target,
+                "line": line_no,
+                "expected_role": expected_line.role,
+                "expected_line": expected_line.raw_line,
+                "observed_count": len(parsed_events),
+                "reason": "protected_recipe_make_invocation_count_mismatch",
+            }
+        )
+
+    parsed_event = parsed_events[0]
+    if parsed_event["target"] != expected_line.target:
+        violations.append(
+            {
+                "target": protected_target,
+                "line": line_no,
+                "expected_target": expected_line.target,
+                "observed_target": parsed_event["target"],
+                "expected_role": expected_line.role,
+                "reason": "protected_recipe_target_mismatch",
+            }
+        )
+    if parsed_event["role"] != expected_line.role:
+        violations.append(
+            {
+                "target": protected_target,
+                "line": line_no,
+                "expected_role": expected_line.role,
+                "observed_role": parsed_event["role"],
+                "observed_target": parsed_event["target"],
+                "reason": "protected_recipe_role_mismatch",
+            }
+        )
     return {
         "line": line_no,
-        "target": expected_line.target,
-        "role": expected_line.role,
-        "raw_args": expected_line.raw_line,
+        "target": parsed_event["target"],
+        "role": parsed_event["role"],
+        "raw_args": parsed_event["raw_args"],
     }
 
 
 def _observe_protected_recipe(
     makefile_text: str,
     entry: dict[str, Any],
+    workflow_order_spec: dict[str, Any],
 ) -> _ProtectedRecipeObservation:
     target = str(entry["target"])
     expected_lines = _protected_expected_lines(entry)
@@ -417,7 +480,15 @@ def _observe_protected_recipe(
                 }
             )
             continue
-        invocations.append(_protected_recipe_invocation(line_no, expected_line))
+        invocations.append(
+            _protected_recipe_invocation(
+                line_no,
+                expected_line,
+                workflow_order_spec,
+                target,
+                violations,
+            )
+        )
 
     for line_no, raw_line in body_lines[len(expected_lines) :]:
         violations.append(
@@ -444,7 +515,11 @@ def _protected_recipe_observations(
     workflow_order_spec: dict[str, Any],
 ) -> dict[str, _ProtectedRecipeObservation]:
     return {
-        str(entry["target"]): _observe_protected_recipe(makefile_text, entry)
+        str(entry["target"]): _observe_protected_recipe(
+            makefile_text,
+            entry,
+            workflow_order_spec,
+        )
         for entry in _protected_recipe_entries(workflow_order_spec)
     }
 
@@ -549,18 +624,82 @@ def _recipe_invocations(
     return invocations
 
 
+def _expanded_recipe_invocations(
+    makefile_text: str,
+    target: str,
+    workflow_order_spec: dict[str, Any],
+) -> list[dict[str, Any]]:
+    expanded: list[dict[str, Any]] = []
+    active_stack: set[str] = set()
+
+    def visit(active_target: str, path: list[str]) -> None:
+        if active_target in active_stack:
+            return
+        active_stack.add(active_target)
+        for invocation in _recipe_invocations(
+            makefile_text,
+            active_target,
+            workflow_order_spec,
+        ):
+            invocation_target = str(invocation["target"])
+            invocation_path = [*path, invocation_target]
+            expanded.append(
+                {
+                    **invocation,
+                    "order": len(expanded) + 1,
+                    "invocation_path": " -> ".join(invocation_path),
+                    "root_target": target,
+                }
+            )
+            visit(invocation_target, invocation_path)
+        active_stack.remove(active_target)
+
+    visit(target, [target])
+    return expanded
+
+
 def _invocation_role(
     target: str,
     raw_args: str,
     workflow_order_spec: dict[str, Any],
 ) -> str:
     for override in _spec_entries(workflow_order_spec, "role_overrides"):
-        if str(override.get("target", "")).strip() != target:
-            continue
-        required_fragment = str(override.get("raw_args_contains", "")).strip()
-        if required_fragment and required_fragment in raw_args:
+        if _role_override_matches(target, raw_args, override):
             return str(override.get("role", "")).strip() or target
     return target
+
+
+def _make_arg_assignments(raw_args: str) -> dict[str, str]:
+    try:
+        tokens = shlex.split(raw_args, posix=True)
+    except ValueError:
+        tokens = raw_args.split()
+    assignments: dict[str, str] = {}
+    for token in tokens:
+        name, separator, value = token.partition("=")
+        if not separator or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            continue
+        assignments[name] = value
+    return assignments
+
+
+def _role_override_matches(
+    target: str,
+    raw_args: str,
+    override: dict[str, Any],
+) -> bool:
+    if str(override.get("target", "")).strip() != target:
+        return False
+
+    required_assignments = _string_dict(override.get("required_assignments"))
+    if required_assignments:
+        assignments = _make_arg_assignments(raw_args)
+        return all(
+            assignments.get(name) == value
+            for name, value in required_assignments.items()
+        )
+
+    return False
 
 
 def _first_index(invocations: list[dict[str, Any]], role: str, *, after: int = 0) -> int:
@@ -715,17 +854,22 @@ def _check_first_role_guard(
 def _append_forbidden_target_guard(
     check: dict[str, Any],
     entry: dict[str, Any],
-    invocations_by_target: dict[str, list[dict[str, Any]]],
+    expanded_invocations_by_target: dict[str, list[dict[str, Any]]],
 ) -> None:
-    invocations = invocations_by_target.get(str(entry["target"]), [])
-    observed_targets = [str(item["target"]) for item in invocations]
+    invocations = expanded_invocations_by_target.get(str(entry["target"]), [])
     for target in _string_list(entry.get("forbidden_targets")):
-        if target not in observed_targets:
+        matching_invocations = [
+            item for item in invocations if str(item["target"]) == target
+        ]
+        if not matching_invocations:
             continue
+        first_match = matching_invocations[0]
         check["status"] = "fail"
         check["violations"].append(
             {
                 "target": target,
+                "line": int(first_match["line"]),
+                "invocation_path": str(first_match.get("invocation_path", target)),
                 "reason": str(entry["violation_reason"]),
             }
         )
@@ -733,16 +877,16 @@ def _append_forbidden_target_guard(
 
 def _check_forbidden_target_guard(
     entry: dict[str, Any],
-    invocations_by_target: dict[str, list[dict[str, Any]]],
+    expanded_invocations_by_target: dict[str, list[dict[str, Any]]],
 ) -> dict[str, Any]:
-    invocations = invocations_by_target.get(str(entry["target"]), [])
+    invocations = expanded_invocations_by_target.get(str(entry["target"]), [])
     check = _check(
         str(entry["id"]),
         expected_order=[f"no {target}" for target in _string_list(entry.get("forbidden_targets"))],
         observed_order=[str(item["target"]) for item in invocations],
         details=str(entry.get("details", "")),
     )
-    _append_forbidden_target_guard(check, entry, invocations_by_target)
+    _append_forbidden_target_guard(check, entry, expanded_invocations_by_target)
     return check
 
 
@@ -757,7 +901,6 @@ def _check_repetition_budget(
         counts[target] = counts.get(target, 0) + 1
     repeated_targets = sorted(target for target, count in counts.items() if count > 1)
     allowed_repeated_targets = set(_string_list(entry.get("allowed_repeated_targets")))
-    forbidden_targets = set(_string_list(entry.get("forbidden_targets")))
     violations = [
         {
             "target": target,
@@ -767,16 +910,6 @@ def _check_repetition_budget(
         for target in repeated_targets
         if target not in allowed_repeated_targets
     ]
-    violations.extend(
-        {
-            "target": target,
-            "count": counts[target],
-            "reason": str(entry.get("forbidden_violation_reason", entry["violation_reason"])),
-        }
-        for target in sorted(forbidden_targets)
-        if counts.get(target, 0)
-    )
-    observed_targets = sorted(set(repeated_targets) | (forbidden_targets & set(counts)))
     expected_order = (
         sorted(allowed_repeated_targets)
         if allowed_repeated_targets
@@ -785,9 +918,66 @@ def _check_repetition_budget(
     return _check(
         str(entry["id"]),
         expected_order=expected_order,
-        observed_order=[f"{target} x{counts[target]}" for target in observed_targets],
+        observed_order=[f"{target} x{counts[target]}" for target in repeated_targets],
         violations=violations,
         details=str(entry.get("details", "")),
+    )
+
+
+def _check_role_override_sequence_coverage(inputs: _WorkflowOrderInputs) -> dict[str, Any]:
+    coverage = inputs.workflow_order_spec.get("role_override_sequence_coverage", {})
+    coverage = coverage if isinstance(coverage, dict) else {}
+    allowlisted_roles = set(_string_list(coverage.get("allowlisted_roles")))
+    override_roles = {
+        str(entry.get("role", "")).strip()
+        for entry in _spec_entries(inputs.workflow_order_spec, "role_overrides")
+        if str(entry.get("role", "")).strip()
+    }
+    expected_roles_by_target: dict[str, set[str]] = {}
+    for entry in _spec_entries(inputs.workflow_order_spec, "expected_subsequences"):
+        target = str(entry.get("target", "")).strip()
+        if not target:
+            continue
+        expected_roles_by_target.setdefault(target, set()).update(
+            _string_list(entry.get("roles"))
+        )
+
+    observed_order: list[str] = []
+    violations: list[dict[str, Any]] = []
+    observed_pairs: set[tuple[str, str]] = set()
+    for target, invocations in inputs.invocations_by_target.items():
+        expected_roles = expected_roles_by_target.get(target, set())
+        for invocation in invocations:
+            role = str(invocation.get("role", "")).strip()
+            if role not in override_roles or role in allowlisted_roles:
+                continue
+            observed_pair = (target, role)
+            if observed_pair in observed_pairs:
+                continue
+            observed_pairs.add(observed_pair)
+            observed_order.append(f"{target}:{role}")
+            if role in expected_roles:
+                continue
+            violations.append(
+                {
+                    "target": target,
+                    "expected_role": role,
+                    "reason": "role_override_missing_from_expected_subsequence",
+                }
+            )
+
+    expected_order = sorted(role for role in override_roles if role not in allowlisted_roles)
+    return _check(
+        "role_override_sequence_coverage",
+        expected_order=expected_order,
+        observed_order=observed_order,
+        violations=violations,
+        details=str(
+            coverage.get(
+                "details",
+                "Observed role overrides must be named in their target expected subsequence.",
+            )
+        ),
     )
 
 
@@ -1062,6 +1252,14 @@ def _workflow_order_inputs(
         )
         for target in _string_list(workflow_order_spec.get("target_recipe_order"))
     }
+    expanded_invocations_by_target = {
+        target: _expanded_recipe_invocations(
+            makefile_text,
+            target,
+            workflow_order_spec,
+        )
+        for target in _string_list(workflow_order_spec.get("target_recipe_order"))
+    }
     planner_report = build_workflow_dependency_report(
         resolved_vault,
         changed_paths=["Makefile"],
@@ -1081,6 +1279,7 @@ def _workflow_order_inputs(
         planner_report=planner_report,
         rule_kinds_by_target=rule_kinds_by_target,
         invocations_by_target=invocations_by_target,
+        expanded_invocations_by_target=expanded_invocations_by_target,
         protected_recipe_observations=protected_recipe_observations,
     )
 
@@ -1096,6 +1295,8 @@ def _release_workflow_order_checks(inputs: _WorkflowOrderInputs) -> list[dict[st
         check = _check_spec_subsequence(entry, invocations)
         checks.append(check)
         checks_by_id[str(entry["id"])] = check
+
+    checks.append(_check_role_override_sequence_coverage(inputs))
 
     for entry in _spec_entries(inputs.workflow_order_spec, "terminal_checks"):
         check_id = str(entry["id"])
@@ -1114,9 +1315,18 @@ def _release_workflow_order_checks(inputs: _WorkflowOrderInputs) -> list[dict[st
     for entry in _spec_entries(inputs.workflow_order_spec, "forbidden_target_checks"):
         check_id = str(entry["id"])
         if check_id in checks_by_id:
-            _append_forbidden_target_guard(checks_by_id[check_id], entry, invocations)
+            _append_forbidden_target_guard(
+                checks_by_id[check_id],
+                entry,
+                inputs.expanded_invocations_by_target,
+            )
         else:
-            checks.append(_check_forbidden_target_guard(entry, invocations))
+            checks.append(
+                _check_forbidden_target_guard(
+                    entry,
+                    inputs.expanded_invocations_by_target,
+                )
+            )
 
     for entry in _spec_entries(inputs.workflow_order_spec, "repetition_budgets"):
         checks.append(_check_repetition_budget(entry, invocations))

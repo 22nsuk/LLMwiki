@@ -8,6 +8,7 @@
     "version",
     "target_recipe_order",
     "role_overrides",
+    "role_override_sequence_coverage",
     "protected_recipes",
     "expected_subsequences",
     "terminal_checks",
@@ -29,6 +30,9 @@
     "role_overrides": {
       "type": "array",
       "items": { "$ref": "#/$defs/role_override" }
+    },
+    "role_override_sequence_coverage": {
+      "$ref": "#/$defs/role_override_sequence_coverage"
     },
     "protected_recipes": {
       "type": "array",
@@ -119,11 +123,28 @@
     "role_override": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["target", "raw_args_contains", "role"],
+      "required": ["target", "required_assignments", "role"],
       "properties": {
         "target": { "$ref": "#/$defs/make_target" },
-        "raw_args_contains": { "$ref": "#/$defs/non_empty_string" },
+        "required_assignments": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "additionalProperties": { "$ref": "#/$defs/non_empty_string" }
+        },
         "role": { "$ref": "#/$defs/make_target" }
+      }
+    },
+    "role_override_sequence_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowlisted_roles", "details"],
+      "properties": {
+        "allowlisted_roles": { "$ref": "#/$defs/make_target_list" },
+        "details": { "$ref": "#/$defs/non_empty_string" }
       }
     },
     "protected_recipe": {
@@ -194,9 +215,7 @@
         "id": { "$ref": "#/$defs/check_id" },
         "target": { "$ref": "#/$defs/make_target" },
         "allowed_repeated_targets": { "$ref": "#/$defs/make_target_list" },
-        "forbidden_targets": { "$ref": "#/$defs/make_target_list" },
         "violation_reason": { "$ref": "#/$defs/non_empty_string" },
-        "forbidden_violation_reason": { "$ref": "#/$defs/non_empty_string" },
         "expected_order_label": { "$ref": "#/$defs/non_empty_string" },
         "details": { "type": "string" }
       }

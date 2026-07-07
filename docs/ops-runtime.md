@@ -53,25 +53,23 @@ General rule:
 - check-only or advisory scratch output lives under `tmp/`;
 - release packages, source-package extracts, and audit packs live under `build/`.
 
-Tracked source-derived projections, such as pytest marker registration, test
-selector projections, public policy templates, script output surfaces, script
-module surface exports/direct-entrypoint flags, release-governance lane
-projections, and report schema sample fixtures, converge through
-`make sync-derived`. The write aggregate also refreshes operator-local
-diagnostics such as Make target inventory. Use
+Tracked source-derived projections converge through `make sync-derived`, whose
+membership is declared in `ops/policies/derived-surfaces.json` and projected
+into `mk/derived-surfaces.generated.mk`. The write aggregate refreshes tracked
+projections and selected operator-local diagnostics. Use
 `make sync-derived-check` when a CI or review context must prove checkable
-tracked projections are current and validate inventory/operator metadata
-without rewriting files. This is separate from `make generated-artifact-converge`,
-which belongs to release/report finality evidence under generated report surfaces.
+projections are current and validate inventory/operator metadata without
+rewriting files. This is separate from `make generated-artifact-converge`, which
+belongs to release/report finality evidence under generated report surfaces.
 
 When adding or changing an ops script, treat the script source, `pyproject.toml`
 console-script exposure, Make recipe references, and small override files as
-the human-owned contract. `make sync-derived` regenerates the tracked lifecycle,
-module-surface, output-surface, selector, governance, action-pin, public-policy,
-Make-inventory, and schema-sample projections from those sources. New generic
-`ops/scripts/**/*.py` changes are also known to the workflow dependency planner
-as runtime source changes and should pair `make static` with the default
-`make test` lane unless a narrower changed-path minimum applies.
+the human-owned contract. Add or adjust source-derived projection membership in
+`ops/policies/derived-surfaces.json`, then run `make sync-derived` so the
+generated Make fragment and the declared projections converge from those
+sources. New generic `ops/scripts/**/*.py` changes are also known to the workflow
+dependency planner as runtime source changes and should pair `make static` with
+the default `make test` lane unless a narrower changed-path minimum applies.
 
 Static Make/CI tests should keep structural invariants and wiring checks only.
 Exact generated content or protected release recipe order belongs in the

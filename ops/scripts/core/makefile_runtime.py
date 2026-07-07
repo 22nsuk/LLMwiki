@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
-INCLUDE_RE = re.compile(r"^include\s+(?P<paths>.+)$")
+INCLUDE_RE = re.compile(r"^(?P<optional>-)?include\s+(?P<paths>.+)$")
 SCRIPT_MODULE_RE = re.compile(
     r"-m\s+(ops\.scripts\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\b"
 )
@@ -15,15 +16,69 @@ VARIABLE_REFERENCE_RE = re.compile(
 )
 
 
-def _include_tokens(line: str) -> list[str]:
+@dataclass(frozen=True)
+class MakeInclude:
+    path: str
+    optional: bool
+
+
+def _variable_name(match: re.Match[str]) -> str:
+    return str(match.group("paren") or match.group("brace") or "")
+
+
+def _expand_make_variable_references(
+    text: str,
+    assignments: dict[str, list[str]],
+) -> str:
+    def replacement(match: re.Match[str]) -> str:
+        variable = _variable_name(match)
+        values = assignments.get(variable)
+        if values is None:
+            return match.group(0)
+        return " ".join(values)
+
+    return VARIABLE_REFERENCE_RE.sub(replacement, text)
+
+
+def _record_makefile_assignment(
+    assignments: dict[str, list[str]],
+    line: str,
+) -> None:
+    if line.startswith("\t"):
+        return
+    assignment_match = VARIABLE_ASSIGNMENT_RE.match(line)
+    if assignment_match is None:
+        return
+    variable = assignment_match.group("name")
+    operator = assignment_match.group("operator")
+    value = assignment_match.group("value")
+    if operator == "+=":
+        assignments.setdefault(variable, []).append(value)
+    elif operator == "?=":
+        assignments.setdefault(variable, [value])
+    else:
+        assignments[variable] = [value]
+
+
+def _include_tokens(
+    line: str,
+    assignments: dict[str, list[str]] | None = None,
+) -> list[MakeInclude]:
+    if line.startswith("\t"):
+        return []
     match = INCLUDE_RE.match(line.strip())
     if match is None:
         return []
-    tokens: list[str] = []
-    for token in match.group("paths").split():
-        if not token or "$" in token or "*" in token:
+    optional = bool(match.group("optional"))
+    expanded_paths = _expand_make_variable_references(
+        match.group("paths"),
+        assignments or {},
+    )
+    tokens: list[MakeInclude] = []
+    for token in expanded_paths.split():
+        if not token or "$" in token:
             continue
-        tokens.append(token)
+        tokens.append(MakeInclude(path=token, optional=optional))
     return tokens
 
 
@@ -31,19 +86,31 @@ def makefile_source_paths(vault: Path, root: str = "Makefile") -> list[str]:
     resolved_vault = vault.resolve()
     seen: set[str] = set()
     ordered: list[str] = []
+    assignments: dict[str, list[str]] = {}
 
-    def visit(rel_path: str) -> None:
+    def visit(rel_path: str, *, optional: bool = False) -> None:
         normalized = Path(rel_path).as_posix()
         if normalized in seen:
             return
         path = resolved_vault / normalized
         if not path.is_file():
-            return
+            if optional:
+                return
+            raise FileNotFoundError(f"missing required Make include: {normalized}")
         seen.add(normalized)
         ordered.append(normalized)
         for line in path.read_text(encoding="utf-8").splitlines():
-            for include_path in _include_tokens(line):
-                visit(include_path)
+            _record_makefile_assignment(assignments, line)
+            for include_token in _include_tokens(line, assignments):
+                matched_paths = sorted(resolved_vault.glob(include_token.path))
+                if not matched_paths:
+                    visit(include_token.path, optional=include_token.optional)
+                    continue
+                for include_path in matched_paths:
+                    visit(
+                        include_path.relative_to(resolved_vault).as_posix(),
+                        optional=include_token.optional,
+                    )
 
     visit(root)
     return ordered
@@ -68,10 +135,6 @@ def _target_names(line: str) -> list[str]:
     if not separator:
         return []
     return [item.strip() for item in target_text.split() if item.strip()]
-
-
-def _variable_name(match: re.Match[str]) -> str:
-    return str(match.group("paren") or match.group("brace") or "")
 
 
 def _without_shell_comment(text: str) -> str:
@@ -146,14 +209,10 @@ def _makefile_assignments(lines: list[str]) -> dict[str, list[str]]:
         while value.rstrip().endswith("\\") and index < len(lines):
             value = value.rstrip()[:-1] + " " + lines[index].strip()
             index += 1
-        variable = assignment_match.group("name")
-        operator = assignment_match.group("operator")
-        if operator == "+=":
-            assignments.setdefault(variable, []).append(value)
-        elif operator == "?=":
-            assignments.setdefault(variable, [value])
-        else:
-            assignments[variable] = [value]
+        _record_makefile_assignment(
+            assignments,
+            f"{assignment_match.group('name')} {assignment_match.group('operator')} {value}",
+        )
     return assignments
 
 

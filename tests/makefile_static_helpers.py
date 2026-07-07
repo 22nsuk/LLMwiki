@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import sys
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
 
-MAKEFILE = Path("Makefile")
+from ops.scripts.core.makefile_runtime import load_makefile_text
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -19,9 +23,7 @@ class MakeTargetContract:
 
 
 def _makefile_text() -> str:
-    text = MAKEFILE.read_text(encoding="utf-8")
-    for mk_file in sorted(REPO_ROOT.glob("mk/*.mk")):
-        text += "\n" + mk_file.read_text(encoding="utf-8")
+    text, _source_paths = load_makefile_text(REPO_ROOT)
     return text
 
 
@@ -38,6 +40,82 @@ def _pytest_collect_nodeid_path_counts(stdout: str) -> dict[str, int]:
             continue
         counts[path] = counts.get(path, 0) + 1
     return counts
+
+
+def _pytest_collect_marker_expression(mark_expr: str) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+
+    return subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "-m",
+            mark_expr,
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+
+
+def _collect_marker_path_counts(
+    mark_expr: str,
+    *,
+    failure_label: str | None = None,
+) -> dict[str, int]:
+    completed = _pytest_collect_marker_expression(mark_expr)
+
+    if completed.returncode != 0:
+        label = failure_label or f"marker expression {mark_expr!r}"
+        raise AssertionError(
+            f"{label} contains an uncollectable pytest marker.\n"
+            f"stdout:\n{completed.stdout}\n"
+            f"stderr:\n{completed.stderr}"
+        )
+
+    return _pytest_collect_nodeid_path_counts(completed.stdout)
+
+
+def _collect_marker_paths(
+    mark_expr: str,
+    *,
+    failure_label: str | None = None,
+) -> set[str]:
+    return set(_collect_marker_path_counts(mark_expr, failure_label=failure_label))
+
+
+def _assert_collected_paths_are_tests(
+    case: unittest.TestCase,
+    collected_by_path: dict[str, int] | set[str],
+) -> None:
+    case.assertTrue(collected_by_path)
+    case.assertTrue(
+        all(
+            path.startswith("tests/") and path.endswith(".py")
+            for path in collected_by_path
+        )
+    )
+
+
+def _assert_collected_paths_self_declare_marker(
+    case: unittest.TestCase,
+    collected_by_path: dict[str, int] | set[str],
+    marker: str,
+) -> None:
+    for path in collected_by_path:
+        with case.subTest(path=path, marker=marker):
+            case.assertIn(marker, (REPO_ROOT / path).read_text(encoding="utf-8"))
 
 
 def _target_block(text: str, target: str) -> str:

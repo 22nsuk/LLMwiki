@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 import unittest
 from pathlib import Path
 
@@ -10,12 +7,16 @@ import pytest
 
 from ops.scripts.test.test_lane_registry_runtime import (
     load_registry,
+    pack_documented_entrypoints,
     pack_mark_expr,
 )
 from tests.makefile_static_helpers import (
+    _assert_collected_paths_are_tests,
+    _assert_collected_paths_self_declare_marker,
+    _collect_marker_path_counts,
     _makefile_text,
-    _pytest_collect_nodeid_path_counts,
     _target_block,
+    _target_dependencies,
 )
 
 pytestmark = [
@@ -30,63 +31,19 @@ DOCS_DEVELOPMENT = Path("docs/development.md")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _collect_marker_path_counts(mark_expr: str, *, failure_label: str) -> dict[str, int]:
-    env = os.environ.copy()
-    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "--collect-only",
-            "-q",
-            "-p",
-            "no:cacheprovider",
-            "-m",
-            mark_expr,
-        ],
-        cwd=REPO_ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
-
-    if completed.returncode != 0:
-        raise AssertionError(
-            f"{failure_label} contains an uncollectable pytest marker.\n"
-            f"stdout:\n{completed.stdout}\n"
-            f"stderr:\n{completed.stderr}"
-        )
-
-    return _pytest_collect_nodeid_path_counts(completed.stdout)
-
-
-def _assert_collected_paths_self_declare_marker(
-    case: unittest.TestCase,
-    collected_by_path: dict[str, int],
-    marker: str,
-) -> None:
-    for path in collected_by_path:
-        with case.subTest(path=path, marker=marker):
-            case.assertIn(marker, (REPO_ROOT / path).read_text(encoding="utf-8"))
-
-
 class MakefileFastSmokeStaticGateTests(unittest.TestCase):
     def test_fast_smoke_is_curated_developer_feedback_loop(self) -> None:
         text = _makefile_text()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         block = _target_block(text, "fast-smoke")
+        registry = load_registry(REPO_ROOT)
 
         self.assertIn("fast-smoke", _target_block(text, ".PHONY"))
         self.assertIn(
-            "`make fast-smoke` is the curated Subagent/developer precheck pytest slice.",
-            development_text,
+            "make fast-smoke",
+            pack_documented_entrypoints(registry, "fast_smoke"),
         )
+        self.assertIn("`make fast-smoke`", development_text)
         self.assertIn(
             "$(PYTHON) -m pytest $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)",
             block,
@@ -100,8 +57,13 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         block = _target_block(text, "runtime-hotspot-smoke")
+        registry = load_registry(REPO_ROOT)
 
         self.assertIn("runtime-hotspot-smoke", _target_block(text, ".PHONY"))
+        self.assertIn(
+            "make runtime-hotspot-smoke",
+            pack_documented_entrypoints(registry, "runtime_hotspot_smoke"),
+        )
         self.assertIn("`make runtime-hotspot-smoke`", development_text)
         self.assertIn(
             "$(PYTHON) -m pytest -q $(RUNTIME_HOTSPOT_SMOKE_TESTS) "
@@ -117,13 +79,7 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
             pack_mark_expr(registry, "runtime_hotspot_smoke"),
             failure_label="RUNTIME_HOTSPOT_SMOKE_TESTS",
         )
-        self.assertTrue(collected_by_path)
-        self.assertTrue(
-            all(
-                path.startswith("tests/") and path.endswith(".py")
-                for path in collected_by_path
-            )
-        )
+        _assert_collected_paths_are_tests(self, collected_by_path)
         _assert_collected_paths_self_declare_marker(
             self,
             collected_by_path,
@@ -134,13 +90,18 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         block = _target_block(text, "test-boundary-contract-smoke")
+        registry = load_registry(REPO_ROOT)
 
         self.assertIn("test-boundary-contract-smoke", _target_block(text, ".PHONY"))
-        self.assertIn("test: test-fast test-boundary-contract-smoke", text)
-        self.assertIn(
-            "`make test` chains the fast unit lane with `make test-boundary-contract-smoke`",
-            development_text,
+        self.assertEqual(
+            _target_dependencies(text, "test"),
+            ("test-fast", "test-boundary-contract-smoke"),
         )
+        self.assertEqual(
+            pack_documented_entrypoints(registry, "default_test_boundary"),
+            ("make test", "make test-boundary-contract-smoke"),
+        )
+        self.assertIn("`make test-boundary-contract-smoke`", development_text)
         self.assertIn(
             "$(PYTHON) -m pytest $(DEFAULT_TEST_BOUNDARY_TESTS) $(PYTEST_SERIAL_FLAGS)",
             block,
@@ -152,13 +113,7 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
             pack_mark_expr(registry, "default_test_boundary"),
             failure_label="DEFAULT_TEST_BOUNDARY_TESTS",
         )
-        self.assertTrue(collected_by_path)
-        self.assertTrue(
-            all(
-                path.startswith("tests/") and path.endswith(".py")
-                for path in collected_by_path
-            )
-        )
+        _assert_collected_paths_are_tests(self, collected_by_path)
         _assert_collected_paths_self_declare_marker(
             self,
             collected_by_path,
@@ -171,13 +126,7 @@ class MakefileFastSmokeStaticGateTests(unittest.TestCase):
             pack_mark_expr(registry, "fast_smoke"),
             failure_label="FAST_SMOKE_TESTS",
         )
-        self.assertTrue(collected_by_path)
-        self.assertTrue(
-            all(
-                path.startswith("tests/") and path.endswith(".py")
-                for path in collected_by_path
-            )
-        )
+        _assert_collected_paths_are_tests(self, collected_by_path)
         _assert_collected_paths_self_declare_marker(
             self,
             collected_by_path,

@@ -165,6 +165,9 @@
         "unknown_change_paths": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
+        },
+        "derived_surfaces_manifest": {
+          "$ref": "#/$defs/derived_surfaces_manifest_diagnostics"
         }
       }
     }
@@ -520,6 +523,20 @@
           "enum": ["pass", "failed"]
         },
         "message": { "type": "string" }
+      }
+    },
+    "derived_surfaces_manifest_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "path", "message", "currentness_output_count"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "skipped", "failed"]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "currentness_output_count": { "type": "integer", "minimum": 0 }
       }
     },
     "evidence_signal": {

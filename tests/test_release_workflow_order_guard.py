@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import shlex
 import tempfile
 import unittest
 from pathlib import Path
@@ -55,10 +56,33 @@ def _sequence_roles(check_id: str) -> tuple[str, ...]:
     raise AssertionError(f"missing workflow order sequence: {check_id}")
 
 
+def _make_assignment_args(assignments: dict[str, object]) -> str:
+    return " ".join(
+        f"{name}={shlex.quote(str(value))}"
+        for name, value in assignments.items()
+    )
+
+
 def _role_overrides() -> dict[str, str]:
     spec = _workflow_order_spec()
     return {
-        str(override["role"]): f"{override['target']} {override['raw_args_contains']}"
+        str(override["role"]): " ".join(
+            item
+            for item in (
+                str(override["target"]),
+                _make_assignment_args(dict(override["required_assignments"])),
+            )
+            if item
+        )
+        for override in spec["role_overrides"]
+        if isinstance(override, dict)
+    }
+
+
+def _role_targets() -> dict[str, str]:
+    spec = _workflow_order_spec()
+    return {
+        str(override["role"]): str(override["target"])
         for override in spec["role_overrides"]
         if isinstance(override, dict)
     }
@@ -117,6 +141,72 @@ def _forbidden_targets(check_id: str) -> set[str]:
     raise AssertionError(f"missing forbidden target check: {check_id}")
 
 
+def _release_workflow_order_spec_target_names() -> tuple[str, ...]:
+    spec = _workflow_order_spec()
+    role_targets = _role_targets()
+    target_names: list[str] = []
+
+    def add(value: object) -> None:
+        name = str(value).strip()
+        if name and name not in target_names:
+            target_names.append(name)
+
+    def add_role(role: object) -> None:
+        role_name = str(role).strip()
+        add(role_targets.get(role_name, role_name))
+
+    for target in spec["target_recipe_order"]:
+        add(target)
+    for protected_recipe in spec["protected_recipes"]:
+        if not isinstance(protected_recipe, dict):
+            continue
+        add(protected_recipe.get("target", ""))
+        for line in protected_recipe.get("expected_lines", []):
+            if isinstance(line, dict):
+                add(
+                    line.get("target")
+                    or role_targets.get(str(line.get("role", "")), "")
+                )
+    for entry in spec["expected_subsequences"]:
+        if not isinstance(entry, dict):
+            continue
+        add(entry.get("target", ""))
+        for role in entry.get("roles", []):
+            add_role(role)
+    for check_key in ("terminal_checks", "first_role_checks"):
+        for entry in spec[check_key]:
+            if isinstance(entry, dict):
+                add(entry.get("target", ""))
+                add_role(entry.get("role", ""))
+    for entry in spec["repetition_budgets"]:
+        if not isinstance(entry, dict):
+            continue
+        add(entry.get("target", ""))
+        for target in entry.get("allowed_repeated_targets", []):
+            add(target)
+    for entry in spec["forbidden_target_checks"]:
+        if not isinstance(entry, dict):
+            continue
+        add(entry.get("target", ""))
+        for target in entry.get("forbidden_targets", []):
+            add(target)
+    return tuple(target_names)
+
+
+def _release_workflow_order_phony_targets() -> tuple[str, ...]:
+    target_names: list[str] = []
+
+    def add(value: str) -> None:
+        if value not in target_names:
+            target_names.append(value)
+
+    for target in RELEASE_WORKFLOW_ORDER_SUPPORT_PHONY_TARGETS:
+        add(target)
+    for target in _release_workflow_order_spec_target_names():
+        add(target)
+    return tuple(target_names)
+
+
 CHECK_FINALIZED_TARGETS = _sequence_roles("check_finalized_post_check_sequence")
 CHECK_FINALIZED_LINES = _make_recipe(
     "auto-improve-readiness-report-body",
@@ -163,6 +253,39 @@ RELEASE_CONVERGE_PREFLIGHT_MISORDER_LINES = _make_recipe(
     RELEASE_CONVERGE_PREFLIGHT_TARGETS[0],
     *RELEASE_CONVERGE_PREFLIGHT_TARGETS[2:],
 )
+AUTO_PROMOTION_PREFLIGHT_PREREQUISITES_TARGETS = _sequence_roles(
+    "release_auto_promotion_preflight_prerequisites_sequence"
+)
+AUTO_PROMOTION_PREFLIGHT_PREREQUISITES_LINES = _make_recipe(
+    *AUTO_PROMOTION_PREFLIGHT_PREREQUISITES_TARGETS
+)
+AUTO_PROMOTION_PREFLIGHT_PREREQUISITES_MISORDER_LINES = _make_recipe(
+    AUTO_PROMOTION_PREFLIGHT_PREREQUISITES_TARGETS[1],
+    AUTO_PROMOTION_PREFLIGHT_PREREQUISITES_TARGETS[0],
+)
+AUTO_PROMOTION_PREFLIGHT_TARGETS = _sequence_roles(
+    "release_auto_promotion_preflight_sequence"
+)
+AUTO_PROMOTION_PREFLIGHT_LINES = _make_recipe(*AUTO_PROMOTION_PREFLIGHT_TARGETS)
+AUTO_PROMOTION_PREFLIGHT_MISORDER_LINES = _make_recipe(
+    AUTO_PROMOTION_PREFLIGHT_TARGETS[1],
+    AUTO_PROMOTION_PREFLIGHT_TARGETS[0],
+    *AUTO_PROMOTION_PREFLIGHT_TARGETS[2:],
+)
+AUTO_PROMOTION_PRESEAL_TARGETS = _sequence_roles(
+    "release_auto_promotion_preseal_sequence"
+)
+AUTO_PROMOTION_PRESEAL_LINES = _make_recipe(*AUTO_PROMOTION_PRESEAL_TARGETS)
+AUTO_PROMOTION_PRESEAL_MISORDER_LINES = _make_recipe(
+    AUTO_PROMOTION_PRESEAL_TARGETS[0],
+    AUTO_PROMOTION_PRESEAL_TARGETS[1],
+    AUTO_PROMOTION_PRESEAL_TARGETS[3],
+    AUTO_PROMOTION_PRESEAL_TARGETS[2],
+    *AUTO_PROMOTION_PRESEAL_TARGETS[4:],
+)
+AUTO_PROMOTION_PRESEAL_FORBIDDEN_WRITER_LINES = (
+    AUTO_PROMOTION_PRESEAL_LINES + _make_recipe("generated-artifact-converge")
+)
 RELEASE_CONVERGE_ALL_LINES = _make_recipe(
     "release-converge",
     "sync-public-policy",
@@ -187,73 +310,19 @@ RELEASE_AUTHORITY_SETTLE_LINES = _make_recipe(
 RELEASE_POST_COMMIT_FINALIZE_LINES = _make_recipe(
     *_sequence_roles("release_post_commit_finalizer_sequence")
 )
-RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = (
+RELEASE_WORKFLOW_ORDER_SUPPORT_PHONY_TARGETS = (
     "check",
-    "check-finalized",
-    "release-evidence-converge",
     "release-evidence-closeout",
-    "release-finality-resettle",
-    "release-terminal-finality",
-    "release-authority-post-ready-finality",
-    "release-authority-settle",
-    "release-authority-sealed-preflight",
-    "release-finality-resettle-current-or-refresh",
-    "release-auto-promotion-goal-run-id-verified-check",
-    "release-auto-promotion-preflight",
-    "release-run-ready",
-    "release-auto-promotion-preseal",
-    "release-sealed-run-ready",
-    "release-auto-promotion-ready",
-    "release-authority-archive-candidate-gate",
-    "release-authority-post-ready-finality-current-or-refresh",
-    "release-converge-preflight",
-    "release-source-ready",
-    "release-source-ready-snapshot",
-    "release-source-ready-prepare",
-    "release-source-ready-commit",
-    "release-post-commit-finalize",
-    "release-source-ready-post-verify",
-    "release-source-ready-status",
-    "release-converge-all-surfaces",
+    "sync-public-policy",
+    "public-check-all",
     "release-converge",
     "release-converge-post",
-    "script-output-surfaces-check",
-    "release-smoke-fast-current-check",
-    "test-execution-summary-current-check",
-    "test-execution-summary-full-current-check",
-    "sync-public-policy-check",
-    "public-check-summary-current-check",
-    "artifact-freshness-check",
-    "release-check-all-surfaces",
-    "sync-public-policy",
-    "public-check-summary",
-    "public-check-all",
-    "goal-runtime-local-evidence-refresh",
-    "auto-improve-readiness-worktree-guard",
-    "remediation-backlog",
-    "generated-artifact-converge",
-    "generated-artifact-script-output",
-    "generated-artifact-finality-suffix",
     "generated-artifact-index",
-    "generated-artifact-index-body",
     "artifact-freshness",
     "release-closeout-summary",
-    "release-evidence-dashboard-report",
-    "release-lane-summary",
-    "release-clean-blocker-ledger",
-    "auto-improve-readiness-report-body",
-    "release-closeout-summary-report",
     "script-output-surfaces",
-    "external-report-action-matrix",
-    "release-closeout-post-check-finalizer-dry-run",
-    "release-closeout-fixed-point",
-    "release-closeout-batch-manifest-promote",
-    "release-closeout-batch-manifest-replay-verify",
-    "artifact-freshness-refresh-check",
-    "operator-release-summary",
-    "tmp-json-clean",
-    "release-closeout-finality-verify",
 )
+RELEASE_WORKFLOW_ORDER_PHONY_TARGETS = _release_workflow_order_phony_targets()
 RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     ".PHONY: {phony}\n"
     "check:\n"
@@ -302,12 +371,14 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "\t@true\n"
     "release-auto-promotion-goal-run-id-verified-check:\n"
     "\t@true\n"
+    "release-auto-promotion-preflight-prerequisites:\n"
+    "{auto_promotion_preflight_prerequisites_lines}"
     "release-auto-promotion-preflight:\n"
-    "\t@true\n"
+    "{auto_promotion_preflight_lines}"
     "release-run-ready:\n"
     "\t@true\n"
     "release-auto-promotion-preseal:\n"
-    "\t@true\n"
+    "{auto_promotion_preseal_lines}"
     "release-sealed-run-ready:\n"
     "\t@true\n"
     "release-auto-promotion-ready:\n"
@@ -328,15 +399,29 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "\t@true\n"
     "release-smoke-fast-current-check:\n"
     "\t@true\n"
+    "release-smoke-fast-refresh-check:\n"
+    "\t@true\n"
+    "release-smoke-full-current-check:\n"
+    "\t@true\n"
     "test-execution-summary-current-check:\n"
     "\t@true\n"
+    "test-execution-summary-current-or-refresh:\n"
+    "\t@true\n"
     "test-execution-summary-full-current-check:\n"
+    "\t@true\n"
+    "test-execution-summary-full-refresh:\n"
+    "\t@true\n"
+    "test-execution-summary-full-body:\n"
     "\t@true\n"
     "sync-public-policy-check:\n"
     "\t@true\n"
     "public-check-summary-current-check:\n"
     "\t@true\n"
     "artifact-freshness-check:\n"
+    "\t@true\n"
+    "bootstrap-preflight:\n"
+    "\t@true\n"
+    "registry-preflight:\n"
     "\t@true\n"
     "goal-runtime-local-evidence-refresh:\n"
     "\t@true\n"
@@ -360,6 +445,8 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "\t@true\n"
     "external-report-action-matrix:\n"
     "\t@true\n"
+    "external-report-reference-manifest-settle:\n"
+    "\t@true\n"
     "generated-artifact-index:\n"
     "\t@true\n"
     "generated-artifact-index-body:\n"
@@ -369,6 +456,22 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "release-closeout-batch-manifest-promote:\n"
     "\t@true\n"
     "release-closeout-batch-manifest-replay-verify:\n"
+    "\t@true\n"
+    "release-auto-promotion-ready-invalidate:\n"
+    "\t@true\n"
+    "release-auto-promotion-goal-run-id-guard:\n"
+    "\t@true\n"
+    "release-run-ready-plan-check:\n"
+    "\t@true\n"
+    "release-run-ready-check:\n"
+    "\t@true\n"
+    "release-auto-promotion-safe-cleanup-cleanup-only:\n"
+    "\t@true\n"
+    "learning-readiness-signoff-revalidation:\n"
+    "\t@true\n"
+    "release-evidence-cohort-preseal-refresh:\n"
+    "\t@true\n"
+    "release-evidence-cohort:\n"
     "\t@true\n"
     "artifact-freshness-refresh-check:\n"
     "\t@true\n"
@@ -387,6 +490,10 @@ def _workflow_order_guard_makefile_text(
     misorder_release_source_ready: bool = False,
     misorder_release_source_ready_post_verify: bool = False,
     misorder_release_converge_preflight: bool = False,
+    misorder_auto_promotion_preflight_prerequisites: bool = False,
+    misorder_auto_promotion_preflight: bool = False,
+    misorder_auto_promotion_preseal: bool = False,
+    auto_promotion_preseal_forbidden_writer: bool = False,
 ) -> str:
     return RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE.format(
         phony=" ".join(RELEASE_WORKFLOW_ORDER_PHONY_TARGETS),
@@ -416,6 +523,23 @@ def _workflow_order_guard_makefile_text(
             RELEASE_CONVERGE_PREFLIGHT_MISORDER_LINES
             if misorder_release_converge_preflight
             else RELEASE_CONVERGE_PREFLIGHT_LINES
+        ),
+        auto_promotion_preflight_prerequisites_lines=(
+            AUTO_PROMOTION_PREFLIGHT_PREREQUISITES_MISORDER_LINES
+            if misorder_auto_promotion_preflight_prerequisites
+            else AUTO_PROMOTION_PREFLIGHT_PREREQUISITES_LINES
+        ),
+        auto_promotion_preflight_lines=(
+            AUTO_PROMOTION_PREFLIGHT_MISORDER_LINES
+            if misorder_auto_promotion_preflight
+            else AUTO_PROMOTION_PREFLIGHT_LINES
+        ),
+        auto_promotion_preseal_lines=(
+            AUTO_PROMOTION_PRESEAL_FORBIDDEN_WRITER_LINES
+            if auto_promotion_preseal_forbidden_writer
+            else AUTO_PROMOTION_PRESEAL_MISORDER_LINES
+            if misorder_auto_promotion_preseal
+            else AUTO_PROMOTION_PRESEAL_LINES
         ),
         release_post_commit_finalize_lines=RELEASE_POST_COMMIT_FINALIZE_LINES,
     )
@@ -483,6 +607,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         misorder_release_source_ready: bool = False,
         misorder_release_source_ready_post_verify: bool = False,
         misorder_release_converge_preflight: bool = False,
+        misorder_auto_promotion_preflight_prerequisites: bool = False,
+        misorder_auto_promotion_preflight: bool = False,
+        misorder_auto_promotion_preseal: bool = False,
+        auto_promotion_preseal_forbidden_writer: bool = False,
     ) -> None:
         self.vault.joinpath("Makefile").write_text(
             _workflow_order_guard_makefile_text(
@@ -490,6 +618,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 misorder_release_source_ready=misorder_release_source_ready,
                 misorder_release_source_ready_post_verify=misorder_release_source_ready_post_verify,
                 misorder_release_converge_preflight=misorder_release_converge_preflight,
+                misorder_auto_promotion_preflight_prerequisites=misorder_auto_promotion_preflight_prerequisites,
+                misorder_auto_promotion_preflight=misorder_auto_promotion_preflight,
+                misorder_auto_promotion_preseal=misorder_auto_promotion_preseal,
+                auto_promotion_preseal_forbidden_writer=auto_promotion_preseal_forbidden_writer,
             ),
             encoding="utf-8",
         )
@@ -514,6 +646,32 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             if item["id"] == "release_post_commit_finalizer_protected_recipe"
         )
 
+    def _check_with_violation(
+        self,
+        report: dict[str, Any],
+        *,
+        check_id: str,
+        reason: str | None = None,
+        target: str | None = None,
+        expected_role: str | None = None,
+    ) -> dict[str, Any]:
+        matches = [
+            check
+            for check in report["checks"]
+            if check["id"] == check_id
+            if any(
+                (reason is None or violation.get("reason") == reason)
+                and (target is None or violation.get("target") == target)
+                and (
+                    expected_role is None
+                    or violation.get("expected_role") == expected_role
+                )
+                for violation in check["violations"]
+            )
+        ]
+        self.assertEqual(len(matches), 1, matches)
+        return matches[0]
+
     def test_spec_keeps_critical_release_safety_roles(self) -> None:
         spec = _workflow_order_spec()
         role_overrides = {
@@ -521,10 +679,38 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             for entry in spec["role_overrides"]
             if isinstance(entry, dict)
         }
+        structured_role_overrides = {
+            str(entry["role"]): dict(entry.get("required_assignments", {}))
+            for entry in spec["role_overrides"]
+            if isinstance(entry, dict)
+        }
 
         self.assertEqual(
             role_overrides["release-closeout-post-check-finalizer-strict-dry-run"],
             "release-closeout-post-check-finalizer-dry-run",
+        )
+        for role in (
+            "auto-improve-readiness-report-body-worktree-guard-refresh",
+            "release-run-ready-plan-check-auto-promotion-distribution",
+            "release-run-ready-check-auto-promotion-distribution",
+            "release-evidence-cohort-preseal-refresh-auto-promotion-metadata",
+            "release-closeout-fixed-point-auto-promotion-artifacts",
+            "release-run-ready-auto-promotion-distribution",
+            "release-evidence-cohort-strict-same-fingerprint-auto-promotion-metadata",
+        ):
+            with self.subTest(role=role, surface="role-overrides"):
+                self.assertIn(role, role_overrides)
+                self.assertTrue(structured_role_overrides[role])
+        self.assertEqual(
+            spec["role_override_sequence_coverage"],
+            {
+                "allowlisted_roles": [],
+                "details": (
+                    "Observed role overrides must be named in the expected "
+                    "subsequence for the target where they appear, unless an "
+                    "override is intentionally allowlisted here."
+                ),
+            },
         )
         self.assertEqual(
             _terminal_roles()["release-terminal-finality"],
@@ -551,6 +737,61 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(
             list(preflight_protected_lines),
             list(_sequence_roles("release_converge_preflight_sequence")),
+        )
+        auto_promotion_prerequisite_lines = _protected_recipe_lines(
+            "release-auto-promotion-preflight-prerequisites"
+        )
+        self.assertEqual(
+            list(auto_promotion_prerequisite_lines),
+            list(
+                _sequence_roles(
+                    "release_auto_promotion_preflight_prerequisites_sequence"
+                )
+            ),
+        )
+        self.assertIn(
+            "auto-improve-readiness-report-body-worktree-guard-refresh",
+            _sequence_roles("release_auto_promotion_preflight_sequence"),
+        )
+        self.assertEqual(
+            _sequence_roles("release_auto_promotion_preflight_sequence")[-2:],
+            (
+                "tmp-json-clean",
+                "release-auto-promotion-preflight-authority-write",
+            ),
+        )
+        self.assertIn(
+            "release-closeout-fixed-point-auto-promotion-artifacts",
+            _sequence_roles("release_auto_promotion_preseal_sequence"),
+        )
+        self.assertEqual(
+            _sequence_roles("release_auto_promotion_preseal_sequence")[-2:],
+            (
+                "tmp-json-clean",
+                "release-auto-promotion-preseal-authority-write",
+            ),
+        )
+        protected_preflight_lines = _protected_recipe_lines(
+            "release-auto-promotion-preflight"
+        )
+        self.assertEqual(
+            list(protected_preflight_lines),
+            list(_sequence_roles("release_auto_promotion_preflight_sequence")),
+        )
+        self.assertIn(
+            "--phase preflight",
+            protected_preflight_lines[
+                "release-auto-promotion-preflight-authority-write"
+            ]["raw_line"],
+        )
+        protected_preseal_lines = _protected_recipe_lines(
+            "release-auto-promotion-preseal"
+        )
+        self.assertIn(
+            "--phase preseal",
+            protected_preseal_lines[
+                "release-auto-promotion-preseal-authority-write"
+            ]["raw_line"],
         )
         self.assertIn(
             '--out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"',
@@ -591,6 +832,25 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 _forbidden_targets("release_source_ready_post_verify_sequence")
             )
         )
+        preseal_repetition_budget = next(
+            entry
+            for entry in spec["repetition_budgets"]
+            if isinstance(entry, dict)
+            and entry["id"] == "release_auto_promotion_preseal_repetition_budget"
+        )
+        self.assertNotIn("forbidden_targets", preseal_repetition_budget)
+        self.assertNotIn("forbidden_violation_reason", preseal_repetition_budget)
+        self.assertTrue(
+            {
+                "test-execution-summary-full-refresh",
+                "test-execution-summary-full-body",
+                "generated-artifact-converge",
+            }.issubset(
+                _forbidden_targets(
+                    "release_auto_promotion_preseal_forbidden_targets"
+                )
+            )
+        )
 
     def test_spec_schema_rejects_empty_critical_guard_arrays(self) -> None:
         schema = load_schema(SPEC_SCHEMA_PATH)
@@ -618,6 +878,50 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         )
         self.assertTrue(
             any("$.terminal_checks[0].target" in error for error in errors),
+            errors,
+        )
+
+    def test_spec_schema_rejects_forbidden_targets_on_repetition_budgets(self) -> None:
+        schema = load_schema(SPEC_SCHEMA_PATH)
+        spec = _cloned_workflow_order_spec()
+        spec["repetition_budgets"][0]["forbidden_targets"] = [
+            "generated-artifact-converge"
+        ]
+
+        errors = validate_with_schema(spec, schema)
+
+        self.assertTrue(
+            any(
+                "$.repetition_budgets[0]: unexpected property 'forbidden_targets'"
+                in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    def test_spec_schema_requires_role_override_matcher(self) -> None:
+        schema = load_schema(SPEC_SCHEMA_PATH)
+        spec = _cloned_workflow_order_spec()
+        del spec["role_overrides"][0]["required_assignments"]
+
+        errors = validate_with_schema(spec, schema)
+
+        self.assertTrue(
+            any("$.role_overrides[0]" in error for error in errors),
+            errors,
+        )
+
+    def test_spec_schema_rejects_empty_structured_role_override_assignments(
+        self,
+    ) -> None:
+        schema = load_schema(SPEC_SCHEMA_PATH)
+        spec = _cloned_workflow_order_spec()
+        spec["role_overrides"][0]["required_assignments"] = {}
+
+        errors = validate_with_schema(spec, schema)
+
+        self.assertIn(
+            "$.role_overrides[0].required_assignments: expected at least 1 propert(ies)",
             errors,
         )
 
@@ -668,13 +972,91 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             if item["id"] == "release_converge_preflight_protected_recipe"
         )
         self.assertEqual(protected_preflight_recipe["status"], "pass")
+        protected_auto_promotion_prerequisites = next(
+            item
+            for item in report["checks"]
+            if item["id"]
+            == "release_auto_promotion_preflight_prerequisites_protected_recipe"
+        )
+        self.assertEqual(protected_auto_promotion_prerequisites["status"], "pass")
+        role_override_coverage = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "role_override_sequence_coverage"
+        )
+        self.assertEqual(role_override_coverage["status"], "pass")
         preflight_check = next(item for item in report["checks"] if item["id"] == "release_converge_preflight_sequence")
         self.assertEqual(preflight_check["status"], "pass")
+        auto_promotion_preflight_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_auto_promotion_preflight_sequence"
+        )
+        self.assertEqual(auto_promotion_preflight_check["status"], "pass")
+        auto_promotion_preflight_recipe = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_auto_promotion_preflight_protected_recipe"
+        )
+        self.assertEqual(auto_promotion_preflight_recipe["status"], "pass")
+        auto_promotion_preseal_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_auto_promotion_preseal_sequence"
+        )
+        self.assertEqual(auto_promotion_preseal_check["status"], "pass")
+        auto_promotion_preseal_recipe = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_auto_promotion_preseal_protected_recipe"
+        )
+        self.assertEqual(auto_promotion_preseal_recipe["status"], "pass")
+        auto_promotion_preseal_forbidden_check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_auto_promotion_preseal_forbidden_targets"
+        )
+        self.assertEqual(auto_promotion_preseal_forbidden_check["status"], "pass")
         self.assertIn("release-finality-resettle", {item["target"] for item in report["target_recipes"]})
         self.assertIn("release-terminal-finality", {item["target"] for item in report["target_recipes"]})
         self.assertIn("release-post-commit-finalize", {item["target"] for item in report["target_recipes"]})
         self.assertIn("release-converge-preflight", {item["target"] for item in report["target_recipes"]})
+        self.assertIn(
+            "release-auto-promotion-preflight",
+            {item["target"] for item in report["target_recipes"]},
+        )
+        self.assertIn(
+            "release-auto-promotion-preseal",
+            {item["target"] for item in report["target_recipes"]},
+        )
         self.assertTrue(write_report(self.vault, report).exists())
+
+    def test_real_repo_release_order_report_builds_from_current_make_graph(self) -> None:
+        report = build_report(REPO_ROOT, context=fixed_context())
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+        self.assertIn(
+            "release-auto-promotion-preseal",
+            {item["target"] for item in report["target_recipes"]},
+        )
+        self.assertEqual(
+            {
+                item["id"]: item["status"]
+                for item in report["checks"]
+                if item["id"]
+                in {
+                    "release_auto_promotion_preseal_sequence",
+                    "release_auto_promotion_preseal_forbidden_targets",
+                    "workflow_dependency_planner_closeout_hooks",
+                }
+            },
+            {
+                "release_auto_promotion_preseal_sequence": "pass",
+                "release_auto_promotion_preseal_forbidden_targets": "pass",
+                "workflow_dependency_planner_closeout_hooks": "pass",
+            },
+        )
 
     def test_check_mode_validates_live_candidate_when_canonical_report_is_missing(
         self,
@@ -1120,6 +1502,256 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             <= reasons,
             check,
         )
+
+    def test_guard_fails_when_auto_promotion_prerequisites_drift(self) -> None:
+        self._write_makefile(misorder_auto_promotion_preflight_prerequisites=True)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"]
+            == "release_auto_promotion_preflight_prerequisites_protected_recipe"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(
+            any(
+                violation.get("reason") == "protected_recipe_line_mismatch"
+                for violation in check["violations"]
+            ),
+            check,
+        )
+
+    def test_guard_fails_when_auto_promotion_preflight_skips_initial_invalidation(
+        self,
+    ) -> None:
+        self._write_makefile(misorder_auto_promotion_preflight=True)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_auto_promotion_preflight_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(
+            any(
+                violation.get("reason")
+                == "ready_manifest_invalidation_must_start_auto_promotion_preflight"
+                for violation in check["violations"]
+            ),
+            check,
+        )
+
+    def test_guard_fails_when_observed_role_override_is_dropped_from_sequence(
+        self,
+    ) -> None:
+        spec = _cloned_workflow_order_spec()
+        for entry in spec["expected_subsequences"]:
+            if (
+                isinstance(entry, dict)
+                and entry["id"] == "release_auto_promotion_preflight_sequence"
+            ):
+                entry["roles"] = [
+                    "auto-improve-readiness-report-body"
+                    if role
+                    == "auto-improve-readiness-report-body-worktree-guard-refresh"
+                    else role
+                    for role in entry["roles"]
+                ]
+                break
+        self._write_workflow_order_spec(spec)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = self._check_with_violation(
+            report,
+            check_id="role_override_sequence_coverage",
+            reason="role_override_missing_from_expected_subsequence",
+            target="release-auto-promotion-preflight",
+            expected_role="auto-improve-readiness-report-body-worktree-guard-refresh",
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+
+    def test_guard_structured_role_override_matching_is_order_independent(
+        self,
+    ) -> None:
+        spec = _cloned_workflow_order_spec()
+        spec["target_recipe_order"].append("custom-override-release")
+        spec["role_overrides"].append(
+            {
+                "target": "custom-override-target",
+                "required_assignments": {
+                    "FOO": "1",
+                    "BAR": "two words",
+                },
+                "role": "custom-override-role",
+            }
+        )
+        spec["expected_subsequences"].append(
+            {
+                "id": "custom_override_sequence",
+                "target": "custom-override-release",
+                "roles": ["custom-override-role"],
+                "details": "custom override role must be observed through structured assignments.",
+            }
+        )
+        self._write_workflow_order_spec(spec)
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8")
+            + "\ncustom-override-release:\n"
+            + "\t$(MAKE) custom-override-target BAR=\"two words\" FOO=1\n"
+            + "custom-override-target:\n"
+            + "\t@true\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item for item in report["checks"] if item["id"] == "custom_override_sequence"
+        )
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(check["status"], "pass")
+        custom_recipe = next(
+            item
+            for item in report["target_recipes"]
+            if item["target"] == "custom-override-release"
+        )
+        self.assertEqual(
+            custom_recipe["invocations"][0]["role"],
+            "custom-override-role",
+        )
+
+    def test_guard_validates_protected_recipe_roles_through_structured_overrides(
+        self,
+    ) -> None:
+        spec = _cloned_workflow_order_spec()
+        for override in spec["role_overrides"]:
+            if (
+                isinstance(override, dict)
+                and override.get("role")
+                == "release-run-ready-plan-check-auto-promotion-distribution"
+            ):
+                override["required_assignments"] = {
+                    "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP": "$(WRONG_DISTRIBUTION_ZIP)"
+                }
+                break
+        else:
+            self.fail("missing auto-promotion distribution role override")
+        self._write_workflow_order_spec(spec)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = self._check_with_violation(
+            report,
+            check_id="release_auto_promotion_preseal_protected_recipe",
+            reason="protected_recipe_role_mismatch",
+            target="release-auto-promotion-preseal",
+            expected_role="release-run-ready-plan-check-auto-promotion-distribution",
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+
+    def test_guard_fails_when_auto_promotion_preseal_misorders_run_ready_checks(
+        self,
+    ) -> None:
+        self._write_makefile(misorder_auto_promotion_preseal=True)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = self._check_with_violation(
+            report,
+            check_id="release_auto_promotion_preseal_sequence",
+            expected_role="release-run-ready-check-auto-promotion-distribution",
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+
+    def test_guard_fails_when_auto_promotion_preseal_runs_forbidden_writer(
+        self,
+    ) -> None:
+        self._write_makefile(auto_promotion_preseal_forbidden_writer=True)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = self._check_with_violation(
+            report,
+            check_id="release_auto_promotion_preseal_protected_recipe",
+            reason="protected_recipe_line_count_mismatch",
+            target="release-auto-promotion-preseal",
+        )
+        forbidden_check = self._check_with_violation(
+            report,
+            check_id="release_auto_promotion_preseal_forbidden_targets",
+            reason="preseal_must_not_run_expensive_or_full_converge_writers",
+            target="generated-artifact-converge",
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(forbidden_check["status"], "fail")
+
+    def test_guard_fails_when_preseal_delegated_cleanup_runs_forbidden_writer(
+        self,
+    ) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-auto-promotion-safe-cleanup-cleanup-only:\n"
+                "\t@true\n",
+                "release-auto-promotion-safe-cleanup-cleanup-only:\n"
+                "\t$(MAKE) generated-artifact-converge\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = self._check_with_violation(
+            report,
+            check_id="release_auto_promotion_preseal_forbidden_targets",
+            reason="preseal_must_not_run_expensive_or_full_converge_writers",
+            target="generated-artifact-converge",
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertIn(
+            "release-auto-promotion-safe-cleanup-cleanup-only",
+            check["violations"][0]["invocation_path"],
+        )
+
+    def test_guard_fails_when_auto_promotion_preseal_authority_writer_moves_before_cleanup(
+        self,
+    ) -> None:
+        cleanup_line = _recipe_line_for_role("tmp-json-clean")
+        writer_line = _recipe_line_for_role(
+            "release-auto-promotion-preseal-authority-write"
+        )
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                cleanup_line + writer_line,
+                writer_line + cleanup_line,
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = self._check_with_violation(
+            report,
+            check_id="release_auto_promotion_preseal_protected_recipe",
+            reason="protected_recipe_line_mismatch",
+            target="release-auto-promotion-preseal",
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
 
 
 if __name__ == "__main__":

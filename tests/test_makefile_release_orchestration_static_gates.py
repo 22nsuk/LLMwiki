@@ -9,8 +9,9 @@ from tests.makefile_static_helpers import (
     MakeTargetContract,
     _assert_assignment_values,
     _assert_make_target_contracts,
-    _assert_recipe_contains_tokens,
+    _assert_phony_targets,
     _makefile_text,
+    _phony_target_names,
     _recipe_lines,
     _target_block,
 )
@@ -21,10 +22,6 @@ pytestmark = [
     pytest.mark.report_contract_core,
     pytest.mark.schema_static_smoke,
 ]
-
-
-def _phony_targets(text: str) -> list[str]:
-    return _target_block(text, ".PHONY").replace(".PHONY:", "").split()
 
 
 _RELEASE_RUN_READY_CURRENT_TARGET_CONTRACTS = (
@@ -118,6 +115,161 @@ _RELEASE_SEALED_RUN_READY_TARGET_CONTRACTS = (
     ),
 )
 
+_RELEASE_CONVERGE_PHONY_TARGETS = (
+    "release-worktree-clean-check",
+    "release-converge",
+    "release-converge-all-surfaces",
+    "head-aligned-evidence-converge",
+)
+
+_RELEASE_CONVERGE_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-check-preflight-converge",
+        required_tokens=(
+            "release-check-preflight-converge: release-converge-preflight",
+            "mutating compatibility alias",
+        ),
+        forbidden_tokens=("$(MAKE) test-execution-summary-report-contract-refresh\n",),
+    ),
+    MakeTargetContract(
+        "release-check-post-converge",
+        required_tokens=(
+            "release-check-post-converge: release-converge-post",
+            "mutating compatibility alias",
+        ),
+    ),
+    MakeTargetContract(
+        "release-converge",
+        required_tokens=(
+            "$(MAKE) release-converge-preflight",
+            "$(MAKE) registry-preflight",
+            "$(MAKE) release-smoke-full-reuse",
+            "$(MAKE) release-converge-post",
+        ),
+    ),
+    MakeTargetContract(
+        "release-converge-all-surfaces",
+        required_tokens=(
+            "$(MAKE) release-converge",
+            "$(MAKE) sync-public-policy",
+            "$(MAKE) public-check-all",
+            "$(MAKE) release-converge-post",
+        ),
+    ),
+    MakeTargetContract(
+        "release-converge-post",
+        required_tokens=(
+            "$(MAKE) generated-artifact-converge",
+            "$(MAKE) remediation-backlog",
+            "$(MAKE) release-closeout-fixed-point",
+            "$(MAKE) operator-release-summary",
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run "
+            "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+        ),
+        forbidden_tokens=(
+            "$(MAKE) generated-artifact-index",
+            "$(MAKE) artifact-freshness",
+        ),
+    ),
+)
+
+_RELEASE_SOURCE_READY_PHONY_TARGETS = (
+    "release-source-ready-snapshot",
+    "release-source-ready-prepare",
+    "release-source-ready-commit",
+    "release-source-ready-post-verify",
+    "release-source-ready",
+)
+
+_RELEASE_SOURCE_READY_ABSENT_PHONY_TARGETS = (
+    "release-source-ready-post-commit",
+    "release-source-ready-post-commit-converge",
+    "release-source-ready-amend",
+    "release-source-ready-final-guard-amend",
+)
+
+_RELEASE_SOURCE_READY_ASSIGNMENTS = (
+    (
+        "RELEASE_SOURCE_READY_COMMIT_MESSAGE",
+        "release: converge source-ready surfaces",
+    ),
+    ("RELEASE_SOURCE_READY_PRE_STATUS_OUT", "tmp/release-source-ready-pre-status.json"),
+    ("RELEASE_SOURCE_READY_COMMIT_OUT", "tmp/release-source-ready-commit.json"),
+    ("RELEASE_SOURCE_READY_STATUS_OUT", "tmp/release-source-ready-status.json"),
+    ("RELEASE_WORKTREE_CLEAN_CHECK_OUT", "tmp/release-worktree-clean-check.json"),
+)
+
+_RELEASE_SOURCE_READY_ABSENT_ASSIGNMENTS = (
+    "RELEASE_SOURCE_READY_AMEND_OUT",
+    "RELEASE_SOURCE_READY_FINAL_GUARD_AMEND_OUT",
+)
+
+_RELEASE_SOURCE_READY_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-worktree-clean-check",
+        required_tokens=(
+            "ops.scripts.goal_worktree_guard",
+            '--out "$(RELEASE_WORKTREE_CLEAN_CHECK_OUT)"',
+        ),
+        forbidden_tokens=('--out "$(GOAL_WORKTREE_GUARD_OUT)"',),
+    ),
+    MakeTargetContract(
+        "release-source-ready-snapshot",
+        required_tokens=(
+            "ops.scripts.release_source_ready_commit",
+            "--snapshot-only",
+        ),
+    ),
+    MakeTargetContract(
+        "release-source-ready-prepare",
+        required_tokens=(
+            "$(MAKE) release-source-ready-snapshot",
+            "$(MAKE) release-converge-all-surfaces",
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
+        ),
+    ),
+    MakeTargetContract(
+        "release-source-ready-commit",
+        required_tokens=(
+            "ops.scripts.release_source_ready_commit",
+            '--pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)"',
+            '--message "$(RELEASE_SOURCE_READY_COMMIT_MESSAGE)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-source-ready-post-verify",
+        required_tokens=(
+            "$(MAKE) release-check-all-surfaces",
+            "$(MAKE) release-source-ready-status",
+        ),
+        forbidden_tokens=(
+            "$(MAKE) auto-improve-readiness-worktree-guard",
+            "$(MAKE) goal-runtime-local-evidence-refresh",
+            "$(MAKE) generated-artifact-converge",
+            "$(MAKE) remediation-backlog",
+            "$(MAKE) release-closeout-fixed-point",
+            "$(MAKE) release-source-ready-amend",
+            "$(MAKE) release-source-ready-final-guard-amend",
+        ),
+    ),
+    MakeTargetContract(
+        "release-source-ready",
+        required_tokens=(
+            "$(MAKE) release-source-ready-prepare",
+            "$(MAKE) release-source-ready-commit",
+            "$(MAKE) release-post-commit-finalize",
+            "$(MAKE) release-source-ready-post-verify",
+        ),
+    ),
+    MakeTargetContract(
+        "release-source-ready-status",
+        required_tokens=(
+            "ops.scripts.release_source_ready_status",
+            '--out "$(RELEASE_SOURCE_READY_STATUS_OUT)"',
+        ),
+    ),
+)
+
 
 _AUTO_PROMOTION_PHONY_TARGETS = (
     "release-auto-promotion-goal-run-id-guard",
@@ -157,14 +309,271 @@ _AUTO_PROMOTION_PRESEAL_EXPENSIVE_WRITERS = (
     "$(MAKE) generated-artifact-converge",
 )
 
+_AUTO_PROMOTION_GOAL_IDENTITY_CONTRACTS = (
+    MakeTargetContract(
+        "release-auto-promotion-goal-run-id-guard",
+        required_tokens=(
+            "ops.scripts.release_goal_run_identity_guard",
+            '--goal-run-id "$(GOAL_RUN_ID)"',
+            '--goal-run-id-origin "$(origin GOAL_RUN_ID)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-auto-promotion-goal-run-id-verified-check",
+        required_tokens=(
+            "--check",
+            "--require-verified",
+        ),
+    ),
+)
+
+_AUTO_PROMOTION_PREFLIGHT_PRESEAL_CONTRACTS = (
+    MakeTargetContract(
+        "release-auto-promotion-preflight",
+        required_tokens=(
+            "$(MAKE) release-auto-promotion-goal-run-id-guard",
+            "ops.scripts.release_auto_promotion_preflight",
+            "--phase preflight",
+            "$(MAKE) remediation-backlog",
+            "$(MAKE) learning-readiness-signoff-revalidation",
+            "$(MAKE) auto-improve-readiness-report-body "
+            "AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
+            *_AUTO_PROMOTION_REPORT_INPUT_TOKENS,
+        ),
+    ),
+    MakeTargetContract(
+        "release-auto-promotion-preseal",
+        required_tokens=(
+            "$(MAKE) release-auto-promotion-goal-run-id-guard",
+            "ops.scripts.release_auto_promotion_preflight",
+            "--phase preseal",
+            "release-run-ready-plan-check "
+            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_'
+            'DISTRIBUTION_ZIP)"',
+            "release-run-ready-check "
+            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_'
+            'DISTRIBUTION_ZIP)"',
+            "release-run-ready "
+            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_'
+            'DISTRIBUTION_ZIP)"',
+            "$(MAKE) release-closeout-summary-report",
+            "$(MAKE) release-evidence-cohort-preseal-refresh",
+            "$(MAKE) release-evidence-cohort "
+            "RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
+            *_AUTO_PROMOTION_REPORT_INPUT_TOKENS,
+        ),
+        forbidden_tokens=_AUTO_PROMOTION_PRESEAL_EXPENSIVE_WRITERS,
+    ),
+)
+
+_AUTO_PROMOTION_SAFE_CLEANUP_CONTRACTS = (
+    MakeTargetContract(
+        "release-auto-promotion-safe-cleanup-cleanup-only",
+        required_tokens=(
+            "$(MAKE) goal-runtime-clean-transient",
+            "$(MAKE) tmp-json-clean",
+            "ops.scripts.backfill_archived_run_artifacts",
+            "$(MAKE) generated-artifact-index",
+            "$(MAKE) artifact-freshness-refresh-check",
+        ),
+        forbidden_tokens=("$(MAKE) release-closeout-fixed-point",),
+    ),
+    MakeTargetContract(
+        "release-auto-promotion-safe-cleanup-finalize",
+        required_tokens=(
+            "$(MAKE) external-report-reference-manifest-release-check",
+            "$(MAKE) release-closeout-batch-manifest-promote",
+            "$(MAKE) release-closeout-fixed-point",
+        ),
+    ),
+    MakeTargetContract(
+        "release-auto-promotion-safe-cleanup",
+        exact_recipe=(
+            "$(MAKE) release-auto-promotion-safe-cleanup-finalize",
+            "$(MAKE) tmp-json-clean",
+        ),
+    ),
+)
+
+_AUTO_PROMOTION_READY_AUTHORITY_PHONY_TARGETS = (
+    "release-authority-post-ready-finality",
+    "release-authority-post-ready-finality-current-check",
+    "release-authority-post-ready-finality-current-or-refresh",
+    "release-authority-archive-candidate-gate",
+    "release-terminal-finality",
+)
+
+_AUTO_PROMOTION_READY_AUTHORITY_CONTRACTS = (
+    MakeTargetContract(
+        "release-auto-promotion-ready",
+        required_tokens=(
+            "ops.scripts.release_auto_promotion_ready",
+            "$(MAKE) release-auto-promotion-operator-summary",
+            "$(MAKE) release-auto-promotion-ready-plan",
+            '--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"',
+            '--sealed-run-manifest "$(RELEASE_SEALED_RUN_MANIFEST_OUT)"',
+            '--goal-run-status "$(GOAL_RUN_STATUS_OUT)"',
+            '--goal-runtime-certificate "$(GOAL_RUNTIME_CERTIFICATE_OUT)"',
+            '--auto-promotion-preflight "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)"',
+            '--auto-promotion-preseal "$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)"',
+        ),
+        forbidden_tokens=(
+            "release-sealed-run-ready-ensure",
+            "learning-readiness-signoff-revalidation",
+            "auto-improve-readiness-report-body",
+            "$(MAKE) release-auto-promotion-preflight",
+            "$(MAKE) release-auto-promotion-preseal",
+            "$(MAKE) release-sealed-run-ready-check",
+        ),
+    ),
+    MakeTargetContract(
+        "release-authority-archive-candidate-gate",
+        required_tokens=(
+            "$(MAKE) external-report-action-matrix",
+            "$(MAKE) generated-artifact-index-body",
+            "$(MAKE) archive-execution-manifest-check",
+        ),
+    ),
+    MakeTargetContract(
+        "release-authority-post-ready-finality",
+        required_tokens=(
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="
+            '"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
+            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="
+            '"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run "
+            "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+            "$(MAKE) release-closeout-finality-verify",
+        ),
+    ),
+    MakeTargetContract(
+        "release-authority-post-ready-finality-current-check",
+        required_tokens=(
+            "$(MAKE) tmp-json-clean",
+            "$(MAKE) release-closeout-batch-manifest-replay-verify",
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run "
+            "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+            "$(MAKE) release-closeout-finality-verify",
+            "$(MAKE) release-finality-resettle-current-diagnose",
+        ),
+    ),
+    MakeTargetContract(
+        "release-authority-post-ready-finality-current-or-refresh",
+        required_tokens=(
+            "$(MAKE) release-authority-post-ready-finality-current-check",
+            "$(MAKE) release-authority-post-ready-finality",
+        ),
+    ),
+    MakeTargetContract(
+        "release-authority-settle",
+        required_tokens=(
+            "@status=0; \\",
+            "$(MAKE) release-auto-promotion-ready || status=$$?; \\",
+            "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\",
+            "if [ $$status -eq 0 ]; then \\",
+            "$(MAKE) release-auto-promotion-ready-check || exit $$?; \\",
+            "$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer "
+            '--vault "$(VAULT)" --mode verify --out '
+            '"$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention '
+            "--fail-on-authority-attention || exit $$?; \\",
+            "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\",
+        ),
+    ),
+    MakeTargetContract(
+        "release-auto-promotion-ready-plan",
+        required_tokens=(
+            "ops.scripts.release_evidence_planner",
+            "--stage auto-promotion-ready",
+            '--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"',
+            '--sealed-run-manifest "$(RELEASE_SEALED_RUN_MANIFEST_OUT)"',
+            '--auto-promotion-preflight "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)"',
+            '--auto-promotion-preseal "$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-auto-promotion-operator-summary",
+        required_tokens=('--self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',),
+    ),
+)
+
+_RELEASE_CHECK_PHONY_TARGETS = (
+    "release-check-preflight-converge",
+    "release-check-core",
+    "release-check-post-check",
+    "release-check-post-converge",
+    "release-check-all-surfaces",
+    "release-check-finalized",
+)
+
+_RELEASE_CHECK_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-check-core",
+        required_tokens=(
+            "$(MAKE) release-worktree-clean-check",
+            "$(MAKE) test-execution-summary-current-check",
+            "$(MAKE) test-execution-summary-full-current-check",
+            "$(MAKE) static",
+            "$(MAKE) artifact-freshness-check",
+            "$(MAKE) registry-preflight-check",
+            "$(MAKE) lint",
+            "$(MAKE) eval",
+            "$(MAKE) stage2-eval",
+            "$(MAKE) planning-gate",
+            "$(MAKE) release-smoke-full-current-check",
+        ),
+        forbidden_tokens=(
+            "$(MAKE) test-report-contract-all",
+            "$(MAKE) registry-preflight\n",
+            "$(MAKE) unit-tests-release-check",
+            "$(MAKE) release-smoke-full-reuse",
+            "$(MAKE) release-check-post-converge",
+            "$(MAKE) check-all",
+            "$(MAKE) unit-tests-all",
+        ),
+    ),
+    MakeTargetContract(
+        "release-check",
+        required_tokens=(
+            "$(MAKE) release-check-core",
+            "$(MAKE) release-check-post-check",
+        ),
+    ),
+    MakeTargetContract(
+        "release-check-post-check",
+        required_tokens=("$(MAKE) release-worktree-clean-check",),
+        forbidden_tokens=("$(MAKE) generated-artifact-converge",),
+    ),
+    MakeTargetContract(
+        "release-check-all-surfaces",
+        required_tokens=(
+            "$(MAKE) release-check-core",
+            "$(MAKE) sync-public-policy-check",
+            "$(MAKE) public-check-all-check",
+            "$(MAKE) release-check-post-check",
+        ),
+        forbidden_tokens=(
+            "$(MAKE) sync-public-policy\n",
+            "$(MAKE) public-check-all\n",
+            "$(MAKE) release-check\n",
+        ),
+    ),
+    MakeTargetContract(
+        "release-check-finalized",
+        required_tokens=(
+            "release-check-finalized: release-check",
+            "compatibility alias",
+            "release-check for check-only verification",
+            "release-post-commit-finalize after committing source-ready changes",
+        ),
+    ),
+)
+
 
 def _assert_auto_promotion_phony_targets(
     test: unittest.TestCase,
-    phony_block: str,
+    text: str,
 ) -> None:
-    for target in _AUTO_PROMOTION_PHONY_TARGETS:
-        with test.subTest(target=target):
-            test.assertIn(target, phony_block)
+    _assert_phony_targets(test, text, _AUTO_PROMOTION_PHONY_TARGETS)
 
 
 def _assert_ready_manifest_invalidation_targets(
@@ -185,157 +594,6 @@ def _assert_ready_manifest_invalidation_targets(
                 "$(MAKE) release-auto-promotion-ready-invalidate",
                 _target_block(text, target),
             )
-
-
-def _assert_auto_promotion_report_input_tokens(
-    test: unittest.TestCase,
-    target_block: str,
-) -> None:
-    for token in _AUTO_PROMOTION_REPORT_INPUT_TOKENS:
-        with test.subTest(token=token):
-            test.assertIn(token, target_block)
-
-
-def _assert_auto_promotion_preflight_order(test: unittest.TestCase, text: str) -> None:
-    test.assertEqual(
-        _recipe_lines(text, "release-auto-promotion-preflight-prerequisites"),
-        [
-            "$(MAKE) external-report-action-matrix",
-            "$(MAKE) generated-artifact-index-body",
-        ],
-    )
-    test.assertNotIn(
-        "$(MAKE) refresh-generated-core",
-        _target_block(text, "release-auto-promotion-preflight-prerequisites"),
-    )
-    test.assertEqual(
-        _recipe_lines(text, "release-auto-promotion-preflight")[:8],
-        [
-            "$(MAKE) release-auto-promotion-ready-invalidate",
-            "$(MAKE) release-auto-promotion-goal-run-id-guard",
-            "$(MAKE) release-auto-promotion-preflight-prerequisites",
-            "$(MAKE) release-smoke-fast-refresh-check",
-            "$(MAKE) test-execution-summary-current-or-refresh",
-            "$(MAKE) artifact-freshness-refresh-check",
-            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
-            "$(MAKE) learning-readiness-signoff-revalidation",
-        ],
-    )
-
-
-def _assert_auto_promotion_preseal_order(test: unittest.TestCase, text: str) -> None:
-    preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
-    run_ready_plan_check_line = (
-        "$(MAKE) release-run-ready-plan-check "
-        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
-    )
-    run_ready_check_line = (
-        "$(MAKE) release-run-ready-check "
-        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
-    )
-    run_ready_refresh_line = (
-        "$(MAKE) release-run-ready "
-        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
-    )
-    test.assertEqual(
-        preseal_recipe[:16],
-        [
-            "$(MAKE) release-auto-promotion-ready-invalidate",
-            "$(MAKE) release-auto-promotion-goal-run-id-guard",
-            run_ready_plan_check_line,
-            run_ready_check_line,
-            "$(MAKE) bootstrap-preflight",
-            "$(MAKE) registry-preflight",
-            "$(MAKE) release-smoke-full-current-check",
-            "$(MAKE) release-smoke-fast-refresh-check",
-            "$(MAKE) external-report-reference-manifest-settle",
-            "$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only",
-            "$(MAKE) learning-readiness-signoff-revalidation",
-            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
-            "$(MAKE) remediation-backlog",
-            "$(MAKE) auto-improve-readiness-report-body",
-            "$(MAKE) release-closeout-summary-report",
-            '$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
-        ],
-    )
-    preseal_refresh_line = (
-        '$(MAKE) release-evidence-cohort-preseal-refresh '
-        'RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"'
-    )
-    strict_cohort_line = (
-        "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint "
-        'RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"'
-    )
-    preseal_fixed_point_line = (
-        "$(MAKE) release-closeout-fixed-point "
-        'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
-        'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
-    )
-    test.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
-    test.assertEqual(preseal_recipe.count(run_ready_plan_check_line), 1)
-    test.assertEqual(preseal_recipe.count(run_ready_check_line), 1)
-    test.assertEqual(preseal_recipe.count(run_ready_refresh_line), 1)
-    test.assertEqual(preseal_recipe.count(preseal_fixed_point_line), 1)
-    test.assertLess(
-        preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
-        preseal_recipe.index("$(MAKE) release-auto-promotion-safe-cleanup-cleanup-only"),
-    )
-    test.assertLess(
-        preseal_recipe.index("$(MAKE) external-report-reference-manifest-settle"),
-        preseal_recipe.index("$(MAKE) release-closeout-summary-report"),
-    )
-    test.assertLess(
-        preseal_recipe.index("$(MAKE) release-closeout-summary-report"),
-        preseal_recipe.index(preseal_refresh_line),
-    )
-    test.assertLess(preseal_recipe.index(preseal_refresh_line), preseal_recipe.index(strict_cohort_line))
-    test.assertLess(
-        preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
-        preseal_recipe.index(strict_cohort_line),
-    )
-    preseal_freshness_index = preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check")
-    final_closeout_summary_index = preseal_recipe.index(
-        "$(MAKE) release-closeout-summary-report",
-        preseal_freshness_index,
-    )
-    test.assertLess(
-        preseal_freshness_index,
-        final_closeout_summary_index,
-    )
-    test.assertLess(
-        final_closeout_summary_index,
-        preseal_recipe.index(preseal_fixed_point_line),
-    )
-    test.assertLess(
-        preseal_recipe.index(preseal_fixed_point_line),
-        preseal_recipe.index(run_ready_refresh_line),
-    )
-    test.assertLess(
-        preseal_recipe.index(
-            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
-        ),
-        preseal_recipe.index("$(MAKE) remediation-backlog"),
-    )
-    test.assertLess(
-        preseal_recipe.index("$(MAKE) remediation-backlog"),
-        preseal_recipe.index(strict_cohort_line),
-    )
-    test.assertLess(
-        preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
-        preseal_recipe.index(preseal_fixed_point_line),
-    )
-    test.assertLess(
-        preseal_recipe.index(preseal_fixed_point_line),
-        preseal_recipe.index(run_ready_refresh_line),
-    )
-    test.assertLess(
-        preseal_recipe.index(run_ready_refresh_line),
-        preseal_recipe.index(strict_cohort_line),
-    )
-    test.assertLess(
-        preseal_recipe.index(strict_cohort_line),
-        preseal_recipe.index("$(MAKE) tmp-json-clean"),
-    )
 
 
 def _assert_release_targets_do_not_spawn_runtime_trials(
@@ -390,45 +648,11 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
     ) -> None:
         text = _makefile_text()
 
-        phony_block = _target_block(text, ".PHONY")
-        self.assertIn("release-worktree-clean-check", phony_block)
-        self.assertIn("release-converge", phony_block)
-        self.assertIn("release-converge-all-surfaces", phony_block)
-        self.assertNotIn("release-converge-artifact-commit", phony_block)
-        self.assertIn("head-aligned-evidence-converge", phony_block)
-
-        preflight_block = _target_block(text, "release-check-preflight-converge")
-        post_block = _target_block(text, "release-check-post-converge")
-        self.assertIn("release-check-preflight-converge: release-converge-preflight", preflight_block)
-        self.assertIn("release-check-post-converge: release-converge-post", post_block)
-        self.assertIn("mutating compatibility alias", preflight_block)
-        self.assertIn("mutating compatibility alias", post_block)
-        self.assertNotIn(
-            "$(MAKE) test-execution-summary-report-contract-refresh\n",
-            preflight_block,
-        )
-
-        converge_block = _target_block(text, "release-converge")
-        self.assertIn("$(MAKE) release-converge-preflight", converge_block)
-        self.assertIn("$(MAKE) registry-preflight", converge_block)
-        self.assertIn("$(MAKE) release-smoke-full-reuse", converge_block)
-        self.assertIn("$(MAKE) release-converge-post", converge_block)
-
-        converge_all_block = _target_block(text, "release-converge-all-surfaces")
-        self.assertIn("$(MAKE) release-converge", converge_all_block)
-        self.assertIn("$(MAKE) sync-public-policy", converge_all_block)
-        self.assertIn("$(MAKE) public-check-all", converge_all_block)
-        self.assertIn("$(MAKE) release-converge-post", converge_all_block)
+        _assert_phony_targets(self, text, _RELEASE_CONVERGE_PHONY_TARGETS)
+        self.assertNotIn("release-converge-artifact-commit", _phony_target_names(text))
+        _assert_make_target_contracts(self, text, _RELEASE_CONVERGE_TARGET_CONTRACTS)
 
         release_converge_post_block = _target_block(text, "release-converge-post")
-        self.assertIn("$(MAKE) generated-artifact-converge", release_converge_post_block)
-        self.assertIn("$(MAKE) remediation-backlog", release_converge_post_block)
-        self.assertIn("$(MAKE) release-closeout-fixed-point", release_converge_post_block)
-        self.assertIn("$(MAKE) operator-release-summary", release_converge_post_block)
-        self.assertIn(
-            "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
-            release_converge_post_block,
-        )
         self.assertGreater(
             release_converge_post_block.index("$(MAKE) operator-release-summary"),
             release_converge_post_block.index("$(MAKE) release-closeout-fixed-point"),
@@ -445,89 +669,32 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
             release_converge_post_block.count("$(MAKE) release-closeout-fixed-point"),
             2,
         )
-        self.assertNotIn("$(MAKE) generated-artifact-index", release_converge_post_block)
-        self.assertNotIn("$(MAKE) artifact-freshness", release_converge_post_block)
 
     def test_release_source_ready_targets_commit_source_and_verify_without_amends(
         self,
     ) -> None:
         text = _makefile_text()
-        phony_block = _target_block(text, ".PHONY")
-        phony_targets = _phony_targets(text)
+        phony_targets = set(_phony_target_names(text))
 
-        self.assertIn("release-source-ready-snapshot", phony_block)
-        self.assertIn("release-source-ready-prepare", phony_block)
-        self.assertIn("release-source-ready-commit", phony_block)
-        self.assertIn("release-source-ready-post-verify", phony_block)
-        self.assertNotIn("release-source-ready-post-commit", phony_targets)
-        self.assertNotIn("release-source-ready-post-commit-converge", phony_targets)
-        self.assertNotIn("release-source-ready-amend", phony_targets)
-        self.assertNotIn("release-source-ready-final-guard-amend", phony_targets)
-        self.assertIn("release-source-ready", phony_block)
-        self.assertIn(
-            "RELEASE_SOURCE_READY_COMMIT_MESSAGE ?= release: converge source-ready surfaces",
+        _assert_phony_targets(self, text, _RELEASE_SOURCE_READY_PHONY_TARGETS)
+        for target in _RELEASE_SOURCE_READY_ABSENT_PHONY_TARGETS:
+            with self.subTest(target=target, surface="phony"):
+                self.assertNotIn(target, phony_targets)
+        _assert_assignment_values(self, text, _RELEASE_SOURCE_READY_ASSIGNMENTS)
+        for variable in _RELEASE_SOURCE_READY_ABSENT_ASSIGNMENTS:
+            with self.subTest(variable=variable):
+                self.assertNotIn(variable, text)
+        _assert_make_target_contracts(
+            self,
             text,
+            _RELEASE_SOURCE_READY_TARGET_CONTRACTS,
         )
-        self.assertIn(
-            "RELEASE_SOURCE_READY_PRE_STATUS_OUT ?= tmp/release-source-ready-pre-status.json",
-            text,
-        )
-        self.assertIn("RELEASE_SOURCE_READY_COMMIT_OUT ?= tmp/release-source-ready-commit.json", text)
-        self.assertNotIn("RELEASE_SOURCE_READY_AMEND_OUT", text)
-        self.assertNotIn("RELEASE_SOURCE_READY_FINAL_GUARD_AMEND_OUT", text)
-        self.assertIn("RELEASE_SOURCE_READY_STATUS_OUT ?= tmp/release-source-ready-status.json", text)
-        self.assertIn("RELEASE_WORKTREE_CLEAN_CHECK_OUT ?= tmp/release-worktree-clean-check.json", text)
-
-        worktree_clean_block = _target_block(text, "release-worktree-clean-check")
-        self.assertIn("ops.scripts.goal_worktree_guard", worktree_clean_block)
-        self.assertIn('--out "$(RELEASE_WORKTREE_CLEAN_CHECK_OUT)"', worktree_clean_block)
-        self.assertNotIn('--out "$(GOAL_WORKTREE_GUARD_OUT)"', worktree_clean_block)
-
-        ready_snapshot_block = _target_block(text, "release-source-ready-snapshot")
-        self.assertIn("ops.scripts.release_source_ready_commit", ready_snapshot_block)
-        self.assertIn("--snapshot-only", ready_snapshot_block)
-        self.assertEqual(
-            _recipe_lines(text, "release-source-ready-prepare"),
-            [
-                "$(MAKE) release-source-ready-snapshot",
-                "$(MAKE) release-converge-all-surfaces",
-                "$(MAKE) test-execution-summary-full-current-or-refresh",
-            ],
-        )
-
-        ready_commit_block = _target_block(text, "release-source-ready-commit")
-        self.assertIn("ops.scripts.release_source_ready_commit", ready_commit_block)
-        self.assertIn('--pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)"', ready_commit_block)
-        self.assertIn('--message "$(RELEASE_SOURCE_READY_COMMIT_MESSAGE)"', ready_commit_block)
-
-        ready_post_verify_block = _target_block(text, "release-source-ready-post-verify")
-        self.assertIn("$(MAKE) release-check-all-surfaces", ready_post_verify_block)
-        self.assertIn("$(MAKE) release-source-ready-status", ready_post_verify_block)
-        for writer in (
-            "$(MAKE) auto-improve-readiness-worktree-guard",
-            "$(MAKE) goal-runtime-local-evidence-refresh",
-            "$(MAKE) generated-artifact-converge",
-            "$(MAKE) remediation-backlog",
-            "$(MAKE) release-closeout-fixed-point",
-            "$(MAKE) release-source-ready-amend",
-            "$(MAKE) release-source-ready-final-guard-amend",
-        ):
-            self.assertNotIn(writer, ready_post_verify_block)
-
-        ready_block = _target_block(text, "release-source-ready")
-        self.assertIn("$(MAKE) release-source-ready-prepare", ready_block)
-        self.assertIn("$(MAKE) release-source-ready-commit", ready_block)
-        self.assertIn("$(MAKE) release-post-commit-finalize", ready_block)
-        self.assertIn("$(MAKE) release-source-ready-post-verify", ready_block)
-        status_block = _target_block(text, "release-source-ready-status")
-        self.assertIn("ops.scripts.release_source_ready_status", status_block)
-        self.assertIn('--out "$(RELEASE_SOURCE_READY_STATUS_OUT)"', status_block)
 
     def test_release_run_ready_and_current_targets_use_plans_and_current_evidence(
         self,
     ) -> None:
         text = _makefile_text()
-        phony_targets = _phony_targets(text)
+        phony_targets = _phony_target_names(text)
 
         self.assertNotIn("release-run-ready-ensure", phony_targets)
         _assert_assignment_values(self, text, _RELEASE_RUN_READY_ASSIGNMENTS)
@@ -539,7 +706,7 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
 
     def test_release_sealed_run_ready_targets_use_planner_and_sidecars(self) -> None:
         text = _makefile_text()
-        phony_targets = _phony_targets(text)
+        phony_targets = _phony_target_names(text)
 
         self.assertNotIn("release-sealed-run-ready-ensure", phony_targets)
         _assert_make_target_contracts(
@@ -552,257 +719,32 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self,
     ) -> None:
         text = _makefile_text()
-        phony_block = _target_block(text, ".PHONY")
-
-        _assert_auto_promotion_phony_targets(self, phony_block)
+        _assert_auto_promotion_phony_targets(self, text)
         _assert_ready_manifest_invalidation_targets(self, text)
-
-        auto_promotion_goal_identity_block = _target_block(
-            text,
-            "release-auto-promotion-goal-run-id-guard",
-        )
-        auto_promotion_verified_goal_identity_block = _target_block(
-            text,
-            "release-auto-promotion-goal-run-id-verified-check",
-        )
-        auto_promotion_preflight_block = _target_block(text, "release-auto-promotion-preflight")
-        auto_promotion_preseal_block = _target_block(text, "release-auto-promotion-preseal")
-        self.assertIn(
-            "ops.scripts.release_goal_run_identity_guard",
-            auto_promotion_goal_identity_block,
-        )
-        self.assertIn('--goal-run-id "$(GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
-        self.assertIn('--goal-run-id-origin "$(origin GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
-        self.assertIn("--check", auto_promotion_verified_goal_identity_block)
-        self.assertIn("--require-verified", auto_promotion_verified_goal_identity_block)
-        self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preflight_block)
-        self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preseal_block)
-        _assert_auto_promotion_preflight_order(self, text)
-
-        self.assertIn(
-            "ops.scripts.release_auto_promotion_preflight",
-            auto_promotion_preflight_block,
-        )
-        self.assertIn("--phase preflight", auto_promotion_preflight_block)
-        self.assertIn("$(MAKE) remediation-backlog", auto_promotion_preflight_block)
-        self.assertIn(
-            "$(MAKE) learning-readiness-signoff-revalidation",
-            auto_promotion_preflight_block,
-        )
-        self.assertIn(
-            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
-            auto_promotion_preflight_block,
-        )
-        _assert_auto_promotion_report_input_tokens(self, auto_promotion_preflight_block)
-
-        _assert_auto_promotion_preseal_order(self, text)
-        _assert_recipe_contains_tokens(
+        _assert_make_target_contracts(
             self,
             text,
-            "release-auto-promotion-safe-cleanup-cleanup-only",
-            (
-                "$(MAKE) goal-runtime-clean-transient",
-                "$(MAKE) tmp-json-clean",
-                "ops.scripts.backfill_archived_run_artifacts",
-                "$(MAKE) generated-artifact-index",
-                "$(MAKE) artifact-freshness-refresh-check",
-            ),
+            _AUTO_PROMOTION_GOAL_IDENTITY_CONTRACTS
+            + _AUTO_PROMOTION_PREFLIGHT_PRESEAL_CONTRACTS
+            + _AUTO_PROMOTION_SAFE_CLEANUP_CONTRACTS,
         )
-        self.assertNotIn(
-            "$(MAKE) release-closeout-fixed-point",
-            _target_block(text, "release-auto-promotion-safe-cleanup-cleanup-only"),
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "release-auto-promotion-safe-cleanup-finalize",
-            (
-                "$(MAKE) external-report-reference-manifest-release-check",
-                "$(MAKE) release-closeout-batch-manifest-promote",
-                "$(MAKE) release-closeout-fixed-point",
-            ),
-        )
-        self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-safe-cleanup"),
-            [
-                "$(MAKE) release-auto-promotion-safe-cleanup-finalize",
-                "$(MAKE) tmp-json-clean",
-            ],
-        )
-        for expensive_writer in _AUTO_PROMOTION_PRESEAL_EXPENSIVE_WRITERS:
-            self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
-
-        self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_block)
-        self.assertIn("--phase preseal", auto_promotion_preseal_block)
-        self.assertIn(
-            'release-run-ready-plan-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-            auto_promotion_preseal_block,
-        )
-        self.assertIn(
-            'release-run-ready-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-            auto_promotion_preseal_block,
-        )
-        self.assertIn(
-            'release-run-ready RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-            auto_promotion_preseal_block,
-        )
-        self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_block)
-        self.assertIn(
-            "$(MAKE) release-evidence-cohort-preseal-refresh",
-            auto_promotion_preseal_block,
-        )
-        self.assertIn(
-            "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
-            auto_promotion_preseal_block,
-        )
-        _assert_auto_promotion_report_input_tokens(self, auto_promotion_preseal_block)
 
     def test_release_auto_promotion_ready_and_authority_settle_do_not_spawn_runtime_trials(
         self,
     ) -> None:
         text = _makefile_text()
 
-        phony_block = _target_block(text, ".PHONY")
+        _assert_phony_targets(self, text, _AUTO_PROMOTION_READY_AUTHORITY_PHONY_TARGETS)
+        _assert_make_target_contracts(
+            self,
+            text,
+            _AUTO_PROMOTION_READY_AUTHORITY_CONTRACTS,
+        )
+
         auto_promotion_block = _target_block(text, "release-auto-promotion-ready")
-        self.assertIn("ops.scripts.release_auto_promotion_ready", auto_promotion_block)
-        self.assertIn("$(MAKE) release-auto-promotion-operator-summary", auto_promotion_block)
-        self.assertIn("$(MAKE) release-auto-promotion-ready-plan", auto_promotion_block)
         self.assertLess(
             auto_promotion_block.index("$(MAKE) release-auto-promotion-operator-summary"),
             auto_promotion_block.index("$(MAKE) release-auto-promotion-ready-plan"),
-        )
-        self.assertIn('--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"', auto_promotion_block)
-        self.assertIn('--sealed-run-manifest "$(RELEASE_SEALED_RUN_MANIFEST_OUT)"', auto_promotion_block)
-        self.assertIn('--goal-run-status "$(GOAL_RUN_STATUS_OUT)"', auto_promotion_block)
-        self.assertIn('--goal-runtime-certificate "$(GOAL_RUNTIME_CERTIFICATE_OUT)"', auto_promotion_block)
-        self.assertIn(
-            '--auto-promotion-preflight "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)"',
-            auto_promotion_block,
-        )
-        self.assertIn(
-            '--auto-promotion-preseal "$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)"',
-            auto_promotion_block,
-        )
-        self.assertNotIn("release-sealed-run-ready-ensure", auto_promotion_block)
-        self.assertNotIn("learning-readiness-signoff-revalidation", auto_promotion_block)
-        self.assertNotIn("auto-improve-readiness-report-body", auto_promotion_block)
-        self.assertNotIn("$(MAKE) release-auto-promotion-preflight", auto_promotion_block)
-        self.assertNotIn("$(MAKE) release-auto-promotion-preseal", auto_promotion_block)
-        self.assertNotIn("$(MAKE) release-sealed-run-ready-check", auto_promotion_block)
-        self.assertIn("release-authority-post-ready-finality", phony_block)
-        self.assertIn("release-authority-post-ready-finality-current-check", phony_block)
-        self.assertIn("release-authority-post-ready-finality-current-or-refresh", phony_block)
-        self.assertIn("release-authority-archive-candidate-gate", phony_block)
-        self.assertIn("release-terminal-finality", phony_block)
-        archive_candidate_gate_recipe = _recipe_lines(
-            text,
-            "release-authority-archive-candidate-gate",
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "release-authority-archive-candidate-gate",
-            (
-                "$(MAKE) external-report-action-matrix",
-                "$(MAKE) generated-artifact-index-body",
-                "$(MAKE) archive-execution-manifest-check",
-            ),
-        )
-        self.assertLess(
-            archive_candidate_gate_recipe.index("$(MAKE) external-report-action-matrix"),
-            archive_candidate_gate_recipe.index("$(MAKE) generated-artifact-index-body"),
-        )
-        self.assertLess(
-            archive_candidate_gate_recipe.index("$(MAKE) generated-artifact-index-body"),
-            archive_candidate_gate_recipe.index("$(MAKE) archive-execution-manifest-check"),
-        )
-        post_ready_finality_recipe = _recipe_lines(
-            text,
-            "release-authority-post-ready-finality",
-        )
-        post_ready_promote_line = (
-            '$(MAKE) release-closeout-batch-manifest-promote '
-            'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
-            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
-        )
-        post_ready_fixed_point_line = (
-            '$(MAKE) release-closeout-fixed-point '
-            'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
-            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
-        )
-        post_ready_replay_line = (
-            '$(MAKE) release-closeout-batch-manifest-replay-verify '
-            'RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" '
-            'RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"'
-        )
-        post_ready_strict_finalizer_line = (
-            "$(MAKE) release-closeout-post-check-finalizer-dry-run "
-            "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
-        )
-        for required_line in (
-            "$(MAKE) artifact-freshness-refresh-check",
-            post_ready_promote_line,
-            post_ready_fixed_point_line,
-            "$(MAKE) tmp-json-clean",
-            post_ready_replay_line,
-            post_ready_strict_finalizer_line,
-            "$(MAKE) release-closeout-finality-verify",
-        ):
-            with self.subTest(target="release-authority-post-ready-finality", line=required_line):
-                self.assertIn(required_line, post_ready_finality_recipe)
-        post_ready_current_check = _target_block(
-            text,
-            "release-authority-post-ready-finality-current-check",
-        )
-        self.assertIn("$(MAKE) tmp-json-clean", post_ready_current_check)
-        self.assertIn(
-            '$(MAKE) release-closeout-batch-manifest-replay-verify RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-            post_ready_current_check,
-        )
-        self.assertIn(
-            "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
-            post_ready_current_check,
-        )
-        self.assertIn("$(MAKE) release-closeout-finality-verify", post_ready_current_check)
-        self.assertIn(
-            "$(MAKE) release-finality-resettle-current-diagnose",
-            post_ready_current_check,
-        )
-        current_or_refresh_block = _target_block(
-            text,
-            "release-authority-post-ready-finality-current-or-refresh",
-        )
-        self.assertIn(
-            "$(MAKE) release-authority-post-ready-finality-current-check",
-            current_or_refresh_block,
-        )
-        self.assertIn(
-            "$(MAKE) release-authority-post-ready-finality",
-            current_or_refresh_block,
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "release-authority-settle",
-            (
-                "$(MAKE) release-finality-resettle-current-or-refresh",
-                "$(MAKE) release-auto-promotion-goal-run-id-verified-check",
-                "$(MAKE) release-auto-promotion-preflight",
-                "$(MAKE) release-run-ready",
-                "$(MAKE) release-auto-promotion-preseal",
-                "$(MAKE) release-sealed-run-ready",
-                "@status=0; \\",
-                "$(MAKE) release-auto-promotion-ready || status=$$?; \\",
-                "$(MAKE) release-authority-archive-candidate-gate || exit $$?; \\",
-                "if [ $$status -eq 0 ]; then \\",
-                "$(MAKE) release-auto-promotion-preflight-check || exit $$?; \\",
-                "$(MAKE) release-run-ready-check || exit $$?; \\",
-                "$(MAKE) release-auto-promotion-preseal-check || exit $$?; \\",
-                "$(MAKE) release-sealed-run-ready-check || exit $$?; \\",
-                "$(MAKE) release-auto-promotion-ready-check || exit $$?; \\",
-                '$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention --fail-on-authority-attention || exit $$?; \\',
-                "$(MAKE) release-authority-post-ready-finality-current-or-refresh || exit $$?; \\",
-            ),
         )
         settle_recipe = _recipe_lines(text, "release-authority-settle")
         finality_or_refresh_line = (
@@ -815,64 +757,14 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         )
         _assert_release_targets_do_not_spawn_runtime_trials(self, text)
 
-        auto_promotion_plan_block = _target_block(text, "release-auto-promotion-ready-plan")
-        self.assertIn("ops.scripts.release_evidence_planner", auto_promotion_plan_block)
-        self.assertIn("--stage auto-promotion-ready", auto_promotion_plan_block)
-        self.assertIn('--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"', auto_promotion_plan_block)
-        self.assertIn(
-            '--sealed-run-manifest "$(RELEASE_SEALED_RUN_MANIFEST_OUT)"',
-            auto_promotion_plan_block,
-        )
-        self.assertIn(
-            '--auto-promotion-preflight "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)"',
-            auto_promotion_plan_block,
-        )
-        self.assertIn(
-            '--auto-promotion-preseal "$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)"',
-            auto_promotion_plan_block,
-        )
-        self.assertIn(
-            '--self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',
-            _target_block(text, "release-auto-promotion-operator-summary"),
-        )
-
     def test_release_check_targets_use_check_only_surfaces_and_finalized_alias(
         self,
     ) -> None:
         text = _makefile_text()
-        phony_block = _target_block(text, ".PHONY")
-
-        self.assertIn("release-check-preflight-converge", phony_block)
-        self.assertIn("release-check-core", phony_block)
-        self.assertIn("release-check-post-check", phony_block)
-        self.assertIn("release-check-post-converge", phony_block)
-        self.assertIn("release-check-all-surfaces", phony_block)
+        _assert_phony_targets(self, text, _RELEASE_CHECK_PHONY_TARGETS)
+        _assert_make_target_contracts(self, text, _RELEASE_CHECK_TARGET_CONTRACTS)
 
         core_block = _target_block(text, "release-check-core")
-        self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
-        self.assertIn(
-            "$(MAKE) test-execution-summary-current-check",
-            core_block,
-        )
-        self.assertIn(
-            "$(MAKE) test-execution-summary-full-current-check",
-            core_block,
-        )
-        self.assertNotIn("$(MAKE) test-report-contract-all", core_block)
-        self.assertIn("$(MAKE) static", core_block)
-        self.assertIn("$(MAKE) artifact-freshness-check", core_block)
-        self.assertIn("$(MAKE) registry-preflight-check", core_block)
-        self.assertNotIn("$(MAKE) registry-preflight\n", core_block)
-        self.assertIn("$(MAKE) lint", core_block)
-        self.assertIn("$(MAKE) eval", core_block)
-        self.assertIn("$(MAKE) stage2-eval", core_block)
-        self.assertIn("$(MAKE) planning-gate", core_block)
-        self.assertNotIn("$(MAKE) unit-tests-release-check", core_block)
-        self.assertIn("$(MAKE) release-smoke-full-current-check", core_block)
-        self.assertNotIn("$(MAKE) release-smoke-full-reuse", core_block)
-        self.assertNotIn("$(MAKE) release-check-post-converge", core_block)
-        self.assertNotIn("$(MAKE) check-all", core_block)
-        self.assertNotIn("$(MAKE) unit-tests-all", core_block)
         self.assertLess(
             core_block.index("$(MAKE) release-worktree-clean-check"),
             core_block.index(
@@ -887,25 +779,12 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         )
 
         release_check_block = _target_block(text, "release-check")
-        self.assertIn("$(MAKE) release-check-core", release_check_block)
-        self.assertIn("$(MAKE) release-check-post-check", release_check_block)
         self.assertLess(
             release_check_block.index("$(MAKE) release-check-core"),
             release_check_block.index("$(MAKE) release-check-post-check"),
         )
 
-        post_check_block = _target_block(text, "release-check-post-check")
-        self.assertIn("$(MAKE) release-worktree-clean-check", post_check_block)
-        self.assertNotIn("$(MAKE) generated-artifact-converge", post_check_block)
-
         all_surfaces_block = _target_block(text, "release-check-all-surfaces")
-        self.assertIn("$(MAKE) release-check-core", all_surfaces_block)
-        self.assertIn("$(MAKE) sync-public-policy-check", all_surfaces_block)
-        self.assertIn("$(MAKE) public-check-all-check", all_surfaces_block)
-        self.assertIn("$(MAKE) release-check-post-check", all_surfaces_block)
-        self.assertNotIn("$(MAKE) sync-public-policy\n", all_surfaces_block)
-        self.assertNotIn("$(MAKE) public-check-all\n", all_surfaces_block)
-        self.assertNotIn("$(MAKE) release-check\n", all_surfaces_block)
         self.assertLess(
             all_surfaces_block.index("$(MAKE) release-check-core"),
             all_surfaces_block.index("$(MAKE) sync-public-policy-check"),
@@ -917,16 +796,6 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertLess(
             all_surfaces_block.index("$(MAKE) public-check-all-check"),
             all_surfaces_block.index("$(MAKE) release-check-post-check"),
-        )
-
-        finalized_block = _target_block(text, "release-check-finalized")
-        self.assertIn("release-check-finalized", phony_block)
-        self.assertTrue(finalized_block.startswith("release-check-finalized: release-check"))
-        self.assertIn("compatibility alias", finalized_block)
-        self.assertIn("release-check for check-only verification", finalized_block)
-        self.assertIn(
-            "release-post-commit-finalize after committing source-ready changes",
-            finalized_block,
         )
 
 

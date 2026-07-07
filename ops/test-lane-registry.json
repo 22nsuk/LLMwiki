@@ -16,11 +16,12 @@
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider {path}": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_workflow_dependency_planner.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_derived_surfaces.py": 30,
+      "make makefile-static-gates": 210,
       "make test-report-contract-core": 180,
       "make workflow-dependency-planner-check": 60,
       "make runtime-hotspot-smoke": 240,
       "make sync-derived-check": 120,
-      "make script-output-surfaces-check": 30,
       "make report-schema-samples-check": 30,
       "make public-check": 120
     },
@@ -89,6 +90,20 @@
         "duration_seconds": 150
       },
       {
+        "rule_id": "makefile_static_helpers",
+        "path_patterns": [
+          "tests/makefile_static_helpers.py"
+        ],
+        "commands": [
+          "make static",
+          "make makefile-static-gates"
+        ],
+        "reason": "Shared Makefile static helper changes should replay every split Makefile static gate owner, not a generic unknown-path lane.",
+        "coverage_class": "makefile_static_gates",
+        "static_required": true,
+        "duration_seconds": 270
+      },
+      {
         "rule_id": "python_runtime_source",
         "path_patterns": [
           "ops/scripts/**/*.py",
@@ -117,6 +132,22 @@
         "coverage_class": "focused_test",
         "static_required": true,
         "duration_seconds": 90
+      },
+      {
+        "rule_id": "derived_surfaces_manifest_contract",
+        "path_patterns": [
+          "ops/policies/derived-surfaces.json",
+          "ops/schemas/derived-surfaces.schema.json"
+        ],
+        "commands": [
+          "make static",
+          "make sync-derived-check",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_derived_surfaces.py"
+        ],
+        "reason": "Derived-surface manifest or schema changes should validate aggregate currentness and the focused manifest generator contract.",
+        "coverage_class": "derived_surfaces_manifest",
+        "static_required": true,
+        "duration_seconds": 210
       },
       {
         "rule_id": "schema_or_report_contract",
@@ -200,32 +231,6 @@
         "coverage_class": "orchestration",
         "static_required": true,
         "duration_seconds": 240
-      },
-      {
-        "rule_id": "script_output_surfaces_artifact",
-        "path_patterns": [
-          "ops/script-output-surfaces.json"
-        ],
-        "commands": [
-          "make sync-derived-check"
-        ],
-        "reason": "Script output surface artifact changes should verify tracked source-derived projections are current.",
-        "coverage_class": "generated_artifact_currentness",
-        "static_required": false,
-        "duration_seconds": 120
-      },
-      {
-        "rule_id": "report_schema_sample_fixture",
-        "path_patterns": [
-          "tests/fixtures/report_schema_samples.json"
-        ],
-        "commands": [
-          "make sync-derived-check"
-        ],
-        "reason": "Report schema sample fixture changes should verify tracked source-derived projections are current.",
-        "coverage_class": "generated_artifact_currentness",
-        "static_required": false,
-        "duration_seconds": 120
       }
     ]
   },

@@ -19,6 +19,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         load_optional_json_object,
         write_schema_backed_report,
     )
+    from ops.scripts.core.derived_surfaces import (
+        MANIFEST_PATH as DERIVED_SURFACES_MANIFEST_PATH,
+        currentness_output_paths as derived_surface_currentness_output_paths,
+        currentness_path_patterns as derived_surface_currentness_path_patterns,
+        load_manifest as load_derived_surfaces_manifest,
+    )
     from ops.scripts.core.makefile_runtime import load_makefile_text
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import load_policy, report_path
@@ -41,6 +47,12 @@ else:
         SchemaBackedReportWriteRequest,
         load_optional_json_object,
         write_schema_backed_report,
+    )
+    from .derived_surfaces import (
+        MANIFEST_PATH as DERIVED_SURFACES_MANIFEST_PATH,
+        currentness_output_paths as derived_surface_currentness_output_paths,
+        currentness_path_patterns as derived_surface_currentness_path_patterns,
+        load_manifest as load_derived_surfaces_manifest,
     )
     from .makefile_runtime import load_makefile_text
     from .output_runtime import display_path
@@ -585,6 +597,54 @@ def _changed_path_minimum_rules(registry: dict[str, Any]) -> dict[str, Any]:
     return plan if isinstance(plan, dict) else {}
 
 
+def _derived_surface_currentness(vault: Path) -> dict[str, Any]:
+    manifest_path = vault / DERIVED_SURFACES_MANIFEST_PATH
+    if not manifest_path.exists():
+        return {
+            "status": "skipped",
+            "path": DERIVED_SURFACES_MANIFEST_PATH,
+            "message": "manifest not found",
+            "paths": [],
+            "output_paths": [],
+        }
+    try:
+        manifest = load_derived_surfaces_manifest(vault)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return {
+            "status": "failed",
+            "path": DERIVED_SURFACES_MANIFEST_PATH,
+            "message": f"{exc.__class__.__name__}: {exc}",
+            "paths": [],
+            "output_paths": [],
+        }
+    return {
+        "status": "pass",
+        "path": DERIVED_SURFACES_MANIFEST_PATH,
+        "message": "",
+        "paths": derived_surface_currentness_path_patterns(manifest),
+        "output_paths": derived_surface_currentness_output_paths(manifest),
+    }
+
+
+def _derived_surface_currentness_rules(paths: list[str]) -> list[dict[str, Any]]:
+    if not paths:
+        return []
+    return [
+        {
+            "rule_id": "derived_surface_currentness",
+            "path_patterns": paths,
+            "commands": ["make sync-derived-check"],
+            "reason": (
+                "Derived surface output changes should verify the manifest-owned "
+                "source-derived aggregate is current."
+            ),
+            "coverage_class": "generated_artifact_currentness",
+            "static_required": False,
+            "duration_seconds": 120,
+        }
+    ]
+
+
 def _command_duration_seconds(config: dict[str, Any]) -> dict[str, int]:
     raw_durations = config.get("command_duration_seconds")
     if not isinstance(raw_durations, dict):
@@ -670,8 +730,13 @@ def _changed_path_minimum_plan(
     registry: dict[str, Any],
     *,
     changed_files_manifest: str | None = None,
+    derived_surface_currentness_paths: list[str] | None = None,
+    derived_surface_currentness_status: str = "skipped",
 ) -> dict[str, Any]:
     config = _changed_path_minimum_rules(registry)
+    derived_rules = _derived_surface_currentness_rules(
+        derived_surface_currentness_paths or []
+    )
     rules = [item for item in config.get("rules", []) if isinstance(item, dict)]
     command_duration_seconds = _command_duration_seconds(config)
     default_rule = config.get("unknown_path")
@@ -698,9 +763,23 @@ def _changed_path_minimum_plan(
             ),
             None,
         )
-        rule = matched_rule or default_rule
+        derived_rule = next(
+            (
+                rule
+                for rule in derived_rules
+                if any(
+                    fnmatch.fnmatch(path, str(pattern))
+                    for pattern in rule.get("path_patterns", [])
+                )
+            ),
+            None,
+        )
+        rule = _combined_changed_path_rule(matched_rule, derived_rule) or default_rule
         if matched_rule is None:
-            unknown_paths.append(path)
+            if derived_rule is None:
+                unknown_paths.append(path)
+            else:
+                matched_rule = derived_rule
         command_templates = [
             str(command) for command in rule.get("commands", []) if str(command).strip()
         ]
@@ -764,7 +843,11 @@ def _changed_path_minimum_plan(
             {str(item["coverage_class"]) for item in path_recommendations}
         )
         coverage_class = coverage_classes[0] if len(coverage_classes) == 1 else "mixed"
-    status = "attention" if unknown_paths else "pass"
+    status = (
+        "attention"
+        if unknown_paths or derived_surface_currentness_status == "failed"
+        else "pass"
+    )
     return {
         "status": status,
         "advisory": True,
@@ -781,6 +864,55 @@ def _changed_path_minimum_plan(
         "command_duration_seconds": selected_command_duration_seconds,
         "unknown_paths": unknown_paths,
         "path_recommendations": path_recommendations,
+    }
+
+
+def _combined_changed_path_rule(
+    matched_rule: dict[str, Any] | None,
+    derived_rule: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if matched_rule is None:
+        return derived_rule
+    if derived_rule is None:
+        return matched_rule
+    matched_rule_id = str(matched_rule.get("rule_id", "")).strip()
+    derived_rule_id = str(derived_rule.get("rule_id", "")).strip()
+    commands = _dedupe_preserve_order(
+        [
+            *[
+                str(command)
+                for command in matched_rule.get("commands", [])
+                if str(command).strip()
+            ],
+            *[
+                str(command)
+                for command in derived_rule.get("commands", [])
+                if str(command).strip()
+            ],
+        ]
+    )
+    return {
+        "rule_id": "+".join(
+            rule_id for rule_id in (matched_rule_id, derived_rule_id) if rule_id
+        ),
+        "commands": commands,
+        "reason": " ".join(
+            reason
+            for reason in (
+                str(matched_rule.get("reason", "")).strip(),
+                str(derived_rule.get("reason", "")).strip(),
+            )
+            if reason
+        ),
+        "coverage_class": str(
+            matched_rule.get("coverage_class", "conservative")
+        ).strip(),
+        "static_required": bool(
+            matched_rule.get("static_required", True)
+            or derived_rule.get("static_required", True)
+        ),
+        "duration_seconds": int(matched_rule.get("duration_seconds", 0) or 0)
+        + int(derived_rule.get("duration_seconds", 0) or 0),
     }
 
 
@@ -946,10 +1078,16 @@ def build_report(
     selected_paths = sorted({*(changed_paths or []), *manifest_paths, *git_paths})
     workflow_rules = _workflow_rules(resolved_vault)
     test_lane_registry = _test_lane_registry(resolved_vault)
+    derived_surface_currentness = _derived_surface_currentness(resolved_vault)
+    derived_surface_currentness_paths = [
+        str(path) for path in derived_surface_currentness["paths"]
+    ]
     changed_path_minimum_plan = _changed_path_minimum_plan(
         selected_paths,
         test_lane_registry,
         changed_files_manifest=changed_files_manifest,
+        derived_surface_currentness_paths=derived_surface_currentness_paths,
+        derived_surface_currentness_status=str(derived_surface_currentness["status"]),
     )
     missing_dependencies = _missing_dependencies(targets, dependency_edges)
     unknown_change_paths = _unknown_change_paths(
@@ -959,7 +1097,13 @@ def build_report(
     )
     selected_workflows = _selected_workflows(selected_paths, workflow_rules)
     evidence_dag = _evidence_dag(resolved_vault)
-    status = "fail" if missing_dependencies else "attention" if unknown_change_paths else "pass"
+    status = (
+        "fail"
+        if missing_dependencies
+        else "attention"
+        if unknown_change_paths or derived_surface_currentness["status"] == "failed"
+        else "pass"
+    )
     file_inputs: dict[str, str] = {path: path for path in makefile_sources}
     ci_workflow = resolved_vault / ".github" / "workflows" / "ci.yml"
     if ci_workflow.exists():
@@ -968,6 +1112,8 @@ def build_report(
         file_inputs["changed_files_manifest"] = changed_files_manifest
     if (resolved_vault / DEFAULT_TEST_LANE_REGISTRY).exists():
         file_inputs["test_lane_registry"] = DEFAULT_TEST_LANE_REGISTRY
+    if (resolved_vault / DERIVED_SURFACES_MANIFEST_PATH).exists():
+        file_inputs["derived_surfaces_manifest"] = DERIVED_SURFACES_MANIFEST_PATH
     return {
         **build_canonical_report_envelope(
             resolved_vault,
@@ -981,6 +1127,7 @@ def build_report(
                 "ops/scripts/core/workflow_dependency_planner.py",
                 "Makefile",
                 *[path for path in makefile_sources if path != "Makefile"],
+                DERIVED_SURFACES_MANIFEST_PATH,
                 "ops/README.md",
             ],
             file_inputs=file_inputs,
@@ -1032,6 +1179,14 @@ def build_report(
             "phony_count": len(phony),
             "missing_dependencies": missing_dependencies,
             "unknown_change_paths": unknown_change_paths,
+            "derived_surfaces_manifest": {
+                "status": str(derived_surface_currentness["status"]),
+                "path": str(derived_surface_currentness["path"]),
+                "message": str(derived_surface_currentness["message"]),
+                "currentness_output_count": len(
+                    derived_surface_currentness["output_paths"]
+                ),
+            },
         },
     }
 
