@@ -20,6 +20,7 @@ from ops.scripts.core.backfill_archived_run_artifacts import (
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.report_contract_test_runtime import load_generated_report_payload_map
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -156,9 +157,7 @@ def _seed_pre_backfill_mechanism_assessment_pair(vault: Path) -> None:
 
 
 def _legacy_structural_complexity_budget_payload() -> dict:
-    payload = _read_json(REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json")[
-        "structural_complexity_budget"
-    ]
+    payload = load_generated_report_payload_map()["structural_complexity_budget"]
     target = payload["targets"][0]
     target["metrics"]["nonempty_line_count_total"] = 136
     target["metrics"]["python_function_count"] = 10

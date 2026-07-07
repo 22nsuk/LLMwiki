@@ -13,7 +13,7 @@ debugging or the script's `--help` output.
 | --- | --- | --- |
 | `tools/ruff_strict_preview.py` | `make ruff-strict-preview` | Runs selected Ruff preview rules on `ops/scripts tests tools` by default and reports candidate debt without failing the command. |
 | `tools/strict_preview_audit.py` | `make strict-preview-audit` | Writes a JSON audit that combines Ruff preview-rule debt and stricter mypy preview checks across the configured target surface. |
-| `tools/regenerate_report_schema_samples.py` | `make report-schema-samples-check` / `make report-schema-samples-regenerate` | Checks or regenerates schema sample fixtures used by report-contract tests. |
+| `tools/regenerate_report_schema_samples.py` | `make report-schema-samples-check` / `make report-schema-samples-regenerate` | Checks or regenerates report-schema samples from the seed fixture and deterministic builders. |
 
 ## Strict Preview Tools
 
@@ -34,18 +34,20 @@ measured, and use the Ruff-only target when iterating on candidate rule cleanup.
 ## Report Schema Samples
 
 `make report-schema-samples-check` runs the schema sample generator in check
-mode and fails if checked-in fixtures are stale. `make
-report-schema-samples-regenerate` first runs the clean fixture regeneration
-guard, then rewrites the sample fixtures.
+mode and fails if the seed fixture cannot produce the full deterministic
+candidate. `make report-schema-samples-regenerate` builds the same candidate
+without writing a committed monolithic fixture; pass the script's `--out` flag
+only for local debugging.
 
-The fixture remains a committed report-contract oracle. The generator owns a
-coverage table that distinguishes self-contained sample builders from
-fixture-seeded samples so schema changes expose which payloads are regenerated
-and which are still preserved from the checked-in fixture.
+`tests/fixtures/report_schema_sample_seeds.json` is the committed source for
+samples that still need curated payloads. The generator owns a coverage table
+that distinguishes self-contained sample builders from seed-preserved samples
+so schema changes expose which payloads are generated and which still require
+seed updates.
 
 Routine report schema or schema-backed producer changes should use
 `make sync-derived`, then the focused owner test for the changed surface. Use
 `make report-schema-samples-check` and `make report-schema-samples-regenerate`
-when isolating fixture drift or debugging the sample generator itself. After
+when isolating seed drift or debugging the sample generator itself. After
 regeneration, run the relevant report-contract tests, normally
 `make test-report-contract-core` for public core lane changes.

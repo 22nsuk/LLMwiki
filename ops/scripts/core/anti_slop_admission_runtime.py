@@ -13,6 +13,10 @@ from ops.scripts.core.schema_constants_runtime import (
     SCRIPT_LIFECYCLE_POLICY_SCHEMA_PATH,
 )
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.script_lifecycle_policy import (
+    ScriptLifecyclePolicyError,
+    load_script_lifecycle_policy,
+)
 
 OPERATOR_INVENTORY_PATH = "ops/make-target-inventory-operator.json"
 SCRIPT_LIFECYCLE_POLICY_PATH = "ops/script-lifecycle-policy.json"
@@ -232,12 +236,32 @@ def evaluate_anti_slop_admission(
     violations.extend(_cli_surface_inventory_violations(cli_surface_inventory))
 
     lifecycle_path = vault / SCRIPT_LIFECYCLE_POLICY_PATH
-    lifecycle_payload = _read_json_object(lifecycle_path)
     lifecycle_schema_errors: list[str] = []
-    if lifecycle_path.is_file():
-        lifecycle_schema_errors = validate_with_schema(
-            lifecycle_payload,
-            load_schema(vault / SCRIPT_LIFECYCLE_POLICY_SCHEMA_PATH),
+    try:
+        lifecycle_payload = load_script_lifecycle_policy(vault.resolve())
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        ScriptLifecyclePolicyError,
+    ) as exc:
+        lifecycle_schema_errors = [f"{type(exc).__name__}: {exc}"]
+        violations.append(
+            _violation(
+                SCRIPT_LIFECYCLE_POLICY_PATH,
+                "$schema",
+                lifecycle_schema_errors[0],
+            )
+        )
+    else:
+        lifecycle_schema_path = vault / SCRIPT_LIFECYCLE_POLICY_SCHEMA_PATH
+        lifecycle_schema_errors = (
+            validate_with_schema(
+                lifecycle_payload,
+                load_schema(lifecycle_schema_path),
+            )
+            if lifecycle_schema_path.is_file()
+            else []
         )
         violations.extend(
             _violation(SCRIPT_LIFECYCLE_POLICY_PATH, "$schema", error)

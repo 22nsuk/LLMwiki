@@ -60,6 +60,8 @@
         "rule_id": "report_schema_sample_generator",
         "path_patterns": [
           "tools/regenerate_report_schema_samples.py",
+          "tests/fixtures/report_schema_sample*.json",
+          "tests/report_contract_test_runtime.py",
           "tests/release_run_ready_sample_runtime.py",
           "tests/supply_chain_sample_runtime.py"
         ],
@@ -69,10 +71,24 @@
           "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_report_schema_sample_regeneration.py",
           "make test-report-contract-core"
         ],
-        "reason": "Report schema sample generator and helper changes need static analysis, fixture convergence, focused generator coverage, and schema-contract validation.",
+        "reason": "Report schema sample generator and helper changes need static analysis, seed-backed generation checks, focused generator coverage, and schema-contract validation.",
         "coverage_class": "report_schema_sample_generation",
         "static_required": true,
         "duration_seconds": 300
+      },
+      {
+        "rule_id": "compatibility_alias_policy_source",
+        "path_patterns": [
+          "ops/scripts/_compatibility_alias_policy.py"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_compatibility_alias_deprecation.py"
+        ],
+        "reason": "Compatibility alias retention policy changes should validate the focused alias deprecation contract instead of falling through to an unknown path advisory.",
+        "coverage_class": "compatibility_alias_policy",
+        "static_required": true,
+        "duration_seconds": 90
       },
       {
         "rule_id": "workflow_dependency_planner_source",
@@ -106,6 +122,7 @@
       {
         "rule_id": "python_runtime_source",
         "path_patterns": [
+          "ops/scripts/*.py",
           "ops/scripts/**/*.py",
           "tools/*.py",
           "tools/**/*.py"
@@ -118,6 +135,20 @@
         "coverage_class": "runtime_source",
         "static_required": true,
         "duration_seconds": 180
+      },
+      {
+        "rule_id": "pytest_harness",
+        "path_patterns": [
+          "tests/conftest.py"
+        ],
+        "commands": [
+          "make static",
+          "make test"
+        ],
+        "reason": "Pytest harness changes affect collection and shared fixtures, so they need the default test lane rather than an unknown-path advisory.",
+        "coverage_class": "pytest_harness",
+        "static_required": true,
+        "duration_seconds": 210
       },
       {
         "rule_id": "focused_pytest_file",

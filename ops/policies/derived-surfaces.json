@@ -183,24 +183,6 @@
         "tmp/make-target-inventory.json"
       ],
       "include_in_sync_derived": true
-    },
-    {
-      "surface_id": "report_schema_samples",
-      "description": "Report schema sample fixture regenerated from deterministic sample builders.",
-      "kind": "tracked_fixture",
-      "sync_target": "report-schema-samples-regenerate",
-      "check_target": "report-schema-samples-check",
-      "generator_module": "tools.regenerate_report_schema_samples",
-      "source_paths": [
-        "tests/release_run_ready_sample_runtime.py",
-        "tests/supply_chain_sample_runtime.py",
-        "tools/regenerate_report_schema_samples.py"
-      ],
-      "tracked_outputs": [
-        "tests/fixtures/report_schema_samples.json"
-      ],
-      "local_outputs": [],
-      "include_in_sync_derived": true
     }
   ]
 }

@@ -23,7 +23,6 @@ SCHEMA_PATH = "ops/schemas/clean-fixture-regeneration-guard.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.clean_fixture_regeneration_guard --vault ."
 DIRTY_REPORT_PREFIX = "ops/reports/"
 PUBLIC_GENERATED_SURFACES = (
-    "tests/fixtures/report_schema_samples.json",
     "ops/script-output-surfaces.json",
 )
 

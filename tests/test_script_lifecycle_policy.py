@@ -10,7 +10,11 @@ from pathlib import Path
 import pytest
 
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.core.script_lifecycle_policy import build_policy
+from ops.scripts.core.script_lifecycle_policy import (
+    build_policy,
+    load_script_lifecycle_policy,
+    redundant_override_fields,
+)
 
 pytestmark = [
     pytest.mark.public,
@@ -37,18 +41,23 @@ def _load_json(path: Path) -> dict[str, object]:
     return payload
 
 
-def _run_script_lifecycle_policy_check(stored: Path) -> subprocess.CompletedProcess[str]:
+def _run_script_lifecycle_policy_check(
+    stored: Path, *, overrides: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    command = [
+        sys.executable,
+        "-m",
+        "ops.scripts.core.script_lifecycle_policy",
+        "--vault",
+        ".",
+        "--stored",
+        stored.as_posix(),
+        "--check",
+    ]
+    if overrides is not None:
+        command.extend(["--overrides", overrides.as_posix()])
     return subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "ops.scripts.core.script_lifecycle_policy",
-            "--vault",
-            ".",
-            "--stored",
-            stored.as_posix(),
-            "--check",
-        ],
+        command,
         cwd=REPO_ROOT,
         check=False,
         text=True,
@@ -80,12 +89,39 @@ class ScriptLifecyclePolicyTests(unittest.TestCase):
             with self.subTest(module=module["canonical_module"]):
                 self.assertFalse(GENERATED_ONLY_FIELDS & set(module))
 
+    def test_overrides_only_store_non_default_manual_judgments(self) -> None:
+        self.assertEqual(redundant_override_fields(REPO_ROOT), {})
+
     def test_policy_matches_live_generated_script_lifecycle_inventory(self) -> None:
         actual = _load_json(SCRIPT_LIFECYCLE_POLICY)
         expected = build_policy(REPO_ROOT)
 
         self.maxDiff = None
         self.assertEqual(actual, expected)
+
+    def test_lifecycle_policy_loader_matches_stored_repo_policy(self) -> None:
+        self.assertEqual(load_script_lifecycle_policy(REPO_ROOT), build_policy(REPO_ROOT))
+
+    def test_lifecycle_policy_loader_derives_policy_when_stored_json_is_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            (vault / "ops" / "scripts" / "core").mkdir(parents=True)
+            (vault / "ops" / "scripts" / "core" / "sample_runtime.py").write_text(
+                "def main(): pass\n",
+                encoding="utf-8",
+            )
+            (vault / "ops" / "script-output-surfaces.json").parent.mkdir(exist_ok=True)
+            (vault / "ops" / "script-output-surfaces.json").write_text(
+                '{"surfaces":[]}\n',
+                encoding="utf-8",
+            )
+
+            policy = load_script_lifecycle_policy(vault)
+
+        self.assertEqual(
+            [item["canonical_module"] for item in policy["modules"]],
+            ["ops.scripts.core.sample_runtime"],
+        )
 
     def test_policy_check_passes_for_current_registry_without_writing(self) -> None:
         before = SCRIPT_LIFECYCLE_POLICY.read_bytes()
@@ -116,6 +152,41 @@ class ScriptLifecyclePolicyTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("script-lifecycle-policy is stale", result.stderr)
         self.assertIn("ops.scripts.core.script_lifecycle_policy", result.stderr)
+
+    def test_policy_check_rejects_redundant_override_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            overrides_path = Path(temp_dir) / "script-lifecycle-overrides.json"
+            overrides = _load_json(SCRIPT_LIFECYCLE_OVERRIDES)
+            policy = _load_json(SCRIPT_LIFECYCLE_POLICY)
+            module = next(
+                item
+                for item in policy["modules"]  # type: ignore[index]
+                if item["canonical_module"] == "ops.scripts.core.script_lifecycle_policy"
+            )
+            redundant_override = {
+                "canonical_module": module["canonical_module"],
+                "lifecycle": module["lifecycle"],
+                "replacement": module["replacement"],
+            }
+            override_items = overrides["overrides"]
+            if not isinstance(override_items, list):
+                raise AssertionError("script lifecycle overrides must be a list")
+            override_items.append(redundant_override)
+            overrides_path.write_text(
+                json.dumps(overrides, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            result = _run_script_lifecycle_policy_check(
+                SCRIPT_LIFECYCLE_POLICY,
+                overrides=overrides_path,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("non-default manual judgments", result.stderr)
+        self.assertIn("ops.scripts.core.script_lifecycle_policy", result.stderr)
+        self.assertIn("lifecycle", result.stderr)
+        self.assertIn("replacement", result.stderr)
 
     def test_new_script_surfaces_receive_deterministic_defaults_from_live_inputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

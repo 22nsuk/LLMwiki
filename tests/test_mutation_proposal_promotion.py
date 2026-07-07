@@ -345,7 +345,7 @@ class MutationProposalPromotionTest(unittest.TestCase):
             broad_supporting_targets = [
                 "ops/schemas/run-telemetry.schema.json",
                 "ops/script-output-surfaces.json",
-                "tests/fixtures/report_schema_samples.json",
+                "tests/fixtures/report_schema_sample_seeds.json",
                 "ops/scripts/core/artifact_freshness_runtime.py",
             ]
             for rel_path in broad_supporting_targets:
@@ -847,11 +847,6 @@ class MutationProposalPromotionTest(unittest.TestCase):
                 "def test_report_schema_sample_regeneration():\n    assert True\n",
                 encoding="utf-8",
             )
-            (vault / "tests" / "fixtures").mkdir(parents=True, exist_ok=True)
-            (vault / "tests" / "fixtures" / "report_schema_samples.json").write_text(
-                "\n".join(f'  "sample_{index}": true,' for index in range(1000)) + "\n",
-                encoding="utf-8",
-            )
             source_run_id = "auto-session-a-run-03-example-runtime"
             run_dir = vault / "runs" / source_run_id
             run_dir.mkdir(parents=True, exist_ok=True)
@@ -915,7 +910,6 @@ class MutationProposalPromotionTest(unittest.TestCase):
                 [
                     schema_target,
                     "ops/script-output-surfaces.json",
-                    "tests/fixtures/report_schema_samples.json",
                     "ops/reports/auto-improve-sessions/session-a.json",
                 ],
             )

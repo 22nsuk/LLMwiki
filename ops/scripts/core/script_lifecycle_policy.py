@@ -257,6 +257,32 @@ def _default_replacement(module: str, entry: Mapping[str, Any]) -> str:
     return f"python -m {module}"
 
 
+def _default_override_values(module: str, entry: Mapping[str, Any]) -> dict[str, str]:
+    return {
+        "lifecycle": _default_lifecycle(entry),
+        "replacement": _default_replacement(module, entry),
+    }
+
+
+def _redundant_override_fields(
+    entries: Mapping[str, Mapping[str, Any]],
+    override_records: Mapping[str, Mapping[str, Any]],
+) -> dict[str, list[str]]:
+    redundant: dict[str, list[str]] = {}
+    for module, override in sorted(override_records.items()):
+        default_values = _default_override_values(module, entries[module])
+        fields = [
+            field
+            for field in sorted(OVERRIDE_FIELDS)
+            if field in override and str(override[field]) == default_values[field]
+        ]
+        if not override:
+            fields = ["<empty>"]
+        if fields:
+            redundant[module] = fields
+    return redundant
+
+
 def _default_rationale(entry: Mapping[str, Any], lifecycle: str) -> str:
     sources = ", ".join(str(item) for item in entry.get("sources", [])) or "source scan"
     if lifecycle == "public_cli":
@@ -264,14 +290,10 @@ def _default_rationale(entry: Mapping[str, Any], lifecycle: str) -> str:
     return f"Generated from {sources}; lifecycle and replacement may be overridden."
 
 
-def build_policy(
-    vault: Path,
-    *,
-    overrides: Mapping[str, Any] | None = None,
-    overrides_path: str | None = None,
-) -> dict[str, Any]:
-    resolved_vault = vault.resolve()
-    override_payload = overrides if overrides is not None else _read_overrides(resolved_vault, overrides_path)
+def _policy_inputs(
+    resolved_vault: Path,
+    override_payload: Mapping[str, Any],
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
     override_records = _override_by_module(override_payload)
     entries = _source_derived_entries(resolved_vault)
     missing_paths = [
@@ -290,7 +312,29 @@ def build_policy(
             "script lifecycle overrides reference missing scripts: "
             + ", ".join(extra_overrides)
         )
+    return entries, override_records
 
+
+def redundant_override_fields(
+    vault: Path,
+    *,
+    overrides: Mapping[str, Any] | None = None,
+    overrides_path: str | None = None,
+) -> dict[str, list[str]]:
+    resolved_vault = vault.resolve()
+    override_payload = (
+        overrides
+        if overrides is not None
+        else _read_overrides(resolved_vault, overrides_path)
+    )
+    entries, override_records = _policy_inputs(resolved_vault, override_payload)
+    return _redundant_override_fields(entries, override_records)
+
+
+def _build_policy_from_inputs(
+    entries: Mapping[str, Mapping[str, Any]],
+    override_records: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
     modules: list[dict[str, Any]] = []
     for module, entry in entries.items():
         override = override_records.get(module, {})
@@ -319,6 +363,60 @@ def build_policy(
         "install_state_values": list(INSTALL_STATE_VALUES),
         "modules": modules,
     }
+
+
+def build_policy(
+    vault: Path,
+    *,
+    overrides: Mapping[str, Any] | None = None,
+    overrides_path: str | None = None,
+) -> dict[str, Any]:
+    resolved_vault = vault.resolve()
+    override_payload = (
+        overrides
+        if overrides is not None
+        else _read_overrides(resolved_vault, overrides_path)
+    )
+    entries, override_records = _policy_inputs(resolved_vault, override_payload)
+    return _build_policy_from_inputs(entries, override_records)
+
+
+def load_script_lifecycle_policy(
+    vault: Path,
+    *,
+    stored_path: str | None = DEFAULT_OUT,
+    overrides_path: str | None = DEFAULT_OVERRIDES,
+) -> dict[str, Any]:
+    resolved_vault = vault.resolve()
+    policy_path = _resolve_path(resolved_vault, stored_path, DEFAULT_OUT)
+    if policy_path.is_file():
+        payload = _read_json_object(policy_path)
+        schema_path = resolved_vault / SCHEMA_PATH
+        if schema_path.is_file():
+            schema_errors = validate_with_schema(payload, load_schema(schema_path))
+            if schema_errors:
+                raise ScriptLifecyclePolicyError(
+                    "script lifecycle policy schema validation failed:\n"
+                    + "\n".join(schema_errors[:10])
+                )
+        return payload
+    return build_policy(resolved_vault, overrides_path=overrides_path)
+
+
+def lifecycle_modules_by_canonical_module(
+    policy: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    modules = policy.get("modules", [])
+    if not isinstance(modules, list):
+        return {}
+    records: dict[str, dict[str, Any]] = {}
+    for item in modules:
+        if not isinstance(item, dict):
+            continue
+        module = str(item.get("canonical_module", "")).strip()
+        if module:
+            records[module] = dict(item)
+    return records
 
 
 def write_policy(vault: Path, policy: dict[str, Any], out_path: str | None = None) -> Path:
@@ -400,7 +498,23 @@ def check_policy(
         )
         return 1
     try:
-        expected = build_policy(vault, overrides_path=overrides_path)
+        override_payload = _read_overrides(vault, overrides_path)
+        entries, override_records = _policy_inputs(vault, override_payload)
+        redundant_fields = _redundant_override_fields(entries, override_records)
+        if redundant_fields:
+            print(
+                "script-lifecycle-policy check failed: "
+                "script lifecycle overrides must only store non-default manual judgments.\n"
+                + json.dumps(
+                    {"redundant_override_fields": redundant_fields},
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                ),
+                file=sys.stderr,
+            )
+            return 1
+        expected = _build_policy_from_inputs(entries, override_records)
     except (OSError, SyntaxError, UnicodeDecodeError, ValueError) as exc:
         print(
             "script-lifecycle-policy check failed while deriving live script surfaces: "

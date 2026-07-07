@@ -164,7 +164,7 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
             "- Treat that closeout as run-local candidate-converge -> single canonical publish boundary -> post-publish fixed-point check when expensive evidence is already current.",
             "- If the cheap closeout plan reports stale expensive evidence, stop after the run-local candidate step and escalate to the full closeout budget instead of publishing canonical reports.",
             "- Use `make goal-runtime-closeout-full` only when the closeout plan shows stale expensive evidence and the source fingerprint changed.",
-            "- Run `make report-schema-samples-check` before generated artifact convergence so schema fixture drift is caught before report currentness work.",
+            "- Run `make report-schema-samples-check` before generated artifact convergence so schema sample seed drift is caught before report currentness work.",
             "- First run `make generated-artifact-script-output` when script surfaces changed, then `make generated-artifact-converge`; the converge suffix fixes artifact-freshness -> external-report-action-matrix -> generated-artifact-index.",
             "- Run `make release-smoke-full-reuse` when release source-tree evidence may have changed.",
             "- Treat full-suite evidence as max-once per unchanged source fingerprint; reuse it after a pass instead of rerunning for report-only drift.",

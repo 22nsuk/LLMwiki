@@ -232,7 +232,7 @@ This order keeps tracked source-derived projections, the focused owner test,
 reusable release smoke, and goal closeout from drifting apart. Use
 `make sync-derived-check` instead of `make sync-derived` in check-only review
 contexts. `make report-schema-samples-check` and
-`make report-schema-samples-regenerate` remain focused fixture repair slices,
+`make report-schema-samples-regenerate` remain focused seed/candidate checks,
 but routine producer/schema changes should flow through the aggregate sync
 target. Release promotion still requires the separate
 `make release-run-ready`, `make release-sealed-run-ready`, and

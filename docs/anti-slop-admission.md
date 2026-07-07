@@ -26,7 +26,10 @@ complete.
 `make make-target-inventory` writes the diagnostic Make inventory report, and
 `make make-target-inventory-check` runs the same live contract without rewriting
 that diagnostic. Both run `ops/scripts/core/anti_slop_admission_runtime.py`
-against `ops/make-target-inventory-operator.json` and `ops/script-lifecycle-policy.json`:
+against `ops/make-target-inventory-operator.json` and the script lifecycle
+loader, which reads `ops/script-lifecycle-policy.json` when present and derives
+the same policy from live source plus `ops/script-lifecycle-overrides.json`
+otherwise:
 
 - Operator inventory entries require `purpose` and `replacement`; each `target`
   must exist in the Makefile inventory.

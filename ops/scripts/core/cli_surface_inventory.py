@@ -14,15 +14,22 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.makefile_runtime import makefile_script_module_targets
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.script_lifecycle_policy import (
+        lifecycle_modules_by_canonical_module,
+        load_script_lifecycle_policy,
+    )
 else:
     from .makefile_runtime import makefile_script_module_targets
     from .output_runtime import display_path
     from .runtime_context import RuntimeContext
+    from .script_lifecycle_policy import (
+        lifecycle_modules_by_canonical_module,
+        load_script_lifecycle_policy,
+    )
 
 
 DEFAULT_OUT = "tmp/cli-surface-inventory.json"
 PRODUCER = "ops.scripts.cli_surface_inventory"
-SCRIPT_LIFECYCLE_POLICY_PATH = "ops/script-lifecycle-policy.json"
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -92,18 +99,7 @@ def _canonical_module_from_path(path: str) -> str:
 
 
 def _lifecycle_policy(vault: Path) -> dict[str, dict[str, Any]]:
-    payload = _read_json(vault / SCRIPT_LIFECYCLE_POLICY_PATH)
-    modules = payload.get("modules", [])
-    if not isinstance(modules, list):
-        return {}
-    records: dict[str, dict[str, Any]] = {}
-    for item in modules:
-        if not isinstance(item, dict):
-            continue
-        module = str(item.get("canonical_module", "")).strip()
-        if module:
-            records[module] = item
-    return records
+    return lifecycle_modules_by_canonical_module(load_script_lifecycle_policy(vault))
 
 
 def build_report(vault: Path, *, context: RuntimeContext | None = None) -> dict[str, Any]:

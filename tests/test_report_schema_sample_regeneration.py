@@ -13,7 +13,9 @@ import pytest
 from tools.regenerate_report_schema_samples import (
     SAMPLE_GENERATION_FIXTURE_SEED,
     SAMPLE_GENERATION_SELF_CONTAINED,
+    SEED_FIXTURE_PATH,
     _assert_sample_coverage_matches_payload,
+    _assert_seed_sample_coverage_matches_payload,
     _normalize_sample_vault_text_newlines,
     _write_stable_json_file,
     build_auto_improve_readiness_schema_sample,
@@ -22,6 +24,7 @@ from tools.regenerate_report_schema_samples import (
     build_supply_chain_schema_samples,
     candidate_report_schema_samples,
     check_report_schema_samples,
+    load_report_schema_sample_seeds,
     report_schema_sample_coverage_table,
     seed_preserved_report_schema_sample_keys,
     self_contained_report_schema_sample_keys,
@@ -29,7 +32,6 @@ from tools.regenerate_report_schema_samples import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 
 pytestmark = [
     pytest.mark.report_contract,
@@ -45,8 +47,8 @@ def _assert_sample_matches(
         actual,
         expected,
         msg=(
-            f"report schema sample fixture drift for {sample_key}; "
-            "run `make report-schema-samples-regenerate` and review the fixture diff."
+            f"report schema sample candidate drift for {sample_key}; "
+            "review the seed fixture and deterministic sample builder."
         ),
     )
 
@@ -58,8 +60,19 @@ def _isolated_child_env() -> dict[str, str]:
 
 
 class ReportSchemaSampleRegenerationTests(unittest.TestCase):
-    def test_sample_coverage_table_matches_fixture_keys(self) -> None:
-        samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    def test_seed_fixture_matches_fixture_seed_coverage_keys(self) -> None:
+        seed_samples = load_report_schema_sample_seeds(SEED_FIXTURE_PATH)
+
+        self.assertEqual(
+            tuple(seed_samples),
+            seed_preserved_report_schema_sample_keys(),
+        )
+        self.assertTrue(
+            set(seed_samples).isdisjoint(self_contained_report_schema_sample_keys())
+        )
+
+    def test_sample_coverage_table_matches_candidate_keys(self) -> None:
+        samples = candidate_report_schema_samples()
         coverage = report_schema_sample_coverage_table()
 
         self.assertEqual([entry.sample_key for entry in coverage], list(samples))
@@ -105,32 +118,36 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
             self_contained_report_schema_sample_update_keys(),
             self_contained_report_schema_sample_keys(),
         )
-        self.assertEqual(
-            self_contained_report_schema_sample_update_keys(include_openvex=False),
-            tuple(
-                sample_key
-                for sample_key in self_contained_report_schema_sample_keys()
-                if sample_key != "openvex_draft"
-            ),
-        )
 
     def test_sample_coverage_mismatch_fails_with_clear_diagnostic(self) -> None:
-        samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+        samples = candidate_report_schema_samples()
         samples["unexpected_sample"] = {}
 
         with self.assertRaisesRegex(ValueError, "missing_from_coverage"):
             _assert_sample_coverage_matches_payload(samples)
 
-    def test_candidate_regenerates_missing_self_contained_key_in_coverage_order(
+    def test_seed_fixture_mismatch_fails_with_clear_diagnostic(self) -> None:
+        seed_samples = load_report_schema_sample_seeds(SEED_FIXTURE_PATH)
+        seed_samples.pop(seed_preserved_report_schema_sample_keys()[0])
+
+        with self.assertRaisesRegex(ValueError, "missing_from_seed"):
+            _assert_seed_sample_coverage_matches_payload(seed_samples)
+
+    def test_candidate_uses_seed_fixture_for_seed_preserved_samples(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            seed_fixture = Path(temp_dir) / "report_schema_sample_seeds.json"
+            seed_payload = load_report_schema_sample_seeds(SEED_FIXTURE_PATH)
+            seed_payload["eval"]["policy"]["path"] = "ops/policies/custom-policy.yaml"
+            _write_stable_json_file(seed_fixture, seed_payload)
+
+            candidate = candidate_report_schema_samples(seed_fixture_path=seed_fixture)
+
+        self.assertEqual(candidate["eval"], seed_payload["eval"])
+
+    def test_candidate_generates_self_contained_keys_in_coverage_order(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            fixture = Path(temp_dir) / "report_schema_samples.json"
-            payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
-            payload.pop("artifact_freshness_report")
-            _write_stable_json_file(fixture, payload)
-
-            candidate = candidate_report_schema_samples(fixture)
+        candidate = candidate_report_schema_samples()
 
         self.assertIn("artifact_freshness_report", candidate)
         self.assertEqual(
@@ -139,22 +156,8 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
         )
         _assert_sample_coverage_matches_payload(candidate)
 
-    def test_check_reports_fixture_key_order_drift(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            fixture = Path(temp_dir) / "report_schema_samples.json"
-            payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
-            sample_keys = list(payload)
-            reordered_payload = {
-                sample_keys[1]: payload[sample_keys[1]],
-                sample_keys[0]: payload[sample_keys[0]],
-                **{sample_key: payload[sample_key] for sample_key in sample_keys[2:]},
-            }
-            _write_stable_json_file(fixture, reordered_payload)
-
-            diff = check_report_schema_samples(fixture)
-
-        self.assertTrue(diff)
-        self.assertIn(f'"{sample_keys[0]}"', "\n".join(diff))
+    def test_check_builds_seed_backed_candidate_without_diff(self) -> None:
+        self.assertEqual(check_report_schema_samples(), [])
 
     def test_generator_does_not_import_test_case_modules(self) -> None:
         source = (
@@ -163,8 +166,8 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
 
         self.assertNotIn("tests.test_", source)
 
-    def test_generated_openvex_sample_matches_frozen_fixture(self) -> None:
-        samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    def test_generated_openvex_sample_matches_candidate(self) -> None:
+        samples = candidate_report_schema_samples()
         cyclonedx_sample = build_supply_chain_schema_samples()["cyclonedx_bom"]
 
         _assert_sample_matches(
@@ -174,8 +177,8 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
             "openvex_draft",
         )
 
-    def test_generated_readiness_sample_matches_frozen_fixture(self) -> None:
-        samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    def test_generated_readiness_sample_matches_candidate(self) -> None:
+        samples = candidate_report_schema_samples()
 
         _assert_sample_matches(
             self,
@@ -184,10 +187,10 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
             "auto_improve_readiness_report",
         )
 
-    def test_generated_release_run_ready_plan_sample_matches_frozen_fixture(
+    def test_generated_release_run_ready_plan_sample_matches_candidate(
         self,
     ) -> None:
-        samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+        samples = candidate_report_schema_samples()
 
         _assert_sample_matches(
             self,
@@ -230,25 +233,23 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--skip-openvex", result.stdout)
+        self.assertIn("--seed-fixture", result.stdout)
+        self.assertIn("--out", result.stdout)
         self.assertIn("--check", result.stdout)
 
-    def test_direct_script_check_fails_on_stale_fixture(self) -> None:
+    def test_direct_script_check_fails_on_missing_seed_key(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            fixture = Path(temp_dir) / "report_schema_samples.json"
-            payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
-            payload["openvex_draft"]["@id"] = "urn:uuid:stale"
-            fixture.write_text(
-                json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
+            seed_fixture = Path(temp_dir) / "report_schema_sample_seeds.json"
+            payload = load_report_schema_sample_seeds(SEED_FIXTURE_PATH)
+            payload.pop("eval")
+            _write_stable_json_file(seed_fixture, payload)
 
             result = subprocess.run(
                 [
                     sys.executable,
                     "tools/regenerate_report_schema_samples.py",
-                    "--fixture",
-                    fixture.as_posix(),
+                    "--seed-fixture",
+                    seed_fixture.as_posix(),
                     "--check",
                 ],
                 cwd=REPO_ROOT,
@@ -259,7 +260,7 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
             )
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("report schema samples are stale", result.stderr)
+        self.assertIn("missing_from_seed", result.stderr)
 
     def test_direct_script_check_passes_for_current_fixture(self) -> None:
         result = subprocess.run(
@@ -276,6 +277,31 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_direct_script_writes_debug_candidate_when_out_is_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            out_path = Path(temp_dir) / "report_schema_samples.generated.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "tools/regenerate_report_schema_samples.py",
+                    "--out",
+                    out_path.as_posix(),
+                ],
+                cwd=REPO_ROOT,
+                env=_isolated_child_env(),
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            payload = json.loads(out_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            list(payload),
+            [entry.sample_key for entry in report_schema_sample_coverage_table()],
+        )
 
     def test_sample_vault_newline_normalizer_makes_text_fixtures_platform_stable(
         self,

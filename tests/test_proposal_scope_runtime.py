@@ -120,7 +120,7 @@ class ProposalScopeRuntimeTests(unittest.TestCase):
             target = vault / "ops" / "scripts" / "mechanism" / "example_runtime.py"
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("VALUE = 1\n", encoding="utf-8")
-            fixture = vault / "tests" / "fixtures" / "report_schema_samples.json"
+            fixture = vault / "tests" / "fixtures" / "report_schema_sample_seeds.json"
             fixture.parent.mkdir(parents=True, exist_ok=True)
             fixture.write_text("{}\n", encoding="utf-8")
             test_path = vault / "tests" / "test_report_schema_sample_regeneration.py"
@@ -134,7 +134,9 @@ class ProposalScopeRuntimeTests(unittest.TestCase):
                 proposal={
                     "proposal_id": "proposal-fixture-supporting-target",
                     "primary_targets": ["ops/scripts/mechanism/example_runtime.py"],
-                    "supporting_targets": ["tests/fixtures/report_schema_samples.json"],
+                    "supporting_targets": [
+                        "tests/fixtures/report_schema_sample_seeds.json"
+                    ],
                     "must_change_tests": ["tests/test_report_schema_sample_regeneration.py"],
                 },
                 context=context,
@@ -146,7 +148,7 @@ class ProposalScopeRuntimeTests(unittest.TestCase):
                 ["tests/test_report_schema_sample_regeneration.py"],
             )
             self.assertNotIn(
-                "tests/fixtures/report_schema_samples.json",
+                "tests/fixtures/report_schema_sample_seeds.json",
                 report["resolution"]["test_files"],
             )
 
