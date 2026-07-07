@@ -4,7 +4,15 @@ import unittest
 
 import pytest
 
-from tests.makefile_static_helpers import _makefile_text, _target_block
+from tests.makefile_static_helpers import (
+    MakeTargetContract,
+    _assert_assignment_values,
+    _assert_make_target_contracts,
+    _assert_phony_targets,
+    _makefile_text,
+    _target_block,
+    _target_dependencies,
+)
 
 pytestmark = [
     pytest.mark.public,
@@ -15,264 +23,284 @@ pytestmark = [
 ]
 
 
+_LEARNING_READINESS_SIGNOFF_PHONY_TARGETS = (
+    "learning-readiness-signoff",
+    "learning-readiness-signoff-refresh",
+    "learning-readiness-signoff-check",
+    "learning-readiness-signoff-revalidation",
+    "learning-readiness-signoff-revalidation-check",
+    "learning-readiness-signoff-template",
+)
+
+_LEARNING_READINESS_SIGNOFF_ASSIGNMENTS = (
+    (
+        "LEARNING_READINESS_SIGNOFF_OUT",
+        "ops/reports/learning-readiness-signoff.json",
+    ),
+    (
+        "LEARNING_READINESS_SIGNOFF_REUSE_FROM",
+        "$(LEARNING_READINESS_SIGNOFF_OUT)",
+    ),
+    (
+        "LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT",
+        "ops/reports/learning-readiness-signoff-revalidation.json",
+    ),
+    (
+        "LEARNING_READINESS_SIGNOFF_REVALIDATION_CHECK_OUT",
+        "tmp/learning-readiness-signoff-revalidation-check.json",
+    ),
+    ("LEARNING_READINESS_SIGNOFF_REVALIDATION_WINDOW_DAYS", "7"),
+    (
+        "LEARNING_READINESS_SIGNOFF_REVALIDATION_COMMAND",
+        "make release-evidence-converge PYTHON=.venv/bin/python",
+    ),
+    (
+        "LEARNING_READINESS_SIGNOFF_REVALIDATION_ENVIRONMENT",
+        ".venv clean release-builder",
+    ),
+    ("LEARNING_READINESS_SIGNOFF_ACCEPTED_BY", ""),
+    ("LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS", "14"),
+)
+
+
+_LEARNING_READINESS_SIGNOFF_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "learning-readiness-signoff",
+        required_tokens=(
+            "ops.scripts.learning_readiness_signoff",
+            '--accepted-by "$(LEARNING_READINESS_SIGNOFF_ACCEPTED_BY)"',
+            '--expiry-days "$(LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS)"',
+            '--risk-owner "$(LEARNING_READINESS_SIGNOFF_RISK_OWNER)"',
+            '--revalidation-condition "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_CONDITION)"',
+            '--rollback-trigger "$(LEARNING_READINESS_SIGNOFF_ROLLBACK_TRIGGER)"',
+        ),
+    ),
+    MakeTargetContract(
+        "learning-readiness-signoff-refresh",
+        required_tokens=(
+            "ops.scripts.learning_readiness_signoff_refresh",
+            '--reuse-from "$(LEARNING_READINESS_SIGNOFF_REUSE_FROM)"',
+            '--out "$(LEARNING_READINESS_SIGNOFF_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "learning-readiness-signoff-check",
+        required_tokens=(
+            "tmp/learning-readiness-signoff-check-release-closeout-summary.json",
+        ),
+    ),
+    MakeTargetContract(
+        "learning-readiness-signoff-revalidation",
+        required_tokens=(
+            "ops.scripts.learning_readiness_signoff_revalidation",
+            '--window-days "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_WINDOW_DAYS)"',
+            '--required-command "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_COMMAND)"',
+            '--required-environment "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_ENVIRONMENT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "learning-readiness-signoff-revalidation-check",
+        required_tokens=(
+            "--fail-on-due",
+            '--out "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_CHECK_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "learning-readiness-signoff-template",
+        required_tokens=(
+            "$(PYTHON) -m json.tool ops/templates/learning-readiness-signoff.json",
+        ),
+    ),
+)
+
+_LEARNING_PIPELINE_PHONY_TARGETS = (
+    "learning-claim-evidence-bundle",
+    "learning-confirmed-legacy-reconstruction",
+    "learning-confirmed-evidence-cohort",
+    "learning-claim-unlock-review",
+    "learning-delta-scoreboard",
+    "learning-claim-activation-report",
+    "session-synopsis",
+    "self-improvement-negative-lessons",
+    "remediation-backlog",
+    "public-check-summary",
+    "tmp-clean",
+)
+
+
+_LEARNING_PIPELINE_ASSIGNMENTS = (
+    ("PUBLIC_CHECK_SUMMARY_OUT", "ops/reports/public-check-summary.json"),
+    (
+        "LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT",
+        "ops/reports/learning-claim-evidence-bundle.json",
+    ),
+    (
+        "LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_OUT",
+        "ops/reports/learning-confirmed-legacy-reconstruction.json",
+    ),
+    (
+        "LEARNING_CONFIRMED_EVIDENCE_COHORT_OUT",
+        "ops/reports/learning-confirmed-evidence-cohort.json",
+    ),
+    (
+        "LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY",
+        "ops/policies/learning-claim-confirmed-improvement.json",
+    ),
+    (
+        "LEARNING_DELTA_SCOREBOARD_OUT",
+        "ops/reports/learning-delta-scoreboard.json",
+    ),
+    (
+        "LEARNING_CLAIM_ACTIVATION_REPORT_OUT",
+        "ops/reports/learning_claim_activation_report.json",
+    ),
+    ("SESSION_SYNOPSIS_OUT", "ops/reports/session-synopsis.json"),
+    (
+        "SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT",
+        "ops/reports/self-improvement-negative-lessons.json",
+    ),
+    ("REMEDIATION_BACKLOG_OUT", "ops/reports/remediation-backlog.json"),
+)
+
+
+def _promoted_target_contract(
+    target: str,
+    producer: str,
+    schema: str,
+    *,
+    required_tokens: tuple[str, ...] = (),
+    forbidden_tokens: tuple[str, ...] = (),
+) -> MakeTargetContract:
+    return MakeTargetContract(
+        target,
+        required_tokens=(
+            producer,
+            "ops.scripts.canonical_artifact_promote",
+            schema,
+            *required_tokens,
+        ),
+        forbidden_tokens=forbidden_tokens,
+    )
+
+
+_LEARNING_PIPELINE_TARGET_CONTRACTS = (
+    _promoted_target_contract(
+        "learning-confirmed-legacy-reconstruction",
+        "ops.scripts.learning_confirmed_legacy_reconstruction",
+        "ops/schemas/learning-confirmed-legacy-reconstruction.schema.json",
+    ),
+    _promoted_target_contract(
+        "learning-claim-evidence-bundle",
+        "ops.scripts.learning_claim_evidence_bundle",
+        "ops/schemas/learning-claim-evidence-bundle.schema.json",
+    ),
+    _promoted_target_contract(
+        "learning-confirmed-evidence-cohort",
+        "ops.scripts.learning_confirmed_evidence_cohort",
+        "ops/schemas/learning-confirmed-evidence-cohort.schema.json",
+        required_tokens=(
+            '--evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)"',
+            '--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"',
+        ),
+    ),
+    _promoted_target_contract(
+        "public-check-summary",
+        "ops.scripts.public_check_summary",
+        "ops/schemas/public-check-summary.schema.json",
+    ),
+    _promoted_target_contract(
+        "learning-claim-unlock-review",
+        "ops.scripts.learning_claim_unlock_review",
+        "ops/schemas/learning-claim-unlock-review.schema.json",
+        required_tokens=(
+            '--evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)"',
+            '--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"',
+        ),
+    ),
+    _promoted_target_contract(
+        "learning-delta-scoreboard",
+        "ops.scripts.learning_delta_scoreboard",
+        "ops/schemas/learning-delta-scoreboard.schema.json",
+    ),
+    _promoted_target_contract(
+        "learning-claim-activation-report",
+        "ops.scripts.learning_claim_activation_report",
+        "ops/schemas/learning-claim-activation-report.schema.json",
+    ),
+    _promoted_target_contract(
+        "session-synopsis",
+        "ops.scripts.session_synopsis",
+        "ops/schemas/session-synopsis.schema.json",
+    ),
+    _promoted_target_contract(
+        "self-improvement-negative-lessons",
+        "ops.scripts.self_improvement_negative_lessons",
+        "ops/schemas/self-improvement-negative-lessons.schema.json",
+    ),
+    _promoted_target_contract(
+        "remediation-backlog",
+        "ops.scripts.remediation_backlog",
+        "ops/schemas/remediation-backlog.schema.json",
+    ),
+)
+
+_LEARNING_PIPELINE_DEPENDENCIES = (
+    ("learning-claim-evidence-bundle", ("learning-confirmed-legacy-reconstruction",)),
+    ("learning-confirmed-evidence-cohort", ("learning-claim-evidence-bundle",)),
+    ("public-check-summary", ("script-output-surfaces-check",)),
+    ("learning-claim-unlock-review", ("learning-confirmed-evidence-cohort",)),
+    ("learning-delta-scoreboard", ("learning-claim-unlock-review",)),
+    ("learning-claim-activation-report", ("learning-delta-scoreboard",)),
+    ("session-synopsis", ("learning-claim-activation-report",)),
+    ("self-improvement-negative-lessons", ("session-synopsis",)),
+    ("remediation-backlog", ("self-improvement-negative-lessons", "session-synopsis")),
+    ("tmp-clean", ("tmp-json-clean",)),
+)
+
+
+def _assert_target_dependencies(
+    case: unittest.TestCase,
+    text: str,
+    dependencies: tuple[tuple[str, tuple[str, ...]], ...],
+) -> None:
+    for target, expected_dependencies in dependencies:
+        with case.subTest(target=target, surface="dependencies"):
+            case.assertEqual(_target_dependencies(text, target), expected_dependencies)
+
+
 class MakefileLearningStaticGateTests(unittest.TestCase):
     def test_learning_readiness_signoff_make_targets_are_explicit_operator_ux(
         self,
     ) -> None:
         text = _makefile_text()
 
-        self.assertIn("learning-readiness-signoff", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "learning-readiness-signoff-refresh", _target_block(text, ".PHONY")
-        )
-        self.assertIn("learning-readiness-signoff-check", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "learning-readiness-signoff-revalidation", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            "learning-readiness-signoff-revalidation-check",
-            _target_block(text, ".PHONY"),
-        )
-        self.assertIn(
-            "learning-readiness-signoff-template", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_OUT ?= ops/reports/learning-readiness-signoff.json",
+        _assert_phony_targets(self, text, _LEARNING_READINESS_SIGNOFF_PHONY_TARGETS)
+        _assert_assignment_values(self, text, _LEARNING_READINESS_SIGNOFF_ASSIGNMENTS)
+        _assert_make_target_contracts(
+            self,
             text,
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REUSE_FROM ?= $(LEARNING_READINESS_SIGNOFF_OUT)",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT ?= ops/reports/learning-readiness-signoff-revalidation.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_CHECK_OUT ?= tmp/learning-readiness-signoff-revalidation-check.json",
-            text,
-        )
-        self.assertIn("LEARNING_READINESS_SIGNOFF_REVALIDATION_WINDOW_DAYS ?= 7", text)
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_COMMAND ?= make release-evidence-converge PYTHON=.venv/bin/python",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_ENVIRONMENT ?= .venv clean release-builder",
-            text,
-        )
-        self.assertIn("LEARNING_READINESS_SIGNOFF_ACCEPTED_BY ?=", text)
-        self.assertIn("LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS ?= 14", text)
-        block = _target_block(text, "learning-readiness-signoff")
-        self.assertIn("ops.scripts.learning_readiness_signoff", block)
-        self.assertIn(
-            '--accepted-by "$(LEARNING_READINESS_SIGNOFF_ACCEPTED_BY)"', block
-        )
-        self.assertIn(
-            '--expiry-days "$(LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS)"', block
-        )
-        self.assertIn('--risk-owner "$(LEARNING_READINESS_SIGNOFF_RISK_OWNER)"', block)
-        self.assertIn(
-            '--revalidation-condition "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_CONDITION)"',
-            block,
-        )
-        self.assertIn(
-            '--rollback-trigger "$(LEARNING_READINESS_SIGNOFF_ROLLBACK_TRIGGER)"', block
+            _LEARNING_READINESS_SIGNOFF_TARGET_CONTRACTS,
         )
         refresh_block = _target_block(text, "learning-readiness-signoff-refresh")
-        self.assertIn("ops.scripts.learning_readiness_signoff_refresh", refresh_block)
-        self.assertIn(
-            '--reuse-from "$(LEARNING_READINESS_SIGNOFF_REUSE_FROM)"',
-            refresh_block,
-        )
-        self.assertIn('--out "$(LEARNING_READINESS_SIGNOFF_OUT)"', refresh_block)
         self.assertNotIn("--accepted-by", refresh_block)
-        self.assertIn(
-            "tmp/learning-readiness-signoff-check-release-closeout-summary.json",
-            _target_block(text, "learning-readiness-signoff-check"),
-        )
-        revalidation_block = _target_block(
-            text, "learning-readiness-signoff-revalidation"
-        )
-        self.assertIn(
-            "ops.scripts.learning_readiness_signoff_revalidation", revalidation_block
-        )
-        self.assertIn(
-            '--window-days "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_WINDOW_DAYS)"',
-            revalidation_block,
-        )
-        self.assertIn(
-            '--required-command "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_COMMAND)"',
-            revalidation_block,
-        )
-        self.assertIn(
-            '--required-environment "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_ENVIRONMENT)"',
-            revalidation_block,
-        )
-        self.assertIn(
-            "--fail-on-due",
-            _target_block(text, "learning-readiness-signoff-revalidation-check"),
-        )
-        self.assertIn(
-            '--out "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_CHECK_OUT)"',
-            _target_block(text, "learning-readiness-signoff-revalidation-check"),
-        )
-        self.assertIn(
-            "$(PYTHON) -m json.tool ops/templates/learning-readiness-signoff.json",
-            _target_block(text, "learning-readiness-signoff-template"),
-        )
 
     def test_learning_claim_bundle_delta_scoreboard_and_tmp_clean_alias_are_explicit(
         self,
     ) -> None:
         text = _makefile_text()
 
-        self.assertIn("learning-claim-evidence-bundle", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "learning-confirmed-legacy-reconstruction", _target_block(text, ".PHONY")
-        )
-        self.assertIn("public-check-summary", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "PUBLIC_CHECK_SUMMARY_OUT ?= ops/reports/public-check-summary.json", text
-        )
-        self.assertIn(
-            "LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT ?= ops/reports/learning-claim-evidence-bundle.json",
+        _assert_phony_targets(self, text, _LEARNING_PIPELINE_PHONY_TARGETS)
+        _assert_assignment_values(self, text, _LEARNING_PIPELINE_ASSIGNMENTS)
+        _assert_make_target_contracts(
+            self,
             text,
+            _LEARNING_PIPELINE_TARGET_CONTRACTS,
         )
-        self.assertIn(
-            "LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_OUT ?= ops/reports/learning-confirmed-legacy-reconstruction.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_CONFIRMED_EVIDENCE_COHORT_OUT ?= ops/reports/learning-confirmed-evidence-cohort.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY ?= ops/policies/learning-claim-confirmed-improvement.json",
-            text,
-        )
+        _assert_target_dependencies(self, text, _LEARNING_PIPELINE_DEPENDENCIES)
         bundle_block = _target_block(text, "learning-claim-evidence-bundle")
-        legacy_block = _target_block(text, "learning-confirmed-legacy-reconstruction")
-        self.assertIn(
-            "ops.scripts.learning_confirmed_legacy_reconstruction", legacy_block
-        )
-        self.assertIn(
-            "ops/schemas/learning-confirmed-legacy-reconstruction.schema.json",
-            legacy_block,
-        )
-        self.assertEqual(
-            bundle_block.splitlines()[0],
-            "learning-claim-evidence-bundle: learning-confirmed-legacy-reconstruction",
-        )
         self.assertNotIn(
             "$(MAKE) learning-confirmed-legacy-reconstruction", bundle_block
         )
-        self.assertIn("ops.scripts.learning_claim_evidence_bundle", bundle_block)
-        self.assertIn(
-            "ops/schemas/learning-claim-evidence-bundle.schema.json", bundle_block
-        )
-        cohort_block = _target_block(text, "learning-confirmed-evidence-cohort")
-        self.assertEqual(
-            cohort_block.splitlines()[0],
-            "learning-confirmed-evidence-cohort: learning-claim-evidence-bundle",
-        )
-        self.assertIn("ops.scripts.learning_confirmed_evidence_cohort", cohort_block)
-        self.assertIn(
-            "ops/schemas/learning-confirmed-evidence-cohort.schema.json", cohort_block
-        )
-        self.assertIn(
-            '--evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)"', cohort_block
-        )
-        self.assertIn(
-            '--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"',
-            cohort_block,
-        )
-        public_check_block = _target_block(text, "public-check-summary")
-        self.assertIn("ops.scripts.public_check_summary", public_check_block)
-        self.assertIn(
-            "ops/schemas/public-check-summary.schema.json", public_check_block
-        )
-        self.assertIn("ops.scripts.canonical_artifact_promote", public_check_block)
-        unlock_block = _target_block(text, "learning-claim-unlock-review")
-        self.assertEqual(
-            unlock_block.splitlines()[0],
-            "learning-claim-unlock-review: learning-confirmed-evidence-cohort",
-        )
-        self.assertIn(
-            '--evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)"', unlock_block
-        )
-        self.assertIn(
-            '--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"',
-            unlock_block,
-        )
-        self.assertIn("learning-delta-scoreboard", _target_block(text, ".PHONY"))
-        self.assertIn("tmp-clean", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "LEARNING_DELTA_SCOREBOARD_OUT ?= ops/reports/learning-delta-scoreboard.json",
-            text,
-        )
-        self.assertIn(
-            "LEARNING_CLAIM_ACTIVATION_REPORT_OUT ?= ops/reports/learning_claim_activation_report.json",
-            text,
-        )
-        self.assertIn(
-            "SESSION_SYNOPSIS_OUT ?= ops/reports/session-synopsis.json",
-            text,
-        )
-        self.assertIn(
-            "SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT ?= ops/reports/self-improvement-negative-lessons.json",
-            text,
-        )
-        self.assertIn(
-            "REMEDIATION_BACKLOG_OUT ?= ops/reports/remediation-backlog.json",
-            text,
-        )
-        block = _target_block(text, "learning-delta-scoreboard")
-        self.assertEqual(
-            block.splitlines()[0],
-            "learning-delta-scoreboard: learning-claim-unlock-review",
-        )
-        self.assertIn("ops.scripts.learning_delta_scoreboard", block)
-        self.assertIn("ops/schemas/learning-delta-scoreboard.schema.json", block)
-        activation_block = _target_block(text, "learning-claim-activation-report")
-        self.assertEqual(
-            activation_block.splitlines()[0],
-            "learning-claim-activation-report: learning-delta-scoreboard",
-        )
-        self.assertIn("ops.scripts.learning_claim_activation_report", activation_block)
-        self.assertIn(
-            "ops/schemas/learning-claim-activation-report.schema.json",
-            activation_block,
-        )
-        synopsis_block = _target_block(text, "session-synopsis")
-        self.assertEqual(
-            synopsis_block.splitlines()[0],
-            "session-synopsis: learning-claim-activation-report",
-        )
-        self.assertIn("ops.scripts.session_synopsis", synopsis_block)
-        self.assertIn("ops/schemas/session-synopsis.schema.json", synopsis_block)
-        negative_lessons_block = _target_block(
-            text, "self-improvement-negative-lessons"
-        )
-        self.assertEqual(
-            negative_lessons_block.splitlines()[0],
-            "self-improvement-negative-lessons: session-synopsis",
-        )
-        self.assertIn(
-            "ops.scripts.self_improvement_negative_lessons", negative_lessons_block
-        )
-        self.assertIn(
-            "ops/schemas/self-improvement-negative-lessons.schema.json",
-            negative_lessons_block,
-        )
-        backlog_block = _target_block(text, "remediation-backlog")
-        self.assertEqual(
-            backlog_block.splitlines()[0],
-            "remediation-backlog: self-improvement-negative-lessons session-synopsis",
-        )
-        self.assertIn("ops.scripts.remediation_backlog", backlog_block)
-        self.assertIn("ops/schemas/remediation-backlog.schema.json", backlog_block)
-        self.assertIn("tmp-clean: tmp-json-clean", text)
         tmp_json_clean_block = _target_block(text, "tmp-json-clean")
         self.assertIn("find tmp -mindepth 1 -delete", tmp_json_clean_block)
         self.assertNotIn("goal-worktree-guard.json", tmp_json_clean_block)

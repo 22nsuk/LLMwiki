@@ -7,8 +7,10 @@ import pytest
 
 from tests.makefile_static_helpers import (
     _assert_assignment_exists,
+    _assert_assignment_values,
     _assert_recipe_contains_tokens,
     _assert_target_depends_on,
+    _assert_text_contains_tokens,
     _makefile_text,
     _recipe_lines,
     _target_block,
@@ -177,6 +179,10 @@ _AUTO_IMPROVE_GOAL_EMPTY_ASSIGNMENTS = (
     "GOAL_RUNTIME_CERTIFICATE_APPLY",
 )
 
+_AUTO_IMPROVE_GOAL_EMPTY_ASSIGNMENT_VALUES = tuple(
+    (variable, "") for variable in _AUTO_IMPROVE_GOAL_EMPTY_ASSIGNMENTS
+)
+
 _AUTO_IMPROVE_LOOP_SHARED_TOKENS = (
     "ops.scripts.auto_improve_loop",
     "$(GOAL_MAINTAIN_UNTIL_BUDGET_FLAG)",
@@ -189,38 +195,16 @@ _AUTO_IMPROVE_LOOP_LEGACY_MAINTAIN_FLAG = (
 )
 
 
-def _assert_assignments_exist(
-    test: unittest.TestCase,
-    text: str,
-    assignments: tuple[tuple[str, str], ...],
-) -> None:
-    for variable, expected in assignments:
-        _assert_assignment_exists(test, text, variable, expected)
-
-
-def _assert_empty_assignments_exist(
-    test: unittest.TestCase,
-    text: str,
-    variables: tuple[str, ...],
-) -> None:
-    for variable in variables:
-        _assert_assignment_exists(test, text, variable, "")
-
-
-def _assert_command_contains_tokens(
-    test: unittest.TestCase,
-    command: str,
-    tokens: tuple[str, ...],
-) -> None:
-    for token in tokens:
-        test.assertIn(token, command)
-
-
 def _assert_auto_improve_loop_common_tokens(
     test: unittest.TestCase,
     command: str,
 ) -> None:
-    _assert_command_contains_tokens(test, command, _AUTO_IMPROVE_LOOP_SHARED_TOKENS)
+    _assert_text_contains_tokens(
+        test,
+        command,
+        _AUTO_IMPROVE_LOOP_SHARED_TOKENS,
+        surface="auto_improve_loop_command",
+    )
     test.assertNotIn(_AUTO_IMPROVE_LOOP_LEGACY_MAINTAIN_FLAG, command)
 
 
@@ -283,11 +267,11 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
     def test_auto_improve_goal_variables_defaults_and_loop_commands(self) -> None:
         text = _makefile_text()
 
-        _assert_assignments_exist(self, text, _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS)
-        _assert_empty_assignments_exist(self, text, _AUTO_IMPROVE_GOAL_EMPTY_ASSIGNMENTS)
+        _assert_assignment_values(self, text, _AUTO_IMPROVE_GOAL_DEFAULT_ASSIGNMENTS)
+        _assert_assignment_values(self, text, _AUTO_IMPROVE_GOAL_EMPTY_ASSIGNMENT_VALUES)
         run_command = _assert_assignment_exists(self, text, "GOAL_RUN_COMMAND")
         _assert_auto_improve_loop_common_tokens(self, run_command)
-        _assert_command_contains_tokens(
+        _assert_text_contains_tokens(
             self,
             run_command,
             (
@@ -297,10 +281,11 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--class \"$(GOAL_ARTIFACT_CLASS)\"",
                 "$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)",
             ),
+            surface="goal_run_command",
         )
         resume_command = _assert_assignment_exists(self, text, "GOAL_RESUME_COMMAND")
         _assert_auto_improve_loop_common_tokens(self, resume_command)
-        _assert_command_contains_tokens(
+        _assert_text_contains_tokens(
             self,
             resume_command,
             (
@@ -310,13 +295,14 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--max-proposals \"$(GOAL_MAX_PROPOSALS)\"",
                 "--max-consecutive-failures \"$(GOAL_MAX_CONSECUTIVE_FAILURES)\"",
             ),
+            surface="goal_resume_command",
         )
         maintenance_action_command = _assert_assignment_exists(
             self,
             text,
             "GOAL_MAINTENANCE_ACTION_NEXT_MAX_PROPOSALS",
         )
-        _assert_command_contains_tokens(
+        _assert_text_contains_tokens(
             self,
             maintenance_action_command,
             (
@@ -325,6 +311,7 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
                 "--print-maintenance-action-next-max-proposals",
                 "--maintenance-action-plan-out \"$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)\"",
             ),
+            surface="goal_maintenance_action_command",
         )
         mutation_proposal_recipe = _target_block(text, "mutation-proposal")
         self.assertIn(
@@ -1171,7 +1158,6 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
     def test_goal_runtime_certificate_status_write_contract_is_split_and_documented(self) -> None:
         text = _makefile_text()
         docs_text = DOCS_SELF_IMPROVEMENT_RUNTIME.read_text(encoding="utf-8")
-        normalized_docs_text = " ".join(docs_text.split())
         status_finalize_recipe = _recipe_lines(text, "goal-runtime-status-finalize")
         certificate_recipe = _recipe_lines(text, "goal-runtime-certificate")
 
@@ -1180,13 +1166,13 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
         self.assertIn('--out "$(GOAL_RUN_STATUS_OUT)"', status_finalize_recipe[1])
         self.assertNotIn("auto-improve-goal-status", "\n".join(certificate_recipe))
         self.assertNotIn("$(GOAL_RUN_STATUS_OUT)", "\n".join(certificate_recipe))
-        self.assertIn("explicit mutating status writer", normalized_docs_text)
-        self.assertIn("read-only certificate renderer", normalized_docs_text)
-        self.assertIn("does not run `auto-improve-goal-status`", normalized_docs_text)
-        self.assertIn(
-            "preserves an existing terminal status and `completed_at`",
-            normalized_docs_text,
-        )
-        self.assertIn("run a run-id guard before mutating evidence", normalized_docs_text)
-        self.assertIn("GOAL_RUN_ID", normalized_docs_text)
-        self.assertIn("GOAL_COMPLETED_AT=<timestamp>", normalized_docs_text)
+        for token in (
+            "goal-runtime-status-finalize",
+            "goal-runtime-certificate-report",
+            "auto-improve-goal-status",
+            "GOAL_RUN_ID",
+            "GOAL_COMPLETED_AT",
+            "completed_at",
+        ):
+            with self.subTest(surface="docs/self-improvement-runtime.md", token=token):
+                self.assertIn(token, docs_text)

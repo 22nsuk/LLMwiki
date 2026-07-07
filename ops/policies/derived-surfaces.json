@@ -1,0 +1,206 @@
+{
+  "$schema": "ops/schemas/derived-surfaces.schema.json",
+  "version": 1,
+  "description": "Source of truth for source-derived projection aggregates. Make sync-derived wrappers are generated from this manifest so new derived surfaces do not require mirrored Makefile and static-test edits.",
+  "generated_make_fragment": {
+    "path": "mk/derived-surfaces.generated.mk",
+    "generator_module": "ops.scripts.core.derived_surfaces"
+  },
+  "aggregate": {
+    "sync_target": "sync-derived",
+    "check_target": "sync-derived-check",
+    "internal_sync_target": "_internal-sync-derived",
+    "internal_check_target": "_internal-sync-derived-check"
+  },
+  "surfaces": [
+    {
+      "surface_id": "pytest_markers",
+      "description": "pytest.ini marker registry block generated from the test lane registry.",
+      "kind": "managed_block",
+      "sync_target": "pytest-markers-sync",
+      "check_target": "pytest-markers-sync-check",
+      "generator_module": "ops.scripts.test.generate_pytest_ini_markers",
+      "source_paths": [
+        "ops/test-lane-registry.json"
+      ],
+      "tracked_outputs": [
+        "pytest.ini"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "test_selectors",
+      "description": "Generated Make selector variables derived from persistent test lane packs.",
+      "kind": "generated_make_fragment",
+      "sync_target": "test-selectors-sync",
+      "check_target": "test-selectors-sync-check",
+      "generator_module": "ops.scripts.test.generate_test_mk_selectors",
+      "source_paths": [
+        "ops/test-lane-registry.json"
+      ],
+      "tracked_outputs": [
+        "mk/test-selectors.generated.mk"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "public_policy",
+      "description": "Public mirror policy template generated from public surface policy rules.",
+      "kind": "managed_policy_projection",
+      "sync_target": "sync-public-policy",
+      "check_target": "sync-public-policy-check",
+      "generator_module": "ops.scripts.public.sync_public_surface_gitignore",
+      "source_paths": [
+        "ops/scripts/public/public_surface_policy.py"
+      ],
+      "tracked_outputs": [
+        "ops/templates/public-mirror.gitignore"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "workflow_action_pins",
+      "description": "Pinned GitHub Actions uses lines rewritten from the workflow action pin catalog.",
+      "kind": "managed_block",
+      "sync_target": "workflow-action-pins-sync",
+      "check_target": "workflow-action-pins-sync-check",
+      "generator_module": "ops.scripts.core.workflow_action_pins",
+      "source_paths": [
+        "ops/scripts/core/workflow_action_pin_catalog.py",
+        "tests/workflow_static_helpers.py"
+      ],
+      "tracked_outputs": [
+        ".github/actions/**/*.yml",
+        ".github/workflows/*.yml"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "script_output_surfaces",
+      "description": "Script output surface inventory generated from ops script AST scanning.",
+      "kind": "tracked_json",
+      "sync_target": "script-output-surfaces",
+      "check_target": "script-output-surfaces-check",
+      "generator_module": "ops.scripts.script_output_surfaces",
+      "source_paths": [
+        "ops/scripts/**/*.py"
+      ],
+      "tracked_outputs": [
+        "ops/script-output-surfaces.json"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "script_lifecycle_policy",
+      "description": "Generated script lifecycle policy with human-owned overrides kept separate.",
+      "kind": "tracked_json",
+      "sync_target": "script-lifecycle-policy",
+      "check_target": "script-lifecycle-policy-check",
+      "generator_module": "ops.scripts.core.script_lifecycle_policy",
+      "source_paths": [
+        "Makefile",
+        "mk/*.mk",
+        "ops/script-lifecycle-overrides.json",
+        "ops/scripts/**/*.py",
+        "pyproject.toml"
+      ],
+      "tracked_outputs": [
+        "ops/script-lifecycle-policy.json"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "script_module_surfaces",
+      "description": "Generated module export surface inventory from __all__ declarations.",
+      "kind": "tracked_json",
+      "sync_target": "script-module-surfaces",
+      "check_target": "script-module-surfaces-check",
+      "generator_module": "ops.scripts.script_module_surfaces",
+      "source_paths": [
+        "ops/script-module-surface-overrides.json",
+        "ops/scripts/**/*.py"
+      ],
+      "tracked_outputs": [
+        "ops/script-module-surfaces.json"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "release_governance",
+      "description": "Managed release-governance ci_matrix block generated from the lane registry.",
+      "kind": "managed_block",
+      "sync_target": "release-governance-sync",
+      "check_target": "release-governance-sync-check",
+      "generator_module": "ops.scripts.test.generate_release_governance_from_lane_registry",
+      "source_paths": [
+        "ops/test-lane-registry.json",
+        "ops/scripts/test/generate_release_governance_from_lane_registry.py"
+      ],
+      "tracked_outputs": [
+        ".github/release-governance.yml"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "release_workflow_order_guard",
+      "description": "Release workflow order guard report generated from the release order spec and Make recipes.",
+      "kind": "local_report",
+      "sync_target": "release-workflow-order-guard",
+      "check_target": "release-workflow-order-guard-check",
+      "generator_module": "ops.scripts.release_workflow_order_guard",
+      "source_paths": [
+        "Makefile",
+        "mk/*.mk",
+        "ops/policies/release-workflow-order-guard.json"
+      ],
+      "tracked_outputs": [],
+      "local_outputs": [
+        "ops/reports/release-workflow-order-guard.json"
+      ],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "make_target_inventory",
+      "description": "Make target inventory diagnostic generated from live Make definitions.",
+      "kind": "diagnostic",
+      "sync_target": "make-target-inventory",
+      "check_target": "make-target-inventory-check",
+      "generator_module": "ops.scripts.make_target_inventory",
+      "source_paths": [
+        "Makefile",
+        "mk/*.mk"
+      ],
+      "tracked_outputs": [],
+      "local_outputs": [
+        "tmp/make-target-inventory.json"
+      ],
+      "include_in_sync_derived": true
+    },
+    {
+      "surface_id": "report_schema_samples",
+      "description": "Report schema sample fixture regenerated from deterministic sample builders.",
+      "kind": "tracked_fixture",
+      "sync_target": "report-schema-samples-regenerate",
+      "check_target": "report-schema-samples-check",
+      "generator_module": "tools.regenerate_report_schema_samples",
+      "source_paths": [
+        "tests/release_run_ready_sample_runtime.py",
+        "tests/supply_chain_sample_runtime.py",
+        "tools/regenerate_report_schema_samples.py"
+      ],
+      "tracked_outputs": [
+        "tests/fixtures/report_schema_samples.json"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    }
+  ]
+}

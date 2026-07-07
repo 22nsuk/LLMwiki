@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import datetime as dt
 import json
 import subprocess
@@ -9,6 +10,12 @@ from pathlib import Path
 
 import pytest
 
+from ops.scripts.core.derived_surfaces import (
+    currentness_output_paths as derived_surface_currentness_output_paths,
+    currentness_path_patterns as derived_surface_currentness_path_patterns,
+    load_manifest as load_derived_surfaces_manifest,
+)
+from ops.scripts.core.makefile_runtime import load_makefile_text, makefile_source_paths
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.core.workflow_dependency_planner import build_report, write_report
@@ -34,7 +41,72 @@ FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_release_workflow_static.py",
 )
+FOCUSED_DERIVED_SURFACES_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_derived_surfaces.py",
+)
 RUNTIME_HOTSPOT_SMOKE_COMMAND = "make runtime-hotspot-smoke"
+FOCUSED_PYTEST_PREFIX = FOCUSED_PYTEST_TEMPLATE.partition("{path}")[0]
+
+
+def _imports_makefile_static_helpers(path: Path) -> bool:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=path.as_posix())
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.ImportFrom)
+            and node.module == "tests.makefile_static_helpers"
+        ):
+            return True
+        if isinstance(node, ast.Import) and any(
+            alias.name == "tests.makefile_static_helpers" for alias in node.names
+        ):
+            return True
+    return False
+
+
+def _makefile_static_helper_importers() -> list[str]:
+    return [
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in sorted((REPO_ROOT / "tests").glob("test_*.py"))
+        if _imports_makefile_static_helpers(path)
+    ]
+
+
+def _focused_pytest_paths(command: str) -> list[str]:
+    if not command.startswith(FOCUSED_PYTEST_PREFIX):
+        return []
+    return command.removeprefix(FOCUSED_PYTEST_PREFIX).split()
+
+
+def _make_target_pytest_paths(target: str) -> list[str]:
+    recipe_lines = _make_target_recipe_lines(target)
+    pytest_lines = [line for line in recipe_lines if " -m pytest " in line]
+    if len(pytest_lines) != 1:
+        raise AssertionError(f"{target} should have exactly one pytest recipe line")
+    tokens = pytest_lines[0].split()
+    return [token for token in tokens if token.startswith("tests/")]
+
+
+def _make_target_recipe_lines(target: str) -> list[str]:
+    text, _source_paths = load_makefile_text(REPO_ROOT)
+    recipe_lines: list[str] = []
+    in_target = False
+    for line in text.splitlines():
+        if not in_target:
+            if ":" not in line:
+                continue
+            target_names = line.split(":", 1)[0].split()
+            in_target = target in target_names
+            continue
+        if line.startswith("\t"):
+            recipe_lines.append(line[1:])
+            continue
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        break
+    if not in_target:
+        raise AssertionError(f"missing Make target: {target}")
+    return recipe_lines
 
 
 def fixed_context() -> RuntimeContext:
@@ -54,6 +126,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         registry.parent.mkdir(parents=True, exist_ok=True)
         registry.write_text(
             (REPO_ROOT / "ops" / "test-lane-registry.json").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        derived_surfaces_manifest = self.vault / "ops" / "policies" / "derived-surfaces.json"
+        derived_surfaces_manifest.parent.mkdir(parents=True, exist_ok=True)
+        derived_surfaces_manifest.write_text(
+            (REPO_ROOT / "ops" / "policies" / "derived-surfaces.json").read_text(
+                encoding="utf-8"
+            ),
             encoding="utf-8",
         )
         (self.vault / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
@@ -127,6 +207,20 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
+
+    def derived_surface_currentness_paths(self) -> list[str]:
+        return derived_surface_currentness_path_patterns(
+            load_derived_surfaces_manifest(self.vault)
+        )
+
+    def derived_surface_output_only_currentness_paths(self) -> list[str]:
+        return [
+            path
+            for path in derived_surface_currentness_output_paths(
+                load_derived_surfaces_manifest(self.vault)
+            )
+            if not path.startswith(("mk/", ".github/"))
+        ]
 
     def _write_fixed_point_policy(self) -> None:
         path = self.vault / "ops" / "policies" / "release-closeout-fixed-point.json"
@@ -208,6 +302,53 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertIn(
             {"from": "release-evidence-converge", "to": "generated-artifact-index", "source": "make_recipe"},
             report["dependency_edges"],
+        )
+
+    def test_makefile_source_paths_preserve_make_include_semantics(self) -> None:
+        makefile = self.vault / "Makefile"
+        makefile.write_text("include mk/missing.mk\n", encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            FileNotFoundError,
+            "missing required Make include: mk/missing.mk",
+        ):
+            makefile_source_paths(self.vault)
+
+        makefile.write_text("-include mk/missing.mk\n", encoding="utf-8")
+        self.assertEqual(makefile_source_paths(self.vault), ["Makefile"])
+
+        makefile.write_text(
+            "include-demo:\n"
+            "\tinclude mk/not-a-make-include.mk\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(makefile_source_paths(self.vault), ["Makefile"])
+
+    def test_optional_mk_includes_can_define_internal_targets(self) -> None:
+        (self.vault / "mk").mkdir(exist_ok=True)
+        (self.vault / "Makefile").write_text(
+            "DERIVED_SURFACES_MK_OUT ?= mk/derived.generated.mk\n"
+            "-include $(DERIVED_SURFACES_MK_OUT)\n"
+            "sync-derived:\n"
+            "\t$(MAKE) _internal-sync-derived\n",
+            encoding="utf-8",
+        )
+        (self.vault / "mk" / "derived.generated.mk").write_text(
+            "_internal-sync-derived:\n"
+            "\t@echo internal sync\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertIn("mk/derived.generated.mk", report["input_fingerprints"])
+        self.assertNotIn(
+            {
+                "consumer": "sync-derived",
+                "dependency": "_internal-sync-derived",
+                "source": "make_recipe",
+            },
+            report["diagnostics"]["missing_dependencies"],
         )
 
     def test_changed_path_selects_report_contract_closeout(self) -> None:
@@ -293,10 +434,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         plan = report["changed_path_minimum_plan"]
         self.assertEqual(plan["status"], "pass")
         self.assertEqual(plan["coverage_class"], "runtime_source")
-        self.assertEqual(plan["selected_commands"], ["make static", "make test"])
+        self.assertEqual(
+            plan["selected_commands"],
+            ["make static", "make test", "make sync-derived-check"],
+        )
         self.assertEqual(
             [item["matched_rule_id"] for item in plan["path_recommendations"]],
-            ["python_runtime_source"],
+            ["python_runtime_source+derived_surface_currentness"],
         )
         self.assertEqual(
             validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
@@ -319,11 +463,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make static",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+                "make sync-derived-check",
             ],
         )
         self.assertEqual(
             [item["matched_rule_id"] for item in plan["path_recommendations"]],
-            ["workflow_dependency_planner_source"],
+            ["workflow_dependency_planner_source+derived_surface_currentness"],
         )
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
         self.assertEqual(
@@ -635,6 +780,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertIn(FOCUSED_PYTEST_TEMPLATE, pytest_commands)
         self.assertIn(FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND, pytest_commands)
+        self.assertIn(FOCUSED_DERIVED_SURFACES_TEST_COMMAND, pytest_commands)
         for command in pytest_commands:
             with self.subTest(command=command):
                 self.assertNotIn("uv run python -m pytest", command)
@@ -668,6 +814,49 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertFalse(plan["release_proof_replacement"])
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
+    def test_changed_path_minimum_plan_routes_makefile_static_helper_to_split_gates(
+        self,
+    ) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["tests/makefile_static_helpers.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "makefile_static_gates")
+        self.assertEqual(plan["unknown_paths"], [])
+        self.assertEqual(
+            plan["selected_commands"],
+            ["make static", "make makefile-static-gates"],
+        )
+        self.assertCountEqual(
+            _make_target_pytest_paths("makefile-static-gates"),
+            _makefile_static_helper_importers(),
+        )
+        self.assertEqual(
+            plan["command_duration_seconds"],
+            {
+                "make static": 60,
+                "make makefile-static-gates": 210,
+            },
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 270)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(
+            {item["matched_rule_id"] for item in plan["path_recommendations"]},
+            {"makefile_static_helpers"},
+        )
+        self.assertEqual(
+            validate_with_schema(
+                report,
+                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+            ),
+            [],
+        )
+
     def test_changed_path_minimum_plan_routes_runtime_hotspot_to_hotspot_smoke(
         self,
     ) -> None:
@@ -693,6 +882,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [
                 "make static",
                 RUNTIME_HOTSPOT_SMOKE_COMMAND,
+                "make sync-derived-check",
             ],
         )
         self.assertEqual(
@@ -700,14 +890,15 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             {
                 "make static": 60,
                 RUNTIME_HOTSPOT_SMOKE_COMMAND: 240,
+                "make sync-derived-check": 120,
             },
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 300)
-        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertEqual(plan["estimated_duration_seconds"], 420)
+        self.assertEqual(plan["budget_status"], "over_budget")
         self.assertFalse(plan["release_proof_replacement"])
         self.assertEqual(
             {item["matched_rule_id"] for item in plan["path_recommendations"]},
-            {"runtime_hotspot_source"},
+            {"runtime_hotspot_source+derived_surface_currentness"},
         )
         self.assertNotIn("make test-fast", plan["selected_commands"])
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
@@ -731,6 +922,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make static",
                 "make workflow-dependency-planner-check",
                 FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND,
+                "make sync-derived-check",
             ],
         )
         self.assertEqual(
@@ -739,12 +931,16 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make static": 60,
                 "make workflow-dependency-planner-check": 60,
                 FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND: 30,
+                "make sync-derived-check": 120,
             },
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 150)
+        self.assertEqual(plan["estimated_duration_seconds"], 270)
         self.assertEqual(plan["budget_status"], "within_budget")
         self.assertFalse(plan["release_proof_replacement"])
-        self.assertEqual(plan["path_recommendations"][0]["matched_rule_id"], "release_workflow_static_contract")
+        self.assertEqual(
+            plan["path_recommendations"][0]["matched_rule_id"],
+            "release_workflow_static_contract+derived_surface_currentness",
+        )
         self.assertNotIn("make test-report-contract-core", plan["selected_commands"])
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
@@ -765,9 +961,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [
                 "make static",
                 "make workflow-dependency-planner-check",
+                "make sync-derived-check",
             ],
         )
-        self.assertEqual(plan["path_recommendations"][0]["matched_rule_id"], "make_or_ci_contract")
+        self.assertEqual(
+            plan["path_recommendations"][0]["matched_rule_id"],
+            "make_or_ci_contract+derived_surface_currentness",
+        )
         self.assertNotIn(FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND, plan["selected_commands"])
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
@@ -814,7 +1014,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
         plan = report["changed_path_minimum_plan"]
         self.assertEqual(plan["coverage_class"], "mixed")
-        self.assertEqual(plan["estimated_duration_seconds"], 330)
+        self.assertEqual(plan["estimated_duration_seconds"], 450)
         self.assertEqual(plan["duration_budget_seconds"], 300)
         self.assertEqual(plan["budget_status"], "over_budget")
         self.assertEqual(
@@ -824,6 +1024,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make workflow-dependency-planner-check": 60,
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
                 "make test-report-contract-core": 180,
+                "make sync-derived-check": 120,
             },
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
@@ -844,16 +1045,18 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [
                 "make static",
                 "make test",
+                "make sync-derived-check",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 300)
-        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertEqual(plan["estimated_duration_seconds"], 420)
+        self.assertEqual(plan["budget_status"], "over_budget")
         self.assertEqual(
             plan["command_duration_seconds"],
             {
                 "make static": 60,
+                "make sync-derived-check": 120,
                 "make workflow-dependency-planner-check": 60,
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
                 "make test": 150,
@@ -861,7 +1064,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
         self.assertEqual(
             [item["duration_seconds"] for item in plan["path_recommendations"]],
-            [180, 150],
+            [300, 270],
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
@@ -886,11 +1089,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [
                 "make static",
                 "make test",
+                "make sync-derived-check",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 330)
+        self.assertEqual(plan["estimated_duration_seconds"], 570)
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_path_minimum_plan_matches_public_docs(self) -> None:
@@ -960,9 +1164,118 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                             "tests/test_report_schema_sample_regeneration.py"
                         ),
                         "make test-report-contract-core",
+                        "make sync-derived-check",
                     ],
                 )
                 self.assertEqual(plan["unknown_paths"], [])
+
+    def test_changed_path_minimum_plan_matches_derived_surfaces_manifest(self) -> None:
+        changed_paths = [
+            "ops/policies/derived-surfaces.json",
+            "ops/schemas/derived-surfaces.schema.json",
+        ]
+
+        for changed_path in changed_paths:
+            with self.subTest(changed_path=changed_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[changed_path],
+                    context=fixed_context(),
+                )
+
+                plan = report["changed_path_minimum_plan"]
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "derived_surfaces_manifest")
+                self.assertEqual(plan["unknown_paths"], [])
+                self.assertEqual(
+                    plan["selected_commands"],
+                    [
+                        "make static",
+                        "make sync-derived-check",
+                        FOCUSED_DERIVED_SURFACES_TEST_COMMAND,
+                    ],
+                )
+                self.assertEqual(
+                    plan["command_duration_seconds"],
+                    {
+                        "make static": 60,
+                        "make sync-derived-check": 120,
+                        FOCUSED_DERIVED_SURFACES_TEST_COMMAND: 30,
+                    },
+                )
+                self.assertEqual(plan["estimated_duration_seconds"], 210)
+                self.assertEqual(plan["budget_status"], "within_budget")
+                self.assertEqual(
+                    {item["matched_rule_id"] for item in plan["path_recommendations"]},
+                    {"derived_surfaces_manifest_contract"},
+                )
+                self.assertEqual(
+                    validate_with_schema(
+                        report,
+                        load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+                    ),
+                    [],
+                )
+
+    def test_changed_path_minimum_plan_derives_currentness_from_derived_surfaces(
+        self,
+    ) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=self.derived_surface_output_only_currentness_paths(),
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "generated_artifact_currentness")
+        self.assertEqual(plan["unknown_paths"], [])
+        self.assertEqual(plan["selected_commands"], ["make sync-derived-check"])
+        self.assertEqual(
+            {item["matched_rule_id"] for item in plan["path_recommendations"]},
+            {"derived_surface_currentness"},
+        )
+        self.assertIn("derived_surfaces_manifest", report["input_fingerprints"])
+        self.assertEqual(
+            plan["command_duration_seconds"],
+            {"make sync-derived-check": 120},
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 120)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertEqual(
+            validate_with_schema(
+                report,
+                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+            ),
+            [],
+        )
+
+    def test_invalid_derived_surfaces_manifest_is_attention(self) -> None:
+        manifest = self.vault / "ops" / "policies" / "derived-surfaces.json"
+        manifest.write_text("{not json", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths=["ops/script-output-surfaces.json"],
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["status"], "attention")
+        diagnostics = report["diagnostics"]["derived_surfaces_manifest"]
+        self.assertEqual(diagnostics["status"], "failed")
+        self.assertEqual(diagnostics["path"], "ops/policies/derived-surfaces.json")
+        self.assertIn("JSONDecodeError", diagnostics["message"])
+        self.assertEqual(diagnostics["currentness_output_count"], 0)
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "attention")
+        self.assertEqual(plan["unknown_paths"], ["ops/script-output-surfaces.json"])
+        self.assertEqual(
+            validate_with_schema(
+                report,
+                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+            ),
+            [],
+        )
 
     def test_changed_path_minimum_plan_covers_registry_and_generated_currentness_artifacts(
         self,
@@ -971,8 +1284,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             self.vault,
             changed_paths=[
                 "ops/test-lane-registry.json",
-                "ops/script-output-surfaces.json",
-                "tests/fixtures/report_schema_samples.json",
+                *self.derived_surface_output_only_currentness_paths(),
             ],
             context=fixed_context(),
         )

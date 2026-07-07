@@ -3,6 +3,8 @@ SCRIPT_MODULE_SURFACES_OUT ?= ops/script-module-surfaces.json
 SCRIPT_LIFECYCLE_POLICY_OUT ?= ops/script-lifecycle-policy.json
 SCRIPT_LIFECYCLE_OVERRIDES ?= ops/script-lifecycle-overrides.json
 SCRIPT_MODULE_SURFACE_OVERRIDES ?= ops/script-module-surface-overrides.json
+DERIVED_SURFACES_MANIFEST ?= ops/policies/derived-surfaces.json
+DERIVED_SURFACES_MK_OUT ?= mk/derived-surfaces.generated.mk
 CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json
 CLOSURE_REGISTRY_ENVELOPE_REGISTRY ?= all
 GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json
@@ -47,7 +49,9 @@ RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.jso
 RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT ?= tmp/release-risk-taxonomy-matrix.candidate.json
 RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.md
 
-.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-workflow-order-guard-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
+-include $(DERIVED_SURFACES_MK_OUT)
+
+.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean derived-surfaces-sync derived-surfaces-sync-check sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean generated-artifact-runs-compress clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-workflow-order-guard-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
@@ -73,30 +77,18 @@ tmp-json-clean:
 tmp-clean: tmp-json-clean
 
 sync-derived:
-	$(MAKE) pytest-markers-sync
-	$(MAKE) test-selectors-sync
-	$(MAKE) sync-public-policy
-	$(MAKE) workflow-action-pins-sync
-	$(MAKE) script-output-surfaces
-	$(MAKE) script-lifecycle-policy
-	$(MAKE) script-module-surfaces
-	$(MAKE) release-governance-sync
-	$(MAKE) release-workflow-order-guard
-	$(MAKE) make-target-inventory
-	$(MAKE) report-schema-samples-regenerate
+	$(MAKE) derived-surfaces-sync
+	$(MAKE) _internal-sync-derived
 
 sync-derived-check:
-	$(MAKE) pytest-markers-sync-check
-	$(MAKE) test-selectors-sync-check
-	$(MAKE) sync-public-policy-check
-	$(MAKE) workflow-action-pins-sync-check
-	$(MAKE) script-output-surfaces-check
-	$(MAKE) script-lifecycle-policy-check
-	$(MAKE) script-module-surfaces-check
-	$(MAKE) release-governance-sync-check
-	$(MAKE) release-workflow-order-guard-check
-	$(MAKE) make-target-inventory-check
-	$(MAKE) report-schema-samples-check
+	$(MAKE) derived-surfaces-sync-check
+	$(MAKE) _internal-sync-derived-check
+
+derived-surfaces-sync:
+	$(PYTHON) -m ops.scripts.core.derived_surfaces --vault "$(VAULT)" --manifest "$(DERIVED_SURFACES_MANIFEST)" --out "$(DERIVED_SURFACES_MK_OUT)"
+
+derived-surfaces-sync-check:
+	$(PYTHON) -m ops.scripts.core.derived_surfaces --vault "$(VAULT)" --manifest "$(DERIVED_SURFACES_MANIFEST)" --out "$(DERIVED_SURFACES_MK_OUT)" --check
 
 workflow-action-pins-sync:
 	$(PYTHON) -m ops.scripts.core.workflow_action_pins --vault "$(VAULT)" --write

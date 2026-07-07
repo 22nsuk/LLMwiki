@@ -105,8 +105,9 @@ refresh tracked projections with `make sync-derived` when generated source
 surfaces are affected, then run the focused test that owns the changed surface.
 Use `make sync-derived-check` in review or CI contexts where files must not be
 rewritten. Avoid adding a one-off sync-check or literal parity assertion when
-the same currentness is already covered by the aggregate sync target, a
-generator unit test, or a declarative guard spec.
+the same currentness is already covered by the aggregate sync target,
+`ops/policies/derived-surfaces.json`, a generator unit test, or a declarative
+guard spec.
 
 ## Cost-Aware Test Use
 
@@ -144,9 +145,9 @@ so clean release runs do not replay the same expensive suite more than once.
 To avoid source-tree fingerprint loops, stabilize mutation-prone generated and
 check surfaces before refreshing expensive summaries. Finish code, docs,
 generator, policy, and schema edits first; then run `make sync-derived` when
-tracked source-derived projections should be regenerated, including pytest
-marker registration and selector projections, or `make sync-derived-check` in
-check-only contexts. Keep targeted
+tracked source-derived projections declared in
+`ops/policies/derived-surfaces.json` should be regenerated, or
+`make sync-derived-check` in check-only contexts. Keep targeted
 `generated-artifact-converge` work for release/report finality surfaces, then
 run `make static`. `test-execution-summary-full` runs
 `make full-pytest-generated-preflight` before the expensive full suite, so stale

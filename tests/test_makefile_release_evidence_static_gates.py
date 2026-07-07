@@ -14,9 +14,12 @@ from tests.makefile_static_helpers import (
     MakeTargetContract,
     _assert_assignment_values,
     _assert_make_target_contracts,
+    _assert_phony_targets,
+    _assert_text_contains_tokens,
     _makefile_text,
     _recipe_lines,
     _target_block,
+    _target_dependencies,
 )
 
 pytestmark = [
@@ -164,6 +167,442 @@ _RELEASE_EVIDENCE_COHORT_TARGET_CONTRACTS = (
     ),
 )
 
+_RELEASE_CLOSEOUT_SUMMARY_ASSIGNMENTS = (
+    (
+        "RELEASE_CLOSEOUT_SUMMARY_OUT",
+        "ops/reports/release-closeout-summary.json",
+    ),
+    (
+        "RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT",
+        "tmp/release-closeout-summary.candidate.json",
+    ),
+    ("RELEASE_CLOSEOUT_PROFILE", "base"),
+)
+
+_RELEASE_CLOSEOUT_SUMMARY_BASE_COMMAND = (
+    '$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" '
+    '--out "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" '
+    '--profile "$(RELEASE_CLOSEOUT_PROFILE)"'
+)
+
+_RELEASE_CLOSEOUT_SUMMARY_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-closeout-summary",
+        phony=True,
+        required_tokens=(
+            _RELEASE_CLOSEOUT_SUMMARY_BASE_COMMAND,
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+    MakeTargetContract(
+        "release-closeout-summary-report",
+        phony=True,
+        required_tokens=(
+            f"{_RELEASE_CLOSEOUT_SUMMARY_BASE_COMMAND} --no-fail",
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+    MakeTargetContract(
+        "release-closeout-summary-conditional",
+        phony=True,
+        required_tokens=(
+            f"{_RELEASE_CLOSEOUT_SUMMARY_BASE_COMMAND} --allow-conditional",
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+)
+
+_RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_ASSIGNMENTS = (
+    (
+        "RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_OUT",
+        "tmp/release-clean-lane-evidence-review.json",
+    ),
+)
+
+_RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-clean-lane-evidence-review",
+        phony=True,
+        required_tokens=(
+            "ops.scripts.release_clean_lane_evidence_review",
+            '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
+            '--out "$(RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_OUT)"',
+        ),
+    ),
+)
+
+_RELEASE_CLOSEOUT_MANIFEST_PHONY_TARGETS = (
+    "release-closeout-batch-manifest-promote",
+    "release-closeout-batch-manifest-verify",
+    "release-closeout-batch-manifest-replay-verify",
+    "release-closeout-finality-attestation",
+    "release-closeout-finality-verify",
+    "release-evidence-closeout-self-check",
+    "release-closeout-post-check-finalizer-dry-run",
+    "release-closeout-post-check-finalizer-ci-artifact",
+    "release-closeout-fixed-point",
+)
+
+_RELEASE_CLOSEOUT_BATCH_MANIFEST_ASSIGNMENTS = (
+    "RELEASE_CLOSEOUT_BATCH_MANIFEST_OUT ?= ops/reports/release-closeout-batch-manifest.json",
+    "RELEASE_CLOSEOUT_BATCH_MANIFEST_CANDIDATE_OUT ?= tmp/release-closeout-batch-manifest.candidate.json",
+    "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA ?=",
+    "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP ?=",
+    "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE ?= UTC",
+    "RELEASE_CLOSEOUT_FIXED_POINT_OUT ?= ops/reports/release-closeout-fixed-point.json",
+    "RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT ?= tmp/release-closeout-fixed-point.candidate.json",
+    "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_OUT ?= tmp/release-closeout-post-check-finalizer.json",
+    "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_RECOMMENDED_TARGETS_OUT ?= tmp/release-closeout-post-check-finalizer-recommended-targets.txt",
+    "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_PLAN_OUT ?= tmp/release-closeout-post-check-finalizer-plan.json",
+    "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS ?=",
+    "RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS ?= 10",
+    "RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS ?=",
+)
+
+_RELEASE_CLOSEOUT_FINALITY_ASSIGNMENTS = (
+    "OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS ?= generated-artifact-index-body artifact-freshness external-report-action-matrix release-closeout-summary-report learning-readiness-signoff-revalidation release-evidence-cohort release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger release-closeout-batch-manifest-promote release-evidence-closeout-self-check",
+    "OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS ?= jsonl-stable",
+    "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT ?= ops/reports/release-closeout-finality-attestation.json",
+    "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_CANDIDATE_OUT ?= tmp/release-closeout-finality-attestation.candidate.json",
+)
+
+_RELEASE_DISTRIBUTION_ASSIGNMENTS = (
+    "RELEASE_DISTRIBUTION_ZIP_OUT ?= build/release/LLMwiki-source.zip",
+    "RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= build/release/release-distribution-zip-smoke.json",
+    "RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?=",
+    "RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?=",
+    "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
+    "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json",
+    "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
+    "RELEASE_AUDIT_PACK_OUT ?= build/release/release-audit-pack.zip",
+    "RELEASE_AUDIT_PACK_INCLUDE_OPTIONAL_PAYLOADS ?=",
+    "RELEASE_POST_SEAL_ATTESTATION_OUT ?= build/release/release-post-seal-attestation.json",
+    "RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP ?= $(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)",
+    "RELEASE_POST_SEAL_ATTESTATION_SELF_CHECK ?=",
+)
+
+_RELEASE_CLOSEOUT_ASSIGNMENT_SURFACES = {
+    "release_closeout_batch_manifest": _RELEASE_CLOSEOUT_BATCH_MANIFEST_ASSIGNMENTS,
+    "release_closeout_finality": _RELEASE_CLOSEOUT_FINALITY_ASSIGNMENTS,
+    "release_distribution": _RELEASE_DISTRIBUTION_ASSIGNMENTS,
+}
+
+_EXTERNAL_REPORT_RELEASE_BASIS_PHONY_TARGETS = (
+    "external-report-reference-manifest-strict",
+    "external-report-reference-manifest-release-check",
+    "external-report-reference-manifest-settle",
+    "external-report-action-matrix",
+    "github-governance-live-drift",
+    "github-governance-live-drift-check",
+    "collaboration-governance",
+    "external-report-lifecycle-refresh",
+)
+
+_EXTERNAL_REPORT_RELEASE_BASIS_ASSIGNMENTS = (
+    "EXTERNAL_REPORT_REVIEW_BASIS_ZIP_NAME ?=",
+    "EXTERNAL_REPORT_REVIEW_BASIS_ZIP_SHA256 ?=",
+    "EXTERNAL_REPORT_REVIEW_BASIS_ZIP_ENTRY_COUNT ?=",
+    "EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH ?=",
+    "EXTERNAL_REPORT_BASIS_ZIP_PATH ?=",
+    "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_NAME =",
+    "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_SHA256 =",
+    "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT =",
+    "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH =",
+    "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
+    "GITHUB_GOVERNANCE_LIVE_INPUT ?= build/release/github-governance-live-input.json",
+    "GITHUB_GOVERNANCE_LIVE_DRIFT_OUT ?= ops/reports/github-governance-live-drift.json",
+    "GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT ?= tmp/github-governance-live-drift-check.json",
+)
+
+_EXTERNAL_REPORT_RELEASE_BASIS_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "external-report-reference-manifest",
+        required_tokens=(
+            "ops.scripts.external_report_reference_manifest",
+            '--mode "$(EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE)"',
+            "--basis-zip-name",
+            "--basis-zip-sha256",
+            "--basis-zip-entry-count",
+            "--basis-zip-path",
+            "--current-distribution-zip-path",
+        ),
+    ),
+    MakeTargetContract(
+        "external-report-reference-manifest-strict",
+        required_tokens=(
+            "ops.scripts.external_report_reference_manifest",
+            "--mode strict_review_release",
+            "--basis-zip-path",
+            "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH)",
+            "$(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH)",
+            "--current-distribution-zip-path",
+        ),
+    ),
+    MakeTargetContract(
+        "external-report-reference-manifest-release-check",
+        required_tokens=(
+            "external-report-reference-manifest-strict",
+            "external-report-reference-manifest EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE=advisory",
+        ),
+    ),
+    MakeTargetContract(
+        "external-report-reference-manifest-settle",
+        required_tokens=(
+            "RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP",
+            'EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            'EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+        ),
+    ),
+    MakeTargetContract(
+        "external-report-action-matrix",
+        required_tokens=(
+            "ops.scripts.external_report_action_matrix",
+            '--out "$(EXTERNAL_REPORT_ACTION_MATRIX_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "github-governance-live-drift",
+        required_tokens=(
+            "ops.scripts.release.github_governance_live_drift",
+            '--live-input "$(GITHUB_GOVERNANCE_LIVE_INPUT)"',
+            '--out "$(GITHUB_GOVERNANCE_LIVE_DRIFT_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "github-governance-live-drift-check",
+        required_tokens=(
+            "ops.scripts.release.github_governance_live_drift",
+            '--live-input "$(GITHUB_GOVERNANCE_LIVE_INPUT)"',
+            '--out "$(GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "collaboration-governance",
+        required_tokens=("github-governance-live-drift",),
+    ),
+    MakeTargetContract(
+        "external-report-lifecycle-refresh",
+        exact_recipe=(
+            "$(MAKE) external-report-reference-manifest-settle",
+            "$(MAKE) generated-artifact-converge",
+            "$(MAKE) release-closeout-summary-report",
+            "$(MAKE) release-evidence-cohort",
+            "$(MAKE) release-evidence-dashboard-report",
+        ),
+    ),
+)
+
+_SEALED_RELEASE_CLOSEOUT_PHONY_TARGETS = (
+    "release-distribution-zip",
+    "release-evidence-closeout-sealed",
+    "release-evidence-closeout-sealed-core-sidecars",
+    "release-evidence-closeout-sealed-sidecars",
+    "release-sealed-post-seal-attestation",
+    "release-evidence-closeout-sealed-check",
+    "release-evidence-closeout-sealed-dry-run",
+    "release-evidence-closeout-sealed-dry-run-check",
+    "release-authority-sealed-preflight",
+    "release-post-seal-attestation",
+)
+
+_SEALED_RELEASE_CLOSEOUT_ASSIGNMENTS = (
+    "RELEASE_CLOSEOUT_SEALED_DRY_RUN_ROOT ?= build/release/release-closeout-sealed-dry-run",
+    "RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS ?= --no-fail",
+    "RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT ?= build/release/external-report-reference-manifest.json",
+    "RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT ?= build/release/release-closeout-batch-manifest.json",
+    "RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT ?= build/release/release-evidence-closeout-self-check.json",
+    "RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT ?= build/release/operator-release-summary.json",
+    "RELEASE_AUTO_PROMOTION_OPERATOR_SUMMARY_OUT ?= $(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)",
+    "RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT ?= build/release/release-sealed-post-seal-attestation.json",
+    "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST ?= build/release/release-closeout-batch-manifest.json",
+    "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST ?= build/release/external-report-reference-manifest.json",
+)
+
+_SEALED_RELEASE_CLOSEOUT_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-distribution-zip",
+        required_tokens=(
+            "ops.scripts.release.release_smoke",
+            "--profile fast",
+            '--archive-out "$(RELEASE_DISTRIBUTION_ZIP_OUT)"',
+            '--out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-evidence-closeout-sealed",
+        exact_recipe=(
+            "$(MAKE) release-worktree-clean-check",
+            "$(MAKE) release-package-current",
+            "$(MAKE) release-seal-current",
+        ),
+        forbidden_tokens=("$(MAKE) release-evidence-converge", "release-sealed-verify"),
+    ),
+    MakeTargetContract(
+        "release-evidence-closeout-sealed-core-sidecars",
+        required_tokens=(
+            "ops.scripts.external_report_reference_manifest",
+            '--out "$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"',
+            "--mode strict_review_release",
+            '--current-distribution-zip-path "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+            "ops.scripts.release_closeout_batch_manifest",
+            '--out "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
+            '--zip-metadata "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+            "ops.scripts.release_evidence_closeout_self_check",
+            '--out "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',
+            "$(MAKE) tmp-json-clean",
+        ),
+    ),
+    MakeTargetContract(
+        "release-evidence-closeout-sealed-sidecars",
+        required_tokens=(
+            "$(MAKE) release-evidence-closeout-sealed-core-sidecars",
+            "ops.scripts.operator_release_summary",
+            '--out "$(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)"',
+            '--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
+            '--self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-sealed-post-seal-attestation",
+        required_tokens=(
+            "ops.scripts.release_sealed_post_seal_attestation",
+            '--out "$(RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT)"',
+            '--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"',
+            '--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
+            '--external-manifest "$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"',
+            '--self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-evidence-closeout-sealed-check",
+        required_tokens=(
+            "ops.scripts.release_closeout_sealed_rehearsal_check",
+            '--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST)"',
+            '--external-manifest "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST)"',
+            '--out "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-evidence-closeout-sealed-dry-run",
+        required_tokens=(
+            'RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_DISTRIBUTION_ZIP)"',
+            "ops.scripts.external_report_reference_manifest",
+            '--out "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_EXTERNAL_MANIFEST_OUT)"',
+            "--mode strict_review_release",
+            "ops.scripts.release_closeout_batch_manifest",
+            '--out "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_BATCH_MANIFEST_OUT)"',
+            "ops.scripts.release_closeout_sealed_rehearsal_check",
+            '--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_BATCH_MANIFEST_OUT)"',
+            '--external-manifest "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_EXTERNAL_MANIFEST_OUT)"',
+            "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS)",
+        ),
+    ),
+    MakeTargetContract(
+        "release-evidence-closeout-sealed-dry-run-check",
+        required_tokens=("RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS=",),
+    ),
+    MakeTargetContract(
+        "release-authority-sealed-preflight",
+        required_tokens=(
+            "RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS=--allow-blocked-preflight",
+            "ops.scripts.canonical_artifact_promote",
+            '--candidate "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_OUT)"',
+            '--out "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT)"',
+        ),
+    ),
+)
+
+_BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-closeout-batch-manifest-promote",
+        required_tokens=(
+            "ops.scripts.release_closeout_batch_manifest",
+            '--out "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_CANDIDATE_OUT)"',
+            '--zip-metadata "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)"',
+            '--distribution-zip "$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)"',
+            "ops.scripts.canonical_artifact_promote",
+        ),
+    ),
+    MakeTargetContract(
+        "release-closeout-batch-manifest-replay-verify",
+        required_tokens=(
+            "release-closeout-batch-manifest-replay-verify requires a clean tmp workspace",
+            "find tmp -mindepth 1 -type f",
+            "ops.scripts.release_closeout_batch_manifest",
+            "--check",
+            '--zip-metadata "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)"',
+            '--distribution-zip "$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)"',
+        ),
+    ),
+    MakeTargetContract(
+        "release-closeout-fixed-point",
+        required_tokens=(
+            "ops.scripts.release_closeout_fixed_point",
+            '--out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)"',
+            "--schema ops/schemas/release-closeout-fixed-point.schema.json",
+            "--bootstrap-post-promote",
+            '--initial-target "$(target)"',
+            "--baseline-before-first-iteration",
+            "$(MAKE) external-report-action-matrix",
+            "$(MAKE) release-closeout-finality-attestation",
+        ),
+    ),
+    MakeTargetContract(
+        "release-closeout-post-check-finalizer-dry-run",
+        required_tokens=(
+            '--dry-run --out "$(RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_OUT)"',
+            "$(RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS)",
+        ),
+    ),
+    MakeTargetContract(
+        "release-closeout-post-check-finalizer-ci-artifact",
+        required_tokens=("--recommended-targets-out", "--plan-out"),
+    ),
+    MakeTargetContract(
+        "release-closeout-finality-attestation",
+        required_tokens=(
+            "ops.scripts.release_closeout_finality_attestation",
+            "--schema ops/schemas/release-closeout-finality-attestation.schema.json",
+        ),
+    ),
+    MakeTargetContract(
+        "release-closeout-finality-verify",
+        required_tokens=("--verify",),
+    ),
+    MakeTargetContract(
+        "release-evidence-closeout-self-check",
+        required_tokens=(
+            "ops.scripts.release_evidence_closeout_self_check",
+            '--batch-manifest "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_OUT)"',
+            '--out "$(RELEASE_EVIDENCE_CLOSEOUT_SELF_CHECK_OUT)"',
+        ),
+    ),
+)
+
+_RELEASE_AUDIT_AND_POST_SEAL_TARGET_CONTRACTS = (
+    MakeTargetContract(
+        "release-audit-pack",
+        phony=True,
+        required_tokens=(
+            "ops.scripts.release_audit_pack",
+            '--batch-manifest "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_OUT)"',
+            '--out "$(RELEASE_AUDIT_PACK_OUT)"',
+            "--include-optional-payloads",
+        ),
+    ),
+    MakeTargetContract(
+        "release-post-seal-attestation",
+        required_tokens=(
+            "ops.scripts.release_post_seal_attestation build",
+            '--out "$(RELEASE_POST_SEAL_ATTESTATION_OUT)"',
+            "--source-zip-path",
+            "--batch-manifest-path",
+            "--self-check-path",
+            "--operator-summary-path",
+        ),
+    ),
+)
+
 
 def _release_evidence_converge_expanded_recipe_lines(text: str) -> list[str]:
     return [
@@ -173,83 +612,28 @@ def _release_evidence_converge_expanded_recipe_lines(text: str) -> list[str]:
     ]
 
 
+def _assert_surface_tokens(
+    case: unittest.TestCase,
+    text: str,
+    surfaces: dict[str, tuple[str, ...]],
+) -> None:
+    for surface, tokens in surfaces.items():
+        _assert_text_contains_tokens(case, text, tokens, surface=surface)
+
+
 def _assert_release_closeout_manifest_phony_and_vars(case: unittest.TestCase, text: str) -> None:
-    phony = _target_block(text, ".PHONY")
-    for target in (
-        "release-closeout-batch-manifest-promote",
-        "release-closeout-batch-manifest-verify",
-        "release-closeout-batch-manifest-replay-verify",
-        "release-closeout-finality-attestation",
-        "release-closeout-finality-verify",
-        "release-evidence-closeout-self-check",
-        "release-closeout-post-check-finalizer-dry-run",
-        "release-closeout-post-check-finalizer-ci-artifact",
-        "release-closeout-fixed-point",
-    ):
-        case.assertIn(target, phony)
-    for assignment in (
-        "RELEASE_CLOSEOUT_BATCH_MANIFEST_OUT ?= ops/reports/release-closeout-batch-manifest.json",
-        "RELEASE_CLOSEOUT_BATCH_MANIFEST_CANDIDATE_OUT ?= tmp/release-closeout-batch-manifest.candidate.json",
-        "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA ?=",
-        "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP ?=",
-        "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE ?= UTC",
-        "RELEASE_CLOSEOUT_FIXED_POINT_OUT ?= ops/reports/release-closeout-fixed-point.json",
-        "RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT ?= tmp/release-closeout-fixed-point.candidate.json",
-        "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_OUT ?= tmp/release-closeout-post-check-finalizer.json",
-        "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_RECOMMENDED_TARGETS_OUT ?= tmp/release-closeout-post-check-finalizer-recommended-targets.txt",
-        "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_PLAN_OUT ?= tmp/release-closeout-post-check-finalizer-plan.json",
-        "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS ?=",
-        "RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS ?= 10",
-        "RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS ?=",
-        "OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS ?= generated-artifact-index-body artifact-freshness external-report-action-matrix release-closeout-summary-report learning-readiness-signoff-revalidation release-evidence-cohort release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger release-closeout-batch-manifest-promote release-evidence-closeout-self-check",
-        "OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS ?= jsonl-stable",
-        "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT ?= ops/reports/release-closeout-finality-attestation.json",
-        "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_CANDIDATE_OUT ?= tmp/release-closeout-finality-attestation.candidate.json",
-        "RELEASE_DISTRIBUTION_ZIP_OUT ?= build/release/LLMwiki-source.zip",
-        "RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= build/release/release-distribution-zip-smoke.json",
-        "RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?=",
-        "RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?=",
-        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
-        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json",
-        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
-        "RELEASE_AUDIT_PACK_OUT ?= build/release/release-audit-pack.zip",
-        "RELEASE_AUDIT_PACK_INCLUDE_OPTIONAL_PAYLOADS ?=",
-        "RELEASE_POST_SEAL_ATTESTATION_OUT ?= build/release/release-post-seal-attestation.json",
-        "RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP ?= $(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)",
-        "RELEASE_POST_SEAL_ATTESTATION_SELF_CHECK ?=",
-    ):
-        case.assertIn(assignment, text)
+    _assert_phony_targets(case, text, _RELEASE_CLOSEOUT_MANIFEST_PHONY_TARGETS)
+    _assert_surface_tokens(case, text, _RELEASE_CLOSEOUT_ASSIGNMENT_SURFACES)
 
 
 def _assert_external_report_release_basis_targets(case: unittest.TestCase, text: str) -> None:
-    phony = _target_block(text, ".PHONY")
-    for target in (
-        "external-report-reference-manifest-strict",
-        "external-report-reference-manifest-release-check",
-        "external-report-reference-manifest-settle",
-        "external-report-action-matrix",
-        "github-governance-live-drift",
-        "github-governance-live-drift-check",
-        "collaboration-governance",
-        "external-report-lifecycle-refresh",
-    ):
-        case.assertIn(target, phony)
-    for assignment in (
-        "EXTERNAL_REPORT_REVIEW_BASIS_ZIP_NAME ?=",
-        "EXTERNAL_REPORT_REVIEW_BASIS_ZIP_SHA256 ?=",
-        "EXTERNAL_REPORT_REVIEW_BASIS_ZIP_ENTRY_COUNT ?=",
-        "EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH ?=",
-        "EXTERNAL_REPORT_BASIS_ZIP_PATH ?=",
-        "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_NAME =",
-        "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_SHA256 =",
-        "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT =",
-        "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH =",
-        "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
-        "GITHUB_GOVERNANCE_LIVE_INPUT ?= build/release/github-governance-live-input.json",
-        "GITHUB_GOVERNANCE_LIVE_DRIFT_OUT ?= ops/reports/github-governance-live-drift.json",
-        "GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT ?= tmp/github-governance-live-drift-check.json",
-    ):
-        case.assertIn(assignment, text)
+    _assert_phony_targets(case, text, _EXTERNAL_REPORT_RELEASE_BASIS_PHONY_TARGETS)
+    _assert_text_contains_tokens(
+        case,
+        text,
+        _EXTERNAL_REPORT_RELEASE_BASIS_ASSIGNMENTS,
+        surface="external_report_release_basis",
+    )
     case.assertNotIn(
         "0a547950871ebd749bf6523cbc1d1a33a58a793168f3b6514b26a8b796869c93", text
     )
@@ -257,185 +641,31 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
         "EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT = $(if $(EXTERNAL_REPORT_REVIEW_BASIS_ZIP_ENTRY_COUNT),$(EXTERNAL_REPORT_REVIEW_BASIS_ZIP_ENTRY_COUNT),$(if $(EXTERNAL_REPORT_BASIS_ZIP_ENTRY_COUNT),$(EXTERNAL_REPORT_BASIS_ZIP_ENTRY_COUNT),1819))",
         text,
     )
-    case.assertIn(
-        '$(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_NAME),--basis-zip-name "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_NAME)",)',
-        _target_block(text, "external-report-reference-manifest"),
+    _assert_make_target_contracts(
+        case,
+        text,
+        _EXTERNAL_REPORT_RELEASE_BASIS_TARGET_CONTRACTS,
     )
-    strict_block = _target_block(text, "external-report-reference-manifest-strict")
-    for needle in (
-        '--basis-zip-path "$(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH),$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_PATH),$(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH))"',
-        "--mode strict_review_release",
-        '$(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_NAME),--basis-zip-name "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_NAME)",)',
-        '$(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_SHA256),--basis-zip-sha256 "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_SHA256)",)',
-        '$(if $(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT),--basis-zip-entry-count "$(EXTERNAL_REPORT_EFFECTIVE_REVIEW_BASIS_ZIP_ENTRY_COUNT)",)',
-        '--current-distribution-zip-path "$(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH)"',
-    ):
-        case.assertIn(needle, strict_block)
-    release_check_block = _target_block(text, "external-report-reference-manifest-release-check")
-    case.assertIn("external-report-reference-manifest-strict", release_check_block)
-    case.assertIn("EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE=advisory", release_check_block)
     settle_block = _target_block(text, "external-report-reference-manifest-settle")
-    case.assertIn("RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP", settle_block)
-    case.assertIn(
-        'EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-        settle_block,
-    )
-    case.assertIn(
-        'EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-        settle_block,
-    )
     case.assertGreaterEqual(
         settle_block.count("external-report-reference-manifest-release-check"),
         2,
     )
-    case.assertIn(
-        '$(PYTHON) -m ops.scripts.external_report_action_matrix --vault "$(VAULT)" --out "$(EXTERNAL_REPORT_ACTION_MATRIX_OUT)"',
-        _target_block(text, "external-report-action-matrix"),
-    )
-    case.assertIn(
-        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.release.github_governance_live_drift --vault "$(VAULT)" --live-input "$(GITHUB_GOVERNANCE_LIVE_INPUT)" --out "$(GITHUB_GOVERNANCE_LIVE_DRIFT_OUT)"',
-        _target_block(text, "github-governance-live-drift"),
-    )
-    case.assertIn(
-        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.release.github_governance_live_drift --vault "$(VAULT)" --live-input "$(GITHUB_GOVERNANCE_LIVE_INPUT)" --out "$(GITHUB_GOVERNANCE_LIVE_DRIFT_CHECK_OUT)"',
-        _target_block(text, "github-governance-live-drift-check"),
-    )
-    case.assertIn("collaboration-governance: github-governance-live-drift", text)
-    case.assertEqual(
-        _recipe_lines(text, "external-report-lifecycle-refresh"),
-        [
-            "$(MAKE) external-report-reference-manifest-settle",
-            "$(MAKE) generated-artifact-converge",
-            "$(MAKE) release-closeout-summary-report",
-            "$(MAKE) release-evidence-cohort",
-            "$(MAKE) release-evidence-dashboard-report",
-        ],
-    )
 
 
 def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) -> None:
-    phony = _target_block(text, ".PHONY")
-    for target in (
-        "release-distribution-zip",
-        "release-evidence-closeout-sealed",
-        "release-evidence-closeout-sealed-core-sidecars",
-        "release-evidence-closeout-sealed-sidecars",
-        "release-sealed-post-seal-attestation",
-        "release-evidence-closeout-sealed-check",
-        "release-evidence-closeout-sealed-dry-run",
-        "release-evidence-closeout-sealed-dry-run-check",
-        "release-authority-sealed-preflight",
-        "release-post-seal-attestation",
-    ):
-        case.assertIn(target, phony)
-    case.assertIn(
-        "RELEASE_CLOSEOUT_SEALED_DRY_RUN_ROOT ?= build/release/release-closeout-sealed-dry-run",
+    _assert_phony_targets(case, text, _SEALED_RELEASE_CLOSEOUT_PHONY_TARGETS)
+    _assert_text_contains_tokens(
+        case,
         text,
+        _SEALED_RELEASE_CLOSEOUT_ASSIGNMENTS,
+        surface="sealed_release_closeout",
     )
-    case.assertIn("RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS ?= --no-fail", text)
-    for assignment in (
-        "RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT ?= build/release/external-report-reference-manifest.json",
-        "RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT ?= build/release/release-closeout-batch-manifest.json",
-        "RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT ?= build/release/release-evidence-closeout-self-check.json",
-        "RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT ?= build/release/operator-release-summary.json",
-        "RELEASE_AUTO_PROMOTION_OPERATOR_SUMMARY_OUT ?= $(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)",
-        "RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT ?= build/release/release-sealed-post-seal-attestation.json",
-        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST ?= build/release/release-closeout-batch-manifest.json",
-        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST ?= build/release/external-report-reference-manifest.json",
-    ):
-        case.assertIn(assignment, text)
-    case.assertIn(
-        '$(PYTHON) -m ops.scripts.release.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_DISTRIBUTION_ZIP_OUT)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"',
-        _target_block(text, "release-distribution-zip"),
-    )
-    sealed_block = _target_block(text, "release-evidence-closeout-sealed")
-    for needle in (
-        "$(MAKE) release-worktree-clean-check",
-        "$(MAKE) release-package-current",
-        "$(MAKE) release-seal-current",
-    ):
-        case.assertIn(needle, sealed_block)
-    case.assertNotIn("$(MAKE) release-evidence-converge", sealed_block)
-    case.assertNotIn("release-sealed-verify", sealed_block)
-    sealed_core_sidecars_block = _target_block(text, "release-evidence-closeout-sealed-core-sidecars")
-    for needle in (
-        '--out "$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"',
-        "--mode strict_review_release",
-        '--current-distribution-zip-path "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
-        '--out "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
-        '--zip-metadata "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
-        "ops.scripts.release_evidence_closeout_self_check",
-        '--out "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',
-        "$(MAKE) tmp-json-clean",
-    ):
-        case.assertIn(needle, sealed_core_sidecars_block)
-    sealed_sidecars_block = _target_block(text, "release-evidence-closeout-sealed-sidecars")
-    for needle in (
-        "$(MAKE) release-evidence-closeout-sealed-core-sidecars",
-        "ops.scripts.operator_release_summary",
-        '--out "$(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)"',
-        '--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
-        '--self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',
-    ):
-        case.assertIn(needle, sealed_sidecars_block)
-    sealed_attestation_block = _target_block(text, "release-sealed-post-seal-attestation")
-    case.assertIn("ops.scripts.release_sealed_post_seal_attestation", sealed_attestation_block)
-    case.assertIn('--out "$(RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT)"', sealed_attestation_block)
-    case.assertIn('--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"', sealed_attestation_block)
-    sealed_verify_block = _target_block(text, "release-sealed-verify")
-    case.assertIn("$(MAKE) release-verify-current", sealed_verify_block)
-    case.assertIn("$(MAKE) release-evidence-closeout-sealed-check", sealed_verify_block)
-    sealed_check_block = _target_block(text, "release-evidence-closeout-sealed-check")
-    case.assertIn("ops.scripts.release_closeout_sealed_rehearsal_check", sealed_check_block)
-    case.assertIn('--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST)"', sealed_check_block)
-    case.assertIn('--external-manifest "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST)"', sealed_check_block)
-    sealed_dry_run = _target_block(text, "release-evidence-closeout-sealed-dry-run")
-    for needle in (
-        'RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_DISTRIBUTION_ZIP)"',
-        '--out "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_EXTERNAL_MANIFEST_OUT)"',
-        "--mode strict_review_release",
-        '--out "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_BATCH_MANIFEST_OUT)"',
-        '--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_BATCH_MANIFEST_OUT)"',
-        '--external-manifest "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_EXTERNAL_MANIFEST_OUT)"',
-        "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS)",
-    ):
-        case.assertIn(needle, sealed_dry_run)
-    case.assertIn(
-        "RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS=",
-        _target_block(text, "release-evidence-closeout-sealed-dry-run-check"),
-    )
-    case.assertIn(
-        "RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS=--allow-blocked-preflight",
-        _target_block(text, "release-authority-sealed-preflight"),
-    )
-    case.assertIn(
-        "--candidate \"$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_OUT)\" --out \"$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT)\"",
-        _target_block(text, "release-authority-sealed-preflight"),
-    )
+    _assert_make_target_contracts(case, text, _SEALED_RELEASE_CLOSEOUT_TARGET_CONTRACTS)
 
 
 def _assert_batch_manifest_closeout_recipe_targets(case: unittest.TestCase, text: str) -> None:
-    batch_promote = _target_block(text, "release-closeout-batch-manifest-promote")
-    case.assertIn(
-        '$(PYTHON) -m ops.scripts.release_closeout_batch_manifest --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_CANDIDATE_OUT)" $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--zip-metadata "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)" --zip-timestamp-timezone "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--distribution-zip "$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)',
-        batch_promote,
-    )
-    case.assertIn("ops.scripts.canonical_artifact_promote", batch_promote)
-    case.assertIn(
-        '$(PYTHON) -m ops.scripts.release_closeout_batch_manifest --vault "$(VAULT)" --check $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--zip-metadata "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)" --zip-timestamp-timezone "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--distribution-zip "$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)',
-        _target_block(text, "release-closeout-batch-manifest-replay-verify"),
-    )
-    fixed_point = _target_block(text, "release-closeout-fixed-point")
-    for needle in (
-        '$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --max-iterations "$(RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS)"',
-        "--schema ops/schemas/release-closeout-fixed-point.schema.json",
-        "--bootstrap-post-promote",
-        '--initial-target "$(target)"',
-        "--baseline-before-first-iteration",
-        "$(MAKE) external-report-action-matrix",
-        "$(MAKE) release-closeout-finality-attestation",
-    ):
-        case.assertIn(needle, fixed_point)
+    _assert_make_target_contracts(case, text, _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS)
     fixed_point_lines = _recipe_lines(text, "release-closeout-fixed-point")
     bootstrap_index = next(
         index
@@ -448,38 +678,10 @@ def _assert_batch_manifest_closeout_recipe_targets(case: unittest.TestCase, text
     )
     case.assertLess(bootstrap_index, matrix_index)
     case.assertLess(matrix_index, attestation_index)
-    post_check_dry_run = _target_block(text, "release-closeout-post-check-finalizer-dry-run")
-    case.assertIn('--dry-run --out "$(RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_OUT)"', post_check_dry_run)
-    case.assertIn("$(RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS)", post_check_dry_run)
-    post_check_artifact = _target_block(text, "release-closeout-post-check-finalizer-ci-artifact")
-    case.assertIn("--recommended-targets-out", post_check_artifact)
-    case.assertIn("--plan-out", post_check_artifact)
-    finality = _target_block(text, "release-closeout-finality-attestation")
-    case.assertIn("ops.scripts.release_closeout_finality_attestation", finality)
-    case.assertIn("--schema ops/schemas/release-closeout-finality-attestation.schema.json", finality)
-    case.assertIn("--verify", _target_block(text, "release-closeout-finality-verify"))
-    self_check = _target_block(text, "release-evidence-closeout-self-check")
-    for needle in (
-        "$(PYTHON) -m ops.scripts.release_evidence_closeout_self_check",
-        '--batch-manifest "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_OUT)"',
-        '--out "$(RELEASE_EVIDENCE_CLOSEOUT_SELF_CHECK_OUT)"',
-    ):
-        case.assertIn(needle, self_check)
 
 
 def _assert_release_audit_and_post_seal_targets(case: unittest.TestCase, text: str) -> None:
-    phony = _target_block(text, ".PHONY")
-    case.assertIn("release-audit-pack", phony)
-    audit_pack = _target_block(text, "release-audit-pack")
-    case.assertIn("ops.scripts.release_audit_pack", audit_pack)
-    case.assertIn(
-        "$(if $(RELEASE_AUDIT_PACK_INCLUDE_OPTIONAL_PAYLOADS),--include-optional-payloads,)",
-        audit_pack,
-    )
-    case.assertIn(
-        '$(PYTHON) -m ops.scripts.release_post_seal_attestation build --vault "$(VAULT)" --out "$(RELEASE_POST_SEAL_ATTESTATION_OUT)" $(if $(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP),--source-zip-path "$(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST),--batch-manifest-path "$(RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_SELF_CHECK),--self-check-path "$(RELEASE_POST_SEAL_ATTESTATION_SELF_CHECK)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY),--operator-summary-path "$(RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY)",)',
-        _target_block(text, "release-post-seal-attestation"),
-    )
+    _assert_make_target_contracts(case, text, _RELEASE_AUDIT_AND_POST_SEAL_TARGET_CONTRACTS)
     case.assertEqual(
         _target_block(text, "release-post-seal-attestation").splitlines()[0],
         "release-post-seal-attestation:",
@@ -500,23 +702,11 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
     ) -> None:
         text = _makefile_text()
 
-        self.assertIn("release-closeout-summary", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "RELEASE_CLOSEOUT_SUMMARY_OUT ?= ops/reports/release-closeout-summary.json",
+        _assert_assignment_values(self, text, _RELEASE_CLOSEOUT_SUMMARY_ASSIGNMENTS)
+        _assert_make_target_contracts(
+            self,
             text,
-        )
-        self.assertIn(
-            "RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT ?= tmp/release-closeout-summary.candidate.json",
-            text,
-        )
-        self.assertIn("RELEASE_CLOSEOUT_PROFILE ?= base", text)
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)"',
-            _target_block(text, "release-closeout-summary"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-closeout-summary"),
+            (_RELEASE_CLOSEOUT_SUMMARY_TARGET_CONTRACTS[0],),
         )
 
     def test_head_aligned_evidence_converge_aliases_post_commit_check_only_finalizer(
@@ -524,19 +714,27 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
     ) -> None:
         text = _makefile_text()
 
-        self.assertIn("head-aligned-evidence-converge", _target_block(text, ".PHONY"))
-        alias_block = _target_block(text, "head-aligned-evidence-converge")
-        self.assertTrue(
-            alias_block.startswith(
-                "head-aligned-evidence-converge: release-post-commit-finalize"
-            )
+        _assert_make_target_contracts(
+            self,
+            text,
+            (
+                MakeTargetContract(
+                    "head-aligned-evidence-converge",
+                    phony=True,
+                    required_tokens=(
+                        "compatibility alias",
+                        "release-post-commit-finalize",
+                    ),
+                ),
+            ),
         )
         self.assertEqual(
-            _recipe_lines(text, "head-aligned-evidence-converge"),
-            [
-                '@echo "head-aligned-evidence-converge is a compatibility alias; prefer release-post-commit-finalize."',
-            ],
+            _target_dependencies(text, "head-aligned-evidence-converge"),
+            ("release-post-commit-finalize",),
         )
+        alias_lines = _recipe_lines(text, "head-aligned-evidence-converge")
+        self.assertEqual(len(alias_lines), 1)
+        self.assertTrue(alias_lines[0].startswith("@echo "))
         finalizer_lines = _recipe_lines(text, "release-post-commit-finalize")
         forbidden_default_refreshes = {
             "$(MAKE) release-evidence-converge",
@@ -555,25 +753,10 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
     def test_release_closeout_summary_report_target_is_write_only(self) -> None:
         text = _makefile_text()
 
-        self.assertIn("release-closeout-summary-report", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "release-closeout-summary-conditional", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --no-fail',
-            _target_block(text, "release-closeout-summary-report"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-closeout-summary-report"),
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --allow-conditional',
-            _target_block(text, "release-closeout-summary-conditional"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "release-closeout-summary-conditional"),
+        _assert_make_target_contracts(
+            self,
+            text,
+            _RELEASE_CLOSEOUT_SUMMARY_TARGET_CONTRACTS[1:],
         )
 
     def test_release_freshness_sensitive_evidence_refresh_avoids_goal_status_publish(
@@ -622,20 +805,37 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
 
     def test_freshness_source_identity_converge_stays_narrow(self) -> None:
         text = _makefile_text()
-        phony = _target_block(text, ".PHONY")
         target_block = _target_block(text, "freshness-source-identity-converge")
         owner_target_block = _target_block(text, "freshness-owner-route-converge")
 
-        self.assertIn("freshness-owner-route-converge", phony)
-        self.assertIn("freshness-source-identity-converge", phony)
+        _assert_make_target_contracts(
+            self,
+            text,
+            (
+                MakeTargetContract(
+                    "freshness-owner-route-converge",
+                    phony=True,
+                    required_tokens=(
+                        "ops.scripts.release.freshness_owner_route_converge",
+                        '--vault "$(VAULT)"',
+                        '--make "$(MAKE)"',
+                        "--python $(PYTHON)",
+                        '--plan-out "$(FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT)"',
+                    ),
+                ),
+                MakeTargetContract(
+                    "freshness-source-identity-converge",
+                    phony=True,
+                    required_tokens=("freshness-owner-route-converge",),
+                ),
+            ),
+        )
+        self.assertEqual(len(_recipe_lines(text, "freshness-owner-route-converge")), 1)
         self.assertEqual(
-            _recipe_lines(text, "freshness-owner-route-converge"),
-            [
-                '$(PYTHON) -m ops.scripts.release.freshness_owner_route_converge --vault "$(VAULT)" --make "$(MAKE)" --python $(PYTHON) --plan-out "$(FRESHNESS_OWNER_ROUTE_CONVERGE_PLAN_OUT)"',
-            ],
+            _target_dependencies(text, "freshness-source-identity-converge"),
+            ("freshness-owner-route-converge",),
         )
         self.assertEqual(_recipe_lines(text, "freshness-source-identity-converge"), [])
-        self.assertIn("freshness-owner-route-converge", target_block)
         for forbidden_target in (
             "$(MAKE) test-execution-summary-full-current-or-refresh",
             "$(MAKE) test-execution-summary-full-refresh",
@@ -690,15 +890,16 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
     def test_release_clean_lane_evidence_review_target_exists(self) -> None:
         text = _makefile_text()
 
-        self.assertIn("release-clean-lane-evidence-review", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_OUT ?= tmp/release-clean-lane-evidence-review.json",
+        _assert_assignment_values(
+            self,
             text,
+            _RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_ASSIGNMENTS,
         )
-        block = _target_block(text, "release-clean-lane-evidence-review")
-        self.assertIn("ops.scripts.release_clean_lane_evidence_review", block)
-        self.assertIn('--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"', block)
-        self.assertIn('--out "$(RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_OUT)"', block)
+        _assert_make_target_contracts(
+            self,
+            text,
+            _RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_TARGET_CONTRACTS,
+        )
 
     def test_release_closeout_batch_manifest_target_uses_candidate_promote_pattern(
         self,

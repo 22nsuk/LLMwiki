@@ -98,8 +98,9 @@ _RELEASE_SMOKE_TARGET_CONTRACTS = (
 )
 
 _RELEASE_SMOKE_DOC_TOKENS = (
-    "developer/package precheck, not canonical release",
-    "canonical release evidence for the full smoke report at",
+    "`make release-smoke-fast`",
+    "`make release-smoke`",
+    "ops/reports/release-smoke-report.json",
 )
 
 

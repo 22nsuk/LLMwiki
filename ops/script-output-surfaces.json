@@ -144,6 +144,17 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
+      "path": "ops/scripts/core/derived_surfaces.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/core/executor.py",
       "classification": "no_output",
       "output_options": [],

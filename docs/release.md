@@ -707,10 +707,9 @@ fingerprints, accepted risk, gate attention, or learning blockers.
 
   1. Finish all source, code, documentation, policy, schema, fixture, and test
      edits.
-  2. Refresh tracked source-derived projections with `make sync-derived` when
-     marker, selector, public policy, script surface, governance, workflow
-     order, Make inventory, action-pin, or schema sample projections are
-     affected. In check-only contexts, use `make sync-derived-check`.
+  2. Refresh tracked source-derived projections with `make sync-derived` when a
+     surface declared in `ops/policies/derived-surfaces.json` is affected. In
+     check-only contexts, use `make sync-derived-check`.
   3. Validate the changed surface with its focused owner test. Direct
      `script-output-surfaces*` or `report-schema-samples*` targets are narrow
      repair/debug slices; the routine closeout path is the aggregate sync target

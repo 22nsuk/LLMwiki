@@ -359,6 +359,15 @@
       "replacement": "make compatibility-alias-deprecation"
     },
     {
+      "canonical_module": "ops.scripts.core.derived_surfaces",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make derived-surfaces-sync"
+    },
+    {
       "canonical_module": "ops.scripts.core.execution_lane_guard",
       "console_scripts": [],
       "install_state": "not_installed",
