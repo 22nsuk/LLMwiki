@@ -38,6 +38,7 @@ from ops.scripts.core.executor_runtime import (
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.workspace_python_identity_runtime import (
     build_workspace_python_identity,
+    load_workspace_python_identity,
     write_workspace_python_identity,
 )
 from tests.cli_test_runtime import invoke_cli_main
@@ -196,8 +197,6 @@ def _write_external_workspace_python_shim(artifact_root: Path, workspace_root: P
     source_python = artifact_root / ".venv" / "bin" / "python"
     if not source_python.exists():
         source_python = Path(sys.executable).resolve()
-    else:
-        source_python = source_python.resolve()
     workspace_python = workspace_root / ".venv" / "bin" / "python"
     workspace_python.parent.mkdir(parents=True, exist_ok=True)
     shim_content = f"#!/bin/sh\nexec {shlex.quote(str(source_python))} \"$@\"\n"
@@ -1073,7 +1072,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertFalse(marker.exists())
 
-    def test_external_workspace_python_shim_matches_provisioner_resolved_source(
+    def test_external_workspace_python_shim_preserves_artifact_venv_symlink(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1091,12 +1090,16 @@ class ExecutorRuntimeTests(unittest.TestCase):
             except (NotImplementedError, OSError) as exc:
                 self.skipTest(f"symlink unavailable: {exc}")
 
-            expected = f"#!/bin/sh\nexec {shlex.quote(str(base_python))} \"$@\"\n"
+            expected = f"#!/bin/sh\nexec {shlex.quote(str(artifact_python))} \"$@\"\n"
 
             self.assertEqual(_expected_external_workspace_python_shim(artifact_root), expected)
             workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
             self.assertEqual(workspace_python.read_text(encoding="utf-8"), expected)
-            self.assertNotIn(str(artifact_python), expected)
+            self.assertNotIn(str(base_python), expected)
+            identity = load_workspace_python_identity(workspace_root)
+            self.assertIsNotNone(identity)
+            assert identity is not None
+            self.assertEqual(identity.source_realpath, str(base_python.resolve()))
             request = cast(
                 Any,
                 SimpleNamespace(

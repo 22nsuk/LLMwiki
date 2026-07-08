@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import shlex
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,9 @@ from ops.scripts.core.promotion_decision_registry_runtime import (
     attach_decision_contract,
 )
 from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.workspace_python_identity_runtime import (
+    load_workspace_python_identity,
+)
 from ops.scripts.mechanism import (
     mechanism_run_promotion_runtime,
     mechanism_run_workspace_runtime,
@@ -127,14 +131,21 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             # Partial copytree leaves one tracked file; .venv/.llmwiki shim surfaces are ignored.
             self.assertEqual(result.telemetry["copied_file_count"], 1)
 
-    def test_prepare_workspace_copy_provisions_python_shim_without_live_venv_symlink(self) -> None:
+    def test_prepare_workspace_copy_provisions_python_shim_preserving_artifact_venv_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             workspace_root = Path(temp_dir) / "workspace-root"
             (vault / "ops" / "scripts").mkdir(parents=True)
             (vault / "ops" / "scripts" / "example.py").write_text("VALUE = 1\n", encoding="utf-8")
             (vault / ".venv" / "bin").mkdir(parents=True)
-            (vault / ".venv" / "bin" / "python").write_text("# python shim\n", encoding="utf-8")
+            base_python = Path(temp_dir) / "base-python"
+            base_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            base_python.chmod(0o755)
+            artifact_python = vault / ".venv" / "bin" / "python"
+            try:
+                artifact_python.symlink_to(base_python)
+            except (NotImplementedError, OSError) as exc:
+                self.skipTest(f"symlink unavailable: {exc}")
 
             result = _prepare_workspace_copy(
                 vault,
@@ -146,10 +157,13 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             workspace_python = workspace_venv / "bin" / "python"
             self.assertFalse(workspace_venv.is_symlink())
             self.assertTrue(workspace_python.is_file())
-            self.assertIn(
-                (vault / ".venv" / "bin" / "python").as_posix(),
-                workspace_python.read_text(encoding="utf-8"),
-            )
+            expected_shim = f"#!/bin/sh\nexec {shlex.quote(str(artifact_python))} \"$@\"\n"
+            self.assertEqual(workspace_python.read_text(encoding="utf-8"), expected_shim)
+            self.assertNotIn(str(base_python), expected_shim)
+            identity = load_workspace_python_identity(result.workspace_vault)
+            self.assertIsNotNone(identity)
+            assert identity is not None
+            self.assertEqual(identity.source_realpath, str(base_python.resolve()))
             self.assertNotIn(".venv/bin/python", result.baseline_file_digests)
 
     def test_prepare_workspace_copy_supports_sparse_manifest_copied_universe(self) -> None:
