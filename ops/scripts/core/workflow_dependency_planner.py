@@ -95,6 +95,7 @@ GIT_LS_FILES_DEBUG_RE = re.compile(
 GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
 GIT_INDEX_INTENT_TO_ADD_FLAG = 0x20000000
 GIT_CHANGED_PATHS_TIMEOUT_SECONDS = 30
+SUBMODULE_IGNORE_MODES = {"all", "dirty", "untracked", "none"}
 GIT_BASE_CONFIG_ARGS = (
     "-c",
     "core.fsmonitor=false",
@@ -152,6 +153,14 @@ class _TrackedFilterContext:
     filtered_paths: set[str]
     gitlink_paths: set[str]
     index_debug_stdout: str
+
+
+@dataclass(frozen=True)
+class _GitlinkScanResult:
+    paths: list[str]
+    commands: list[_GitCommandObservation]
+    failures: list[_GitFailure]
+    ignored_all_paths: set[str]
 
 
 REPORT_CLOSEOUT_TARGETS = [
@@ -1784,9 +1793,17 @@ def _submodule_ignore_mode(
             env=env,
             args=args,
         ).lower()
-        if value in {"all", "dirty", "untracked", "none"}:
+        if value in SUBMODULE_IGNORE_MODES:
             return value
-    return "none"
+    diff_ignore = _run_git_optional_config(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        args=["--get", "diff.ignoreSubmodules"],
+    ).lower()
+    if diff_ignore in SUBMODULE_IGNORE_MODES:
+        return diff_ignore
+    return "untracked"
 
 
 def _submodule_worktree_dirty(
@@ -1891,19 +1908,14 @@ def _submodule_changed(
     *,
     vault: Path,
     entry: _GitIndexEntry,
+    ignore_mode: str,
     git_executable: str,
     env: dict[str, str],
 ) -> tuple[bool, list[_GitCommandObservation], list[_GitFailure]]:
-    if _submodule_worktree_type_changed(vault, entry.rel_path):
-        return True, [], []
-    ignore_mode = _submodule_ignore_mode(
-        vault=vault,
-        entry=entry,
-        git_executable=git_executable,
-        env=env,
-    )
     if ignore_mode == "all":
         return False, [], []
+    if _submodule_worktree_type_changed(vault, entry.rel_path):
+        return True, [], []
     git_dir = _submodule_git_dir(vault, entry.rel_path)
     if git_dir is None:
         external_git_dir = _submodule_external_git_dir(vault, entry.rel_path)
@@ -1949,14 +1961,24 @@ def _submodule_changed_paths(
     git_executable: str,
     env: dict[str, str],
     stdout: str,
-) -> tuple[list[str], list[_GitCommandObservation], list[_GitFailure]]:
+) -> tuple[list[str], list[_GitCommandObservation], list[_GitFailure], set[str]]:
     paths: list[str] = []
     commands: list[_GitCommandObservation] = []
     failures: list[_GitFailure] = []
+    ignored_all_paths: set[str] = set()
     for entry in _gitlink_entries_from_ls_files_stage(stdout).values():
+        ignore_mode = _submodule_ignore_mode(
+            vault=vault,
+            entry=entry,
+            git_executable=git_executable,
+            env=env,
+        )
+        if ignore_mode == "all":
+            ignored_all_paths.add(entry.rel_path)
         changed, submodule_commands, submodule_failures = _submodule_changed(
             vault=vault,
             entry=entry,
+            ignore_mode=ignore_mode,
             git_executable=git_executable,
             env=env,
         )
@@ -1964,7 +1986,7 @@ def _submodule_changed_paths(
         failures.extend(submodule_failures)
         if changed:
             paths.append(entry.rel_path)
-    return paths, commands, failures
+    return paths, commands, failures, ignored_all_paths
 
 
 def _run_git_submodule_paths_command(
@@ -1972,7 +1994,7 @@ def _run_git_submodule_paths_command(
     vault: Path,
     git_executable: str,
     env: dict[str, str],
-) -> tuple[list[str], list[_GitCommandObservation], list[_GitFailure]]:
+) -> _GitlinkScanResult:
     stdout, observation, failure = _run_git_raw_command(
         vault=vault,
         git_executable=git_executable,
@@ -1981,16 +2003,16 @@ def _run_git_submodule_paths_command(
         args=["ls-files", "-z", "-s"],
     )
     if failure is not None:
-        return [], [observation], [failure]
-    paths, commands, failures = _submodule_changed_paths(
+        return _GitlinkScanResult([], [observation], [failure], set())
+    paths, commands, failures, ignored_all_paths = _submodule_changed_paths(
         vault=vault,
         git_executable=git_executable,
         env=env,
         stdout=stdout,
     )
-    return (
-        paths,
-        [
+    return _GitlinkScanResult(
+        paths=paths,
+        commands=[
             _GitCommandObservation(
                 command_id=observation.command_id,
                 status=observation.status,
@@ -2001,7 +2023,8 @@ def _run_git_submodule_paths_command(
             ),
             *commands,
         ],
-        failures,
+        failures=failures,
+        ignored_all_paths=ignored_all_paths,
     )
 
 
@@ -2268,16 +2291,17 @@ def _read_git_changed_paths(vault: Path) -> _GitChangedPathsResult:
             failures=failures,
             ignored_path_entry_count=ignored_path_entry_count,
         )
-    submodule_paths, submodule_observations, submodule_failures = (
-        _run_git_submodule_paths_command(
-            vault=vault,
-            git_executable=git_executable,
-            env=env,
-        )
+    submodule_result = _run_git_submodule_paths_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
     )
-    commands.extend(submodule_observations)
-    failures.extend(submodule_failures)
-    paths.extend(submodule_paths)
+    commands.extend(submodule_result.commands)
+    failures.extend(submodule_result.failures)
+    paths = [
+        path for path in paths if path not in submodule_result.ignored_all_paths
+    ]
+    paths.extend(submodule_result.paths)
     if failures:
         return _failed_git_changed_paths_result(
             paths=paths,

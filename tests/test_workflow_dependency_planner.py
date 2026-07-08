@@ -328,6 +328,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         (subrepo / "content.txt").write_text(text, encoding="utf-8")
         self._commit_all_at(subrepo, "advance submodule")
 
+    def _remove_submodule_worktree(self, submodule_path: Path) -> None:
+        for child in list(submodule_path.iterdir()):
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        submodule_path.rmdir()
+
     def _commit_vault_with_external_linked_gitlink(
         self,
         rel_path: str = "vendor/external-linked",
@@ -2309,6 +2317,110 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
+    def test_changed_paths_from_git_respects_diff_ignore_submodules_dirty(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "diff.ignoreSubmodules", "dirty")
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_respects_diff_ignore_submodules_all(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "vendor" / "submodule", "pull")
+        self._run_git("config", "diff.ignoreSubmodules", "all")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_keeps_submodule_ignore_precedence_over_diff_default(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "diff.ignoreSubmodules", "all")
+        self._run_git("config", "submodule.vendor/submodule.ignore", "none")
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, ["vendor/submodule"])
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_ignores_default_untracked_submodule_noise(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "untracked.txt").write_text("local\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
     def test_changed_paths_from_git_accepts_old_form_submodule_gitdirs(self) -> None:
         embedded_submodule = self.vault / "vendor" / "embedded"
         embedded_submodule.mkdir(parents=True)
@@ -2343,12 +2455,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         subrepo = self._create_submodule_source_repo()
         self._commit_vault_with_submodule(subrepo)
         submodule_path = self.vault / "vendor" / "submodule"
-        for child in list(submodule_path.iterdir()):
-            if child.is_dir() and not child.is_symlink():
-                shutil.rmtree(child)
-            else:
-                child.unlink()
-        submodule_path.rmdir()
+        self._remove_submodule_worktree(submodule_path)
         submodule_path.write_text("not a submodule\n", encoding="utf-8")
 
         report = build_report(
@@ -2358,6 +2465,58 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
         self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_applies_submodule_ignore_before_typechange(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "submodule.vendor/submodule.ignore", "all")
+        submodule_path = self.vault / "vendor" / "submodule"
+        self._remove_submodule_worktree(submodule_path)
+        submodule_path.write_text("not a submodule\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_filters_ignored_deleted_submodule_worktree(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "submodule.vendor/submodule.ignore", "all")
+        self._remove_submodule_worktree(self.vault / "vendor" / "submodule")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
