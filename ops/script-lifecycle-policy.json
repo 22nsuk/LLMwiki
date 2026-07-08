@@ -3501,6 +3501,15 @@
       "replacement": "make release-workflow-order-guard"
     },
     {
+      "canonical_module": "ops.scripts.release.release_workflow_order_guard_recipes",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.release.release_workflow_order_guard_recipes"
+    },
+    {
       "canonical_module": "ops.scripts.release.review_archive",
       "console_scripts": [],
       "install_state": "not_installed",

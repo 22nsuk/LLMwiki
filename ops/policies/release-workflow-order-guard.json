@@ -791,6 +791,7 @@
   "source_paths": {
     "static": [
       "ops/scripts/release/release_workflow_order_guard.py",
+      "ops/scripts/release/release_workflow_order_guard_recipes.py",
       "ops/scripts/core/workflow_dependency_planner.py",
       "ops/scripts/release/release_closeout_fixed_point.py",
       "ops/policies/release-workflow-order-guard.json",
