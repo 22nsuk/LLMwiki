@@ -4,7 +4,6 @@ import argparse
 import fnmatch
 import json
 import re
-import stat as stat_module
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -83,18 +82,12 @@ TARGET_RE = re.compile(r"^([A-Za-z0-9_.%/@-][A-Za-z0-9_.%/@ -]*):(?P<deps>[^\n#]
 MAKE_RECIPE_RE = re.compile(r"\$\((?:MAKE|make)\)\s+(?P<args>[^\n;&|]+)")
 TARGET_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.%/@-]+$")
 OPTION_OR_ASSIGNMENT_RE = re.compile(r"^(?:-|[A-Za-z_][A-Za-z0-9_]*=)")
-GIT_LS_FILES_DEBUG_RE = re.compile(
-    r"^  ctime: (?P<ctime_s>\d+):(?P<ctime_ns>\d+)\n"
-    r"  mtime: (?P<mtime_s>\d+):(?P<mtime_ns>\d+)\n"
-    r"  dev: (?P<dev>\d+)\tino: (?P<ino>\d+)\n"
-    r"  uid: (?P<uid>\d+)\tgid: (?P<gid>\d+)\n"
-    r"  size: (?P<size>\d+)\tflags: (?P<flags>\d+)\n"
-)
 GIT_LS_FILES_STAGE_RE = re.compile(
     r"^(?P<mode>\d{6}) (?P<object_id>[0-9a-fA-F]{40,64}) "
     r"(?P<stage>\d)\t(?P<path>.+)$"
 )
 GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
+GIT_FILTER_DRIVER_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 GIT_CHANGED_PATHS_TIMEOUT_SECONDS = 30
 GIT_BASE_CONFIG_ARGS = (
     "-c",
@@ -1167,6 +1160,7 @@ def _run_git_raw_command(
     env: dict[str, str],
     command_id: str,
     args: list[str],
+    input_text: str | None = None,
 ) -> tuple[str, _GitCommandObservation, dict[str, str] | None]:
     result = run_with_timeout(
         RunWithTimeoutRequest(
@@ -1174,6 +1168,7 @@ def _run_git_raw_command(
             cwd=vault,
             timeout_seconds=GIT_CHANGED_PATHS_TIMEOUT_SECONDS,
             env=env,
+            input_text=input_text,
         )
     )
     if result.timed_out:
@@ -1242,6 +1237,26 @@ def _run_git_changed_paths_command(
         ),
         None,
     )
+
+
+def _run_git_optional_config(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+    args: list[str],
+) -> str:
+    result = run_with_timeout(
+        RunWithTimeoutRequest(
+            argv=[git_executable, *GIT_BASE_CONFIG_ARGS, "config", *args],
+            cwd=vault,
+            timeout_seconds=GIT_CHANGED_PATHS_TIMEOUT_SECONDS,
+            env=env,
+        )
+    )
+    if result.timed_out or result.returncode not in {0, 1}:
+        return ""
+    return result.stdout.strip()
 
 
 def _stderr_indicates_missing_worktree(stderr: str) -> bool:
@@ -1317,12 +1332,6 @@ def _git_worktree_exists(
     )
 
 
-def _index_time_ns(match: re.Match[str], prefix: str) -> int:
-    return int(match.group(f"{prefix}_s")) * 1_000_000_000 + int(
-        match.group(f"{prefix}_ns")
-    )
-
-
 def _git_index_entry(record: str) -> _GitIndexEntry | None:
     match = GIT_LS_FILES_STAGE_RE.match(record)
     if match is None:
@@ -1334,58 +1343,6 @@ def _git_index_entry(record: str) -> _GitIndexEntry | None:
     )
 
 
-def _git_mode_from_lstat_mode(mode: int) -> str | None:
-    if stat_module.S_ISLNK(mode):
-        return "120000"
-    if stat_module.S_ISREG(mode):
-        return "100755" if mode & 0o111 else "100644"
-    return None
-
-
-def _index_entry_stat_changed(
-    vault: Path,
-    entry: _GitIndexEntry,
-    match: re.Match[str],
-) -> bool:
-    try:
-        stat_result = (vault / entry.rel_path).lstat()
-    except OSError:
-        return False
-    worktree_mode = _git_mode_from_lstat_mode(stat_result.st_mode)
-    if entry.mode not in {"160000", worktree_mode}:
-        return True
-    return any(
-        (
-            stat_result.st_size != int(match.group("size")),
-            stat_result.st_mtime_ns != _index_time_ns(match, "mtime"),
-            stat_result.st_ctime_ns != _index_time_ns(match, "ctime"),
-            stat_result.st_dev != int(match.group("dev")),
-            stat_result.st_ino != int(match.group("ino")),
-        )
-    )
-
-
-def _modified_paths_from_index_debug(vault: Path, stdout: str) -> list[str]:
-    segments = stdout.split("\0")
-    if not segments:
-        return []
-    stage_record = segments[0]
-    modified_paths: list[str] = []
-    for segment in segments[1:]:
-        if not stage_record:
-            break
-        entry = _git_index_entry(stage_record)
-        if entry is None:
-            break
-        match = GIT_LS_FILES_DEBUG_RE.match(segment)
-        if match is None:
-            break
-        if _index_entry_stat_changed(vault, entry, match):
-            modified_paths.append(entry.rel_path)
-        stage_record = segment[match.end() :]
-    return modified_paths
-
-
 def _gitlink_entries_from_ls_files_stage(stdout: str) -> dict[str, _GitIndexEntry]:
     entries: dict[str, _GitIndexEntry] = {}
     for record in _split_nul_paths(stdout):
@@ -1394,6 +1351,78 @@ def _gitlink_entries_from_ls_files_stage(stdout: str) -> dict[str, _GitIndexEntr
             continue
         entries[entry.rel_path] = entry
     return entries
+
+
+def _filter_driver_names_from_check_attr(stdout: str) -> set[str]:
+    fields = stdout.split("\0")
+    names: set[str] = set()
+    for index in range(0, len(fields) - 2, 3):
+        attr = fields[index + 1]
+        value = fields[index + 2]
+        if attr != "filter" or value in {"", "unspecified", "unset", "set"}:
+            continue
+        names.add(value)
+    return names
+
+
+def _safe_filter_driver_config_args(filter_names: set[str]) -> list[str] | None:
+    args: list[str] = []
+    for name in sorted(filter_names):
+        if not GIT_FILTER_DRIVER_NAME_RE.fullmatch(name):
+            return None
+        args.extend(
+            [
+                "-c",
+                f"filter.{name}.clean=",
+                "-c",
+                f"filter.{name}.process=",
+                "-c",
+                f"filter.{name}.required=false",
+            ]
+        )
+    return args
+
+
+def _tracked_path_filter_driver_config_args(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+) -> tuple[list[str], set[str], dict[str, str] | None]:
+    paths_stdout, _paths_observation, paths_failure = _run_git_raw_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        command_id="ls-files-filter-paths",
+        args=["ls-files", "-z", "-s"],
+    )
+    if paths_failure is not None:
+        return [], set(), paths_failure
+    entries = [
+        entry
+        for record in _split_nul_paths(paths_stdout)
+        if (entry := _git_index_entry(record)) is not None
+    ]
+    paths = [entry.rel_path for entry in entries]
+    if not paths:
+        return [], set(), None
+    attr_stdout, _attr_observation, attr_failure = _run_git_raw_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        command_id="check-attr-filter",
+        args=["check-attr", "-z", "--stdin", "filter"],
+        input_text="\0".join(paths) + "\0",
+    )
+    if attr_failure is not None:
+        return [], set(), attr_failure
+    config_args = _safe_filter_driver_config_args(
+        _filter_driver_names_from_check_attr(attr_stdout)
+    )
+    if config_args is None:
+        return [], set(), {"command_id": "check-attr-filter", "code": "git_probe_failed"}
+    gitlink_paths = {entry.rel_path for entry in entries if entry.mode == "160000"}
+    return config_args, gitlink_paths, None
 
 
 def _git_dir_from_marker(marker: Path) -> Path | None:
@@ -1421,13 +1450,20 @@ def _git_dir_from_marker(marker: Path) -> Path | None:
 
 
 def _submodule_git_dir(vault: Path, rel_path: str) -> Path | None:
+    submodule_root = vault / rel_path
     git_dir = _git_dir_from_marker(vault / rel_path / ".git")
     storage_root = _git_dir_from_marker(vault / ".git")
-    if git_dir is None or storage_root is None:
+    if git_dir is None:
         return None
+    if storage_root is not None:
+        try:
+            git_dir.relative_to(storage_root)
+            return git_dir
+        except ValueError:
+            pass
     try:
-        git_dir.relative_to(storage_root)
-    except ValueError:
+        git_dir.relative_to(submodule_root.resolve())
+    except (OSError, ValueError):
         return None
     return git_dir
 
@@ -1475,24 +1511,80 @@ def _submodule_command_id(rel_path: str, command_id: str) -> str:
     return f"submodule:{rel_path}:{command_id}"
 
 
+def _submodule_names_by_path(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+) -> dict[str, str]:
+    stdout = _run_git_optional_config(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        args=["--file", ".gitmodules", "--get-regexp", r"^submodule\..*\.path$"],
+    )
+    names_by_path: dict[str, str] = {}
+    for raw_line in stdout.splitlines():
+        key, separator, rel_path = raw_line.partition(" ")
+        if not separator:
+            continue
+        prefix = "submodule."
+        suffix = ".path"
+        if key.startswith(prefix) and key.endswith(suffix):
+            names_by_path[rel_path.strip()] = key[len(prefix) : -len(suffix)]
+    return names_by_path
+
+
+def _submodule_ignore_mode(
+    *,
+    vault: Path,
+    entry: _GitIndexEntry,
+    git_executable: str,
+    env: dict[str, str],
+) -> str:
+    name = _submodule_names_by_path(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+    ).get(entry.rel_path, entry.rel_path)
+    config_key = f"submodule.{name}.ignore"
+    for args in (
+        ["--get", config_key],
+        ["--file", ".gitmodules", "--get", config_key],
+    ):
+        value = _run_git_optional_config(
+            vault=vault,
+            git_executable=git_executable,
+            env=env,
+            args=args,
+        ).lower()
+        if value in {"all", "dirty", "untracked", "none"}:
+            return value
+    return "none"
+
+
 def _submodule_worktree_dirty(
     *,
     vault: Path,
     entry: _GitIndexEntry,
     git_executable: str,
     env: dict[str, str],
+    ignore_untracked: bool,
 ) -> tuple[bool, list[_GitCommandObservation], list[dict[str, str]]]:
     submodule_root = vault / entry.rel_path
     if not submodule_root.is_dir():
         return False, [], []
     commands: list[_GitCommandObservation] = []
     failures: list[dict[str, str]] = []
+    worktree_args = ["ls-files", "-z", "-d"]
+    if not ignore_untracked:
+        worktree_args.extend(["-o", "--exclude-standard"])
     worktree_paths, worktree_observation, worktree_failure = _run_git_changed_paths_command(
         vault=submodule_root,
         git_executable=git_executable,
         env=env,
         command_id=_submodule_command_id(entry.rel_path, "ls-files-worktree"),
-        args=["ls-files", "-z", "-d", "-o", "--exclude-standard"],
+        args=worktree_args,
     )
     commands.append(worktree_observation)
     if worktree_failure is not None:
@@ -1502,7 +1594,7 @@ def _submodule_worktree_dirty(
         vault=submodule_root,
         git_executable=git_executable,
         env=env,
-        command_id=_submodule_command_id(entry.rel_path, "ls-files-index-stats"),
+        command_id=_submodule_command_id(entry.rel_path, "ls-files-modified"),
     )
     commands.append(modified_observation)
     if modified_failure is not None:
@@ -1537,6 +1629,9 @@ def _submodule_worktree_dirty(
     if has_head:
         staged_args = ["diff-index", "--cached", "-z", "--name-only", "HEAD", "--"]
         staged_command_id = "diff-index-cached"
+    elif ignore_untracked:
+        staged_args = ["ls-files", "-z", "--cached"]
+        staged_command_id = "ls-files-no-head"
     else:
         staged_args = ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]
         staged_command_id = "ls-files-no-head"
@@ -1568,13 +1663,24 @@ def _submodule_changed(
     git_dir = _submodule_git_dir(vault, entry.rel_path)
     if git_dir is None:
         return False, [], []
+    ignore_mode = _submodule_ignore_mode(
+        vault=vault,
+        entry=entry,
+        git_executable=git_executable,
+        env=env,
+    )
+    if ignore_mode == "all":
+        return False, [], []
     current_head = _read_git_dir_head(git_dir)
     head_changed = current_head is None or current_head != entry.object_id
+    if ignore_mode == "dirty":
+        return head_changed, [], []
     dirty, commands, failures = _submodule_worktree_dirty(
         vault=vault,
         entry=entry,
         git_executable=git_executable,
         env=env,
+        ignore_untracked=ignore_mode == "untracked",
     )
     return head_changed or dirty, commands, failures
 
@@ -1646,26 +1752,45 @@ def _run_git_modified_paths_command(
     vault: Path,
     git_executable: str,
     env: dict[str, str],
-    command_id: str = "ls-files-index-stats",
+    command_id: str = "ls-files-modified",
 ) -> tuple[list[str], _GitCommandObservation, dict[str, str] | None]:
-    stdout, observation, failure = _run_git_raw_command(
+    filter_config_args, gitlink_paths, filter_failure = (
+        _tracked_path_filter_driver_config_args(
+            vault=vault,
+            git_executable=git_executable,
+            env=env,
+        )
+    )
+    if filter_failure is not None:
+        return (
+            [],
+            _GitCommandObservation(
+                command_id=command_id,
+                status="failed",
+                returncode=1,
+                timed_out=False,
+                reason="git_probe_failed",
+            ),
+            {"command_id": command_id, "code": str(filter_failure["code"])},
+        )
+    paths, observation, failure = _run_git_changed_paths_command(
         vault=vault,
         git_executable=git_executable,
         env=env,
         command_id=command_id,
-        args=["ls-files", "-z", "-s", "--debug"],
+        args=[*filter_config_args, "ls-files", "-z", "-m"],
     )
     if failure is not None:
-        return [], observation, failure
-    paths = _modified_paths_from_index_debug(vault, stdout)
+        return paths, observation, failure
+    filtered_paths = [path for path in paths if path not in gitlink_paths]
     return (
-        paths,
+        filtered_paths,
         _GitCommandObservation(
             command_id=observation.command_id,
             status=observation.status,
             returncode=observation.returncode,
             timed_out=observation.timed_out,
-            path_count=len(paths),
+            path_count=len(filtered_paths),
             reason=observation.reason,
         ),
         None,
