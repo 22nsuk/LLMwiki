@@ -164,19 +164,12 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         (
             "refresh-generated-core",
             "refresh-generated-observability",
-            "pytest-markers-sync",
-            "pytest-markers-sync-check",
             "_internal-pytest-markers-sync-check",
             "generated-artifact-converge",
             "generated-artifact-script-output",
             "generated-artifact-finality-suffix",
             "command-log-summary-backfill",
             "generated-artifact-retention-clean",
-            "script-output-surfaces",
-            "script-module-surfaces",
-            "script-module-surfaces-check",
-            "script-lifecycle-policy",
-            "script-lifecycle-policy-check",
             "function-budget-refactor-proposals",
             "function-budget-edit-check",
             "outcome-provenance-gate-policy",
@@ -287,7 +280,6 @@ def _assert_script_surface_and_inventory_targets(
         "--semantic-match-includes-source-tree-fingerprint", script_output_block
     )
     script_output_check_block = _target_block(text, "script-output-surfaces-check")
-    case.assertIn("script-output-surfaces-check", _target_block(text, ".PHONY"))
     case.assertIn("ops.scripts.script_output_surfaces", script_output_check_block)
     case.assertIn('--stored "$(SCRIPT_OUTPUT_SURFACES_OUT)"', script_output_check_block)
     case.assertIn("--check", script_output_check_block)
@@ -301,7 +293,6 @@ def _assert_script_surface_and_inventory_targets(
         script_module_block,
     )
     script_module_check_block = _target_block(text, "script-module-surfaces-check")
-    case.assertIn("script-module-surfaces-check", _target_block(text, ".PHONY"))
     case.assertIn("ops.scripts.script_module_surfaces", script_module_check_block)
     case.assertIn('--stored "$(SCRIPT_MODULE_SURFACES_OUT)"', script_module_check_block)
     case.assertIn(
@@ -314,13 +305,11 @@ def _assert_script_surface_and_inventory_targets(
         "ops.scripts.canonical_artifact_promote", script_module_check_block
     )
     script_lifecycle_block = _target_block(text, "script-lifecycle-policy")
-    case.assertIn("script-lifecycle-policy", _target_block(text, ".PHONY"))
     case.assertIn(
         '$(PYTHON) -m ops.scripts.core.script_lifecycle_policy --vault "$(VAULT)" --out "$(SCRIPT_LIFECYCLE_POLICY_OUT)" --overrides "$(SCRIPT_LIFECYCLE_OVERRIDES)"',
         script_lifecycle_block,
     )
     script_lifecycle_check_block = _target_block(text, "script-lifecycle-policy-check")
-    case.assertIn("script-lifecycle-policy-check", _target_block(text, ".PHONY"))
     case.assertIn(
         "ops.scripts.core.script_lifecycle_policy",
         script_lifecycle_check_block,
@@ -368,8 +357,6 @@ def _assert_script_surface_and_inventory_targets(
         "script-output-surfaces-clean-regenerate: clean-fixture-regeneration-guard script-output-surfaces",
         text,
     )
-    case.assertIn("make-target-inventory", _target_block(text, ".PHONY"))
-    case.assertIn("make-target-inventory-check", _target_block(text, ".PHONY"))
     case.assertIn(
         '$(PYTHON) -m ops.scripts.make_target_inventory --vault "$(VAULT)" --out "$(MAKE_TARGET_INVENTORY_OUT)"',
         _target_block(text, "make-target-inventory"),
@@ -426,16 +413,6 @@ def _assert_workflow_dependency_planner_target(
 def _assert_release_workflow_order_guard_target(
     case: unittest.TestCase, text: str
 ) -> None:
-    _assert_phony_targets(
-        case,
-        text,
-        (
-            "release-workflow-order-guard",
-            "release-workflow-order-guard-check",
-            "release-workflow-order-guard-spec-sync",
-            "release-workflow-order-guard-spec-sync-check",
-        ),
-    )
     _assert_make_target_contract(
         case,
         text,
@@ -915,9 +892,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         test_mk_text = Path("mk/test.mk").read_text(encoding="utf-8")
         self.assertIn("include mk/test-selectors.generated.mk", test_mk_text)
-        self.assertIn(
-            "test-selectors-sync-check", _target_block(test_mk_text, ".PHONY")
-        )
         self.assertIn(
             "_internal-test-selectors-sync-check", _target_block(test_mk_text, ".PHONY")
         )

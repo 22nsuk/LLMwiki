@@ -159,6 +159,8 @@
       "source_paths": [
         "Makefile",
         "mk/*.mk",
+        "ops/scripts/release/release_workflow_order_guard.py",
+        "ops/scripts/release/release_workflow_order_guard_recipes.py",
         "ops/policies/release-workflow-order-guard.json"
       ],
       "tracked_outputs": [
@@ -177,6 +179,8 @@
       "source_paths": [
         "Makefile",
         "mk/*.mk",
+        "ops/scripts/release/release_workflow_order_guard.py",
+        "ops/scripts/release/release_workflow_order_guard_recipes.py",
         "ops/policies/release-workflow-order-guard.json"
       ],
       "tracked_outputs": [],
