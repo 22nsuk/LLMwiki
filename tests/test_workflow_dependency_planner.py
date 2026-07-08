@@ -3,13 +3,19 @@ from __future__ import annotations
 import ast
 import datetime as dt
 import json
+import os
+import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
+from typing import Any
+from unittest import mock
 
 import pytest
 
+from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.core.derived_surfaces import (
     currentness_output_paths as derived_surface_currentness_output_paths,
     currentness_path_patterns as derived_surface_currentness_path_patterns,
@@ -36,6 +42,10 @@ FOCUSED_PYTEST_TEMPLATE = (
 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_workflow_dependency_planner.py",
+)
+FOCUSED_SOURCE_REVISION_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_source_revision_runtime.py",
 )
 FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
@@ -261,6 +271,209 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def _run_git_at(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+    def _run_git(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return self._run_git_at(self.vault, *args)
+
+    def _git_name_only_paths(self) -> list[str]:
+        return self._run_git("diff", "--name-only", "HEAD", "--").stdout.splitlines()
+
+    def _build_git_changed_paths_report(self) -> dict[str, Any]:
+        return build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+    def _assert_git_changed_paths_match_name_only(self) -> dict[str, Any]:
+        git_name_only_paths = self._git_name_only_paths()
+        report = self._build_git_changed_paths_report()
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(report["selected_change_paths"], git_name_only_paths)
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+        return report
+
+    def _commit_all_at(self, cwd: Path, message: str) -> None:
+        self._run_git_at(cwd, "add", ".")
+        self._run_git_at(
+            cwd,
+            "-c",
+            "user.name=LLMwiki Test",
+            "-c",
+            "user.email=llmwiki-test@example.invalid",
+            "commit",
+            "-m",
+            message,
+        )
+
+    def _commit_git_baseline(self) -> None:
+        self._run_git("init")
+        self._commit_all_at(self.vault, "baseline")
+
+    def _create_submodule_source_repo(self) -> Path:
+        subrepo = Path(self.temp_dir.name) / "submodule-source"
+        subrepo.mkdir()
+        self._run_git_at(subrepo, "init")
+        (subrepo / "content.txt").write_text("base\n", encoding="utf-8")
+        self._commit_all_at(subrepo, "submodule baseline")
+        return subrepo
+
+    def _commit_vault_with_submodule(self, subrepo: Path) -> None:
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(subrepo),
+            "vendor/submodule",
+        )
+        self._commit_all_at(self.vault, "baseline with submodule")
+
+    def _advance_submodule_source_repo(
+        self,
+        subrepo: Path,
+        text: str = "advanced\n",
+    ) -> None:
+        (subrepo / "content.txt").write_text(text, encoding="utf-8")
+        self._commit_all_at(subrepo, "advance submodule")
+
+    def _remove_submodule_worktree(self, submodule_path: Path) -> None:
+        for child in list(submodule_path.iterdir()):
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        submodule_path.rmdir()
+
+    def _commit_vault_with_external_linked_gitlink(
+        self,
+        rel_path: str = "vendor/external-linked",
+        *,
+        branch_name: str | None = None,
+    ) -> tuple[Path, Path]:
+        self._commit_git_baseline()
+        external_repo = Path(self.temp_dir.name) / "external-linked-source"
+        external_repo.mkdir()
+        self._run_git_at(external_repo, "init")
+        (external_repo / "content.txt").write_text("base\n", encoding="utf-8")
+        self._commit_all_at(external_repo, "external baseline")
+        base_commit = self._run_git_at(external_repo, "rev-parse", "HEAD").stdout.strip()
+        linked_path = self.vault / rel_path
+        linked_path.parent.mkdir(parents=True, exist_ok=True)
+        if branch_name is None:
+            self._run_git_at(
+                external_repo,
+                "worktree",
+                "add",
+                "--detach",
+                str(linked_path),
+                base_commit,
+            )
+        else:
+            self._run_git_at(external_repo, "branch", branch_name, base_commit)
+            self._run_git_at(
+                external_repo,
+                "worktree",
+                "add",
+                str(linked_path),
+                branch_name,
+            )
+        self._run_git(
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            f"160000,{base_commit},{rel_path}",
+        )
+        self._run_git(
+            "-c",
+            "user.name=LLMwiki Test",
+            "-c",
+            "user.email=llmwiki-test@example.invalid",
+            "commit",
+            "-m",
+            "baseline with external linked gitlink",
+        )
+        return external_repo, linked_path
+
+    def _advance_external_linked_worktree(
+        self,
+        external_repo: Path,
+        linked_path: Path,
+    ) -> None:
+        (external_repo / "content.txt").write_text("advanced\n", encoding="utf-8")
+        self._commit_all_at(external_repo, "advance external")
+        advanced_commit = self._run_git_at(
+            external_repo,
+            "rev-parse",
+            "HEAD",
+        ).stdout.strip()
+        self._run_git_at(linked_path, "checkout", advanced_commit)
+
+    def _commit_filtered_file_baseline(
+        self,
+        *,
+        clean_body: str,
+        file_text: str,
+        driver_name: str = "pwn",
+        relative_path: str = "docs/filter.foo",
+        configure_process: bool = True,
+    ) -> tuple[Path, Path]:
+        filter_script = self.vault / "filter-driver.sh"
+        marker = self.vault / "filter-driver-ran"
+        filter_script.write_text(
+            "#!/bin/sh\n"
+            f"printf ran >> {str(marker)!r}\n"
+            f"{clean_body}",
+            encoding="utf-8",
+        )
+        filter_script.chmod(0o755)
+        filtered_path = self.vault / relative_path
+        filtered_path.parent.mkdir(parents=True, exist_ok=True)
+        filtered_path.write_text(file_text, encoding="utf-8")
+        (self.vault / ".gitattributes").write_text(
+            f"*.foo filter={driver_name}\n",
+            encoding="utf-8",
+        )
+        self._run_git("init")
+        self._run_git("config", f"filter.{driver_name}.clean", str(filter_script))
+        self._commit_all_at(self.vault, "baseline")
+        if configure_process:
+            self._run_git("config", f"filter.{driver_name}.process", str(filter_script))
+        marker.unlink(missing_ok=True)
+        return filtered_path, marker
+
+    def _assert_filtered_path_requires_filter_driver(
+        self,
+        report: dict[str, Any],
+        *,
+        paths: list[str] | None = None,
+    ) -> None:
+        expected_paths = paths or ["docs/filter.foo"]
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["selected_change_paths"], [])
+        diagnostics = report["diagnostics"]["git_changed_paths"]
+        self.assertEqual(diagnostics["status"], "failed")
+        self.assertEqual(diagnostics["reason"], "filtered_path_requires_filter_driver")
+        self.assertEqual(
+            diagnostics["failures"],
+            [
+                {
+                    "command_id": "ls-files-modified",
+                    "code": "filtered_path_requires_filter_driver",
+                    "paths": expected_paths,
+                }
+            ],
+        )
+
     def test_build_report_maps_make_edges_and_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())
 
@@ -390,6 +603,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
     def test_planner_inputs_select_planner_closeout(self) -> None:
         for path in [
+            "ops/scripts/core/git_changed_paths_runtime.py",
             "ops/scripts/core/workflow_dependency_planner.py",
             "ops/schemas/workflow-dependency-planner.schema.json",
             "ops/README.md",
@@ -460,31 +674,85 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
     def test_planner_source_uses_focused_changed_path_minimum(self) -> None:
+        for source_path in [
+            "ops/scripts/core/git_changed_paths_runtime.py",
+            "ops/scripts/core/workflow_dependency_planner.py",
+        ]:
+            with self.subTest(source_path=source_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[source_path],
+                    context=fixed_context(),
+                )
+
+                plan = report["changed_path_minimum_plan"]
+                workflow = next(
+                    item
+                    for item in report["selected_workflows"]
+                    if item["workflow_id"] == "workflow_dependency_planner_closeout"
+                )
+                self.assertEqual(workflow["matched_paths"], [source_path])
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "workflow_dependency_planner")
+                self.assertEqual(
+                    plan["selected_commands"],
+                    [
+                        "make static",
+                        "make workflow-dependency-planner-check",
+                        FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+                        "make sync-derived-check",
+                    ],
+                )
+                self.assertEqual(
+                    [item["matched_rule_id"] for item in plan["path_recommendations"]],
+                    ["workflow_dependency_planner_source+derived_surface_currentness"],
+                )
+                self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+                self.assertEqual(
+                    validate_with_schema(
+                        report,
+                        load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+                    ),
+                    [],
+                )
+
+    def test_git_runtime_source_uses_shared_changed_path_minimum(self) -> None:
+        source_path = "ops/scripts/core/git_runtime.py"
         report = build_report(
             self.vault,
-            changed_paths=["ops/scripts/core/workflow_dependency_planner.py"],
+            changed_paths=[source_path],
             context=fixed_context(),
         )
 
         plan = report["changed_path_minimum_plan"]
+        workflow = next(
+            item
+            for item in report["selected_workflows"]
+            if item["workflow_id"] == "workflow_dependency_planner_closeout"
+        )
+        self.assertEqual(workflow["matched_paths"], [source_path])
         self.assertEqual(plan["status"], "pass")
-        self.assertEqual(plan["coverage_class"], "workflow_dependency_planner")
+        self.assertEqual(plan["coverage_class"], "git_runtime_shared")
         self.assertEqual(
             plan["selected_commands"],
             [
                 "make static",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+                FOCUSED_SOURCE_REVISION_TEST_COMMAND,
                 "make sync-derived-check",
             ],
         )
         self.assertEqual(
             [item["matched_rule_id"] for item in plan["path_recommendations"]],
-            ["workflow_dependency_planner_source+derived_surface_currentness"],
+            ["git_runtime_shared_source+derived_surface_currentness"],
         )
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
         self.assertEqual(
-            validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
+            validate_with_schema(
+                report,
+                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+            ),
             [],
         )
 
@@ -1385,13 +1653,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def test_changed_files_manifest_is_consumed(self) -> None:
         manifest = self.vault / "tmp" / "changed-files.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["git", "init"],
-            cwd=self.vault,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
+        self._run_git("init")
         untracked_doc = self.vault / "docs" / "development.md"
         untracked_doc.parent.mkdir(parents=True, exist_ok=True)
         untracked_doc.write_text("untracked doc\n", encoding="utf-8")
@@ -1400,51 +1662,60 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        report = build_report(
-            self.vault,
-            changed_files_manifest="tmp/changed-files.json",
-            changed_paths_from_git=True,
-            context=fixed_context(),
-        )
+        with mock.patch(
+            "ops.scripts.core.git_changed_paths_runtime.run_with_timeout",
+            side_effect=AssertionError("manifest input should bypass git probing"),
+        ):
+            report = build_report(
+                self.vault,
+                changed_files_manifest="tmp/changed-files.json",
+                changed_paths_from_git=True,
+                context=fixed_context(),
+            )
 
         self.assertEqual(report["selected_change_paths"], ["external-reports/review.md"])
         self.assertIn("changed_files_manifest", report["input_fingerprints"])
         self.assertEqual(report["selected_workflows"][0]["workflow_id"], "external_report_reference_closeout")
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "skipped")
+        self.assertEqual(
+            report["diagnostics"]["git_changed_paths"]["reason"],
+            "changed_files_manifest",
+        )
 
-    def test_changed_paths_from_git_reads_untracked_paths(self) -> None:
-        subprocess.run(
-            ["git", "init"],
-            cwd=self.vault,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["git", "add", "."],
-            cwd=self.vault,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            [
-                "git",
-                "-c",
-                "user.name=LLMwiki Test",
-                "-c",
-                "user.email=llmwiki-test@example.invalid",
-                "commit",
-                "-m",
-                "baseline",
-            ],
-            cwd=self.vault,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        changed_path = self.vault / "docs" / "development.md"
-        changed_path.parent.mkdir(parents=True, exist_ok=True)
-        changed_path.write_text("untracked doc\n", encoding="utf-8")
+    def test_changed_paths_from_git_skips_missing_worktree_metadata(self) -> None:
+        with mock.patch(
+            "ops.scripts.core.git_changed_paths_runtime.run_with_timeout",
+            side_effect=AssertionError("source packages without .git should not probe git"),
+        ):
+            report = build_report(
+                self.vault,
+                changed_paths_from_git=True,
+                context=fixed_context(),
+            )
+
+        diagnostics = report["diagnostics"]["git_changed_paths"]
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertEqual(diagnostics["status"], "skipped")
+        self.assertEqual(diagnostics["source"], "none")
+        self.assertEqual(diagnostics["reason"], "source_package_without_git")
+        self.assertEqual(diagnostics["commands"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_worktree_and_staged_paths(self) -> None:
+        tracked_path = self.vault / "docs" / "existing.md"
+        deleted_path = self.vault / "docs" / "remove-me.md"
+        tracked_path.parent.mkdir(parents=True, exist_ok=True)
+        tracked_path.write_text("tracked\n", encoding="utf-8")
+        deleted_path.write_text("delete me\n", encoding="utf-8")
+        self._commit_git_baseline()
+        tracked_path.write_text("modified\n", encoding="utf-8")
+        deleted_path.unlink()
+        staged_path = self.vault / "docs" / "staged.md"
+        staged_path.write_text("staged\n", encoding="utf-8")
+        self._run_git("add", "docs/staged.md")
+        untracked_path = self.vault / "docs" / "untracked-guide.md"
+        untracked_path.write_text("untracked doc\n", encoding="utf-8")
 
         report = build_report(
             self.vault,
@@ -1452,13 +1723,1164 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             context=fixed_context(),
         )
 
-        self.assertEqual(report["selected_change_paths"], ["docs/development.md"])
+        self.assertEqual(
+            report["selected_change_paths"],
+            [
+                "docs/existing.md",
+                "docs/remove-me.md",
+                "docs/staged.md",
+                "docs/untracked-guide.md",
+            ],
+        )
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["path_count"], 4)
+        self.assertEqual(
+            [item["id"] for item in report["diagnostics"]["git_changed_paths"]["commands"]],
+            [
+                "rev-parse-worktree",
+                "ls-files-index-flags",
+                "ls-files-worktree",
+                "ls-files-modified",
+                "ls-files-gitlinks",
+                "rev-parse-head",
+                "diff-cached",
+            ],
+        )
         self.assertEqual(
             report["changed_path_minimum_plan"]["selected_commands"],
             ["make static", "make public-check"],
         )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_preserves_staged_rename_name_only_semantics(self) -> None:
+        old_path = self.vault / "docs" / "old.md"
+        old_path.parent.mkdir(parents=True, exist_ok=True)
+        old_path.write_text("old\n", encoding="utf-8")
+        self._commit_git_baseline()
+        self._run_git("mv", "docs/old.md", "docs/new.md")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--cached",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, ["docs/new.md"])
+        self.assertEqual(report["selected_change_paths"], git_name_only_paths)
+        self.assertNotIn("docs/old.md", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_does_not_execute_filter_drivers(self) -> None:
+        filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="cat\n",
+            file_text="baseline\n",
+        )
+        filtered_path.write_text("modified content\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self._assert_filtered_path_requires_filter_driver(report)
+        self.assertFalse(marker.exists())
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_does_not_false_positive_clean_filtered_files(self) -> None:
+        _filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+        )
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_accepts_slash_filter_driver_names(self) -> None:
+        _filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+            driver_name="foo/bar",
+        )
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_accepts_colon_filter_driver_names(self) -> None:
+        _filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+            driver_name="foo:bar",
+        )
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_accepts_equals_filter_driver_names(self) -> None:
+        _filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+            driver_name="foo=bar",
+        )
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_handles_newline_filtered_paths_without_driver(self) -> None:
+        _filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+            relative_path="docs/line\nbreak.foo",
+            configure_process=False,
+        )
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_preserves_filtered_intent_to_add_paths(self) -> None:
+        _filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="cat\n",
+            file_text="baseline\n",
+        )
+        intent_path = self.vault / "docs" / "intent.foo"
+        intent_path.write_text("intent\n", encoding="utf-8")
+        self._run_git("add", "-N", "docs/intent.foo")
+        marker.unlink(missing_ok=True)
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], ["docs/intent.foo"])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_flags_filtered_stat_drift_as_indeterminate(
+        self,
+    ) -> None:
+        filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+        )
+        os.utime(filtered_path, (1893423600, 1893423600))
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self._assert_filtered_path_requires_filter_driver(report)
+        self.assertFalse(marker.exists())
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_flags_filtered_ctime_drift_as_indeterminate(
+        self,
+    ) -> None:
+        filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+        )
+        baseline_stat = filtered_path.stat()
+        time.sleep(0.02)
+        filtered_path.write_text("changed\n", encoding="utf-8")
+        os.utime(filtered_path, ns=(baseline_stat.st_atime_ns, baseline_stat.st_mtime_ns))
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self._assert_filtered_path_requires_filter_driver(report)
+        self.assertFalse(marker.exists())
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_tracked_symlink_retarget(self) -> None:
+        symlink_target = self.vault / "docs" / "target.md"
+        symlink_target.parent.mkdir(parents=True, exist_ok=True)
+        symlink_target.write_text("target\n", encoding="utf-8")
+        symlink_path = self.vault / "docs" / "linked.md"
+        try:
+            symlink_path.symlink_to("target.md")
+        except OSError as exc:
+            self.skipTest(f"symlink creation is unavailable: {exc}")
+        self._commit_git_baseline()
+        symlink_path.unlink()
+        symlink_path.symlink_to("missing.md")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], ["docs/linked.md"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_unstaged_submodule_head_changes(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "vendor" / "submodule", "pull")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertIn(
+            {
+                "id": "ls-files-gitlinks",
+                "status": "pass",
+                "returncode": 0,
+                "timed_out": False,
+                "path_count": 1,
+            },
+            report["diagnostics"]["git_changed_paths"]["commands"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_dirty_submodule_worktrees(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertIn(
+            {
+                "id": "submodule:vendor/submodule:ls-files-modified",
+                "status": "pass",
+                "returncode": 0,
+                "timed_out": False,
+                "path_count": 1,
+            },
+            report["diagnostics"]["git_changed_paths"]["commands"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_resolves_linked_worktree_submodule_gitdirs(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        linked_vault = Path(self.temp_dir.name) / "linked-vault"
+        self._run_git("worktree", "add", str(linked_vault), "-b", "linked-vault")
+        self._run_git_at(
+            linked_vault,
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+        )
+        linked_submodule = linked_vault / "vendor" / "submodule"
+        self._advance_submodule_source_repo(subrepo, "linked advanced\n")
+        self._run_git_at(linked_submodule, "fetch")
+        self._run_git_at(linked_submodule, "checkout", "FETCH_HEAD")
+
+        report = build_report(
+            linked_vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertIn(
+            {
+                "id": "ls-files-gitlinks",
+                "status": "pass",
+                "returncode": 0,
+                "timed_out": False,
+                "path_count": 1,
+            },
+            report["diagnostics"]["git_changed_paths"]["commands"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_ignores_clean_external_linked_worktree_gitlink(self) -> None:
+        self._commit_vault_with_external_linked_gitlink()
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/external-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_common_gitdir_for_clean_branch_external_gitlink(
+        self,
+    ) -> None:
+        self._commit_vault_with_external_linked_gitlink(
+            rel_path="vendor/branch-linked",
+            branch_name="linked-branch",
+        )
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/branch-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_marks_external_gitlink_with_bad_backlink_changed(self) -> None:
+        _external_repo, linked_path = self._commit_vault_with_external_linked_gitlink()
+        prefix, separator, raw_git_dir = (linked_path / ".git").read_text(
+            encoding="utf-8",
+        ).partition(":")
+        self.assertEqual(prefix.strip().lower(), "gitdir")
+        self.assertTrue(separator)
+        git_dir = (linked_path / raw_git_dir.strip()).resolve()
+        (git_dir / "gitdir").write_text(
+            str(self.vault / "missing-worktree" / ".git"),
+            encoding="utf-8",
+        )
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/external-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_dirty_external_linked_worktree_gitlink(self) -> None:
+        _external_repo, linked_path = self._commit_vault_with_external_linked_gitlink()
+        (linked_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, ["vendor/external-linked"])
+        self.assertIn("vendor/external-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_marks_external_linked_worktree_gitlink_changed(self) -> None:
+        external_repo, linked_path = self._commit_vault_with_external_linked_gitlink()
+        self._advance_external_linked_worktree(external_repo, linked_path)
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, ["vendor/external-linked"])
+        self.assertIn("vendor/external-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_respects_all_ignore_for_external_gitdir(self) -> None:
+        external_repo, linked_path = self._commit_vault_with_external_linked_gitlink()
+        self._run_git("config", "submodule.vendor/external-linked.ignore", "all")
+        self._advance_external_linked_worktree(external_repo, linked_path)
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertNotIn("vendor/external-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_executable_bit_only_changes(self) -> None:
+        script = self.vault / "tools" / "mode-only.sh"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text("#!/bin/sh\n", encoding="utf-8")
+        script.chmod(0o644)
+        self._commit_git_baseline()
+        self._run_git("config", "core.filemode", "true")
+        script.chmod(0o755)
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("tools/mode-only.sh", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_respects_core_filemode_false(self) -> None:
+        script = self.vault / "tools" / "mode-ignored.sh"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text("#!/bin/sh\n", encoding="utf-8")
+        script.chmod(0o644)
+        self._commit_git_baseline()
+        self._run_git("config", "core.fileMode", "false")
+        script.chmod(0o755)
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_ignores_touch_only_metadata_changes(self) -> None:
+        touched_path = self.vault / "docs" / "touched.md"
+        touched_path.parent.mkdir(parents=True, exist_ok=True)
+        touched_path.write_text("content\n", encoding="utf-8")
+        self._commit_git_baseline()
+        os.utime(touched_path, (1893423600, 1893423600))
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_ignores_eol_normalized_touch_only_changes(self) -> None:
+        eol_path = self.vault / "docs" / "eol.txt"
+        eol_path.parent.mkdir(parents=True, exist_ok=True)
+        (self.vault / ".gitattributes").write_text(
+            "*.txt text eol=crlf\n",
+            encoding="utf-8",
+        )
+        eol_path.write_text("content\n", encoding="utf-8")
+        self._commit_git_baseline()
+        eol_path.unlink()
+        self._run_git("checkout", "--", "docs/eol.txt")
+        self.assertIn(b"\r\n", eol_path.read_bytes())
+        os.utime(eol_path, (1893423600, 1893423600))
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_honors_hidden_index_flags(self) -> None:
+        assume_path = self.vault / "docs" / "assume.md"
+        skip_path = self.vault / "docs" / "skip.md"
+        assume_path.parent.mkdir(parents=True, exist_ok=True)
+        assume_path.write_text("base\n", encoding="utf-8")
+        skip_path.write_text("base\n", encoding="utf-8")
+        self._commit_git_baseline()
+        self._run_git("update-index", "--assume-unchanged", "docs/assume.md")
+        self._run_git("update-index", "--skip-worktree", "docs/skip.md")
+        assume_path.write_text("local assume change\n", encoding="utf-8")
+        skip_path.write_text("local skip change\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_honors_assume_unchanged_deletions(self) -> None:
+        assume_path = self.vault / "docs" / "assume-delete.md"
+        assume_path.parent.mkdir(parents=True, exist_ok=True)
+        assume_path.write_text("base\n", encoding="utf-8")
+        self._commit_git_baseline()
+        self._run_git("update-index", "--assume-unchanged", "docs/assume-delete.md")
+        assume_path.unlink()
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_respects_dirty_submodule_ignore(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "submodule.vendor/submodule.ignore", "dirty")
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_respects_untracked_submodule_ignore(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "submodule.vendor/submodule.ignore", "untracked")
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "untracked.txt").write_text("local\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_respects_all_submodule_ignore(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "vendor" / "submodule", "pull")
+        self._run_git("config", "submodule.vendor/submodule.ignore", "all")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_keeps_gitmodules_name_over_local_alias(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "canonical",
+            str(subrepo),
+            "sm",
+        )
+        self._run_git(
+            "config",
+            "--file",
+            ".gitmodules",
+            "submodule.canonical.ignore",
+            "all",
+        )
+        self._commit_all_at(self.vault, "baseline with canonical submodule")
+        self._run_git("config", "submodule.alias.path", "sm")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "sm", "pull")
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_does_not_apply_local_alias_ignore_to_gitmodules_name(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "canonical",
+            str(subrepo),
+            "sm",
+        )
+        self._commit_all_at(self.vault, "baseline with canonical submodule")
+        self._run_git("config", "submodule.alias.path", "sm")
+        self._run_git("config", "submodule.alias.ignore", "all")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "sm", "pull")
+
+        report = self._assert_git_changed_paths_match_name_only()
+
+        self.assertEqual(report["selected_change_paths"], ["sm"])
+
+    def test_changed_paths_from_git_preserves_submodule_path_whitespace(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "spacey",
+            str(subrepo),
+            " sm ",
+        )
+        self._run_git("config", "--file", ".gitmodules", "submodule.spacey.ignore", "all")
+        self._commit_all_at(self.vault, "baseline with whitespace submodule path")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / " sm ", "pull")
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_respects_diff_ignore_submodules_dirty(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "diff.ignoreSubmodules", "dirty")
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_respects_diff_ignore_submodules_all(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "vendor" / "submodule", "pull")
+        self._run_git("config", "diff.ignoreSubmodules", "all")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_keeps_submodule_ignore_precedence_over_diff_default(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "diff.ignoreSubmodules", "all")
+        self._run_git("config", "submodule.vendor/submodule.ignore", "none")
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, ["vendor/submodule"])
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_ignores_default_untracked_submodule_noise(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "untracked.txt").write_text("local\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_marks_filtered_submodule_edits_as_gitlink(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        filter_script = submodule_path / "filter-driver.sh"
+        marker = submodule_path / "filter-driver-ran"
+        filter_script.write_text(
+            "#!/bin/sh\n"
+            f"printf ran >> {str(marker)!r}\n"
+            "cat\n",
+            encoding="utf-8",
+        )
+        filter_script.chmod(0o755)
+        (submodule_path / ".gitattributes").write_text("*.foo filter=pwn\n", encoding="utf-8")
+        (submodule_path / "content.foo").write_text("base\n", encoding="utf-8")
+        self._run_git_at(submodule_path, "config", "filter.pwn.clean", str(filter_script))
+        self._commit_all_at(submodule_path, "submodule filtered baseline")
+        self._run_git("add", "vendor/submodule")
+        self._commit_all_at(self.vault, "baseline with filtered submodule")
+        self._run_git_at(submodule_path, "config", "filter.pwn.process", str(filter_script))
+        marker.unlink(missing_ok=True)
+        (submodule_path / "content.foo").write_text("modified\n", encoding="utf-8")
+
+        report = self._assert_git_changed_paths_match_name_only()
+
+        self.assertEqual(report["selected_change_paths"], ["vendor/submodule"])
+        self.assertFalse(marker.exists())
+
+    def test_changed_paths_from_git_honors_hidden_index_deletions_inside_submodules(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        self._run_git_at(submodule_path, "update-index", "--assume-unchanged", "content.txt")
+        (submodule_path / "content.txt").unlink()
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_honors_hidden_index_gitlinks(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("update-index", "--assume-unchanged", "vendor/submodule")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "vendor" / "submodule", "pull")
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_resolves_chained_symbolic_gitlink_refs(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        current_head_ref = self._run_git_at(submodule_path, "symbolic-ref", "HEAD").stdout.strip()
+        self._run_git_at(submodule_path, "symbolic-ref", "refs/heads/alias", current_head_ref)
+        self._run_git_at(submodule_path, "symbolic-ref", "HEAD", "refs/heads/alias")
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_recurses_into_nested_submodule_gitlinks(self) -> None:
+        nested_source = self._create_submodule_source_repo()
+        outer_source = Path(self.temp_dir.name) / "outer-submodule-source"
+        outer_source.mkdir()
+        self._run_git_at(outer_source, "init")
+        self._run_git_at(
+            outer_source,
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(nested_source),
+            "nested",
+        )
+        self._commit_all_at(outer_source, "outer baseline with nested submodule")
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(outer_source),
+            "outer",
+        )
+        self._run_git_at(
+            self.vault / "outer",
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+        )
+        self._commit_all_at(self.vault, "baseline with outer submodule")
+        self._advance_submodule_source_repo(nested_source)
+        self._run_git_at(self.vault / "outer" / "nested", "fetch")
+        self._run_git_at(self.vault / "outer" / "nested", "checkout", "FETCH_HEAD")
+
+        report = self._assert_git_changed_paths_match_name_only()
+
+        self.assertEqual(report["selected_change_paths"], ["outer"])
+
+    def test_changed_paths_from_git_parses_spaced_submodule_names(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "foo bar",
+            str(subrepo),
+            "sm",
+        )
+        self._commit_all_at(self.vault, "baseline with spaced-name submodule")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "sm", "pull")
+        self._run_git("config", "submodule.foo bar.ignore", "all")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("sm", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_local_submodule_path_aliases(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "alias name",
+            str(subrepo),
+            "sm",
+        )
+        self._commit_all_at(self.vault, "baseline with aliased submodule")
+        (self.vault / ".gitmodules").unlink()
+        self._run_git("config", "submodule.alias name.path", "sm")
+        self._run_git("config", "submodule.alias name.ignore", "all")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "sm", "pull")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [".gitmodules"])
+        self.assertNotIn("sm", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_accepts_old_form_submodule_gitdirs(self) -> None:
+        embedded_submodule = self.vault / "vendor" / "embedded"
+        embedded_submodule.mkdir(parents=True)
+        self._run_git("init")
+        self._run_git_at(embedded_submodule, "init")
+        (embedded_submodule / "content.txt").write_text("base\n", encoding="utf-8")
+        self._commit_all_at(embedded_submodule, "embedded baseline")
+        self._run_git("add", "vendor/embedded")
+        self._run_git(
+            "-c",
+            "user.name=LLMwiki Test",
+            "-c",
+            "user.email=llmwiki-test@example.invalid",
+            "commit",
+            "-m",
+            "baseline with embedded submodule",
+        )
+        (embedded_submodule / "content.txt").write_text("advanced\n", encoding="utf-8")
+        self._commit_all_at(embedded_submodule, "advance embedded submodule")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/embedded", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reports_submodule_typechange_to_file(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        self._remove_submodule_worktree(submodule_path)
+        submodule_path.write_text("not a submodule\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_applies_submodule_ignore_before_typechange(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "submodule.vendor/submodule.ignore", "all")
+        submodule_path = self.vault / "vendor" / "submodule"
+        self._remove_submodule_worktree(submodule_path)
+        submodule_path.write_text("not a submodule\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_filters_ignored_deleted_submodule_worktree(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("config", "submodule.vendor/submodule.ignore", "all")
+        self._remove_submodule_worktree(self.vault / "vendor" / "submodule")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_ignores_vault_local_git_on_path(self) -> None:
+        self._commit_git_baseline()
+        marker = self.vault / "local-git-ran"
+        local_git = self.vault / "git"
+        local_git.write_text(
+            "#!/bin/sh\n"
+            f"printf ran >> {str(marker)!r}\n"
+            "exit 127\n",
+            encoding="utf-8",
+        )
+        local_git.chmod(0o755)
+        with (self.vault / ".git" / "info" / "exclude").open("a", encoding="utf-8") as handle:
+            handle.write("\n/git\n")
+        changed_path = self.vault / "docs" / "development.md"
+        changed_path.parent.mkdir(parents=True, exist_ok=True)
+        changed_path.write_text("untracked doc\n", encoding="utf-8")
+        polluted_path = os.pathsep.join(
+            [str(self.vault), ".", "", os.environ.get("PATH", "")]
+        )
+
+        with mock.patch.dict(os.environ, {"PATH": polluted_path}):
+            report = build_report(
+                self.vault,
+                changed_paths_from_git=True,
+                context=fixed_context(),
+            )
+
+        self.assertEqual(report["selected_change_paths"], ["docs/development.md"])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertGreaterEqual(
+            report["diagnostics"]["git_changed_paths"]["ignored_path_entry_count"],
+            3,
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_failure_fails_report(self) -> None:
+        self._commit_git_baseline()
+
+        def fake_run(*_args: object, **_kwargs: object) -> TimedProcessResult:
+            return TimedProcessResult(
+                args=[],
+                returncode=124,
+                stdout="",
+                stderr="timeout",
+                timed_out=True,
+                timeout_seconds=30,
+                termination_reason="execution_timeout",
+            )
+
+        with mock.patch(
+            "ops.scripts.core.git_changed_paths_runtime.run_with_timeout",
+            side_effect=fake_run,
+        ):
+            report = build_report(
+                self.vault,
+                changed_paths_from_git=True,
+                context=fixed_context(),
+            )
+
+        diagnostics = report["diagnostics"]["git_changed_paths"]
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(diagnostics["status"], "timed_out")
+        self.assertEqual(
+            diagnostics["failures"],
+            [{"command_id": "rev-parse-worktree", "code": "git_probe_timed_out"}],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_write_report_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())

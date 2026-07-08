@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -50,6 +51,34 @@ def test_source_revision_uses_git_head_when_git_metadata_exists() -> None:
     assert revision.revision == expected
     assert revision.status == "git_head"
     assert revision.revision != "unknown"
+
+
+def test_source_revision_ignores_vault_local_git_on_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        (vault / ".git").mkdir()
+        marker = vault / "local-git-ran"
+        local_git = vault / "git"
+        local_git.write_text(
+            "#!/bin/sh\n"
+            f"printf ran >> {str(marker)!r}\n"
+            "exit 127\n",
+            encoding="utf-8",
+        )
+        local_git.chmod(0o755)
+        monkeypatch.setenv(
+            "PATH",
+            os.pathsep.join([str(vault), ".", "", os.environ.get("PATH", "")]),
+        )
+
+        revision = resolve_source_revision(vault)
+
+        assert revision.revision == "git_unavailable"
+        assert revision.status == "git_unavailable"
+        assert not marker.exists()
 
 
 def test_canonical_report_envelope_avoids_unknown_source_revision() -> None:

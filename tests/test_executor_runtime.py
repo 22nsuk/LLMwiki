@@ -217,7 +217,7 @@ def _executor_subprocess_completed(
     preflight_stderr: str = "",
     preflight_returncode: int = 0,
 ) -> subprocess.CompletedProcess[str]:
-    if argv[:3] == ["git", "rev-parse", "HEAD"]:
+    if _is_git_rev_parse_head(argv):
         return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
     if len(argv) >= 2 and argv[1] == "-c":
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
@@ -231,6 +231,14 @@ def _executor_subprocess_completed(
             stderr=preflight_stderr,
         )
     raise AssertionError(f"unexpected subprocess command: {argv!r}")
+
+
+def _is_git_rev_parse_head(argv: list[str]) -> bool:
+    return (
+        len(argv) >= 3
+        and Path(argv[0]).name == "git"
+        and argv[1:3] == ["rev-parse", "HEAD"]
+    )
 
 
 def _is_worker_repo_health_preflight(argv: list[str]) -> bool:
@@ -954,7 +962,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-                if argv[:3] == ["git", "rev-parse", "HEAD"]:
+                if _is_git_rev_parse_head(argv):
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
                 trusted_python = (vault / ".venv" / "bin" / "python").resolve()
                 self.assertEqual(argv[0], str(trusted_python))

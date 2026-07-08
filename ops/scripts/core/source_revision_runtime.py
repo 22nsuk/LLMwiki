@@ -4,6 +4,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .git_runtime import resolve_trusted_git_executable, trusted_git_subprocess_env
+
 
 @dataclass(frozen=True)
 class SourceRevision:
@@ -12,13 +14,19 @@ class SourceRevision:
 
 
 def _git_head(vault: Path) -> str:
+    git_executable, path_text, _ignored_path_entry_count = resolve_trusted_git_executable(
+        vault
+    )
+    if git_executable is None:
+        return ""
     try:
         completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+            [git_executable, "rev-parse", "HEAD"],
             cwd=vault,
             check=False,
             text=True,
             capture_output=True,
+            env=trusted_git_subprocess_env(path_text),
         )
     except OSError:
         return ""
