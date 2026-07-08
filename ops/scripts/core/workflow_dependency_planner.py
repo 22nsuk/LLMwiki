@@ -4,7 +4,6 @@ import argparse
 import fnmatch
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -24,6 +23,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         currentness_output_paths as derived_surface_currentness_output_paths,
         currentness_path_patterns as derived_surface_currentness_path_patterns,
         load_manifest as load_derived_surfaces_manifest,
+    )
+    from ops.scripts.core.git_changed_paths_runtime import (
+        read_git_changed_paths,
+        skipped_git_changed_paths,
     )
     from ops.scripts.core.makefile_runtime import load_makefile_text
     from ops.scripts.core.output_runtime import display_path
@@ -54,12 +57,15 @@ else:
         currentness_path_patterns as derived_surface_currentness_path_patterns,
         load_manifest as load_derived_surfaces_manifest,
     )
+    from .git_changed_paths_runtime import (
+        read_git_changed_paths,
+        skipped_git_changed_paths,
+    )
     from .makefile_runtime import load_makefile_text
     from .output_runtime import display_path
     from .policy_runtime import load_policy, report_path
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH
-
 
 DEFAULT_OUT = "ops/reports/workflow-dependency-planner.json"
 DEFAULT_TEST_LANE_REGISTRY = "ops/test-lane-registry.json"
@@ -147,6 +153,8 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
             "mk/*.mk",
             ".github/workflows/*.yml",
             ".github/workflows/*.yaml",
+            "ops/scripts/core/git_changed_paths_runtime.py",
+            "ops/scripts/core/git_runtime.py",
             "ops/scripts/core/workflow_dependency_planner.py",
             "ops/schemas/workflow-dependency-planner.schema.json",
             "ops/README.md",
@@ -1039,25 +1047,6 @@ def _read_changed_paths(vault: Path, changed_files_manifest: str | None) -> list
     return paths
 
 
-def _read_git_changed_paths(vault: Path) -> list[str]:
-    paths: list[str] = []
-    for command in (
-        ["git", "diff", "--name-only", "HEAD", "--"],
-        ["git", "ls-files", "--others", "--exclude-standard"],
-    ):
-        result = subprocess.run(
-            command,
-            cwd=vault,
-            check=False,
-            text=True,
-            capture_output=True,
-        )
-        if result.returncode != 0:
-            continue
-        paths.extend(line.strip() for line in result.stdout.splitlines() if line.strip())
-    return paths
-
-
 def build_report(
     vault: Path,
     *,
@@ -1073,11 +1062,13 @@ def build_report(
     makefile_text, makefile_sources = load_makefile_text(resolved_vault)
     targets, phony, dependency_edges = _parse_makefile(makefile_text)
     manifest_paths = _read_changed_paths(resolved_vault, changed_files_manifest)
-    git_paths = (
-        []
-        if changed_files_manifest or not changed_paths_from_git
-        else _read_git_changed_paths(resolved_vault)
-    )
+    if changed_files_manifest:
+        git_changed_paths = skipped_git_changed_paths("changed_files_manifest")
+    elif not changed_paths_from_git:
+        git_changed_paths = skipped_git_changed_paths("changed_paths_from_git_disabled")
+    else:
+        git_changed_paths = read_git_changed_paths(resolved_vault)
+    git_paths = git_changed_paths.paths
     selected_paths = sorted({*(changed_paths or []), *manifest_paths, *git_paths})
     workflow_rules = _workflow_rules(resolved_vault)
     test_lane_registry = _test_lane_registry(resolved_vault)
@@ -1102,7 +1093,7 @@ def build_report(
     evidence_dag = _evidence_dag(resolved_vault)
     status = (
         "fail"
-        if missing_dependencies
+        if missing_dependencies or git_changed_paths.failed
         else "attention"
         if unknown_change_paths or derived_surface_currentness["status"] == "failed"
         else "pass"
@@ -1127,6 +1118,8 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,
             source_paths=[
+                "ops/scripts/core/git_changed_paths_runtime.py",
+                "ops/scripts/core/git_runtime.py",
                 "ops/scripts/core/workflow_dependency_planner.py",
                 "Makefile",
                 *[path for path in makefile_sources if path != "Makefile"],
@@ -1182,6 +1175,7 @@ def build_report(
             "phony_count": len(phony),
             "missing_dependencies": missing_dependencies,
             "unknown_change_paths": unknown_change_paths,
+            "git_changed_paths": git_changed_paths.diagnostics,
             "derived_surfaces_manifest": {
                 "status": str(derived_surface_currentness["status"]),
                 "path": str(derived_surface_currentness["path"]),
