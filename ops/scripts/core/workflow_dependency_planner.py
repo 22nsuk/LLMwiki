@@ -85,10 +85,6 @@ TARGET_RE = re.compile(r"^([A-Za-z0-9_.%/@-][A-Za-z0-9_.%/@ -]*):(?P<deps>[^\n#]
 MAKE_RECIPE_RE = re.compile(r"\$\((?:MAKE|make)\)\s+(?P<args>[^\n;&|]+)")
 TARGET_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.%/@-]+$")
 OPTION_OR_ASSIGNMENT_RE = re.compile(r"^(?:-|[A-Za-z_][A-Za-z0-9_]*=)")
-GIT_LS_FILES_STAGE_RE = re.compile(
-    r"^(?P<mode>\d{6}) (?P<object_id>[0-9a-fA-F]{40,64}) "
-    r"(?P<stage>\d)\t(?P<path>.+)$"
-)
 GIT_LS_FILES_DEBUG_RE = re.compile(
     r"^  ctime: (?P<ctime_s>\d+):(?P<ctime_ns>\d+)\n"
     r"  mtime: (?P<mtime_s>\d+):(?P<mtime_ns>\d+)\n"
@@ -97,7 +93,7 @@ GIT_LS_FILES_DEBUG_RE = re.compile(
     r"  size: (?P<size>\d+)\tflags: (?P<flags>[0-9a-fA-F]+)\n"
 )
 GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
-GIT_FILTER_DRIVER_NAME_RE = re.compile(r"^[A-Za-z0-9_./-]+$")
+GIT_INDEX_INTENT_TO_ADD_FLAG = 0x20000000
 GIT_CHANGED_PATHS_TIMEOUT_SECONDS = 30
 GIT_BASE_CONFIG_ARGS = (
     "-c",
@@ -152,7 +148,7 @@ class _GitIndexEntry:
 
 @dataclass(frozen=True)
 class _TrackedFilterContext:
-    config_args: list[str]
+    config_env: dict[str, str]
     filtered_paths: set[str]
     gitlink_paths: set[str]
     index_debug_stdout: str
@@ -1351,13 +1347,23 @@ def _git_worktree_exists(
 
 
 def _git_index_entry(record: str) -> _GitIndexEntry | None:
-    match = GIT_LS_FILES_STAGE_RE.match(record)
-    if match is None:
+    header, separator, rel_path = record.partition("\t")
+    if not separator:
+        return None
+    parts = header.split()
+    if len(parts) != 3:
+        return None
+    mode, object_id, stage = parts
+    if not re.fullmatch(r"\d{6}", mode):
+        return None
+    if not GIT_OBJECT_ID_RE.fullmatch(object_id):
+        return None
+    if not stage.isdigit():
         return None
     return _GitIndexEntry(
-        mode=match.group("mode"),
-        object_id=match.group("object_id").lower(),
-        rel_path=match.group("path"),
+        mode=mode,
+        object_id=object_id.lower(),
+        rel_path=rel_path,
     )
 
 
@@ -1406,22 +1412,23 @@ def _filter_driver_paths_from_check_attr(stdout: str) -> dict[str, str]:
     return drivers_by_path
 
 
-def _safe_filter_driver_config_args(filter_names: set[str]) -> list[str] | None:
-    args: list[str] = []
+def _safe_filter_driver_config_env(filter_names: set[str]) -> dict[str, str] | None:
+    config_env: dict[str, str] = {}
+    config_index = 0
     for name in sorted(filter_names):
-        if not GIT_FILTER_DRIVER_NAME_RE.fullmatch(name):
+        if not name or any(char in name for char in "\0\r\n"):
             return None
-        args.extend(
-            [
-                "-c",
-                f"filter.{name}.clean=",
-                "-c",
-                f"filter.{name}.process=",
-                "-c",
-                f"filter.{name}.required=false",
-            ]
-        )
-    return args
+        for suffix, value in (
+            ("clean", ""),
+            ("process", ""),
+            ("required", "false"),
+        ):
+            config_env[f"GIT_CONFIG_KEY_{config_index}"] = f"filter.{name}.{suffix}"
+            config_env[f"GIT_CONFIG_VALUE_{config_index}"] = value
+            config_index += 1
+    if config_index:
+        config_env["GIT_CONFIG_COUNT"] = str(config_index)
+    return config_env
 
 
 def _index_time_ns(match: re.Match[str], prefix: str) -> int:
@@ -1490,7 +1497,8 @@ def _filtered_paths_requiring_filter_driver(
     for entry, match in _ls_files_stage_debug_records(stdout):
         if entry.rel_path not in filtered_paths:
             continue
-        if match.group("flags") != "0":
+        flags = int(match.group("flags"), 16)
+        if flags != 0:
             continue
         if _index_entry_stat_changed(
             vault=vault,
@@ -1498,6 +1506,21 @@ def _filtered_paths_requiring_filter_driver(
             match=match,
             core_filemode=core_filemode,
         ):
+            paths.append(entry.rel_path)
+    return paths
+
+
+def _filtered_intent_to_add_paths(
+    *,
+    stdout: str,
+    filtered_paths: set[str],
+) -> list[str]:
+    paths: list[str] = []
+    for entry, match in _ls_files_stage_debug_records(stdout):
+        if entry.rel_path not in filtered_paths:
+            continue
+        flags = int(match.group("flags"), 16)
+        if flags & GIT_INDEX_INTENT_TO_ADD_FLAG:
             paths.append(entry.rel_path)
     return paths
 
@@ -1516,11 +1539,11 @@ def _tracked_filter_context(
         args=["ls-files", "-z", "-s", "--debug"],
     )
     if paths_failure is not None:
-        return _TrackedFilterContext([], set(), set(), ""), paths_failure
+        return _TrackedFilterContext({}, set(), set(), ""), paths_failure
     entries = [entry for entry, _match in _ls_files_stage_debug_records(paths_stdout)]
     paths = [entry.rel_path for entry in entries]
     if not paths:
-        return _TrackedFilterContext([], set(), set(), paths_stdout), None
+        return _TrackedFilterContext({}, set(), set(), paths_stdout), None
     attr_stdout, _attr_observation, attr_failure = _run_git_raw_command(
         vault=vault,
         git_executable=git_executable,
@@ -1530,18 +1553,18 @@ def _tracked_filter_context(
         input_text="\0".join(paths) + "\0",
     )
     if attr_failure is not None:
-        return _TrackedFilterContext([], set(), set(), paths_stdout), attr_failure
+        return _TrackedFilterContext({}, set(), set(), paths_stdout), attr_failure
     drivers_by_path = _filter_driver_paths_from_check_attr(attr_stdout)
-    config_args = _safe_filter_driver_config_args(set(drivers_by_path.values()))
-    if config_args is None:
-        return _TrackedFilterContext([], set(), set(), paths_stdout), {
+    config_env = _safe_filter_driver_config_env(set(drivers_by_path.values()))
+    if config_env is None:
+        return _TrackedFilterContext({}, set(), set(), paths_stdout), {
             "command_id": "check-attr-filter",
             "code": "git_probe_failed",
         }
     gitlink_paths = {entry.rel_path for entry in entries if entry.mode == "160000"}
     return (
         _TrackedFilterContext(
-            config_args=config_args,
+            config_env=config_env,
             filtered_paths=set(drivers_by_path),
             gitlink_paths=gitlink_paths,
             index_debug_stdout=paths_stdout,
@@ -1599,20 +1622,42 @@ def _submodule_git_dir(vault: Path, rel_path: str) -> Path | None:
     return git_dir
 
 
-def _submodule_has_external_git_dir(vault: Path, rel_path: str) -> bool:
+def _submodule_external_git_dir(vault: Path, rel_path: str) -> Path | None:
     git_dir = _git_dir_from_marker(vault / rel_path / ".git")
     if git_dir is None:
+        return None
+    if _submodule_git_dir_is_allowed(vault, rel_path, git_dir):
+        return None
+    return git_dir
+
+
+def _external_git_dir_points_to_worktree_marker(
+    *,
+    vault: Path,
+    rel_path: str,
+    git_dir: Path,
+) -> bool:
+    try:
+        marker_path = (vault / rel_path / ".git").resolve()
+        backlink = (git_dir / "gitdir").read_text(
+            encoding="utf-8",
+            errors="replace",
+        ).strip()
+        backlink_path = (git_dir / backlink).resolve()
+    except OSError:
         return False
-    return not _submodule_git_dir_is_allowed(vault, rel_path, git_dir)
+    return backlink_path == marker_path
 
 
 def _read_packed_git_ref(git_dir: Path, ref_name: str) -> str | None:
     try:
-        lines = (git_dir / "packed-refs").read_text(
+        packed_refs_path = (git_dir / "packed-refs").resolve()
+        packed_refs_path.relative_to(git_dir.resolve())
+        lines = packed_refs_path.read_text(
             encoding="utf-8",
             errors="replace",
         ).splitlines()
-    except OSError:
+    except (OSError, ValueError):
         return None
     for line in lines:
         if not line or line.startswith(("#", "^")):
@@ -1625,8 +1670,11 @@ def _read_packed_git_ref(git_dir: Path, ref_name: str) -> str | None:
 
 def _read_git_dir_head(git_dir: Path) -> str | None:
     try:
-        head = (git_dir / "HEAD").read_text(encoding="utf-8", errors="replace").strip()
-    except OSError:
+        git_dir_root = git_dir.resolve()
+        head_path = (git_dir / "HEAD").resolve()
+        head_path.relative_to(git_dir_root)
+        head = head_path.read_text(encoding="utf-8", errors="replace").strip()
+    except (OSError, ValueError):
         return None
     if GIT_OBJECT_ID_RE.fullmatch(head):
         return head.lower()
@@ -1636,7 +1684,7 @@ def _read_git_dir_head(git_dir: Path) -> str | None:
     ref_name = ref_name.strip()
     try:
         ref_path = (git_dir / ref_name).resolve()
-        ref_path.relative_to(git_dir.resolve())
+        ref_path.relative_to(git_dir_root)
         ref_value = ref_path.read_text(encoding="utf-8", errors="replace").strip()
     except (OSError, ValueError):
         ref_value = ""
@@ -1816,11 +1864,22 @@ def _submodule_changed(
     )
     if ignore_mode == "all":
         return False, [], []
-    if _submodule_has_external_git_dir(vault, entry.rel_path):
-        return True, [], []
     git_dir = _submodule_git_dir(vault, entry.rel_path)
     if git_dir is None:
-        return False, [], []
+        external_git_dir = _submodule_external_git_dir(vault, entry.rel_path)
+        if external_git_dir is None:
+            return False, [], []
+        if not _external_git_dir_points_to_worktree_marker(
+            vault=vault,
+            rel_path=entry.rel_path,
+            git_dir=external_git_dir,
+        ):
+            return True, [], []
+        current_external_head = _read_git_dir_head(external_git_dir)
+        head_changed = (
+            current_external_head is None or current_external_head != entry.object_id
+        )
+        return head_changed, [], []
     current_head = _read_git_dir_head(git_dir)
     head_changed = current_head is None or current_head != entry.object_id
     if ignore_mode == "dirty":
@@ -1924,13 +1983,17 @@ def _run_git_modified_paths_command(
     paths, observation, failure = _run_git_changed_paths_command(
         vault=vault,
         git_executable=git_executable,
-        env=env,
+        env={**env, **filter_context.config_env},
         command_id=command_id,
-        args=[*filter_context.config_args, "ls-files", "-z", "-m"],
+        args=["ls-files", "-z", "-m"],
     )
     if failure is not None:
         return paths, observation, failure
     excluded_paths = filter_context.gitlink_paths | filter_context.filtered_paths
+    intent_to_add_paths = _filtered_intent_to_add_paths(
+        stdout=filter_context.index_debug_stdout,
+        filtered_paths=filter_context.filtered_paths - filter_context.gitlink_paths,
+    )
     filter_driver_required_paths = _filtered_paths_requiring_filter_driver(
         vault=vault,
         stdout=filter_context.index_debug_stdout,
@@ -1941,7 +2004,14 @@ def _run_git_modified_paths_command(
             env=env,
         ),
     )
-    detected_paths = sorted(path for path in paths if path not in excluded_paths)
+    detected_paths = sorted(
+        {
+            path
+            for path in paths
+            if path not in excluded_paths
+        }
+        | set(intent_to_add_paths)
+    )
     if filter_driver_required_paths:
         return (
             detected_paths,
