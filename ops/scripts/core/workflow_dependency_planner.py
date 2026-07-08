@@ -97,7 +97,7 @@ GIT_LS_FILES_DEBUG_RE = re.compile(
     r"  size: (?P<size>\d+)\tflags: (?P<flags>[0-9a-fA-F]+)\n"
 )
 GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
-GIT_FILTER_DRIVER_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+GIT_FILTER_DRIVER_NAME_RE = re.compile(r"^[A-Za-z0-9_./-]+$")
 GIT_CHANGED_PATHS_TIMEOUT_SECONDS = 30
 GIT_BASE_CONFIG_ARGS = (
     "-c",
@@ -1574,23 +1574,36 @@ def _git_dir_from_marker(marker: Path) -> Path | None:
         return None
 
 
-def _submodule_git_dir(vault: Path, rel_path: str) -> Path | None:
+def _submodule_git_dir_is_allowed(vault: Path, rel_path: str, git_dir: Path) -> bool:
     submodule_root = vault / rel_path
-    git_dir = _git_dir_from_marker(vault / rel_path / ".git")
     storage_root = _git_dir_from_marker(vault / ".git")
-    if git_dir is None:
-        return None
     if storage_root is not None:
         try:
             git_dir.relative_to(storage_root)
-            return git_dir
+            return True
         except ValueError:
             pass
     try:
         git_dir.relative_to(submodule_root.resolve())
     except (OSError, ValueError):
+        return False
+    return True
+
+
+def _submodule_git_dir(vault: Path, rel_path: str) -> Path | None:
+    git_dir = _git_dir_from_marker(vault / rel_path / ".git")
+    if git_dir is None:
+        return None
+    if not _submodule_git_dir_is_allowed(vault, rel_path, git_dir):
         return None
     return git_dir
+
+
+def _submodule_has_external_git_dir(vault: Path, rel_path: str) -> bool:
+    git_dir = _git_dir_from_marker(vault / rel_path / ".git")
+    if git_dir is None:
+        return False
+    return not _submodule_git_dir_is_allowed(vault, rel_path, git_dir)
 
 
 def _read_packed_git_ref(git_dir: Path, ref_name: str) -> str | None:
@@ -1752,8 +1765,8 @@ def _submodule_worktree_dirty(
         )
         return False, commands, failures
     if has_head:
-        staged_args = ["diff-index", "--cached", "-z", "--name-only", "HEAD", "--"]
-        staged_command_id = "diff-index-cached"
+        staged_args = ["diff", "--cached", "-z", "--name-only", "HEAD", "--"]
+        staged_command_id = "diff-cached"
     elif ignore_untracked:
         staged_args = ["ls-files", "-z", "--cached"]
         staged_command_id = "ls-files-no-head"
@@ -1795,9 +1808,6 @@ def _submodule_changed(
 ) -> tuple[bool, list[_GitCommandObservation], list[_GitFailure]]:
     if _submodule_worktree_type_changed(vault, entry.rel_path):
         return True, [], []
-    git_dir = _submodule_git_dir(vault, entry.rel_path)
-    if git_dir is None:
-        return False, [], []
     ignore_mode = _submodule_ignore_mode(
         vault=vault,
         entry=entry,
@@ -1805,6 +1815,11 @@ def _submodule_changed(
         env=env,
     )
     if ignore_mode == "all":
+        return False, [], []
+    if _submodule_has_external_git_dir(vault, entry.rel_path):
+        return True, [], []
+    git_dir = _submodule_git_dir(vault, entry.rel_path)
+    if git_dir is None:
         return False, [], []
     current_head = _read_git_dir_head(git_dir)
     head_changed = current_head is None or current_head != entry.object_id
@@ -2167,8 +2182,8 @@ def _read_git_changed_paths(vault: Path) -> _GitChangedPathsResult:
             ignored_path_entry_count=ignored_path_entry_count,
         )
     if has_head:
-        staged_args = ["diff-index", "--cached", "-z", "--name-only", "HEAD", "--"]
-        command_id = "diff-index-cached"
+        staged_args = ["diff", "--cached", "-z", "--name-only", "HEAD", "--"]
+        command_id = "diff-cached"
     else:
         staged_args = ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]
         command_id = "ls-files-no-head"

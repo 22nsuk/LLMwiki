@@ -328,11 +328,64 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         (subrepo / "content.txt").write_text(text, encoding="utf-8")
         self._commit_all_at(subrepo, "advance submodule")
 
+    def _commit_vault_with_external_linked_gitlink(
+        self,
+        rel_path: str = "vendor/external-linked",
+    ) -> tuple[Path, Path]:
+        self._commit_git_baseline()
+        external_repo = Path(self.temp_dir.name) / "external-linked-source"
+        external_repo.mkdir()
+        self._run_git_at(external_repo, "init")
+        (external_repo / "content.txt").write_text("base\n", encoding="utf-8")
+        self._commit_all_at(external_repo, "external baseline")
+        base_commit = self._run_git_at(external_repo, "rev-parse", "HEAD").stdout.strip()
+        linked_path = self.vault / rel_path
+        linked_path.parent.mkdir(parents=True, exist_ok=True)
+        self._run_git_at(
+            external_repo,
+            "worktree",
+            "add",
+            "--detach",
+            str(linked_path),
+            base_commit,
+        )
+        self._run_git(
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            f"160000,{base_commit},{rel_path}",
+        )
+        self._run_git(
+            "-c",
+            "user.name=LLMwiki Test",
+            "-c",
+            "user.email=llmwiki-test@example.invalid",
+            "commit",
+            "-m",
+            "baseline with external linked gitlink",
+        )
+        return external_repo, linked_path
+
+    def _advance_external_linked_worktree(
+        self,
+        external_repo: Path,
+        linked_path: Path,
+    ) -> None:
+        (external_repo / "content.txt").write_text("advanced\n", encoding="utf-8")
+        self._commit_all_at(external_repo, "advance external")
+        advanced_commit = self._run_git_at(
+            external_repo,
+            "rev-parse",
+            "HEAD",
+        ).stdout.strip()
+        self._run_git_at(linked_path, "checkout", advanced_commit)
+
     def _commit_filtered_file_baseline(
         self,
         *,
         clean_body: str,
         file_text: str,
+        driver_name: str = "pwn",
     ) -> tuple[Path, Path]:
         filter_script = self.vault / "filter-driver.sh"
         marker = self.vault / "filter-driver-ran"
@@ -347,13 +400,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         filtered_path.parent.mkdir(parents=True, exist_ok=True)
         filtered_path.write_text(file_text, encoding="utf-8")
         (self.vault / ".gitattributes").write_text(
-            "*.foo filter=pwn\n",
+            f"*.foo filter={driver_name}\n",
             encoding="utf-8",
         )
         self._run_git("init")
-        self._run_git("config", "filter.pwn.clean", str(filter_script))
+        self._run_git("config", f"filter.{driver_name}.clean", str(filter_script))
         self._commit_all_at(self.vault, "baseline")
-        self._run_git("config", "filter.pwn.process", str(filter_script))
+        self._run_git("config", f"filter.{driver_name}.process", str(filter_script))
         marker.unlink(missing_ok=True)
         return filtered_path, marker
 
@@ -1641,13 +1694,39 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "ls-files-modified",
                 "ls-files-gitlinks",
                 "rev-parse-head",
-                "diff-index-cached",
+                "diff-cached",
             ],
         )
         self.assertEqual(
             report["changed_path_minimum_plan"]["selected_commands"],
             ["make static", "make public-check"],
         )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_preserves_staged_rename_name_only_semantics(self) -> None:
+        old_path = self.vault / "docs" / "old.md"
+        old_path.parent.mkdir(parents=True, exist_ok=True)
+        old_path.write_text("old\n", encoding="utf-8")
+        self._commit_git_baseline()
+        self._run_git("mv", "docs/old.md", "docs/new.md")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--cached",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, ["docs/new.md"])
+        self.assertEqual(report["selected_change_paths"], git_name_only_paths)
+        self.assertNotIn("docs/old.md", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_paths_from_git_does_not_execute_filter_drivers(self) -> None:
@@ -1671,6 +1750,24 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         _filtered_path, marker = self._commit_filtered_file_baseline(
             clean_body="sed s/payload/canonical/\n",
             file_text="payload\n",
+        )
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_accepts_slash_filter_driver_names(self) -> None:
+        _filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+            driver_name="foo/bar",
         )
 
         report = build_report(
@@ -1836,6 +1933,42 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             },
             report["diagnostics"]["git_changed_paths"]["commands"],
         )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_marks_external_linked_worktree_gitlink_changed(self) -> None:
+        external_repo, linked_path = self._commit_vault_with_external_linked_gitlink()
+        self._advance_external_linked_worktree(external_repo, linked_path)
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, ["vendor/external-linked"])
+        self.assertIn("vendor/external-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_respects_all_ignore_for_external_gitdir(self) -> None:
+        external_repo, linked_path = self._commit_vault_with_external_linked_gitlink()
+        self._run_git("config", "submodule.vendor/external-linked.ignore", "all")
+        self._advance_external_linked_worktree(external_repo, linked_path)
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertNotIn("vendor/external-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_paths_from_git_reads_executable_bit_only_changes(self) -> None:
