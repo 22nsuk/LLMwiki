@@ -19,7 +19,7 @@ UPLOAD_ARTIFACT_ACTION_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 DOWNLOAD_ARTIFACT_ACTION_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
 ATTEST_BUILD_PROVENANCE_ACTION_SHA = "0f67c3f4856b2e3261c31976d6725780e5e4c373"
 PYPI_PUBLISH_ACTION_SHA = "cef221092ed1bacb1cc03d23a2d87d1d172e277b"
-CODEQL_ACTION_SHA = "54f647b7e1bb85c95cddabcd46b0c578ec92bc1a"
+CODEQL_ACTION_SHA = "99df26d4f13ea111d4ec1a7dddef6063f76b97e9"
 DEPENDENCY_REVIEW_ACTION_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 
 PINNED_CI_CHECKOUT_ACTION = f"actions/checkout@{CI_CHECKOUT_ACTION_SHA}"
@@ -118,14 +118,14 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "codeql-init",
         "action": "github/codeql-action/init",
         "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.36.3",
+        "version_comment": "v4.37.0",
         "paths": (".github/workflows/codeql.yml",),
     },
     {
         "id": "codeql-analyze",
         "action": "github/codeql-action/analyze",
         "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.36.3",
+        "version_comment": "v4.37.0",
         "paths": (".github/workflows/codeql.yml",),
     },
     {
