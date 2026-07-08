@@ -1472,6 +1472,9 @@ def _index_entry_stat_changed(
         (
             stat_result.st_size != int(match.group("size")),
             stat_result.st_mtime_ns != _index_time_ns(match, "mtime"),
+            stat_result.st_ctime_ns != _index_time_ns(match, "ctime"),
+            stat_result.st_dev != int(match.group("dev")),
+            stat_result.st_ino != int(match.group("ino")),
         )
     )
 
@@ -1775,6 +1778,14 @@ def _submodule_worktree_dirty(
     )
 
 
+def _submodule_worktree_type_changed(vault: Path, rel_path: str) -> bool:
+    try:
+        worktree_mode = (vault / rel_path).lstat().st_mode
+    except OSError:
+        return False
+    return stat_module.S_ISLNK(worktree_mode) or not stat_module.S_ISDIR(worktree_mode)
+
+
 def _submodule_changed(
     *,
     vault: Path,
@@ -1782,6 +1793,8 @@ def _submodule_changed(
     git_executable: str,
     env: dict[str, str],
 ) -> tuple[bool, list[_GitCommandObservation], list[_GitFailure]]:
+    if _submodule_worktree_type_changed(vault, entry.rel_path):
+        return True, [], []
     git_dir = _submodule_git_dir(vault, entry.rel_path)
     if git_dir is None:
         return False, [], []
