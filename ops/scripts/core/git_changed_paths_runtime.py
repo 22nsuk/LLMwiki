@@ -21,6 +21,7 @@ GIT_LS_FILES_DEBUG_RE = re.compile(
 GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
 GIT_INDEX_INTENT_TO_ADD_FLAG = 0x20000000
 GIT_CHANGED_PATHS_TIMEOUT_SECONDS = 30
+GIT_SYMBOLIC_REF_MAX_DEPTH = 8
 SUBMODULE_IGNORE_MODES = {"all", "dirty", "untracked", "none"}
 GIT_BASE_CONFIG_ARGS = (
     "-c",
@@ -305,7 +306,7 @@ def _submodule_names_by_path_from_config_stdout(stdout: str) -> dict[str, str]:
         prefix = "submodule."
         suffix = ".path"
         if key.startswith(prefix) and key.endswith(suffix):
-            names_by_path[rel_path.strip()] = key[len(prefix) : -len(suffix)]
+            names_by_path[rel_path] = key[len(prefix) : -len(suffix)]
     return names_by_path
 
 
@@ -730,16 +731,43 @@ def _git_ref_roots(git_dir_root: Path) -> list[Path]:
     return [git_dir_root, common_dir]
 
 
-def _read_loose_git_ref(git_dir: Path, ref_name: str) -> str | None:
+def _read_loose_git_ref_value(git_dir: Path, ref_name: str) -> str | None:
     try:
         git_dir_root = git_dir.resolve()
         ref_path = (git_dir_root / ref_name).resolve()
         ref_path.relative_to(git_dir_root)
-        ref_value = ref_path.read_text(encoding="utf-8", errors="replace").strip()
+        return ref_path.read_text(encoding="utf-8", errors="replace").strip()
     except (OSError, ValueError):
         return None
-    if GIT_OBJECT_ID_RE.fullmatch(ref_value):
-        return ref_value.lower()
+
+
+def _resolve_git_ref(
+    ref_roots: list[Path],
+    ref_name: str,
+    *,
+    seen: frozenset[str] = frozenset(),
+) -> str | None:
+    if ref_name in seen or len(seen) >= GIT_SYMBOLIC_REF_MAX_DEPTH:
+        return None
+    next_seen = frozenset({*seen, ref_name})
+    for ref_root in ref_roots:
+        ref_value = _read_loose_git_ref_value(ref_root, ref_name)
+        if ref_value is None:
+            continue
+        if GIT_OBJECT_ID_RE.fullmatch(ref_value):
+            return ref_value.lower()
+        prefix, separator, next_ref_name = ref_value.partition(":")
+        if prefix == "ref" and separator:
+            return _resolve_git_ref(
+                ref_roots,
+                next_ref_name.strip(),
+                seen=next_seen,
+            )
+        return None
+    for ref_root in ref_roots:
+        ref_value = _read_packed_git_ref(ref_root, ref_name)
+        if ref_value is not None:
+            return ref_value
     return None
 
 
@@ -757,20 +785,34 @@ def _read_git_dir_head(git_dir: Path) -> str | None:
     if prefix != "ref" or not separator:
         return None
     ref_name = ref_name.strip()
-    ref_roots = _git_ref_roots(git_dir_root)
-    for ref_root in ref_roots:
-        ref_value = _read_loose_git_ref(ref_root, ref_name)
-        if ref_value is not None:
-            return ref_value
-    for ref_root in ref_roots:
-        ref_value = _read_packed_git_ref(ref_root, ref_name)
-        if ref_value is not None:
-            return ref_value
-    return None
+    return _resolve_git_ref(_git_ref_roots(git_dir_root), ref_name)
 
 
 def _submodule_command_id(rel_path: str, command_id: str) -> str:
     return f"submodule:{rel_path}:{command_id}"
+
+
+def _submodule_observation(
+    rel_path: str,
+    observation: _GitCommandObservation,
+) -> _GitCommandObservation:
+    return _GitCommandObservation(
+        command_id=_submodule_command_id(rel_path, observation.command_id),
+        status=observation.status,
+        returncode=observation.returncode,
+        timed_out=observation.timed_out,
+        path_count=observation.path_count,
+        reason=observation.reason,
+    )
+
+
+def _submodule_failure(rel_path: str, failure: _GitFailure) -> _GitFailure:
+    payload = dict(failure)
+    payload["command_id"] = _submodule_command_id(
+        rel_path,
+        str(failure.get("command_id", "git-probe")),
+    )
+    return payload
 
 
 def _submodule_names_by_path(
@@ -779,18 +821,21 @@ def _submodule_names_by_path(
     git_executable: str,
     env: dict[str, str],
 ) -> dict[str, str]:
-    names_by_path: dict[str, str] = {}
-    for args in (
-        ["-z", "--file", ".gitmodules", "--get-regexp", r"^submodule\..*\.path$"],
-        ["-z", "--get-regexp", r"^submodule\..*\.path$"],
-    ):
-        stdout = _run_git_optional_config_raw(
-            vault=vault,
-            git_executable=git_executable,
-            env=env,
-            args=args,
-        )
-        names_by_path.update(_submodule_names_by_path_from_config_stdout(stdout))
+    gitmodules_stdout = _run_git_optional_config_raw(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        args=["-z", "--file", ".gitmodules", "--get-regexp", r"^submodule\..*\.path$"],
+    )
+    names_by_path = _submodule_names_by_path_from_config_stdout(gitmodules_stdout)
+    local_stdout = _run_git_optional_config_raw(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        args=["-z", "--get-regexp", r"^submodule\..*\.path$"],
+    )
+    for rel_path, name in _submodule_names_by_path_from_config_stdout(local_stdout).items():
+        names_by_path.setdefault(rel_path, name)
     return names_by_path
 
 
@@ -843,6 +888,15 @@ def _submodule_worktree_dirty(
         return False, [], []
     commands: list[_GitCommandObservation] = []
     failures: list[_GitFailure] = []
+    hidden_index_paths, hidden_observation, hidden_failure = _run_git_hidden_index_paths_command(
+        vault=submodule_root,
+        git_executable=git_executable,
+        env=env,
+    )
+    commands.append(_submodule_observation(entry.rel_path, hidden_observation))
+    if hidden_failure is not None:
+        failures.append(_submodule_failure(entry.rel_path, hidden_failure))
+        return False, commands, failures
     worktree_args = ["ls-files", "-z", "-d"]
     if not ignore_untracked:
         worktree_args.extend(["-o", "--exclude-standard"])
@@ -857,6 +911,9 @@ def _submodule_worktree_dirty(
     if worktree_failure is not None:
         failures.append(worktree_failure)
         return False, commands, failures
+    worktree_paths = [
+        path for path in worktree_paths if path not in hidden_index_paths
+    ]
     modified_paths, modified_observation, modified_failure = _run_git_modified_paths_command(
         vault=submodule_root,
         git_executable=git_executable,
@@ -864,34 +921,40 @@ def _submodule_worktree_dirty(
         command_id=_submodule_command_id(entry.rel_path, "ls-files-modified"),
     )
     commands.append(modified_observation)
+    filtered_driver_dirty = False
     if modified_failure is not None:
-        failures.append(modified_failure)
+        if modified_failure.get("code") == "filtered_path_requires_filter_driver":
+            filtered_driver_dirty = True
+        else:
+            failures.append(modified_failure)
+            return False, commands, failures
+    modified_paths = [
+        path for path in modified_paths if path not in hidden_index_paths
+    ]
+    nested_result = _run_git_submodule_paths_command(
+        vault=submodule_root,
+        git_executable=git_executable,
+        env=env,
+        hidden_index_paths=hidden_index_paths,
+    )
+    commands.extend(
+        _submodule_observation(entry.rel_path, command)
+        for command in nested_result.commands
+    )
+    failures.extend(
+        _submodule_failure(entry.rel_path, failure)
+        for failure in nested_result.failures
+    )
+    if failures:
         return False, commands, failures
     has_head, head_observation, head_failure = _git_head_exists(
         vault=submodule_root,
         git_executable=git_executable,
         env=env,
     )
-    commands.append(
-        _GitCommandObservation(
-            command_id=_submodule_command_id(entry.rel_path, head_observation.command_id),
-            status=head_observation.status,
-            returncode=head_observation.returncode,
-            timed_out=head_observation.timed_out,
-            path_count=head_observation.path_count,
-            reason=head_observation.reason,
-        )
-    )
+    commands.append(_submodule_observation(entry.rel_path, head_observation))
     if head_failure is not None:
-        failures.append(
-            {
-                "command_id": _submodule_command_id(
-                    entry.rel_path,
-                    str(head_failure.get("command_id", "rev-parse-head")),
-                ),
-                "code": str(head_failure["code"]),
-            }
-        )
+        failures.append(_submodule_failure(entry.rel_path, head_failure))
         return False, commands, failures
     if has_head:
         staged_args = ["diff", "--cached", "-z", "--name-only", "HEAD", "--"]
@@ -914,7 +977,13 @@ def _submodule_worktree_dirty(
         failures.append(staged_failure)
         return False, commands, failures
     return (
-        bool(worktree_paths or modified_paths or staged_paths),
+        bool(
+            worktree_paths
+            or modified_paths
+            or filtered_driver_dirty
+            or nested_result.paths
+            or staged_paths
+        ),
         commands,
         failures,
     )
@@ -985,12 +1054,15 @@ def _submodule_changed_paths(
     git_executable: str,
     env: dict[str, str],
     stdout: str,
+    hidden_index_paths: set[str],
 ) -> tuple[list[str], list[_GitCommandObservation], list[_GitFailure], set[str]]:
     paths: list[str] = []
     commands: list[_GitCommandObservation] = []
     failures: list[_GitFailure] = []
     ignored_all_paths: set[str] = set()
     for entry in _gitlink_entries_from_ls_files_stage(stdout).values():
+        if entry.rel_path in hidden_index_paths:
+            continue
         ignore_mode = _submodule_ignore_mode(
             vault=vault,
             entry=entry,
@@ -1018,6 +1090,7 @@ def _run_git_submodule_paths_command(
     vault: Path,
     git_executable: str,
     env: dict[str, str],
+    hidden_index_paths: set[str] | None = None,
 ) -> _GitlinkScanResult:
     stdout, observation, failure = _run_git_raw_command(
         vault=vault,
@@ -1033,6 +1106,7 @@ def _run_git_submodule_paths_command(
         git_executable=git_executable,
         env=env,
         stdout=stdout,
+        hidden_index_paths=hidden_index_paths or set(),
     )
     return _GitlinkScanResult(
         paths=paths,
@@ -1336,6 +1410,7 @@ def _read_git_changed_paths(vault: Path) -> _GitChangedPathsResult:
         vault=vault,
         git_executable=git_executable,
         env=env,
+        hidden_index_paths=hidden_index_paths,
     )
     commands.extend(submodule_result.commands)
     failures.extend(submodule_result.failures)

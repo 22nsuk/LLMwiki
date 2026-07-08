@@ -283,6 +283,24 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def _run_git(self, *args: str) -> subprocess.CompletedProcess[str]:
         return self._run_git_at(self.vault, *args)
 
+    def _git_name_only_paths(self) -> list[str]:
+        return self._run_git("diff", "--name-only", "HEAD", "--").stdout.splitlines()
+
+    def _build_git_changed_paths_report(self) -> dict[str, Any]:
+        return build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+    def _assert_git_changed_paths_match_name_only(self) -> dict[str, Any]:
+        git_name_only_paths = self._git_name_only_paths()
+        report = self._build_git_changed_paths_report()
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(report["selected_change_paths"], git_name_only_paths)
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+        return report
+
     def _commit_all_at(self, cwd: Path, message: str) -> None:
         self._run_git_at(cwd, "add", ".")
         self._run_git_at(
@@ -2346,6 +2364,78 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
+    def test_changed_paths_from_git_keeps_gitmodules_name_over_local_alias(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "canonical",
+            str(subrepo),
+            "sm",
+        )
+        self._run_git(
+            "config",
+            "--file",
+            ".gitmodules",
+            "submodule.canonical.ignore",
+            "all",
+        )
+        self._commit_all_at(self.vault, "baseline with canonical submodule")
+        self._run_git("config", "submodule.alias.path", "sm")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "sm", "pull")
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_does_not_apply_local_alias_ignore_to_gitmodules_name(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "canonical",
+            str(subrepo),
+            "sm",
+        )
+        self._commit_all_at(self.vault, "baseline with canonical submodule")
+        self._run_git("config", "submodule.alias.path", "sm")
+        self._run_git("config", "submodule.alias.ignore", "all")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "sm", "pull")
+
+        report = self._assert_git_changed_paths_match_name_only()
+
+        self.assertEqual(report["selected_change_paths"], ["sm"])
+
+    def test_changed_paths_from_git_preserves_submodule_path_whitespace(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "spacey",
+            str(subrepo),
+            " sm ",
+        )
+        self._run_git("config", "--file", ".gitmodules", "submodule.spacey.ignore", "all")
+        self._commit_all_at(self.vault, "baseline with whitespace submodule path")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / " sm ", "pull")
+
+        self._assert_git_changed_paths_match_name_only()
+
     def test_changed_paths_from_git_respects_diff_ignore_submodules_dirty(
         self,
     ) -> None:
@@ -2449,6 +2539,108 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertNotIn("vendor/submodule", report["selected_change_paths"])
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_marks_filtered_submodule_edits_as_gitlink(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        filter_script = submodule_path / "filter-driver.sh"
+        marker = submodule_path / "filter-driver-ran"
+        filter_script.write_text(
+            "#!/bin/sh\n"
+            f"printf ran >> {str(marker)!r}\n"
+            "cat\n",
+            encoding="utf-8",
+        )
+        filter_script.chmod(0o755)
+        (submodule_path / ".gitattributes").write_text("*.foo filter=pwn\n", encoding="utf-8")
+        (submodule_path / "content.foo").write_text("base\n", encoding="utf-8")
+        self._run_git_at(submodule_path, "config", "filter.pwn.clean", str(filter_script))
+        self._commit_all_at(submodule_path, "submodule filtered baseline")
+        self._run_git("add", "vendor/submodule")
+        self._commit_all_at(self.vault, "baseline with filtered submodule")
+        self._run_git_at(submodule_path, "config", "filter.pwn.process", str(filter_script))
+        marker.unlink(missing_ok=True)
+        (submodule_path / "content.foo").write_text("modified\n", encoding="utf-8")
+
+        report = self._assert_git_changed_paths_match_name_only()
+
+        self.assertEqual(report["selected_change_paths"], ["vendor/submodule"])
+        self.assertFalse(marker.exists())
+
+    def test_changed_paths_from_git_honors_hidden_index_deletions_inside_submodules(
+        self,
+    ) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        self._run_git_at(submodule_path, "update-index", "--assume-unchanged", "content.txt")
+        (submodule_path / "content.txt").unlink()
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_honors_hidden_index_gitlinks(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._run_git("update-index", "--assume-unchanged", "vendor/submodule")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "vendor" / "submodule", "pull")
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_resolves_chained_symbolic_gitlink_refs(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        current_head_ref = self._run_git_at(submodule_path, "symbolic-ref", "HEAD").stdout.strip()
+        self._run_git_at(submodule_path, "symbolic-ref", "refs/heads/alias", current_head_ref)
+        self._run_git_at(submodule_path, "symbolic-ref", "HEAD", "refs/heads/alias")
+
+        self._assert_git_changed_paths_match_name_only()
+
+    def test_changed_paths_from_git_recurses_into_nested_submodule_gitlinks(self) -> None:
+        nested_source = self._create_submodule_source_repo()
+        outer_source = Path(self.temp_dir.name) / "outer-submodule-source"
+        outer_source.mkdir()
+        self._run_git_at(outer_source, "init")
+        self._run_git_at(
+            outer_source,
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(nested_source),
+            "nested",
+        )
+        self._commit_all_at(outer_source, "outer baseline with nested submodule")
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(outer_source),
+            "outer",
+        )
+        self._run_git_at(
+            self.vault / "outer",
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+        )
+        self._commit_all_at(self.vault, "baseline with outer submodule")
+        self._advance_submodule_source_repo(nested_source)
+        self._run_git_at(self.vault / "outer" / "nested", "fetch")
+        self._run_git_at(self.vault / "outer" / "nested", "checkout", "FETCH_HEAD")
+
+        report = self._assert_git_changed_paths_match_name_only()
+
+        self.assertEqual(report["selected_change_paths"], ["outer"])
 
     def test_changed_paths_from_git_parses_spaced_submodule_names(self) -> None:
         subrepo = self._create_submodule_source_repo()
