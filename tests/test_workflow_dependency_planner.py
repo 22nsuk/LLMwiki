@@ -585,6 +585,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
     def test_planner_inputs_select_planner_closeout(self) -> None:
         for path in [
+            "ops/scripts/core/git_changed_paths_runtime.py",
             "ops/scripts/core/workflow_dependency_planner.py",
             "ops/schemas/workflow-dependency-planner.schema.json",
             "ops/README.md",
@@ -655,45 +656,47 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
     def test_planner_source_uses_focused_changed_path_minimum(self) -> None:
-        report = build_report(
-            self.vault,
-            changed_paths=["ops/scripts/core/workflow_dependency_planner.py"],
-            context=fixed_context(),
-        )
+        for source_path in [
+            "ops/scripts/core/git_changed_paths_runtime.py",
+            "ops/scripts/core/workflow_dependency_planner.py",
+        ]:
+            with self.subTest(source_path=source_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[source_path],
+                    context=fixed_context(),
+                )
 
-        plan = report["changed_path_minimum_plan"]
-        workflow = next(
-            item
-            for item in report["selected_workflows"]
-            if item["workflow_id"] == "workflow_dependency_planner_closeout"
-        )
-        self.assertEqual(
-            workflow["matched_paths"],
-            ["ops/scripts/core/workflow_dependency_planner.py"],
-        )
-        self.assertEqual(plan["status"], "pass")
-        self.assertEqual(plan["coverage_class"], "workflow_dependency_planner")
-        self.assertEqual(
-            plan["selected_commands"],
-            [
-                "make static",
-                "make workflow-dependency-planner-check",
-                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
-                "make sync-derived-check",
-            ],
-        )
-        self.assertEqual(
-            [item["matched_rule_id"] for item in plan["path_recommendations"]],
-            ["workflow_dependency_planner_source+derived_surface_currentness"],
-        )
-        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
-        self.assertEqual(
-            validate_with_schema(
-                report,
-                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
-            ),
-            [],
-        )
+                plan = report["changed_path_minimum_plan"]
+                workflow = next(
+                    item
+                    for item in report["selected_workflows"]
+                    if item["workflow_id"] == "workflow_dependency_planner_closeout"
+                )
+                self.assertEqual(workflow["matched_paths"], [source_path])
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "workflow_dependency_planner")
+                self.assertEqual(
+                    plan["selected_commands"],
+                    [
+                        "make static",
+                        "make workflow-dependency-planner-check",
+                        FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+                        "make sync-derived-check",
+                    ],
+                )
+                self.assertEqual(
+                    [item["matched_rule_id"] for item in plan["path_recommendations"]],
+                    ["workflow_dependency_planner_source+derived_surface_currentness"],
+                )
+                self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+                self.assertEqual(
+                    validate_with_schema(
+                        report,
+                        load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+                    ),
+                    [],
+                )
 
     def test_git_runtime_source_uses_shared_changed_path_minimum(self) -> None:
         source_path = "ops/scripts/core/git_runtime.py"
@@ -1642,7 +1645,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "ops.scripts.core.workflow_dependency_planner.run_with_timeout",
+            "ops.scripts.core.git_changed_paths_runtime.run_with_timeout",
             side_effect=AssertionError("manifest input should bypass git probing"),
         ):
             report = build_report(
@@ -1663,7 +1666,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
     def test_changed_paths_from_git_skips_missing_worktree_metadata(self) -> None:
         with mock.patch(
-            "ops.scripts.core.workflow_dependency_planner.run_with_timeout",
+            "ops.scripts.core.git_changed_paths_runtime.run_with_timeout",
             side_effect=AssertionError("source packages without .git should not probe git"),
         ):
             report = build_report(
@@ -1719,6 +1722,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [item["id"] for item in report["diagnostics"]["git_changed_paths"]["commands"]],
             [
                 "rev-parse-worktree",
+                "ls-files-index-flags",
                 "ls-files-worktree",
                 "ls-files-modified",
                 "ls-files-gitlinks",
@@ -2266,6 +2270,31 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
+    def test_changed_paths_from_git_honors_assume_unchanged_deletions(self) -> None:
+        assume_path = self.vault / "docs" / "assume-delete.md"
+        assume_path.parent.mkdir(parents=True, exist_ok=True)
+        assume_path.write_text("base\n", encoding="utf-8")
+        self._commit_git_baseline()
+        self._run_git("update-index", "--assume-unchanged", "docs/assume-delete.md")
+        assume_path.unlink()
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
     def test_changed_paths_from_git_respects_dirty_submodule_ignore(self) -> None:
         subrepo = self._create_submodule_source_repo()
         self._commit_vault_with_submodule(subrepo)
@@ -2421,6 +2450,78 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
+    def test_changed_paths_from_git_parses_spaced_submodule_names(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "foo bar",
+            str(subrepo),
+            "sm",
+        )
+        self._commit_all_at(self.vault, "baseline with spaced-name submodule")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "sm", "pull")
+        self._run_git("config", "submodule.foo bar.ignore", "all")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("sm", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_local_submodule_path_aliases(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name",
+            "alias name",
+            str(subrepo),
+            "sm",
+        )
+        self._commit_all_at(self.vault, "baseline with aliased submodule")
+        (self.vault / ".gitmodules").unlink()
+        self._run_git("config", "submodule.alias name.path", "sm")
+        self._run_git("config", "submodule.alias name.ignore", "all")
+        self._advance_submodule_source_repo(subrepo)
+        self._run_git_at(self.vault / "sm", "pull")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [".gitmodules"])
+        self.assertNotIn("sm", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
     def test_changed_paths_from_git_accepts_old_form_submodule_gitdirs(self) -> None:
         embedded_submodule = self.vault / "vendor" / "embedded"
         embedded_submodule.mkdir(parents=True)
@@ -2571,7 +2672,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             )
 
         with mock.patch(
-            "ops.scripts.core.workflow_dependency_planner.run_with_timeout",
+            "ops.scripts.core.git_changed_paths_runtime.run_with_timeout",
             side_effect=fake_run,
         ):
             report = build_report(

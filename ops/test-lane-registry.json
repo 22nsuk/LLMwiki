@@ -110,6 +110,7 @@
       {
         "rule_id": "workflow_dependency_planner_source",
         "path_patterns": [
+          "ops/scripts/core/git_changed_paths_runtime.py",
           "ops/scripts/core/workflow_dependency_planner.py"
         ],
         "commands": [
