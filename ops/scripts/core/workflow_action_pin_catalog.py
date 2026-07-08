@@ -17,9 +17,9 @@ SETUP_PYTHON_ACTION_SHA = "a309ff8b426b58ec0e2a45f0f869d46889d02405"
 SETUP_UV_ACTION_SHA = "08807647e7069bb48b6ef5acd8ec9567f424441b"
 UPLOAD_ARTIFACT_ACTION_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 DOWNLOAD_ARTIFACT_ACTION_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
-ATTEST_BUILD_PROVENANCE_ACTION_SHA = "a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32"
+ATTEST_BUILD_PROVENANCE_ACTION_SHA = "0f67c3f4856b2e3261c31976d6725780e5e4c373"
 PYPI_PUBLISH_ACTION_SHA = "cef221092ed1bacb1cc03d23a2d87d1d172e277b"
-CODEQL_ACTION_SHA = "8aad20d150bbac5944a9f9d289da16a4b0d87c1e"
+CODEQL_ACTION_SHA = "99df26d4f13ea111d4ec1a7dddef6063f76b97e9"
 DEPENDENCY_REVIEW_ACTION_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 
 PINNED_CI_CHECKOUT_ACTION = f"actions/checkout@{CI_CHECKOUT_ACTION_SHA}"
@@ -101,7 +101,7 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "attest-build-provenance",
         "action": "actions/attest-build-provenance",
         "sha": ATTEST_BUILD_PROVENANCE_ACTION_SHA,
-        "version_comment": "v4.1.0",
+        "version_comment": "v4.1.1",
         "paths": (
             ".github/workflows/ci.yml",
             ".github/workflows/release.yml",
@@ -118,14 +118,14 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "codeql-init",
         "action": "github/codeql-action/init",
         "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.36.2",
+        "version_comment": "v4.37.0",
         "paths": (".github/workflows/codeql.yml",),
     },
     {
         "id": "codeql-analyze",
         "action": "github/codeql-action/analyze",
         "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.36.2",
+        "version_comment": "v4.37.0",
         "paths": (".github/workflows/codeql.yml",),
     },
     {
