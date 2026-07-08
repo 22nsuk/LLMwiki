@@ -70,6 +70,7 @@ DEFAULT_EXCLUDED_SUFFIXES = (
     ":Zone.Identifier",
 )
 DEFAULT_EXCLUDED_FILES = {
+    "AGENTS.local.md",
     "ops/manifest.json",
     "ops/raw-registry.json",
     "ops/script-output-surfaces.json",
