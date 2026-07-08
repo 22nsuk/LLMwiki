@@ -276,18 +276,50 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def _run_git(self, *args: str) -> subprocess.CompletedProcess[str]:
         return self._run_git_at(self.vault, *args)
 
-    def _commit_git_baseline(self) -> None:
-        self._run_git("init")
-        self._run_git("add", ".")
-        self._run_git(
+    def _commit_all_at(self, cwd: Path, message: str) -> None:
+        self._run_git_at(cwd, "add", ".")
+        self._run_git_at(
+            cwd,
             "-c",
             "user.name=LLMwiki Test",
             "-c",
             "user.email=llmwiki-test@example.invalid",
             "commit",
             "-m",
-            "baseline",
+            message,
         )
+
+    def _commit_git_baseline(self) -> None:
+        self._run_git("init")
+        self._commit_all_at(self.vault, "baseline")
+
+    def _create_submodule_source_repo(self) -> Path:
+        subrepo = Path(self.temp_dir.name) / "submodule-source"
+        subrepo.mkdir()
+        self._run_git_at(subrepo, "init")
+        (subrepo / "content.txt").write_text("base\n", encoding="utf-8")
+        self._commit_all_at(subrepo, "submodule baseline")
+        return subrepo
+
+    def _commit_vault_with_submodule(self, subrepo: Path) -> None:
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(subrepo),
+            "vendor/submodule",
+        )
+        self._commit_all_at(self.vault, "baseline with submodule")
+
+    def _advance_submodule_source_repo(
+        self,
+        subrepo: Path,
+        text: str = "advanced\n",
+    ) -> None:
+        (subrepo / "content.txt").write_text(text, encoding="utf-8")
+        self._commit_all_at(subrepo, "advance submodule")
 
     def test_build_report_maps_make_edges_and_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())
@@ -1584,52 +1616,9 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_paths_from_git_reads_unstaged_submodule_head_changes(self) -> None:
-        subrepo = Path(self.temp_dir.name) / "submodule-source"
-        subrepo.mkdir()
-        self._run_git_at(subrepo, "init")
-        (subrepo / "content.txt").write_text("base\n", encoding="utf-8")
-        self._run_git_at(subrepo, "add", "content.txt")
-        self._run_git_at(
-            subrepo,
-            "-c",
-            "user.name=LLMwiki Test",
-            "-c",
-            "user.email=llmwiki-test@example.invalid",
-            "commit",
-            "-m",
-            "submodule baseline",
-        )
-        self._run_git("init")
-        self._run_git(
-            "-c",
-            "protocol.file.allow=always",
-            "submodule",
-            "add",
-            str(subrepo),
-            "vendor/submodule",
-        )
-        self._run_git("add", ".")
-        self._run_git(
-            "-c",
-            "user.name=LLMwiki Test",
-            "-c",
-            "user.email=llmwiki-test@example.invalid",
-            "commit",
-            "-m",
-            "baseline with submodule",
-        )
-        (subrepo / "content.txt").write_text("advanced\n", encoding="utf-8")
-        self._run_git_at(subrepo, "add", "content.txt")
-        self._run_git_at(
-            subrepo,
-            "-c",
-            "user.name=LLMwiki Test",
-            "-c",
-            "user.email=llmwiki-test@example.invalid",
-            "commit",
-            "-m",
-            "advance submodule",
-        )
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        self._advance_submodule_source_repo(subrepo)
         self._run_git_at(self.vault / "vendor" / "submodule", "pull")
 
         report = build_report(
@@ -1650,6 +1639,89 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             },
             report["diagnostics"]["git_changed_paths"]["commands"],
         )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_dirty_submodule_worktrees(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        submodule_path = self.vault / "vendor" / "submodule"
+        (submodule_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertIn(
+            {
+                "id": "submodule:vendor/submodule:ls-files-index-stats",
+                "status": "pass",
+                "returncode": 0,
+                "timed_out": False,
+                "path_count": 1,
+            },
+            report["diagnostics"]["git_changed_paths"]["commands"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_resolves_linked_worktree_submodule_gitdirs(self) -> None:
+        subrepo = self._create_submodule_source_repo()
+        self._commit_vault_with_submodule(subrepo)
+        linked_vault = Path(self.temp_dir.name) / "linked-vault"
+        self._run_git("worktree", "add", str(linked_vault), "-b", "linked-vault")
+        self._run_git_at(
+            linked_vault,
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+        )
+        linked_submodule = linked_vault / "vendor" / "submodule"
+        self._advance_submodule_source_repo(subrepo, "linked advanced\n")
+        self._run_git_at(linked_submodule, "fetch")
+        self._run_git_at(linked_submodule, "checkout", "FETCH_HEAD")
+
+        report = build_report(
+            linked_vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertIn(
+            {
+                "id": "ls-files-gitlinks",
+                "status": "pass",
+                "returncode": 0,
+                "timed_out": False,
+                "path_count": 1,
+            },
+            report["diagnostics"]["git_changed_paths"]["commands"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_executable_bit_only_changes(self) -> None:
+        script = self.vault / "tools" / "mode-only.sh"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text("#!/bin/sh\n", encoding="utf-8")
+        script.chmod(0o644)
+        self._commit_git_baseline()
+        self._run_git("config", "core.filemode", "true")
+        script.chmod(0o755)
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("tools/mode-only.sh", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_paths_from_git_ignores_vault_local_git_on_path(self) -> None:

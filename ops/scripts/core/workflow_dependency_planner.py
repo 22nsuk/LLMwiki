@@ -4,6 +4,7 @@ import argparse
 import fnmatch
 import json
 import re
+import stat as stat_module
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -89,6 +90,10 @@ GIT_LS_FILES_DEBUG_RE = re.compile(
     r"  uid: (?P<uid>\d+)\tgid: (?P<gid>\d+)\n"
     r"  size: (?P<size>\d+)\tflags: (?P<flags>\d+)\n"
 )
+GIT_LS_FILES_STAGE_RE = re.compile(
+    r"^(?P<mode>\d{6}) (?P<object_id>[0-9a-fA-F]{40,64}) "
+    r"(?P<stage>\d)\t(?P<path>.+)$"
+)
 GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
 GIT_CHANGED_PATHS_TIMEOUT_SECONDS = 30
 GIT_BASE_CONFIG_ARGS = (
@@ -133,6 +138,14 @@ class _GitChangedPathsResult:
             "timed_out",
             "unavailable",
         }
+
+
+@dataclass(frozen=True)
+class _GitIndexEntry:
+    mode: str
+    object_id: str
+    rel_path: str
+
 
 REPORT_CLOSEOUT_TARGETS = [
     "test-execution-summary-report-contract",
@@ -1310,18 +1323,44 @@ def _index_time_ns(match: re.Match[str], prefix: str) -> int:
     )
 
 
-def _index_entry_stat_changed(vault: Path, rel_path: str, match: re.Match[str]) -> bool:
+def _git_index_entry(record: str) -> _GitIndexEntry | None:
+    match = GIT_LS_FILES_STAGE_RE.match(record)
+    if match is None:
+        return None
+    return _GitIndexEntry(
+        mode=match.group("mode"),
+        object_id=match.group("object_id").lower(),
+        rel_path=match.group("path"),
+    )
+
+
+def _git_mode_from_lstat_mode(mode: int) -> str | None:
+    if stat_module.S_ISLNK(mode):
+        return "120000"
+    if stat_module.S_ISREG(mode):
+        return "100755" if mode & 0o111 else "100644"
+    return None
+
+
+def _index_entry_stat_changed(
+    vault: Path,
+    entry: _GitIndexEntry,
+    match: re.Match[str],
+) -> bool:
     try:
-        stat = (vault / rel_path).lstat()
+        stat_result = (vault / entry.rel_path).lstat()
     except OSError:
         return False
+    worktree_mode = _git_mode_from_lstat_mode(stat_result.st_mode)
+    if entry.mode not in {"160000", worktree_mode}:
+        return True
     return any(
         (
-            stat.st_size != int(match.group("size")),
-            stat.st_mtime_ns != _index_time_ns(match, "mtime"),
-            stat.st_ctime_ns != _index_time_ns(match, "ctime"),
-            stat.st_dev != int(match.group("dev")),
-            stat.st_ino != int(match.group("ino")),
+            stat_result.st_size != int(match.group("size")),
+            stat_result.st_mtime_ns != _index_time_ns(match, "mtime"),
+            stat_result.st_ctime_ns != _index_time_ns(match, "ctime"),
+            stat_result.st_dev != int(match.group("dev")),
+            stat_result.st_ino != int(match.group("ino")),
         )
     )
 
@@ -1330,42 +1369,39 @@ def _modified_paths_from_index_debug(vault: Path, stdout: str) -> list[str]:
     segments = stdout.split("\0")
     if not segments:
         return []
-    rel_path = segments[0]
+    stage_record = segments[0]
     modified_paths: list[str] = []
     for segment in segments[1:]:
-        if not rel_path:
+        if not stage_record:
+            break
+        entry = _git_index_entry(stage_record)
+        if entry is None:
             break
         match = GIT_LS_FILES_DEBUG_RE.match(segment)
         if match is None:
             break
-        if _index_entry_stat_changed(vault, rel_path, match):
-            modified_paths.append(rel_path)
-        rel_path = segment[match.end() :]
+        if _index_entry_stat_changed(vault, entry, match):
+            modified_paths.append(entry.rel_path)
+        stage_record = segment[match.end() :]
     return modified_paths
 
 
-def _gitlink_entries_from_ls_files_stage(stdout: str) -> dict[str, str]:
-    entries: dict[str, str] = {}
+def _gitlink_entries_from_ls_files_stage(stdout: str) -> dict[str, _GitIndexEntry]:
+    entries: dict[str, _GitIndexEntry] = {}
     for record in _split_nul_paths(stdout):
-        metadata, separator, rel_path = record.partition("\t")
-        if not separator or not rel_path:
+        entry = _git_index_entry(record)
+        if entry is None or entry.mode != "160000":
             continue
-        fields = metadata.split()
-        if len(fields) < 3 or fields[0] != "160000":
-            continue
-        object_id = fields[1]
-        if GIT_OBJECT_ID_RE.fullmatch(object_id):
-            entries[rel_path] = object_id.lower()
+        entries[entry.rel_path] = entry
     return entries
 
 
-def _submodule_git_dir(vault: Path, rel_path: str) -> Path | None:
-    marker = vault / rel_path / ".git"
+def _git_dir_from_marker(marker: Path) -> Path | None:
     try:
         if marker.is_symlink():
             return None
         if marker.is_dir():
-            return marker
+            return marker.resolve()
         if not marker.is_file():
             return None
         first_line = marker.read_text(encoding="utf-8", errors="replace").splitlines()[
@@ -1379,9 +1415,19 @@ def _submodule_git_dir(vault: Path, rel_path: str) -> Path | None:
     if prefix.strip().lower() != "gitdir" or not separator:
         return None
     try:
-        git_dir = (marker.parent / raw_git_dir.strip()).resolve()
-        git_dir.relative_to((vault / ".git").resolve())
-    except (OSError, ValueError):
+        return (marker.parent / raw_git_dir.strip()).resolve()
+    except OSError:
+        return None
+
+
+def _submodule_git_dir(vault: Path, rel_path: str) -> Path | None:
+    git_dir = _git_dir_from_marker(vault / rel_path / ".git")
+    storage_root = _git_dir_from_marker(vault / ".git")
+    if git_dir is None or storage_root is None:
+        return None
+    try:
+        git_dir.relative_to(storage_root)
+    except ValueError:
         return None
     return git_dir
 
@@ -1425,22 +1471,136 @@ def _read_git_dir_head(git_dir: Path) -> str | None:
     return _read_packed_git_ref(git_dir, ref_name)
 
 
-def _submodule_head_changed(vault: Path, rel_path: str, indexed_object_id: str) -> bool:
-    git_dir = _submodule_git_dir(vault, rel_path)
+def _submodule_command_id(rel_path: str, command_id: str) -> str:
+    return f"submodule:{rel_path}:{command_id}"
+
+
+def _submodule_worktree_dirty(
+    *,
+    vault: Path,
+    entry: _GitIndexEntry,
+    git_executable: str,
+    env: dict[str, str],
+) -> tuple[bool, list[_GitCommandObservation], list[dict[str, str]]]:
+    submodule_root = vault / entry.rel_path
+    if not submodule_root.is_dir():
+        return False, [], []
+    commands: list[_GitCommandObservation] = []
+    failures: list[dict[str, str]] = []
+    worktree_paths, worktree_observation, worktree_failure = _run_git_changed_paths_command(
+        vault=submodule_root,
+        git_executable=git_executable,
+        env=env,
+        command_id=_submodule_command_id(entry.rel_path, "ls-files-worktree"),
+        args=["ls-files", "-z", "-d", "-o", "--exclude-standard"],
+    )
+    commands.append(worktree_observation)
+    if worktree_failure is not None:
+        failures.append(worktree_failure)
+        return False, commands, failures
+    modified_paths, modified_observation, modified_failure = _run_git_modified_paths_command(
+        vault=submodule_root,
+        git_executable=git_executable,
+        env=env,
+        command_id=_submodule_command_id(entry.rel_path, "ls-files-index-stats"),
+    )
+    commands.append(modified_observation)
+    if modified_failure is not None:
+        failures.append(modified_failure)
+        return False, commands, failures
+    has_head, head_observation, head_failure = _git_head_exists(
+        vault=submodule_root,
+        git_executable=git_executable,
+        env=env,
+    )
+    commands.append(
+        _GitCommandObservation(
+            command_id=_submodule_command_id(entry.rel_path, head_observation.command_id),
+            status=head_observation.status,
+            returncode=head_observation.returncode,
+            timed_out=head_observation.timed_out,
+            path_count=head_observation.path_count,
+            reason=head_observation.reason,
+        )
+    )
+    if head_failure is not None:
+        failures.append(
+            {
+                "command_id": _submodule_command_id(
+                    entry.rel_path,
+                    str(head_failure.get("command_id", "rev-parse-head")),
+                ),
+                "code": str(head_failure["code"]),
+            }
+        )
+        return False, commands, failures
+    if has_head:
+        staged_args = ["diff-index", "--cached", "-z", "--name-only", "HEAD", "--"]
+        staged_command_id = "diff-index-cached"
+    else:
+        staged_args = ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]
+        staged_command_id = "ls-files-no-head"
+    staged_paths, staged_observation, staged_failure = _run_git_changed_paths_command(
+        vault=submodule_root,
+        git_executable=git_executable,
+        env=env,
+        command_id=_submodule_command_id(entry.rel_path, staged_command_id),
+        args=staged_args,
+    )
+    commands.append(staged_observation)
+    if staged_failure is not None:
+        failures.append(staged_failure)
+        return False, commands, failures
+    return (
+        bool(worktree_paths or modified_paths or staged_paths),
+        commands,
+        failures,
+    )
+
+
+def _submodule_changed(
+    *,
+    vault: Path,
+    entry: _GitIndexEntry,
+    git_executable: str,
+    env: dict[str, str],
+) -> tuple[bool, list[_GitCommandObservation], list[dict[str, str]]]:
+    git_dir = _submodule_git_dir(vault, entry.rel_path)
     if git_dir is None:
-        return False
+        return False, [], []
     current_head = _read_git_dir_head(git_dir)
-    return current_head is None or current_head != indexed_object_id.lower()
+    head_changed = current_head is None or current_head != entry.object_id
+    dirty, commands, failures = _submodule_worktree_dirty(
+        vault=vault,
+        entry=entry,
+        git_executable=git_executable,
+        env=env,
+    )
+    return head_changed or dirty, commands, failures
 
 
-def _submodule_head_changed_paths(vault: Path, stdout: str) -> list[str]:
-    return [
-        rel_path
-        for rel_path, indexed_object_id in _gitlink_entries_from_ls_files_stage(
-            stdout
-        ).items()
-        if _submodule_head_changed(vault, rel_path, indexed_object_id)
-    ]
+def _submodule_changed_paths(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+    stdout: str,
+) -> tuple[list[str], list[_GitCommandObservation], list[dict[str, str]]]:
+    paths: list[str] = []
+    commands: list[_GitCommandObservation] = []
+    failures: list[dict[str, str]] = []
+    for entry in _gitlink_entries_from_ls_files_stage(stdout).values():
+        changed, submodule_commands, submodule_failures = _submodule_changed(
+            vault=vault,
+            entry=entry,
+            git_executable=git_executable,
+            env=env,
+        )
+        commands.extend(submodule_commands)
+        failures.extend(submodule_failures)
+        if changed:
+            paths.append(entry.rel_path)
+    return paths, commands, failures
 
 
 def _run_git_submodule_paths_command(
@@ -1448,7 +1608,7 @@ def _run_git_submodule_paths_command(
     vault: Path,
     git_executable: str,
     env: dict[str, str],
-) -> tuple[list[str], _GitCommandObservation, dict[str, str] | None]:
+) -> tuple[list[str], list[_GitCommandObservation], list[dict[str, str]]]:
     stdout, observation, failure = _run_git_raw_command(
         vault=vault,
         git_executable=git_executable,
@@ -1457,19 +1617,27 @@ def _run_git_submodule_paths_command(
         args=["ls-files", "-z", "-s"],
     )
     if failure is not None:
-        return [], observation, failure
-    paths = _submodule_head_changed_paths(vault, stdout)
+        return [], [observation], [failure]
+    paths, commands, failures = _submodule_changed_paths(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        stdout=stdout,
+    )
     return (
         paths,
-        _GitCommandObservation(
-            command_id=observation.command_id,
-            status=observation.status,
-            returncode=observation.returncode,
-            timed_out=observation.timed_out,
-            path_count=len(paths),
-            reason=observation.reason,
-        ),
-        None,
+        [
+            _GitCommandObservation(
+                command_id=observation.command_id,
+                status=observation.status,
+                returncode=observation.returncode,
+                timed_out=observation.timed_out,
+                path_count=len(paths),
+                reason=observation.reason,
+            ),
+            *commands,
+        ],
+        failures,
     )
 
 
@@ -1478,13 +1646,14 @@ def _run_git_modified_paths_command(
     vault: Path,
     git_executable: str,
     env: dict[str, str],
+    command_id: str = "ls-files-index-stats",
 ) -> tuple[list[str], _GitCommandObservation, dict[str, str] | None]:
     stdout, observation, failure = _run_git_raw_command(
         vault=vault,
         git_executable=git_executable,
         env=env,
-        command_id="ls-files-index-stats",
-        args=["ls-files", "-z", "--debug"],
+        command_id=command_id,
+        args=["ls-files", "-z", "-s", "--debug"],
     )
     if failure is not None:
         return [], observation, failure
@@ -1673,16 +1842,15 @@ def _read_git_changed_paths(vault: Path) -> _GitChangedPathsResult:
             failures=failures,
             ignored_path_entry_count=ignored_path_entry_count,
         )
-    submodule_paths, submodule_observation, submodule_failure = (
+    submodule_paths, submodule_observations, submodule_failures = (
         _run_git_submodule_paths_command(
             vault=vault,
             git_executable=git_executable,
             env=env,
         )
     )
-    commands.append(submodule_observation)
-    if submodule_failure is not None:
-        failures.append(submodule_failure)
+    commands.extend(submodule_observations)
+    failures.extend(submodule_failures)
     paths.extend(submodule_paths)
     if failures:
         return _failed_git_changed_paths_result(
