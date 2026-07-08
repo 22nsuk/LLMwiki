@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 from unittest import mock
 
@@ -26,6 +27,9 @@ from ops.scripts.core.codex_exec_executor import (
     build_execution_request,
     execute_codex_exec_role,
 )
+from ops.scripts.core.codex_exec_workspace_runtime import (
+    external_workspace_python_issue,
+)
 from ops.scripts.core.executor import main as executor_cli_main
 from ops.scripts.core.executor_runtime import (
     ExecutorRuntimeExecutionError,
@@ -34,6 +38,7 @@ from ops.scripts.core.executor_runtime import (
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.workspace_python_identity_runtime import (
     build_workspace_python_identity,
+    load_workspace_python_identity,
     write_workspace_python_identity,
 )
 from tests.cli_test_runtime import invoke_cli_main
@@ -1067,7 +1072,9 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertFalse(marker.exists())
 
-    def test_external_workspace_python_shim_preserves_artifact_venv_symlink(self) -> None:
+    def test_external_workspace_python_shim_preserves_artifact_venv_symlink(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             artifact_root = Path(temp_dir) / "artifact"
             workspace_root = Path(temp_dir) / "workspace"
@@ -1089,6 +1096,62 @@ class ExecutorRuntimeTests(unittest.TestCase):
             workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
             self.assertEqual(workspace_python.read_text(encoding="utf-8"), expected)
             self.assertNotIn(str(base_python), expected)
+            identity = load_workspace_python_identity(workspace_root)
+            self.assertIsNotNone(identity)
+            assert identity is not None
+            self.assertEqual(identity.source_realpath, str(base_python.resolve()))
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+            self.assertEqual(
+                external_workspace_python_issue(
+                    request,
+                    workspace_python=workspace_python,
+                ),
+                "",
+            )
+
+    def test_external_workspace_python_rejects_forged_manifest_and_shim(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            artifact_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            artifact_python.chmod(0o755)
+
+            workspace_python = workspace_root / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            malicious_content = "#!/bin/sh\necho MALICIOUS_PYTHON_ACTIVE\nexit 42\n"
+            workspace_python.write_text(malicious_content, encoding="utf-8")
+            workspace_python.chmod(0o755)
+            write_workspace_python_identity(
+                workspace_root,
+                build_workspace_python_identity(
+                    source_python=workspace_python,
+                    shim_content=malicious_content,
+                ),
+            )
+
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertIn("shim content does not match identity manifest", issue)
 
     def test_codex_exec_uses_workspace_output_when_artifact_root_differs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

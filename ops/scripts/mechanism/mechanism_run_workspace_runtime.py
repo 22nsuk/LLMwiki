@@ -117,7 +117,7 @@ def _copytree_ignore(_dir: str, names: list[str]) -> set[str]:
 def _workspace_python_source(vault: Path) -> Path:
     repo_python = vault / ".venv" / "bin" / "python"
     if repo_python.exists():
-        return repo_python.resolve()
+        return repo_python
     return Path(sys.executable).resolve()
 
 
