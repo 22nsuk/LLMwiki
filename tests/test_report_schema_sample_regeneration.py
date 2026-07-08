@@ -21,6 +21,8 @@ from tools.regenerate_report_schema_samples import (
     build_auto_improve_readiness_schema_sample,
     build_openvex_schema_sample,
     build_release_run_ready_plan_schema_sample,
+    build_run_artifact_fingerprint_schema_sample,
+    build_runtime_event_schema_sample,
     build_supply_chain_schema_samples,
     candidate_report_schema_samples,
     check_report_schema_samples,
@@ -133,6 +135,33 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing_from_seed"):
             _assert_seed_sample_coverage_matches_payload(seed_samples)
 
+    def test_seed_fixture_order_mismatch_reports_first_drift(self) -> None:
+        seed_samples = load_report_schema_sample_seeds(SEED_FIXTURE_PATH)
+        seed_keys = list(seed_samples)
+        reordered_seed_samples = {
+            seed_keys[1]: seed_samples[seed_keys[1]],
+            seed_keys[0]: seed_samples[seed_keys[0]],
+            **{key: seed_samples[key] for key in seed_keys[2:]},
+        }
+
+        with self.assertRaises(ValueError) as error:
+            _assert_seed_sample_coverage_matches_payload(reordered_seed_samples)
+
+        message = str(error.exception)
+        self.assertIn("first_order_mismatch=index 0", message)
+        self.assertIn(f"expected={seed_keys[0]!r}", message)
+        self.assertIn(f"actual={seed_keys[1]!r}", message)
+
+    def test_seed_fixture_rejects_stale_self_contained_sample_keys(self) -> None:
+        seed_samples = load_report_schema_sample_seeds(SEED_FIXTURE_PATH)
+        stale_key = self_contained_report_schema_sample_keys()[0]
+        seed_samples[stale_key] = {}
+
+        with self.assertRaises(ValueError) as error:
+            _assert_seed_sample_coverage_matches_payload(seed_samples)
+
+        self.assertIn(f"unexpected_seed_keys=['{stale_key}']", str(error.exception))
+
     def test_candidate_uses_seed_fixture_for_seed_preserved_samples(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             seed_fixture = Path(temp_dir) / "report_schema_sample_seeds.json"
@@ -197,6 +226,28 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
             build_release_run_ready_plan_schema_sample(),
             samples["release_run_ready_plan"],
             "release_run_ready_plan",
+        )
+
+    def test_generated_runtime_event_sample_matches_candidate(self) -> None:
+        samples = candidate_report_schema_samples()
+
+        _assert_sample_matches(
+            self,
+            build_runtime_event_schema_sample(),
+            samples["runtime_event"],
+            "runtime_event",
+        )
+
+    def test_generated_run_artifact_fingerprint_sample_matches_candidate(
+        self,
+    ) -> None:
+        samples = candidate_report_schema_samples()
+
+        _assert_sample_matches(
+            self,
+            build_run_artifact_fingerprint_schema_sample(),
+            samples["run_artifact_fingerprint"],
+            "run_artifact_fingerprint",
         )
 
     def test_generated_readiness_sample_keeps_release_clean_queue_blocked_shape(

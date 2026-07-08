@@ -129,6 +129,62 @@ class ObservationCloseoutLintTests(unittest.TestCase):
         self.assertEqual(report["summary"]["unregistered_open_count"], 1)
         self.assertEqual(validate_with_schema(report, schema), [])
 
+    def test_closed_automated_observations_do_not_require_registry_entries(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            obs_path = (
+                vault
+                / "ops"
+                / "reports"
+                / "task-improvement-observations"
+                / "task-1"
+                / "improvement-observations.json"
+            )
+            obs_path.parent.mkdir(parents=True)
+            obs_path.write_text(
+                json.dumps(
+                    {
+                        "observations": [
+                            {
+                                "observation_id": "closed_followup",
+                                "status": "automated",
+                                "surface": "ops/scripts/example.py",
+                                "suggested_followup": "closed during this task",
+                                "resolution_evidence": [
+                                    "source:ops/scripts/example.py",
+                                    "test:tests/test_example.py",
+                                ],
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            registry_path = vault / "ops" / "observation-closeout-registry.json"
+            registry_path.parent.mkdir(parents=True, exist_ok=True)
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/observation-closeout-registry.schema.json",
+                        "artifact_kind": "observation_closeout_registry",
+                        "retained_observations": [],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+        schema = load_schema("ops/schemas/observation-closeout-registry.schema.json")
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["summary"]["open_observation_count"], 0)
+        self.assertEqual(report["summary"]["unregistered_open_count"], 0)
+        self.assertEqual(validate_with_schema(report, schema), [])
+
     def test_stale_registry_entry_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

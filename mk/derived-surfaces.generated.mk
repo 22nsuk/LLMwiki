@@ -12,6 +12,7 @@ _internal-sync-derived:
 	$(MAKE) script-lifecycle-policy
 	$(MAKE) script-module-surfaces
 	$(MAKE) release-governance-sync
+	$(MAKE) release-workflow-order-guard-spec-sync
 	$(MAKE) release-workflow-order-guard
 	$(MAKE) make-target-inventory
 
@@ -24,5 +25,6 @@ _internal-sync-derived-check:
 	$(MAKE) script-lifecycle-policy-check
 	$(MAKE) script-module-surfaces-check
 	$(MAKE) release-governance-sync-check
+	$(MAKE) release-workflow-order-guard-spec-sync-check
 	$(MAKE) release-workflow-order-guard-check
 	$(MAKE) make-target-inventory-check

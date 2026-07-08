@@ -298,8 +298,11 @@ def _is_literal_output_path(path: str) -> bool:
 def currentness_output_paths(manifest: dict[str, Any]) -> list[str]:
     paths = [str(manifest["generated_make_fragment"]["path"])]
     for surface in _sync_surfaces(manifest):
+        source_paths = {str(path) for path in surface.get("source_paths", [])}
         for output_path in surface.get("tracked_outputs", []):
             path = str(output_path)
+            if path in source_paths:
+                continue
             if _is_literal_output_path(path):
                 paths.append(path)
     return _dedupe_preserve_order(paths)

@@ -23,7 +23,10 @@ from ops.scripts.test.test_lane_registry_runtime import (
 )
 from tests.makefile_static_helpers import (
     _assert_assignment_exists,
+    _assert_assignment_values,
     _assert_collected_paths_are_tests,
+    _assert_make_target_contract,
+    _assert_phony_targets,
     _assert_recipe_contains_tokens,
     _collect_marker_paths,
     _makefile_assignment_value,
@@ -32,6 +35,7 @@ from tests.makefile_static_helpers import (
     _recipe_lines,
     _target_block,
     _target_dependencies,
+    promoted_artifact_contract,
 )
 
 pytestmark = [
@@ -76,9 +80,20 @@ def _normalize_whitespace(value: str) -> str:
 
 
 def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) -> None:
-    case.assertIn(
-        "refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics promotion-decision-trends artifact-freshness mechanism-review mutation-proposal",
-        text,
+    case.assertEqual(
+        _target_dependencies(text, "refresh-generated-core"),
+        (
+            "registry-preflight",
+            "raw-registry-export",
+            "manifest",
+            "script-output-surfaces",
+            "routing-provenance-aggregate",
+            "outcome-metrics",
+            "promotion-decision-trends",
+            "artifact-freshness",
+            "mechanism-review",
+            "mutation-proposal",
+        ),
     )
     case.assertEqual(
         _recipe_lines(text, "refresh-generated-observability"),
@@ -91,9 +106,9 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             "$(MAKE) generated-artifact-converge",
         ],
     )
-    case.assertIn(
-        "refresh-generated: refresh-generated-core refresh-generated-observability",
-        text,
+    case.assertEqual(
+        _target_dependencies(text, "refresh-generated"),
+        ("refresh-generated-core", "refresh-generated-observability"),
     )
     case.assertEqual(
         _recipe_lines(text, "generated-artifact-converge"),
@@ -143,67 +158,119 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         "GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT ?= tmp/generated-artifact-converge-summary.before.json",
         text,
     )
-    for phony_target in (
-        "refresh-generated-core",
-        "refresh-generated-observability",
-        "pytest-markers-sync",
-        "pytest-markers-sync-check",
-        "_internal-pytest-markers-sync-check",
-        "generated-artifact-converge",
-        "generated-artifact-script-output",
-        "generated-artifact-finality-suffix",
-        "command-log-summary-backfill",
-        "generated-artifact-retention-clean",
-        "script-output-surfaces",
-        "script-module-surfaces",
-        "script-module-surfaces-check",
-        "script-lifecycle-policy",
-        "script-lifecycle-policy-check",
-        "function-budget-refactor-proposals",
-        "function-budget-edit-check",
-        "outcome-provenance-gate-policy",
-        "external-report-action-matrix",
-        "artifact-relocation-audit",
-    ):
-        with case.subTest(phony_target=phony_target):
-            case.assertIn(phony_target, _target_block(text, ".PHONY"))
+    _assert_phony_targets(
+        case,
+        text,
+        (
+            "refresh-generated-core",
+            "refresh-generated-observability",
+            "pytest-markers-sync",
+            "pytest-markers-sync-check",
+            "_internal-pytest-markers-sync-check",
+            "generated-artifact-converge",
+            "generated-artifact-script-output",
+            "generated-artifact-finality-suffix",
+            "command-log-summary-backfill",
+            "generated-artifact-retention-clean",
+            "script-output-surfaces",
+            "script-module-surfaces",
+            "script-module-surfaces-check",
+            "script-lifecycle-policy",
+            "script-lifecycle-policy-check",
+            "function-budget-refactor-proposals",
+            "function-budget-edit-check",
+            "outcome-provenance-gate-policy",
+            "external-report-action-matrix",
+            "artifact-relocation-audit",
+        ),
+    )
 
 
 def _assert_observability_output_variables(case: unittest.TestCase, text: str) -> None:
-    expected_variables = (
-        "FUNCTION_BUDGET_REFACTOR_PROPOSALS_OUT ?= ops/reports/function-budget-refactor-proposals.json",
-        "FUNCTION_BUDGET_REFACTOR_PROPOSALS_CANDIDATE_OUT ?= tmp/function-budget-refactor-proposals.candidate.json",
-        "OUTCOME_PROVENANCE_GATE_POLICY_OUT ?= ops/reports/outcome-provenance-gate-policy.json",
-        "OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT ?= tmp/outcome-provenance-gate-policy.candidate.json",
-        "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
-        "SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json",
-        "SCRIPT_MODULE_SURFACES_OUT ?= ops/script-module-surfaces.json",
-        "SCRIPT_LIFECYCLE_POLICY_OUT ?= ops/script-lifecycle-policy.json",
-        "SCRIPT_LIFECYCLE_OVERRIDES ?= ops/script-lifecycle-overrides.json",
-        "SCRIPT_MODULE_SURFACE_OVERRIDES ?= ops/script-module-surface-overrides.json",
-        "GENERATED_ARTIFACT_RETENTION_CLEAN_OUT ?= tmp/generated-artifact-retention-clean.json",
-        "GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY ?=",
-        "COMMAND_LOG_SUMMARY_BACKFILL_OUT ?= tmp/command-log-summary-backfill.json",
-        "COMMAND_LOG_SUMMARY_BACKFILL_APPLY ?=",
-        "COMMAND_LOG_SUMMARY_BACKFILL_ALL ?=",
-        "COMMAND_LOG_SUMMARY_BACKFILL_INCLUDE_RUN_COMMANDS ?=",
-        "COMMAND_LOG_SUMMARY_BACKFILL_CLOSE_PROMOTED_UNREFERENCED ?=",
-        "COMMAND_LOG_SUMMARY_BACKFILL_DELETE_RAW ?=",
-        "COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION ?=",
-        "COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID ?=",
-        "CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json",
-        "MAKE_TARGET_INVENTORY_OUT ?= tmp/make-target-inventory.json",
-        "WORKFLOW_DEPENDENCY_PLANNER_OUT ?= ops/reports/workflow-dependency-planner.json",
-        "WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT ?= tmp/workflow-dependency-planner.candidate.json",
-        "WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT ?= tmp/workflow-dependency-planner-check.json",
-        "WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST ?=",
-        "RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= ops/reports/release-workflow-order-guard.json",
-        "RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json",
-        "RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT ?= tmp/release-workflow-order-guard-check.json",
+    _assert_assignment_values(
+        case,
+        text,
+        (
+            (
+                "FUNCTION_BUDGET_REFACTOR_PROPOSALS_OUT",
+                "ops/reports/function-budget-refactor-proposals.json",
+            ),
+            (
+                "FUNCTION_BUDGET_REFACTOR_PROPOSALS_CANDIDATE_OUT",
+                "tmp/function-budget-refactor-proposals.candidate.json",
+            ),
+            (
+                "OUTCOME_PROVENANCE_GATE_POLICY_OUT",
+                "ops/reports/outcome-provenance-gate-policy.json",
+            ),
+            (
+                "OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT",
+                "tmp/outcome-provenance-gate-policy.candidate.json",
+            ),
+            (
+                "EXTERNAL_REPORT_ACTION_MATRIX_OUT",
+                "ops/reports/external-report-action-matrix.json",
+            ),
+            ("SCRIPT_OUTPUT_SURFACES_OUT", "ops/script-output-surfaces.json"),
+            ("SCRIPT_MODULE_SURFACES_OUT", "ops/script-module-surfaces.json"),
+            ("SCRIPT_LIFECYCLE_POLICY_OUT", "ops/script-lifecycle-policy.json"),
+            ("SCRIPT_LIFECYCLE_OVERRIDES", "ops/script-lifecycle-overrides.json"),
+            (
+                "SCRIPT_MODULE_SURFACE_OVERRIDES",
+                "ops/script-module-surface-overrides.json",
+            ),
+            (
+                "GENERATED_ARTIFACT_RETENTION_CLEAN_OUT",
+                "tmp/generated-artifact-retention-clean.json",
+            ),
+            ("GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY", ""),
+            (
+                "COMMAND_LOG_SUMMARY_BACKFILL_OUT",
+                "tmp/command-log-summary-backfill.json",
+            ),
+            ("COMMAND_LOG_SUMMARY_BACKFILL_APPLY", ""),
+            ("COMMAND_LOG_SUMMARY_BACKFILL_ALL", ""),
+            ("COMMAND_LOG_SUMMARY_BACKFILL_INCLUDE_RUN_COMMANDS", ""),
+            ("COMMAND_LOG_SUMMARY_BACKFILL_CLOSE_PROMOTED_UNREFERENCED", ""),
+            ("COMMAND_LOG_SUMMARY_BACKFILL_DELETE_RAW", ""),
+            ("COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION", ""),
+            ("COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID", ""),
+            (
+                "CLEAN_FIXTURE_REGENERATION_GUARD_OUT",
+                "tmp/clean-fixture-regeneration-guard.json",
+            ),
+            ("MAKE_TARGET_INVENTORY_OUT", "tmp/make-target-inventory.json"),
+            (
+                "WORKFLOW_DEPENDENCY_PLANNER_OUT",
+                "ops/reports/workflow-dependency-planner.json",
+            ),
+            (
+                "WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT",
+                "tmp/workflow-dependency-planner.candidate.json",
+            ),
+            (
+                "WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT",
+                "tmp/workflow-dependency-planner-check.json",
+            ),
+            ("WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST", ""),
+            (
+                "RELEASE_WORKFLOW_ORDER_GUARD_OUT",
+                "ops/reports/release-workflow-order-guard.json",
+            ),
+            (
+                "RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT",
+                "tmp/release-workflow-order-guard.candidate.json",
+            ),
+            (
+                "RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT",
+                "tmp/release-workflow-order-guard-check.json",
+            ),
+            (
+                "RELEASE_WORKFLOW_ORDER_GUARD_SPEC",
+                "ops/policies/release-workflow-order-guard.json",
+            ),
+        ),
     )
-    for variable in expected_variables:
-        with case.subTest(variable=variable):
-            case.assertIn(variable, text)
 
 
 def _assert_script_surface_and_inventory_targets(
@@ -316,20 +383,23 @@ def _assert_script_surface_and_inventory_targets(
 def _assert_workflow_dependency_planner_target(
     case: unittest.TestCase, text: str
 ) -> None:
-    case.assertIn("workflow-dependency-planner", _target_block(text, ".PHONY"))
-    case.assertIn("workflow-dependency-planner-check", _target_block(text, ".PHONY"))
+    _assert_phony_targets(
+        case,
+        text,
+        ("workflow-dependency-planner", "workflow-dependency-planner-check"),
+    )
     planner_block = _target_block(text, "workflow-dependency-planner")
-    case.assertIn(
-        '$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT)"',
-        planner_block,
-    )
-    case.assertIn("ops.scripts.canonical_artifact_promote", planner_block)
-    case.assertIn(
-        "--schema ops/schemas/workflow-dependency-planner.schema.json", planner_block
-    )
-    case.assertIn("--expected-artifact-kind workflow_dependency_planner", planner_block)
-    case.assertIn(
-        "--expected-producer ops.scripts.workflow_dependency_planner", planner_block
+    _assert_make_target_contract(
+        case,
+        text,
+        promoted_artifact_contract(
+            "workflow-dependency-planner",
+            "ops.scripts.workflow_dependency_planner",
+            "ops/schemas/workflow-dependency-planner.schema.json",
+            expected_artifact_kind="workflow_dependency_planner",
+            expected_producer="ops.scripts.workflow_dependency_planner",
+            required_tokens=('--out "$(WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT)"',),
+        ),
     )
     planner_check_block = _target_block(text, "workflow-dependency-planner-check")
     case.assertIn(
@@ -356,24 +426,27 @@ def _assert_workflow_dependency_planner_target(
 def _assert_release_workflow_order_guard_target(
     case: unittest.TestCase, text: str
 ) -> None:
-    case.assertIn("release-workflow-order-guard", _target_block(text, ".PHONY"))
-    case.assertIn("release-workflow-order-guard-check", _target_block(text, ".PHONY"))
-    order_guard_block = _target_block(text, "release-workflow-order-guard")
-    case.assertIn(
-        '$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)"',
-        order_guard_block,
+    _assert_phony_targets(
+        case,
+        text,
+        (
+            "release-workflow-order-guard",
+            "release-workflow-order-guard-check",
+            "release-workflow-order-guard-spec-sync",
+            "release-workflow-order-guard-spec-sync-check",
+        ),
     )
-    case.assertIn("ops.scripts.canonical_artifact_promote", order_guard_block)
-    case.assertIn(
-        "--schema ops/schemas/release-workflow-order-guard.schema.json",
-        order_guard_block,
-    )
-    case.assertIn(
-        "--expected-artifact-kind release_workflow_order_guard", order_guard_block
-    )
-    case.assertIn(
-        "--expected-producer ops.scripts.release_workflow_order_guard",
-        order_guard_block,
+    _assert_make_target_contract(
+        case,
+        text,
+        promoted_artifact_contract(
+            "release-workflow-order-guard",
+            "ops.scripts.release_workflow_order_guard",
+            "ops/schemas/release-workflow-order-guard.schema.json",
+            expected_artifact_kind="release_workflow_order_guard",
+            expected_producer="ops.scripts.release_workflow_order_guard",
+            required_tokens=('--out "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)"',),
+        ),
     )
     order_guard_check_block = _target_block(text, "release-workflow-order-guard-check")
     case.assertIn(
@@ -393,6 +466,14 @@ def _assert_release_workflow_order_guard_target(
     case.assertNotIn(
         "$(MAKE) release-workflow-order-guard", _target_block(text, "check-finalized")
     )
+    case.assertIn(
+        "--write-spec",
+        _target_block(text, "release-workflow-order-guard-spec-sync"),
+    )
+    case.assertIn(
+        "--check-spec",
+        _target_block(text, "release-workflow-order-guard-spec-sync-check"),
+    )
 
 
 def _assert_function_budget_and_outcome_targets(
@@ -400,8 +481,9 @@ def _assert_function_budget_and_outcome_targets(
 ) -> None:
     proposal_block = _target_block(text, "function-budget-refactor-proposals")
     edit_check_block = _target_block(text, "function-budget-edit-check")
-    case.assertIn(
-        "function-budget-refactor-proposals: wiki-lint-review-classification", text
+    case.assertEqual(
+        _target_dependencies(text, "function-budget-refactor-proposals"),
+        ("wiki-lint-review-classification",),
     )
     case.assertIn(
         '$(PYTHON) -m ops.scripts.function_budget_refactor_proposals --vault "$(VAULT)" --classification "$(WIKI_LINT_REVIEW_CLASSIFICATION_OUT)" --out "$(FUNCTION_BUDGET_REFACTOR_PROPOSALS_CANDIDATE_OUT)"',
@@ -416,25 +498,23 @@ def _assert_function_budget_and_outcome_targets(
     )
     case.assertIn("$(MAKE) complexity-budget-touched-check", edit_check_block)
 
-    outcome_policy_block = _target_block(text, "outcome-provenance-gate-policy")
-    case.assertIn(
-        "outcome-provenance-gate-policy: outcome-metrics routing-provenance-aggregate",
+    case.assertEqual(
+        _target_dependencies(text, "outcome-provenance-gate-policy"),
+        ("outcome-metrics", "routing-provenance-aggregate"),
+    )
+    _assert_make_target_contract(
+        case,
         text,
-    )
-    case.assertIn(
-        '$(PYTHON) -m ops.scripts.outcome_provenance_gate_policy --vault "$(VAULT)" --out "$(OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT)"',
-        outcome_policy_block,
-    )
-    case.assertIn(
-        "--schema ops/schemas/outcome-provenance-gate-policy.schema.json",
-        outcome_policy_block,
-    )
-    case.assertIn(
-        "--expected-artifact-kind outcome_provenance_gate_policy", outcome_policy_block
-    )
-    case.assertIn(
-        "--expected-producer ops.scripts.outcome_provenance_gate_policy",
-        outcome_policy_block,
+        promoted_artifact_contract(
+            "outcome-provenance-gate-policy",
+            "ops.scripts.outcome_provenance_gate_policy",
+            "ops/schemas/outcome-provenance-gate-policy.schema.json",
+            expected_artifact_kind="outcome_provenance_gate_policy",
+            expected_producer="ops.scripts.outcome_provenance_gate_policy",
+            required_tokens=(
+                '--out "$(OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT)"',
+            ),
+        ),
     )
 
     promotion_trends_block = _target_block(text, "promotion-decision-trends")
@@ -570,9 +650,11 @@ class MakefileStaticGateTests(unittest.TestCase):
             'UV_LOCK_CHECK_INDEX_FLAGS ?= --default-index "$(UV_CANONICAL_INDEX_URL)"',
             text,
         )
-        self.assertIn("static-local", _target_block(text, ".PHONY"))
-        self.assertIn("lock-freshness-check", _target_block(text, ".PHONY"))
-        self.assertIn("uv-lock-check", _target_block(text, ".PHONY"))
+        _assert_phony_targets(
+            self,
+            text,
+            ("static-local", "lock-freshness-check", "uv-lock-check"),
+        )
 
     def test_strict_targets_include_warning_budget_gate(self) -> None:
         text = _makefile_text()
@@ -589,26 +671,30 @@ class MakefileStaticGateTests(unittest.TestCase):
             '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target check-clean',
             _target_block(text, "check-clean-lane-guard"),
         )
-        self.assertIn(
-            "release-evidence-converge-lane-guard", _target_block(text, ".PHONY")
+        _assert_phony_targets(
+            self,
+            text,
+            (
+                "release-evidence-converge-lane-guard",
+                "release-evidence-closeout-lane-guard",
+                "release-builder-full",
+                "release-builder-full-lane-guard",
+                "release-smoke-lane-guard",
+                "release-distribution-zip-lane-guard",
+            ),
         )
         self.assertIn(
             '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-evidence-converge',
             _target_block(text, "release-evidence-converge-lane-guard"),
         )
         self.assertIn(
-            "release-evidence-closeout-lane-guard", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
             "release-evidence-closeout-lane-guard is a compatibility alias",
             _target_block(text, "release-evidence-closeout-lane-guard"),
         )
-        self.assertIn("release-builder-full-lane-guard", _target_block(text, ".PHONY"))
         self.assertIn(
             '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-builder-full',
             _target_block(text, "release-builder-full-lane-guard"),
         )
-        self.assertIn("release-smoke-lane-guard", _target_block(text, ".PHONY"))
         self.assertIn(
             '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-smoke',
             _target_block(text, "release-smoke-lane-guard"),
@@ -1101,29 +1187,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-release-sealing-core",
             "test-release-sealing-all",
             "test-subprocess",
-            "release-source-package-smoke",
-            "release-source-package-check",
-            "release-run-ready",
-            "release-run-ready-check",
-            "release-sealed-run-ready",
-            "release-sealed-run-ready-plan",
-            "release-sealed-run-ready-check",
-            "release-auto-promotion-goal-run-id-guard",
-            "release-auto-promotion-preflight",
-            "release-auto-promotion-preflight-check",
-            "release-auto-promotion-safe-cleanup",
-            "release-auto-promotion-safe-cleanup-cleanup-only",
-            "release-auto-promotion-safe-cleanup-finalize",
-            "release-auto-promotion-preseal",
-            "release-auto-promotion-preseal-check",
-            "release-auto-promotion-ready",
-            "release-auto-promotion-ready-plan",
-            "release-auto-promotion-operator-summary",
-            "release-auto-promotion-ready-check",
-            "release-authority-post-ready-finality-current-check",
-            "release-authority-post-ready-finality-current-or-refresh",
-            "release-authority-settle",
-            "release-builder-full",
         ):
             with self.subTest(target=target):
                 self.assertIn(target, _target_block(text, ".PHONY"))
@@ -1279,63 +1342,44 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         text = _makefile_text()
 
-        _assert_assignment_exists(
+        _assert_assignment_values(
             self,
             text,
-            "SOURCE_PACKAGE_SMOKE_ROOT",
-            "build/source-package-smoke",
+            (
+                ("SOURCE_PACKAGE_SMOKE_ROOT", "build/source-package-smoke"),
+                (
+                    "SOURCE_PACKAGE_SMOKE_OUT",
+                    "$(SOURCE_PACKAGE_SMOKE_ROOT)/source-package-smoke.json",
+                ),
+                (
+                    "SOURCE_PACKAGE_SMOKE_EXTRACT_PARENT",
+                    "$(SOURCE_PACKAGE_SMOKE_ROOT)/extract",
+                ),
+                ("SOURCE_PACKAGE_SMOKE_PYTHON", "$(PUBLIC_PYTHON)"),
+                (
+                    "SOURCE_PACKAGE_CLEAN_EXTRACT_OUT",
+                    "ops/reports/source-package-clean-extract.json",
+                ),
+                (
+                    "SOURCE_PACKAGE_CLEAN_EXTRACT_ROOT",
+                    "tmp/source-package-clean-extract",
+                ),
+            ),
         )
-        _assert_assignment_exists(
+        _assert_phony_targets(
             self,
             text,
-            "SOURCE_PACKAGE_SMOKE_OUT",
-            "$(SOURCE_PACKAGE_SMOKE_ROOT)/source-package-smoke.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "SOURCE_PACKAGE_SMOKE_EXTRACT_PARENT",
-            "$(SOURCE_PACKAGE_SMOKE_ROOT)/extract",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "SOURCE_PACKAGE_SMOKE_PYTHON",
-            "$(PUBLIC_PYTHON)",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "SOURCE_PACKAGE_CLEAN_EXTRACT_OUT",
-            "ops/reports/source-package-clean-extract.json",
-        )
-        _assert_assignment_exists(
-            self,
-            text,
-            "SOURCE_PACKAGE_CLEAN_EXTRACT_ROOT",
-            "tmp/source-package-clean-extract",
-        )
-        self.assertIn("release-package-current-check", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "release-package-current-or-refresh", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            "release-source-package-smoke-current-check", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            "release-source-package-smoke-current-or-refresh",
-            _target_block(text, ".PHONY"),
-        )
-        self.assertIn(
-            "release-source-package-clean-extract", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            "release-source-package-clean-extract-current-check",
-            _target_block(text, ".PHONY"),
-        )
-        self.assertIn(
-            "release-source-package-clean-extract-current-or-refresh",
-            _target_block(text, ".PHONY"),
+            (
+                "release-source-package-smoke",
+                "release-source-package-check",
+                "release-package-current-check",
+                "release-package-current-or-refresh",
+                "release-source-package-smoke-current-check",
+                "release-source-package-smoke-current-or-refresh",
+                "release-source-package-clean-extract",
+                "release-source-package-clean-extract-current-check",
+                "release-source-package-clean-extract-current-or-refresh",
+            ),
         )
         self.assertIn(
             "--reuse-if-current", _target_block(text, "release-package-current-check")

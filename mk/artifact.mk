@@ -45,13 +45,14 @@ CHANGED_PATH_MINIMUM_PLAN_OUT ?= tmp/changed-path-minimum-plan.json
 RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= ops/reports/release-workflow-order-guard.json
 RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json
 RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT ?= tmp/release-workflow-order-guard-check.json
+RELEASE_WORKFLOW_ORDER_GUARD_SPEC ?= ops/policies/release-workflow-order-guard.json
 RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.json
 RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT ?= tmp/release-risk-taxonomy-matrix.candidate.json
 RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.md
 
 -include $(DERIVED_SURFACES_MK_OUT)
 
-.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean derived-surfaces-sync derived-surfaces-sync-check sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean generated-artifact-runs-compress clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-workflow-order-guard-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
+.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean derived-surfaces-sync derived-surfaces-sync-check sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean generated-artifact-runs-compress clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-workflow-order-guard-check release-workflow-order-guard-spec-sync release-workflow-order-guard-spec-sync-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
@@ -189,6 +190,12 @@ release-workflow-order-guard:
 
 release-workflow-order-guard-check:
 	$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_OUT)" --check --check-out "$(RELEASE_WORKFLOW_ORDER_GUARD_CHECK_OUT)"
+
+release-workflow-order-guard-spec-sync:
+	$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --spec-path "$(RELEASE_WORKFLOW_ORDER_GUARD_SPEC)" --write-spec
+
+release-workflow-order-guard-spec-sync-check:
+	$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --spec-path "$(RELEASE_WORKFLOW_ORDER_GUARD_SPEC)" --check-spec
 
 release-risk-taxonomy-matrix:
 	$(PYTHON) -m ops.scripts.release_risk_taxonomy_matrix --vault "$(VAULT)" --out "$(RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT)" --markdown-out "$(RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT)"

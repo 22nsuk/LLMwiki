@@ -134,10 +134,12 @@ class DerivedSurfacesTests(unittest.TestCase):
         for surface in manifest["surfaces"]:
             if not surface["include_in_sync_derived"]:
                 continue
+            source_paths = {str(source_path) for source_path in surface["source_paths"]}
             expected_paths.extend(
                 str(output_path)
                 for output_path in surface["tracked_outputs"]
-                if not any(char in str(output_path) for char in "*?[")
+                if str(output_path) not in source_paths
+                and not any(char in str(output_path) for char in "*?[")
             )
 
         self.assertEqual(
@@ -161,6 +163,15 @@ class DerivedSurfacesTests(unittest.TestCase):
                 {
                     "include_in_sync_derived": False,
                     "tracked_outputs": ["ignored-by-aggregate.txt"],
+                },
+                {
+                    "include_in_sync_derived": True,
+                    "source_paths": [
+                        "ops/policies/release-workflow-order-guard.json",
+                    ],
+                    "tracked_outputs": [
+                        "ops/policies/release-workflow-order-guard.json",
+                    ],
                 },
                 {
                     "include_in_sync_derived": True,

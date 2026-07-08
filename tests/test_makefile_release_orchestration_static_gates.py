@@ -103,6 +103,7 @@ _RELEASE_SEALED_RUN_READY_TARGET_CONTRACTS = (
     ),
     MakeTargetContract(
         "release-sealed-run-ready",
+        phony=True,
         required_tokens=(
             "$(MAKE) release-sealed-run-ready-plan",
             "$(MAKE) release-evidence-closeout-sealed-sidecars",
@@ -111,6 +112,15 @@ _RELEASE_SEALED_RUN_READY_TARGET_CONTRACTS = (
         forbidden_tokens=(
             "release-run-ready-ensure",
             "$(MAKE) release-evidence-closeout-sealed-core-sidecars",
+        ),
+    ),
+    MakeTargetContract(
+        "release-sealed-run-ready-check",
+        phony=True,
+        required_tokens=(
+            "ops.scripts.release_sealed_run_manifest",
+            "--check",
+            '--post-seal-attestation "$(RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT)"',
         ),
     ),
 )
@@ -406,6 +416,7 @@ _AUTO_PROMOTION_READY_AUTHORITY_PHONY_TARGETS = (
 _AUTO_PROMOTION_READY_AUTHORITY_CONTRACTS = (
     MakeTargetContract(
         "release-auto-promotion-ready",
+        phony=True,
         required_tokens=(
             "ops.scripts.release_auto_promotion_ready",
             "$(MAKE) release-auto-promotion-operator-summary",
@@ -427,7 +438,19 @@ _AUTO_PROMOTION_READY_AUTHORITY_CONTRACTS = (
         ),
     ),
     MakeTargetContract(
+        "release-auto-promotion-ready-check",
+        phony=True,
+        required_tokens=(
+            "ops.scripts.release_auto_promotion_ready",
+            "--check",
+            '--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"',
+            '--sealed-run-manifest "$(RELEASE_SEALED_RUN_MANIFEST_OUT)"',
+            '--operator-summary "$(RELEASE_AUTO_PROMOTION_OPERATOR_SUMMARY_OUT)"',
+        ),
+    ),
+    MakeTargetContract(
         "release-authority-archive-candidate-gate",
+        phony=True,
         required_tokens=(
             "$(MAKE) external-report-action-matrix",
             "$(MAKE) generated-artifact-index-body",
