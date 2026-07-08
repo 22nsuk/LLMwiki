@@ -331,6 +331,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def _commit_vault_with_external_linked_gitlink(
         self,
         rel_path: str = "vendor/external-linked",
+        *,
+        branch_name: str | None = None,
     ) -> tuple[Path, Path]:
         self._commit_git_baseline()
         external_repo = Path(self.temp_dir.name) / "external-linked-source"
@@ -341,14 +343,24 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         base_commit = self._run_git_at(external_repo, "rev-parse", "HEAD").stdout.strip()
         linked_path = self.vault / rel_path
         linked_path.parent.mkdir(parents=True, exist_ok=True)
-        self._run_git_at(
-            external_repo,
-            "worktree",
-            "add",
-            "--detach",
-            str(linked_path),
-            base_commit,
-        )
+        if branch_name is None:
+            self._run_git_at(
+                external_repo,
+                "worktree",
+                "add",
+                "--detach",
+                str(linked_path),
+                base_commit,
+            )
+        else:
+            self._run_git_at(external_repo, "branch", branch_name, base_commit)
+            self._run_git_at(
+                external_repo,
+                "worktree",
+                "add",
+                str(linked_path),
+                branch_name,
+            )
         self._run_git(
             "update-index",
             "--add",
@@ -2040,6 +2052,31 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
+    def test_changed_paths_from_git_reads_common_gitdir_for_clean_branch_external_gitlink(
+        self,
+    ) -> None:
+        self._commit_vault_with_external_linked_gitlink(
+            rel_path="vendor/branch-linked",
+            branch_name="linked-branch",
+        )
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, [])
+        self.assertNotIn("vendor/branch-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
     def test_changed_paths_from_git_marks_external_gitlink_with_bad_backlink_changed(self) -> None:
         _external_repo, linked_path = self._commit_vault_with_external_linked_gitlink()
         prefix, separator, raw_git_dir = (linked_path / ".git").read_text(
@@ -2059,6 +2096,27 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             context=fixed_context(),
         )
 
+        self.assertIn("vendor/external-linked", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_dirty_external_linked_worktree_gitlink(self) -> None:
+        _external_repo, linked_path = self._commit_vault_with_external_linked_gitlink()
+        (linked_path / "content.txt").write_text("dirty\n", encoding="utf-8")
+
+        git_name_only_paths = self._run_git(
+            "diff",
+            "--name-only",
+            "HEAD",
+            "--",
+        ).stdout.splitlines()
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(git_name_only_paths, ["vendor/external-linked"])
         self.assertIn("vendor/external-linked", report["selected_change_paths"])
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])

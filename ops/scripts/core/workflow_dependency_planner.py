@@ -1651,8 +1651,9 @@ def _external_git_dir_points_to_worktree_marker(
 
 def _read_packed_git_ref(git_dir: Path, ref_name: str) -> str | None:
     try:
-        packed_refs_path = (git_dir / "packed-refs").resolve()
-        packed_refs_path.relative_to(git_dir.resolve())
+        git_dir_root = git_dir.resolve()
+        packed_refs_path = (git_dir_root / "packed-refs").resolve()
+        packed_refs_path.relative_to(git_dir_root)
         lines = packed_refs_path.read_text(
             encoding="utf-8",
             errors="replace",
@@ -1668,10 +1669,48 @@ def _read_packed_git_ref(git_dir: Path, ref_name: str) -> str | None:
     return None
 
 
+def _git_common_dir(git_dir_root: Path) -> Path:
+    try:
+        commondir_path = (git_dir_root / "commondir").resolve()
+        commondir_path.relative_to(git_dir_root)
+        raw_common_dir = commondir_path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        ).strip()
+    except (OSError, ValueError):
+        return git_dir_root
+    if not raw_common_dir:
+        return git_dir_root
+    try:
+        return (git_dir_root / raw_common_dir).resolve()
+    except OSError:
+        return git_dir_root
+
+
+def _git_ref_roots(git_dir_root: Path) -> list[Path]:
+    common_dir = _git_common_dir(git_dir_root)
+    if common_dir == git_dir_root:
+        return [git_dir_root]
+    return [git_dir_root, common_dir]
+
+
+def _read_loose_git_ref(git_dir: Path, ref_name: str) -> str | None:
+    try:
+        git_dir_root = git_dir.resolve()
+        ref_path = (git_dir_root / ref_name).resolve()
+        ref_path.relative_to(git_dir_root)
+        ref_value = ref_path.read_text(encoding="utf-8", errors="replace").strip()
+    except (OSError, ValueError):
+        return None
+    if GIT_OBJECT_ID_RE.fullmatch(ref_value):
+        return ref_value.lower()
+    return None
+
+
 def _read_git_dir_head(git_dir: Path) -> str | None:
     try:
         git_dir_root = git_dir.resolve()
-        head_path = (git_dir / "HEAD").resolve()
+        head_path = (git_dir_root / "HEAD").resolve()
         head_path.relative_to(git_dir_root)
         head = head_path.read_text(encoding="utf-8", errors="replace").strip()
     except (OSError, ValueError):
@@ -1682,15 +1721,16 @@ def _read_git_dir_head(git_dir: Path) -> str | None:
     if prefix != "ref" or not separator:
         return None
     ref_name = ref_name.strip()
-    try:
-        ref_path = (git_dir / ref_name).resolve()
-        ref_path.relative_to(git_dir_root)
-        ref_value = ref_path.read_text(encoding="utf-8", errors="replace").strip()
-    except (OSError, ValueError):
-        ref_value = ""
-    if GIT_OBJECT_ID_RE.fullmatch(ref_value):
-        return ref_value.lower()
-    return _read_packed_git_ref(git_dir, ref_name)
+    ref_roots = _git_ref_roots(git_dir_root)
+    for ref_root in ref_roots:
+        ref_value = _read_loose_git_ref(ref_root, ref_name)
+        if ref_value is not None:
+            return ref_value
+    for ref_root in ref_roots:
+        ref_value = _read_packed_git_ref(ref_root, ref_name)
+        if ref_value is not None:
+            return ref_value
+    return None
 
 
 def _submodule_command_id(rel_path: str, command_id: str) -> str:
@@ -1879,7 +1919,16 @@ def _submodule_changed(
         head_changed = (
             current_external_head is None or current_external_head != entry.object_id
         )
-        return head_changed, [], []
+        if ignore_mode == "dirty":
+            return head_changed, [], []
+        dirty, commands, failures = _submodule_worktree_dirty(
+            vault=vault,
+            entry=entry,
+            git_executable=git_executable,
+            env=env,
+            ignore_untracked=ignore_mode == "untracked",
+        )
+        return head_changed or dirty, commands, failures
     current_head = _read_git_dir_head(git_dir)
     head_changed = current_head is None or current_head != entry.object_id
     if ignore_mode == "dirty":
