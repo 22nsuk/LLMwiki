@@ -152,7 +152,8 @@
         "target_count",
         "phony_count",
         "missing_dependencies",
-        "unknown_change_paths"
+        "unknown_change_paths",
+        "git_changed_paths"
       ],
       "properties": {
         "makefile_path": { "type": "string", "minLength": 1 },
@@ -165,6 +166,9 @@
         "unknown_change_paths": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
+        },
+        "git_changed_paths": {
+          "$ref": "#/$defs/git_changed_paths_diagnostics"
         },
         "derived_surfaces_manifest": {
           "$ref": "#/$defs/derived_surfaces_manifest_diagnostics"
@@ -537,6 +541,71 @@
         "path": { "type": "string", "minLength": 1 },
         "message": { "type": "string" },
         "currentness_output_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "git_changed_paths_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source",
+        "path_count",
+        "commands",
+        "failures",
+        "ignored_path_entry_count"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["skipped", "pass", "failed", "timed_out", "unavailable"]
+        },
+        "source": {
+          "type": "string",
+          "enum": ["none", "git"]
+        },
+        "path_count": { "type": "integer", "minimum": 0 },
+        "reason": { "type": "string", "minLength": 1 },
+        "commands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/git_changed_paths_command" }
+        },
+        "failures": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/git_changed_paths_failure" }
+        },
+        "ignored_path_entry_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "git_changed_paths_command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "returncode", "timed_out", "path_count"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "failed", "timed_out", "no_head"]
+        },
+        "returncode": { "type": "integer" },
+        "timed_out": { "type": "boolean" },
+        "path_count": { "type": "integer", "minimum": 0 },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "git_changed_paths_failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "command_id": { "type": "string", "minLength": 1 },
+        "code": {
+          "type": "string",
+          "enum": [
+            "git_executable_unavailable",
+            "git_probe_failed",
+            "git_probe_timed_out"
+          ]
+        }
       }
     },
     "evidence_signal": {

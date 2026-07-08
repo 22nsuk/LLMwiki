@@ -4,8 +4,8 @@ import argparse
 import fnmatch
 import json
 import re
-import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -19,11 +19,16 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         load_optional_json_object,
         write_schema_backed_report,
     )
+    from ops.scripts.core.command_runtime import RunWithTimeoutRequest, run_with_timeout
     from ops.scripts.core.derived_surfaces import (
         MANIFEST_PATH as DERIVED_SURFACES_MANIFEST_PATH,
         currentness_output_paths as derived_surface_currentness_output_paths,
         currentness_path_patterns as derived_surface_currentness_path_patterns,
         load_manifest as load_derived_surfaces_manifest,
+    )
+    from ops.scripts.core.git_runtime import (
+        resolve_trusted_git_executable,
+        trusted_git_subprocess_env,
     )
     from ops.scripts.core.makefile_runtime import load_makefile_text
     from ops.scripts.core.output_runtime import display_path
@@ -48,11 +53,16 @@ else:
         load_optional_json_object,
         write_schema_backed_report,
     )
+    from .command_runtime import RunWithTimeoutRequest, run_with_timeout
     from .derived_surfaces import (
         MANIFEST_PATH as DERIVED_SURFACES_MANIFEST_PATH,
         currentness_output_paths as derived_surface_currentness_output_paths,
         currentness_path_patterns as derived_surface_currentness_path_patterns,
         load_manifest as load_derived_surfaces_manifest,
+    )
+    from .git_runtime import (
+        resolve_trusted_git_executable,
+        trusted_git_subprocess_env,
     )
     from .makefile_runtime import load_makefile_text
     from .output_runtime import display_path
@@ -72,6 +82,56 @@ TARGET_RE = re.compile(r"^([A-Za-z0-9_.%/@-][A-Za-z0-9_.%/@ -]*):(?P<deps>[^\n#]
 MAKE_RECIPE_RE = re.compile(r"\$\((?:MAKE|make)\)\s+(?P<args>[^\n;&|]+)")
 TARGET_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.%/@-]+$")
 OPTION_OR_ASSIGNMENT_RE = re.compile(r"^(?:-|[A-Za-z_][A-Za-z0-9_]*=)")
+GIT_LS_FILES_DEBUG_RE = re.compile(
+    r"^  ctime: (?P<ctime_s>\d+):(?P<ctime_ns>\d+)\n"
+    r"  mtime: (?P<mtime_s>\d+):(?P<mtime_ns>\d+)\n"
+    r"  dev: (?P<dev>\d+)\tino: (?P<ino>\d+)\n"
+    r"  uid: (?P<uid>\d+)\tgid: (?P<gid>\d+)\n"
+    r"  size: (?P<size>\d+)\tflags: (?P<flags>\d+)\n"
+)
+GIT_CHANGED_PATHS_TIMEOUT_SECONDS = 30
+GIT_BASE_CONFIG_ARGS = (
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.untrackedCache=false",
+)
+
+
+@dataclass(frozen=True)
+class _GitCommandObservation:
+    command_id: str
+    status: str
+    returncode: int
+    timed_out: bool
+    path_count: int = 0
+    reason: str = ""
+
+    def to_payload(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "id": self.command_id,
+            "status": self.status,
+            "returncode": self.returncode,
+            "timed_out": self.timed_out,
+            "path_count": self.path_count,
+        }
+        if self.reason:
+            payload["reason"] = self.reason
+        return payload
+
+
+@dataclass(frozen=True)
+class _GitChangedPathsResult:
+    paths: list[str]
+    diagnostics: dict[str, Any]
+
+    @property
+    def failed(self) -> bool:
+        return self.diagnostics.get("status") in {
+            "failed",
+            "timed_out",
+            "unavailable",
+        }
 
 REPORT_CLOSEOUT_TARGETS = [
     "test-execution-summary-report-contract",
@@ -1039,23 +1099,394 @@ def _read_changed_paths(vault: Path, changed_files_manifest: str | None) -> list
     return paths
 
 
-def _read_git_changed_paths(vault: Path) -> list[str]:
-    paths: list[str] = []
-    for command in (
-        ["git", "diff", "--name-only", "HEAD", "--"],
-        ["git", "ls-files", "--others", "--exclude-standard"],
-    ):
-        result = subprocess.run(
-            command,
+def _git_changed_paths_diagnostics(
+    *,
+    status: str,
+    source: str,
+    path_count: int = 0,
+    reason: str = "",
+    commands: list[_GitCommandObservation] | None = None,
+    failures: list[dict[str, str]] | None = None,
+    ignored_path_entry_count: int = 0,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": status,
+        "source": source,
+        "path_count": path_count,
+        "commands": [command.to_payload() for command in commands or []],
+        "failures": failures or [],
+        "ignored_path_entry_count": ignored_path_entry_count,
+    }
+    if reason:
+        payload["reason"] = reason
+    return payload
+
+
+def _skipped_git_changed_paths(reason: str) -> _GitChangedPathsResult:
+    return _GitChangedPathsResult(
+        paths=[],
+        diagnostics=_git_changed_paths_diagnostics(
+            status="skipped",
+            source="none",
+            reason=reason,
+        ),
+    )
+
+
+def _split_nul_paths(stdout: str) -> list[str]:
+    return [item for item in stdout.split("\0") if item]
+
+
+def _run_git_raw_command(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+    command_id: str,
+    args: list[str],
+) -> tuple[str, _GitCommandObservation, dict[str, str] | None]:
+    result = run_with_timeout(
+        RunWithTimeoutRequest(
+            argv=[git_executable, *GIT_BASE_CONFIG_ARGS, *args],
             cwd=vault,
-            check=False,
-            text=True,
-            capture_output=True,
+            timeout_seconds=GIT_CHANGED_PATHS_TIMEOUT_SECONDS,
+            env=env,
         )
-        if result.returncode != 0:
-            continue
-        paths.extend(line.strip() for line in result.stdout.splitlines() if line.strip())
-    return paths
+    )
+    if result.timed_out:
+        observation = _GitCommandObservation(
+            command_id=command_id,
+            status="timed_out",
+            returncode=result.returncode,
+            timed_out=True,
+            reason="git_probe_timed_out",
+        )
+        return "", observation, {
+            "command_id": command_id,
+            "code": "git_probe_timed_out",
+        }
+    if result.returncode != 0:
+        observation = _GitCommandObservation(
+            command_id=command_id,
+            status="failed",
+            returncode=result.returncode,
+            timed_out=False,
+            reason="git_probe_failed",
+        )
+        return "", observation, {
+            "command_id": command_id,
+            "code": "git_probe_failed",
+        }
+    return (
+        result.stdout,
+        _GitCommandObservation(
+            command_id=command_id,
+            status="pass",
+            returncode=result.returncode,
+            timed_out=False,
+        ),
+        None,
+    )
+
+
+def _run_git_changed_paths_command(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+    command_id: str,
+    args: list[str],
+) -> tuple[list[str], _GitCommandObservation, dict[str, str] | None]:
+    stdout, observation, failure = _run_git_raw_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        command_id=command_id,
+        args=args,
+    )
+    if failure is not None:
+        return [], observation, failure
+    paths = _split_nul_paths(stdout)
+    return (
+        paths,
+        _GitCommandObservation(
+            command_id=observation.command_id,
+            status=observation.status,
+            returncode=observation.returncode,
+            timed_out=observation.timed_out,
+            path_count=len(paths),
+            reason=observation.reason,
+        ),
+        None,
+    )
+
+
+def _index_time_ns(match: re.Match[str], prefix: str) -> int:
+    return int(match.group(f"{prefix}_s")) * 1_000_000_000 + int(
+        match.group(f"{prefix}_ns")
+    )
+
+
+def _index_entry_stat_changed(vault: Path, rel_path: str, match: re.Match[str]) -> bool:
+    try:
+        stat = (vault / rel_path).stat()
+    except OSError:
+        return False
+    return any(
+        (
+            stat.st_size != int(match.group("size")),
+            stat.st_mtime_ns != _index_time_ns(match, "mtime"),
+            stat.st_ctime_ns != _index_time_ns(match, "ctime"),
+            stat.st_dev != int(match.group("dev")),
+            stat.st_ino != int(match.group("ino")),
+        )
+    )
+
+
+def _modified_paths_from_index_debug(vault: Path, stdout: str) -> list[str]:
+    segments = stdout.split("\0")
+    if not segments:
+        return []
+    rel_path = segments[0]
+    modified_paths: list[str] = []
+    for segment in segments[1:]:
+        if not rel_path:
+            break
+        match = GIT_LS_FILES_DEBUG_RE.match(segment)
+        if match is None:
+            break
+        if _index_entry_stat_changed(vault, rel_path, match):
+            modified_paths.append(rel_path)
+        rel_path = segment[match.end() :]
+    return modified_paths
+
+
+def _run_git_modified_paths_command(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+) -> tuple[list[str], _GitCommandObservation, dict[str, str] | None]:
+    stdout, observation, failure = _run_git_raw_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        command_id="ls-files-index-stats",
+        args=["ls-files", "-z", "--debug"],
+    )
+    if failure is not None:
+        return [], observation, failure
+    paths = _modified_paths_from_index_debug(vault, stdout)
+    return (
+        paths,
+        _GitCommandObservation(
+            command_id=observation.command_id,
+            status=observation.status,
+            returncode=observation.returncode,
+            timed_out=observation.timed_out,
+            path_count=len(paths),
+            reason=observation.reason,
+        ),
+        None,
+    )
+
+
+def _git_head_exists(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+) -> tuple[bool, _GitCommandObservation, dict[str, str] | None]:
+    result = run_with_timeout(
+        RunWithTimeoutRequest(
+            argv=[
+                git_executable,
+                *GIT_BASE_CONFIG_ARGS,
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                "HEAD",
+            ],
+            cwd=vault,
+            timeout_seconds=GIT_CHANGED_PATHS_TIMEOUT_SECONDS,
+            env=env,
+        )
+    )
+    if result.timed_out:
+        observation = _GitCommandObservation(
+            command_id="rev-parse-head",
+            status="timed_out",
+            returncode=result.returncode,
+            timed_out=True,
+            reason="git_probe_timed_out",
+        )
+        return False, observation, {
+            "command_id": "rev-parse-head",
+            "code": "git_probe_timed_out",
+        }
+    if result.returncode == 0:
+        return (
+            True,
+            _GitCommandObservation(
+                command_id="rev-parse-head",
+                status="pass",
+                returncode=result.returncode,
+                timed_out=False,
+            ),
+            None,
+        )
+    if result.returncode == 1:
+        return (
+            False,
+            _GitCommandObservation(
+                command_id="rev-parse-head",
+                status="no_head",
+                returncode=result.returncode,
+                timed_out=False,
+                reason="git_head_missing",
+            ),
+            None,
+        )
+    observation = _GitCommandObservation(
+        command_id="rev-parse-head",
+        status="failed",
+        returncode=result.returncode,
+        timed_out=False,
+        reason="git_probe_failed",
+    )
+    return False, observation, {
+        "command_id": "rev-parse-head",
+        "code": "git_probe_failed",
+    }
+
+
+def _failed_git_changed_paths_result(
+    *,
+    paths: list[str],
+    commands: list[_GitCommandObservation],
+    failures: list[dict[str, str]],
+    ignored_path_entry_count: int,
+) -> _GitChangedPathsResult:
+    unique_paths = sorted(set(paths))
+    failed_statuses = {command.status for command in commands if command.status != "pass"}
+    status = "timed_out" if "timed_out" in failed_statuses else "failed"
+    return _GitChangedPathsResult(
+        paths=unique_paths,
+        diagnostics=_git_changed_paths_diagnostics(
+            status=status,
+            source="git",
+            path_count=len(unique_paths),
+            reason="git_probe_failed",
+            commands=commands,
+            failures=failures,
+            ignored_path_entry_count=ignored_path_entry_count,
+        ),
+    )
+
+
+def _read_git_changed_paths(vault: Path) -> _GitChangedPathsResult:
+    git_executable, path_text, ignored_path_entry_count = resolve_trusted_git_executable(
+        vault
+    )
+    if git_executable is None:
+        return _GitChangedPathsResult(
+            paths=[],
+            diagnostics=_git_changed_paths_diagnostics(
+                status="unavailable",
+                source="git",
+                reason="git_executable_unavailable",
+                failures=[{"code": "git_executable_unavailable"}],
+                ignored_path_entry_count=ignored_path_entry_count,
+            ),
+        )
+    env = trusted_git_subprocess_env(path_text)
+    commands: list[_GitCommandObservation] = []
+    failures: list[dict[str, str]] = []
+    paths: list[str] = []
+    worktree_paths, worktree_observation, worktree_failure = _run_git_changed_paths_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        command_id="ls-files-worktree",
+        args=["ls-files", "-z", "-d", "-o", "--exclude-standard"],
+    )
+    commands.append(worktree_observation)
+    if worktree_failure is not None:
+        failures.append(worktree_failure)
+    paths.extend(worktree_paths)
+    if failures:
+        return _failed_git_changed_paths_result(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+            ignored_path_entry_count=ignored_path_entry_count,
+        )
+    modified_paths, modified_observation, modified_failure = _run_git_modified_paths_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+    )
+    commands.append(modified_observation)
+    if modified_failure is not None:
+        failures.append(modified_failure)
+    paths.extend(modified_paths)
+    if failures:
+        return _failed_git_changed_paths_result(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+            ignored_path_entry_count=ignored_path_entry_count,
+        )
+    has_head, head_observation, head_failure = _git_head_exists(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+    )
+    commands.append(head_observation)
+    if head_failure is not None:
+        failures.append(head_failure)
+    if failures:
+        return _failed_git_changed_paths_result(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+            ignored_path_entry_count=ignored_path_entry_count,
+        )
+    if has_head:
+        staged_args = ["diff-index", "--cached", "-z", "--name-only", "HEAD", "--"]
+        command_id = "diff-index-cached"
+    else:
+        staged_args = ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]
+        command_id = "ls-files-no-head"
+    staged_paths, staged_observation, staged_failure = _run_git_changed_paths_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        command_id=command_id,
+        args=staged_args,
+    )
+    commands.append(staged_observation)
+    if staged_failure is not None:
+        failures.append(staged_failure)
+    paths.extend(staged_paths)
+    unique_paths = sorted(set(paths))
+    if failures:
+        return _failed_git_changed_paths_result(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+            ignored_path_entry_count=ignored_path_entry_count,
+        )
+    return _GitChangedPathsResult(
+        paths=unique_paths,
+        diagnostics=_git_changed_paths_diagnostics(
+            status="pass",
+            source="git",
+            path_count=len(unique_paths),
+            commands=commands,
+            ignored_path_entry_count=ignored_path_entry_count,
+        ),
+    )
 
 
 def build_report(
@@ -1073,11 +1504,13 @@ def build_report(
     makefile_text, makefile_sources = load_makefile_text(resolved_vault)
     targets, phony, dependency_edges = _parse_makefile(makefile_text)
     manifest_paths = _read_changed_paths(resolved_vault, changed_files_manifest)
-    git_paths = (
-        []
-        if changed_files_manifest or not changed_paths_from_git
-        else _read_git_changed_paths(resolved_vault)
-    )
+    if changed_files_manifest:
+        git_changed_paths = _skipped_git_changed_paths("changed_files_manifest")
+    elif not changed_paths_from_git:
+        git_changed_paths = _skipped_git_changed_paths("changed_paths_from_git_disabled")
+    else:
+        git_changed_paths = _read_git_changed_paths(resolved_vault)
+    git_paths = git_changed_paths.paths
     selected_paths = sorted({*(changed_paths or []), *manifest_paths, *git_paths})
     workflow_rules = _workflow_rules(resolved_vault)
     test_lane_registry = _test_lane_registry(resolved_vault)
@@ -1102,7 +1535,7 @@ def build_report(
     evidence_dag = _evidence_dag(resolved_vault)
     status = (
         "fail"
-        if missing_dependencies
+        if missing_dependencies or git_changed_paths.failed
         else "attention"
         if unknown_change_paths or derived_surface_currentness["status"] == "failed"
         else "pass"
@@ -1182,6 +1615,7 @@ def build_report(
             "phony_count": len(phony),
             "missing_dependencies": missing_dependencies,
             "unknown_change_paths": unknown_change_paths,
+            "git_changed_paths": git_changed_paths.diagnostics,
             "derived_surfaces_manifest": {
                 "status": str(derived_surface_currentness["status"]),
                 "path": str(derived_surface_currentness["path"]),

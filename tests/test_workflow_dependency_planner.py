@@ -3,13 +3,16 @@ from __future__ import annotations
 import ast
 import datetime as dt
 import json
+import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
+from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.core.derived_surfaces import (
     currentness_output_paths as derived_surface_currentness_output_paths,
     currentness_path_patterns as derived_surface_currentness_path_patterns,
@@ -259,6 +262,28 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 indent=2,
             ),
             encoding="utf-8",
+        )
+
+    def _run_git(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *args],
+            cwd=self.vault,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+    def _commit_git_baseline(self) -> None:
+        self._run_git("init")
+        self._run_git("add", ".")
+        self._run_git(
+            "-c",
+            "user.name=LLMwiki Test",
+            "-c",
+            "user.email=llmwiki-test@example.invalid",
+            "commit",
+            "-m",
+            "baseline",
         )
 
     def test_build_report_maps_make_edges_and_validates_schema(self) -> None:
@@ -1385,13 +1410,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def test_changed_files_manifest_is_consumed(self) -> None:
         manifest = self.vault / "tmp" / "changed-files.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["git", "init"],
-            cwd=self.vault,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
+        self._run_git("init")
         untracked_doc = self.vault / "docs" / "development.md"
         untracked_doc.parent.mkdir(parents=True, exist_ok=True)
         untracked_doc.write_text("untracked doc\n", encoding="utf-8")
@@ -1400,51 +1419,40 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        report = build_report(
-            self.vault,
-            changed_files_manifest="tmp/changed-files.json",
-            changed_paths_from_git=True,
-            context=fixed_context(),
-        )
+        with mock.patch(
+            "ops.scripts.core.workflow_dependency_planner.run_with_timeout",
+            side_effect=AssertionError("manifest input should bypass git probing"),
+        ):
+            report = build_report(
+                self.vault,
+                changed_files_manifest="tmp/changed-files.json",
+                changed_paths_from_git=True,
+                context=fixed_context(),
+            )
 
         self.assertEqual(report["selected_change_paths"], ["external-reports/review.md"])
         self.assertIn("changed_files_manifest", report["input_fingerprints"])
         self.assertEqual(report["selected_workflows"][0]["workflow_id"], "external_report_reference_closeout")
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "skipped")
+        self.assertEqual(
+            report["diagnostics"]["git_changed_paths"]["reason"],
+            "changed_files_manifest",
+        )
 
-    def test_changed_paths_from_git_reads_untracked_paths(self) -> None:
-        subprocess.run(
-            ["git", "init"],
-            cwd=self.vault,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["git", "add", "."],
-            cwd=self.vault,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            [
-                "git",
-                "-c",
-                "user.name=LLMwiki Test",
-                "-c",
-                "user.email=llmwiki-test@example.invalid",
-                "commit",
-                "-m",
-                "baseline",
-            ],
-            cwd=self.vault,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        changed_path = self.vault / "docs" / "development.md"
-        changed_path.parent.mkdir(parents=True, exist_ok=True)
-        changed_path.write_text("untracked doc\n", encoding="utf-8")
+    def test_changed_paths_from_git_reads_worktree_and_staged_paths(self) -> None:
+        tracked_path = self.vault / "docs" / "existing.md"
+        deleted_path = self.vault / "docs" / "remove-me.md"
+        tracked_path.parent.mkdir(parents=True, exist_ok=True)
+        tracked_path.write_text("tracked\n", encoding="utf-8")
+        deleted_path.write_text("delete me\n", encoding="utf-8")
+        self._commit_git_baseline()
+        tracked_path.write_text("modified\n", encoding="utf-8")
+        deleted_path.unlink()
+        staged_path = self.vault / "docs" / "staged.md"
+        staged_path.write_text("staged\n", encoding="utf-8")
+        self._run_git("add", "docs/staged.md")
+        untracked_path = self.vault / "docs" / "untracked-guide.md"
+        untracked_path.write_text("untracked doc\n", encoding="utf-8")
 
         report = build_report(
             self.vault,
@@ -1452,13 +1460,132 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             context=fixed_context(),
         )
 
-        self.assertEqual(report["selected_change_paths"], ["docs/development.md"])
+        self.assertEqual(
+            report["selected_change_paths"],
+            [
+                "docs/existing.md",
+                "docs/remove-me.md",
+                "docs/staged.md",
+                "docs/untracked-guide.md",
+            ],
+        )
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["path_count"], 4)
+        self.assertEqual(
+            [item["id"] for item in report["diagnostics"]["git_changed_paths"]["commands"]],
+            [
+                "ls-files-worktree",
+                "ls-files-index-stats",
+                "rev-parse-head",
+                "diff-index-cached",
+            ],
+        )
         self.assertEqual(
             report["changed_path_minimum_plan"]["selected_commands"],
             ["make static", "make public-check"],
         )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_does_not_execute_filter_drivers(self) -> None:
+        filter_script = self.vault / "filter-driver.sh"
+        marker = self.vault / "filter-driver-ran"
+        filter_script.write_text(
+            "#!/bin/sh\n"
+            f"printf ran >> {str(marker)!r}\n"
+            "cat\n",
+            encoding="utf-8",
+        )
+        filter_script.chmod(0o755)
+        filtered_path = self.vault / "docs" / "filter.foo"
+        filtered_path.parent.mkdir(parents=True, exist_ok=True)
+        filtered_path.write_text("baseline\n", encoding="utf-8")
+        (self.vault / ".gitattributes").write_text(
+            "*.foo filter=pwn\n",
+            encoding="utf-8",
+        )
+        self._commit_git_baseline()
+        self._run_git("config", "filter.pwn.clean", str(filter_script))
+        marker.unlink(missing_ok=True)
+        filtered_path.write_text("modified\n", encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], ["docs/filter.foo"])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_ignores_vault_local_git_on_path(self) -> None:
+        self._commit_git_baseline()
+        marker = self.vault / "local-git-ran"
+        local_git = self.vault / "git"
+        local_git.write_text(
+            "#!/bin/sh\n"
+            f"printf ran >> {str(marker)!r}\n"
+            "exit 127\n",
+            encoding="utf-8",
+        )
+        local_git.chmod(0o755)
+        with (self.vault / ".git" / "info" / "exclude").open("a", encoding="utf-8") as handle:
+            handle.write("\n/git\n")
+        changed_path = self.vault / "docs" / "development.md"
+        changed_path.parent.mkdir(parents=True, exist_ok=True)
+        changed_path.write_text("untracked doc\n", encoding="utf-8")
+        polluted_path = os.pathsep.join(
+            [str(self.vault), ".", "", os.environ.get("PATH", "")]
+        )
+
+        with mock.patch.dict(os.environ, {"PATH": polluted_path}):
+            report = build_report(
+                self.vault,
+                changed_paths_from_git=True,
+                context=fixed_context(),
+            )
+
+        self.assertEqual(report["selected_change_paths"], ["docs/development.md"])
+        self.assertFalse(marker.exists())
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertGreaterEqual(
+            report["diagnostics"]["git_changed_paths"]["ignored_path_entry_count"],
+            3,
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_failure_fails_report(self) -> None:
+        self._commit_git_baseline()
+
+        def fake_run(*_args: object, **_kwargs: object) -> TimedProcessResult:
+            return TimedProcessResult(
+                args=[],
+                returncode=124,
+                stdout="",
+                stderr="timeout",
+                timed_out=True,
+                timeout_seconds=30,
+                termination_reason="execution_timeout",
+            )
+
+        with mock.patch(
+            "ops.scripts.core.workflow_dependency_planner.run_with_timeout",
+            side_effect=fake_run,
+        ):
+            report = build_report(
+                self.vault,
+                changed_paths_from_git=True,
+                context=fixed_context(),
+            )
+
+        diagnostics = report["diagnostics"]["git_changed_paths"]
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(diagnostics["status"], "timed_out")
+        self.assertEqual(diagnostics["failures"], [{"command_id": "ls-files-worktree", "code": "git_probe_timed_out"}])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_write_report_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())
