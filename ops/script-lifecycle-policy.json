@@ -503,6 +503,24 @@
       "replacement": "python -m ops.scripts.core.generated_artifact_semantic_digest"
     },
     {
+      "canonical_module": "ops.scripts.core.git_changed_paths_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.git_changed_paths_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.core.git_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.git_runtime"
+    },
+    {
       "canonical_module": "ops.scripts.core.learning_claim_state_runtime",
       "console_scripts": [],
       "install_state": "not_installed",

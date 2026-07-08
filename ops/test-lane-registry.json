@@ -15,6 +15,7 @@
       "make test-boundary-contract-smoke": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider {path}": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_workflow_dependency_planner.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_source_revision_runtime.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_derived_surfaces.py": 30,
       "make makefile-static-gates": 210,
@@ -91,8 +92,25 @@
         "duration_seconds": 90
       },
       {
+        "rule_id": "git_runtime_shared_source",
+        "path_patterns": [
+          "ops/scripts/core/git_runtime.py"
+        ],
+        "commands": [
+          "make static",
+          "make workflow-dependency-planner-check",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_workflow_dependency_planner.py",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_source_revision_runtime.py"
+        ],
+        "reason": "Trusted Git runtime changes affect both workflow changed-path detection and source revision resolution, so both focused contracts should run.",
+        "coverage_class": "git_runtime_shared",
+        "static_required": true,
+        "duration_seconds": 180
+      },
+      {
         "rule_id": "workflow_dependency_planner_source",
         "path_patterns": [
+          "ops/scripts/core/git_changed_paths_runtime.py",
           "ops/scripts/core/workflow_dependency_planner.py"
         ],
         "commands": [
