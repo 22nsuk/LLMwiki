@@ -72,9 +72,27 @@ dependency planner as runtime source changes and should pair `make static` with
 the default `make test` lane unless a narrower changed-path minimum applies.
 
 Static Make/CI tests should keep structural invariants and wiring checks only.
-Exact generated content or protected release recipe order belongs in the
-generator unit test, the `make sync-derived` no-op convergence check, or the
-declarative release workflow order guard spec.
+Exact generated content belongs in the generator unit test or the
+`make sync-derived` no-op convergence check. Protected release recipe roles and
+ordering remain declarative in the release workflow order guard spec; its raw
+Make recipe line snapshots are refreshed through `make sync-derived`.
+
+Observation closeout uses the tracked
+`ops/observation-closeout-registry.json` only for retained `open` or `planned`
+follow-ups. Run `make observation-closeout-lint` before adding registry entries:
+closed `automated` observations with resolution evidence stay in their
+observation artifact, and `wontfix` observations must carry explicit resolution
+evidence rather than being hidden by omission. Do not blanket-register a task's
+observations; register only the unregistered open/planned items reported by the
+lint.
+
+For meta-maintenance tracks that reduce bookkeeping surfaces, declare a stop
+condition once the duplicated owner has moved to a generator, manifest, or lint.
+After that point, observe the next 20-30 commits for recurring companion edits
+such as schema sample seeds, static gate mirrors, or sync manifest churn. If the
+recurrence does not reappear, close the track and fold any remaining small seed
+or literal reductions into the next real schema/runtime change instead of
+opening another standalone cleanup phase.
 
 Operator-facing `current` or reusable-evidence decisions should come from the
 objective lane checks that bind HEAD, source fingerprint, and domain-specific

@@ -22,6 +22,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
+    from ops.scripts.core.filesystem_runtime import atomic_write_text
     from ops.scripts.core.makefile_runtime import load_makefile_text
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import load_policy, report_path
@@ -49,6 +50,7 @@ else:
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
+    from ops.scripts.core.filesystem_runtime import atomic_write_text
     from ops.scripts.core.makefile_runtime import load_makefile_text
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import load_policy, report_path
@@ -78,6 +80,79 @@ SOURCE_COMMAND = (
 RELEASE_CONVERGE_TARGET = "release-evidence-converge"
 CHECK_FINALIZED_TARGET = "check-finalized"
 MAKE_RECIPE_RE = re.compile(r"\$\(MAKE\)\s+(?P<args>[^\n;&|]+)")
+_DIRECT_PYTHON_PROTECTED_TOKENS: dict[str, tuple[str, ...]] = {
+    "release-post-commit-finalizer-snapshot": (
+        "$(PYTHON)",
+        "-m",
+        "ops.scripts.release.release_post_commit_finalizer",
+        "--vault",
+        "$(VAULT)",
+        "--mode",
+        "snapshot",
+        "--out",
+        "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)",
+    ),
+    "release-post-commit-finalizer-verify": (
+        "$(PYTHON)",
+        "-m",
+        "ops.scripts.release.release_post_commit_finalizer",
+        "--vault",
+        "$(VAULT)",
+        "--mode",
+        "verify",
+        "--previous",
+        "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)",
+        "--out",
+        "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)",
+        "--fail-on-attention",
+    ),
+    "release-auto-promotion-preflight-authority-write": (
+        "$(PYTHON)",
+        "-m",
+        "ops.scripts.release_auto_promotion_preflight",
+        "--vault",
+        "$(VAULT)",
+        "--phase",
+        "preflight",
+        "--out",
+        "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)",
+        "--auto-improve-readiness",
+        "$(AUTO_IMPROVE_READINESS_OUT)",
+        "--remediation-backlog",
+        "$(REMEDIATION_BACKLOG_OUT)",
+        "--learning-revalidation",
+        "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)",
+        "--closeout-summary",
+        "$(RELEASE_CLOSEOUT_SUMMARY_OUT)",
+        "--evidence-cohort",
+        "$(RELEASE_EVIDENCE_COHORT_OUT)",
+        "--goal-run-identity",
+        "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)",
+    ),
+    "release-auto-promotion-preseal-authority-write": (
+        "$(PYTHON)",
+        "-m",
+        "ops.scripts.release_auto_promotion_preflight",
+        "--vault",
+        "$(VAULT)",
+        "--phase",
+        "preseal",
+        "--out",
+        "$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)",
+        "--auto-improve-readiness",
+        "$(AUTO_IMPROVE_READINESS_OUT)",
+        "--remediation-backlog",
+        "$(REMEDIATION_BACKLOG_OUT)",
+        "--learning-revalidation",
+        "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)",
+        "--closeout-summary",
+        "$(RELEASE_CLOSEOUT_SUMMARY_OUT)",
+        "--evidence-cohort",
+        "$(RELEASE_EVIDENCE_COHORT_OUT)",
+        "--goal-run-identity",
+        "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -251,6 +326,179 @@ def _recipe_line_events(
     return [event for _event_index, event in sorted(recipe_events, key=lambda item: item[0])]
 
 
+def _split_recipe_args(raw_args: str) -> list[str]:
+    try:
+        return shlex.split(raw_args, posix=True)
+    except ValueError:
+        return raw_args.split()
+
+
+def _protected_recipe_unparseable_line_diagnostic(
+    *,
+    protected_target: str,
+    line_no: int,
+    expected_line: _ProtectedExpectedRecipeLine,
+    observed_line: str,
+) -> dict[str, Any]:
+    return {
+        "target": protected_target,
+        "line": line_no,
+        "expected_role": expected_line.role,
+        "expected_target": expected_line.target,
+        "expected_line": expected_line.raw_line,
+        "observed_line": observed_line,
+        "reason": "protected_recipe_unparseable_line",
+    }
+
+
+def _direct_python_protected_recipe_event(
+    line_no: int,
+    expected_line: _ProtectedExpectedRecipeLine,
+    raw_args: str,
+) -> dict[str, Any] | None:
+    expected_tokens = _DIRECT_PYTHON_PROTECTED_TOKENS.get(expected_line.role)
+    if expected_tokens is None or expected_line.target != expected_line.role:
+        return None
+    if tuple(_split_recipe_args(raw_args)) != expected_tokens:
+        return None
+    return {
+        "line": line_no,
+        "target": expected_line.target,
+        "role": expected_line.role,
+        "raw_args": raw_args,
+    }
+
+
+def _required_make_assignments_for_role(
+    workflow_order_spec: dict[str, Any],
+    expected_line: _ProtectedExpectedRecipeLine,
+) -> dict[str, str]:
+    for override in _spec_entries(workflow_order_spec, "role_overrides"):
+        if (
+            str(override.get("role", "")).strip() == expected_line.role
+            and str(override.get("target", "")).strip() == expected_line.target
+        ):
+            return _string_dict(override.get("required_assignments"))
+    return {}
+
+
+def _make_protected_recipe_args_diagnostic(
+    *,
+    protected_target: str,
+    line_no: int,
+    expected_line: _ProtectedExpectedRecipeLine,
+    parsed_event: dict[str, Any],
+    workflow_order_spec: dict[str, Any],
+) -> dict[str, Any] | None:
+    tokens = _split_recipe_args(str(parsed_event["raw_args"]))
+    if not tokens or tokens[0] != expected_line.target:
+        return {
+            "target": protected_target,
+            "line": line_no,
+            "expected_role": expected_line.role,
+            "expected_target": expected_line.target,
+            "observed_raw_args": parsed_event["raw_args"],
+            "reason": "protected_recipe_make_args_mismatch",
+        }
+
+    assignments: dict[str, str] = {}
+    unexpected_tokens: list[str] = []
+    for token in tokens[1:]:
+        name, separator, value = token.partition("=")
+        if separator and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            assignments[name] = value
+        else:
+            unexpected_tokens.append(token)
+
+    expected_assignments = _required_make_assignments_for_role(
+        workflow_order_spec,
+        expected_line,
+    )
+    if not unexpected_tokens and assignments == expected_assignments:
+        return None
+    return {
+        "target": protected_target,
+        "line": line_no,
+        "expected_role": expected_line.role,
+        "expected_target": expected_line.target,
+        "expected_assignments": expected_assignments,
+        "observed_assignments": assignments,
+        "unexpected_tokens": unexpected_tokens,
+        "reason": "protected_recipe_make_args_mismatch",
+    }
+
+
+def _protected_recipe_line_event(
+    *,
+    protected_target: str,
+    line_no: int,
+    expected_line: _ProtectedExpectedRecipeLine,
+    observed_line: str,
+    workflow_order_spec: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    direct_event = _direct_python_protected_recipe_event(
+        line_no,
+        expected_line,
+        observed_line,
+    )
+    if direct_event is not None:
+        return direct_event, None
+
+    make_prefix = "$(MAKE) "
+    if not observed_line.startswith(make_prefix):
+        return None, _protected_recipe_unparseable_line_diagnostic(
+            protected_target=protected_target,
+            line_no=line_no,
+            expected_line=expected_line,
+            observed_line=observed_line,
+        )
+
+    raw_args = observed_line[len(make_prefix) :].strip()
+    tokens = _split_recipe_args(raw_args)
+    if not tokens:
+        return None, _protected_recipe_unparseable_line_diagnostic(
+            protected_target=protected_target,
+            line_no=line_no,
+            expected_line=expected_line,
+            observed_line=observed_line,
+        )
+
+    parsed_event = {
+        "line": line_no,
+        "target": tokens[0],
+        "role": _invocation_role(tokens[0], raw_args, workflow_order_spec),
+        "raw_args": raw_args,
+    }
+    if parsed_event["target"] != expected_line.target:
+        return None, {
+            "target": protected_target,
+            "line": line_no,
+            "expected_target": expected_line.target,
+            "observed_target": parsed_event["target"],
+            "expected_role": expected_line.role,
+            "reason": "protected_recipe_target_mismatch",
+        }
+    if parsed_event["role"] != expected_line.role:
+        return None, {
+            "target": protected_target,
+            "line": line_no,
+            "expected_role": expected_line.role,
+            "observed_role": parsed_event["role"],
+            "observed_target": parsed_event["target"],
+            "reason": "protected_recipe_role_mismatch",
+        }
+    make_args_diagnostic = _make_protected_recipe_args_diagnostic(
+        protected_target=protected_target,
+        line_no=line_no,
+        expected_line=expected_line,
+        parsed_event=parsed_event,
+        workflow_order_spec=workflow_order_spec,
+    )
+    if make_args_diagnostic is not None:
+        return None, make_args_diagnostic
+    return parsed_event, None
+
+
 def _protected_recipe_entries(workflow_order_spec: dict[str, Any]) -> list[dict[str, Any]]:
     return _spec_entries(workflow_order_spec, "protected_recipes")
 
@@ -325,53 +573,22 @@ def _protected_recipe_invocation(
     protected_target: str,
     violations: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    parsed_events = _recipe_line_events(
-        f"\t{expected_line.raw_line}",
-        line_no,
-        workflow_order_spec,
+    parsed_event, diagnostic = _protected_recipe_line_event(
+        protected_target=protected_target,
+        line_no=line_no,
+        expected_line=expected_line,
+        observed_line=expected_line.raw_line,
+        workflow_order_spec=workflow_order_spec,
     )
-    if not parsed_events:
+    if diagnostic is not None:
+        violations.append(diagnostic)
+    if parsed_event is None:
         return {
             "line": line_no,
             "target": expected_line.target,
             "role": expected_line.role,
             "raw_args": expected_line.raw_line,
         }
-    if len(parsed_events) != 1:
-        violations.append(
-            {
-                "target": protected_target,
-                "line": line_no,
-                "expected_role": expected_line.role,
-                "expected_line": expected_line.raw_line,
-                "observed_count": len(parsed_events),
-                "reason": "protected_recipe_make_invocation_count_mismatch",
-            }
-        )
-
-    parsed_event = parsed_events[0]
-    if parsed_event["target"] != expected_line.target:
-        violations.append(
-            {
-                "target": protected_target,
-                "line": line_no,
-                "expected_target": expected_line.target,
-                "observed_target": parsed_event["target"],
-                "expected_role": expected_line.role,
-                "reason": "protected_recipe_target_mismatch",
-            }
-        )
-    if parsed_event["role"] != expected_line.role:
-        violations.append(
-            {
-                "target": protected_target,
-                "line": line_no,
-                "expected_role": expected_line.role,
-                "observed_role": parsed_event["role"],
-                "observed_target": parsed_event["target"],
-                "reason": "protected_recipe_role_mismatch",
-            }
-        )
     return {
         "line": line_no,
         "target": parsed_event["target"],
@@ -508,6 +725,183 @@ def _observe_protected_recipe(
         ],
         violations=violations,
     )
+
+
+def _protected_recipe_resnapshot_lines(
+    makefile_text: str,
+    entry: dict[str, Any],
+    workflow_order_spec: dict[str, Any],
+) -> tuple[list[str], list[dict[str, Any]]]:
+    target = str(entry.get("target", "")).strip()
+    expected_lines = _protected_expected_lines(entry)
+    definitions = _recipe_definitions(makefile_text, target)
+    diagnostics: list[dict[str, Any]] = []
+
+    if len(definitions) != 1:
+        diagnostics.append(
+            {
+                "target": target,
+                "expected_count": 1,
+                "observed_count": len(definitions),
+                "reason": "protected_recipe_definition_count_mismatch",
+            }
+        )
+        return [], diagnostics
+
+    definition = definitions[0]
+    if definition.rule.targets != {target}:
+        diagnostics.append(
+            {
+                "target": target,
+                "line": definition.line,
+                "reason": "protected_recipe_multi_target_rule",
+            }
+        )
+    if definition.rule.is_double_colon:
+        diagnostics.append(
+            {
+                "target": target,
+                "line": definition.line,
+                "reason": "protected_recipe_double_colon_rule",
+            }
+        )
+    if definition.rule.deps:
+        diagnostics.append(
+            {
+                "target": target,
+                "line": definition.line,
+                "reason": "protected_recipe_prerequisites_forbidden",
+            }
+        )
+    if definition.rule.has_inline_recipe:
+        diagnostics.append(
+            {
+                "target": target,
+                "line": definition.line,
+                "reason": "protected_recipe_inline_recipe_forbidden",
+            }
+        )
+
+    body_lines = definition.body_lines
+    if len(body_lines) != len(expected_lines):
+        diagnostics.append(
+            {
+                "target": target,
+                "expected_count": len(expected_lines),
+                "observed_count": len(body_lines),
+                "reason": "protected_recipe_line_count_mismatch",
+            }
+        )
+
+    observed_lines: list[str] = []
+    for index, (line_no, raw_line) in enumerate(body_lines):
+        if not raw_line.startswith("\t") or not raw_line.strip():
+            diagnostics.append(
+                {
+                    "target": target,
+                    "line": line_no,
+                    "observed_line": raw_line.strip(),
+                    "reason": "protected_recipe_non_recipe_body_line",
+                }
+            )
+            continue
+        observed_line = raw_line[1:].strip()
+        observed_lines.append(observed_line)
+        if index >= len(expected_lines):
+            continue
+        expected_line = expected_lines[index]
+        _parsed_event, diagnostic = _protected_recipe_line_event(
+            protected_target=target,
+            line_no=line_no,
+            expected_line=expected_line,
+            observed_line=observed_line,
+            workflow_order_spec=workflow_order_spec,
+        )
+        if diagnostic is not None:
+            diagnostics.append(diagnostic)
+    return observed_lines, diagnostics
+
+
+def _stable_json_text(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+
+def _workflow_order_spec_raw_line_candidate(
+    vault: Path,
+    *,
+    spec_path: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], Path, list[dict[str, Any]], list[dict[str, Any]]]:
+    workflow_order_spec, resolved_spec_path = _load_workflow_order_spec(vault, spec_path)
+    makefile_text, _makefile_sources = load_makefile_text(vault)
+    candidate = json.loads(json.dumps(workflow_order_spec))
+    diagnostics: list[dict[str, Any]] = []
+    updates: list[dict[str, Any]] = []
+
+    for recipe_index, entry in enumerate(_protected_recipe_entries(candidate)):
+        observed_lines, entry_diagnostics = _protected_recipe_resnapshot_lines(
+            makefile_text,
+            entry,
+            candidate,
+        )
+        diagnostics.extend(entry_diagnostics)
+        if entry_diagnostics:
+            continue
+        expected_line_entries = [
+            line_entry
+            for line_entry in entry.get("expected_lines", [])
+            if isinstance(line_entry, dict)
+        ]
+        for line_index, (line_entry, observed_line) in enumerate(
+            zip(expected_line_entries, observed_lines, strict=True)
+        ):
+            current_raw_line = str(line_entry.get("raw_line", "")).strip()
+            if current_raw_line == observed_line:
+                continue
+            line_entry["raw_line"] = observed_line
+            updates.append(
+                {
+                    "target": entry.get("target"),
+                    "recipe_index": recipe_index,
+                    "line_index": line_index,
+                    "role": line_entry.get("role"),
+                    "old_raw_line": current_raw_line,
+                    "new_raw_line": observed_line,
+                    "reason": "protected_recipe_raw_line_drift",
+                }
+            )
+    return workflow_order_spec, candidate, resolved_spec_path, diagnostics, updates
+
+
+def check_workflow_order_spec_raw_lines(
+    vault: Path,
+    *,
+    spec_path: str | None = None,
+) -> list[dict[str, Any]]:
+    original, candidate, _resolved_spec_path, diagnostics, updates = (
+        _workflow_order_spec_raw_line_candidate(vault, spec_path=spec_path)
+    )
+    if diagnostics:
+        return diagnostics
+    if original != candidate:
+        return updates
+    return []
+
+
+def write_workflow_order_spec_raw_lines(
+    vault: Path,
+    *,
+    spec_path: str | None = None,
+) -> Path:
+    _original, candidate, resolved_spec_path, diagnostics, _updates = (
+        _workflow_order_spec_raw_line_candidate(vault, spec_path=spec_path)
+    )
+    if diagnostics:
+        raise ValueError(
+            "release workflow order guard spec raw lines could not be resnapshotted: "
+            + json.dumps(diagnostics, ensure_ascii=False, sort_keys=True)
+        )
+    atomic_write_text(resolved_spec_path, _stable_json_text(candidate))
+    return resolved_spec_path
 
 
 def _protected_recipe_observations(
@@ -670,12 +1064,8 @@ def _invocation_role(
 
 
 def _make_arg_assignments(raw_args: str) -> dict[str, str]:
-    try:
-        tokens = shlex.split(raw_args, posix=True)
-    except ValueError:
-        tokens = raw_args.split()
     assignments: dict[str, str] = {}
-    for token in tokens:
+    for token in _split_recipe_args(raw_args):
         name, separator, value = token.partition("=")
         if not separator or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
             continue
@@ -1564,6 +1954,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--check", action="store_true")
     parser.add_argument(
+        "--write-spec",
+        action="store_true",
+        help="Refresh protected recipe raw_line fields in the workflow order spec from Make recipes.",
+    )
+    parser.add_argument(
+        "--check-spec",
+        action="store_true",
+        help="Fail when protected recipe raw_line fields drift from Make recipes.",
+    )
+    parser.add_argument(
         "--check-out",
         default=None,
         help="Optional candidate report path to write while checking the canonical report.",
@@ -1575,6 +1975,43 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
+    selected_modes = sum(
+        bool(flag)
+        for flag in (args.check, args.write_spec, args.check_spec)
+    )
+    if selected_modes > 1:
+        print(
+            "choose only one of --check, --write-spec, or --check-spec",
+            file=sys.stderr,
+        )
+        return 2
+    if args.write_spec:
+        try:
+            destination = write_workflow_order_spec_raw_lines(
+                vault,
+                spec_path=args.spec_path,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(display_path(vault, destination))
+        return 0
+    if args.check_spec:
+        diagnostics = check_workflow_order_spec_raw_lines(
+            vault,
+            spec_path=args.spec_path,
+        )
+        if diagnostics:
+            print(
+                "release workflow order guard spec raw lines drifted:\n"
+                + json.dumps(diagnostics, ensure_ascii=False, indent=2, sort_keys=True),
+                file=sys.stderr,
+            )
+            return 1
+        spec_path = Path(args.spec_path or SPEC_PATH)
+        resolved_spec_path = spec_path if spec_path.is_absolute() else vault / spec_path
+        print(f"{display_path(vault, resolved_spec_path)} is current")
+        return 0
     if args.check:
         return check_report(
             vault,

@@ -13,8 +13,15 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
 
 from ops.scripts.core.artifact_freshness_debt_runtime import stale_routing
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.observability_artifacts_runtime import (
+    build_run_artifact_fingerprint,
+)
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.runtime_event_logging_runtime import (
+    RuntimeEventRequest,
+    build_runtime_event,
+)
 from ops.scripts.mechanism.auto_improve_readiness_runtime import build_readiness_report
 from ops.scripts.release.release_run_ready import build_run_ready_plan
 from ops.scripts.supply_chain.cyclonedx_sbom import build_bom
@@ -128,7 +135,9 @@ REPORT_SCHEMA_SAMPLE_COVERAGE = (
         "generated_artifact_convergence", SAMPLE_GENERATION_FIXTURE_SEED, ""
     ),
     ReportSchemaSampleCoverage(
-        "run_artifact_fingerprint", SAMPLE_GENERATION_FIXTURE_SEED, ""
+        "run_artifact_fingerprint",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_run_artifact_fingerprint_schema_sample",
     ),
     ReportSchemaSampleCoverage("timeout_failure", SAMPLE_GENERATION_FIXTURE_SEED, ""),
     ReportSchemaSampleCoverage(
@@ -170,7 +179,11 @@ REPORT_SCHEMA_SAMPLE_COVERAGE = (
         SAMPLE_GENERATION_SELF_CONTAINED,
         "build_auto_improve_readiness_schema_sample",
     ),
-    ReportSchemaSampleCoverage("runtime_event", SAMPLE_GENERATION_FIXTURE_SEED, ""),
+    ReportSchemaSampleCoverage(
+        "runtime_event",
+        SAMPLE_GENERATION_SELF_CONTAINED,
+        "build_runtime_event_schema_sample",
+    ),
     ReportSchemaSampleCoverage(
         "sbom_readiness_gate_report",
         SAMPLE_GENERATION_SELF_CONTAINED,
@@ -234,10 +247,22 @@ def _assert_seed_sample_coverage_matches_payload(payload: dict) -> None:
         return
     missing_from_seed = sorted(set(seed_keys) - set(payload_keys))
     unexpected_seed_keys = sorted(set(payload_keys) - set(seed_keys))
+    first_order_mismatch = ""
+    if not missing_from_seed and not unexpected_seed_keys:
+        for index, (expected_key, actual_key) in enumerate(
+            zip(seed_keys, payload_keys, strict=True)
+        ):
+            if expected_key != actual_key:
+                first_order_mismatch = (
+                    f", first_order_mismatch=index {index} "
+                    f"expected={expected_key!r} actual={actual_key!r}"
+                )
+                break
     raise ValueError(
         "report schema sample seed fixture does not match fixture_seed coverage keys: "
         f"missing_from_seed={missing_from_seed}, "
         f"unexpected_seed_keys={unexpected_seed_keys}"
+        f"{first_order_mismatch}"
     )
 
 
@@ -478,6 +503,70 @@ def build_artifact_freshness_schema_sample() -> dict:
         seed_minimal_vault(vault)
         _normalize_sample_vault_text_newlines(vault)
         return build_artifact_freshness_schema_sample_for_vault(vault)
+
+
+def build_runtime_event_schema_sample() -> dict:
+    return build_runtime_event(
+        RuntimeEventRequest(
+            context=fixed_context(),
+            run_id="run-20260415-example",
+            session_id="auto-improve-2026-04-15",
+            phase="queue_blocked",
+            component="auto_improve_readiness",
+            decision="warn",
+            decision_reason="recent_log_overlap",
+            artifact_path="ops/reports/auto-improve-readiness.json",
+            duration_ms=12,
+            policy_version=1,
+            proposal_id="repeated_same_eval_or_discard__example",
+            candidate_id="mechanism_eval_stagnation_candidate__example",
+            blocker="recent_log_overlap",
+            blocker_kind="hard",
+        )
+    )
+
+
+def build_run_artifact_fingerprint_schema_sample() -> dict:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        run_id = "run-20260415-example"
+        _write_stable_json_file(
+            vault / "runs" / run_id / "run-telemetry.json",
+            {
+                "$schema": "ops/schemas/run-telemetry.schema.json",
+                "session_id": "auto-improve-2026-04-15",
+                "run_id": run_id,
+                "generated_at": fixed_context().isoformat_z(),
+                "proposal_id": "repeated_same_eval_or_discard__example",
+                "proposal_snapshot": "",
+                "scope_freeze": "",
+                "routing_reports": [],
+                "executor_reports": [],
+                "primary_targets": ["ops/scripts/example.py"],
+                "supporting_targets": [],
+                "test_files": ["tests/test_example.py"],
+                "phase_durations": {"routing": 1.25, "execution": 12.5},
+                "failure_taxonomy": "",
+                "decision": "PROMOTE",
+                "finalized": True,
+                "finalize_result": {"run_id": run_id},
+            },
+        )
+        _write_stable_json_file(
+            vault / SUPPLY_CHAIN_PROVENANCE_REPORT_PATH,
+            {
+                "generated_at": fixed_context().isoformat_z(),
+                "status": "pass",
+            },
+        )
+        _normalize_sample_vault_text_newlines(vault)
+        return build_run_artifact_fingerprint(
+            vault,
+            run_id,
+            context=fixed_context(),
+        )
 
 
 def _write_readiness_sample_report(
@@ -735,6 +824,8 @@ def build_release_run_ready_plan_schema_sample() -> dict:
 def _build_self_contained_sample_updates() -> dict:
     updates = build_supply_chain_schema_samples()
     updates["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
+    updates["runtime_event"] = build_runtime_event_schema_sample()
+    updates["run_artifact_fingerprint"] = build_run_artifact_fingerprint_schema_sample()
     updates["auto_improve_readiness_report"] = (
         build_auto_improve_readiness_schema_sample()
     )

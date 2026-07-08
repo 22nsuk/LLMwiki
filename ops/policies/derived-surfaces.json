@@ -150,6 +150,24 @@
       "include_in_sync_derived": true
     },
     {
+      "surface_id": "release_workflow_order_guard_spec",
+      "description": "Protected release workflow recipe raw lines refreshed from live Make recipes; role and order semantics remain human-owned in the spec.",
+      "kind": "tracked_json",
+      "sync_target": "release-workflow-order-guard-spec-sync",
+      "check_target": "release-workflow-order-guard-spec-sync-check",
+      "generator_module": "ops.scripts.release_workflow_order_guard",
+      "source_paths": [
+        "Makefile",
+        "mk/*.mk",
+        "ops/policies/release-workflow-order-guard.json"
+      ],
+      "tracked_outputs": [
+        "ops/policies/release-workflow-order-guard.json"
+      ],
+      "local_outputs": [],
+      "include_in_sync_derived": true
+    },
+    {
       "surface_id": "release_workflow_order_guard",
       "description": "Release workflow order guard report generated from the release order spec and Make recipes.",
       "kind": "local_report",

@@ -781,33 +781,6 @@
       }
     ]
   },
-  "run_artifact_fingerprint": {
-    "$schema": "ops/schemas/run-artifact-fingerprint.schema.json",
-    "scope": "run",
-    "run_id": "run-20260415-example",
-    "generated_at": "2026-04-15T00:00:00Z",
-    "repo_provenance_snapshot": {
-      "report_path": "ops/reports/supply-chain-provenance.json",
-      "report_sha256": "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-      "report_generated_at": "2026-04-15T00:00:00Z",
-      "report_status": "pass",
-      "exists_at_run_start": true
-    },
-    "summary": {
-      "artifact_count": 1,
-      "schema_backed_count": 1,
-      "total_size_bytes": 512
-    },
-    "artifacts": [
-      {
-        "path": "runs/run-20260415-example/run-telemetry.json",
-        "artifact_role": "run_telemetry",
-        "schema": "ops/schemas/run-telemetry.schema.json",
-        "size_bytes": 512,
-        "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-      }
-    ]
-  },
   "timeout_failure": {
     "$schema": "ops/schemas/timeout-failure.schema.json",
     "run_id": "run-20260415-example",
@@ -1457,23 +1430,6 @@
         "promotion_report": "runs/run-20260415-example/promotion-report.json"
       }
     ]
-  },
-  "runtime_event": {
-    "$schema": "ops/schemas/runtime-event.schema.json",
-    "ts": "2026-04-15T00:00:00Z",
-    "run_id": "run-20260415-example",
-    "session_id": "auto-improve-2026-04-15",
-    "phase": "queue_blocked",
-    "component": "auto_improve_readiness",
-    "decision": "warn",
-    "decision_reason": "recent_log_overlap",
-    "artifact_path": "ops/reports/auto-improve-readiness.json",
-    "duration_ms": 12,
-    "policy_version": 1,
-    "proposal_id": "repeated_same_eval_or_discard__example",
-    "candidate_id": "mechanism_eval_stagnation_candidate__example",
-    "blocker": "recent_log_overlap",
-    "blocker_kind": "hard"
   },
   "review_archive": {
     "$schema": "ops/schemas/review-archive-report.schema.json",

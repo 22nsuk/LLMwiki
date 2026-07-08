@@ -12,6 +12,7 @@ from tests.makefile_static_helpers import (
     _makefile_text,
     _target_block,
     _target_dependencies,
+    promoted_artifact_contract,
 )
 
 pytestmark = [
@@ -163,38 +164,18 @@ _LEARNING_PIPELINE_ASSIGNMENTS = (
 )
 
 
-def _promoted_target_contract(
-    target: str,
-    producer: str,
-    schema: str,
-    *,
-    required_tokens: tuple[str, ...] = (),
-    forbidden_tokens: tuple[str, ...] = (),
-) -> MakeTargetContract:
-    return MakeTargetContract(
-        target,
-        required_tokens=(
-            producer,
-            "ops.scripts.canonical_artifact_promote",
-            schema,
-            *required_tokens,
-        ),
-        forbidden_tokens=forbidden_tokens,
-    )
-
-
 _LEARNING_PIPELINE_TARGET_CONTRACTS = (
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "learning-confirmed-legacy-reconstruction",
         "ops.scripts.learning_confirmed_legacy_reconstruction",
         "ops/schemas/learning-confirmed-legacy-reconstruction.schema.json",
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "learning-claim-evidence-bundle",
         "ops.scripts.learning_claim_evidence_bundle",
         "ops/schemas/learning-claim-evidence-bundle.schema.json",
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "learning-confirmed-evidence-cohort",
         "ops.scripts.learning_confirmed_evidence_cohort",
         "ops/schemas/learning-confirmed-evidence-cohort.schema.json",
@@ -203,12 +184,12 @@ _LEARNING_PIPELINE_TARGET_CONTRACTS = (
             '--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"',
         ),
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "public-check-summary",
         "ops.scripts.public_check_summary",
         "ops/schemas/public-check-summary.schema.json",
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "learning-claim-unlock-review",
         "ops.scripts.learning_claim_unlock_review",
         "ops/schemas/learning-claim-unlock-review.schema.json",
@@ -217,27 +198,27 @@ _LEARNING_PIPELINE_TARGET_CONTRACTS = (
             '--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"',
         ),
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "learning-delta-scoreboard",
         "ops.scripts.learning_delta_scoreboard",
         "ops/schemas/learning-delta-scoreboard.schema.json",
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "learning-claim-activation-report",
         "ops.scripts.learning_claim_activation_report",
         "ops/schemas/learning-claim-activation-report.schema.json",
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "session-synopsis",
         "ops.scripts.session_synopsis",
         "ops/schemas/session-synopsis.schema.json",
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "self-improvement-negative-lessons",
         "ops.scripts.self_improvement_negative_lessons",
         "ops/schemas/self-improvement-negative-lessons.schema.json",
     ),
-    _promoted_target_contract(
+    promoted_artifact_contract(
         "remediation-backlog",
         "ops.scripts.remediation_backlog",
         "ops/schemas/remediation-backlog.schema.json",

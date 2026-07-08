@@ -15,7 +15,9 @@ from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.release_workflow_order_guard import (
     build_report,
     check_report,
+    check_workflow_order_spec_raw_lines,
     write_report,
+    write_workflow_order_spec_raw_lines,
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
@@ -935,6 +937,299 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             r"invalid release workflow order spec.*\$\.terminal_checks: expected at least 1 item",
         ):
             build_report(self.vault, context=fixed_context())
+
+    def test_spec_raw_recipe_sync_refreshes_only_make_line_snapshots(self) -> None:
+        spec = _cloned_workflow_order_spec()
+        protected_recipe = next(
+            entry
+            for entry in spec["protected_recipes"]
+            if entry["target"] == "release-post-commit-finalize"
+        )
+        protected_line = protected_recipe["expected_lines"][1]
+        original_role = protected_line["role"]
+        original_target = protected_line["target"]
+        protected_line["raw_line"] = "$(MAKE) stale-script-output-surfaces-check"
+        self._write_workflow_order_spec(spec)
+
+        drift = check_workflow_order_spec_raw_lines(self.vault)
+
+        self.assertEqual(
+            drift,
+            [
+                {
+                    "target": "release-post-commit-finalize",
+                    "recipe_index": 0,
+                    "line_index": 1,
+                    "role": "script-output-surfaces-check",
+                    "old_raw_line": "$(MAKE) stale-script-output-surfaces-check",
+                    "new_raw_line": "$(MAKE) script-output-surfaces-check",
+                    "reason": "protected_recipe_raw_line_drift",
+                }
+            ],
+        )
+
+        destination = write_workflow_order_spec_raw_lines(self.vault)
+
+        rewritten = json.loads(destination.read_text(encoding="utf-8"))
+        rewritten_recipe = next(
+            entry
+            for entry in rewritten["protected_recipes"]
+            if entry["target"] == "release-post-commit-finalize"
+        )
+        rewritten_line = rewritten_recipe["expected_lines"][1]
+        self.assertEqual(rewritten_line["role"], original_role)
+        self.assertEqual(rewritten_line["target"], original_target)
+        self.assertEqual(
+            rewritten_line["raw_line"],
+            "$(MAKE) script-output-surfaces-check",
+        )
+        self.assertEqual(check_workflow_order_spec_raw_lines(self.vault), [])
+        self.assertEqual(validate_with_schema(rewritten, load_schema(SPEC_SCHEMA_PATH)), [])
+
+    def test_spec_raw_recipe_sync_refuses_structural_recipe_drift(self) -> None:
+        replacement = (
+            "release-post-commit-finalize:\n"
+            + RELEASE_POST_COMMIT_FINALIZE_LINES
+            + "\t$(MAKE) extra-human-reviewed-target\n"
+        )
+        self._replace_post_commit_recipe(replacement)
+
+        drift = check_workflow_order_spec_raw_lines(self.vault)
+
+        self.assertTrue(
+            any(
+                item.get("target") == "release-post-commit-finalize"
+                and item.get("reason") == "protected_recipe_line_count_mismatch"
+                for item in drift
+            ),
+            drift,
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "protected_recipe_line_count_mismatch",
+        ):
+            write_workflow_order_spec_raw_lines(self.vault)
+
+    def test_spec_raw_recipe_sync_refuses_unparseable_line_changes(self) -> None:
+        recipe_lines = RELEASE_POST_COMMIT_FINALIZE_LINES.splitlines()
+        recipe_lines[0] = "\t@echo raw-shell-fragment"
+        self._replace_post_commit_recipe(
+            "release-post-commit-finalize:\n" + "\n".join(recipe_lines) + "\n"
+        )
+
+        drift = check_workflow_order_spec_raw_lines(self.vault)
+
+        self.assertTrue(
+            any(
+                item.get("target") == "release-post-commit-finalize"
+                and item.get("reason") == "protected_recipe_unparseable_line"
+                and item.get("observed_line") == "@echo raw-shell-fragment"
+                for item in drift
+            ),
+            drift,
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "protected_recipe_unparseable_line",
+        ):
+            write_workflow_order_spec_raw_lines(self.vault)
+
+    def test_guard_rejects_matching_raw_shell_in_spec_and_makefile(self) -> None:
+        raw_shell_line = "@echo raw-shell-fragment"
+        spec = _cloned_workflow_order_spec()
+        protected_recipe = next(
+            entry
+            for entry in spec["protected_recipes"]
+            if entry["target"] == "release-post-commit-finalize"
+        )
+        protected_recipe["expected_lines"][0]["raw_line"] = raw_shell_line
+        self._write_workflow_order_spec(spec)
+        recipe_lines = RELEASE_POST_COMMIT_FINALIZE_LINES.splitlines()
+        recipe_lines[0] = f"\t{raw_shell_line}"
+        self._replace_post_commit_recipe(
+            "release-post-commit-finalize:\n" + "\n".join(recipe_lines) + "\n"
+        )
+
+        drift = check_workflow_order_spec_raw_lines(self.vault)
+        report = build_report(self.vault, context=fixed_context())
+        check = self._protected_post_commit_recipe_check(report)
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(
+            any(
+                item.get("reason") == "protected_recipe_unparseable_line"
+                and item.get("observed_line") == raw_shell_line
+                for item in drift
+            ),
+            drift,
+        )
+        self.assertTrue(
+            any(
+                item.get("reason") == "protected_recipe_unparseable_line"
+                and item.get("observed_line") == raw_shell_line
+                for item in check["violations"]
+            ),
+            check["violations"],
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "protected_recipe_unparseable_line",
+        ):
+            write_workflow_order_spec_raw_lines(self.vault)
+
+    def test_guard_rejects_matching_extra_make_args_in_spec_and_makefile(self) -> None:
+        unsafe_make_line = "$(MAKE) script-output-surfaces-check FOO=bar"
+        spec = _cloned_workflow_order_spec()
+        protected_recipe = next(
+            entry
+            for entry in spec["protected_recipes"]
+            if entry["target"] == "release-post-commit-finalize"
+        )
+        protected_recipe["expected_lines"][1]["raw_line"] = unsafe_make_line
+        self._write_workflow_order_spec(spec)
+        self._replace_post_commit_recipe(
+            (
+                "release-post-commit-finalize:\n"
+                + RELEASE_POST_COMMIT_FINALIZE_LINES
+            ).replace(
+                "\t$(MAKE) script-output-surfaces-check\n",
+                f"\t{unsafe_make_line}\n",
+            )
+        )
+
+        drift = check_workflow_order_spec_raw_lines(self.vault)
+        report = build_report(self.vault, context=fixed_context())
+        check = self._protected_post_commit_recipe_check(report)
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(
+            any(
+                item.get("reason") == "protected_recipe_make_args_mismatch"
+                and item.get("observed_assignments") == {"FOO": "bar"}
+                for item in drift
+            ),
+            drift,
+        )
+        self.assertTrue(
+            any(
+                item.get("reason") == "protected_recipe_make_args_mismatch"
+                and item.get("observed_assignments") == {"FOO": "bar"}
+                for item in check["violations"]
+            ),
+            check["violations"],
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "protected_recipe_make_args_mismatch",
+        ):
+            write_workflow_order_spec_raw_lines(self.vault)
+
+    def test_guard_rejects_matching_shell_suffix_in_spec_and_makefile(self) -> None:
+        unsafe_make_line = "$(MAKE) script-output-surfaces-check; @echo raw-shell-fragment"
+        spec = _cloned_workflow_order_spec()
+        protected_recipe = next(
+            entry
+            for entry in spec["protected_recipes"]
+            if entry["target"] == "release-post-commit-finalize"
+        )
+        protected_recipe["expected_lines"][1]["raw_line"] = unsafe_make_line
+        self._write_workflow_order_spec(spec)
+        self._replace_post_commit_recipe(
+            (
+                "release-post-commit-finalize:\n"
+                + RELEASE_POST_COMMIT_FINALIZE_LINES
+            ).replace(
+                "\t$(MAKE) script-output-surfaces-check\n",
+                f"\t{unsafe_make_line}\n",
+            )
+        )
+
+        drift = check_workflow_order_spec_raw_lines(self.vault)
+        report = build_report(self.vault, context=fixed_context())
+        check = self._protected_post_commit_recipe_check(report)
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(
+            any(
+                item.get("reason")
+                in {
+                    "protected_recipe_make_args_mismatch",
+                    "protected_recipe_target_mismatch",
+                }
+                for item in drift
+            ),
+            drift,
+        )
+        self.assertTrue(
+            any(
+                item.get("reason")
+                in {
+                    "protected_recipe_make_args_mismatch",
+                    "protected_recipe_target_mismatch",
+                }
+                for item in check["violations"]
+            ),
+            check["violations"],
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "protected_recipe_(make_args|target)_mismatch",
+        ):
+            write_workflow_order_spec_raw_lines(self.vault)
+
+    def test_guard_rejects_matching_make_modifiers_in_spec_and_makefile(self) -> None:
+        for modifier in ("@", "-", "+"):
+            with self.subTest(modifier=modifier):
+                self._write_makefile()
+                spec = _cloned_workflow_order_spec()
+                unsafe_make_line = f"{modifier}$(MAKE) script-output-surfaces-check"
+                protected_recipe = next(
+                    entry
+                    for entry in spec["protected_recipes"]
+                    if entry["target"] == "release-post-commit-finalize"
+                )
+                protected_recipe["expected_lines"][1]["raw_line"] = unsafe_make_line
+                self._write_workflow_order_spec(spec)
+                self._replace_post_commit_recipe(
+                    (
+                        "release-post-commit-finalize:\n"
+                        + RELEASE_POST_COMMIT_FINALIZE_LINES
+                    ).replace(
+                        "\t$(MAKE) script-output-surfaces-check\n",
+                        f"\t{unsafe_make_line}\n",
+                    )
+                )
+
+                drift = check_workflow_order_spec_raw_lines(self.vault)
+                report = build_report(self.vault, context=fixed_context())
+                check = self._protected_post_commit_recipe_check(report)
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(check["status"], "fail")
+                self.assertTrue(
+                    any(
+                        item.get("reason") == "protected_recipe_unparseable_line"
+                        and item.get("observed_line") == unsafe_make_line
+                        for item in drift
+                    ),
+                    drift,
+                )
+                self.assertTrue(
+                    any(
+                        item.get("reason") == "protected_recipe_unparseable_line"
+                        and item.get("observed_line") == unsafe_make_line
+                        for item in check["violations"]
+                    ),
+                    check["violations"],
+                )
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "protected_recipe_unparseable_line",
+                ):
+                    write_workflow_order_spec_raw_lines(self.vault)
 
     def test_guard_passes_for_current_closeout_sequence_and_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())

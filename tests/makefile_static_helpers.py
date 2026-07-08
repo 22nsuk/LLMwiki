@@ -22,6 +22,34 @@ class MakeTargetContract:
     forbidden_tokens: tuple[str, ...] = ()
 
 
+def promoted_artifact_contract(
+    target: str,
+    producer_module: str,
+    schema_path: str,
+    *,
+    expected_artifact_kind: str | None = None,
+    expected_producer: str | None = None,
+    phony: bool = False,
+    required_tokens: tuple[str, ...] = (),
+    forbidden_tokens: tuple[str, ...] = (),
+) -> MakeTargetContract:
+    promotion_tokens = [
+        producer_module,
+        "ops.scripts.canonical_artifact_promote",
+        f"--schema {schema_path}",
+    ]
+    if expected_artifact_kind is not None:
+        promotion_tokens.append(f"--expected-artifact-kind {expected_artifact_kind}")
+    if expected_producer is not None:
+        promotion_tokens.append(f"--expected-producer {expected_producer}")
+    return MakeTargetContract(
+        target,
+        phony=phony,
+        required_tokens=(*promotion_tokens, *required_tokens),
+        forbidden_tokens=forbidden_tokens,
+    )
+
+
 def _makefile_text() -> str:
     text, _source_paths = load_makefile_text(REPO_ROOT)
     return text
