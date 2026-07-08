@@ -325,6 +325,35 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         (subrepo / "content.txt").write_text(text, encoding="utf-8")
         self._commit_all_at(subrepo, "advance submodule")
 
+    def _commit_filtered_file_baseline(
+        self,
+        *,
+        clean_body: str,
+        file_text: str,
+    ) -> tuple[Path, Path]:
+        filter_script = self.vault / "filter-driver.sh"
+        marker = self.vault / "filter-driver-ran"
+        filter_script.write_text(
+            "#!/bin/sh\n"
+            f"printf ran >> {str(marker)!r}\n"
+            f"{clean_body}",
+            encoding="utf-8",
+        )
+        filter_script.chmod(0o755)
+        filtered_path = self.vault / "docs" / "filter.foo"
+        filtered_path.parent.mkdir(parents=True, exist_ok=True)
+        filtered_path.write_text(file_text, encoding="utf-8")
+        (self.vault / ".gitattributes").write_text(
+            "*.foo filter=pwn\n",
+            encoding="utf-8",
+        )
+        self._run_git("init")
+        self._run_git("config", "filter.pwn.clean", str(filter_script))
+        self._commit_all_at(self.vault, "baseline")
+        self._run_git("config", "filter.pwn.process", str(filter_script))
+        marker.unlink(missing_ok=True)
+        return filtered_path, marker
+
     def test_build_report_maps_make_edges_and_validates_schema(self) -> None:
         report = build_report(self.vault, context=fixed_context())
 
@@ -1602,27 +1631,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_paths_from_git_does_not_execute_filter_drivers(self) -> None:
-        filter_script = self.vault / "filter-driver.sh"
-        marker = self.vault / "filter-driver-ran"
-        filter_script.write_text(
-            "#!/bin/sh\n"
-            f"printf ran >> {str(marker)!r}\n"
-            "cat\n",
-            encoding="utf-8",
+        filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="cat\n",
+            file_text="baseline\n",
         )
-        filter_script.chmod(0o755)
-        filtered_path = self.vault / "docs" / "filter.foo"
-        filtered_path.parent.mkdir(parents=True, exist_ok=True)
-        filtered_path.write_text("baseline\n", encoding="utf-8")
-        (self.vault / ".gitattributes").write_text(
-            "*.foo filter=pwn\n",
-            encoding="utf-8",
-        )
-        self._commit_git_baseline()
-        self._run_git("config", "filter.pwn.clean", str(filter_script))
-        self._run_git("config", "filter.pwn.process", str(filter_script))
-        marker.unlink(missing_ok=True)
-        filtered_path.write_text("modified\n", encoding="utf-8")
+        filtered_path.write_text("modified content\n", encoding="utf-8")
 
         report = build_report(
             self.vault,
@@ -1630,9 +1643,72 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             context=fixed_context(),
         )
 
-        self.assertEqual(report["selected_change_paths"], ["docs/filter.foo"])
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertFalse(marker.exists())
+        diagnostics = report["diagnostics"]["git_changed_paths"]
+        self.assertEqual(diagnostics["status"], "failed")
+        self.assertEqual(diagnostics["reason"], "filtered_path_requires_filter_driver")
+        self.assertEqual(
+            diagnostics["failures"],
+            [
+                {
+                    "command_id": "ls-files-modified",
+                    "code": "filtered_path_requires_filter_driver",
+                    "paths": ["docs/filter.foo"],
+                }
+            ],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_does_not_false_positive_clean_filtered_files(self) -> None:
+        _filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+        )
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], [])
         self.assertFalse(marker.exists())
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_flags_filtered_stat_drift_as_indeterminate(
+        self,
+    ) -> None:
+        filtered_path, marker = self._commit_filtered_file_baseline(
+            clean_body="sed s/payload/canonical/\n",
+            file_text="payload\n",
+        )
+        os.utime(filtered_path, (1893423600, 1893423600))
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertFalse(marker.exists())
+        diagnostics = report["diagnostics"]["git_changed_paths"]
+        self.assertEqual(diagnostics["status"], "failed")
+        self.assertEqual(diagnostics["reason"], "filtered_path_requires_filter_driver")
+        self.assertEqual(
+            diagnostics["failures"],
+            [
+                {
+                    "command_id": "ls-files-modified",
+                    "code": "filtered_path_requires_filter_driver",
+                    "paths": ["docs/filter.foo"],
+                }
+            ],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_paths_from_git_reads_tracked_symlink_retarget(self) -> None:

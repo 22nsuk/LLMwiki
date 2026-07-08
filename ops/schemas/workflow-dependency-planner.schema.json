@@ -601,10 +601,15 @@
         "code": {
           "type": "string",
           "enum": [
+            "filtered_path_requires_filter_driver",
             "git_executable_unavailable",
             "git_probe_failed",
             "git_probe_timed_out"
           ]
+        },
+        "paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
         }
       }
     },

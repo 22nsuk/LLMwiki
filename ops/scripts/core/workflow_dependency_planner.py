@@ -4,10 +4,13 @@ import argparse
 import fnmatch
 import json
 import re
+import stat as stat_module
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+_GitFailure = dict[str, Any]
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -86,6 +89,13 @@ GIT_LS_FILES_STAGE_RE = re.compile(
     r"^(?P<mode>\d{6}) (?P<object_id>[0-9a-fA-F]{40,64}) "
     r"(?P<stage>\d)\t(?P<path>.+)$"
 )
+GIT_LS_FILES_DEBUG_RE = re.compile(
+    r"^  ctime: (?P<ctime_s>\d+):(?P<ctime_ns>\d+)\n"
+    r"  mtime: (?P<mtime_s>\d+):(?P<mtime_ns>\d+)\n"
+    r"  dev: (?P<dev>\d+)\tino: (?P<ino>\d+)\n"
+    r"  uid: (?P<uid>\d+)\tgid: (?P<gid>\d+)\n"
+    r"  size: (?P<size>\d+)\tflags: (?P<flags>[0-9a-fA-F]+)\n"
+)
 GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
 GIT_FILTER_DRIVER_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 GIT_CHANGED_PATHS_TIMEOUT_SECONDS = 30
@@ -138,6 +148,14 @@ class _GitIndexEntry:
     mode: str
     object_id: str
     rel_path: str
+
+
+@dataclass(frozen=True)
+class _TrackedFilterContext:
+    config_args: list[str]
+    filtered_paths: set[str]
+    gitlink_paths: set[str]
+    index_debug_stdout: str
 
 
 REPORT_CLOSEOUT_TARGETS = [
@@ -1114,7 +1132,7 @@ def _git_changed_paths_diagnostics(
     path_count: int = 0,
     reason: str = "",
     commands: list[_GitCommandObservation] | None = None,
-    failures: list[dict[str, str]] | None = None,
+    failures: list[_GitFailure] | None = None,
     ignored_path_entry_count: int = 0,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
@@ -1161,7 +1179,7 @@ def _run_git_raw_command(
     command_id: str,
     args: list[str],
     input_text: str | None = None,
-) -> tuple[str, _GitCommandObservation, dict[str, str] | None]:
+) -> tuple[str, _GitCommandObservation, _GitFailure | None]:
     result = run_with_timeout(
         RunWithTimeoutRequest(
             argv=[git_executable, *GIT_BASE_CONFIG_ARGS, *args],
@@ -1214,7 +1232,7 @@ def _run_git_changed_paths_command(
     env: dict[str, str],
     command_id: str,
     args: list[str],
-) -> tuple[list[str], _GitCommandObservation, dict[str, str] | None]:
+) -> tuple[list[str], _GitCommandObservation, _GitFailure | None]:
     stdout, observation, failure = _run_git_raw_command(
         vault=vault,
         git_executable=git_executable,
@@ -1269,7 +1287,7 @@ def _git_worktree_exists(
     vault: Path,
     git_executable: str,
     env: dict[str, str],
-) -> tuple[bool, _GitCommandObservation, dict[str, str] | None]:
+) -> tuple[bool, _GitCommandObservation, _GitFailure | None]:
     command_id = "rev-parse-worktree"
     result = run_with_timeout(
         RunWithTimeoutRequest(
@@ -1343,6 +1361,28 @@ def _git_index_entry(record: str) -> _GitIndexEntry | None:
     )
 
 
+def _ls_files_stage_debug_records(
+    stdout: str,
+) -> list[tuple[_GitIndexEntry, re.Match[str]]]:
+    segments = stdout.split("\0")
+    if not segments:
+        return []
+    stage_record = segments[0]
+    records: list[tuple[_GitIndexEntry, re.Match[str]]] = []
+    for segment in segments[1:]:
+        if not stage_record:
+            break
+        entry = _git_index_entry(stage_record)
+        if entry is None:
+            break
+        match = GIT_LS_FILES_DEBUG_RE.match(segment)
+        if match is None:
+            break
+        records.append((entry, match))
+        stage_record = segment[match.end() :]
+    return records
+
+
 def _gitlink_entries_from_ls_files_stage(stdout: str) -> dict[str, _GitIndexEntry]:
     entries: dict[str, _GitIndexEntry] = {}
     for record in _split_nul_paths(stdout):
@@ -1353,16 +1393,17 @@ def _gitlink_entries_from_ls_files_stage(stdout: str) -> dict[str, _GitIndexEntr
     return entries
 
 
-def _filter_driver_names_from_check_attr(stdout: str) -> set[str]:
+def _filter_driver_paths_from_check_attr(stdout: str) -> dict[str, str]:
     fields = stdout.split("\0")
-    names: set[str] = set()
+    drivers_by_path: dict[str, str] = {}
     for index in range(0, len(fields) - 2, 3):
+        path = fields[index]
         attr = fields[index + 1]
         value = fields[index + 2]
         if attr != "filter" or value in {"", "unspecified", "unset", "set"}:
             continue
-        names.add(value)
-    return names
+        drivers_by_path[path] = value
+    return drivers_by_path
 
 
 def _safe_filter_driver_config_args(filter_names: set[str]) -> list[str] | None:
@@ -1383,29 +1424,100 @@ def _safe_filter_driver_config_args(filter_names: set[str]) -> list[str] | None:
     return args
 
 
-def _tracked_path_filter_driver_config_args(
+def _index_time_ns(match: re.Match[str], prefix: str) -> int:
+    return int(match.group(f"{prefix}_s")) * 1_000_000_000 + int(
+        match.group(f"{prefix}_ns")
+    )
+
+
+def _git_mode_from_lstat_mode(mode: int) -> str | None:
+    if stat_module.S_ISLNK(mode):
+        return "120000"
+    if stat_module.S_ISREG(mode):
+        return "100755" if mode & 0o111 else "100644"
+    return None
+
+
+def _git_core_filemode(
     *,
     vault: Path,
     git_executable: str,
     env: dict[str, str],
-) -> tuple[list[str], set[str], dict[str, str] | None]:
+) -> bool:
+    value = _run_git_optional_config(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        args=["--bool", "core.fileMode"],
+    ).lower()
+    return value != "false"
+
+
+def _index_entry_stat_changed(
+    *,
+    vault: Path,
+    entry: _GitIndexEntry,
+    match: re.Match[str],
+    core_filemode: bool,
+) -> bool:
+    try:
+        stat_result = (vault / entry.rel_path).lstat()
+    except OSError:
+        return False
+    if core_filemode:
+        worktree_mode = _git_mode_from_lstat_mode(stat_result.st_mode)
+        if entry.mode not in {"160000", worktree_mode}:
+            return True
+    return any(
+        (
+            stat_result.st_size != int(match.group("size")),
+            stat_result.st_mtime_ns != _index_time_ns(match, "mtime"),
+        )
+    )
+
+
+def _filtered_paths_requiring_filter_driver(
+    *,
+    vault: Path,
+    stdout: str,
+    filtered_paths: set[str],
+    core_filemode: bool,
+) -> list[str]:
+    paths: list[str] = []
+    for entry, match in _ls_files_stage_debug_records(stdout):
+        if entry.rel_path not in filtered_paths:
+            continue
+        if match.group("flags") != "0":
+            continue
+        if _index_entry_stat_changed(
+            vault=vault,
+            entry=entry,
+            match=match,
+            core_filemode=core_filemode,
+        ):
+            paths.append(entry.rel_path)
+    return paths
+
+
+def _tracked_filter_context(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+) -> tuple[_TrackedFilterContext, _GitFailure | None]:
     paths_stdout, _paths_observation, paths_failure = _run_git_raw_command(
         vault=vault,
         git_executable=git_executable,
         env=env,
         command_id="ls-files-filter-paths",
-        args=["ls-files", "-z", "-s"],
+        args=["ls-files", "-z", "-s", "--debug"],
     )
     if paths_failure is not None:
-        return [], set(), paths_failure
-    entries = [
-        entry
-        for record in _split_nul_paths(paths_stdout)
-        if (entry := _git_index_entry(record)) is not None
-    ]
+        return _TrackedFilterContext([], set(), set(), ""), paths_failure
+    entries = [entry for entry, _match in _ls_files_stage_debug_records(paths_stdout)]
     paths = [entry.rel_path for entry in entries]
     if not paths:
-        return [], set(), None
+        return _TrackedFilterContext([], set(), set(), paths_stdout), None
     attr_stdout, _attr_observation, attr_failure = _run_git_raw_command(
         vault=vault,
         git_executable=git_executable,
@@ -1415,14 +1527,24 @@ def _tracked_path_filter_driver_config_args(
         input_text="\0".join(paths) + "\0",
     )
     if attr_failure is not None:
-        return [], set(), attr_failure
-    config_args = _safe_filter_driver_config_args(
-        _filter_driver_names_from_check_attr(attr_stdout)
-    )
+        return _TrackedFilterContext([], set(), set(), paths_stdout), attr_failure
+    drivers_by_path = _filter_driver_paths_from_check_attr(attr_stdout)
+    config_args = _safe_filter_driver_config_args(set(drivers_by_path.values()))
     if config_args is None:
-        return [], set(), {"command_id": "check-attr-filter", "code": "git_probe_failed"}
+        return _TrackedFilterContext([], set(), set(), paths_stdout), {
+            "command_id": "check-attr-filter",
+            "code": "git_probe_failed",
+        }
     gitlink_paths = {entry.rel_path for entry in entries if entry.mode == "160000"}
-    return config_args, gitlink_paths, None
+    return (
+        _TrackedFilterContext(
+            config_args=config_args,
+            filtered_paths=set(drivers_by_path),
+            gitlink_paths=gitlink_paths,
+            index_debug_stdout=paths_stdout,
+        ),
+        None,
+    )
 
 
 def _git_dir_from_marker(marker: Path) -> Path | None:
@@ -1570,12 +1692,12 @@ def _submodule_worktree_dirty(
     git_executable: str,
     env: dict[str, str],
     ignore_untracked: bool,
-) -> tuple[bool, list[_GitCommandObservation], list[dict[str, str]]]:
+) -> tuple[bool, list[_GitCommandObservation], list[_GitFailure]]:
     submodule_root = vault / entry.rel_path
     if not submodule_root.is_dir():
         return False, [], []
     commands: list[_GitCommandObservation] = []
-    failures: list[dict[str, str]] = []
+    failures: list[_GitFailure] = []
     worktree_args = ["ls-files", "-z", "-d"]
     if not ignore_untracked:
         worktree_args.extend(["-o", "--exclude-standard"])
@@ -1659,7 +1781,7 @@ def _submodule_changed(
     entry: _GitIndexEntry,
     git_executable: str,
     env: dict[str, str],
-) -> tuple[bool, list[_GitCommandObservation], list[dict[str, str]]]:
+) -> tuple[bool, list[_GitCommandObservation], list[_GitFailure]]:
     git_dir = _submodule_git_dir(vault, entry.rel_path)
     if git_dir is None:
         return False, [], []
@@ -1691,10 +1813,10 @@ def _submodule_changed_paths(
     git_executable: str,
     env: dict[str, str],
     stdout: str,
-) -> tuple[list[str], list[_GitCommandObservation], list[dict[str, str]]]:
+) -> tuple[list[str], list[_GitCommandObservation], list[_GitFailure]]:
     paths: list[str] = []
     commands: list[_GitCommandObservation] = []
-    failures: list[dict[str, str]] = []
+    failures: list[_GitFailure] = []
     for entry in _gitlink_entries_from_ls_files_stage(stdout).values():
         changed, submodule_commands, submodule_failures = _submodule_changed(
             vault=vault,
@@ -1714,7 +1836,7 @@ def _run_git_submodule_paths_command(
     vault: Path,
     git_executable: str,
     env: dict[str, str],
-) -> tuple[list[str], list[_GitCommandObservation], list[dict[str, str]]]:
+) -> tuple[list[str], list[_GitCommandObservation], list[_GitFailure]]:
     stdout, observation, failure = _run_git_raw_command(
         vault=vault,
         git_executable=git_executable,
@@ -1753,13 +1875,11 @@ def _run_git_modified_paths_command(
     git_executable: str,
     env: dict[str, str],
     command_id: str = "ls-files-modified",
-) -> tuple[list[str], _GitCommandObservation, dict[str, str] | None]:
-    filter_config_args, gitlink_paths, filter_failure = (
-        _tracked_path_filter_driver_config_args(
-            vault=vault,
-            git_executable=git_executable,
-            env=env,
-        )
+) -> tuple[list[str], _GitCommandObservation, _GitFailure | None]:
+    filter_context, filter_failure = _tracked_filter_context(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
     )
     if filter_failure is not None:
         return (
@@ -1778,19 +1898,47 @@ def _run_git_modified_paths_command(
         git_executable=git_executable,
         env=env,
         command_id=command_id,
-        args=[*filter_config_args, "ls-files", "-z", "-m"],
+        args=[*filter_context.config_args, "ls-files", "-z", "-m"],
     )
     if failure is not None:
         return paths, observation, failure
-    filtered_paths = [path for path in paths if path not in gitlink_paths]
+    excluded_paths = filter_context.gitlink_paths | filter_context.filtered_paths
+    filter_driver_required_paths = _filtered_paths_requiring_filter_driver(
+        vault=vault,
+        stdout=filter_context.index_debug_stdout,
+        filtered_paths=filter_context.filtered_paths - filter_context.gitlink_paths,
+        core_filemode=_git_core_filemode(
+            vault=vault,
+            git_executable=git_executable,
+            env=env,
+        ),
+    )
+    detected_paths = sorted(path for path in paths if path not in excluded_paths)
+    if filter_driver_required_paths:
+        return (
+            detected_paths,
+            _GitCommandObservation(
+                command_id=observation.command_id,
+                status=observation.status,
+                returncode=observation.returncode,
+                timed_out=observation.timed_out,
+                path_count=len(detected_paths),
+                reason=observation.reason,
+            ),
+            {
+                "command_id": command_id,
+                "code": "filtered_path_requires_filter_driver",
+                "paths": filter_driver_required_paths,
+            },
+        )
     return (
-        filtered_paths,
+        detected_paths,
         _GitCommandObservation(
             command_id=observation.command_id,
             status=observation.status,
             returncode=observation.returncode,
             timed_out=observation.timed_out,
-            path_count=len(filtered_paths),
+            path_count=len(detected_paths),
             reason=observation.reason,
         ),
         None,
@@ -1802,7 +1950,7 @@ def _git_head_exists(
     vault: Path,
     git_executable: str,
     env: dict[str, str],
-) -> tuple[bool, _GitCommandObservation, dict[str, str] | None]:
+) -> tuple[bool, _GitCommandObservation, _GitFailure | None]:
     result = run_with_timeout(
         RunWithTimeoutRequest(
             argv=[
@@ -1870,19 +2018,25 @@ def _failed_git_changed_paths_result(
     *,
     paths: list[str],
     commands: list[_GitCommandObservation],
-    failures: list[dict[str, str]],
+    failures: list[_GitFailure],
     ignored_path_entry_count: int,
 ) -> _GitChangedPathsResult:
     unique_paths = sorted(set(paths))
     failed_statuses = {command.status for command in commands if command.status != "pass"}
     status = "timed_out" if "timed_out" in failed_statuses else "failed"
+    failure_codes = {failure["code"] for failure in failures}
+    reason = (
+        next(iter(failure_codes))
+        if len(failure_codes) == 1
+        else "git_probe_failed"
+    )
     return _GitChangedPathsResult(
         paths=unique_paths,
         diagnostics=_git_changed_paths_diagnostics(
             status=status,
             source="git",
             path_count=len(unique_paths),
-            reason="git_probe_failed",
+            reason=reason,
             commands=commands,
             failures=failures,
             ignored_path_entry_count=ignored_path_entry_count,
@@ -1909,7 +2063,7 @@ def _read_git_changed_paths(vault: Path) -> _GitChangedPathsResult:
         )
     env = trusted_git_subprocess_env(path_text)
     commands: list[_GitCommandObservation] = []
-    failures: list[dict[str, str]] = []
+    failures: list[_GitFailure] = []
     paths: list[str] = []
     has_worktree, worktree_probe, worktree_probe_failure = _git_worktree_exists(
         vault=vault,
