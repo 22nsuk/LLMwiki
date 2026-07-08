@@ -264,14 +264,17 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def _run_git(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def _run_git_at(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["git", *args],
-            cwd=self.vault,
+            cwd=cwd,
             check=True,
             text=True,
             capture_output=True,
         )
+
+    def _run_git(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return self._run_git_at(self.vault, *args)
 
     def _commit_git_baseline(self) -> None:
         self._run_git("init")
@@ -485,33 +488,47 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
 
     def test_planner_source_uses_focused_changed_path_minimum(self) -> None:
-        report = build_report(
-            self.vault,
-            changed_paths=["ops/scripts/core/workflow_dependency_planner.py"],
-            context=fixed_context(),
-        )
+        for source_path in (
+            "ops/scripts/core/workflow_dependency_planner.py",
+            "ops/scripts/core/git_runtime.py",
+        ):
+            with self.subTest(source_path=source_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[source_path],
+                    context=fixed_context(),
+                )
 
-        plan = report["changed_path_minimum_plan"]
-        self.assertEqual(plan["status"], "pass")
-        self.assertEqual(plan["coverage_class"], "workflow_dependency_planner")
-        self.assertEqual(
-            plan["selected_commands"],
-            [
-                "make static",
-                "make workflow-dependency-planner-check",
-                FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
-                "make sync-derived-check",
-            ],
-        )
-        self.assertEqual(
-            [item["matched_rule_id"] for item in plan["path_recommendations"]],
-            ["workflow_dependency_planner_source+derived_surface_currentness"],
-        )
-        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
-        self.assertEqual(
-            validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
-            [],
-        )
+                plan = report["changed_path_minimum_plan"]
+                workflow = next(
+                    item
+                    for item in report["selected_workflows"]
+                    if item["workflow_id"] == "workflow_dependency_planner_closeout"
+                )
+                self.assertEqual(workflow["matched_paths"], [source_path])
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "workflow_dependency_planner")
+                self.assertEqual(
+                    plan["selected_commands"],
+                    [
+                        "make static",
+                        "make workflow-dependency-planner-check",
+                        FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+                        "make sync-derived-check",
+                    ],
+                )
+                self.assertEqual(
+                    [item["matched_rule_id"] for item in plan["path_recommendations"]],
+                    ["workflow_dependency_planner_source+derived_surface_currentness"],
+                )
+                self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+                self.assertEqual(
+                    validate_with_schema(
+                        report,
+                        load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+                    ),
+                    [],
+                )
 
     def test_canonical_release_script_path_selects_release_evidence_converge(self) -> None:
         report = build_report(
@@ -1439,6 +1456,26 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "changed_files_manifest",
         )
 
+    def test_changed_paths_from_git_skips_missing_worktree_metadata(self) -> None:
+        with mock.patch(
+            "ops.scripts.core.workflow_dependency_planner.run_with_timeout",
+            side_effect=AssertionError("source packages without .git should not probe git"),
+        ):
+            report = build_report(
+                self.vault,
+                changed_paths_from_git=True,
+                context=fixed_context(),
+            )
+
+        diagnostics = report["diagnostics"]["git_changed_paths"]
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["selected_change_paths"], [])
+        self.assertEqual(diagnostics["status"], "skipped")
+        self.assertEqual(diagnostics["source"], "none")
+        self.assertEqual(diagnostics["reason"], "source_package_without_git")
+        self.assertEqual(diagnostics["commands"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
     def test_changed_paths_from_git_reads_worktree_and_staged_paths(self) -> None:
         tracked_path = self.vault / "docs" / "existing.md"
         deleted_path = self.vault / "docs" / "remove-me.md"
@@ -1476,8 +1513,10 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(
             [item["id"] for item in report["diagnostics"]["git_changed_paths"]["commands"]],
             [
+                "rev-parse-worktree",
                 "ls-files-worktree",
                 "ls-files-index-stats",
+                "ls-files-gitlinks",
                 "rev-parse-head",
                 "diff-index-cached",
             ],
@@ -1519,6 +1558,98 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(report["selected_change_paths"], ["docs/filter.foo"])
         self.assertFalse(marker.exists())
         self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_tracked_symlink_retarget(self) -> None:
+        symlink_target = self.vault / "docs" / "target.md"
+        symlink_target.parent.mkdir(parents=True, exist_ok=True)
+        symlink_target.write_text("target\n", encoding="utf-8")
+        symlink_path = self.vault / "docs" / "linked.md"
+        try:
+            symlink_path.symlink_to("target.md")
+        except OSError as exc:
+            self.skipTest(f"symlink creation is unavailable: {exc}")
+        self._commit_git_baseline()
+        symlink_path.unlink()
+        symlink_path.symlink_to("missing.md")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(report["selected_change_paths"], ["docs/linked.md"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_paths_from_git_reads_unstaged_submodule_head_changes(self) -> None:
+        subrepo = Path(self.temp_dir.name) / "submodule-source"
+        subrepo.mkdir()
+        self._run_git_at(subrepo, "init")
+        (subrepo / "content.txt").write_text("base\n", encoding="utf-8")
+        self._run_git_at(subrepo, "add", "content.txt")
+        self._run_git_at(
+            subrepo,
+            "-c",
+            "user.name=LLMwiki Test",
+            "-c",
+            "user.email=llmwiki-test@example.invalid",
+            "commit",
+            "-m",
+            "submodule baseline",
+        )
+        self._run_git("init")
+        self._run_git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(subrepo),
+            "vendor/submodule",
+        )
+        self._run_git("add", ".")
+        self._run_git(
+            "-c",
+            "user.name=LLMwiki Test",
+            "-c",
+            "user.email=llmwiki-test@example.invalid",
+            "commit",
+            "-m",
+            "baseline with submodule",
+        )
+        (subrepo / "content.txt").write_text("advanced\n", encoding="utf-8")
+        self._run_git_at(subrepo, "add", "content.txt")
+        self._run_git_at(
+            subrepo,
+            "-c",
+            "user.name=LLMwiki Test",
+            "-c",
+            "user.email=llmwiki-test@example.invalid",
+            "commit",
+            "-m",
+            "advance submodule",
+        )
+        self._run_git_at(self.vault / "vendor" / "submodule", "pull")
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+
+        self.assertIn("vendor/submodule", report["selected_change_paths"])
+        self.assertEqual(report["diagnostics"]["git_changed_paths"]["status"], "pass")
+        self.assertIn(
+            {
+                "id": "ls-files-gitlinks",
+                "status": "pass",
+                "returncode": 0,
+                "timed_out": False,
+                "path_count": 1,
+            },
+            report["diagnostics"]["git_changed_paths"]["commands"],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_paths_from_git_ignores_vault_local_git_on_path(self) -> None:
@@ -1584,7 +1715,10 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         diagnostics = report["diagnostics"]["git_changed_paths"]
         self.assertEqual(report["status"], "fail")
         self.assertEqual(diagnostics["status"], "timed_out")
-        self.assertEqual(diagnostics["failures"], [{"command_id": "ls-files-worktree", "code": "git_probe_timed_out"}])
+        self.assertEqual(
+            diagnostics["failures"],
+            [{"command_id": "rev-parse-worktree", "code": "git_probe_timed_out"}],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_write_report_validates_schema(self) -> None:

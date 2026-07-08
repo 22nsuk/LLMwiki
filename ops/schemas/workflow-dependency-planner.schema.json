@@ -584,7 +584,7 @@
         "id": { "type": "string", "minLength": 1 },
         "status": {
           "type": "string",
-          "enum": ["pass", "failed", "timed_out", "no_head"]
+          "enum": ["pass", "failed", "timed_out", "no_head", "not_worktree"]
         },
         "returncode": { "type": "integer" },
         "timed_out": { "type": "boolean" },
