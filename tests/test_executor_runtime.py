@@ -16,6 +16,7 @@ from unittest import mock
 
 import pytest
 
+from ops.scripts.core import workspace_python_identity_runtime
 from ops.scripts.core.codex_exec_executor import (
     ExecutorContractError,
     ExecutorReportRequest,
@@ -39,6 +40,7 @@ from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.workspace_python_identity_runtime import (
     build_workspace_python_identity,
     load_workspace_python_identity,
+    workspace_python_identity_path,
     write_workspace_python_identity,
 )
 from tests.cli_test_runtime import invoke_cli_main
@@ -1151,7 +1153,233 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 workspace_python=workspace_python,
             )
 
-            self.assertIn("shim content does not match identity manifest", issue)
+            self.assertIn("identity manifest does not match trusted artifact shim", issue)
+
+    def test_external_workspace_python_requires_identity_manifest_for_external_shim(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            artifact_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            artifact_python.chmod(0o755)
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            workspace_python_identity_path(workspace_root).unlink()
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertEqual(issue, "missing workspace python identity manifest")
+
+    def test_external_workspace_python_reports_malformed_identity_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            artifact_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            artifact_python.chmod(0o755)
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            workspace_python_identity_path(workspace_root).write_text("{bad json", encoding="utf-8")
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertIn("workspace python identity manifest is invalid JSON", issue)
+
+    def test_external_workspace_python_reports_invalid_identity_manifest_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            artifact_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            artifact_python.chmod(0o755)
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            identity = load_workspace_python_identity(workspace_root)
+            self.assertIsNotNone(identity)
+            assert identity is not None
+            payload = identity.to_payload()
+            payload["source_device"] = "not-an-int"
+            workspace_python_identity_path(workspace_root).write_text(
+                json.dumps(payload),
+                encoding="utf-8",
+            )
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertIn("workspace python identity manifest has invalid fields", issue)
+
+    def test_external_workspace_python_rejects_artifact_source_identity_changed_after_provisioning(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            first_python = Path(temp_dir) / "first-python"
+            second_python = Path(temp_dir) / "second-python"
+            for python_path in (first_python, second_python):
+                python_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                python_path.chmod(0o755)
+            try:
+                artifact_python.symlink_to(first_python)
+            except (NotImplementedError, OSError) as exc:
+                self.skipTest(f"symlink unavailable: {exc}")
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            artifact_python.unlink()
+            artifact_python.symlink_to(second_python)
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertEqual(
+                issue,
+                "trusted workspace python source identity changed since workspace provisioning",
+            )
+
+    def test_external_workspace_python_rejects_artifact_source_digest_changed_after_provisioning(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            artifact_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            artifact_python.chmod(0o755)
+            source_stat = artifact_python.stat()
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            with artifact_python.open("w", encoding="utf-8") as file:
+                file.write("#!/bin/sh\nexit 99\n")
+            artifact_python.chmod(0o755)
+            self.assertEqual(artifact_python.stat().st_ino, source_stat.st_ino)
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertEqual(
+                issue,
+                "trusted workspace python source digest changed since workspace provisioning",
+            )
+
+    def test_external_workspace_python_reuses_verified_identity_manifest_snapshot(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            artifact_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            artifact_python.chmod(0o755)
+            trusted_content = _expected_external_workspace_python_shim(artifact_root)
+            trusted_identity = build_workspace_python_identity(
+                source_python=artifact_python,
+                shim_content=trusted_content,
+            )
+            workspace_python = workspace_root / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            malicious_content = "#!/bin/sh\necho MALICIOUS_PYTHON_ACTIVE\nexit 42\n"
+            workspace_python.write_text(malicious_content, encoding="utf-8")
+            workspace_python.chmod(0o755)
+            write_workspace_python_identity(
+                workspace_root,
+                build_workspace_python_identity(
+                    source_python=workspace_python,
+                    shim_content=malicious_content,
+                ),
+            )
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+
+            def verify_and_swap_manifest(
+                workspace_root_arg: Path,
+                *,
+                workspace_python: Path,
+                expected_identity: object,
+            ) -> str:
+                write_workspace_python_identity(workspace_root, trusted_identity)
+                return workspace_python_identity_runtime.verify_workspace_python_shim(
+                    workspace_root_arg,
+                    workspace_python=workspace_python,
+                    expected_identity=cast(Any, expected_identity),
+                )
+
+            with mock.patch(
+                "ops.scripts.core.codex_exec_workspace_runtime.verify_workspace_python_shim",
+                side_effect=verify_and_swap_manifest,
+            ):
+                issue = external_workspace_python_issue(
+                    request,
+                    workspace_python=workspace_python,
+                )
+
+            self.assertIn("identity manifest does not match trusted artifact shim", issue)
 
     def test_codex_exec_uses_workspace_output_when_artifact_root_differs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1353,6 +1581,98 @@ class ExecutorRuntimeTests(unittest.TestCase):
             notes = "\n".join(report["diagnostics"]["notes"])
             self.assertIn("workspace Python trust check", notes)
             self.assertIn("shim content does not match identity manifest", notes)
+
+    def test_non_worker_dependency_preflight_blocks_missing_external_workspace_python_identity_manifest(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            _seed_executor_vault(artifact_root)
+            seed_subagent_profiles(artifact_root, ["validator"])
+            _write_external_workspace_python_shim(artifact_root, workspace_root)
+            workspace_python_identity_path(workspace_root).unlink()
+            _write_routing_report(
+                artifact_root,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout") as run,
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            run.assert_not_called()
+            self.assertEqual(report["status"], "fail")
+            notes = "\n".join(report["diagnostics"]["notes"])
+            self.assertIn("workspace Python trust check", notes)
+            self.assertIn("missing workspace python identity manifest", notes)
+
+    def test_non_worker_dependency_preflight_blocks_malformed_external_workspace_python_identity_manifest(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            _seed_executor_vault(artifact_root)
+            seed_subagent_profiles(artifact_root, ["validator"])
+            _write_external_workspace_python_shim(artifact_root, workspace_root)
+            workspace_python_identity_path(workspace_root).write_text("{bad json", encoding="utf-8")
+            _write_routing_report(
+                artifact_root,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout") as run,
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            run.assert_not_called()
+            self.assertEqual(report["status"], "fail")
+            notes = "\n".join(report["diagnostics"]["notes"])
+            self.assertIn("workspace Python trust check", notes)
+            self.assertIn("workspace python identity manifest is invalid JSON", notes)
 
     def test_codex_exec_blocks_workspace_virtualenv_codex_when_no_outer_codex_exists(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

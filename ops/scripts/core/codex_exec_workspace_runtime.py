@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Protocol
 
 from ops.scripts.core.workspace_python_identity_runtime import (
+    WorkspacePythonIdentity,
     build_workspace_python_identity,
+    read_workspace_python_identity,
     verify_workspace_python_shim,
 )
 
@@ -143,21 +145,61 @@ def is_workspace_python_shim(content: str) -> bool:
     return content.startswith("#!/bin/sh\nexec ")
 
 
+def _trusted_artifact_identity_issue(
+    provisioned_identity: WorkspacePythonIdentity,
+    *,
+    artifact_root: Path,
+) -> str:
+    try:
+        expected_identity = build_workspace_python_identity(
+            source_python=trusted_workspace_python_source(artifact_root),
+            shim_content=expected_external_workspace_python_shim(artifact_root),
+        )
+    except OSError as exc:
+        return f"trusted workspace python source is unreadable: {exc}"
+    except ValueError:
+        return "trusted workspace python source is not a regular file"
+
+    if (
+        provisioned_identity.shim_content != expected_identity.shim_content
+        or provisioned_identity.shim_sha256 != expected_identity.shim_sha256
+    ):
+        return "workspace python identity manifest does not match trusted artifact shim"
+    if (
+        provisioned_identity.source_realpath != expected_identity.source_realpath
+        or provisioned_identity.source_device != expected_identity.source_device
+        or provisioned_identity.source_inode != expected_identity.source_inode
+        or provisioned_identity.source_sha256 != expected_identity.source_sha256
+    ):
+        return "trusted workspace python source identity changed since workspace provisioning"
+    return ""
+
+
 def external_workspace_python_issue(
     request: _WorkspacePythonRequest,
     *,
     workspace_python: Path,
 ) -> str:
-    expected_identity = None
-    if not same_path(request.workspace_root, request.artifact_root):
-        expected_identity = build_workspace_python_identity(
-            source_python=trusted_workspace_python_source(request.artifact_root),
-            shim_content=expected_external_workspace_python_shim(request.artifact_root),
+    is_external_workspace = not same_path(request.workspace_root, request.artifact_root)
+    if is_external_workspace:
+        loaded_identity = read_workspace_python_identity(request.workspace_root)
+        if loaded_identity.issue:
+            return loaded_identity.issue
+        assert loaded_identity.identity is not None
+        identity_issue = verify_workspace_python_shim(
+            request.workspace_root,
+            workspace_python=workspace_python,
+            expected_identity=loaded_identity.identity,
+        )
+        if identity_issue:
+            return identity_issue
+        return _trusted_artifact_identity_issue(
+            loaded_identity.identity,
+            artifact_root=request.artifact_root,
         )
     identity_issue = verify_workspace_python_shim(
         request.workspace_root,
         workspace_python=workspace_python,
-        expected_identity=expected_identity,
     )
     if identity_issue and identity_issue != "missing workspace python identity manifest":
         return identity_issue
