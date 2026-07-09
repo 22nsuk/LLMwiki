@@ -211,6 +211,13 @@ def _write_external_workspace_python_shim(artifact_root: Path, workspace_root: P
     return workspace_python
 
 
+def _json_integer_literal_exceeding_digit_limit() -> str | None:
+    get_int_max_str_digits = getattr(sys, "get_int_max_str_digits", None)
+    if get_int_max_str_digits is None or get_int_max_str_digits() <= 0:
+        return None
+    return "1" * (get_int_max_str_digits() + 1)
+
+
 def _executor_subprocess_completed(
     argv: list[str],
     *,
@@ -1209,6 +1216,39 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             self.assertIn("workspace python identity manifest is invalid JSON", issue)
 
+    def test_external_workspace_python_reports_parser_valueerror_identity_manifest(self) -> None:
+        manifest_text = _json_integer_literal_exceeding_digit_limit()
+        if manifest_text is None:
+            self.skipTest("Python JSON integer digit limit is unavailable")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            artifact_python = artifact_root / ".venv" / "bin" / "python"
+            artifact_python.parent.mkdir(parents=True)
+            artifact_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            artifact_python.chmod(0o755)
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            workspace_python_identity_path(workspace_root).write_text(
+                manifest_text,
+                encoding="utf-8",
+            )
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                ),
+            )
+
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertIn("workspace python identity manifest is invalid JSON", issue)
+
     def test_external_workspace_python_reports_invalid_identity_manifest_fields(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             artifact_root = Path(temp_dir) / "artifact"
@@ -1631,48 +1671,58 @@ class ExecutorRuntimeTests(unittest.TestCase):
     def test_non_worker_dependency_preflight_blocks_malformed_external_workspace_python_identity_manifest(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            artifact_root = Path(temp_dir) / "artifact"
-            workspace_root = Path(temp_dir) / "workspace"
-            artifact_root.mkdir()
-            workspace_root.mkdir()
-            _seed_executor_vault(artifact_root)
-            seed_subagent_profiles(artifact_root, ["validator"])
-            _write_external_workspace_python_shim(artifact_root, workspace_root)
-            workspace_python_identity_path(workspace_root).write_text("{bad json", encoding="utf-8")
-            _write_routing_report(
-                artifact_root,
-                "validator",
-                sandbox_mode="workspace-write",
-                model="gpt-5.5",
-                reasoning_effort="xhigh",
-                selected_rung=3,
-            )
-            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
-            outer_codex.parent.mkdir()
-            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
-            outer_codex.chmod(0o755)
-
-            with (
-                mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
-                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout") as run,
-            ):
-                report = execute_codex_exec_role(
-                    artifact_root=artifact_root,
-                    workspace_root=workspace_root,
-                    run_id="run-executor",
-                    role="validator",
-                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
-                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
-                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
-                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+        manifest_cases = {
+            "json-decode-error": "{bad json",
+        }
+        parser_value_error_manifest = _json_integer_literal_exceeding_digit_limit()
+        if parser_value_error_manifest is not None:
+            manifest_cases["parser-value-error"] = parser_value_error_manifest
+        for case_name, manifest_text in manifest_cases.items():
+            with self.subTest(case=case_name), tempfile.TemporaryDirectory() as temp_dir:
+                artifact_root = Path(temp_dir) / "artifact"
+                workspace_root = Path(temp_dir) / "workspace"
+                artifact_root.mkdir()
+                workspace_root.mkdir()
+                _seed_executor_vault(artifact_root)
+                seed_subagent_profiles(artifact_root, ["validator"])
+                _write_external_workspace_python_shim(artifact_root, workspace_root)
+                workspace_python_identity_path(workspace_root).write_text(
+                    manifest_text,
+                    encoding="utf-8",
                 )
+                _write_routing_report(
+                    artifact_root,
+                    "validator",
+                    sandbox_mode="workspace-write",
+                    model="gpt-5.5",
+                    reasoning_effort="xhigh",
+                    selected_rung=3,
+                )
+                outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+                outer_codex.parent.mkdir()
+                outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+                outer_codex.chmod(0o755)
 
-            run.assert_not_called()
-            self.assertEqual(report["status"], "fail")
-            notes = "\n".join(report["diagnostics"]["notes"])
-            self.assertIn("workspace Python trust check", notes)
-            self.assertIn("workspace python identity manifest is invalid JSON", notes)
+                with (
+                    mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}),
+                    mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout") as run,
+                ):
+                    report = execute_codex_exec_role(
+                        artifact_root=artifact_root,
+                        workspace_root=workspace_root,
+                        run_id="run-executor",
+                        role="validator",
+                        routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                        scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                        proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                        context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                    )
+
+                run.assert_not_called()
+                self.assertEqual(report["status"], "fail")
+                notes = "\n".join(report["diagnostics"]["notes"])
+                self.assertIn("workspace Python trust check", notes)
+                self.assertIn("workspace python identity manifest is invalid JSON", notes)
 
     def test_codex_exec_blocks_workspace_virtualenv_codex_when_no_outer_codex_exists(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -106,15 +106,15 @@ def read_workspace_python_identity(workspace_root: Path) -> WorkspacePythonIdent
         return WorkspacePythonIdentityLoadResult(None, "missing workspace python identity manifest")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        return WorkspacePythonIdentityLoadResult(
-            None,
-            f"workspace python identity manifest is invalid JSON: {exc}",
-        )
     except (OSError, UnicodeDecodeError) as exc:
         return WorkspacePythonIdentityLoadResult(
             None,
             f"workspace python identity manifest is unreadable: {exc}",
+        )
+    except ValueError as exc:
+        return WorkspacePythonIdentityLoadResult(
+            None,
+            f"workspace python identity manifest is invalid JSON: {exc}",
         )
     if not isinstance(payload, dict):
         return WorkspacePythonIdentityLoadResult(
