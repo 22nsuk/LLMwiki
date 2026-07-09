@@ -170,20 +170,22 @@ def classify_source_trace_targets(
             resolved_absolute = resolved if resolved.is_absolute() else (Path.cwd() / resolved).resolve()
             resolved_path = report_source_trace_path(vault.resolve(), resolved_absolute)
             exists = resolved.exists()
+            raw_path_classification = classify_release_manifest_path(record.raw_ref)
             classification_path = (
                 record.raw_ref
                 if (
                     normalized_ref.startswith(("/", "../"))
                     or Path(normalized_ref).is_absolute()
-                    or classify_release_manifest_path(record.raw_ref).invalid
+                    or raw_path_classification.invalid
                 )
                 else normalized_ref
             )
-            status = (
-                PRESENT
-                if exists
-                else _missing_status_for_path(classification_path, profile=profile)
-            )
+            if raw_path_classification.invalid:
+                status = MISSING_INVALID_PATH
+            elif exists:
+                status = PRESENT
+            else:
+                status = _missing_status_for_path(classification_path, profile=profile)
         requirement = _requirement(status, classification_path if resolved is not None else normalized_ref)
         targets.append(
             {

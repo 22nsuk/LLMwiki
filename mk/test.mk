@@ -142,7 +142,7 @@ test-release-sealing-all:
 	$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_SEALING_MARK_EXPR)" $(PYTEST_RELEASE_SEALING_FLAGS)
 
 test-executor-runtime:
-	$(PYTHON) -m pytest -q tests/test_executor_runtime.py $(PYTEST_CACHE_ISOLATION_FLAGS) $(PYTEST_SERIAL_FLAGS)
+	$(PYTHON) -m pytest -q $(EXECUTOR_RUNTIME_TESTS) $(PYTEST_CACHE_ISOLATION_FLAGS) $(PYTEST_SERIAL_FLAGS)
 
 test-subprocess:
 	$(PYTHON) -m pytest $(SUBPROCESS_TESTS) $(PYTEST_SERIAL_FLAGS)

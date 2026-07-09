@@ -843,6 +843,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 (
                     f"#!/bin/sh\n"
+                    f"if [ \"${{1:-}}\" = \"-I\" ]; then exec {json.dumps(sys.executable)} \"$@\"; fi\n"
                     f"if [ \"${{1:-}}\" = \"-c\" ]; then exec {json.dumps(sys.executable)} \"$@\"; fi\n"
                     "printf 'workspace-python\\n'\n"
                 ),
@@ -979,14 +980,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
                 if _is_git_rev_parse_head(argv):
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
-                trusted_python = trusted_dependency_preflight_python(
-                    vault,
-                    workspace_root=vault,
-                )
-                self.assertEqual(argv[0], str(trusted_python))
+                workspace_python = vault / ".venv" / "bin" / "python"
+                self.assertEqual(argv[0], str(workspace_python))
                 self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
                 payload = {
-                    "python": {"executable": str(trusted_python), "version": "3.test"},
+                    "python": {"executable": str(workspace_python), "version": "3.test"},
                     "modules": [
                         {
                             "import_name": "pytest",
@@ -1040,7 +1038,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(
                 report["diagnostics"]["dependency_preflight"]["python"]["executable"],
-                str(trusted_dependency_preflight_python(vault, workspace_root=vault)),
+                ".venv/bin/python",
             )
 
     def test_trusted_dependency_preflight_python_accepts_workspace_symlink_to_external_python(
@@ -1068,7 +1066,58 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertEqual(trusted_python, Path(sys.executable).resolve(strict=True))
             self.assertNotEqual(trusted_python, workspace_python)
 
-    def test_same_root_dependency_preflight_does_not_execute_workspace_python(self) -> None:
+    def test_same_root_workspace_python_allows_symlink_resolving_outside_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            source_python = Path(temp_dir) / "source-python"
+            source_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            source_python.chmod(0o755)
+            workspace_python = vault / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            try:
+                workspace_python.symlink_to(source_python)
+            except OSError as exc:
+                self.skipTest(f"workspace symlink setup unavailable: {exc}")
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                ),
+            )
+
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertEqual(issue, "")
+
+    def test_same_root_workspace_python_blocks_local_file_without_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            workspace_python = vault / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            workspace_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            workspace_python.chmod(0o755)
+            request = cast(
+                Any,
+                SimpleNamespace(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                ),
+            )
+
+            issue = external_workspace_python_issue(
+                request,
+                workspace_python=workspace_python,
+            )
+
+            self.assertEqual(issue, "missing workspace python identity manifest")
+
+    def test_same_root_dependency_preflight_blocks_untrusted_workspace_python(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -1103,19 +1152,22 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 context=RuntimeContext(display_timezone=dt.UTC),
             )
 
-            preflight, summary = non_worker_dependency_preflight(request)
+            with mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run") as run:
+                preflight, summary = non_worker_dependency_preflight(request)
 
-            self.assertEqual(preflight["status"], "pass")
-            self.assertIsNone(summary)
+            run.assert_not_called()
+            self.assertEqual(preflight["status"], "fail")
+            self.assertEqual(preflight["returncode"], 126)
+            self.assertIsNotNone(summary)
             self.assertFalse(marker.exists())
             self.assertEqual(preflight["command"]["argv"][0], ".venv/bin/python")
             self.assertEqual(preflight["python"]["path"], ".venv/bin/python")
-            self.assertEqual(
-                preflight["python"]["executable"],
-                str(trusted_dependency_preflight_python(vault, workspace_root=vault)),
-            )
+            assert summary is not None
+            notes = " ".join(summary.notes)
+            self.assertIn("workspace Python trust check", notes)
+            self.assertIn("missing workspace python identity manifest", notes)
 
-    def test_same_root_dependency_preflight_blocks_workspace_resolved_sys_executable(
+    def test_same_root_dependency_preflight_blocks_untrusted_sys_executable_path(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1167,7 +1219,9 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertFalse(marker.exists())
             self.assertIsNotNone(summary)
             assert summary is not None
-            self.assertIn("resolves inside the workspace", " ".join(summary.notes))
+            notes = " ".join(summary.notes)
+            self.assertIn("workspace Python trust check", notes)
+            self.assertIn("missing workspace python identity manifest", notes)
 
     def test_external_workspace_dependency_preflight_executes_artifact_python(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

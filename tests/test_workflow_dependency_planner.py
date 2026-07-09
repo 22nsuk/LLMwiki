@@ -62,6 +62,7 @@ FOCUSED_COMPATIBILITY_ALIAS_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
 DELETED_LEGACY_REPORT_SCHEMA_SAMPLES_PATH = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_SEEDS_PATH = "tests/fixtures/report_schema_sample_seeds.json"
 RUNTIME_HOTSPOT_SMOKE_COMMAND = "make runtime-hotspot-smoke"
+EXECUTOR_RUNTIME_COMMAND = "make test-executor-runtime"
 FOCUSED_PYTEST_PREFIX = FOCUSED_PYTEST_TEMPLATE.partition("{path}")[0]
 
 
@@ -672,6 +673,34 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
             [],
         )
+
+    def test_executor_runtime_source_selects_focused_executor_lane(self) -> None:
+        for changed_path in [
+            "ops/scripts/core/executor_runtime.py",
+            "ops/scripts/core/codex_exec_executor.py",
+            "ops/scripts/core/trusted_candidate_runner.py",
+        ]:
+            with self.subTest(changed_path=changed_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[changed_path],
+                    context=fixed_context(),
+                )
+
+                plan = report["changed_path_minimum_plan"]
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "executor_runtime")
+                self.assertEqual(
+                    plan["selected_commands"],
+                    ["make static", EXECUTOR_RUNTIME_COMMAND, "make sync-derived-check"],
+                )
+                self.assertNotIn("make test", plan["selected_commands"])
+                self.assertEqual(plan["budget_status"], "within_budget")
+                self.assertEqual(plan["unknown_paths"], [])
+                self.assertEqual(
+                    [item["matched_rule_id"] for item in plan["path_recommendations"]],
+                    ["executor_runtime_source+derived_surface_currentness"],
+                )
 
     def test_planner_source_uses_focused_changed_path_minimum(self) -> None:
         for source_path in [

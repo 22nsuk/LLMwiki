@@ -232,6 +232,38 @@ class SourceTraceRuntimeTests(unittest.TestCase):
                         },
                     )
 
+    def test_source_trace_profile_classifies_existing_invalid_raw_refs_before_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            readme = root / "README.md"
+            readme.write_text("ok\n", encoding="utf-8")
+
+            source_trace = f"""
+- `wiki/../README.md`
+- `{readme.as_posix()}`
+"""
+
+            by_ref = {
+                item["ref"]: item
+                for item in classify_source_trace_targets(
+                    root,
+                    source_trace,
+                    profile=STRICT_PROFILE,
+                )
+            }
+
+            for label, ref in {
+                "parent-reference": "README.md",
+                "absolute-inside-vault": readme.as_posix(),
+            }.items():
+                with self.subTest(label=label):
+                    target = by_ref[ref]
+                    self.assertTrue(target["exists"])
+                    self.assertEqual(target["resolved_path"], "README.md")
+                    self.assertEqual(target["classification"], MISSING_INVALID_PATH)
+                    self.assertTrue(target["blocks_profile"])
+                    self.assertFalse(target["profile_allows_missing"])
+
 
 if __name__ == "__main__":
     unittest.main()

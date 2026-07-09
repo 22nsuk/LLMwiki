@@ -11,6 +11,7 @@ from ops.scripts.core.trusted_candidate_runner import (
     TrustedCandidateRunRequest,
     build_trusted_candidate_env,
     resolve_trusted_repo_health_argv,
+    rewrite_argv_trusted_python,
     run_trusted_candidate_command,
 )
 from ops.scripts.core.workspace_python_identity_runtime import (
@@ -86,6 +87,42 @@ class TrustedCandidateRunnerTests(unittest.TestCase):
             self.assertEqual(outcome.returncode, 0)
             audit = json.loads((vault / audit_rel).read_text(encoding="utf-8"))
             self.assertEqual(audit["purpose"], "test")
+
+    def test_rewrite_preserves_workspace_python_when_caller_trusts_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            workspace_python = workspace / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            workspace_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            argv = [str(workspace_python), "-I", "-B", "-c", "pass"]
+
+            rewritten = rewrite_argv_trusted_python(
+                argv,
+                workspace_root=workspace,
+                trusted_python=workspace_python,
+            )
+
+            self.assertEqual(rewritten, argv)
+
+    def test_rewrite_replaces_workspace_python_when_trusted_python_differs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "workspace"
+            workspace.mkdir()
+            workspace_python = workspace / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            workspace_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            trusted_python = Path(temp_dir) / "trusted-python"
+            trusted_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            argv = [str(workspace_python), "-I", "-B", "-c", "pass"]
+
+            rewritten = rewrite_argv_trusted_python(
+                argv,
+                workspace_root=workspace,
+                trusted_python=trusted_python,
+            )
+
+            self.assertEqual(rewritten[0], str(trusted_python.resolve()))
+            self.assertEqual(rewritten[1:], argv[1:])
 
     def test_workspace_python_identity_blocks_modified_shim(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

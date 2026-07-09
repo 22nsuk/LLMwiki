@@ -201,18 +201,25 @@ def external_workspace_python_issue(
         request.workspace_root,
         workspace_python=workspace_python,
     )
-    if identity_issue and identity_issue != "missing workspace python identity manifest":
+    if not identity_issue:
+        return ""
+    if identity_issue != "missing workspace python identity manifest":
         return identity_issue
-    if identity_issue == "missing workspace python identity manifest":
+    if workspace_python.is_symlink():
         try:
-            content = workspace_python.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError) as exc:
-            return f"workspace virtualenv python shim is unreadable: {exc}"
-        if is_workspace_python_shim(content):
-            return identity_issue
-        if not same_path(request.workspace_root, request.artifact_root):
-            return identity_issue
-    return ""
+            resolved_python = workspace_python.resolve(strict=True)
+        except OSError as exc:
+            return f"workspace virtualenv python symlink is unreadable: {exc}"
+        if path_is_inside_workspace(resolved_python, request.workspace_root):
+            return "workspace virtualenv python symlink resolves inside the workspace"
+        return ""
+    try:
+        content = workspace_python.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return f"workspace virtualenv python shim is unreadable: {exc}"
+    if is_workspace_python_shim(content):
+        return identity_issue
+    return identity_issue
 
 
 def _raise_codex_contract_error(message: str) -> None:
