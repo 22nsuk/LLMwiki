@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib.util
 import os
-import shutil
 import subprocess
 import sys
 import unittest
@@ -28,23 +27,15 @@ def _load_repo_conftest() -> ModuleType:
     return module
 
 
-def _pytest_console_script() -> str:
-    executable_dirs = (
-        Path(sys.executable).parent,
-        Path(sys.executable).resolve().parent,
-        REPO_ROOT / ".venv" / "bin",
-        REPO_ROOT / ".venv" / "Scripts",
-    )
-    for executable_dir in executable_dirs:
-        for name in ("pytest", "pytest.exe"):
-            candidate = executable_dir / name
-            if candidate.exists():
-                return str(candidate)
-    for name in ("pytest", "pytest.exe"):
-        found = shutil.which(name)
-        if found:
-            return found
-    raise unittest.SkipTest("pytest console script is unavailable")
+BARE_PYTEST_SIMULATION = (
+    "import sys, pytest; "
+    "sys.argv = ['pytest', *sys.argv[1:]]; "
+    "raise SystemExit(pytest.console_main())"
+)
+
+
+def _bare_pytest_command(*args: str) -> list[str]:
+    return [sys.executable, "-c", BARE_PYTEST_SIMULATION, *args]
 
 
 class PytestEntrypointGuidanceTests(unittest.TestCase):
@@ -55,14 +46,13 @@ class PytestEntrypointGuidanceTests(unittest.TestCase):
         env.pop("LLMWIKI_MAKE_PYTEST_ENTRYPOINT", None)
 
         completed = subprocess.run(
-            [
-                _pytest_console_script(),
+            _bare_pytest_command(
                 "--collect-only",
                 "-q",
                 "-p",
                 "no:cacheprovider",
                 "tests/test_command_runtime.py",
-            ],
+            ),
             cwd=REPO_ROOT,
             env=env,
             capture_output=True,

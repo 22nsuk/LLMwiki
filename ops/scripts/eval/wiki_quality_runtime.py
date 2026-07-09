@@ -11,7 +11,7 @@ from ops.scripts.core.source_trace_profile_runtime import (
 )
 from ops.scripts.core.source_trace_runtime import missing_source_trace_targets
 
-from .wiki_manifest import release_manifest_excludes_path
+from .wiki_manifest import classify_release_manifest_path
 from .wiki_page_runtime import open_question_severity_counts, section_exists
 from .wikilink_runtime import extract_wikilinks, resolve_wikilink_target
 
@@ -82,7 +82,7 @@ def source_trace_targets_blocking_profile(
 
 def source_trace_target_is_release_excluded(target: dict[str, str]) -> bool:
     return any(
-        release_manifest_excludes_path(target.get(key))
+        classify_release_manifest_path(target.get(key)).excluded
         for key in ("ref", "resolved_path")
     )
 

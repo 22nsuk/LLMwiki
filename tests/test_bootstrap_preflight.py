@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import importlib.metadata
 import os
 import tempfile
 import unittest
@@ -11,6 +12,7 @@ from unittest import mock
 import pytest
 
 from ops.scripts.core.bootstrap_preflight import (
+    _default_module_available,
     build_report,
     format_text,
     main,
@@ -63,6 +65,52 @@ class BootstrapPreflightTests(unittest.TestCase):
         text = format_text(report)
         self.assertIn("pytest", text)
         self.assertIn("Run make dev-install", text)
+
+    def test_dev_report_checks_full_dev_lane_dependency_surface(self) -> None:
+        report = build_report(
+            include_dev=True,
+            python_version=(3, 12, 1),
+            module_available=_module_available({"build", "hypothesis", "xdist", "yaml-stubs"}),
+        )
+
+        dev_rows = [row for row in report["dependencies"] if row["category"] == "dev"]
+        self.assertEqual(
+            {row["package"] for row in dev_rows},
+            {
+                "build",
+                "hypothesis",
+                "mypy",
+                "pytest",
+                "pytest-xdist",
+                "ruff",
+                "types-PyYAML",
+            },
+        )
+        self.assertEqual(
+            report["summary"]["missing_packages"],
+            ["build", "hypothesis", "pytest-xdist", "types-PyYAML"],
+        )
+
+    def test_dev_dependency_default_check_uses_distribution_metadata(self) -> None:
+        def missing_build_distribution(package: str) -> str:
+            if package == "build":
+                raise importlib.metadata.PackageNotFoundError(package)
+            return "1.0"
+
+        with (
+            mock.patch(
+                "ops.scripts.core.bootstrap_preflight.importlib.metadata.version",
+                side_effect=missing_build_distribution,
+            ),
+            mock.patch(
+                "ops.scripts.core.bootstrap_preflight.importlib.util.find_spec",
+                return_value=object(),
+            ) as find_spec,
+        ):
+            self.assertFalse(_default_module_available("build"))
+            self.assertTrue(_default_module_available("yaml"))
+
+        find_spec.assert_called_once_with("yaml")
 
     def test_python_version_is_a_hard_preflight_failure(self) -> None:
         report = build_report(

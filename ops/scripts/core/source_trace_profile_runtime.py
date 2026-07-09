@@ -3,10 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.eval.wiki_manifest import release_manifest_excludes_path
+from ops.scripts.eval.wiki_manifest import (
+    RELEASE_MANIFEST_PATH_INVALID,
+    classify_release_manifest_path,
+)
 
 from .source_trace_runtime import (
-    extract_source_trace_refs,
+    extract_source_trace_ref_records,
     normalize_source_trace_ref,
     report_source_trace_path,
     resolve_source_trace_ref,
@@ -19,12 +22,14 @@ PUBLIC_CODE_MIRROR_PROFILE = "public_code_mirror"
 
 PRESENT = "present"
 MISSING_UNCLASSIFIED = "missing_unclassified"
+MISSING_INVALID_PATH = "missing_invalid_path"
 MISSING_EXPORT_EXCLUDED_BOUND = "missing_export_excluded_bound"
 MISSING_EXPORT_EXCLUDED_UNBOUND = "missing_export_excluded_unbound"
 MISSING_PRIVATE_SURFACE_EXPECTED = "missing_private_surface_expected"
 MISSING_GENERATED_REBUILDABLE = "missing_generated_rebuildable"
 
 MISSING_STATUSES = {
+    MISSING_INVALID_PATH,
     MISSING_UNCLASSIFIED,
     MISSING_EXPORT_EXCLUDED_BOUND,
     MISSING_EXPORT_EXCLUDED_UNBOUND,
@@ -98,6 +103,13 @@ def _requirement(status: str, rel_path: str) -> dict[str, str]:
             "linkage": "unbound",
             "repair_target": f"move {rel_path} to a durable source trace target or add explicit release evidence linkage",
         }
+    if status == MISSING_INVALID_PATH:
+        return {
+            "authority": "none",
+            "digest": "unbound",
+            "linkage": "invalid source trace path",
+            "repair_target": f"correct invalid source trace target {rel_path}",
+        }
     return {
         "authority": "none",
         "digest": "unbound",
@@ -111,11 +123,14 @@ def _has_prefix(rel_path: str, prefixes: tuple[str, ...]) -> bool:
 
 
 def _missing_status_for_path(rel_path: str, *, profile: str) -> str:
+    release_manifest_path = classify_release_manifest_path(rel_path)
+    if release_manifest_path.status == RELEASE_MANIFEST_PATH_INVALID:
+        return MISSING_INVALID_PATH
     if profile == PUBLIC_CODE_MIRROR_PROFILE and _has_prefix(rel_path, PRIVATE_SURFACE_PREFIXES):
         return MISSING_PRIVATE_SURFACE_EXPECTED
     if _has_prefix(rel_path, GENERATED_REBUILDABLE_PREFIXES):
         return MISSING_GENERATED_REBUILDABLE
-    if not release_manifest_excludes_path(rel_path):
+    if release_manifest_path.included:
         return MISSING_UNCLASSIFIED
     if _has_prefix(rel_path, UNBOUND_EXPORT_EXCLUDED_PREFIXES):
         return MISSING_EXPORT_EXCLUDED_UNBOUND
@@ -143,7 +158,8 @@ def classify_source_trace_targets(
     profile: str = STRICT_PROFILE,
 ) -> list[dict[str, Any]]:
     targets: list[dict[str, Any]] = []
-    for ref in extract_source_trace_refs(source_trace):
+    for record in extract_source_trace_ref_records(source_trace):
+        ref = record.normalized_ref
         resolved = resolve_source_trace_ref(vault, ref, resolution_map)
         normalized_ref = normalize_source_trace_ref(ref)
         if resolved is None:
@@ -155,8 +171,12 @@ def classify_source_trace_targets(
             resolved_path = report_source_trace_path(vault.resolve(), resolved_absolute)
             exists = resolved.exists()
             classification_path = (
-                resolved_path
-                if normalized_ref.startswith(("/", "../")) or Path(normalized_ref).is_absolute()
+                record.raw_ref
+                if (
+                    normalized_ref.startswith(("/", "../"))
+                    or Path(normalized_ref).is_absolute()
+                    or classify_release_manifest_path(record.raw_ref).invalid
+                )
                 else normalized_ref
             )
             status = (

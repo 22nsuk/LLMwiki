@@ -23,7 +23,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.eval.wiki_manifest import (
         build_manifest,
-        release_manifest_excludes_path,
+        classify_release_manifest_path,
     )
     from ops.scripts.public.export_public_repo import iter_public_files
     from ops.scripts.supply_chain.supply_chain_provenance import (
@@ -46,7 +46,7 @@ else:
     )
     from ops.scripts.eval.wiki_manifest import (
         build_manifest,
-        release_manifest_excludes_path,
+        classify_release_manifest_path,
     )
     from ops.scripts.public.export_public_repo import iter_public_files
 
@@ -105,7 +105,11 @@ def _export_mapping(release_files: set[str], public_files: set[str]) -> list[dic
     mapping = []
     for rel_path in sorted(release_files | public_files):
         in_public_export = rel_path in public_files
-        release_manifest_exclusion = bool(in_public_export and rel_path not in release_files and release_manifest_excludes_path(rel_path))
+        release_manifest_exclusion = bool(
+            in_public_export
+            and rel_path not in release_files
+            and classify_release_manifest_path(rel_path).excluded
+        )
         mapping.append(
             {
                 "path": rel_path,
@@ -123,7 +127,9 @@ def _surface_summary(release_files: set[str], public_files: set[str]) -> dict:
     private_release_files = release_files - public_files
     public_only_files = public_files - release_files
     release_excluded_public_files = {
-        rel_path for rel_path in public_only_files if release_manifest_excludes_path(rel_path)
+        rel_path
+        for rel_path in public_only_files
+        if classify_release_manifest_path(rel_path).excluded
     }
     blocking_public_only_files = public_only_files - release_excluded_public_files
     return {

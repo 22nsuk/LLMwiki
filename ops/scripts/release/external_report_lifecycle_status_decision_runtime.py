@@ -85,6 +85,98 @@ def source_revision_unknown_canonical_reports_status(
     return "partially_automated"
 
 
+def codex_exec_dependency_preflight_trust_boundary_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    surface_text = "\n".join(
+        read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "ops/scripts/core/codex_exec_dependency_preflight_runtime.py",
+            "ops/scripts/core/codex_exec_dependency_preflight_decision_runtime.py",
+            "tests/test_executor_runtime.py",
+        )
+    )
+    if all(
+        token in surface_text
+        for token in (
+            "trusted_dependency_preflight_python(",
+            "DependencyPreflightTrustError",
+            "path_is_inside_workspace",
+            "resolve(strict=True)",
+            "run_trusted_candidate_command(",
+            "test_same_root_dependency_preflight_does_not_execute_workspace_python",
+            "test_same_root_dependency_preflight_blocks_workspace_resolved_sys_executable",
+            "test_external_workspace_dependency_preflight_executes_artifact_python",
+        )
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def bootstrap_dev_install_hardening_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    surface_text = "\n".join(
+        read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "ops/scripts/core/bootstrap_preflight.py",
+            "mk/core.mk",
+            "docs/development.md",
+            "tests/test_bootstrap_preflight.py",
+            "tests/test_makefile_static_gates.py",
+        )
+    )
+    if all(
+        token in surface_text
+        for token in (
+            "DEV_DEPENDENCIES",
+            "importlib.metadata.version",
+            "DEV_INSTALL_ROLLBACK_DIR",
+            "DEV_INSTALL_READY_MARKER",
+            ".venv.previous",
+            "test_dev_report_checks_full_dev_lane_dependency_surface",
+            "test_dev_install_creates_editable_environment",
+        )
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def release_manifest_path_classification_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    surface_text = "\n".join(
+        read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "ops/scripts/eval/wiki_manifest.py",
+            "ops/scripts/core/source_trace_profile_runtime.py",
+            "tests/test_manifest_export_symlink_safety.py",
+            "tests/test_source_trace_runtime.py",
+        )
+    )
+    if all(
+        token in surface_text
+        for token in (
+            "classify_release_manifest_path",
+            "RELEASE_MANIFEST_PATH_INVALID",
+            "release_manifest_includes_path",
+            "MISSING_INVALID_PATH",
+            "test_release_manifest_excludes_path_is_valid_path_compatibility_facade",
+        )
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
 RELEASE_LANE_MUTABILITY_SPLIT_SURFACES = (
     "mk/release.mk",
     "mk/release-authority.mk",
@@ -1132,6 +1224,11 @@ COUNT_STATUS_RESOLVERS: dict[str, CountStatusResolver] = {
     ),
     "promotion_truth_ladder": _release_verified_count_status("promotion_truth_ladder"),
     "source_revision_unknown_canonical_reports": source_revision_unknown_canonical_reports_status,
+    "codex_exec_dependency_preflight_trust_boundary": (
+        codex_exec_dependency_preflight_trust_boundary_status
+    ),
+    "bootstrap_dev_install_hardening": bootstrap_dev_install_hardening_status,
+    "release_manifest_path_classification": release_manifest_path_classification_status,
     "ruff_strict_preview_import_order": ruff_strict_preview_import_order_status,
     "release_source_ready_deindex_hardening": release_source_ready_deindex_hardening_status,
     "uv_lock_canonical_policy": uv_lock_canonical_policy_status,
@@ -1163,4 +1260,3 @@ COUNT_STATUS_RESOLVERS: dict[str, CountStatusResolver] = {
     ),
     "collaboration_governance_surface": collaboration_governance_surface_status,
 }
-

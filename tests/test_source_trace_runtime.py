@@ -9,6 +9,7 @@ from ops.scripts.core.source_trace_profile_runtime import (
     MISSING_EXPORT_EXCLUDED_BOUND,
     MISSING_EXPORT_EXCLUDED_UNBOUND,
     MISSING_GENERATED_REBUILDABLE,
+    MISSING_INVALID_PATH,
     MISSING_PRIVATE_SURFACE_EXPECTED,
     MISSING_UNCLASSIFIED,
     PRESENT,
@@ -162,6 +163,74 @@ class SourceTraceRuntimeTests(unittest.TestCase):
                 MISSING_PRIVATE_SURFACE_EXPECTED,
             )
             self.assertIn("full-vault", public_by_ref["raw/private.pdf"]["linkage_requirement"])
+
+    def test_source_trace_profile_classifies_invalid_path_shapes_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            absolute_missing_export_excluded = root / "runs" / "run-1" / "evidence.json"
+            source_trace = f"""
+- `{absolute_missing_export_excluded.as_posix()}`
+- `tmp/../runs/run-1/evidence.json`
+- `raw/../missing.md`
+- `ops/reports/../missing.md`
+"""
+
+            by_ref = {
+                item["ref"]: item
+                for item in classify_source_trace_targets(
+                    root,
+                    source_trace,
+                    profile=RELEASE_ARCHIVE_PROFILE,
+                )
+            }
+            public_by_ref = {
+                item["ref"]: item
+                for item in classify_source_trace_targets(
+                    root,
+                    source_trace,
+                    profile=PUBLIC_CODE_MIRROR_PROFILE,
+                )
+            }
+
+            regression_cases = {
+                "absolute": (by_ref, (absolute_missing_export_excluded.as_posix(),)),
+                "traversal": (
+                    by_ref,
+                    ("tmp/../runs/run-1/evidence.json", "runs/run-1/evidence.json"),
+                ),
+                "private-prefix-traversal": (
+                    public_by_ref,
+                    ("raw/../missing.md", "missing.md"),
+                ),
+                "generated-prefix-traversal": (
+                    by_ref,
+                    ("ops/reports/../missing.md", "ops/missing.md"),
+                ),
+            }
+
+            for label, (targets_by_ref, candidate_refs) in regression_cases.items():
+                with self.subTest(label=label):
+                    target = next(
+                        (targets_by_ref[ref] for ref in candidate_refs if ref in targets_by_ref),
+                        None,
+                    )
+                    self.assertIsNotNone(
+                        target,
+                        f"expected one of {candidate_refs!r} in classified source trace targets",
+                    )
+                    assert target is not None
+                    self.assertEqual(target["classification"], MISSING_INVALID_PATH)
+                    self.assertTrue(target["blocks_profile"])
+                    self.assertFalse(target["profile_allows_missing"])
+                    self.assertNotIn(
+                        target["classification"],
+                        {
+                            MISSING_EXPORT_EXCLUDED_BOUND,
+                            MISSING_EXPORT_EXCLUDED_UNBOUND,
+                            MISSING_GENERATED_REBUILDABLE,
+                            MISSING_PRIVATE_SURFACE_EXPECTED,
+                        },
+                    )
 
 
 if __name__ == "__main__":

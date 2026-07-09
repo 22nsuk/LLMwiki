@@ -151,6 +151,66 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self.assertEqual(summary["recommended_lane"], "source-action")
         self.assertEqual(summary["recommended_targets"], ["external-report-action-matrix"])
 
+    def test_active_report_followup_actions_are_implemented_by_source_tokens(self) -> None:
+        for rel_path, text in {
+            "ops/scripts/core/codex_exec_dependency_preflight_runtime.py": (
+                "def trusted_dependency_preflight_python():\n"
+                "    raise DependencyPreflightTrustError()\n"
+                "    path_is_inside_workspace()\n"
+                "    return Path(sys.executable).resolve(strict=True)\n"
+            ),
+            "ops/scripts/core/codex_exec_dependency_preflight_decision_runtime.py": (
+                "run_trusted_candidate_command()\n"
+            ),
+            "ops/scripts/core/codex_exec_workspace_runtime.py": "workspace runtime\n",
+            "ops/scripts/core/trusted_candidate_runner.py": "trusted runner\n",
+            "tests/test_executor_runtime.py": (
+                "def test_same_root_dependency_preflight_does_not_execute_workspace_python(): pass\n"
+                "def test_same_root_dependency_preflight_blocks_workspace_resolved_sys_executable(): pass\n"
+                "def test_external_workspace_dependency_preflight_executes_artifact_python(): pass\n"
+            ),
+            "tests/test_trusted_candidate_runner.py": "def test_runner(): pass\n",
+            "ops/scripts/core/bootstrap_preflight.py": (
+                "DEV_DEPENDENCIES = {}\n"
+                "importlib.metadata.version('pytest')\n"
+            ),
+            "mk/core.mk": (
+                "DEV_INSTALL_ROLLBACK_DIR := .venv.previous\n"
+                "DEV_INSTALL_READY_MARKER := .venv/.llmwiki-dev-ready\n"
+            ),
+            "docs/development.md": ".venv.previous\n",
+            "tests/test_bootstrap_preflight.py": (
+                "def test_dev_report_checks_full_dev_lane_dependency_surface(): pass\n"
+            ),
+            "tests/test_makefile_static_gates.py": (
+                "def test_dev_install_creates_editable_environment(): pass\n"
+            ),
+            "ops/scripts/eval/wiki_manifest.py": (
+                "def classify_release_manifest_path(): pass\n"
+                "RELEASE_MANIFEST_PATH_INVALID = 'invalid'\n"
+                "def release_manifest_includes_path(): pass\n"
+            ),
+            "ops/scripts/core/source_trace_profile_runtime.py": (
+                "MISSING_INVALID_PATH = 'missing_invalid_path'\n"
+            ),
+            "tests/test_manifest_export_symlink_safety.py": (
+                "def test_release_manifest_excludes_path_is_valid_path_compatibility_facade(): pass\n"
+            ),
+            "tests/test_source_trace_runtime.py": "MISSING_INVALID_PATH\n",
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+        statuses = action_statuses(self.vault)
+
+        self.assertEqual(
+            statuses["codex_exec_dependency_preflight_trust_boundary"],
+            "implemented",
+        )
+        self.assertEqual(statuses["bootstrap_dev_install_hardening"], "implemented")
+        self.assertEqual(statuses["release_manifest_path_classification"], "implemented")
+
     def test_generated_artifact_policy_status_requires_tracking_policy_envelope(self) -> None:
         for rel_path, text in {
             "ops/scripts/core/generated_artifact_index.py": (

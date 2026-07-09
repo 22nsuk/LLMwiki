@@ -17,6 +17,13 @@ from unittest import mock
 import pytest
 
 from ops.scripts.core import workspace_python_identity_runtime
+from ops.scripts.core.codex_exec_dependency_preflight_decision_runtime import (
+    non_worker_dependency_preflight,
+)
+from ops.scripts.core.codex_exec_dependency_preflight_runtime import (
+    trusted_dependency_preflight_python,
+)
+from ops.scripts.core.codex_exec_execution_types_runtime import ExecutionRequest
 from ops.scripts.core.codex_exec_executor import (
     ExecutorContractError,
     ExecutorReportRequest,
@@ -972,7 +979,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
                 if _is_git_rev_parse_head(argv):
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
-                trusted_python = (vault / ".venv" / "bin" / "python").resolve()
+                trusted_python = trusted_dependency_preflight_python(
+                    vault,
+                    workspace_root=vault,
+                )
                 self.assertEqual(argv[0], str(trusted_python))
                 self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
                 payload = {
@@ -1024,6 +1034,224 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
 
             self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                report["diagnostics"]["dependency_preflight"]["python"]["path"],
+                ".venv/bin/python",
+            )
+            self.assertEqual(
+                report["diagnostics"]["dependency_preflight"]["python"]["executable"],
+                str(trusted_dependency_preflight_python(vault, workspace_root=vault)),
+            )
+
+    def test_trusted_dependency_preflight_python_accepts_workspace_symlink_to_external_python(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            workspace_python = vault / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            try:
+                workspace_python.symlink_to(Path(sys.executable).resolve(strict=True))
+            except OSError as exc:
+                self.skipTest(f"workspace symlink setup unavailable: {exc}")
+
+            with mock.patch(
+                "ops.scripts.core.codex_exec_dependency_preflight_runtime.sys.executable",
+                str(workspace_python),
+            ):
+                trusted_python = trusted_dependency_preflight_python(
+                    vault,
+                    workspace_root=vault,
+                )
+
+            self.assertEqual(trusted_python, Path(sys.executable).resolve(strict=True))
+            self.assertNotEqual(trusted_python, workspace_python)
+
+    def test_same_root_dependency_preflight_does_not_execute_workspace_python(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            marker = vault / "workspace-python-executed.txt"
+            workspace_python = vault / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            workspace_python.write_text(
+                "#!/bin/sh\n"
+                f"touch {shlex.quote(str(marker))}\n"
+                "printf '%s\\n' '{\"python\":{\"executable\":\"workspace-python\",\"version\":\"0\"},\"modules\":[{\"import_name\":\"pytest\",\"package\":\"pytest\",\"status\":\"available\",\"version\":\"x\",\"detail\":\"\"},{\"import_name\":\"jsonschema\",\"package\":\"jsonschema\",\"status\":\"available\",\"version\":\"x\",\"detail\":\"\"},{\"import_name\":\"yaml\",\"package\":\"PyYAML\",\"status\":\"available\",\"version\":\"x\",\"detail\":\"\"}]}'\n",
+                encoding="utf-8",
+            )
+            workspace_python.chmod(0o755)
+            request = ExecutionRequest(
+                artifact_root=vault,
+                workspace_root=vault,
+                run_id="run-executor",
+                role="validator",
+                routing_report={},
+                scope_freeze={},
+                profile={},
+                routing_report_rel="",
+                scope_freeze_rel="",
+                proposal_snapshot_rel="",
+                repair_context_rel="",
+                repair_context=None,
+                artifacts=_ExecutorArtifacts("", "", "", "", "", "", ""),
+                argv=[],
+                sanitized_argv=[],
+                prompt_path=vault / "prompt.md",
+                timeout_seconds=30,
+                context=RuntimeContext(display_timezone=dt.UTC),
+            )
+
+            preflight, summary = non_worker_dependency_preflight(request)
+
+            self.assertEqual(preflight["status"], "pass")
+            self.assertIsNone(summary)
+            self.assertFalse(marker.exists())
+            self.assertEqual(preflight["command"]["argv"][0], ".venv/bin/python")
+            self.assertEqual(preflight["python"]["path"], ".venv/bin/python")
+            self.assertEqual(
+                preflight["python"]["executable"],
+                str(trusted_dependency_preflight_python(vault, workspace_root=vault)),
+            )
+
+    def test_same_root_dependency_preflight_blocks_workspace_resolved_sys_executable(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            marker = vault / "workspace-python-executed.txt"
+            workspace_python = vault / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            workspace_python.write_text(
+                "#!/bin/sh\n"
+                f"touch {shlex.quote(str(marker))}\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            workspace_python.chmod(0o755)
+            request = ExecutionRequest(
+                artifact_root=vault,
+                workspace_root=vault,
+                run_id="run-executor",
+                role="validator",
+                routing_report={},
+                scope_freeze={},
+                profile={},
+                routing_report_rel="",
+                scope_freeze_rel="",
+                proposal_snapshot_rel="",
+                repair_context_rel="",
+                repair_context=None,
+                artifacts=_ExecutorArtifacts("", "", "", "", "", "", ""),
+                argv=[],
+                sanitized_argv=[],
+                prompt_path=vault / "prompt.md",
+                timeout_seconds=30,
+                context=RuntimeContext(display_timezone=dt.UTC),
+            )
+
+            with (
+                mock.patch(
+                    "ops.scripts.core.codex_exec_dependency_preflight_runtime.sys.executable",
+                    str(workspace_python),
+                ),
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run") as run,
+            ):
+                preflight, summary = non_worker_dependency_preflight(request)
+
+            run.assert_not_called()
+            self.assertEqual(preflight["status"], "fail")
+            self.assertEqual(preflight["returncode"], 126)
+            self.assertFalse(marker.exists())
+            self.assertIsNotNone(summary)
+            assert summary is not None
+            self.assertIn("resolves inside the workspace", " ".join(summary.notes))
+
+    def test_external_workspace_dependency_preflight_executes_artifact_python(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_root = Path(temp_dir) / "artifact"
+            workspace_root = Path(temp_dir) / "workspace"
+            artifact_root.mkdir()
+            workspace_root.mkdir()
+            _seed_executor_vault(artifact_root)
+            seed_subagent_profiles(artifact_root, ["validator"])
+            workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
+            _write_routing_report(
+                artifact_root,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            artifact_python = (artifact_root / ".venv" / "bin" / "python").absolute()
+            captured_preflight_argv: list[str] = []
+
+            def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if _is_git_rev_parse_head(argv):
+                    return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
+                captured_preflight_argv[:] = argv
+                self.assertEqual(argv[0], str(artifact_python))
+                self.assertNotEqual(Path(argv[0]), workspace_python.absolute())
+                self.assertEqual(Path(str(kwargs.get("cwd"))), workspace_root)
+                payload = {
+                    "python": {"executable": str(artifact_python), "version": "3.test"},
+                    "modules": [
+                        {
+                            "import_name": "pytest",
+                            "package": "pytest",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                        {
+                            "import_name": "jsonschema",
+                            "package": "jsonschema",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                        {
+                            "import_name": "yaml",
+                            "package": "PyYAML",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                    ],
+                }
+                return subprocess.CompletedProcess(argv, 0, stdout=json.dumps(payload), stderr="")
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                write_valid_model_output(
+                    Path(argv[out_index]),
+                    artifact_root,
+                    run_id="run-executor",
+                    role="validator",
+                    notes=["validated"],
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with (
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run", side_effect=fake_preflight),
+                mock.patch("ops.scripts.core.codex_exec_execution_outcome_runtime.run_with_timeout", side_effect=fake_run),
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=artifact_root,
+                    workspace_root=workspace_root,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=dt.UTC),
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(captured_preflight_argv[0], str(artifact_python))
             self.assertEqual(
                 report["diagnostics"]["dependency_preflight"]["python"]["path"],
                 ".venv/bin/python",

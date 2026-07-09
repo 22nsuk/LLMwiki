@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from .path_runtime import normalize_repo_path_text, stable_report_path
 
 SOURCE_TRACE_REF_RE = re.compile(r"`([^`]+)`")
 URL_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+
+
+@dataclass(frozen=True)
+class SourceTraceRef:
+    raw_ref: str
+    normalized_ref: str
 
 
 def _flat_script_relocation(vault: Path, normalized_ref: str) -> Path | None:
@@ -30,17 +37,21 @@ def normalize_source_trace_ref(ref: str) -> str:
 
 
 def extract_source_trace_refs(source_trace: str | None) -> list[str]:
+    return [record.normalized_ref for record in extract_source_trace_ref_records(source_trace)]
+
+
+def extract_source_trace_ref_records(source_trace: str | None) -> list[SourceTraceRef]:
     if not source_trace:
         return []
 
-    refs: list[str] = []
+    refs: list[SourceTraceRef] = []
     seen: set[str] = set()
     for ref in SOURCE_TRACE_REF_RE.findall(source_trace):
         normalized = normalize_source_trace_ref(ref)
         if not normalized or normalized in seen:
             continue
         seen.add(normalized)
-        refs.append(normalized)
+        refs.append(SourceTraceRef(raw_ref=ref, normalized_ref=normalized))
     return refs
 
 

@@ -5,6 +5,8 @@ SUBAGENT_PROFILE_SCHEMA_OUT ?= tmp/subagent-profile-schema.json
 COMPATIBILITY_ALIAS_DEPRECATION_OUT ?= tmp/compatibility-alias-deprecation.json
 DEV_LOCKED_REQUIREMENTS ?= tmp/locked-requirements.dev.txt
 DEV_INSTALL_INDEX_URL ?= $(UV_CANONICAL_INDEX_URL)
+DEV_INSTALL_ROLLBACK_DIR ?= $(VENV_DIR).previous
+DEV_INSTALL_READY_MARKER ?= $(VENV_DIR)/.llmwiki-dev-ready
 UV_EXPORT_DEV_REQUIREMENTS_FLAGS ?= --frozen --extra dev --format requirements-txt --no-hashes --no-emit-project
 STATUS_FLAGS ?=
 
@@ -64,9 +66,13 @@ help:
 		"  make release-auto-promotion-ready verify auto-promotion readiness"
 
 dev-install:
-	@if command -v $(UV) >/dev/null 2>&1; then \
+	@set -eu; \
+	rm -rf "$(DEV_INSTALL_ROLLBACK_DIR)"; \
+	if [ -d "$(VENV_DIR)" ]; then mv "$(VENV_DIR)" "$(DEV_INSTALL_ROLLBACK_DIR)"; fi; \
+	trap 'status=$$?; rm -rf "$(VENV_DIR)"; if [ -d "$(DEV_INSTALL_ROLLBACK_DIR)" ]; then mv "$(DEV_INSTALL_ROLLBACK_DIR)" "$(VENV_DIR)"; fi; exit $$status' EXIT; \
+	if command -v $(UV) >/dev/null 2>&1; then \
 		echo "Using uv to create/update $(VENV_DIR)"; \
-		$(UV) venv --allow-existing --python "$(BOOTSTRAP_PYTHON)" "$(VENV_DIR)"; \
+		$(UV) venv --python "$(BOOTSTRAP_PYTHON)" "$(VENV_DIR)"; \
 		mkdir -p "$(dir $(DEV_LOCKED_REQUIREMENTS))"; \
 		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)" >/dev/null; \
 		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"; \
@@ -76,9 +82,12 @@ dev-install:
 		"$(BOOTSTRAP_PYTHON)" -m venv "$(VENV_DIR)"; \
 		"$(VENV_PYTHON)" -m pip install --upgrade pip; \
 		"$(VENV_PYTHON)" -m pip install -e ".[dev]"; \
-	fi
-	@echo "Development environment is ready at $(VENV_PYTHON)"
-	@echo "Subsequent 'make check' and 'make test' invocations will auto-use $(VENV_PYTHON) when it exists."
+	fi; \
+	printf '%s\n' "dev-install complete" > "$(DEV_INSTALL_READY_MARKER)"; \
+	rm -rf "$(DEV_INSTALL_ROLLBACK_DIR)"; \
+	trap - EXIT; \
+	echo "Development environment is ready at $(VENV_PYTHON)"; \
+	echo "Subsequent 'make check' and 'make test' invocations will auto-use $(VENV_PYTHON) when it exists."
 
 status:
 	$(PYTHON) -m ops.scripts.release.release_status_surface --vault "$(VAULT)" $(STATUS_FLAGS)
