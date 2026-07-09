@@ -11,7 +11,6 @@ from ops.scripts.core.codex_exec_execution_types_runtime import (
 from ops.scripts.core.codex_exec_sanitize_runtime import _sanitize_path_text
 from ops.scripts.core.codex_exec_workspace_runtime import (
     external_workspace_python_issue,
-    same_path,
     workspace_virtualenv_python,
 )
 from ops.scripts.core.trusted_candidate_runner import (
@@ -90,13 +89,9 @@ def non_worker_dependency_preflight(
         )
 
     try:
-        trusted_python = (
-            workspace_python
-            if same_path(request.artifact_root, request.workspace_root)
-            else trusted_dependency_preflight_python(
-                request.artifact_root,
-                workspace_root=request.workspace_root,
-            )
+        trusted_python = trusted_dependency_preflight_python(
+            request.artifact_root,
+            workspace_root=request.workspace_root,
         )
     except DependencyPreflightTrustError as exc:
         return workspace_python_failure(
@@ -104,6 +99,16 @@ def non_worker_dependency_preflight(
             workspace_python=workspace_python,
             detail=str(exc),
         )
+    trusted_python_realpath = None
+    if trusted_python.absolute() == workspace_python.absolute() and trusted_python.is_symlink():
+        try:
+            trusted_python_realpath = trusted_python.resolve(strict=True)
+        except OSError as exc:
+            return workspace_python_failure(
+                request=request,
+                workspace_python=workspace_python,
+                detail=f"trusted workspace python symlink is unreadable: {exc}",
+            )
     command = [
         str(workspace_python),
         *DEPENDENCY_PREFLIGHT_PYTHON_FLAGS,
@@ -120,6 +125,7 @@ def non_worker_dependency_preflight(
             timeout_seconds=30,
             cwd=request.workspace_root,
             audit_rel_path=f"runs/{request.run_id}/{request.role}-dependency-preflight.audit.json",
+            trusted_python_realpath=trusted_python_realpath,
         )
     )
     completed = subprocess.CompletedProcess(

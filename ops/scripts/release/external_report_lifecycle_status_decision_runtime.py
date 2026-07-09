@@ -96,7 +96,10 @@ def codex_exec_dependency_preflight_trust_boundary_status(
         for rel_path in (
             "ops/scripts/core/codex_exec_dependency_preflight_runtime.py",
             "ops/scripts/core/codex_exec_dependency_preflight_decision_runtime.py",
+            "ops/scripts/core/codex_exec_workspace_runtime.py",
+            "ops/scripts/core/trusted_candidate_runner.py",
             "tests/test_executor_runtime.py",
+            "tests/test_trusted_candidate_runner.py",
         )
     )
     if all(
@@ -107,9 +110,14 @@ def codex_exec_dependency_preflight_trust_boundary_status(
             "path_is_inside_workspace",
             "resolve(strict=True)",
             "run_trusted_candidate_command(",
-            "test_same_root_dependency_preflight_does_not_execute_workspace_python",
-            "test_same_root_dependency_preflight_blocks_workspace_resolved_sys_executable",
+            "trusted_python_realpath",
+            "same-root workspace python identity manifest is self-signed",
+            "trusted python symlink target changed before launch",
+            "test_same_root_dependency_preflight_blocks_self_signed_workspace_python_without_execution",
+            "test_same_root_dependency_preflight_blocks_untrusted_sys_executable_path",
+            "test_same_root_dependency_preflight_captures_workspace_symlink_realpath",
             "test_external_workspace_dependency_preflight_executes_artifact_python",
+            "test_run_trusted_candidate_command_blocks_trusted_python_symlink_swap",
         )
     ):
         return "implemented"

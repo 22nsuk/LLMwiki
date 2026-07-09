@@ -124,6 +124,70 @@ class TrustedCandidateRunnerTests(unittest.TestCase):
             self.assertEqual(rewritten[0], str(trusted_python.resolve()))
             self.assertEqual(rewritten[1:], argv[1:])
 
+    def test_rewrite_preserves_trusted_python_symlink_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "workspace"
+            workspace.mkdir()
+            workspace_python = workspace / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            trusted_target = Path(temp_dir) / "trusted-python-target"
+            trusted_target.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            trusted_target.chmod(0o755)
+            trusted_python = Path(temp_dir) / "trusted-bin" / "python"
+            trusted_python.parent.mkdir()
+            try:
+                trusted_python.symlink_to(trusted_target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            workspace_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            argv = [str(workspace_python), "-I", "-B", "-c", "pass"]
+
+            rewritten = rewrite_argv_trusted_python(
+                argv,
+                workspace_root=workspace,
+                trusted_python=trusted_python,
+            )
+
+            self.assertEqual(rewritten[0], str(trusted_python.absolute()))
+            self.assertNotEqual(rewritten[0], str(trusted_target))
+            self.assertEqual(rewritten[1:], argv[1:])
+
+    def test_run_trusted_candidate_command_blocks_trusted_python_symlink_swap(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "workspace"
+            workspace.mkdir()
+            first_target = Path(temp_dir) / "first-python"
+            second_target = Path(temp_dir) / "second-python"
+            for target in (first_target, second_target):
+                target.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                target.chmod(0o755)
+            trusted_python = workspace / ".venv" / "bin" / "python"
+            trusted_python.parent.mkdir(parents=True)
+            try:
+                trusted_python.symlink_to(first_target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            expected_realpath = trusted_python.resolve(strict=True)
+            trusted_python.unlink()
+            trusted_python.symlink_to(second_target)
+
+            with mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run") as run:
+                outcome = run_trusted_candidate_command(
+                    TrustedCandidateRunRequest(
+                        purpose="test",
+                        argv=[str(trusted_python), "-c", "pass"],
+                        workspace_root=workspace,
+                        trusted_vault_root=workspace,
+                        trusted_python=trusted_python,
+                        trusted_python_realpath=expected_realpath,
+                        timeout_seconds=5,
+                    )
+                )
+
+            run.assert_not_called()
+            self.assertEqual(outcome.returncode, 126)
+            self.assertIn("trusted python symlink target changed", outcome.stderr)
+
     def test_workspace_python_identity_blocks_modified_shim(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir)

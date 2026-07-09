@@ -237,9 +237,12 @@ def trusted_dependency_preflight_python(
     current_python = Path(sys.executable).absolute()
     current_resolved_python = current_python.resolve(strict=True)
     if workspace_root is not None and artifact_root.resolve() == workspace_root.resolve():
+        workspace_python = (workspace_root / ".venv" / "bin" / "python").absolute()
         if not path_is_inside_workspace(current_python, workspace_root):
             return current_python
         if not path_is_inside_workspace(current_resolved_python, workspace_root):
+            if current_python == workspace_python:
+                return current_python
             return current_resolved_python
         raise DependencyPreflightTrustError(
             "same-root dependency preflight interpreter resolves inside the workspace"
