@@ -103,9 +103,12 @@ def codex_exec_dependency_preflight_trust_boundary_status(
         token in surface_text
         for token in (
             "trusted_dependency_preflight_python(",
-            "Path(sys.executable).absolute()",
+            "DependencyPreflightTrustError",
+            "path_is_inside_workspace",
+            "resolve(strict=True)",
             "run_trusted_candidate_command(",
             "test_same_root_dependency_preflight_does_not_execute_workspace_python",
+            "test_same_root_dependency_preflight_blocks_workspace_resolved_sys_executable",
             "test_external_workspace_dependency_preflight_executes_artifact_python",
         )
     ):

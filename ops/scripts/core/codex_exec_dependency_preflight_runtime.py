@@ -13,6 +13,7 @@ from ops.scripts.core.codex_exec_execution_types_runtime import (
     ExecutorDependencyPreflightPayload,
 )
 from ops.scripts.core.codex_exec_sanitize_runtime import _sanitize_path_text
+from ops.scripts.core.codex_exec_workspace_runtime import path_is_inside_workspace
 
 NON_WORKER_PROJECT_CHECK_MODULES: tuple[tuple[str, str], ...] = (
     ("pytest", "pytest"),
@@ -21,6 +22,10 @@ NON_WORKER_PROJECT_CHECK_MODULES: tuple[tuple[str, str], ...] = (
 )
 DEPENDENCY_PREFLIGHT_PYTHON_FLAGS = ("-I", "-B")
 PROJECT_CHECK_LANE = "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider <focused-selector>"
+
+
+class DependencyPreflightTrustError(ValueError):
+    """Raised when a dependency preflight interpreter cannot be trusted."""
 
 
 class _DependencyPreflightRequest(Protocol):
@@ -230,11 +235,29 @@ def trusted_dependency_preflight_python(
     workspace_root: Path | None = None,
 ) -> Path:
     current_python = Path(sys.executable).absolute()
+    current_resolved_python = current_python.resolve(strict=True)
     if workspace_root is not None and artifact_root.resolve() == workspace_root.resolve():
-        return current_python
+        if not path_is_inside_workspace(current_python, workspace_root):
+            return current_python
+        if not path_is_inside_workspace(current_resolved_python, workspace_root):
+            return current_resolved_python
+        raise DependencyPreflightTrustError(
+            "same-root dependency preflight interpreter resolves inside the workspace"
+        )
     repo_python = artifact_root / ".venv" / "bin" / "python"
     if repo_python.is_file():
-        return repo_python.absolute()
+        trusted_python = repo_python.resolve(strict=True)
+        if workspace_root is not None and path_is_inside_workspace(trusted_python, workspace_root):
+            raise DependencyPreflightTrustError(
+                "artifact dependency preflight interpreter resolves inside the workspace"
+            )
+        return trusted_python
+    if workspace_root is not None and path_is_inside_workspace(current_python, workspace_root):
+        if not path_is_inside_workspace(current_resolved_python, workspace_root):
+            return current_resolved_python
+        raise DependencyPreflightTrustError(
+            "dependency preflight interpreter resolves inside the workspace"
+        )
     return current_python
 
 

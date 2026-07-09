@@ -20,6 +20,7 @@ from ops.scripts.core.trusted_candidate_runner import (
 
 from .codex_exec_dependency_preflight_runtime import (
     DEPENDENCY_PREFLIGHT_PYTHON_FLAGS,
+    DependencyPreflightTrustError,
     dependency_module_payloads,
     dependency_preflight_failure_summary,
     dependency_preflight_from_probe,
@@ -87,10 +88,17 @@ def non_worker_dependency_preflight(
             detail=workspace_python_issue,
         )
 
-    trusted_python = trusted_dependency_preflight_python(
-        request.artifact_root,
-        workspace_root=request.workspace_root,
-    )
+    try:
+        trusted_python = trusted_dependency_preflight_python(
+            request.artifact_root,
+            workspace_root=request.workspace_root,
+        )
+    except DependencyPreflightTrustError as exc:
+        return workspace_python_failure(
+            request=request,
+            workspace_python=workspace_python,
+            detail=str(exc),
+        )
     command = [
         str(trusted_python),
         *DEPENDENCY_PREFLIGHT_PYTHON_FLAGS,

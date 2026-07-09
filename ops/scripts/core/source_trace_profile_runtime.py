@@ -123,13 +123,13 @@ def _has_prefix(rel_path: str, prefixes: tuple[str, ...]) -> bool:
 
 
 def _missing_status_for_path(rel_path: str, *, profile: str) -> str:
+    release_manifest_path = classify_release_manifest_path(rel_path)
+    if release_manifest_path.status == RELEASE_MANIFEST_PATH_INVALID:
+        return MISSING_INVALID_PATH
     if profile == PUBLIC_CODE_MIRROR_PROFILE and _has_prefix(rel_path, PRIVATE_SURFACE_PREFIXES):
         return MISSING_PRIVATE_SURFACE_EXPECTED
     if _has_prefix(rel_path, GENERATED_REBUILDABLE_PREFIXES):
         return MISSING_GENERATED_REBUILDABLE
-    release_manifest_path = classify_release_manifest_path(rel_path)
-    if release_manifest_path.status == RELEASE_MANIFEST_PATH_INVALID:
-        return MISSING_INVALID_PATH
     if release_manifest_path.included:
         return MISSING_UNCLASSIFIED
     if _has_prefix(rel_path, UNBOUND_EXPORT_EXCLUDED_PREFIXES):

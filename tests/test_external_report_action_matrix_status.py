@@ -155,7 +155,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         for rel_path, text in {
             "ops/scripts/core/codex_exec_dependency_preflight_runtime.py": (
                 "def trusted_dependency_preflight_python():\n"
-                "    return Path(sys.executable).absolute()\n"
+                "    raise DependencyPreflightTrustError()\n"
+                "    path_is_inside_workspace()\n"
+                "    return Path(sys.executable).resolve(strict=True)\n"
             ),
             "ops/scripts/core/codex_exec_dependency_preflight_decision_runtime.py": (
                 "run_trusted_candidate_command()\n"
@@ -164,6 +166,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "ops/scripts/core/trusted_candidate_runner.py": "trusted runner\n",
             "tests/test_executor_runtime.py": (
                 "def test_same_root_dependency_preflight_does_not_execute_workspace_python(): pass\n"
+                "def test_same_root_dependency_preflight_blocks_workspace_resolved_sys_executable(): pass\n"
                 "def test_external_workspace_dependency_preflight_executes_artifact_python(): pass\n"
             ),
             "tests/test_trusted_candidate_runner.py": "def test_runner(): pass\n",
