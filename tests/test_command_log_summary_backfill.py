@@ -59,7 +59,7 @@ class CommandLogSummaryBackfillTests(unittest.TestCase):
             "executor": {
                 "name": "codex_exec",
                 "sandbox_mode": "workspace-write",
-                "model": "gpt-5.5",
+                "model": "gpt-5.6-sol",
                 "reasoning_effort": "high",
             },
             "status": "pass",

@@ -1,6 +1,6 @@
 name = "worker"
 description = "Default implementer profile for bounded wiki, runtime, and tooling changes in this repository."
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
