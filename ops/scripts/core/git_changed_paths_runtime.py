@@ -90,6 +90,14 @@ class _GitlinkScanResult:
     ignored_all_paths: set[str]
 
 
+@dataclass(frozen=True)
+class _GitChangedPathsScanResult:
+    paths: list[str]
+    commands: list[_GitCommandObservation]
+    failures: list[_GitFailure]
+    skip_reason: str = ""
+
+
 def _git_changed_paths_diagnostics(
     *,
     status: str,
@@ -1312,6 +1320,190 @@ def _failed_git_changed_paths_result(
     )
 
 
+def _read_unstaged_root_paths(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+    hidden_index_paths: set[str],
+) -> _GitChangedPathsScanResult:
+    commands: list[_GitCommandObservation] = []
+    failures: list[_GitFailure] = []
+    paths: list[str] = []
+    worktree_paths, worktree_observation, worktree_failure = _run_git_changed_paths_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        command_id="ls-files-worktree",
+        args=["ls-files", "-z", "-d", "-o", "--exclude-standard"],
+    )
+    commands.append(worktree_observation)
+    if worktree_failure is not None:
+        failures.append(worktree_failure)
+    paths.extend(path for path in worktree_paths if path not in hidden_index_paths)
+    if failures:
+        return _GitChangedPathsScanResult(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+        )
+
+    modified_paths, modified_observation, modified_failure = _run_git_modified_paths_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+    )
+    commands.append(modified_observation)
+    if modified_failure is not None:
+        failures.append(modified_failure)
+    paths.extend(path for path in modified_paths if path not in hidden_index_paths)
+    return _GitChangedPathsScanResult(
+        paths=paths,
+        commands=commands,
+        failures=failures,
+    )
+
+
+def _read_staged_root_paths(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+) -> _GitChangedPathsScanResult:
+    commands: list[_GitCommandObservation] = []
+    failures: list[_GitFailure] = []
+    has_head, head_observation, head_failure = _git_head_exists(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+    )
+    commands.append(head_observation)
+    if head_failure is not None:
+        failures.append(head_failure)
+        return _GitChangedPathsScanResult(
+            paths=[],
+            commands=commands,
+            failures=failures,
+        )
+    if has_head:
+        staged_args = ["diff", "--cached", "-z", "--name-only", "HEAD", "--"]
+        command_id = "diff-cached"
+    else:
+        staged_args = ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]
+        command_id = "ls-files-no-head"
+    staged_paths, staged_observation, staged_failure = _run_git_changed_paths_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        command_id=command_id,
+        args=staged_args,
+    )
+    commands.append(staged_observation)
+    if staged_failure is not None:
+        failures.append(staged_failure)
+    return _GitChangedPathsScanResult(
+        paths=staged_paths,
+        commands=commands,
+        failures=failures,
+    )
+
+
+def _scan_root_git_changed_paths(
+    *,
+    vault: Path,
+    git_executable: str,
+    env: dict[str, str],
+) -> _GitChangedPathsScanResult:
+    commands: list[_GitCommandObservation] = []
+    failures: list[_GitFailure] = []
+    paths: list[str] = []
+    has_worktree, worktree_probe, worktree_probe_failure = _git_worktree_exists(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+    )
+    commands.append(worktree_probe)
+    if worktree_probe_failure is not None:
+        failures.append(worktree_probe_failure)
+        return _GitChangedPathsScanResult(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+        )
+    if not has_worktree:
+        return _GitChangedPathsScanResult(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+            skip_reason="git_worktree_missing",
+        )
+
+    hidden_index_paths, hidden_index_observation, hidden_index_failure = (
+        _run_git_hidden_index_paths_command(
+            vault=vault,
+            git_executable=git_executable,
+            env=env,
+        )
+    )
+    commands.append(hidden_index_observation)
+    if hidden_index_failure is not None:
+        failures.append(hidden_index_failure)
+        return _GitChangedPathsScanResult(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+        )
+
+    unstaged_result = _read_unstaged_root_paths(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        hidden_index_paths=hidden_index_paths,
+    )
+    commands.extend(unstaged_result.commands)
+    failures.extend(unstaged_result.failures)
+    paths.extend(unstaged_result.paths)
+    if failures:
+        return _GitChangedPathsScanResult(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+        )
+
+    submodule_result = _run_git_submodule_paths_command(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+        hidden_index_paths=hidden_index_paths,
+    )
+    commands.extend(submodule_result.commands)
+    failures.extend(submodule_result.failures)
+    paths = [
+        path for path in paths if path not in submodule_result.ignored_all_paths
+    ]
+    paths.extend(submodule_result.paths)
+    if failures:
+        return _GitChangedPathsScanResult(
+            paths=paths,
+            commands=commands,
+            failures=failures,
+        )
+
+    staged_result = _read_staged_root_paths(
+        vault=vault,
+        git_executable=git_executable,
+        env=env,
+    )
+    commands.extend(staged_result.commands)
+    failures.extend(staged_result.failures)
+    paths.extend(staged_result.paths)
+    return _GitChangedPathsScanResult(
+        paths=paths,
+        commands=commands,
+        failures=failures,
+    )
+
+
 def _read_git_changed_paths(vault: Path) -> _GitChangedPathsResult:
     if not (vault / ".git").exists():
         return _skipped_git_changed_paths("source_package_without_git")
@@ -1330,148 +1522,33 @@ def _read_git_changed_paths(vault: Path) -> _GitChangedPathsResult:
             ),
         )
     env = trusted_git_subprocess_env(path_text)
-    commands: list[_GitCommandObservation] = []
-    failures: list[_GitFailure] = []
-    paths: list[str] = []
-    has_worktree, worktree_probe, worktree_probe_failure = _git_worktree_exists(
+    scan_result = _scan_root_git_changed_paths(
         vault=vault,
         git_executable=git_executable,
         env=env,
     )
-    commands.append(worktree_probe)
-    if worktree_probe_failure is not None:
-        failures.append(worktree_probe_failure)
-    if failures:
-        return _failed_git_changed_paths_result(
-            paths=paths,
-            commands=commands,
-            failures=failures,
-            ignored_path_entry_count=ignored_path_entry_count,
-        )
-    if not has_worktree:
+    if scan_result.skip_reason:
         return _skipped_git_changed_paths(
-            "git_worktree_missing",
+            scan_result.skip_reason,
             source="git",
-            commands=commands,
+            commands=scan_result.commands,
             ignored_path_entry_count=ignored_path_entry_count,
         )
-    hidden_index_paths, hidden_index_observation, hidden_index_failure = (
-        _run_git_hidden_index_paths_command(
-            vault=vault,
-            git_executable=git_executable,
-            env=env,
-        )
-    )
-    commands.append(hidden_index_observation)
-    if hidden_index_failure is not None:
-        failures.append(hidden_index_failure)
-    if failures:
+    if scan_result.failures:
         return _failed_git_changed_paths_result(
-            paths=paths,
-            commands=commands,
-            failures=failures,
+            paths=scan_result.paths,
+            commands=scan_result.commands,
+            failures=scan_result.failures,
             ignored_path_entry_count=ignored_path_entry_count,
         )
-    worktree_paths, worktree_observation, worktree_failure = _run_git_changed_paths_command(
-        vault=vault,
-        git_executable=git_executable,
-        env=env,
-        command_id="ls-files-worktree",
-        args=["ls-files", "-z", "-d", "-o", "--exclude-standard"],
-    )
-    commands.append(worktree_observation)
-    if worktree_failure is not None:
-        failures.append(worktree_failure)
-    paths.extend(path for path in worktree_paths if path not in hidden_index_paths)
-    if failures:
-        return _failed_git_changed_paths_result(
-            paths=paths,
-            commands=commands,
-            failures=failures,
-            ignored_path_entry_count=ignored_path_entry_count,
-        )
-    modified_paths, modified_observation, modified_failure = _run_git_modified_paths_command(
-        vault=vault,
-        git_executable=git_executable,
-        env=env,
-    )
-    commands.append(modified_observation)
-    if modified_failure is not None:
-        failures.append(modified_failure)
-    paths.extend(path for path in modified_paths if path not in hidden_index_paths)
-    if failures:
-        return _failed_git_changed_paths_result(
-            paths=paths,
-            commands=commands,
-            failures=failures,
-            ignored_path_entry_count=ignored_path_entry_count,
-        )
-    submodule_result = _run_git_submodule_paths_command(
-        vault=vault,
-        git_executable=git_executable,
-        env=env,
-        hidden_index_paths=hidden_index_paths,
-    )
-    commands.extend(submodule_result.commands)
-    failures.extend(submodule_result.failures)
-    paths = [
-        path for path in paths if path not in submodule_result.ignored_all_paths
-    ]
-    paths.extend(submodule_result.paths)
-    if failures:
-        return _failed_git_changed_paths_result(
-            paths=paths,
-            commands=commands,
-            failures=failures,
-            ignored_path_entry_count=ignored_path_entry_count,
-        )
-    has_head, head_observation, head_failure = _git_head_exists(
-        vault=vault,
-        git_executable=git_executable,
-        env=env,
-    )
-    commands.append(head_observation)
-    if head_failure is not None:
-        failures.append(head_failure)
-    if failures:
-        return _failed_git_changed_paths_result(
-            paths=paths,
-            commands=commands,
-            failures=failures,
-            ignored_path_entry_count=ignored_path_entry_count,
-        )
-    if has_head:
-        staged_args = ["diff", "--cached", "-z", "--name-only", "HEAD", "--"]
-        command_id = "diff-cached"
-    else:
-        staged_args = ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]
-        command_id = "ls-files-no-head"
-    staged_paths, staged_observation, staged_failure = _run_git_changed_paths_command(
-        vault=vault,
-        git_executable=git_executable,
-        env=env,
-        command_id=command_id,
-        args=staged_args,
-    )
-    commands.append(staged_observation)
-    if staged_failure is not None:
-        failures.append(staged_failure)
-    paths.extend(staged_paths)
-    unique_paths = sorted(set(paths))
-    if failures:
-        return _failed_git_changed_paths_result(
-            paths=paths,
-            commands=commands,
-            failures=failures,
-            ignored_path_entry_count=ignored_path_entry_count,
-        )
+    unique_paths = sorted(set(scan_result.paths))
     return _GitChangedPathsResult(
         paths=unique_paths,
         diagnostics=_git_changed_paths_diagnostics(
             status="pass",
             source="git",
             path_count=len(unique_paths),
-            commands=commands,
+            commands=scan_result.commands,
             ignored_path_entry_count=ignored_path_entry_count,
         ),
     )
