@@ -13,6 +13,10 @@ from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.external_report_action_matrix import (
     build_report as build_action_matrix_report,
 )
+from ops.scripts.release.external_report_inventory_runtime import (
+    LOCAL_REPORT_LINE_DIGESTS,
+    REFERENCE_MANIFEST,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -649,17 +653,18 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             vault.mkdir()
             seed_minimal_vault(vault)
             (vault / "external-reports").mkdir(exist_ok=True)
-            (vault / "external-reports" / "report-reference-manifest.json").write_text(
+            (vault / REFERENCE_MANIFEST).write_text(
                 json.dumps({"references": [], "summary": {"active_reference_set_status": "current"}}),
                 encoding="utf-8",
             )
+            (vault / LOCAL_REPORT_LINE_DIGESTS).write_text("{}", encoding="utf-8")
 
             report = build_report(vault, context=fixed_context())
 
             manifest_record = next(
                 item
                 for item in report["canonical_reports"]
-                if item["path"] == "external-reports/report-reference-manifest.json"
+                if item["path"] == REFERENCE_MANIFEST
             )
             external_rule = next(
                 item for item in report["archive_rules"] if item["surface"] == "external_reports"
@@ -667,6 +672,15 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             self.assertEqual(manifest_record["role"], "current_reference_manifest")
             self.assertIn("private reference manifest", external_rule["canonical_rule"])
             self.assertNotIn("current review report", json.dumps(manifest_record))
+            indexed_paths = {
+                item["path"]
+                for item in [*report["canonical_reports"], *report["archive_candidates"]]
+            }
+            self.assertNotIn(LOCAL_REPORT_LINE_DIGESTS, indexed_paths)
+            self.assertEqual(
+                validate_with_schema(report, load_schema(GENERATED_INDEX_SCHEMA_PATH)),
+                [],
+            )
 
 
 if __name__ == "__main__":
