@@ -11,6 +11,8 @@ from ops.scripts.core.codex_exec_execution_types_runtime import (
 from ops.scripts.core.codex_exec_sanitize_runtime import _sanitize_path_text
 from ops.scripts.core.codex_exec_workspace_runtime import (
     external_workspace_python_issue,
+    path_is_inside_workspace,
+    same_path,
     workspace_virtualenv_python,
 )
 from ops.scripts.core.trusted_candidate_runner import (
@@ -100,15 +102,35 @@ def non_worker_dependency_preflight(
             detail=str(exc),
         )
     trusted_python_realpath = None
-    if trusted_python.absolute() == workspace_python.absolute() and trusted_python.is_symlink():
+    if same_path(request.artifact_root, request.workspace_root) and workspace_python.is_symlink():
         try:
-            trusted_python_realpath = trusted_python.resolve(strict=True)
+            workspace_python_realpath = workspace_python.resolve(strict=True)
         except OSError as exc:
             return workspace_python_failure(
                 request=request,
                 workspace_python=workspace_python,
                 detail=f"trusted workspace python symlink is unreadable: {exc}",
             )
+        if path_is_inside_workspace(workspace_python_realpath, request.workspace_root):
+            return workspace_python_failure(
+                request=request,
+                workspace_python=workspace_python,
+                detail="trusted workspace python symlink resolves inside the workspace",
+            )
+        if trusted_python.absolute() == workspace_python.absolute():
+            trusted_python_realpath = workspace_python_realpath
+        else:
+            try:
+                trusted_python_resolved = trusted_python.resolve(strict=True)
+            except OSError as exc:
+                return workspace_python_failure(
+                    request=request,
+                    workspace_python=workspace_python,
+                    detail=f"trusted dependency preflight python is unreadable: {exc}",
+                )
+            if trusted_python_resolved == workspace_python_realpath:
+                trusted_python = workspace_python.absolute()
+                trusted_python_realpath = workspace_python_realpath
     command = [
         str(workspace_python),
         *DEPENDENCY_PREFLIGHT_PYTHON_FLAGS,

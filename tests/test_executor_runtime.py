@@ -1171,6 +1171,126 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertEqual(captured_request.trusted_python, workspace_python.absolute())
             self.assertEqual(captured_request.trusted_python_realpath, source_python.resolve(strict=True))
 
+    def test_same_root_dependency_preflight_preserves_workspace_venv_for_external_current_python(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            source_python = Path(temp_dir) / "source-python"
+            source_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            source_python.chmod(0o755)
+            workspace_python = vault / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            try:
+                workspace_python.symlink_to(source_python)
+            except OSError as exc:
+                self.skipTest(f"workspace symlink setup unavailable: {exc}")
+            request = _dependency_preflight_request(vault)
+            captured_request: Any | None = None
+
+            def fake_run_trusted_candidate(run_request: Any) -> TrustedCandidateRunOutcome:
+                nonlocal captured_request
+                captured_request = run_request
+                payload = {
+                    "python": {"executable": str(workspace_python), "version": "3.test"},
+                    "modules": [
+                        {
+                            "import_name": "pytest",
+                            "package": "pytest",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                        {
+                            "import_name": "jsonschema",
+                            "package": "jsonschema",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                        {
+                            "import_name": "yaml",
+                            "package": "PyYAML",
+                            "status": "available",
+                            "version": "test",
+                            "detail": "",
+                        },
+                    ],
+                }
+                return TrustedCandidateRunOutcome(
+                    returncode=0,
+                    stdout=json.dumps(payload),
+                    stderr="",
+                    timed_out=False,
+                    argv=run_request.argv,
+                    audit_record={},
+                )
+
+            with (
+                mock.patch(
+                    "ops.scripts.core.codex_exec_dependency_preflight_runtime.sys.executable",
+                    str(source_python),
+                ),
+                mock.patch(
+                    "ops.scripts.core.codex_exec_dependency_preflight_decision_runtime.run_trusted_candidate_command",
+                    side_effect=fake_run_trusted_candidate,
+                ),
+            ):
+                preflight, summary = non_worker_dependency_preflight(request)
+
+            self.assertEqual(preflight["status"], "pass")
+            self.assertIsNone(summary)
+            self.assertIsNotNone(captured_request)
+            assert captured_request is not None
+            self.assertEqual(captured_request.trusted_python, workspace_python.absolute())
+            self.assertEqual(captured_request.trusted_python_realpath, source_python.resolve(strict=True))
+
+    def test_same_root_dependency_preflight_blocks_symlink_swapped_inside_before_realpath_capture(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            source_python = Path(temp_dir) / "source-python"
+            source_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            source_python.chmod(0o755)
+            malicious_python = vault / "malicious-python"
+            malicious_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            malicious_python.chmod(0o755)
+            workspace_python = vault / ".venv" / "bin" / "python"
+            workspace_python.parent.mkdir(parents=True)
+            try:
+                workspace_python.symlink_to(source_python)
+            except OSError as exc:
+                self.skipTest(f"workspace symlink setup unavailable: {exc}")
+            request = _dependency_preflight_request(vault)
+
+            def fake_trusted_python(*_: Any, **__: Any) -> Path:
+                workspace_python.unlink()
+                workspace_python.symlink_to(malicious_python)
+                return workspace_python.absolute()
+
+            with (
+                mock.patch(
+                    "ops.scripts.core.codex_exec_dependency_preflight_decision_runtime.trusted_dependency_preflight_python",
+                    side_effect=fake_trusted_python,
+                ),
+                mock.patch(
+                    "ops.scripts.core.codex_exec_dependency_preflight_decision_runtime.run_trusted_candidate_command"
+                ) as run,
+            ):
+                preflight, summary = non_worker_dependency_preflight(request)
+
+            run.assert_not_called()
+            self.assertEqual(preflight["status"], "fail")
+            self.assertEqual(preflight["returncode"], 126)
+            self.assertIsNotNone(summary)
+            assert summary is not None
+            notes = " ".join(summary.notes)
+            self.assertIn("workspace Python trust check", notes)
+            self.assertIn("symlink resolves inside the workspace", notes)
+
     def test_same_root_workspace_python_allows_symlink_resolving_outside_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
