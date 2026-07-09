@@ -1634,7 +1634,9 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         block = _target_block(text, "test-executor-runtime")
         self.assertIn("test-executor-runtime", _target_block(text, ".PHONY"))
-        self.assertIn("tests/test_executor_runtime.py", block)
+        self.assertIn("EXECUTOR_RUNTIME_TESTS ?=", text)
+        self.assertIn("tests/test_executor_runtime.py", text)
+        self.assertIn("$(EXECUTOR_RUNTIME_TESTS)", block)
         self.assertIn("$(PYTEST_CACHE_ISOLATION_FLAGS)", block)
         self.assertIn("$(PYTEST_SERIAL_FLAGS)", block)
 

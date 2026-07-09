@@ -22,6 +22,7 @@
       "make test-report-contract-core": 180,
       "make workflow-dependency-planner-check": 60,
       "make runtime-hotspot-smoke": 240,
+      "make test-executor-runtime": 120,
       "make sync-derived-check": 120,
       "make report-schema-samples-check": 30,
       "make public-check": 120
@@ -136,6 +137,27 @@
         "coverage_class": "makefile_static_gates",
         "static_required": true,
         "duration_seconds": 270
+      },
+      {
+        "rule_id": "executor_runtime_source",
+        "path_patterns": [
+          "ops/scripts/core/executor.py",
+          "ops/scripts/core/executor_runtime.py",
+          "ops/scripts/core/executor_runtime_*_runtime.py",
+          "ops/scripts/core/executor_noop_runtime.py",
+          "ops/scripts/core/trusted_candidate_runner.py",
+          "ops/scripts/core/workspace_python_identity_runtime.py",
+          "ops/scripts/core/codex_exec_*.py",
+          "ops/scripts/core/codex_exec_*_runtime.py"
+        ],
+        "commands": [
+          "make static",
+          "make test-executor-runtime"
+        ],
+        "reason": "Executor runtime changes should run the focused executor lane instead of falling through to the generic default test lane.",
+        "coverage_class": "executor_runtime",
+        "static_required": true,
+        "duration_seconds": 180
       },
       {
         "rule_id": "python_runtime_source",
@@ -530,6 +552,29 @@
       ]
     },
     {
+      "pack_id": "executor_runtime",
+      "authority": "advisory",
+      "status": "derived_from_registry",
+      "semantics": "Focused executor runtime lane for Codex executor orchestration, environment, prompt/report, and pipeline behavior.",
+      "backing_targets": [
+        "test-executor-runtime"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "selectors": [
+          "test-executor-runtime"
+        ],
+        "tests_argument": "tests/test_executor_runtime.py"
+      },
+      "ci_entrypoint": "test-executor-runtime",
+      "ci_steps": [
+        "make test-executor-runtime"
+      ],
+      "documented_entrypoints": [
+        "make test-executor-runtime"
+      ]
+    },
+    {
       "pack_id": "developer_full",
       "authority": "derived",
       "status": "derived_from_registry",
@@ -870,6 +915,11 @@
     },
     {
       "kind": "make_target",
+      "name": "test-executor-runtime",
+      "maps_to": "executor_runtime"
+    },
+    {
+      "kind": "make_target",
       "name": "unit-tests-all",
       "maps_to": "developer_full"
     },
@@ -1062,6 +1112,11 @@
       "kind": "documented_entrypoint",
       "name": "make runtime-hotspot-smoke",
       "maps_to": "runtime_hotspot_smoke"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make test-executor-runtime",
+      "maps_to": "executor_runtime"
     },
     {
       "kind": "documented_entrypoint",

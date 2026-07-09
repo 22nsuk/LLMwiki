@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ops.scripts.test.test_lane_registry_runtime import (
     load_registry,
+    pack_by_id,
     pack_deselects,
     pack_mark_expr,
     pack_selection_mode,
@@ -26,6 +27,10 @@ PACK_VARIABLES: dict[str, str] = {
     "release_sealing_core": "RELEASE_SEALING_CORE_TESTS",
     "subprocess_checks": "SUBPROCESS_TESTS",
     "release_closeout_regression": "RELEASE_CLOSEOUT_REGRESSION_TESTS",
+}
+
+EXPLICIT_TEST_ARGUMENT_VARIABLES: dict[str, str] = {
+    "executor_runtime": "EXECUTOR_RUNTIME_TESTS",
 }
 
 # Marker-derived packs may reuse Make-owned marker expressions when mk/test.mk
@@ -94,6 +99,25 @@ def render_test_selectors_mk(vault: Path) -> str:
             )
         prefix = _format_mark_expr_prefix(mark_expr, mark_expr_variable)
         blocks.append(_format_selector_variable(variable, (), prefix=prefix))
+        blocks.append("")
+
+    for pack_id, variable in EXPLICIT_TEST_ARGUMENT_VARIABLES.items():
+        selection_mode = pack_selection_mode(registry, pack_id)
+        if selection_mode != "explicit_selectors":
+            raise SystemExit(
+                f"{pack_id} selector projection requires explicit_selectors mode"
+            )
+        selection = pack_by_id(registry)[pack_id].get("selection", {})
+        tests_argument = (
+            selection.get("tests_argument") if isinstance(selection, dict) else None
+        )
+        if not isinstance(tests_argument, str) or not tests_argument.strip():
+            raise SystemExit(
+                f"{pack_id} requires tests_argument in ops/test-lane-registry.json"
+            )
+        blocks.append(
+            _format_selector_variable(variable, tuple(tests_argument.strip().split()))
+        )
         blocks.append("")
 
     for variable, value in DERIVED_ALIASES.items():

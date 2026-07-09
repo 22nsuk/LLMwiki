@@ -92,6 +92,9 @@ def rewrite_argv_trusted_python(
     workspace_root: Path,
     trusted_python: Path,
 ) -> list[str]:
+    workspace_python_path = workspace_root / ".venv" / "bin" / "python"
+    if trusted_python.absolute() == workspace_python_path.absolute():
+        return list(argv)
     workspace_python = _workspace_python_token(workspace_root)
     trusted = str(trusted_python.resolve())
     rewritten: list[str] = []
