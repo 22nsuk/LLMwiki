@@ -15,6 +15,7 @@ from .external_report_inventory_runtime import (
     coverage_markers,
     matched_actions,
     priority_counts,
+    report_line_digest_policy,
     report_text,
     report_type_for_path,
     unmatched_recommendation_count,
@@ -25,6 +26,7 @@ def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
     rel_path = report_path(vault, path)
     text = report_text(path)
     report_type = report_type_for_path(path)
+    line_action_digests, operator_context_line_digests = report_line_digest_policy(vault)
     operator_only_rationale = ""
     if report_type == "binary_report":
         action_ids = ["operator_only_external_report_binary"]
@@ -36,7 +38,7 @@ def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
         action_ids = ["external_report_lifecycle"]
         operator_only_rationale = "unreadable_narrative_report"
     else:
-        action_ids = matched_actions(text)
+        action_ids = matched_actions(text, line_action_digests=line_action_digests)
     if path.name == Path(REFERENCE_MANIFEST).name:
         action_ids = sorted(set(action_ids) | {"active_report_manifest_freshness"})
     return {
@@ -45,7 +47,11 @@ def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
         "content_sha256": content_sha256(path),
         "coverage_markers": coverage_markers(path, text),
         "priority_mentions": priority_counts(text),
-        "unmatched_recommendation_count": unmatched_recommendation_count(text),
+        "unmatched_recommendation_count": unmatched_recommendation_count(
+            text,
+            line_action_digests=line_action_digests,
+            operator_context_line_digests=operator_context_line_digests,
+        ),
         "matched_action_ids": action_ids,
         "matched_action_count": len(action_ids),
         "operator_only_rationale": operator_only_rationale,

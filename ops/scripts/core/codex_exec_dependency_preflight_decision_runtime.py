@@ -87,7 +87,10 @@ def non_worker_dependency_preflight(
             detail=workspace_python_issue,
         )
 
-    trusted_python = trusted_dependency_preflight_python(request.artifact_root)
+    trusted_python = trusted_dependency_preflight_python(
+        request.artifact_root,
+        workspace_root=request.workspace_root,
+    )
     command = [
         str(trusted_python),
         *DEPENDENCY_PREFLIGHT_PYTHON_FLAGS,

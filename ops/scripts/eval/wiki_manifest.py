@@ -7,6 +7,7 @@ import os
 import sys
 from collections.abc import Iterator
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
@@ -76,6 +77,32 @@ DEFAULT_EXCLUDED_FILES = {
     "ops/script-output-surfaces.json",
 }
 DEFAULT_OUT = "ops/manifest.json"
+RELEASE_MANIFEST_PATH_INCLUDED = "included"
+RELEASE_MANIFEST_PATH_EXCLUDED = "excluded"
+RELEASE_MANIFEST_PATH_INVALID = "invalid"
+
+
+@dataclass(frozen=True)
+class ReleaseManifestPathClassification:
+    normalized_path: str
+    status: str
+    reason: str
+
+    @property
+    def valid(self) -> bool:
+        return not self.invalid
+
+    @property
+    def included(self) -> bool:
+        return self.status == RELEASE_MANIFEST_PATH_INCLUDED
+
+    @property
+    def excluded(self) -> bool:
+        return self.status == RELEASE_MANIFEST_PATH_EXCLUDED
+
+    @property
+    def invalid(self) -> bool:
+        return self.status == RELEASE_MANIFEST_PATH_INVALID
 
 
 def sha256_file(path: Path) -> str:
@@ -121,13 +148,64 @@ def should_descend(rel_dir: str, excluded_prefixes: tuple[str, ...]) -> bool:
     )
 
 
-def release_manifest_excludes_path(rel_path: str | None) -> bool:
+def _looks_like_windows_drive_path(normalized: str) -> bool:
+    return len(normalized) >= 2 and normalized[0].isalpha() and normalized[1] == ":"
+
+
+def _has_parent_reference(rel_path: str | None) -> bool:
+    if rel_path is None:
+        return False
+    text = str(rel_path).strip().replace("\\", "/")
+    return any(part == ".." for part in text.split("/"))
+
+
+def classify_release_manifest_path(rel_path: str | None) -> ReleaseManifestPathClassification:
     normalized = normalize_repo_path_text(rel_path)
-    if normalized is None or normalized == ".":
-        return False
-    if normalized.startswith(("/", "../")):
-        return False
-    return not should_include(normalized, DEFAULT_EXCLUDED_FILES, DEFAULT_EXCLUDED_PREFIXES)
+    if normalized is None:
+        return ReleaseManifestPathClassification(
+            normalized_path="",
+            status=RELEASE_MANIFEST_PATH_INVALID,
+            reason="empty",
+        )
+    if normalized == ".":
+        return ReleaseManifestPathClassification(
+            normalized_path=normalized,
+            status=RELEASE_MANIFEST_PATH_INVALID,
+            reason="repo-root",
+        )
+    if _has_parent_reference(rel_path):
+        return ReleaseManifestPathClassification(
+            normalized_path=normalized,
+            status=RELEASE_MANIFEST_PATH_INVALID,
+            reason="parent-reference",
+        )
+    if normalized.startswith("/") or _looks_like_windows_drive_path(normalized):
+        return ReleaseManifestPathClassification(
+            normalized_path=normalized,
+            status=RELEASE_MANIFEST_PATH_INVALID,
+            reason="absolute",
+        )
+    if should_include(normalized, DEFAULT_EXCLUDED_FILES, DEFAULT_EXCLUDED_PREFIXES):
+        return ReleaseManifestPathClassification(
+            normalized_path=normalized,
+            status=RELEASE_MANIFEST_PATH_INCLUDED,
+            reason="manifest-included",
+        )
+    return ReleaseManifestPathClassification(
+        normalized_path=normalized,
+        status=RELEASE_MANIFEST_PATH_EXCLUDED,
+        reason="manifest-excluded",
+    )
+
+
+def release_manifest_excludes_path(rel_path: str | None) -> bool:
+    classification = classify_release_manifest_path(rel_path)
+    return classification.excluded
+
+
+def release_manifest_includes_path(rel_path: str | None) -> bool:
+    classification = classify_release_manifest_path(rel_path)
+    return classification.included
 
 
 def _is_safe_manifest_file(vault_root: Path, path: Path) -> bool:

@@ -32,3 +32,14 @@ def test_catalog_policy_sets_reference_catalog_actions_or_known_artifacts() -> N
     assert set(IMPLEMENTED_ARTIFACT_ACTIONS) <= action_ids
     assert set(SPRINT_PRIORITIES) <= action_ids
     assert all(path.startswith("ops/reports/") for path in SOURCE_REVISION_RELEASE_AUTHORITY_REPORTS)
+
+
+def test_active_report_followup_catalog_actions_are_present() -> None:
+    action_ids = {str(action["action_id"]) for action in ACTION_CATALOG}
+
+    assert {
+        "codex_exec_dependency_preflight_trust_boundary",
+        "bootstrap_dev_install_hardening",
+        "release_manifest_path_classification",
+        "maintainability_hotspot_refactor_backlog",
+    } <= action_ids

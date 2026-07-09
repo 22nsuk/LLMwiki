@@ -6,7 +6,9 @@ from pathlib import Path
 import pytest
 
 from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.release.external_report_action_catalog import ACTION_CATALOG
 from ops.scripts.release.external_report_inventory_runtime import (
+    LOCAL_REPORT_LINE_DIGESTS,
     REFERENCE_MANIFEST,
     active_reference_report_paths,
     active_report_paths,
@@ -14,8 +16,10 @@ from ops.scripts.release.external_report_inventory_runtime import (
     archived_report_paths,
     coverage_markers,
     is_unmatched_recommendation_line,
+    line_sha256,
     matched_actions,
     reference_manifest_alignment,
+    report_line_digest_policy,
     report_type_for_path,
     unmatched_recommendation_count,
 )
@@ -87,12 +91,67 @@ def test_catalog_patterns_cover_sanitized_operator_review_terms() -> None:
     assert "source_package_distribution_binding" in matched_actions(
         "P0 release ZIP includes AGENTS.local.md"
     )
+    assert "codex_exec_dependency_preflight_trust_boundary" in matched_actions(
+        "P0 dependency preflight same-root workspace .venv/bin/python trust boundary"
+    )
+    assert "bootstrap_dev_install_hardening" in matched_actions(
+        "P1 dev-install incomplete .venv staging marker"
+    )
+    assert "bootstrap_dev_install_hardening" in matched_actions(
+        "P1 bootstrap dependency check incomplete dev dependency parity"
+    )
+    assert "release_manifest_path_classification" in matched_actions(
+        "P1 release path predicate ambiguous include/exclude/invalid classification"
+    )
     assert "generated_artifact_tracking_policy" in matched_actions(
         "P2 generated evidence retention should be tightened"
     )
     assert "maintainability_hotspot_refactor_backlog" in matched_actions(
         "P2 large test file should be decomposed"
     )
+
+
+def test_local_report_line_digest_policy_is_digest_backed(tmp_path: Path) -> None:
+    catalog_action_ids = {str(action["action_id"]) for action in ACTION_CATALOG}
+    reports = tmp_path / "external-reports"
+    reports.mkdir()
+    action_line = "P0 synthetic dependency preflight intake"
+    operator_line = "P0 synthetic operator context note"
+    policy_path = tmp_path / LOCAL_REPORT_LINE_DIGESTS
+    policy_path.write_text(
+        json.dumps(
+            {
+                "action_line_sha256": {
+                    line_sha256(action_line): [
+                        "codex_exec_dependency_preflight_trust_boundary"
+                    ]
+                },
+                "operator_context_line_sha256": [line_sha256(operator_line)],
+            }
+        ),
+        encoding="utf-8",
+    )
+    line_action_digests, operator_context_line_digests = report_line_digest_policy(
+        tmp_path
+    )
+
+    digest_action_ids = {
+        action_id for action_ids in line_action_digests.values() for action_id in action_ids
+    }
+    assert digest_action_ids <= catalog_action_ids
+    assert set(line_action_digests).isdisjoint(operator_context_line_digests)
+    assert "codex_exec_dependency_preflight_trust_boundary" in matched_actions(
+        action_line,
+        line_action_digests=line_action_digests,
+    )
+    assert not is_unmatched_recommendation_line(
+        operator_line,
+        line_action_digests=line_action_digests,
+        operator_context_line_digests=operator_context_line_digests,
+    )
+    for digest in [*line_action_digests, *operator_context_line_digests]:
+        assert len(digest) == 64
+        assert set(digest) <= set("0123456789abcdef")
 
 
 def test_unmatched_recommendation_count_ignores_headings_and_priority_notation_meta() -> None:
@@ -112,6 +171,28 @@ def test_unmatched_recommendation_count_ignores_headings_and_priority_notation_m
         "1. P0 runner·executor 모듈을 strict mypy 대상으로 지정"
     )
     assert unmatched_recommendation_count(text) == 0
+
+
+def test_local_active_markdown_reports_have_no_unmatched_recommendations() -> None:
+    report_paths = [
+        path
+        for path in active_reference_report_paths(REPO_ROOT)
+        if path.suffix.lower() == ".md"
+    ]
+    if not report_paths:
+        pytest.skip("local active external reports are absent in this source tree")
+
+    line_action_digests, operator_context_line_digests = report_line_digest_policy(REPO_ROOT)
+    for path in report_paths:
+        text = path.read_text(encoding="utf-8")
+        assert (
+            unmatched_recommendation_count(
+                text,
+                line_action_digests=line_action_digests,
+                operator_context_line_digests=operator_context_line_digests,
+            )
+            == 0
+        ), report_path(REPO_ROOT, path)
 
 
 def test_archived_reports_seven_and_eight_have_no_unmatched_recommendations() -> None:

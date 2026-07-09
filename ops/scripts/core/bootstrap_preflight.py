@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import importlib.metadata
 import importlib.util
 import json
 import os
@@ -37,10 +38,15 @@ RUNTIME_DEPENDENCIES = {
     "jsonschema": "jsonschema",
 }
 DEV_DEPENDENCIES = {
+    "build": "build",
+    "hypothesis": "hypothesis",
+    "mypy": "mypy",
     "pytest": "pytest",
     "ruff": "ruff",
-    "mypy": "mypy",
+    "xdist": "pytest-xdist",
+    "yaml-stubs": "types-PyYAML",
 }
+DEV_DISTRIBUTIONS_BY_MODULE = dict(DEV_DEPENDENCIES)
 CODEX_EXECUTABLE_NAMES = ("codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.js")
 
 
@@ -48,7 +54,17 @@ ModuleAvailable = Callable[[str], bool]
 
 
 def _default_module_available(module: str) -> bool:
-    return importlib.util.find_spec(module) is not None
+    distribution = DEV_DISTRIBUTIONS_BY_MODULE.get(module)
+    if distribution is not None:
+        try:
+            importlib.metadata.version(distribution)
+        except importlib.metadata.PackageNotFoundError:
+            return False
+        return True
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, AttributeError, ValueError):
+        return False
 
 
 def _python_version_label(version: tuple[int, int, int]) -> str:

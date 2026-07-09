@@ -23,7 +23,7 @@ from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.eval.wiki_manifest import (
     build_manifest,
-    release_manifest_excludes_path,
+    release_manifest_includes_path,
 )
 
 from .finality_current_diagnostics import classify_batch_replay_digest_mismatches
@@ -596,7 +596,7 @@ def _source_evidence_freshness(
             rel_path = path.relative_to(vault).as_posix()
         except OSError:
             continue
-        if release_manifest_excludes_path(rel_path):
+        if not release_manifest_includes_path(rel_path):
             continue
         if basis == ZIP_MEMBER_TIMESTAMP_BASIS:
             mtime = zip_mtimes.get(rel_path, "")

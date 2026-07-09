@@ -8,8 +8,13 @@ from unittest import mock
 import pytest
 
 from ops.scripts.eval.wiki_manifest import (
+    RELEASE_MANIFEST_PATH_EXCLUDED,
+    RELEASE_MANIFEST_PATH_INCLUDED,
+    RELEASE_MANIFEST_PATH_INVALID,
     build_manifest,
+    classify_release_manifest_path,
     release_manifest_excludes_path,
+    release_manifest_includes_path,
 )
 from ops.scripts.public.export_public_repo import export_public_repo
 
@@ -36,6 +41,86 @@ class ManifestExportSymlinkSafetyTests(unittest.TestCase):
         self.assertTrue(release_manifest_excludes_path(".venv-py312/bin/python"))
         self.assertTrue(release_manifest_excludes_path("wiki/source--fake.md"))
         self.assertFalse(release_manifest_excludes_path("../outside.txt"))
+
+    def test_release_manifest_path_classification_distinguishes_valid_and_invalid_inputs(self) -> None:
+        cases = [
+            ("README.md", RELEASE_MANIFEST_PATH_INCLUDED, "manifest-included", "README.md"),
+            (
+                "docs/development.md",
+                RELEASE_MANIFEST_PATH_INCLUDED,
+                "manifest-included",
+                "docs/development.md",
+            ),
+            (
+                "AGENTS.local.md",
+                RELEASE_MANIFEST_PATH_EXCLUDED,
+                "manifest-excluded",
+                "AGENTS.local.md",
+            ),
+            (
+                "runs/run-1/evidence.json",
+                RELEASE_MANIFEST_PATH_EXCLUDED,
+                "manifest-excluded",
+                "runs/run-1/evidence.json",
+            ),
+            (
+                "ops/reports/generated.json",
+                RELEASE_MANIFEST_PATH_EXCLUDED,
+                "manifest-excluded",
+                "ops/reports/generated.json",
+            ),
+            (None, RELEASE_MANIFEST_PATH_INVALID, "empty", ""),
+            ("", RELEASE_MANIFEST_PATH_INVALID, "empty", ""),
+            ("   ", RELEASE_MANIFEST_PATH_INVALID, "empty", ""),
+            (".", RELEASE_MANIFEST_PATH_INVALID, "repo-root", "."),
+            ("/tmp/outside.txt", RELEASE_MANIFEST_PATH_INVALID, "absolute", "/tmp/outside.txt"),
+            ("../outside.txt", RELEASE_MANIFEST_PATH_INVALID, "parent-reference", "../outside.txt"),
+            (
+                "tmp/../runs/run-1/evidence.json",
+                RELEASE_MANIFEST_PATH_INVALID,
+                "parent-reference",
+                "runs/run-1/evidence.json",
+            ),
+            (
+                "wiki/../README.md",
+                RELEASE_MANIFEST_PATH_INVALID,
+                "parent-reference",
+                "README.md",
+            ),
+        ]
+
+        for rel_path, status, reason, normalized_path in cases:
+            with self.subTest(rel_path=rel_path):
+                result = classify_release_manifest_path(rel_path)
+                self.assertEqual(result.status, status)
+                self.assertEqual(result.reason, reason)
+                self.assertEqual(result.normalized_path, normalized_path)
+                self.assertEqual(result.valid, status != RELEASE_MANIFEST_PATH_INVALID)
+                self.assertEqual(result.included, status == RELEASE_MANIFEST_PATH_INCLUDED)
+                self.assertEqual(result.excluded, status == RELEASE_MANIFEST_PATH_EXCLUDED)
+                self.assertEqual(result.invalid, status == RELEASE_MANIFEST_PATH_INVALID)
+
+    def test_release_manifest_excludes_path_is_valid_path_compatibility_facade(self) -> None:
+        valid_cases = [
+            "README.md",
+            "docs/development.md",
+            "AGENTS.local.md",
+            "runs/run-1/evidence.json",
+            "ops/reports/generated.json",
+        ]
+
+        for rel_path in valid_cases:
+            with self.subTest(rel_path=rel_path):
+                result = classify_release_manifest_path(rel_path)
+                self.assertEqual(release_manifest_excludes_path(rel_path), result.excluded)
+                self.assertEqual(release_manifest_includes_path(rel_path), result.included)
+
+        for invalid_path in (None, "", "   ", "/tmp/outside.txt", "../outside.txt", "tmp/../runs/run-1/evidence.json"):
+            with self.subTest(invalid_path=invalid_path):
+                result = classify_release_manifest_path(invalid_path)
+                self.assertTrue(result.invalid)
+                self.assertFalse(release_manifest_excludes_path(invalid_path))
+                self.assertFalse(release_manifest_includes_path(invalid_path))
 
     def test_build_manifest_does_not_resolve_regular_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

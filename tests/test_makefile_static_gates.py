@@ -1569,9 +1569,20 @@ class MakefileStaticGateTests(unittest.TestCase):
             "DEV_LOCKED_REQUIREMENTS ?= tmp/locked-requirements.dev.txt", text
         )
         self.assertIn("DEV_INSTALL_INDEX_URL ?= $(UV_CANONICAL_INDEX_URL)", text)
+        self.assertIn("DEV_INSTALL_ROLLBACK_DIR ?= $(VENV_DIR).previous", text)
+        self.assertIn("DEV_INSTALL_READY_MARKER ?= $(VENV_DIR)/.llmwiki-dev-ready", text)
         self.assertIn(
             "UV_EXPORT_DEV_REQUIREMENTS_FLAGS ?= --frozen --extra dev --format requirements-txt --no-hashes --no-emit-project",
             text,
+        )
+        self.assertIn('rm -rf "$(DEV_INSTALL_ROLLBACK_DIR)"', block)
+        self.assertIn(
+            'if [ -d "$(VENV_DIR)" ]; then mv "$(VENV_DIR)" "$(DEV_INSTALL_ROLLBACK_DIR)"; fi',
+            block,
+        )
+        self.assertIn(
+            'trap \'status=$$?; rm -rf "$(VENV_DIR)"; if [ -d "$(DEV_INSTALL_ROLLBACK_DIR)" ]; then mv "$(DEV_INSTALL_ROLLBACK_DIR)" "$(VENV_DIR)"; fi; exit $$status\' EXIT',
+            block,
         )
         self.assertIn(
             'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)"',
@@ -1585,7 +1596,12 @@ class MakefileStaticGateTests(unittest.TestCase):
             'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .',
             block,
         )
+        self.assertIn(
+            'printf \'%s\\n\' "dev-install complete" > "$(DEV_INSTALL_READY_MARKER)"',
+            block,
+        )
         self.assertNotIn('UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)"', block)
+        self.assertIn('"$(VENV_PYTHON)" -m pip install --upgrade pip', block)
         self.assertIn('"$(VENV_PYTHON)" -m pip install -e ".[dev]"', block)
 
     def test_legacy_root_requirements_files_are_retired(self) -> None:
@@ -1612,6 +1628,15 @@ class MakefileStaticGateTests(unittest.TestCase):
             '$(PYTHON) -m ops.scripts.bootstrap_preflight --vault "$(VAULT)" --dev --environment-class "$(BOOTSTRAP_PREFLIGHT_ENVIRONMENT_CLASS)" --out "$(BOOTSTRAP_PREFLIGHT_OUT)"',
             _target_block(text, "bootstrap-preflight"),
         )
+
+    def test_executor_runtime_target_runs_focused_slow_file(self) -> None:
+        text = _makefile_text()
+
+        block = _target_block(text, "test-executor-runtime")
+        self.assertIn("test-executor-runtime", _target_block(text, ".PHONY"))
+        self.assertIn("tests/test_executor_runtime.py", block)
+        self.assertIn("$(PYTEST_CACHE_ISOLATION_FLAGS)", block)
+        self.assertIn("$(PYTEST_SERIAL_FLAGS)", block)
 
     def test_refresh_generated_splits_core_outputs_from_observability_outputs(
         self,

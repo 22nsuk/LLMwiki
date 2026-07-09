@@ -17,6 +17,11 @@ report-contract, public mirror, mechanism, and release entrypoints.
 export omits the project itself, then installs the local project separately as
 editable with `--no-deps`, so local setup and CI both replay the same frozen
 third-party dependency authority without losing editable source behavior.
+If an existing `.venv` is present, the install first moves it to `.venv.previous`
+and creates the new environment directly at `.venv`, so generated console
+scripts keep valid shebangs. Failed installs remove the partial `.venv` and
+restore `.venv.previous`; successful installs remove the rollback copy and write
+`.venv/.llmwiki-dev-ready` after the editable project install completes.
 Local install replay uses `DEV_INSTALL_INDEX_URL`, which defaults to
 `UV_CANONICAL_INDEX_URL` but can be overridden for a local package mirror
 without changing the canonical lock-check policy.

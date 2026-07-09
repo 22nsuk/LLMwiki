@@ -224,11 +224,18 @@ def dependency_preflight_template(
     )
 
 
-def trusted_dependency_preflight_python(artifact_root: Path) -> Path:
+def trusted_dependency_preflight_python(
+    artifact_root: Path,
+    *,
+    workspace_root: Path | None = None,
+) -> Path:
+    current_python = Path(sys.executable).absolute()
+    if workspace_root is not None and artifact_root.resolve() == workspace_root.resolve():
+        return current_python
     repo_python = artifact_root / ".venv" / "bin" / "python"
     if repo_python.is_file():
-        return repo_python.resolve()
-    return Path(sys.executable).resolve()
+        return repo_python.absolute()
+    return current_python
 
 
 def dependency_preflight_from_probe(
