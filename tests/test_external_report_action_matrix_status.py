@@ -161,15 +161,24 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             ),
             "ops/scripts/core/codex_exec_dependency_preflight_decision_runtime.py": (
                 "run_trusted_candidate_command()\n"
+                "trusted_python_realpath=trusted_python_realpath\n"
             ),
-            "ops/scripts/core/codex_exec_workspace_runtime.py": "workspace runtime\n",
-            "ops/scripts/core/trusted_candidate_runner.py": "trusted runner\n",
+            "ops/scripts/core/codex_exec_workspace_runtime.py": (
+                "same-root workspace python identity manifest is self-signed\n"
+            ),
+            "ops/scripts/core/trusted_candidate_runner.py": (
+                "trusted_python_realpath\n"
+                "trusted python symlink target changed before launch\n"
+            ),
             "tests/test_executor_runtime.py": (
-                "def test_same_root_dependency_preflight_does_not_execute_workspace_python(): pass\n"
-                "def test_same_root_dependency_preflight_blocks_workspace_resolved_sys_executable(): pass\n"
+                "def test_same_root_dependency_preflight_blocks_self_signed_workspace_python_without_execution(): pass\n"
+                "def test_same_root_dependency_preflight_blocks_untrusted_sys_executable_path(): pass\n"
+                "def test_same_root_dependency_preflight_captures_workspace_symlink_realpath(): pass\n"
                 "def test_external_workspace_dependency_preflight_executes_artifact_python(): pass\n"
             ),
-            "tests/test_trusted_candidate_runner.py": "def test_runner(): pass\n",
+            "tests/test_trusted_candidate_runner.py": (
+                "def test_run_trusted_candidate_command_blocks_trusted_python_symlink_swap(): pass\n"
+            ),
             "ops/scripts/core/bootstrap_preflight.py": (
                 "DEV_DEPENDENCIES = {}\n"
                 "importlib.metadata.version('pytest')\n"

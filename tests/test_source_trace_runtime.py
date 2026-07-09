@@ -264,6 +264,31 @@ class SourceTraceRuntimeTests(unittest.TestCase):
                     self.assertTrue(target["blocks_profile"])
                     self.assertFalse(target["profile_allows_missing"])
 
+    def test_source_trace_profile_blocks_invalid_raw_duplicate_after_valid_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "README.md").write_text("ok\n", encoding="utf-8")
+
+            source_trace = """
+- `README.md`
+- `wiki/../README.md`
+"""
+
+            targets = classify_source_trace_targets(
+                root,
+                source_trace,
+                profile=STRICT_PROFILE,
+            )
+
+            self.assertEqual(extract_source_trace_refs(source_trace), ["README.md"])
+            self.assertEqual([target["ref"] for target in targets], ["README.md", "README.md"])
+            self.assertEqual(targets[0]["classification"], PRESENT)
+            self.assertFalse(targets[0]["blocks_profile"])
+            self.assertEqual(targets[1]["classification"], MISSING_INVALID_PATH)
+            self.assertTrue(targets[1]["exists"])
+            self.assertTrue(targets[1]["blocks_profile"])
+            self.assertFalse(targets[1]["profile_allows_missing"])
+
 
 if __name__ == "__main__":
     unittest.main()

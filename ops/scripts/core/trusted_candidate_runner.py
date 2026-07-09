@@ -51,6 +51,7 @@ class TrustedCandidateRunRequest:
     cwd: Path | None = None
     extra_env: dict[str, str] | None = None
     audit_rel_path: str | None = None
+    trusted_python_realpath: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -96,7 +97,7 @@ def rewrite_argv_trusted_python(
     if trusted_python.absolute() == workspace_python_path.absolute():
         return list(argv)
     workspace_python = _workspace_python_token(workspace_root)
-    trusted = str(trusted_python.resolve())
+    trusted = str(trusted_python.absolute())
     rewritten: list[str] = []
     for token in argv:
         if token == workspace_python:
@@ -161,32 +162,41 @@ def run_trusted_candidate_command(request: TrustedCandidateRunRequest) -> Truste
     stdout = ""
     stderr = ""
     returncode = 1
-    try:
-        completed = subprocess.run(
-            argv,
-            cwd=cwd,
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=request.timeout_seconds,
-            check=False,
-        )
-        returncode = int(completed.returncode)
-        stdout = completed.stdout
-        stderr = completed.stderr
-    except subprocess.TimeoutExpired as exc:
-        timed_out = True
-        stdout = str(exc.stdout or "")
-        stderr = str(exc.stderr or "")
-        returncode = 124
-    except OSError as exc:
-        stderr = str(exc)
-        returncode = 126
+    if request.trusted_python_realpath is not None:
+        try:
+            actual_realpath = request.trusted_python.resolve(strict=True)
+        except OSError:
+            actual_realpath = None
+        if actual_realpath != request.trusted_python_realpath:
+            stderr = "trusted python symlink target changed before launch"
+            returncode = 126
+    if returncode != 126:
+        try:
+            completed = subprocess.run(
+                argv,
+                cwd=cwd,
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=request.timeout_seconds,
+                check=False,
+            )
+            returncode = int(completed.returncode)
+            stdout = completed.stdout
+            stderr = completed.stderr
+        except subprocess.TimeoutExpired as exc:
+            timed_out = True
+            stdout = str(exc.stdout or "")
+            stderr = str(exc.stderr or "")
+            returncode = 124
+        except OSError as exc:
+            stderr = str(exc)
+            returncode = 126
     audit_record = {
         "purpose": request.purpose,
         "argv": argv,
         "cwd": cwd.as_posix(),
-        "trusted_python": str(request.trusted_python.resolve()),
+        "trusted_python": str(request.trusted_python.absolute()),
         "workspace_root": request.workspace_root.as_posix(),
         "trusted_vault_root": request.trusted_vault_root.as_posix(),
         "returncode": returncode,
@@ -194,6 +204,8 @@ def run_trusted_candidate_command(request: TrustedCandidateRunRequest) -> Truste
         "env_stripped": sorted(TRUSTED_CANDIDATE_ENV_STRIP),
         "network_policy": "default_deny_not_enforced_by_subprocess_wrapper",
     }
+    if request.trusted_python_realpath is not None:
+        audit_record["trusted_python_realpath"] = str(request.trusted_python_realpath)
     if request.audit_rel_path:
         audit_path = request.trusted_vault_root / request.audit_rel_path
         audit_path.parent.mkdir(parents=True, exist_ok=True)

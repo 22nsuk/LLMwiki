@@ -37,7 +37,14 @@ def normalize_source_trace_ref(ref: str) -> str:
 
 
 def extract_source_trace_refs(source_trace: str | None) -> list[str]:
-    return [record.normalized_ref for record in extract_source_trace_ref_records(source_trace)]
+    refs: list[str] = []
+    seen: set[str] = set()
+    for record in extract_source_trace_ref_records(source_trace):
+        if record.normalized_ref in seen:
+            continue
+        seen.add(record.normalized_ref)
+        refs.append(record.normalized_ref)
+    return refs
 
 
 def extract_source_trace_ref_records(source_trace: str | None) -> list[SourceTraceRef]:
@@ -45,12 +52,10 @@ def extract_source_trace_ref_records(source_trace: str | None) -> list[SourceTra
         return []
 
     refs: list[SourceTraceRef] = []
-    seen: set[str] = set()
     for ref in SOURCE_TRACE_REF_RE.findall(source_trace):
         normalized = normalize_source_trace_ref(ref)
-        if not normalized or normalized in seen:
+        if not normalized:
             continue
-        seen.add(normalized)
         refs.append(SourceTraceRef(raw_ref=ref, normalized_ref=normalized))
     return refs
 

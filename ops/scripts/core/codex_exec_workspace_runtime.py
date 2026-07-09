@@ -197,14 +197,6 @@ def external_workspace_python_issue(
             loaded_identity.identity,
             artifact_root=request.artifact_root,
         )
-    identity_issue = verify_workspace_python_shim(
-        request.workspace_root,
-        workspace_python=workspace_python,
-    )
-    if not identity_issue:
-        return ""
-    if identity_issue != "missing workspace python identity manifest":
-        return identity_issue
     if workspace_python.is_symlink():
         try:
             resolved_python = workspace_python.resolve(strict=True)
@@ -213,6 +205,14 @@ def external_workspace_python_issue(
         if path_is_inside_workspace(resolved_python, request.workspace_root):
             return "workspace virtualenv python symlink resolves inside the workspace"
         return ""
+    identity_issue = verify_workspace_python_shim(
+        request.workspace_root,
+        workspace_python=workspace_python,
+    )
+    if not identity_issue:
+        return "same-root workspace python identity manifest is self-signed"
+    if identity_issue != "missing workspace python identity manifest":
+        return identity_issue
     try:
         content = workspace_python.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
