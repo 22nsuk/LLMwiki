@@ -10,6 +10,11 @@ from typing import Any
 
 import pytest
 
+from ops.scripts.core.artifact_binding_runtime import (
+    CONTENT_BINDING_MODE,
+    REVISION_BINDING_MODE,
+    binding_file_digest,
+)
 from ops.scripts.core.gate_effect_vocabulary import strongest_gate_effect
 from ops.scripts.core.generated_artifact_index import (
     build_report as build_generated_artifact_index_report,
@@ -463,6 +468,7 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
         self._write_json(
             BATCH_MANIFEST_PATH,
             {
+                "schema_version": 2,
                 "status": "pass",
                 "release_authority_status": "clean_pass",
                 "semantic_release_status": "clean_pass",
@@ -482,19 +488,46 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
                 "closeout_inputs": {"batch_manifest_fingerprint": batch_digest},
             },
         )
-        digest_map = {
+        raw_digest_map = {
             generated_path: _sha256_file(self.vault / generated_path),
             BATCH_MANIFEST_PATH: batch_digest,
             SELF_CHECK_PATH: _sha256_file(self.vault / SELF_CHECK_PATH),
         }
+        binding_mode_map = {
+            generated_path: CONTENT_BINDING_MODE,
+            BATCH_MANIFEST_PATH: REVISION_BINDING_MODE,
+            SELF_CHECK_PATH: CONTENT_BINDING_MODE,
+        }
+        binding_digest_map = {
+            path: binding_file_digest(
+                self.vault / path,
+                binding_mode=binding_mode_map[path],
+            )[1]
+            for path in raw_digest_map
+        }
         self._write_json(
             FIXED_POINT_REPORT_PATH,
             {
+                "artifact_kind": "release_closeout_fixed_point_report",
+                "producer": "ops.scripts.release_closeout_fixed_point",
+                "schema_version": 2,
+                "artifact_status": "current",
+                "currentness": {"status": "current"},
                 "status": "pass",
-                "converged": True,
-                "converged_iteration": 1,
-                "tracked_artifacts": [{"path": path} for path in sorted(digest_map)],
-                "final_digest_map": digest_map,
+                "execution_pass_count": 1,
+                "tracked_artifacts": [
+                    {"path": path, "binding_mode": binding_mode_map[path]}
+                    for path in sorted(raw_digest_map)
+                ],
+                "raw_digest_map": raw_digest_map,
+                "binding_digest_map": binding_digest_map,
+                "binding_mode_map": binding_mode_map,
+                "execution": {
+                    "status": "pass",
+                    "raw_digest_map": raw_digest_map,
+                    "binding_digest_map": binding_digest_map,
+                    "binding_mode_map": binding_mode_map,
+                },
             },
         )
         finality_report = build_finality_attestation_report(self.vault, context=fixed_context())

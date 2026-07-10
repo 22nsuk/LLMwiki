@@ -145,7 +145,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         artifacts = [
             {
                 "path": rel_path,
-                "digest": self._digest(rel_path),
+                "raw_digest": self._digest(rel_path),
             }
             for rel_path in artifact_paths
         ]
@@ -156,6 +156,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self._write_json(
             "ops/reports/release-closeout-batch-manifest.json",
             {
+                "schema_version": 2,
                 "artifact_kind": "release_closeout_batch_manifest",
                 "artifacts": artifacts,
                 "semantic_release_status": "clean_pass",
@@ -189,6 +190,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertEqual(report["source_zip_policy_status"], "match")
         self.assertEqual(report["source_zip"]["status"], "match")
         self.assertEqual(report["batch_verify"]["status"], "pass")
+        self.assertEqual(report["batch_verify"]["authority_schema_status"], "current")
         self.assertEqual(report["test_evidence"]["primary_suite_scope"], "report_contract_summary")
         self.assertEqual(report["test_evidence"]["full_suite_status"], "pass")
         self.assertEqual(report["tmp_json_policy_status"], "clean")
@@ -338,7 +340,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         batch["artifacts"].append(
             {
                 "path": "ops/reports/release-evidence-dashboard.json",
-                "digest": "a" * 64,
+                "raw_digest": "a" * 64,
             }
         )
         batch_path.write_text(json.dumps(batch, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -369,6 +371,21 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertEqual(report["tmp_json_policy_status"], "clean")
         self.assertEqual(report["artifact_digest_policy_status"], "match")
         self.assertIn("source_zip=drift", report["operator_summary"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_v1_batch_manifest_is_not_reused_as_current_authority(self) -> None:
+        path = self.vault / "ops/reports/release-closeout-batch-manifest.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["schema_version"] = 1
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(report["batch_verify"]["status"], "fail")
+        self.assertEqual(
+            report["batch_verify"]["authority_schema_status"], "unsupported"
+        )
+        self.assertEqual(report["status"], "attention")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_operator_summary_uses_clean_lane_blocking_count_from_closeout(self) -> None:

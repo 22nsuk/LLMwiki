@@ -4,11 +4,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.artifact_binding_runtime import RAW_BINDING_MODE
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
@@ -28,6 +30,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.supply_chain.supply_chain_artifact_model import build_model
     from ops.scripts.supply_chain.supply_chain_provenance import sha256_file
 else:
+    from ops.scripts.core.artifact_binding_runtime import RAW_BINDING_MODE
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
@@ -51,6 +54,17 @@ DEFAULT_OUT = "ops/reports/sigstore-bundle-verification.json"
 TOOL_NAME = "ops.scripts.sigstore_bundle"
 ARTIFACT_KIND = "sigstore_bundle_verification"
 SOURCE_COMMAND = "python -m ops.scripts.supply_chain.sigstore_bundle"
+BUNDLE_BINDING_MODE = RAW_BINDING_MODE
+
+
+@dataclass(frozen=True)
+class _BundleEvidence:
+    ref: str
+    present: bool
+    parseable: bool
+    has_sigstore_shape: bool
+    raw_digest: str
+    size_bytes: int
 
 
 def _resolve_ref(vault: Path, report_ref: str) -> Path:
@@ -142,19 +156,21 @@ def _in_toto_subject_digests_match(
 def _bundle_evidence(
     vault: Path,
     bundle_ref: str | None,
-) -> tuple[str, bool, bool, bool]:
+) -> _BundleEvidence:
     if not bundle_ref:
-        return "", False, False, False
+        return _BundleEvidence("", False, False, False, "", 0)
     bundle_path = _resolve_ref(vault, bundle_ref)
     resolved_bundle_ref = report_path(vault, bundle_path) if bundle_path.exists() else bundle_ref
     bundle_present = bundle_path.exists()
     bundle_payload = _bundle_payload(bundle_path) if bundle_present else None
     bundle_parseable = bundle_payload is not None
-    return (
+    return _BundleEvidence(
         resolved_bundle_ref,
         bundle_present,
         bundle_parseable,
         _has_sigstore_bundle_shape(bundle_payload),
+        sha256_file(bundle_path) if bundle_present else "",
+        bundle_path.stat().st_size if bundle_present else 0,
     )
 
 
@@ -215,6 +231,12 @@ def _verification_status(
     return "external-bundle-verification-failed"
 
 
+def _bundle_binding_status(bundle_ref: str | None, bundle: _BundleEvidence) -> str:
+    if bundle.present:
+        return "bound"
+    return "missing" if bundle_ref else "not_applicable"
+
+
 def _report_subjects(vault: Path, subjects: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if subjects:
         return subjects
@@ -242,9 +264,7 @@ def build_bundle_verification(
     policy, resolved_policy_path = load_policy(vault, policy_path)
     model = artifact_model or build_model(vault, policy_path=policy_path)
     subjects, missing = _collect_subjects(vault, _artifact_subject_refs(model))
-    resolved_bundle_ref, bundle_present, bundle_parseable, bundle_has_sigstore_shape = (
-        _bundle_evidence(vault, bundle_ref)
-    )
+    bundle = _bundle_evidence(vault, bundle_ref)
     checks = _verification_checks(
         missing=missing,
         in_toto_match=_in_toto_subject_digests_match(
@@ -252,11 +272,11 @@ def build_bundle_verification(
             model["artifact_context"]["in_toto_statement_ref"],
             subjects,
         ),
-        bundle_present=bundle_present,
-        bundle_parseable=bundle_parseable,
-        bundle_has_sigstore_shape=bundle_has_sigstore_shape,
+        bundle_present=bundle.present,
+        bundle_parseable=bundle.parseable,
+        bundle_has_sigstore_shape=bundle.has_sigstore_shape,
     )
-    status = _verification_status(checks, bundle_present=bundle_present)
+    status = _verification_status(checks, bundle_present=bundle.present)
     report = {
         "$schema": SIGSTORE_BUNDLE_VERIFICATION_SCHEMA_PATH,
         "vault": report_path(vault, vault),
@@ -267,7 +287,13 @@ def build_bundle_verification(
         },
         "artifact_context": _artifact_context(model),
         "status": status,
-        "bundle_ref": resolved_bundle_ref,
+        "bundle_ref": bundle.ref,
+        "bundle_binding": {
+            "binding_mode": BUNDLE_BINDING_MODE,
+            "status": _bundle_binding_status(bundle_ref, bundle),
+            "raw_digest": bundle.raw_digest,
+            "size_bytes": bundle.size_bytes,
+        },
         "subjects": _report_subjects(vault, subjects),
         "verification_checks": checks,
     }
@@ -288,7 +314,9 @@ def build_bundle_verification(
             "artifact_set_id": str(model["artifact_context"]["artifact_set_id"]),
             "subject_count": str(len(subjects)),
             "status": status,
-            "bundle_ref": resolved_bundle_ref,
+            "bundle_ref": bundle.ref,
+            "bundle_binding_mode": BUNDLE_BINDING_MODE,
+            "bundle_raw_digest": bundle.raw_digest,
         },
     )
     return embed_artifact_envelope_metadata(report, envelope)

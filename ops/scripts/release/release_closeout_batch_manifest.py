@@ -11,6 +11,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_binding_runtime import (
+    CONTENT_BINDING_MODE,
+    RAW_BINDING_MODE,
+    REVISION_BINDING_MODE,
+    binding_file_digest,
+    binding_payload_digest,
+)
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
@@ -26,7 +33,7 @@ from ops.scripts.eval.wiki_manifest import (
     release_manifest_includes_path,
 )
 
-from .finality_current_diagnostics import classify_batch_replay_digest_mismatches
+from .finality_current_diagnostics import classify_batch_replay_binding_mismatches
 from .release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
     release_authority_vocabulary_payload,
@@ -62,6 +69,11 @@ TEST_EXECUTION_SUMMARY_FULL_PATH = "ops/reports/test-execution-summary-full.json
 ARCHIVE_SELF_DESCRIPTION_PATH = "release-archive-self-description.json"
 ALLOWED_DISTRIBUTION_VIRTUAL_PATHS = {ARCHIVE_SELF_DESCRIPTION_PATH}
 SEALED_DISTRIBUTION_RETIRED_RISK_CODES = {"external_report_strict_unavailable"}
+SUPPORTED_ARTIFACT_BINDING_MODES = {
+    CONTENT_BINDING_MODE,
+    REVISION_BINDING_MODE,
+    RAW_BINDING_MODE,
+}
 
 
 @dataclass(frozen=True)
@@ -457,7 +469,8 @@ def _evidence_set_digest(artifacts: list[dict[str, Any]]) -> str:
     normalized = [
         {
             "path": str(item.get("path", "")),
-            "digest": str(item.get("digest", "")),
+            "binding_digest": str(item.get("binding_digest", "")),
+            "binding_mode": str(item.get("binding_mode", "")),
             "artifact_kind": str(item.get("artifact_kind", "")),
             "role": str(item.get("role", "")),
             "required": bool(item.get("required", False)),
@@ -531,7 +544,7 @@ def _optional_payload_policy(optional_payloads: list[dict[str, Any]]) -> dict[st
         ),
         "summary": (
             "JUnit/log payload files are optional portable audit-pack payloads; "
-            "checked-in JSON digests remain authoritative unless payloads are included explicitly"
+            "checked-in JSON raw SHA-256 values remain authoritative unless payloads are included explicitly"
         ),
     }
 
@@ -821,10 +834,24 @@ def _artifact_record(
     vault: Path, spec: dict[str, Any]
 ) -> tuple[dict[str, Any], bool, bool, bool]:
     rel_path = str(spec["path"])
+    binding_mode = str(spec.get("binding_mode", "")).strip()
+    if not binding_mode:
+        raise ValueError(
+            f"batch artifact spec {rel_path} must declare binding_mode"
+        )
+    if binding_mode not in SUPPORTED_ARTIFACT_BINDING_MODES:
+        raise ValueError(
+            f"batch artifact spec {rel_path} has unsupported binding_mode: "
+            f"{binding_mode}"
+        )
     path = vault / rel_path
     payload, _diagnostics = load_optional_json_object_with_diagnostics(path)
     exists = path.exists()
-    digest = _sha256_file(path) if exists else "0" * 64
+    raw_digest = _sha256_file(path) if exists else "0" * 64
+    _binding_format, binding_digest = binding_file_digest(
+        path,
+        binding_mode=binding_mode,
+    )
     currentness = payload.get("currentness", {}) if payload else {}
     currentness_status = (
         str(currentness.get("status", "unknown"))
@@ -838,7 +865,9 @@ def _artifact_record(
             "artifact_kind": str(payload.get("artifact_kind", ""))
             if payload
             else "",
-            "digest": digest,
+            "raw_digest": raw_digest,
+            "binding_digest": binding_digest,
+            "binding_mode": binding_mode,
             "generated_at": str(payload.get("generated_at", "")) if payload else "",
             "producer": str(payload.get("producer", "")) if payload else "",
             "source_tree_fingerprint": str(
@@ -1243,6 +1272,7 @@ def _render_batch_manifest_report(inputs: BatchManifestRenderInputs) -> dict[str
             source_paths=["ops/scripts/release/release_closeout_batch_manifest.py"],
             text_inputs=_envelope_text_inputs(inputs),
         ),
+        "schema_version": 2,
         "batch_id": inputs.batch_id,
         "distribution_package": inputs.distribution_package,
         "external_source_zip_bound": decision.external_source_zip_bound,
@@ -1417,17 +1447,7 @@ def write_report(
     )
 
 
-def _strip_generated_at(obj: Any) -> Any:
-    if isinstance(obj, dict):
-        return {
-            k: _strip_generated_at(v) for k, v in obj.items() if k != "generated_at"
-        }
-    if isinstance(obj, list):
-        return [_strip_generated_at(item) for item in obj]
-    return obj
-
-
-def _artifact_digest_mismatches(
+def _artifact_binding_mismatches(
     existing: dict[str, Any], current: dict[str, Any]
 ) -> list[dict[str, str]]:
     existing_by_path = {
@@ -1442,17 +1462,43 @@ def _artifact_digest_mismatches(
     }
     mismatches: list[dict[str, str]] = []
     for rel_path in sorted(set(existing_by_path) | set(current_by_path)):
-        expected = str(existing_by_path.get(rel_path, {}).get("digest", "missing"))
-        actual = str(current_by_path.get(rel_path, {}).get("digest", "missing"))
-        if expected != actual:
+        existing_item = existing_by_path.get(rel_path, {})
+        current_item = current_by_path.get(rel_path, {})
+        expected_digest = str(existing_item.get("binding_digest", "missing"))
+        actual_digest = str(current_item.get("binding_digest", "missing"))
+        expected_mode = str(existing_item.get("binding_mode", "missing"))
+        actual_mode = str(current_item.get("binding_mode", "missing"))
+        if expected_digest != actual_digest or expected_mode != actual_mode:
             mismatches.append(
                 {
                     "path": rel_path,
-                    "expected_digest": expected,
-                    "actual_digest": actual,
+                    "expected_binding_digest": expected_digest,
+                    "actual_binding_digest": actual_digest,
+                    "expected_binding_mode": expected_mode,
+                    "actual_binding_mode": actual_mode,
                 }
             )
     return mismatches
+
+
+def _replay_content_binding_digest(payload: dict[str, Any]) -> str:
+    normalized = json.loads(json.dumps(payload))
+    normalized.pop("batch_id", None)
+    normalized.pop("schema_version", None)
+    input_fingerprints = normalized.get("input_fingerprints")
+    if isinstance(input_fingerprints, dict):
+        input_fingerprints.pop("batch_id", None)
+    artifacts = normalized.get("artifacts")
+    if isinstance(artifacts, list):
+        for item in artifacts:
+            if not isinstance(item, dict):
+                continue
+            item.pop("raw_digest", None)
+            item.pop("generated_at", None)
+    return binding_payload_digest(
+        normalized,
+        binding_mode=CONTENT_BINDING_MODE,
+    )
 
 
 def _check_manifest(
@@ -1473,6 +1519,12 @@ def _check_manifest(
         )
         return 1
     existing = json.loads(destination.read_text(encoding="utf-8"))
+    if existing.get("schema_version") != 2:
+        print(
+            "batch manifest check failed: only schema_version=2 is current authority",
+            file=sys.stderr,
+        )
+        return 1
     existing_generated_at = _parse_utc_z(str(existing.get("generated_at", "")))
     replay_context = (
         RuntimeContext(
@@ -1494,18 +1546,12 @@ def _check_manifest(
         zip_metadata_path=zip_metadata_path,
         zip_timestamp_timezone=zip_timestamp_timezone,
     )
-    digest_mismatches = _artifact_digest_mismatches(existing, report)
-    # Remove timestamp-dependent fields before comparison; batch_id and
-    # currentness.checked_at change between promote and verify.
-    for payload in (report, existing):
-        payload.pop("batch_id", None)
-        if isinstance(payload.get("currentness"), dict):
-            payload["currentness"].pop("checked_at", None)
-        if isinstance(payload.get("input_fingerprints"), dict):
-            payload["input_fingerprints"].pop("batch_id", None)
-    content_matches = _strip_generated_at(report) == _strip_generated_at(existing)
+    binding_mismatches = _artifact_binding_mismatches(existing, report)
+    content_matches = _replay_content_binding_digest(
+        report
+    ) == _replay_content_binding_digest(existing)
     source_freshness_passes = existing_source_freshness.get("status") == "pass"
-    if content_matches and source_freshness_passes:
+    if not binding_mismatches and content_matches and source_freshness_passes:
         print(f"batch manifest check passed: {display_path(vault, destination)}")
         return 0
     if not content_matches:
@@ -1523,20 +1569,20 @@ def _check_manifest(
             print(f"- {item['path']}: mtime {item['mtime']}", file=sys.stderr)
         for rel_path in existing_source_freshness.get("missing_zip_members", []):
             print(f"- {rel_path}: missing from ZIP metadata", file=sys.stderr)
-    if digest_mismatches or not content_matches or not source_freshness_passes:
-        classification = classify_batch_replay_digest_mismatches(
+    if binding_mismatches or not content_matches or not source_freshness_passes:
+        classification = classify_batch_replay_binding_mismatches(
             vault,
-            digest_mismatches,
+            binding_mismatches,
             source_freshness=existing_source_freshness,
             content_matches=content_matches,
         )
     else:
         classification = {}
-    if digest_mismatches:
-        print("artifact digest mismatches:", file=sys.stderr)
-        for item in digest_mismatches:
-            expected = item["expected_digest"]
-            actual = item["actual_digest"]
+    if binding_mismatches:
+        print("artifact binding mismatches:", file=sys.stderr)
+        for item in binding_mismatches:
+            expected = item["expected_binding_digest"]
+            actual = item["actual_binding_digest"]
             print(
                 f"- {item['path']}: expected {expected[:12]}..., actual {actual[:12]}...",
                 file=sys.stderr,

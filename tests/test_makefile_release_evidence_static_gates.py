@@ -255,7 +255,6 @@ _RELEASE_CLOSEOUT_BATCH_MANIFEST_ASSIGNMENTS = (
     "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_RECOMMENDED_TARGETS_OUT ?= tmp/release-closeout-post-check-finalizer-recommended-targets.txt",
     "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_PLAN_OUT ?= tmp/release-closeout-post-check-finalizer-plan.json",
     "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS ?=",
-    "RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS ?= 10",
     "RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS ?=",
 )
 
@@ -521,6 +520,7 @@ _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS = (
             '--zip-metadata "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)"',
             '--distribution-zip "$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)"',
             "ops.scripts.canonical_artifact_promote",
+            "--binding-mode revision",
         ),
     ),
     MakeTargetContract(
@@ -540,10 +540,8 @@ _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS = (
             "ops.scripts.release_closeout_fixed_point",
             '--out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)"',
             "--schema ops/schemas/release-closeout-fixed-point.schema.json",
-            "--bootstrap-post-promote",
             '--initial-target "$(target)"',
-            "--baseline-before-first-iteration",
-            "$(MAKE) external-report-action-matrix",
+            "--binding-mode revision",
             "$(MAKE) release-closeout-finality-attestation",
         ),
     ),
@@ -563,6 +561,7 @@ _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS = (
         required_tokens=(
             "ops.scripts.release_closeout_finality_attestation",
             "--schema ops/schemas/release-closeout-finality-attestation.schema.json",
+            "--binding-mode revision",
         ),
     ),
     MakeTargetContract(
@@ -647,9 +646,9 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
         _EXTERNAL_REPORT_RELEASE_BASIS_TARGET_CONTRACTS,
     )
     settle_block = _target_block(text, "external-report-reference-manifest-settle")
-    case.assertGreaterEqual(
+    case.assertEqual(
         settle_block.count("external-report-reference-manifest-release-check"),
-        2,
+        1,
     )
 
 
@@ -667,17 +666,17 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
 def _assert_batch_manifest_closeout_recipe_targets(case: unittest.TestCase, text: str) -> None:
     _assert_make_target_contracts(case, text, _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS)
     fixed_point_lines = _recipe_lines(text, "release-closeout-fixed-point")
-    bootstrap_index = next(
+    promotion_index = next(
         index
         for index, line in enumerate(fixed_point_lines)
-        if "--bootstrap-post-promote" in line
+        if "ops.scripts.canonical_artifact_promote" in line
     )
-    matrix_index = fixed_point_lines.index("$(MAKE) external-report-action-matrix")
     attestation_index = fixed_point_lines.index(
         "$(MAKE) release-closeout-finality-attestation"
     )
-    case.assertLess(bootstrap_index, matrix_index)
-    case.assertLess(matrix_index, attestation_index)
+    case.assertLess(promotion_index, attestation_index)
+    case.assertNotIn("$(MAKE) external-report-action-matrix", fixed_point_lines)
+    case.assertFalse(any("--bootstrap-post-promote" in line for line in fixed_point_lines))
 
 
 def _assert_release_audit_and_post_seal_targets(case: unittest.TestCase, text: str) -> None:
@@ -862,8 +861,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             _recipe_lines(text, "operator-evidence-closeout-finality-resettle"),
             [
                 "$(MAKE) test-execution-summary-current-or-refresh",
-                '$(MAKE) generated-artifact-finality-suffix ARTIFACT_FRESHNESS_PROGRESS="$(OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS)"',
-                "$(MAKE) release-closeout-summary-report",
                 '$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS="$(OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS)" ARTIFACT_FRESHNESS_PROGRESS="$(OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS)"',
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
@@ -1091,8 +1088,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             with self.subTest(required_line=required_line):
                 self.assertIn(required_line, recipe_lines)
         for required_line in (
-            "$(MAKE) generated-artifact-finality-suffix",
-            "$(MAKE) release-closeout-summary-report",
             "$(MAKE) release-closeout-fixed-point",
             "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
         ):
@@ -1118,6 +1113,10 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         )
         self.assertIn("$(MAKE) release-finality-resettle-current-check", current_or_refresh_block)
         self.assertIn("$(MAKE) release-finality-resettle", current_or_refresh_block)
+        self.assertGreaterEqual(
+            current_or_refresh_block.count("$(MAKE) release-finality-resettle-current-check"),
+            2,
+        )
         self.assertNotIn("$(MAKE) release-evidence-converge", recipe_lines)
 
     def test_check_finalized_runs_post_check_dry_run_before_mutating_finalizer(self) -> None:
@@ -1229,13 +1228,11 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             "batch manifest index out of range",
         )
 
-        # Fixed-point owns iteration internally; Make should keep any extra
-        # fixed-point calls bounded instead of hand-rolling an outer loop.
+        # The graph owns one writer pass; Make must not add an outer settle loop.
         fixed_point_count = sum(
             1 for w, _ in occurrences if w == "release-closeout-fixed-point"
         )
-        self.assertGreaterEqual(fixed_point_count, 1)
-        self.assertLessEqual(fixed_point_count, 2)
+        self.assertEqual(fixed_point_count, 1)
 
     def test_release_evidence_refresh_fast_reuses_existing_expensive_evidence(
         self,

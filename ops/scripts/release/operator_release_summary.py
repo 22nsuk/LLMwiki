@@ -127,6 +127,8 @@ def _batch_verify_snapshot(vault: Path, batch_manifest: dict[str, Any], load_sta
         return {
             "status": "fail",
             "manifest_load_status": load_status,
+            "authority_schema_status": "missing",
+            "manifest_schema_version": 0,
             "artifact_count": 0,
             "mismatch_count": 0,
             "missing_artifact_count": 0,
@@ -134,6 +136,24 @@ def _batch_verify_snapshot(vault: Path, batch_manifest: dict[str, Any], load_sta
             "tmp_json_paths": tmp_paths,
             "mismatches": [],
             "summary": "release batch manifest is missing or unreadable",
+        }
+    schema_version = int(batch_manifest.get("schema_version", 0) or 0)
+    if schema_version != 2:
+        return {
+            "status": "fail",
+            "manifest_load_status": load_status,
+            "authority_schema_status": "unsupported",
+            "manifest_schema_version": schema_version,
+            "artifact_count": 0,
+            "mismatch_count": 0,
+            "missing_artifact_count": 0,
+            "tmp_json_count": len(tmp_paths),
+            "tmp_json_paths": tmp_paths,
+            "mismatches": [],
+            "summary": (
+                "release batch manifest is not current authority; "
+                f"expected schema_version=2; actual={schema_version}"
+            ),
         }
 
     mismatches: list[dict[str, str]] = []
@@ -146,7 +166,7 @@ def _batch_verify_snapshot(vault: Path, batch_manifest: dict[str, Any], load_sta
         rel_path = str(artifact.get("path", "")).strip()
         if not rel_path:
             continue
-        expected = str(artifact.get("digest", "")).strip() or "missing"
+        expected = str(artifact.get("raw_digest", "")).strip() or "missing"
         actual = _sha256_file(vault / rel_path)
         if actual == "missing":
             missing_count += 1
@@ -163,6 +183,8 @@ def _batch_verify_snapshot(vault: Path, batch_manifest: dict[str, Any], load_sta
     return {
         "status": status,
         "manifest_load_status": load_status,
+        "authority_schema_status": "current",
+        "manifest_schema_version": schema_version,
         "artifact_count": len(artifacts),
         "mismatch_count": len(mismatches),
         "missing_artifact_count": missing_count,

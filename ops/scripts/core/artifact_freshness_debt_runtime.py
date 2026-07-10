@@ -67,9 +67,6 @@ EXECUTION_BLOCKING_ISSUES = (
     "json_root_not_object",
     "schema_validation_failed",
 )
-ADVISORY_ONLY_MTIME_DRIFT_PATHS = {
-    "ops/reports/generated-artifact-index.json",
-}
 LEARNING_READINESS_SIGNOFF_REPORT = "ops/reports/learning-readiness-signoff.json"
 SUPPLY_CHAIN_SOURCE_IDENTITY_KINDS = {
     "cyclonedx_sbom",
@@ -184,10 +181,6 @@ def is_historical_schema_drift(
 
 def matching_issues(issues: list[str], prefixes: tuple[str, ...]) -> list[str]:
     return sorted(issue for issue in issues if issue.startswith(prefixes))
-
-
-def mtime_drift_is_advisory_only(rel_path: str) -> bool:
-    return rel_path in ADVISORY_ONLY_MTIME_DRIFT_PATHS
 
 
 def is_learning_readiness_signoff_source_identity_issue(

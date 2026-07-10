@@ -412,10 +412,9 @@
         "release-evidence-dashboard-report",
         "release-lane-summary",
         "release-clean-blocker-ledger",
-        "release-closeout-post-check-finalizer-dry-run",
-        "release-closeout-fixed-point",
-        "operator-release-summary",
         "generated-artifact-converge",
+        "release-closeout-post-check-finalizer-dry-run",
+        "operator-release-summary",
         "release-closeout-fixed-point",
         "tmp-json-clean",
         "release-closeout-finality-verify"
@@ -447,15 +446,14 @@
       "id": "release_terminal_finality_sequence",
       "target": "release-terminal-finality",
       "roles": [
-        "generated-artifact-finality-suffix",
-        "release-closeout-summary-report",
         "release-closeout-fixed-point",
         "tmp-json-clean",
         "release-closeout-post-check-finalizer-strict-dry-run",
         "tmp-json-clean",
         "release-closeout-finality-verify"
       ],
-      "details": "release-terminal-finality must settle freshness/index/matrix through the finality suffix, refresh fixed-point once, run a strict dry-run currentness check, then make finality verification terminal."
+      "exact": true,
+      "details": "release-terminal-finality must execute the binding graph once, run a strict read-only currentness check, then make finality verification terminal."
     },
     {
       "id": "release_authority_post_ready_finality_sequence",

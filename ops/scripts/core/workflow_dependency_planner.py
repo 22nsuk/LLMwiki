@@ -36,12 +36,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,
     )
     from ops.scripts.release.release_closeout_fixed_point import (
-        fixed_point_initial_targets_from_policy,
+        fixed_point_execution_targets_from_policy,
         fixed_point_writer_specs_from_policy,
     )
 else:
     from ops.scripts.release.release_closeout_fixed_point import (
-        fixed_point_initial_targets_from_policy,
+        fixed_point_execution_targets_from_policy,
         fixed_point_writer_specs_from_policy,
     )
 
@@ -126,11 +126,6 @@ GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS = [
     "script-output-surfaces",
 ]
 
-GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS = [
-    "artifact-freshness",
-    "external-report-action-matrix",
-    "generated-artifact-index",
-]
 PLANNER_CLOSEOUT_FALLBACK_TARGETS = [
     "workflow-dependency-planner",
     "generated-artifact-converge",
@@ -291,8 +286,8 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         ],
         "workflow_id": "canonical_report_finalization",
         "recommended_lane": "release-finality-resettle",
-        "reason_code": "canonical_report_finality_suffix_changed",
-        "description": "Canonical generated reports changed; use the focused resettle lane so finality is rewritten only after generated artifact convergence and fixed-point closeout.",
+        "reason_code": "canonical_report_binding_graph_changed",
+        "description": "Canonical generated reports changed; run the focused single-pass binding graph before terminal finality verification.",
         "targets": FINALITY_RESETTLE_TARGETS,
         "expensive": False,
         "reusable": True,
@@ -357,7 +352,7 @@ def _dedupe_preserve_order(items: list[str]) -> list[str]:
 
 def _planner_closeout_targets(vault: Path) -> list[str]:
     try:
-        policy_targets = fixed_point_initial_targets_from_policy(vault)
+        policy_targets = fixed_point_execution_targets_from_policy(vault)
     except (OSError, ValueError, json.JSONDecodeError):
         return list(PLANNER_CLOSEOUT_FALLBACK_TARGETS)
     targets = ["workflow-dependency-planner", *policy_targets]
@@ -516,7 +511,6 @@ def _primary_report_for_target(target: str) -> str:
         "external-report-action-matrix": "ops/reports/external-report-action-matrix.json",
         "generated-artifact-converge": "ops/reports/artifact-freshness-report.json",
         "generated-artifact-script-output": "ops/script-output-surfaces.json",
-        "generated-artifact-finality-suffix": "ops/reports/artifact-freshness-report.json",
         "generated-artifact-index": "ops/reports/generated-artifact-index.json",
         "generated-artifact-index-body": "ops/reports/generated-artifact-index.json",
         "learning-readiness-signoff-revalidation": "ops/reports/learning-readiness-signoff-revalidation.json",
@@ -544,10 +538,7 @@ def _fanout_targets_for_target(target: str) -> list[str]:
     return {
         "generated-artifact-converge": list(GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS),
         "generated-artifact-script-output": list(GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS),
-        "generated-artifact-finality-suffix": list(GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS),
         "release-terminal-finality": [
-            "generated-artifact-finality-suffix",
-            "release-closeout-summary-report",
             "release-closeout-fixed-point",
             "release-closeout-post-check-finalizer-dry-run",
             "release-closeout-finality-verify",
@@ -1117,11 +1108,10 @@ def _planner_report_envelope(
                 ensure_ascii=False,
                 sort_keys=True,
             ),
-            "generated_artifact_converge_fanout_targets": json.dumps(
+            "generated_artifact_fanout_targets": json.dumps(
                 {
                     "generated-artifact-converge": GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS,
                     "generated-artifact-script-output": GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS,
-                    "generated-artifact-finality-suffix": GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS,
                 },
                 ensure_ascii=False,
                 sort_keys=True,

@@ -276,7 +276,7 @@ release-evidence-closeout-sealed-dry-run-check:
 
 release-authority-sealed-preflight:
 	$(MAKE) release-evidence-closeout-sealed-dry-run RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS=--allow-blocked-preflight
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_OUT)" --out "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT)" --schema ops/schemas/release-closeout-sealed-rehearsal-check.schema.json --expected-artifact-kind release_closeout_sealed_rehearsal_check
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_OUT)" --out "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT)" --schema ops/schemas/release-closeout-sealed-rehearsal-check.schema.json --expected-artifact-kind release_closeout_sealed_rehearsal_check --binding-mode revision
 
 release-worktree-clean-check:
 	$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --requested-mode git --out "$(RELEASE_WORKTREE_CLEAN_CHECK_OUT)" --strict

@@ -102,7 +102,7 @@ observation-closeout-lint:
 	$(PYTHON) -m ops.scripts.observation_closeout_lint --vault "$(VAULT)" --registry "$(OBSERVATION_CLOSEOUT_REGISTRY)" --out "$(OBSERVATION_CLOSEOUT_LINT_OUT)"
 
 auto-improve-readiness: auto-improve-readiness-worktree-guard
-	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit $$status
+	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime --binding-mode revision; exit $$status
 
 auto-improve-readiness-report:
 	$(MAKE) auto-improve-readiness-worktree-guard
@@ -115,7 +115,7 @@ auto-improve-readiness-report:
 
 auto-improve-readiness-report-body:
 	@if [ "$(AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH)" = "1" ]; then $(MAKE) auto-improve-readiness-worktree-guard; fi
-	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit 0
+	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime --binding-mode revision; exit 0
 
 auto-improve-readiness-worktree-guard:
 	-$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --requested-mode "$(GOAL_WORKTREE_MODE)" --out "$(GOAL_WORKTREE_GUARD_OUT)"
@@ -134,11 +134,11 @@ goal-runtime-refresh: auto-improve-goal-preflight auto-improve-goal-status
 goal-runtime-publish-snapshot:
 	$(MAKE) goal-runtime-certificate-run-id-guard
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --out "$(CODEX_GOAL_CONTRACT_OUT)" --schema ops/schemas/codex-goal-contract.schema.json
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status --binding-mode revision
 	$(PYTHON) -m ops.scripts.codex_goal_prompt --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --out "$(CODEX_GOAL_PROMPT_OUT)"
 
 goal-runtime-local-readiness: auto-improve-readiness-worktree-guard
-	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(GOAL_LOCAL_READINESS_CANDIDATE_OUT)" --remediation-backlog "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_READINESS_CANDIDATE_OUT)" --out "$(GOAL_LOCAL_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit 0
+	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(GOAL_LOCAL_READINESS_CANDIDATE_OUT)" --remediation-backlog "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_READINESS_CANDIDATE_OUT)" --out "$(GOAL_LOCAL_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime --binding-mode revision; exit 0
 
 goal-runtime-local-session-synopsis:
 	$(PYTHON) -m ops.scripts.session_synopsis --vault "$(VAULT)" --out "$(GOAL_LOCAL_SESSION_SYNOPSIS_CANDIDATE_OUT)" --auto-improve-readiness "$(GOAL_LOCAL_READINESS_OUT)" --goal-run-status "$(GOAL_ACTIVE_RUN_STATUS_OUT)"
@@ -150,7 +150,7 @@ goal-runtime-local-negative-lessons:
 
 goal-runtime-local-remediation-backlog:
 	$(PYTHON) -m ops.scripts.remediation_backlog --vault "$(VAULT)" --out "$(GOAL_LOCAL_REMEDIATION_BACKLOG_CANDIDATE_OUT)" --self-improvement-negative-lessons "$(GOAL_LOCAL_NEGATIVE_LESSONS_OUT)" --session-synopsis "$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)"
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_REMEDIATION_BACKLOG_CANDIDATE_OUT)" --out "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" --schema ops/schemas/remediation-backlog.schema.json --expected-artifact-kind remediation_backlog --expected-producer ops.scripts.remediation_backlog
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_REMEDIATION_BACKLOG_CANDIDATE_OUT)" --out "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" --schema ops/schemas/remediation-backlog.schema.json --expected-artifact-kind remediation_backlog --expected-producer ops.scripts.remediation_backlog --binding-mode revision
 
 goal-runtime-local-fixed-point-check:
 	$(PYTHON) -m ops.scripts.goal_runtime_fixed_point_check --vault "$(VAULT)" --out "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)" --codex-goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --goal-run-status "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --auto-improve-readiness "$(GOAL_LOCAL_READINESS_OUT)" --session-synopsis "$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)" --remediation-backlog "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)"
@@ -166,11 +166,11 @@ goal-runtime-publish-local-evidence:
 	$(MAKE) goal-runtime-certificate-run-id-guard
 	$(MAKE) goal-runtime-local-evidence-converge
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --out "$(CODEX_GOAL_CONTRACT_OUT)" --schema ops/schemas/codex-goal-contract.schema.json
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_READINESS_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status --binding-mode revision
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_READINESS_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime --binding-mode revision
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)" --out "$(SESSION_SYNOPSIS_OUT)" --schema ops/schemas/session-synopsis.schema.json --expected-artifact-kind session_synopsis --expected-producer ops.scripts.session_synopsis
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_NEGATIVE_LESSONS_OUT)" --out "$(SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT)" --schema ops/schemas/self-improvement-negative-lessons.schema.json --expected-artifact-kind self_improvement_negative_lessons --expected-producer ops.scripts.self_improvement_negative_lessons
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" --out "$(REMEDIATION_BACKLOG_OUT)" --schema ops/schemas/remediation-backlog.schema.json --expected-artifact-kind remediation_backlog --expected-producer ops.scripts.remediation_backlog
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" --out "$(REMEDIATION_BACKLOG_OUT)" --schema ops/schemas/remediation-backlog.schema.json --expected-artifact-kind remediation_backlog --expected-producer ops.scripts.remediation_backlog --binding-mode revision
 	$(PYTHON) -m ops.scripts.codex_goal_prompt --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --out "$(CODEX_GOAL_PROMPT_OUT)"
 
 goal-runtime-reconcile:
@@ -320,7 +320,7 @@ auto-improve-goal-run: goal-runtime-run-admission auto-improve-goal-contract
 	$(PYTHON) -m ops.scripts.goal_runtime_runner --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --result-out "$(GOAL_SESSION_RESULT_OUT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --checkpoint-command-timeout-seconds "$(GOAL_CHECKPOINT_COMMAND_TIMEOUT_SECONDS)" --timeout-seconds "$(GOAL_RUNNER_TIMEOUT_SECONDS)" --workspace-lock-path "$(GOAL_RUNTIME_LOCK_PATH)" -- $(GOAL_RUN_COMMAND)
 
 auto-improve-goal-status: auto-improve-goal-contract
-	@status=0; $(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_RUN_STATUS)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --write-run-artifacts || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --out "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status; exit $$status
+	@status=0; $(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_RUN_STATUS)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --write-run-artifacts || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --out "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status --binding-mode revision; exit $$status
 
 auto-improve-goal-resume: goal-runtime-run-admission-resume auto-improve-goal-contract
 	$(PYTHON) -m ops.scripts.goal_runtime_runner --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --result-out "$(GOAL_SESSION_RESULT_OUT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --checkpoint-command-timeout-seconds "$(GOAL_CHECKPOINT_COMMAND_TIMEOUT_SECONDS)" --timeout-seconds "$(GOAL_RUNNER_TIMEOUT_SECONDS)" --workspace-lock-path "$(GOAL_RUNTIME_LOCK_PATH)" --resume-from-checkpoint -- $(GOAL_RESUME_COMMAND)
@@ -329,7 +329,7 @@ auto-improve-goal-maintenance-action: goal-runtime-maintenance-action-plan
 	@next_max_proposals="$$( $(PYTHON) -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["next_max_proposals"])' "$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)" )"; $(MAKE) auto-improve-goal-resume GOAL_MAX_PROPOSALS="$$next_max_proposals" GOAL_RUNTIME_RUN_ADMISSION_MAINTENANCE_ACTION_PLAN="$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)"
 
 auto-improve-goal-finalize: auto-improve-goal-contract
-	@status=0; $(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_FINAL_STATUS)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --completed-at "$(GOAL_COMPLETED_AT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --write-run-artifacts || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --out "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status; exit $$status
+	@status=0; $(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_FINAL_STATUS)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --completed-at "$(GOAL_COMPLETED_AT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --write-run-artifacts || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --out "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status --binding-mode revision; exit $$status
 
 auto-improve-goal-run-artifacts: auto-improve-goal-status
 	$(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_RUN_STATUS)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --write-run-artifacts
@@ -339,14 +339,14 @@ goal-runtime-certificate-run-id-guard:
 
 goal-runtime-status-finalize: auto-improve-goal-contract
 	$(MAKE) goal-runtime-certificate-run-id-guard
-	@status=0; $(MAKE) auto-improve-goal-status || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status || status=$$?; exit $$status
+	@status=0; $(MAKE) auto-improve-goal-status || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status --binding-mode revision || status=$$?; exit $$status
 
 goal-runtime-certificate-report:
 	$(MAKE) goal-runtime-certificate-run-id-guard
 	$(PYTHON) -m ops.scripts.goal_runtime_certificate_report --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --status-report "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)" $(if $(GOAL_RUNTIME_CERTIFICATE_MODE),--runtime-mode "$(GOAL_RUNTIME_CERTIFICATE_MODE)",) $(if $(GOAL_RUNTIME_CERTIFICATE_APPLY),--apply,)
 
 goal-runtime-certificate:
-	@status=0; $(MAKE) goal-runtime-certificate-report || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)" --out "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --schema ops/schemas/goal-runtime-certificate.schema.json --expected-artifact-kind goal_runtime_certificate --expected-producer ops.scripts.goal_runtime_certificate_report || status=$$?; exit $$status
+	@status=0; $(MAKE) goal-runtime-certificate-report || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)" --out "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --schema ops/schemas/goal-runtime-certificate.schema.json --expected-artifact-kind goal_runtime_certificate --expected-producer ops.scripts.goal_runtime_certificate_report --binding-mode revision || status=$$?; exit $$status
 
 goal-prompt: codex-goal-prompt
 

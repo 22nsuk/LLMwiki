@@ -1,15 +1,5 @@
 {
-  "version": 7,
-  "max_iterations": 10,
-  "feedback_refresh_targets": [
-    "generated-artifact-index-body",
-    "artifact-freshness",
-    "external-report-action-matrix"
-  ],
-  "feedback_refresh_exempt_targets": [
-    "release-closeout-batch-manifest-promote",
-    "release-evidence-closeout-self-check"
-  ],
+  "version": 9,
   "cost_trend": {
     "retained_run_count": 10,
     "thresholds": {
@@ -27,74 +17,87 @@
     {
       "name": "goal-worktree-guard",
       "target": "auto-improve-readiness-worktree-guard",
+      "binding_mode": "content",
       "produces": ["ops/reports/goal-worktree-guard.json"],
       "depends_on": [],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
+    },
+    {
+      "name": "artifact-freshness",
+      "target": "artifact-freshness",
+      "binding_mode": "content",
+      "produces": ["ops/reports/artifact-freshness-report.json"],
+      "depends_on": ["auto-improve-readiness-worktree-guard"],
+      "expensive_prerequisites": []
+    },
+    {
+      "name": "external-report-action-matrix",
+      "target": "external-report-action-matrix",
+      "binding_mode": "content",
+      "produces": ["ops/reports/external-report-action-matrix.json"],
+      "depends_on": ["artifact-freshness"],
+      "expensive_prerequisites": []
     },
     {
       "name": "generated-artifact-index",
       "target": "generated-artifact-index-body",
+      "binding_mode": "content",
       "produces": ["ops/reports/generated-artifact-index.json"],
-      "depends_on": ["auto-improve-readiness-worktree-guard"],
-      "expensive_prerequisites_once": [
+      "depends_on": ["external-report-action-matrix"],
+      "expensive_prerequisites": [
         "closure-registry-envelope",
         "manual-mutate-defect-registry",
         "release-risk-taxonomy-matrix"
       ]
     },
     {
-      "name": "artifact-freshness",
-      "target": "artifact-freshness",
-      "produces": ["ops/reports/artifact-freshness-report.json"],
-      "depends_on": ["generated-artifact-index-body"],
-      "expensive_prerequisites_once": []
-    },
-    {
-      "name": "external-report-action-matrix",
-      "target": "external-report-action-matrix",
-      "produces": ["ops/reports/external-report-action-matrix.json"],
-      "depends_on": ["artifact-freshness"],
-      "expensive_prerequisites_once": []
-    },
-    {
       "name": "auto-improve-readiness",
       "target": "auto-improve-readiness-report-body",
+      "binding_mode": "revision",
       "produces": ["ops/reports/auto-improve-readiness.json"],
-      "depends_on": ["auto-improve-readiness-worktree-guard", "artifact-freshness"],
-      "expensive_prerequisites_once": []
+      "depends_on": [
+        "auto-improve-readiness-worktree-guard",
+        "artifact-freshness",
+        "generated-artifact-index-body"
+      ],
+      "expensive_prerequisites": []
     },
     {
       "name": "release-closeout-summary",
       "target": "release-closeout-summary-report",
+      "binding_mode": "revision",
       "produces": ["ops/reports/release-closeout-summary.json"],
       "depends_on": [
         "generated-artifact-index-body",
         "artifact-freshness",
         "auto-improve-readiness-report-body"
       ],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
     },
     {
       "name": "learning-readiness-signoff-revalidation",
       "target": "learning-readiness-signoff-revalidation",
+      "binding_mode": "content",
       "produces": ["ops/reports/learning-readiness-signoff-revalidation.json"],
       "depends_on": ["release-closeout-summary-report", "artifact-freshness"],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
     },
     {
       "name": "release-evidence-cohort",
       "target": "release-evidence-cohort",
+      "binding_mode": "revision",
       "produces": ["ops/reports/release-evidence-cohort.json"],
       "depends_on": [
         "release-closeout-summary-report",
         "learning-readiness-signoff-revalidation",
         "artifact-freshness"
       ],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
     },
     {
       "name": "release-evidence-dashboard",
       "target": "release-evidence-dashboard-report",
+      "binding_mode": "content",
       "produces": ["ops/reports/release-evidence-dashboard.json"],
       "depends_on": [
         "release-closeout-summary-report",
@@ -102,22 +105,24 @@
         "release-evidence-cohort",
         "artifact-freshness"
       ],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
     },
     {
       "name": "release-lane-summary",
       "target": "release-lane-summary",
+      "binding_mode": "content",
       "produces": ["ops/reports/release-lane-summary.json"],
       "depends_on": [
         "release-closeout-summary-report",
         "release-evidence-dashboard-report",
         "release-evidence-cohort"
       ],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
     },
     {
       "name": "release-clean-blocker-ledger",
       "target": "release-clean-blocker-ledger",
+      "binding_mode": "content",
       "produces": ["ops/reports/release-clean-blocker-ledger.json"],
       "depends_on": [
         "release-closeout-summary-report",
@@ -125,11 +130,12 @@
         "release-lane-summary",
         "release-evidence-cohort"
       ],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
     },
     {
       "name": "release-closeout-batch-manifest",
       "target": "release-closeout-batch-manifest-promote",
+      "binding_mode": "revision",
       "produces": ["ops/reports/release-closeout-batch-manifest.json"],
       "depends_on": [
         "generated-artifact-index-body",
@@ -141,28 +147,15 @@
         "release-lane-summary",
         "release-clean-blocker-ledger"
       ],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
     },
     {
       "name": "release-evidence-closeout-self-check",
       "target": "release-evidence-closeout-self-check",
+      "binding_mode": "content",
       "produces": ["ops/reports/release-evidence-closeout-self-check.json"],
       "depends_on": ["release-closeout-batch-manifest-promote"],
-      "expensive_prerequisites_once": []
+      "expensive_prerequisites": []
     }
-  ],
-  "tracked_artifacts": [
-    "ops/reports/goal-worktree-guard.json",
-    "ops/reports/generated-artifact-index.json",
-    "ops/reports/artifact-freshness-report.json",
-    "ops/reports/auto-improve-readiness.json",
-    "ops/reports/release-closeout-summary.json",
-    "ops/reports/learning-readiness-signoff-revalidation.json",
-    "ops/reports/release-evidence-cohort.json",
-    "ops/reports/release-evidence-dashboard.json",
-    "ops/reports/release-lane-summary.json",
-    "ops/reports/release-clean-blocker-ledger.json",
-    "ops/reports/release-closeout-batch-manifest.json",
-    "ops/reports/release-evidence-closeout-self-check.json"
   ]
 }

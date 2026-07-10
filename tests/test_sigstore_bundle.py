@@ -7,6 +7,10 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_binding_runtime import RAW_BINDING_MODE
+from ops.scripts.core.artifact_freshness_payload_runtime import (
+    embedded_artifact_envelope,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.supply_chain.cyclonedx_sbom import build_bom, write_bom
 from ops.scripts.supply_chain.in_toto_statement import (
@@ -18,6 +22,7 @@ from ops.scripts.supply_chain.openvex_draft import (
     write_openvex_draft,
 )
 from ops.scripts.supply_chain.sigstore_bundle import (
+    BUNDLE_BINDING_MODE,
     build_bundle_verification,
     write_bundle_verification,
 )
@@ -86,6 +91,16 @@ class SigstoreBundleTests(unittest.TestCase):
             persisted = json.loads(destination.read_text(encoding="utf-8"))
 
             self.assertEqual(persisted["status"], "local-integrity-only")
+            self.assertEqual(BUNDLE_BINDING_MODE, RAW_BINDING_MODE)
+            self.assertEqual(
+                persisted["bundle_binding"],
+                {
+                    "binding_mode": "raw",
+                    "status": "not_applicable",
+                    "raw_digest": "",
+                    "size_bytes": 0,
+                },
+            )
             self.assertTrue(
                 next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "subject_files_exist")
             )
@@ -147,6 +162,13 @@ class SigstoreBundleTests(unittest.TestCase):
 
             self.assertEqual(persisted["status"], "verified-external-bundle")
             self.assertEqual(persisted["bundle_ref"], "tmp/sigstore.bundle")
+            self.assertEqual(persisted["bundle_binding"]["binding_mode"], "raw")
+            self.assertEqual(persisted["bundle_binding"]["status"], "bound")
+            self.assertEqual(len(persisted["bundle_binding"]["raw_digest"]), 64)
+            self.assertEqual(
+                persisted["bundle_binding"]["size_bytes"],
+                bundle.stat().st_size,
+            )
             self.assertTrue(
                 next(item["pass"] for item in persisted["verification_checks"] if item["rule"] == "external_bundle_observed")
             )
@@ -156,6 +178,41 @@ class SigstoreBundleTests(unittest.TestCase):
                     for item in persisted["verification_checks"]
                     if item["rule"] == "external_bundle_has_sigstore_shape"
                 )
+            )
+
+    def test_bundle_binding_changes_when_raw_bytes_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            model = self._seed_supply_chain_reports(vault)
+            bundle = vault / "tmp" / "sigstore.bundle"
+            bundle.parent.mkdir(parents=True, exist_ok=True)
+            bundle.write_text(json.dumps(valid_sigstore_bundle_payload()), encoding="utf-8")
+            before = build_bundle_verification(
+                vault,
+                artifact_model=model,
+                bundle_ref="tmp/sigstore.bundle",
+            )
+            bundle.write_text(
+                json.dumps(valid_sigstore_bundle_payload(), indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            after = build_bundle_verification(
+                vault,
+                artifact_model=model,
+                bundle_ref="tmp/sigstore.bundle",
+            )
+
+            self.assertNotEqual(
+                before["bundle_binding"]["raw_digest"],
+                after["bundle_binding"]["raw_digest"],
+            )
+            before_envelope = embedded_artifact_envelope(before)
+            after_envelope = embedded_artifact_envelope(after)
+            self.assertNotEqual(
+                before_envelope["input_fingerprints"]["bundle_raw_digest"],
+                after_envelope["input_fingerprints"]["bundle_raw_digest"],
             )
 
     def test_build_bundle_verification_rejects_omitted_in_toto_subject(self) -> None:

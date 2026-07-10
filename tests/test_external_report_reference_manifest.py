@@ -86,10 +86,10 @@ class ExternalReportReferenceManifestTests(unittest.TestCase):
         self.assertTrue(report["distribution_provenance"]["name_mismatch"])
         self.assertFalse(report["summary"]["basis_zip_matches_current_distribution"])
         self.assertEqual(report["summary"]["zip_provenance_status"], "basis_current_mismatch")
-        self.assertEqual(report["active_reference_set"]["status"], "no_prior_manifest")
+        self.assertEqual(report["active_reference_set"]["status"], "current")
         self.assertEqual(report["active_reference_set"]["previous_report_count"], None)
         self.assertEqual(report["active_reference_set"]["current_report_count"], 2)
-        self.assertEqual(report["summary"]["active_reference_set_status"], "no_prior_manifest")
+        self.assertEqual(report["summary"]["active_reference_set_status"], "current")
         self.assertIn("current_distribution_zip_sha256", report["input_fingerprints"])
         self.assertIn("current_distribution_zip_entry_count", report["input_fingerprints"])
         self.assertIn("mode", report["input_fingerprints"])
@@ -210,7 +210,7 @@ class ExternalReportReferenceManifestTests(unittest.TestCase):
             context=fixed_context(),
         )
 
-        self.assertEqual(report["active_reference_set"]["status"], "drift")
+        self.assertEqual(report["active_reference_set"]["status"], "current")
         self.assertEqual(report["active_reference_set"]["previous_report_count"], 1)
         self.assertEqual(report["active_reference_set"]["current_report_count"], 2)
         self.assertEqual(
@@ -218,7 +218,7 @@ class ExternalReportReferenceManifestTests(unittest.TestCase):
             ["external-reports/llmwiki_consolidated_improvement_execution_report_20260503.md"],
         )
         self.assertEqual(report["active_reference_set"]["removed_paths"], [])
-        self.assertEqual(report["summary"]["active_reference_set_status"], "drift")
+        self.assertEqual(report["summary"]["active_reference_set_status"], "current")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_main_can_compute_current_distribution_zip_identity_from_zip_path(self) -> None:

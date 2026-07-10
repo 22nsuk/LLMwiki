@@ -52,7 +52,7 @@
       "type": "object",
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
-    "schema_version": { "type": "integer", "minimum": 1 },
+    "schema_version": { "type": "integer", "const": 2 },
     "artifact_status": {
       "type": "string",
       "enum": ["current", "stale"]
@@ -88,14 +88,14 @@
     "fixed_point_report": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "load_status", "digest", "sample_available"],
+      "required": ["path", "load_status", "raw_digest", "sample_available"],
       "properties": {
         "path": {
           "type": "string",
           "const": "ops/reports/release-closeout-fixed-point.json"
         },
         "load_status": { "type": "string", "minLength": 1 },
-        "digest": { "$ref": "#/$defs/optionalDigest" },
+        "raw_digest": { "$ref": "#/$defs/optionalDigest" },
         "sample_available": { "type": "boolean" }
       }
     },
@@ -104,11 +104,11 @@
     "previous_trend": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "load_status", "digest"],
+      "required": ["path", "load_status", "raw_digest"],
       "properties": {
         "path": { "type": "string", "minLength": 1 },
         "load_status": { "type": "string" },
-        "digest": { "$ref": "#/$defs/optionalDigest" }
+        "raw_digest": { "$ref": "#/$defs/optionalDigest" }
       }
     },
     "latest_sample": {
@@ -156,25 +156,23 @@
       "additionalProperties": false,
       "required": [
         "fixed_point_report_path",
-        "fixed_point_report_digest",
+        "fixed_point_report_raw_digest",
         "fixed_point_generated_at",
         "fixed_point_status",
-        "fixed_point_converged",
-        "iteration_count",
+        "execution_pass_count",
         "command_run_count",
         "total_duration_ms",
         "writer_costs"
       ],
       "properties": {
         "fixed_point_report_path": { "type": "string", "minLength": 1 },
-        "fixed_point_report_digest": { "$ref": "#/$defs/digest" },
+        "fixed_point_report_raw_digest": { "$ref": "#/$defs/digest" },
         "fixed_point_generated_at": { "type": "string" },
         "fixed_point_status": {
           "type": "string",
-          "enum": ["pass", "non_converged", "fail", "unknown"]
+          "enum": ["pass", "fail", "unknown"]
         },
-        "fixed_point_converged": { "type": "boolean" },
-        "iteration_count": { "type": "integer", "minimum": 0 },
+        "execution_pass_count": { "type": "integer", "const": 1 },
         "command_run_count": { "type": "integer", "minimum": 0 },
         "total_duration_ms": { "type": "integer", "minimum": 0 },
         "writer_costs": {

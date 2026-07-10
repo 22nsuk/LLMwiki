@@ -159,37 +159,37 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
 
     def _write_fixed_point_inputs(self) -> None:
         fixed_point_payload = {
+            "schema_version": 2,
             "generated_at": "2026-04-30T08:30:00Z",
             "status": "pass",
-            "converged": True,
-            "iteration_count": 3,
+            "execution_pass_count": 1,
             "duration_summary": {
-                "iteration_count": 3,
+                "execution_pass_count": 1,
                 "command_run_count": 12,
                 "total_duration_ms": 1200,
                 "writer_costs": [
                     {
                         "name": "generated-artifact-index",
                         "target": "generated-artifact-index-body",
+                        "produces": ["ops/reports/generated-artifact-index.json"],
                         "run_count": 1,
-                        "selected_iteration_count": 1,
+                        "selected": True,
                         "total_duration_ms": 300,
                         "average_duration_ms": 300,
                         "max_duration_ms": 300,
-                        "skipped_after_first_iteration_count": 2,
                     },
                     {
                         "name": "release-evidence-dashboard",
                         "target": "release-evidence-dashboard-report",
-                        "run_count": 3,
-                        "selected_iteration_count": 3,
+                        "produces": ["ops/reports/release-evidence-dashboard.json"],
+                        "run_count": 1,
+                        "selected": True,
                         "total_duration_ms": 450,
                         "average_duration_ms": 150,
                         "max_duration_ms": 200,
-                        "skipped_after_first_iteration_count": 0,
                     },
                 ],
-                "expensive_prerequisites_once": {
+                "expensive_prerequisites": {
                     "targets": [
                         "closure-registry-envelope",
                         "manual-mutate-defect-registry",
@@ -197,15 +197,11 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
                     ],
                     "configured_target_count": 3,
                     "observed_target_count": 3,
-                    "first_iteration_run_count": 3,
-                    "post_first_iteration_selected_count": 0,
-                    "post_first_iteration_run_count": 0,
-                    "skipped_post_first_iteration_selection_count": 6,
+                    "run_count": 3,
                     "total_duration_ms": 450,
-                    "skip_policy_effective": True,
-                    "summary": "expensive prerequisites were selected only in iteration 1",
+                    "summary": "expensive prerequisites ran once",
                 },
-                "summary": "2 writers ran 12 commands across 3 iterations",
+                "summary": "2 writers ran 12 commands in one execution pass",
             },
         }
         self._write_report(
@@ -220,10 +216,11 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
         self._write_report(
             "ops/reports/release-closeout-fixed-point-cost-trend.json",
             {
+                "schema_version": 2,
                 "status": "pass",
                 "sample_count": 2,
                 "latest_sample": {
-                    "fixed_point_report_digest": fixed_point_digest,
+                    "fixed_point_report_raw_digest": fixed_point_digest,
                 },
                 "threshold_summary": {
                     "status": "pass",
@@ -407,38 +404,30 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
         finalizer_cost = report["budget_signals"]["fixed_point_finalizer_cost"]
         self.assertEqual(finalizer_cost["status"], "pass")
         self.assertEqual(finalizer_cost["fixed_point_report_status"], "pass")
-        self.assertTrue(finalizer_cost["converged"])
+        self.assertEqual(finalizer_cost["execution_pass_count"], 1)
         self.assertEqual(finalizer_cost["total_duration_ms"], 1200)
         self.assertEqual(finalizer_cost["threshold_summary"]["status"], "pass")
         self.assertRegex(
-            finalizer_cost["evidence_basis"]["fixed_point_report_digest"],
+            finalizer_cost["evidence_basis"]["fixed_point_report_raw_digest"],
             r"^[a-f0-9]{64}$",
         )
         self.assertEqual(
-            finalizer_cost["evidence_basis"]["current_fixed_point_report_digest"],
-            finalizer_cost["evidence_basis"]["fixed_point_report_digest"],
+            finalizer_cost["evidence_basis"]["current_fixed_point_report_raw_digest"],
+            finalizer_cost["evidence_basis"]["fixed_point_report_raw_digest"],
         )
         self.assertEqual(
-            finalizer_cost["evidence_basis"]["sampled_fixed_point_report_digest"],
-            finalizer_cost["evidence_basis"]["fixed_point_report_digest"],
+            finalizer_cost["evidence_basis"]["sampled_fixed_point_report_raw_digest"],
+            finalizer_cost["evidence_basis"]["fixed_point_report_raw_digest"],
         )
         self.assertEqual(
             finalizer_cost["evidence_basis"]["basis_relation_to_current_fixed_point"],
             "sampled_current_fixed_point",
         )
         self.assertRegex(
-            finalizer_cost["evidence_basis"]["cost_trend_digest"],
+            finalizer_cost["evidence_basis"]["cost_trend_raw_digest"],
             r"^[a-f0-9]{64}$",
         )
-        self.assertTrue(
-            finalizer_cost["expensive_prerequisites_once"]["skip_policy_effective"]
-        )
-        self.assertEqual(
-            finalizer_cost["expensive_prerequisites_once"][
-                "post_first_iteration_run_count"
-            ],
-            0,
-        )
+        self.assertEqual(finalizer_cost["expensive_prerequisites"]["run_count"], 3)
         self.assertEqual(
             report["inputs"]["release_closeout_fixed_point"]["load_status"], "ok"
         )
@@ -483,7 +472,7 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
             / "release-closeout-fixed-point-cost-trend.json"
         )
         trend = json.loads(trend_path.read_text(encoding="utf-8"))
-        trend["latest_sample"]["fixed_point_report_digest"] = "b" * 64
+        trend["latest_sample"]["fixed_point_report_raw_digest"] = "b" * 64
         trend_path.write_text(
             json.dumps(trend, ensure_ascii=False, indent=2), encoding="utf-8"
         )
@@ -495,16 +484,18 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
             basis["basis_relation_to_current_fixed_point"],
             "sampled_different_fixed_point",
         )
-        self.assertEqual(basis["sampled_fixed_point_report_digest"], "b" * 64)
+        self.assertEqual(basis["sampled_fixed_point_report_raw_digest"], "b" * 64)
         self.assertNotEqual(
-            basis["sampled_fixed_point_report_digest"],
-            basis["current_fixed_point_report_digest"],
+            basis["sampled_fixed_point_report_raw_digest"],
+            basis["current_fixed_point_report_raw_digest"],
         )
         self.assertEqual(
             validate_with_schema(report, load_schema(DASHBOARD_SCHEMA_PATH)), []
         )
 
-    def test_dashboard_surfaces_expired_advisory_lifecycle_as_operator_attention(self) -> None:
+    def test_dashboard_surfaces_expired_advisory_lifecycle_as_operator_attention(
+        self,
+    ) -> None:
         self._write_inputs()
         closeout_path = self.vault / "ops" / "reports" / "release-closeout-summary.json"
         closeout = json.loads(closeout_path.read_text(encoding="utf-8"))
@@ -543,7 +534,9 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
         )
         self.assertEqual(gate["checked_in_state"], "attention")
         self.assertEqual(gate["accepted_risk"]["count"], 1)
-        self.assertIn("advisory_backlog_status=expired", gate["live_rerun_state"]["reason"])
+        self.assertIn(
+            "advisory_backlog_status=expired", gate["live_rerun_state"]["reason"]
+        )
         self.assertIn("expired or incomplete", gate["next_action"])
         self.assertEqual(
             validate_with_schema(report, load_schema(DASHBOARD_SCHEMA_PATH)), []

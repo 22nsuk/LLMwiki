@@ -87,7 +87,6 @@ RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_PLAN_OUT ?= tmp/release-closeout-post-chec
 RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS ?=
 RELEASE_CLOSEOUT_FIXED_POINT_COST_TREND_OUT ?= ops/reports/release-closeout-fixed-point-cost-trend.json
 RELEASE_CLOSEOUT_FIXED_POINT_COST_TREND_CANDIDATE_OUT ?= tmp/release-closeout-fixed-point-cost-trend.candidate.json
-RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS ?= 10
 RELEASE_CLOSEOUT_FIXED_POINT_TIMEOUT_SECONDS ?= 600
 RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS ?=
 OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS ?= generated-artifact-index-body artifact-freshness external-report-action-matrix release-closeout-summary-report learning-readiness-signoff-revalidation release-evidence-cohort release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger release-closeout-batch-manifest-promote release-evidence-closeout-self-check

@@ -54,7 +54,11 @@ def _artifact_entries(batch_manifest: dict[str, Any]) -> list[dict[str, Any]]:
         entries.append(
             {
                 "path": rel_path,
-                "expected_sha256": str(item.get("digest", "")),
+                # v1 manifests are archive inputs only; current v2 authority
+                # records the exact artifact bytes as raw_digest.
+                "expected_sha256": str(
+                    item.get("raw_digest", item.get("digest", ""))
+                ),
                 "required": bool(item.get("required", False)),
                 "role": str(item.get("role", "")),
                 "artifact_kind": str(item.get("artifact_kind", "")),

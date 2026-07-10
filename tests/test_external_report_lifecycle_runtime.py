@@ -245,6 +245,34 @@ def test_artifact_freshness_source_identity_mismatch_returns_unavailable_state(
     )
 
 
+def test_artifact_freshness_revision_alias_is_current_when_source_tree_matches(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "ops" / "reports" / "artifact-freshness-report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(
+            _artifact_freshness_payload(
+                tmp_path,
+                artifact_count=123,
+                stale_artifact_count=0,
+                operational_attention_artifact_count=0,
+                source_revision="previous-revision-same-tree",
+                source_tree_fingerprint=release_source_tree_fingerprint(tmp_path),
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    state = canonical_artifact_freshness_state(tmp_path)
+
+    assert state == _artifact_freshness_state(
+        artifact_count=123,
+        stale_artifact_count=0,
+        operational_attention_artifact_count=0,
+    )
+
+
 def test_46_of_46_stale_claim_is_historical_not_current() -> None:
     lifecycle = classify_external_report_action_lifecycle(
         {

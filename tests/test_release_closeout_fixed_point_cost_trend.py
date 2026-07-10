@@ -62,12 +62,12 @@ class ReleaseCloseoutFixedPointCostTrendTests(unittest.TestCase):
 
     def _write_fixed_point(self, *, digest_seed: str, writer_total_ms: int) -> None:
         payload: dict[str, Any] = {
+            "schema_version": 2,
             "generated_at": f"2026-05-09T{digest_seed}:00:00Z",
             "status": "pass",
-            "converged": True,
-            "iteration_count": 2,
+            "execution_pass_count": 1,
             "duration_summary": {
-                "iteration_count": 2,
+                "execution_pass_count": 1,
                 "command_run_count": 2,
                 "total_duration_ms": writer_total_ms,
                 "writer_costs": [
@@ -112,7 +112,8 @@ class ReleaseCloseoutFixedPointCostTrendTests(unittest.TestCase):
         self.assertEqual(report["sample_count"], 1)
         self.assertEqual(report["latest_sample"]["total_duration_ms"], 1000)
         self.assertRegex(
-            report["latest_sample"]["fixed_point_report_digest"], r"^[a-f0-9]{64}$"
+            report["latest_sample"]["fixed_point_report_raw_digest"],
+            r"^[a-f0-9]{64}$",
         )
         self.assertEqual(report["threshold_summary"]["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
@@ -141,7 +142,9 @@ class ReleaseCloseoutFixedPointCostTrendTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(second, load_schema(SCHEMA_PATH)), [])
 
-    def test_main_no_fail_writes_attention_diagnostic_when_fixed_point_missing(self) -> None:
+    def test_main_no_fail_writes_attention_diagnostic_when_fixed_point_missing(
+        self,
+    ) -> None:
         exit_code = main(
             [
                 "--vault",
@@ -161,11 +164,21 @@ class ReleaseCloseoutFixedPointCostTrendTests(unittest.TestCase):
         self.assertEqual(report["status"], "attention")
         self.assertFalse(report["fixed_point_report"]["sample_available"])
         self.assertNotEqual(report["fixed_point_report"]["load_status"], "ok")
-        self.assertEqual(report["fixed_point_report"]["digest"], "")
+        self.assertEqual(report["fixed_point_report"]["raw_digest"], "")
         self.assertEqual(report["sample_count"], 0)
         self.assertIsNone(report["latest_sample"])
         self.assertEqual(report["samples"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_schema_v1_fixed_point_is_not_reused_as_current_authority(self) -> None:
+        self._write_fixed_point(digest_seed="10", writer_total_ms=1000)
+        fixed_point_path = self.vault / FIXED_POINT_REPORT_PATH
+        payload = json.loads(fixed_point_path.read_text(encoding="utf-8"))
+        payload["schema_version"] = 1
+        fixed_point_path.write_text(json.dumps(payload), encoding="utf-8")
+
+        with self.assertRaisesRegex(FileNotFoundError, "unsupported_schema_version"):
+            build_report(self.vault, context=context_at(10))
 
 
 if __name__ == "__main__":

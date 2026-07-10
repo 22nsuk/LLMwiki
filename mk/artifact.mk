@@ -52,7 +52,7 @@ RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.
 
 -include $(DERIVED_SURFACES_MK_OUT)
 
-.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean derived-surfaces-sync derived-surfaces-sync-check sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output generated-artifact-finality-suffix command-log-summary-backfill generated-artifact-retention-clean generated-artifact-runs-compress clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-workflow-order-guard-check release-workflow-order-guard-spec-sync release-workflow-order-guard-spec-sync-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
+.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean derived-surfaces-sync derived-surfaces-sync-check sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output command-log-summary-backfill generated-artifact-retention-clean generated-artifact-runs-compress clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan release-workflow-order-guard release-workflow-order-guard-check release-workflow-order-guard-spec-sync release-workflow-order-guard-spec-sync-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
@@ -113,22 +113,13 @@ refresh-generated: refresh-generated-core refresh-generated-observability
 
 generated-artifact-converge:
 	$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase before --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)"
-	$(MAKE) generated-artifact-finality-suffix
+	$(MAKE) artifact-freshness
+	$(MAKE) external-report-action-matrix
+	$(MAKE) generated-artifact-index
 	$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase after --before "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)" --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT)"
 
 generated-artifact-script-output:
 	$(MAKE) script-output-surfaces
-
-# These reports feed each other: freshness reads matrix/index, matrix reads freshness,
-# and index reads matrix. Run one full index pass, then a body-only feedback pass.
-generated-artifact-finality-suffix:
-	$(MAKE) artifact-freshness
-	$(MAKE) external-report-action-matrix
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
-	$(MAKE) external-report-action-matrix
-	$(MAKE) generated-artifact-index-body
-	$(MAKE) artifact-freshness
 
 command-log-summary-backfill:
 	$(PYTHON) -m ops.scripts.command_log_summary_backfill --vault "$(VAULT)" --out "$(COMMAND_LOG_SUMMARY_BACKFILL_OUT)" $(if $(COMMAND_LOG_SUMMARY_BACKFILL_APPLY),--apply,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_ALL),--all,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_INCLUDE_RUN_COMMANDS),--include-run-commands,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_CLOSE_PROMOTED_UNREFERENCED),--close-promoted-unreferenced,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_DELETE_RAW),--delete-raw,) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION),--operator-confirmation "$(COMMAND_LOG_SUMMARY_BACKFILL_OPERATOR_CONFIRMATION)",) $(if $(COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID),--run-id "$(COMMAND_LOG_SUMMARY_BACKFILL_RUN_ID)",)

@@ -25,39 +25,35 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def _fixed_point_payload() -> dict:
     return {
+        "schema_version": 2,
         "generated_at": "2026-04-30T08:30:00Z",
         "status": "pass",
-        "converged": True,
-        "iteration_count": 3,
+        "execution_pass_count": 1,
         "duration_summary": {
-            "iteration_count": 3,
+            "execution_pass_count": 1,
             "command_run_count": 12,
             "total_duration_ms": 1200,
             "writer_costs": [
                 {
                     "name": "release-evidence-dashboard",
                     "target": "release-evidence-dashboard-report",
-                    "run_count": 3,
-                    "selected_iteration_count": 3,
+                    "produces": ["ops/reports/release-evidence-dashboard.json"],
+                    "run_count": 1,
+                    "selected": True,
                     "total_duration_ms": 450,
                     "average_duration_ms": 150,
                     "max_duration_ms": 200,
-                    "skipped_after_first_iteration_count": 0,
                 }
             ],
-            "expensive_prerequisites_once": {
+            "expensive_prerequisites": {
                 "targets": ["release-risk-taxonomy-matrix"],
                 "configured_target_count": 1,
                 "observed_target_count": 1,
-                "first_iteration_run_count": 1,
-                "post_first_iteration_selected_count": 0,
-                "post_first_iteration_run_count": 0,
-                "skipped_post_first_iteration_selection_count": 2,
+                "run_count": 1,
                 "total_duration_ms": 450,
-                "skip_policy_effective": True,
-                "summary": "expensive prerequisites were selected only in iteration 1",
+                "summary": "expensive prerequisites ran once",
             },
-            "summary": "1 writer ran 12 commands across 3 iterations",
+            "summary": "1 writer ran 12 commands in one execution pass",
         },
     }
 
@@ -65,9 +61,10 @@ def _fixed_point_payload() -> dict:
 def _cost_trend_payload(fixed_point_digest: str, *, status: str = "pass") -> dict:
     breached = status == "attention"
     return {
+        "schema_version": 2,
         "status": status,
         "sample_count": 2,
-        "latest_sample": {"fixed_point_report_digest": fixed_point_digest},
+        "latest_sample": {"fixed_point_report_raw_digest": fixed_point_digest},
         "threshold_summary": {
             "status": status,
             "breached_writer_count": 1 if breached else 0,
@@ -98,7 +95,9 @@ def test_finalizer_duration_signal_reads_current_digest_and_writer_costs() -> No
 
     assert signal["status"] == "pass"
     assert signal["fixed_point_report_status"] == "pass"
-    assert signal["evidence_basis"]["fixed_point_report_digest"] == fixed_point_digest
+    assert (
+        signal["evidence_basis"]["fixed_point_report_raw_digest"] == fixed_point_digest
+    )
     assert (
         signal["evidence_basis"]["basis_relation_to_current_fixed_point"]
         == "sampled_current_fixed_point"
@@ -107,12 +106,12 @@ def test_finalizer_duration_signal_reads_current_digest_and_writer_costs() -> No
         {
             "name": "release-evidence-dashboard",
             "target": "release-evidence-dashboard-report",
-            "run_count": 3,
-            "selected_iteration_count": 3,
+            "produces": ["ops/reports/release-evidence-dashboard.json"],
+            "run_count": 1,
+            "selected": True,
             "total_duration_ms": 450,
             "average_duration_ms": 150,
             "max_duration_ms": 200,
-            "skipped_after_first_iteration_count": 0,
         }
     ]
 
@@ -161,9 +160,22 @@ def test_finalizer_duration_signal_preserves_missing_evidence_basis() -> None:
 
     assert signal["load_status"] == "missing"
     assert signal["status"] == "unknown"
-    assert signal["evidence_basis"]["fixed_point_report_digest"] == ""
-    assert signal["evidence_basis"]["cost_trend_digest"] == cost_trend_digest
+    assert signal["evidence_basis"]["fixed_point_report_raw_digest"] == ""
+    assert signal["evidence_basis"]["cost_trend_raw_digest"] == cost_trend_digest
     assert (
         signal["evidence_basis"]["basis_relation_to_current_fixed_point"]
         == "cost_trend_unavailable"
     )
+
+
+def test_finalizer_duration_signal_rejects_v1_current_authority() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        fixed_point = _fixed_point_payload()
+        fixed_point["schema_version"] = 1
+
+        signal = finalizer_duration_signal(vault, fixed_point, "ok", {}, "missing")
+
+    assert signal["load_status"] == "unsupported_schema_version"
+    assert signal["status"] == "unknown"
+    assert signal["execution_pass_count"] == 0

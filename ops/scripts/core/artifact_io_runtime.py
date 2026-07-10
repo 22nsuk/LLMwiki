@@ -8,19 +8,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .artifact_binding_runtime import (
+    CONTENT_BINDING_MODE,
+    binding_file_digest,
+)
 from .artifact_freshness_mtime_runtime import parse_generated_at
 from .output_runtime import display_path, resolve_repo_output_path, write_output_text
 from .schema_runtime import load_schema_with_vault_override, validate_or_raise
-
-SEMANTIC_NOOP_ENVELOPE_FIELDS = frozenset(
-    {
-        "generated_at",
-        "source_revision",
-        "source_tree_fingerprint",
-        "input_fingerprints",
-        "currentness",
-    }
-)
 
 
 @dataclass(frozen=True)
@@ -324,8 +318,7 @@ def promote_schema_validated_json(
     expected_producer: str | None = None,
     context: str,
     trailing_newline: bool = True,
-    preserve_existing_on_semantic_match: bool = False,
-    semantic_ignore_fields: frozenset[str] = SEMANTIC_NOOP_ENVELOPE_FIELDS,
+    binding_mode: str = CONTENT_BINDING_MODE,
 ) -> Path:
     payload = read_json_object(candidate_path, context=candidate_path.as_posix())
     resolved_schema_path = schema_path_from_payload(payload, override=schema_path)
@@ -341,7 +334,7 @@ def promote_schema_validated_json(
         )
     schema = load_schema_with_vault_override(vault, resolved_schema_path)
     validate_or_raise(payload, schema, context=context, path="$")
-    if preserve_existing_on_semantic_match and destination_path.is_file():
+    if destination_path.is_file():
         try:
             existing_payload = read_json_object(destination_path, context=destination_path.as_posix())
             validate_or_raise(
@@ -352,10 +345,21 @@ def promote_schema_validated_json(
             )
         except (OSError, json.JSONDecodeError, ValueError):
             existing_payload = {}
-        if _semantic_payload(payload, semantic_ignore_fields) == _semantic_payload(
-            existing_payload,
-            semantic_ignore_fields,
+        candidate_mode, candidate_digest = binding_file_digest(
+            candidate_path,
+            binding_mode=binding_mode,
+        )
+        existing_mode, existing_digest = binding_file_digest(
+            destination_path,
+            binding_mode=binding_mode,
+        )
+        if (
+            existing_payload
+            and candidate_mode == existing_mode
+            and candidate_digest == existing_digest
         ):
+            if candidate_path.resolve() != destination_path.resolve():
+                candidate_path.unlink(missing_ok=True)
             return destination_path
     return write_schema_validated_json(
         destination_path,
@@ -364,10 +368,6 @@ def promote_schema_validated_json(
         context=context,
         trailing_newline=trailing_newline,
     )
-
-
-def _semantic_payload(payload: dict[str, Any], ignored_fields: frozenset[str]) -> dict[str, Any]:
-    return {key: value for key, value in payload.items() if key not in ignored_fields}
 
 
 def write_vault_schema_validated_json(

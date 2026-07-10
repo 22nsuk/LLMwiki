@@ -8,6 +8,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_binding_runtime import (
+    CONTENT_BINDING_MODE,
+    RAW_BINDING_MODE,
+    REVISION_BINDING_MODE,
+    binding_file_digest,
+)
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
@@ -15,7 +21,6 @@ from ops.scripts.core.artifact_io_runtime import (
     resolve_schema_backed_report_output_path,
     write_schema_backed_report,
 )
-from ops.scripts.core.generated_artifact_semantic_digest import semantic_digest_maps
 from ops.scripts.core.output_runtime import display_path
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
@@ -32,10 +37,16 @@ PRODUCER = "ops.scripts.release_closeout_finality_attestation"
 SCHEMA_PATH = "ops/schemas/release-closeout-finality-attestation.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.release_closeout_finality_attestation --vault ."
 FIXED_POINT_REPORT_PATH = "ops/reports/release-closeout-fixed-point.json"
+FIXED_POINT_PRODUCER = "ops.scripts.release_closeout_fixed_point"
 BATCH_MANIFEST_PATH = "ops/reports/release-closeout-batch-manifest.json"
 SELF_CHECK_PATH = "ops/reports/release-evidence-closeout-self-check.json"
 EXTERNAL_REPORT_MANIFEST_PATH = "external-reports/report-reference-manifest.json"
 SHA256_MISSING = "missing"
+SUPPORTED_BINDING_MODES = {
+    CONTENT_BINDING_MODE,
+    REVISION_BINDING_MODE,
+    RAW_BINDING_MODE,
+}
 
 
 def _sha256_file(path: Path) -> str:
@@ -70,137 +81,187 @@ def _tracked_paths_from_fixed_point(fixed_point: dict[str, Any]) -> list[str]:
         ]
         if paths:
             return sorted(dict.fromkeys(paths))
-    final_map = fixed_point.get("final_digest_map")
-    if isinstance(final_map, dict):
-        return sorted(str(path) for path in final_map)
     return []
 
 
-def _digest_map(vault: Path, paths: list[str]) -> dict[str, str]:
+def _raw_digest_map(vault: Path, paths: list[str]) -> dict[str, str]:
     return {path: _sha256_file(vault / path) for path in paths}
 
 
-def _digest_mismatches(
-    expected: dict[str, Any],
+def _binding_digest_map(
+    vault: Path,
+    binding_mode_map: dict[str, str],
+) -> dict[str, str]:
+    return {
+        path: binding_file_digest(
+            vault / path,
+            binding_mode=binding_mode,
+        )[1]
+        for path, binding_mode in sorted(binding_mode_map.items())
+    }
+
+
+def _binding_mismatches(
+    expected: dict[str, str],
     actual: dict[str, str],
+    *,
+    binding_mode_map: dict[str, str],
 ) -> list[dict[str, str]]:
     mismatches: list[dict[str, str]] = []
     for path in sorted(set(expected) | set(actual)):
-        expected_digest = str(expected.get(path, SHA256_MISSING))
-        actual_digest = str(actual.get(path, SHA256_MISSING))
+        expected_digest = expected.get(path, SHA256_MISSING)
+        actual_digest = actual.get(path, SHA256_MISSING)
         if expected_digest == actual_digest:
             continue
         mismatches.append(
             {
                 "path": path,
-                "fixed_point_digest": expected_digest,
-                "current_digest": actual_digest,
+                "fixed_point_binding_digest": expected_digest,
+                "current_binding_digest": actual_digest,
+                "binding_mode": binding_mode_map.get(path, "missing"),
             }
         )
     return mismatches
 
 
-def _recorded_digest_mismatches(
+def _recorded_binding_mismatches(
     *,
     recorded: dict[str, str],
     current: dict[str, str],
+    binding_mode_map: dict[str, str],
 ) -> list[dict[str, str]]:
     paths = sorted(set(recorded) | set(current))
     return [
         {
             "path": path,
-            "recorded_digest": recorded.get(path, SHA256_MISSING),
-            "current_digest": current.get(path, SHA256_MISSING),
+            "recorded_binding_digest": recorded.get(path, SHA256_MISSING),
+            "current_binding_digest": current.get(path, SHA256_MISSING),
+            "binding_mode": binding_mode_map.get(path, "missing"),
         }
         for path in paths
         if recorded.get(path, SHA256_MISSING) != current.get(path, SHA256_MISSING)
     ]
 
 
-def _batch_manifest_artifact_digest_mismatches(vault: Path) -> list[dict[str, str]]:
+def _batch_manifest_artifact_mismatches(vault: Path) -> dict[str, Any]:
     payload, load_status = _load_optional(vault, BATCH_MANIFEST_PATH)
     if load_status != "ok":
-        return []
+        return {
+            "binding_mismatches": [],
+            "authority_failures": [f"batch_manifest_load_status:{load_status}"],
+        }
+    if payload.get("schema_version") != 2:
+        return {
+            "binding_mismatches": [],
+            "authority_failures": ["batch_manifest_unsupported_schema_version"],
+        }
     artifacts = payload.get("artifacts")
     if not isinstance(artifacts, list):
-        return []
-    mismatches: list[dict[str, str]] = []
+        return {
+            "binding_mismatches": [],
+            "authority_failures": ["batch_manifest_artifacts_missing"],
+        }
+    binding_mismatches: list[dict[str, str]] = []
+    authority_failures: list[str] = []
     for item in artifacts:
         if not isinstance(item, dict):
             continue
         rel_path = str(item.get("path", "")).strip()
         if not rel_path:
             continue
-        expected = str(item.get("digest", SHA256_MISSING)).strip() or SHA256_MISSING
-        actual = _sha256_file(vault / rel_path)
-        if expected == actual:
+        role = str(item.get("role", "")).strip()
+        binding_expected = str(item.get("binding_digest", "")).strip()
+        binding_mode = str(item.get("binding_mode", "")).strip()
+        if binding_expected and binding_mode in SUPPORTED_BINDING_MODES:
+            binding_current = binding_file_digest(
+                vault / rel_path,
+                binding_mode=binding_mode,
+            )[1]
+        else:
+            authority_failures.append(
+                f"batch_manifest_artifact_binding_invalid:{rel_path}"
+            )
             continue
-        mismatches.append(
-            {
-                "path": rel_path,
-                "role": str(item.get("role", "")).strip(),
-                "batch_manifest_digest": expected,
-                "current_digest": actual,
-            }
-        )
-    return mismatches
+        if binding_expected != binding_current:
+            binding_mismatches.append(
+                {
+                    "path": rel_path,
+                    "role": role,
+                    "batch_manifest_binding_digest": binding_expected,
+                    "current_binding_digest": binding_current,
+                    "binding_mode": binding_mode,
+                }
+            )
+    return {
+        "binding_mismatches": binding_mismatches,
+        "authority_failures": authority_failures,
+    }
 
 
-def _mismatches_covered_by_semantic_digest(
-    mismatches: list[dict[str, str]],
-    *,
-    recorded_semantic_map: dict[str, str],
-    current_semantic_map: dict[str, str],
-) -> list[dict[str, str]]:
-    covered: list[dict[str, str]] = []
-    for item in mismatches:
-        path = item["path"]
-        recorded = recorded_semantic_map.get(path, "")
-        current = current_semantic_map.get(path, "")
-        if not recorded or recorded != current:
-            continue
-        covered.append(
-            {
-                **item,
-                "recorded_semantic_digest": recorded,
-                "current_semantic_digest": current,
-            }
-        )
-    return covered
-
-
-def _mismatches_covered_by_semantic_digest_with_fixed_point_authority(
-    mismatches: list[dict[str, str]],
-    *,
-    fixed_point_digest_map: dict[str, str],
-    recorded_semantic_map: dict[str, str],
-    current_semantic_map: dict[str, str],
-) -> list[dict[str, str]]:
-    digest_consistent_mismatches: list[dict[str, str]] = []
-    for item in mismatches:
-        path = item["path"]
-        fixed_point_digest = fixed_point_digest_map.get(path, "")
-        if not fixed_point_digest or item["recorded_digest"] != fixed_point_digest:
-            continue
-        digest_consistent_mismatches.append(
-            {
-                **item,
-                "fixed_point_digest": fixed_point_digest,
-            }
-        )
-    return _mismatches_covered_by_semantic_digest(
-        digest_consistent_mismatches,
-        recorded_semantic_map=recorded_semantic_map,
-        current_semantic_map=current_semantic_map,
+def _fixed_point_authority_maps(
+    fixed_point: dict[str, Any],
+) -> tuple[dict[str, str], dict[str, str], dict[str, str], str]:
+    if fixed_point.get("schema_version") != 2:
+        return {}, {}, {}, "unsupported_schema_version"
+    raw_digest_map = _normalized_digest_map(fixed_point.get("raw_digest_map"))
+    binding_digest_map = _normalized_digest_map(
+        fixed_point.get("binding_digest_map")
     )
-
-
-def _uncovered_mismatches(
-    mismatches: list[dict[str, str]],
-    covered: list[dict[str, str]],
-) -> list[dict[str, str]]:
-    covered_paths = {item["path"] for item in covered}
-    return [item for item in mismatches if item["path"] not in covered_paths]
+    binding_mode_map = _normalized_digest_map(fixed_point.get("binding_mode_map"))
+    currentness = fixed_point.get("currentness")
+    currentness_status = (
+        str(currentness.get("status", "")).strip()
+        if isinstance(currentness, dict)
+        else ""
+    )
+    execution = fixed_point.get("execution")
+    execution_is_consistent = (
+        isinstance(execution, dict)
+        and execution.get("status") == "pass"
+        and _normalized_digest_map(execution.get("raw_digest_map"))
+        == raw_digest_map
+        and _normalized_digest_map(execution.get("binding_digest_map"))
+        == binding_digest_map
+        and _normalized_digest_map(execution.get("binding_mode_map"))
+        == binding_mode_map
+    )
+    tracked_paths = set(_tracked_paths_from_fixed_point(fixed_point))
+    tracked_mode_map = {
+        str(item.get("path", "")).strip(): str(
+            item.get("binding_mode", "")
+        ).strip()
+        for item in fixed_point.get("tracked_artifacts", [])
+        if isinstance(item, dict) and str(item.get("path", "")).strip()
+    }
+    if (
+        not tracked_paths
+        or fixed_point.get("artifact_kind")
+        != "release_closeout_fixed_point_report"
+        or fixed_point.get("producer") != FIXED_POINT_PRODUCER
+        or fixed_point.get("status") != "pass"
+        or fixed_point.get("artifact_status") != "current"
+        or currentness_status != "current"
+        or fixed_point.get("execution_pass_count") != 1
+        or set(raw_digest_map) != tracked_paths
+        or set(binding_digest_map) != tracked_paths
+        or set(binding_mode_map) != tracked_paths
+        or tracked_mode_map != binding_mode_map
+        or not execution_is_consistent
+        or any(
+            digest != SHA256_MISSING
+            and (
+                len(digest) != 64
+                or any(character not in "0123456789abcdef" for character in digest)
+            )
+            for digest in [*raw_digest_map.values(), *binding_digest_map.values()]
+        )
+        or any(
+            mode not in SUPPORTED_BINDING_MODES
+            for mode in binding_mode_map.values()
+        )
+    ):
+        return {}, {}, {}, "invalid_v2_authority"
+    return raw_digest_map, binding_digest_map, binding_mode_map, "ok"
 
 
 def _sealed_preflight_summary(vault: Path) -> dict[str, Any]:
@@ -214,7 +275,7 @@ def _sealed_preflight_summary(vault: Path) -> dict[str, Any]:
     currentness_status = str(currentness.get("status", "")).strip()
     return {
         "path": SEALED_PREFLIGHT_PATH,
-        "digest": _sha256_file(vault / SEALED_PREFLIGHT_PATH),
+        "raw_digest": _sha256_file(vault / SEALED_PREFLIGHT_PATH),
         "load_status": load_status,
         "status": status,
         "preflight_status": preflight_status,
@@ -232,9 +293,9 @@ def _finality_failure_classification(
     vault: Path,
     *,
     failures: list[str],
-    raw_digest_mismatches: list[dict[str, str]],
-    fixed_point_digest_mismatches: list[dict[str, str]],
-    batch_manifest_artifact_digest_mismatches: list[dict[str, str]] | None = None,
+    binding_digest_mismatches: list[dict[str, str]],
+    fixed_point_binding_mismatches: list[dict[str, str]],
+    batch_manifest_artifact_binding_mismatches: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     if not failures:
         return {
@@ -244,17 +305,17 @@ def _finality_failure_classification(
             "recommended_lane": "none",
             "recommended_targets": [],
             "recommended_fixed_point_initial_targets": [],
-            "batch_manifest_artifact_digest_mismatches": [],
-            "freshness_index_cohort_digest_mismatches": [],
-            "sealed_preflight_artifact_digest_mismatches": [],
+            "batch_manifest_artifact_binding_mismatches": [],
+            "freshness_index_cohort_binding_mismatches": [],
+            "sealed_preflight_artifact_binding_mismatches": [],
             "sealed_preflight": _sealed_preflight_summary(vault),
-            "fixed_point_tracked_writer_mismatches": [],
+            "fixed_point_tracked_writer_binding_mismatches": [],
             "summary": "finality current-check is current",
         }
     batch_mismatches = (
-        batch_manifest_artifact_digest_mismatches
-        if batch_manifest_artifact_digest_mismatches is not None
-        else _batch_manifest_artifact_digest_mismatches(vault)
+        batch_manifest_artifact_binding_mismatches
+        if batch_manifest_artifact_binding_mismatches is not None
+        else _batch_manifest_artifact_mismatches(vault)["binding_mismatches"]
     )
     freshness_index_cohort = [
         item
@@ -271,14 +332,14 @@ def _finality_failure_classification(
             **item,
             "writer_target": fixed_point_writer_by_path.get(item["path"], ""),
         }
-        for item in fixed_point_digest_mismatches
+        for item in fixed_point_binding_mismatches
     ]
 
     classes: list[str] = []
     recommended_targets: list[str] = []
     recommended_initial_targets: list[str] = []
     if freshness_index_cohort:
-        classes.append("batch_manifest_freshness_index_cohort_digest_mismatch")
+        classes.append("batch_manifest_freshness_index_cohort_binding_mismatch")
         recommended_initial_targets.extend(
             FRESHNESS_INDEX_COHORT_PATHS[item["path"]]
             for item in freshness_index_cohort
@@ -289,20 +350,22 @@ def _finality_failure_classification(
         classes.append("sealed_preflight_artifact_mismatch")
         recommended_targets.append("release-authority-sealed-preflight")
     if fixed_point_writer_mismatches:
-        classes.append("fixed_point_tracked_writer_mismatch")
+        classes.append("fixed_point_tracked_writer_binding_mismatch")
         recommended_initial_targets.extend(
             item["writer_target"]
             for item in fixed_point_writer_mismatches
             if item["writer_target"]
         )
-    if raw_digest_mismatches and not fixed_point_writer_mismatches:
-        classes.append("finality_attestation_digest_mismatch")
+    if binding_digest_mismatches and not fixed_point_writer_mismatches:
+        classes.append("finality_attestation_binding_mismatch")
+    if any(failure.endswith("_raw_binding_mismatch") for failure in failures):
+        classes.append("terminal_component_raw_binding_mismatch")
     if failures and not classes:
         classes.append("unclassified_finality_current_check_failure")
 
     if recommended_initial_targets:
         recommended_targets.append("release-closeout-fixed-point")
-    if classes == ["finality_attestation_digest_mismatch"]:
+    if classes == ["finality_attestation_binding_mismatch"]:
         recommended_targets.append("release-closeout-finality-attestation")
     if classes:
         recommended_targets.append("release-closeout-finality-verify")
@@ -312,14 +375,16 @@ def _finality_failure_classification(
     recommended_lane = (
         "release-authority-sealed-preflight + release-closeout-fixed-point"
         if "sealed_preflight_artifact_mismatch" in classes
-        and "fixed_point_tracked_writer_mismatch" in classes
+        and "fixed_point_tracked_writer_binding_mismatch" in classes
         else "release-authority-sealed-preflight"
         if classes == ["sealed_preflight_artifact_mismatch"]
         else "release-closeout-fixed-point"
         if recommended_initial_targets or fixed_point_writer_mismatches
         else "release-closeout-finality-attestation"
-        if classes == ["finality_attestation_digest_mismatch"]
-        else "release-finality-resettle-current-or-refresh"
+        if classes == ["finality_attestation_binding_mismatch"]
+        else "terminal-component-owner"
+        if "terminal_component_raw_binding_mismatch" in classes
+        else "release-closeout-finality-verify"
     )
     return {
         "status": "pass" if not failures else "fail",
@@ -328,11 +393,11 @@ def _finality_failure_classification(
         "recommended_lane": recommended_lane,
         "recommended_targets": recommended_targets,
         "recommended_fixed_point_initial_targets": recommended_initial_targets,
-        "batch_manifest_artifact_digest_mismatches": batch_mismatches,
-        "freshness_index_cohort_digest_mismatches": freshness_index_cohort,
-        "sealed_preflight_artifact_digest_mismatches": sealed_preflight_artifact_mismatches,
+        "batch_manifest_artifact_binding_mismatches": batch_mismatches,
+        "freshness_index_cohort_binding_mismatches": freshness_index_cohort,
+        "sealed_preflight_artifact_binding_mismatches": sealed_preflight_artifact_mismatches,
         "sealed_preflight": sealed_preflight,
-        "fixed_point_tracked_writer_mismatches": fixed_point_writer_mismatches,
+        "fixed_point_tracked_writer_binding_mismatches": fixed_point_writer_mismatches,
         "summary": (
             "finality current-check is current"
             if not failures
@@ -347,29 +412,36 @@ def _finality_failure_classification(
 
 def _fixed_point_summary(vault: Path) -> tuple[dict[str, Any], dict[str, Any], str]:
     payload, load_status = _load_optional(vault, FIXED_POINT_REPORT_PATH)
-    digest = _sha256_file(vault / FIXED_POINT_REPORT_PATH)
+    raw_digest = _sha256_file(vault / FIXED_POINT_REPORT_PATH)
     summary = {
         "path": FIXED_POINT_REPORT_PATH,
-        "digest": digest,
+        "raw_digest": raw_digest,
+        "binding_mode": RAW_BINDING_MODE,
         "load_status": load_status,
+        "schema_version": int(payload.get("schema_version", 0) or 0),
         "status": str(payload.get("status", "missing")).strip() if payload else "missing",
-        "converged": bool(payload.get("converged", False)) if payload else False,
-        "converged_iteration": int(payload.get("converged_iteration", 0) or 0) if payload else 0,
-        "final_digest_map": payload.get("final_digest_map", {}) if isinstance(payload.get("final_digest_map"), dict) else {},
+        "execution_pass_count": int(payload.get("execution_pass_count", 0) or 0),
+        "raw_digest_map": _normalized_digest_map(payload.get("raw_digest_map")),
+        "binding_digest_map": _normalized_digest_map(
+            payload.get("binding_digest_map")
+        ),
+        "binding_mode_map": _normalized_digest_map(payload.get("binding_mode_map")),
     }
-    return payload, summary, digest
+    return payload, summary, raw_digest
 
 
 def _batch_manifest_summary(vault: Path) -> tuple[dict[str, Any], dict[str, Any], str]:
     payload, load_status = _load_optional(vault, BATCH_MANIFEST_PATH)
-    digest = _sha256_file(vault / BATCH_MANIFEST_PATH)
+    raw_digest = _sha256_file(vault / BATCH_MANIFEST_PATH)
     raw_finality = payload.get("finality")
     finality: dict[str, Any] = raw_finality if isinstance(raw_finality, dict) else {}
     status_view = release_status_v2_view(payload) if payload else {}
     summary = {
         "path": BATCH_MANIFEST_PATH,
-        "digest": digest,
+        "raw_digest": raw_digest,
+        "binding_mode": RAW_BINDING_MODE,
         "load_status": load_status,
+        "schema_version": int(payload.get("schema_version", 0) or 0),
         "status": str(status_view.get("compatibility_status_value", "missing")).strip()
         if payload
         else "missing",
@@ -379,12 +451,12 @@ def _batch_manifest_summary(vault: Path) -> tuple[dict[str, Any], dict[str, Any]
         "finality_required": bool(finality.get("finality_required", False)),
         "finality_attestation_path": str(finality.get("finality_attestation_path", "")).strip(),
     }
-    return payload, summary, digest
+    return payload, summary, raw_digest
 
 
-def _self_check_summary(vault: Path, *, batch_digest: str) -> tuple[dict[str, Any], dict[str, Any], str]:
+def _self_check_summary(vault: Path, *, batch_raw_digest: str) -> tuple[dict[str, Any], dict[str, Any], str]:
     payload, load_status = _load_optional(vault, SELF_CHECK_PATH)
-    digest = _sha256_file(vault / SELF_CHECK_PATH)
+    raw_digest = _sha256_file(vault / SELF_CHECK_PATH)
     raw_status = payload.get("status")
     status_payload: dict[str, Any] = raw_status if isinstance(raw_status, dict) else {}
     raw_closeout_inputs = payload.get("closeout_inputs")
@@ -392,13 +464,16 @@ def _self_check_summary(vault: Path, *, batch_digest: str) -> tuple[dict[str, An
     batch_fingerprint = str(closeout_inputs.get("batch_manifest_fingerprint", "")).strip()
     summary = {
         "path": SELF_CHECK_PATH,
-        "digest": digest,
+        "raw_digest": raw_digest,
+        "binding_mode": RAW_BINDING_MODE,
         "load_status": load_status,
         "result": str(status_payload.get("result", "missing")).strip() if payload else "missing",
         "batch_manifest_fingerprint": batch_fingerprint,
-        "batch_manifest_fingerprint_matches_current": bool(batch_fingerprint and batch_fingerprint == batch_digest),
+        "batch_manifest_fingerprint_matches_current": bool(
+            batch_fingerprint and batch_fingerprint == batch_raw_digest
+        ),
     }
-    return payload, summary, digest
+    return payload, summary, raw_digest
 
 
 def _external_report_manifest_summary(vault: Path) -> dict[str, Any]:
@@ -407,7 +482,8 @@ def _external_report_manifest_summary(vault: Path) -> dict[str, Any]:
     provenance: dict[str, Any] = raw_provenance if isinstance(raw_provenance, dict) else {}
     return {
         "path": EXTERNAL_REPORT_MANIFEST_PATH,
-        "digest": _sha256_file(vault / EXTERNAL_REPORT_MANIFEST_PATH),
+        "raw_digest": _sha256_file(vault / EXTERNAL_REPORT_MANIFEST_PATH),
+        "binding_mode": RAW_BINDING_MODE,
         "load_status": load_status,
         "mode": str(provenance.get("mode", "")).strip(),
         "distribution_provenance_status": str(provenance.get("status", "")).strip(),
@@ -419,16 +495,22 @@ def _finality_failures(
     fixed_point_report: dict[str, Any],
     batch_manifest: dict[str, Any],
     self_check: dict[str, Any],
-    matches_fixed_point_digest_map: bool,
-    digest_mismatches: list[dict[str, str]],
+    matches_fixed_point_binding_digest_map: bool,
+    binding_digest_mismatches: list[dict[str, str]],
 ) -> list[str]:
     failures: list[str] = []
     if fixed_point_report["load_status"] != "ok":
         failures.append("fixed_point_report_unavailable")
-    if fixed_point_report["status"] != "pass" or not fixed_point_report["converged"]:
-        failures.append("fixed_point_not_converged")
+    if (
+        fixed_point_report["schema_version"] != 2
+        or fixed_point_report["status"] != "pass"
+        or fixed_point_report["execution_pass_count"] != 1
+    ):
+        failures.append("fixed_point_not_current_v2_authority")
     if batch_manifest["load_status"] != "ok":
         failures.append("batch_manifest_unavailable")
+    if batch_manifest["schema_version"] != 2:
+        failures.append("batch_manifest_unsupported_schema_version")
     if not batch_manifest["finality_required"]:
         failures.append("batch_manifest_finality_not_required")
     if batch_manifest["finality_attestation_path"] != DEFAULT_OUT:
@@ -438,10 +520,13 @@ def _finality_failures(
     if self_check["result"] != "pass":
         failures.append("self_check_not_pass")
     if not self_check["batch_manifest_fingerprint_matches_current"]:
-        failures.append("self_check_batch_digest_mismatch")
-    if not matches_fixed_point_digest_map:
-        failures.append("tracked_digest_map_mismatch")
-        failures.extend(f"digest_mismatch:{item['path']}" for item in digest_mismatches)
+        failures.append("self_check_batch_raw_binding_mismatch")
+    if not matches_fixed_point_binding_digest_map:
+        failures.append("tracked_binding_digest_map_mismatch")
+        failures.extend(
+            f"binding_digest_mismatch:{item['path']}"
+            for item in binding_digest_mismatches
+        )
     return failures
 
 
@@ -454,25 +539,43 @@ def build_report(
     policy, resolved_policy_path = load_policy(vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
     generated_at = runtime_context.isoformat_z()
-    fixed_payload, fixed_point_report, _fixed_digest = _fixed_point_summary(vault)
-    _batch_payload, batch_manifest, batch_digest = _batch_manifest_summary(vault)
-    _self_payload, self_check, _self_digest = _self_check_summary(vault, batch_digest=batch_digest)
+    fixed_payload, fixed_point_report, _fixed_raw_digest = _fixed_point_summary(vault)
+    _batch_payload, batch_manifest, batch_raw_digest = _batch_manifest_summary(vault)
+    _self_payload, self_check, _self_raw_digest = _self_check_summary(
+        vault,
+        batch_raw_digest=batch_raw_digest,
+    )
     external_report_manifest = _external_report_manifest_summary(vault)
 
-    tracked_paths = _tracked_paths_from_fixed_point(fixed_payload)
-    tracked_digest_map = _digest_map(vault, tracked_paths)
-    tracked_semantic_digest_map, tracked_semantic_digest_modes = semantic_digest_maps(
-        vault, tracked_paths
+    (
+        fixed_point_raw_digest_map,
+        fixed_point_binding_digest_map,
+        fixed_point_binding_mode_map,
+        fixed_point_authority_status,
+    ) = _fixed_point_authority_maps(fixed_payload)
+    tracked_paths = sorted(fixed_point_binding_mode_map)
+    tracked_raw_digest_map = _raw_digest_map(vault, tracked_paths)
+    tracked_binding_digest_map = _binding_digest_map(
+        vault,
+        fixed_point_binding_mode_map,
     )
-    fixed_point_digest_map = fixed_point_report["final_digest_map"]
-    digest_mismatches = _digest_mismatches(fixed_point_digest_map, tracked_digest_map)
-    matches_fixed_point_digest_map = not digest_mismatches and bool(tracked_paths)
+    binding_digest_mismatches = _binding_mismatches(
+        fixed_point_binding_digest_map,
+        tracked_binding_digest_map,
+        binding_mode_map=fixed_point_binding_mode_map,
+    )
+    matches_fixed_point_binding_digest_map = (
+        fixed_point_authority_status == "ok"
+        and not binding_digest_mismatches
+        and bool(tracked_paths)
+        and bool(fixed_point_binding_digest_map)
+    )
     finality_failures = _finality_failures(
         fixed_point_report=fixed_point_report,
         batch_manifest=batch_manifest,
         self_check=self_check,
-        matches_fixed_point_digest_map=matches_fixed_point_digest_map,
-        digest_mismatches=digest_mismatches,
+        matches_fixed_point_binding_digest_map=matches_fixed_point_binding_digest_map,
+        binding_digest_mismatches=binding_digest_mismatches,
     )
     finality_status = "pass" if not finality_failures else "fail"
 
@@ -487,7 +590,7 @@ def build_report(
             schema_path=SCHEMA_PATH,
             source_paths=[
                 "ops/scripts/release/release_closeout_finality_attestation.py",
-                "ops/scripts/core/generated_artifact_semantic_digest.py",
+                "ops/scripts/core/artifact_binding_runtime.py",
             ],
             file_inputs={
                 "fixed_point_report": FIXED_POINT_REPORT_PATH,
@@ -498,10 +601,13 @@ def build_report(
             path_group_inputs={"tracked_artifacts": tracked_paths},
             text_inputs={
                 "finality_status": finality_status,
-                "matches_fixed_point_digest_map": str(matches_fixed_point_digest_map),
+                "matches_fixed_point_binding_digest_map": str(
+                    matches_fixed_point_binding_digest_map
+                ),
             },
             source_tree_excluded_files=(DEFAULT_OUT,),
         ),
+        "schema_version": 2,
         "vault": report_path(vault, vault),
         "policy": {
             "path": report_path(vault, resolved_policy_path),
@@ -511,11 +617,12 @@ def build_report(
         "batch_manifest": batch_manifest,
         "self_check": self_check,
         "external_report_manifest": external_report_manifest,
-        "tracked_digest_map": tracked_digest_map,
-        "tracked_semantic_digest_map": tracked_semantic_digest_map,
-        "tracked_semantic_digest_modes": tracked_semantic_digest_modes,
-        "matches_fixed_point_digest_map": matches_fixed_point_digest_map,
-        "digest_mismatches": digest_mismatches,
+        "tracked_raw_digest_map": tracked_raw_digest_map,
+        "tracked_binding_digest_map": tracked_binding_digest_map,
+        "tracked_binding_mode_map": fixed_point_binding_mode_map,
+        "fixed_point_authority_status": fixed_point_authority_status,
+        "matches_fixed_point_binding_digest_map": matches_fixed_point_binding_digest_map,
+        "binding_digest_mismatches": binding_digest_mismatches,
         "finality_status": finality_status,
         "finality_failures": finality_failures,
     }
@@ -542,13 +649,14 @@ def _attestation_load_failure_report(vault: Path, load_status: str) -> dict[str,
         "failure_classification": _finality_failure_classification(
             vault,
             failures=load_failures,
-            raw_digest_mismatches=[],
-            fixed_point_digest_mismatches=[],
+            binding_digest_mismatches=[],
+            fixed_point_binding_mismatches=[],
         ),
-        "semantic_fallback_used": False,
-        "raw_digest_mismatches": [],
-        "raw_digest_mismatches_covered_by_semantic_digest": [],
-        "fixed_point_digest_mismatches": [],
+        "binding_digest_mismatches": [],
+        "fixed_point_binding_mismatches": [],
+        "component_binding_mismatches": [],
+        "batch_manifest_artifact_binding_mismatches": [],
+        "batch_manifest_authority_failures": [],
     }
 
 
@@ -557,116 +665,97 @@ def _attestation_component_verification(
     payload: dict[str, Any],
 ) -> tuple[list[str], list[dict[str, str]]]:
     failures: list[str] = []
-    component_digest_mismatches: list[dict[str, str]] = []
+    component_binding_mismatches: list[dict[str, str]] = []
     for field in ("fixed_point_report", "batch_manifest", "self_check", "external_report_manifest"):
         item = payload.get(field)
         if not isinstance(item, dict):
             failures.append(f"{field}_missing")
             continue
         rel_path = str(item.get("path", "")).strip()
-        expected = str(item.get("digest", "")).strip()
+        expected = str(item.get("raw_digest", "")).strip()
+        binding_mode = str(item.get("binding_mode", "")).strip()
+        if binding_mode != RAW_BINDING_MODE:
+            failures.append(f"{field}_binding_mode_not_raw")
         actual = _sha256_file(vault / rel_path) if rel_path else SHA256_MISSING
         if expected != actual:
-            component_digest_mismatches.append(
+            component_binding_mismatches.append(
                 {
                     "field": field,
                     "path": rel_path,
-                    "recorded_digest": expected,
-                    "current_digest": actual,
+                    "binding_mode": RAW_BINDING_MODE,
+                    "recorded_binding_digest": expected,
+                    "current_binding_digest": actual,
                 }
             )
-    return failures, component_digest_mismatches
+    return failures, component_binding_mismatches
 
 
-def _attestation_tracked_digest_verification(
+def _attestation_tracked_binding_verification(
     vault: Path,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
     fixed_payload, _fixed_summary, _fixed_digest = _fixed_point_summary(vault)
-    tracked_paths = _tracked_paths_from_fixed_point(fixed_payload)
-    current_tracked_digest_map = _digest_map(vault, tracked_paths)
-    recorded_map = _normalized_digest_map(payload.get("tracked_digest_map"))
-    current_semantic_digest_map, _current_semantic_modes = semantic_digest_maps(
-        vault, tracked_paths
+    (
+        _fixed_raw_digest_map,
+        fixed_binding_digest_map,
+        fixed_binding_mode_map,
+        fixed_authority_status,
+    ) = _fixed_point_authority_maps(fixed_payload)
+    current_binding_digest_map = _binding_digest_map(
+        vault,
+        fixed_binding_mode_map,
     )
-    recorded_semantic_map = _normalized_digest_map(payload.get("tracked_semantic_digest_map"))
-    semantic_map_matches = bool(recorded_semantic_map) and (
-        current_semantic_digest_map == recorded_semantic_map
+    recorded_binding_digest_map = _normalized_digest_map(
+        payload.get("tracked_binding_digest_map")
     )
-    raw_digest_mismatches = _recorded_digest_mismatches(
-        recorded=recorded_map,
-        current=current_tracked_digest_map,
+    recorded_binding_mode_map = _normalized_digest_map(
+        payload.get("tracked_binding_mode_map")
     )
-    raw_fixed_map = fixed_payload.get("final_digest_map")
-    fixed_map = _normalized_digest_map(raw_fixed_map)
-    semantic_covered_raw_mismatches = (
-        _mismatches_covered_by_semantic_digest_with_fixed_point_authority(
-            raw_digest_mismatches,
-            fixed_point_digest_map=fixed_map,
-            recorded_semantic_map=recorded_semantic_map,
-            current_semantic_map=current_semantic_digest_map,
-        )
-        if semantic_map_matches
-        else []
+    binding_digest_mismatches = _recorded_binding_mismatches(
+        recorded=recorded_binding_digest_map,
+        current=current_binding_digest_map,
+        binding_mode_map=fixed_binding_mode_map,
     )
-    uncovered_raw_digest_mismatches = (
-        _uncovered_mismatches(raw_digest_mismatches, semantic_covered_raw_mismatches)
+    fixed_point_binding_mismatches = _binding_mismatches(
+        fixed_binding_digest_map,
+        current_binding_digest_map,
+        binding_mode_map=fixed_binding_mode_map,
     )
     failures: list[str] = []
-    if uncovered_raw_digest_mismatches:
-        failures.append("tracked_digest_map_current_mismatch")
-    fixed_point_digest_mismatches = _digest_mismatches(fixed_map, current_tracked_digest_map)
-    uncovered_fixed_point_digest_mismatches = (
-        [] if semantic_map_matches else fixed_point_digest_mismatches
-    )
-    if fixed_point_digest_mismatches and not semantic_map_matches:
-        failures.append("fixed_point_digest_map_current_mismatch")
+    if fixed_authority_status != "ok":
+        failures.append(f"fixed_point_authority_status:{fixed_authority_status}")
+    if recorded_binding_mode_map != fixed_binding_mode_map:
+        failures.append("tracked_binding_mode_map_current_mismatch")
+    if binding_digest_mismatches or not recorded_binding_digest_map:
+        failures.append("tracked_binding_digest_map_current_mismatch")
+    if fixed_point_binding_mismatches or not fixed_binding_digest_map:
+        failures.append("fixed_point_binding_digest_map_current_mismatch")
     return {
         "failures": failures,
-        "raw_digest_mismatches": raw_digest_mismatches,
-        "semantic_covered_raw_mismatches": semantic_covered_raw_mismatches,
-        "uncovered_raw_digest_mismatches": uncovered_raw_digest_mismatches,
-        "fixed_point_digest_mismatches": fixed_point_digest_mismatches,
-        "uncovered_fixed_point_digest_mismatches": uncovered_fixed_point_digest_mismatches,
-        "semantic_map_matches": semantic_map_matches,
-        "recorded_semantic_map": recorded_semantic_map,
-        "current_semantic_map": current_semantic_digest_map,
-        "fixed_map": fixed_map,
+        "binding_digest_mismatches": binding_digest_mismatches,
+        "fixed_point_binding_mismatches": fixed_point_binding_mismatches,
+        "binding_mode_map_mismatch": recorded_binding_mode_map
+        != fixed_binding_mode_map,
+        "recorded_binding_digest_map": recorded_binding_digest_map,
+        "current_binding_digest_map": current_binding_digest_map,
     }
 
 
 def _attestation_batch_and_status_failures(
     vault: Path,
     payload: dict[str, Any],
-    *,
-    semantic_map_matches: bool,
-    recorded_semantic_map: dict[str, str],
-    current_semantic_map: dict[str, str],
-) -> tuple[list[str], list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
+) -> tuple[list[str], dict[str, Any]]:
     failures: list[str] = []
-    batch_mismatches = _batch_manifest_artifact_digest_mismatches(vault)
-    semantic_covered_batch_mismatches = _mismatches_covered_by_semantic_digest(
-        batch_mismatches,
-        recorded_semantic_map=recorded_semantic_map,
-        current_semantic_map=current_semantic_map,
-    )
-    uncovered_batch_mismatches = _uncovered_mismatches(
-        batch_mismatches,
-        semantic_covered_batch_mismatches,
-    )
-    if uncovered_batch_mismatches:
-        failures.append("batch_manifest_artifact_digest_current_mismatch")
+    batch_diagnostics = _batch_manifest_artifact_mismatches(vault)
+    failures.extend(batch_diagnostics["authority_failures"])
+    if batch_diagnostics["binding_mismatches"]:
+        failures.append("batch_manifest_artifact_binding_current_mismatch")
     sealed_preflight = _sealed_preflight_summary(vault)
     if sealed_preflight["load_status"] == "ok" and not sealed_preflight["current"]:
         failures.append("sealed_preflight_not_current")
     if str(payload.get("finality_status", "")).strip() != "pass":
         failures.append("attestation_finality_status_not_pass")
-    return (
-        failures,
-        batch_mismatches,
-        semantic_covered_batch_mismatches,
-        uncovered_batch_mismatches,
-    )
+    return failures, batch_diagnostics
 
 
 def _verify_attestation_diagnostics(
@@ -682,62 +771,52 @@ def _verify_attestation_diagnostics(
     load_status = str(diagnostics.get("status", "unknown")).strip() or "unknown"
     if load_status != "ok":
         return _attestation_load_failure_report(vault, load_status)
+    if payload.get("schema_version") != 2:
+        return _attestation_load_failure_report(vault, "unsupported_schema_version")
 
-    component_failures, component_digest_mismatches = _attestation_component_verification(
+    component_failures, component_binding_mismatches = _attestation_component_verification(
         vault,
         payload,
     )
-    tracked = _attestation_tracked_digest_verification(vault, payload)
-    semantic_covered_component_mismatches = (
-        _mismatches_covered_by_semantic_digest_with_fixed_point_authority(
-            component_digest_mismatches,
-            fixed_point_digest_map=tracked["fixed_map"],
-            recorded_semantic_map=tracked["recorded_semantic_map"],
-            current_semantic_map=tracked["current_semantic_map"],
-        )
-        if tracked["semantic_map_matches"]
-        else []
-    )
-    uncovered_component_digest_mismatches = _uncovered_mismatches(
-        component_digest_mismatches,
-        semantic_covered_component_mismatches,
-    )
-    batch_failures, batch_mismatches, semantic_covered_batch_mismatches, uncovered_batch_mismatches = (
-        _attestation_batch_and_status_failures(
-            vault,
-            payload,
-            semantic_map_matches=tracked["semantic_map_matches"],
-            recorded_semantic_map=tracked["recorded_semantic_map"],
-            current_semantic_map=tracked["current_semantic_map"],
-        )
+    tracked = _attestation_tracked_binding_verification(vault, payload)
+    batch_failures, batch_diagnostics = _attestation_batch_and_status_failures(
+        vault,
+        payload,
     )
     failures = [
         *component_failures,
         *tracked["failures"],
-        *(f"{item['field']}_digest_mismatch" for item in uncovered_component_digest_mismatches),
+        *(
+            f"{item['field']}_raw_binding_mismatch"
+            for item in component_binding_mismatches
+        ),
         *batch_failures,
     ]
-    semantic_covered_raw_mismatches = tracked["semantic_covered_raw_mismatches"]
     return {
         "status": "pass" if not failures else "fail",
         "failures": failures,
         "failure_classification": _finality_failure_classification(
             vault,
             failures=failures,
-            raw_digest_mismatches=tracked["uncovered_raw_digest_mismatches"],
-            fixed_point_digest_mismatches=tracked["uncovered_fixed_point_digest_mismatches"],
-            batch_manifest_artifact_digest_mismatches=uncovered_batch_mismatches,
+            binding_digest_mismatches=tracked["binding_digest_mismatches"],
+            fixed_point_binding_mismatches=tracked[
+                "fixed_point_binding_mismatches"
+            ],
+            batch_manifest_artifact_binding_mismatches=batch_diagnostics[
+                "binding_mismatches"
+            ],
         ),
-        "semantic_fallback_used": bool(semantic_covered_raw_mismatches)
-        or bool(semantic_covered_component_mismatches)
-        or bool(semantic_covered_batch_mismatches),
-        "raw_digest_mismatches": tracked["raw_digest_mismatches"],
-        "raw_digest_mismatches_covered_by_semantic_digest": semantic_covered_raw_mismatches,
-        "fixed_point_digest_mismatches": tracked["fixed_point_digest_mismatches"],
-        "component_digest_mismatches": component_digest_mismatches,
-        "component_digest_mismatches_covered_by_semantic_digest": semantic_covered_component_mismatches,
-        "batch_manifest_artifact_digest_mismatches": batch_mismatches,
-        "batch_manifest_artifact_digest_mismatches_covered_by_semantic_digest": semantic_covered_batch_mismatches,
+        "binding_digest_mismatches": tracked["binding_digest_mismatches"],
+        "fixed_point_binding_mismatches": tracked[
+            "fixed_point_binding_mismatches"
+        ],
+        "component_binding_mismatches": component_binding_mismatches,
+        "batch_manifest_artifact_binding_mismatches": batch_diagnostics[
+            "binding_mismatches"
+        ],
+        "batch_manifest_authority_failures": batch_diagnostics[
+            "authority_failures"
+        ],
     }
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -10,6 +11,9 @@ from pathlib import Path
 
 import pytest
 
+from ops.scripts.core.canonical_artifact_promote import (
+    REQUIRED_BINDING_BY_ARTIFACT_KIND,
+)
 from ops.scripts.test.test_lane_registry_runtime import (
     compatibility_names,
     documentation_authority,
@@ -114,7 +118,9 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         _recipe_lines(text, "generated-artifact-converge"),
         [
             '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase before --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)"',
-            "$(MAKE) generated-artifact-finality-suffix",
+            "$(MAKE) artifact-freshness",
+            "$(MAKE) external-report-action-matrix",
+            "$(MAKE) generated-artifact-index",
             '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase after --before "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)" --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT)"',
         ],
     )
@@ -138,18 +144,7 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             '$(PYTHON) -m ops.scripts.test.generate_pytest_ini_markers --vault "$(VAULT)" --check'
         ],
     )
-    case.assertEqual(
-        _recipe_lines(text, "generated-artifact-finality-suffix"),
-        [
-            "$(MAKE) artifact-freshness",
-            "$(MAKE) external-report-action-matrix",
-            "$(MAKE) generated-artifact-index",
-            "$(MAKE) artifact-freshness",
-            "$(MAKE) external-report-action-matrix",
-            "$(MAKE) generated-artifact-index-body",
-            "$(MAKE) artifact-freshness",
-        ],
-    )
+    case.assertNotIn("generated-artifact-finality-suffix:", text)
     case.assertIn(
         "GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT ?= tmp/generated-artifact-converge-summary.json",
         text,
@@ -167,7 +162,6 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
             "_internal-pytest-markers-sync-check",
             "generated-artifact-converge",
             "generated-artifact-script-output",
-            "generated-artifact-finality-suffix",
             "command-log-summary-backfill",
             "generated-artifact-retention-clean",
             "function-budget-refactor-proposals",
@@ -513,6 +507,51 @@ def _assert_external_report_action_matrix_target(
 
 
 class MakefileStaticGateTests(unittest.TestCase):
+    def test_fixed_point_release_authorities_use_revision_binding(self) -> None:
+        policy = json.loads(
+            (REPO_ROOT / "ops" / "policies" / "release-closeout-fixed-point.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        mode_by_target = {
+            str(writer["target"]): str(writer["binding_mode"])
+            for writer in policy["writers"]
+        }
+
+        for target in (
+            "auto-improve-readiness-report-body",
+            "release-closeout-summary-report",
+            "release-evidence-cohort",
+            "release-closeout-batch-manifest-promote",
+        ):
+            self.assertEqual(
+                mode_by_target.get(target),
+                "revision",
+                f"{target} must retain exact revision authority in fixed-point finality",
+            )
+
+    def test_exact_authority_promotions_declare_required_binding_mode(self) -> None:
+        text = _makefile_text()
+        promotion_lines = [
+            line
+            for line in text.splitlines()
+            if "ops.scripts.canonical_artifact_promote" in line
+        ]
+
+        for artifact_kind, binding_mode in REQUIRED_BINDING_BY_ARTIFACT_KIND.items():
+            owned_lines = [
+                line
+                for line in promotion_lines
+                if f"--expected-artifact-kind {artifact_kind}" in line
+            ]
+            self.assertTrue(owned_lines, f"missing promotion owner for {artifact_kind}")
+            for line in owned_lines:
+                self.assertIn(
+                    f"--binding-mode {binding_mode}",
+                    line,
+                    f"{artifact_kind} promotion must declare {binding_mode} binding",
+                )
+
     def test_root_makefile_keeps_only_common_variables_and_aggregate_aliases(
         self,
     ) -> None:

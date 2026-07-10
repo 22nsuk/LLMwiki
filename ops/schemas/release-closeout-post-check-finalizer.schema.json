@@ -120,7 +120,7 @@
       "type": "string",
       "pattern": "^(unknown|[0-9a-f]{64})$"
     },
-    "semanticDigest": {
+    "bindingDigest": {
       "type": "string",
       "pattern": "^(unknown|missing|[0-9a-f]{64})$"
     },
@@ -144,12 +144,13 @@
         "path",
         "producer_target",
         "load_status",
-        "baseline_digest",
-        "current_digest",
-        "digest_status",
-        "baseline_semantic_digest",
-        "current_semantic_digest",
-        "semantic_digest_status",
+        "binding_mode",
+        "baseline_raw_digest",
+        "current_raw_digest",
+        "raw_digest_status",
+        "baseline_binding_digest",
+        "current_binding_digest",
+        "binding_digest_status",
         "source_tree_fingerprint",
         "source_tree_status",
         "schema_validation_status",
@@ -165,25 +166,29 @@
           "type": "string",
           "enum": ["ok", "missing", "unreadable"]
         },
-        "baseline_digest": {
+        "binding_mode": {
+          "type": "string",
+          "enum": ["content", "revision", "raw"]
+        },
+        "baseline_raw_digest": {
           "type": "string",
           "pattern": "^(missing|[0-9a-f]{64})$"
         },
-        "current_digest": {
+        "current_raw_digest": {
           "type": "string",
           "pattern": "^(missing|[0-9a-f]{64})$"
         },
-        "digest_status": {
+        "raw_digest_status": {
           "type": "string",
           "enum": ["current", "changed"]
         },
-        "baseline_semantic_digest": {
-          "$ref": "#/$defs/semanticDigest"
+        "baseline_binding_digest": {
+          "$ref": "#/$defs/bindingDigest"
         },
-        "current_semantic_digest": {
-          "$ref": "#/$defs/semanticDigest"
+        "current_binding_digest": {
+          "$ref": "#/$defs/bindingDigest"
         },
-        "semantic_digest_status": {
+        "binding_digest_status": {
           "type": "string",
           "enum": ["current", "changed", "unknown"]
         },
@@ -269,7 +274,7 @@
         "target",
         "why",
         "writes",
-        "expected_digest_to_settle",
+        "expected_raw_digest_to_settle",
         "safe_to_run_in_dry_run"
       ],
       "properties": {
@@ -279,7 +284,7 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
-        "expected_digest_to_settle": {
+        "expected_raw_digest_to_settle": {
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/digest" }
         },

@@ -47,20 +47,20 @@ def fixed_point_writer_targets_by_path(vault: Path) -> dict[str, str]:
     return result
 
 
-def classify_batch_replay_digest_mismatches(
+def classify_batch_replay_binding_mismatches(
     vault: Path,
-    digest_mismatches: list[dict[str, str]],
+    binding_mismatches: list[dict[str, str]],
     *,
     source_freshness: dict[str, Any] | None = None,
     content_matches: bool | None = None,
 ) -> dict[str, Any]:
     freshness_index_cohort = [
         item
-        for item in digest_mismatches
+        for item in binding_mismatches
         if item["path"] in FRESHNESS_INDEX_COHORT_TARGETS
     ]
     sealed_preflight = [
-        item for item in digest_mismatches if item["path"] == SEALED_PREFLIGHT_PATH
+        item for item in binding_mismatches if item["path"] == SEALED_PREFLIGHT_PATH
     ]
     fixed_point_writer_by_path = fixed_point_writer_targets_by_path(vault)
     fixed_point_writer_mismatches = [
@@ -68,7 +68,7 @@ def classify_batch_replay_digest_mismatches(
             **item,
             "writer_target": fixed_point_writer_by_path.get(item["path"], ""),
         }
-        for item in digest_mismatches
+        for item in binding_mismatches
         if item["path"] not in FRESHNESS_INDEX_COHORT_TARGETS
         and item["path"] != SEALED_PREFLIGHT_PATH
         and fixed_point_writer_by_path.get(item["path"])
@@ -83,7 +83,7 @@ def classify_batch_replay_digest_mismatches(
         else ""
     )
     if freshness_index_cohort:
-        classes.append("batch_manifest_freshness_index_cohort_digest_mismatch")
+        classes.append("batch_manifest_freshness_index_cohort_binding_mismatch")
         recommended_initial_targets.extend(
             FRESHNESS_INDEX_COHORT_TARGETS[item["path"]]
             for item in freshness_index_cohort
@@ -92,20 +92,19 @@ def classify_batch_replay_digest_mismatches(
         classes.append("sealed_preflight_artifact_mismatch")
         recommended_targets.append("release-authority-sealed-preflight")
     if fixed_point_writer_mismatches:
-        classes.append("fixed_point_tracked_writer_mismatch")
+        classes.append("fixed_point_tracked_writer_binding_mismatch")
         recommended_initial_targets.extend(
             item["writer_target"]
             for item in fixed_point_writer_mismatches
             if item["writer_target"]
         )
     if source_freshness_status and source_freshness_status != "pass":
-        classes.append("batch_manifest_source_freshness_mismatch")
-        recommended_targets.append("release-finality-resettle-current-or-refresh")
-    if content_matches is False and not digest_mismatches:
+        classes.append("external_source_change_after_evidence")
+    if content_matches is False and not binding_mismatches:
         classes.append("batch_manifest_content_mismatch")
         recommended_targets.append("release-closeout-batch-manifest-promote")
-    if digest_mismatches and not classes:
-        classes.append("batch_manifest_replay_digest_mismatch")
+    if binding_mismatches and not classes:
+        classes.append("batch_manifest_replay_binding_mismatch")
 
     if recommended_initial_targets:
         recommended_targets.append("release-closeout-fixed-point")
@@ -127,7 +126,11 @@ def classify_batch_replay_digest_mismatches(
         if classes == ["sealed_preflight_artifact_mismatch"]
         else "release-closeout-fixed-point"
         if recommended_initial_targets
-        else "release-finality-resettle-current-or-refresh"
+        else "external-source-change-review"
+        if "external_source_change_after_evidence" in classes
+        else "release-closeout-batch-manifest-promote"
+        if "batch_manifest_content_mismatch" in classes
+        else "release-closeout-batch-manifest-replay-verify"
     )
     return {
         "status": "pass" if not classes else "fail",
@@ -136,15 +139,15 @@ def classify_batch_replay_digest_mismatches(
         "recommended_lane": recommended_lane,
         "recommended_targets": recommended_targets,
         "recommended_fixed_point_initial_targets": recommended_initial_targets,
-        "digest_mismatches": digest_mismatches,
+        "binding_mismatches": binding_mismatches,
         "source_freshness_status": source_freshness_status or "unknown",
         "source_freshness": source_freshness or {},
         "content_matches": content_matches,
-        "freshness_index_cohort_digest_mismatches": freshness_index_cohort,
-        "sealed_preflight_artifact_digest_mismatches": sealed_preflight,
-        "fixed_point_tracked_writer_mismatches": fixed_point_writer_mismatches,
+        "freshness_index_cohort_binding_mismatches": freshness_index_cohort,
+        "sealed_preflight_artifact_binding_mismatches": sealed_preflight,
+        "fixed_point_tracked_writer_binding_mismatches": fixed_point_writer_mismatches,
         "summary": (
-            "batch manifest replay artifact digests are current"
+            "batch manifest replay content bindings are current"
             if not classes
             else (
                 f"primary_class={classes[0] if classes else 'unclassified'}; "

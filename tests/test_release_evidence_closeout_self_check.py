@@ -66,6 +66,7 @@ class ReleaseEvidenceCloseoutSelfCheckTests(unittest.TestCase):
         cohort_overrides: dict[str, object] | None = None,
     ) -> None:
         batch_manifest: dict[str, object] = {
+            "schema_version": 2,
             "summary": {"artifact_count": 10},
             "artifacts": [],
             "input_fingerprints": {"release_smoke": "a" * 64},
@@ -264,7 +265,8 @@ class ReleaseEvidenceCloseoutSelfCheckTests(unittest.TestCase):
         self._write_closeout_inputs(
             batch_overrides={
                 "summary": {"artifact_count": 1},
-                "artifacts": [{"path": artifact_path, "digest": sealed_digest}],
+                "schema_version": 2,
+                "artifacts": [{"path": artifact_path, "raw_digest": sealed_digest}],
             }
         )
 
@@ -297,6 +299,21 @@ class ReleaseEvidenceCloseoutSelfCheckTests(unittest.TestCase):
         self.assertEqual(watch["artifacts"][0]["expected_digest"], sealed_digest)
         self.assertNotEqual(watch["artifacts"][0]["actual_digest"], sealed_digest)
         self.assertEqual(validate_with_schema(drifted, load_schema(SCHEMA_PATH)), [])
+
+    def test_v1_batch_manifest_is_not_reused_as_current_authority(self) -> None:
+        self._write_closeout_inputs(batch_overrides={"schema_version": 1})
+
+        report = build_report(
+            self.vault,
+            "ops/reports/release-closeout-batch-manifest.json",
+            "ops/reports/release-evidence-cohort.json",
+            fixed_context(),
+        )
+
+        watch = report["batch_artifact_digest_watch"]
+        self.assertEqual(report["status"]["result"], "fail")
+        self.assertEqual(watch["authority_schema_status"], "unsupported")
+        self.assertEqual(watch["manifest_schema_version"], 1)
 
     def test_missing_input_documents_handled_gracefully(self) -> None:
         """Self-check handles missing input documents without error."""

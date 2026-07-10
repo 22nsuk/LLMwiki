@@ -159,7 +159,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             ".PHONY: static ruff typecheck release-evidence-converge release-smoke-full "
             "release-evidence-closeout "
             "test-execution-summary-report-contract generated-artifact-converge generated-artifact-script-output "
-            "generated-artifact-finality-suffix script-output-surfaces "
+            "script-output-surfaces "
             "external-report-action-matrix generated-artifact-index generated-artifact-index-body artifact-freshness "
             "release-closeout-summary-report release-closeout-fixed-point "
             "tmp-json-clean release-closeout-finality-verify "
@@ -181,17 +181,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "test-execution-summary-report-contract:\n"
             "\t@echo tests\n"
             "generated-artifact-converge:\n"
-            "\t$(MAKE) generated-artifact-finality-suffix\n"
-            "generated-artifact-script-output:\n"
-            "\t$(MAKE) script-output-surfaces\n"
-            "generated-artifact-finality-suffix:\n"
             "\t$(MAKE) artifact-freshness\n"
             "\t$(MAKE) external-report-action-matrix\n"
             "\t$(MAKE) generated-artifact-index\n"
-            "\t$(MAKE) artifact-freshness\n"
-            "\t$(MAKE) external-report-action-matrix\n"
-            "\t$(MAKE) generated-artifact-index-body\n"
-            "\t$(MAKE) artifact-freshness\n"
+            "generated-artifact-script-output:\n"
+            "\t$(MAKE) script-output-surfaces\n"
             "script-output-surfaces:\n"
             "\t@echo surfaces\n"
             "external-report-action-matrix:\n"
@@ -251,20 +245,18 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                             "name": "alpha",
                             "target": "alpha-writer",
                             "produces": ["ops/reports/alpha.json"],
+                            "binding_mode": "content",
                             "depends_on": [],
-                            "expensive_prerequisites_once": ["seed-writer"],
+                            "expensive_prerequisites": ["seed-writer"],
                         },
                         {
                             "name": "beta",
                             "target": "beta-writer",
                             "produces": ["ops/reports/beta.json"],
+                            "binding_mode": "content",
                             "depends_on": ["alpha-writer"],
-                            "expensive_prerequisites_once": [],
+                            "expensive_prerequisites": [],
                         },
-                    ],
-                    "tracked_artifacts": [
-                        "ops/reports/alpha.json",
-                        "ops/reports/beta.json",
                     ],
                 },
                 indent=2,
@@ -489,7 +481,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             report["dependency_edges"],
         )
         self.assertEqual(report["summary"]["missing_dependency_count"], 0)
-        self.assertEqual(report["evidence_dag"]["status"], "attention")
+        self.assertEqual(report["evidence_dag"]["status"], "pass")
         self.assertIn("Makefile", report["input_fingerprints"])
         self.assertIn(".github/workflows/ci.yml", report["input_fingerprints"])
         self.assertIn("test_lane_registry", report["input_fingerprints"])
@@ -829,8 +821,6 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(
             workflow["steps"][2]["fanout_targets"],
             [
-                "generated-artifact-finality-suffix",
-                "release-closeout-summary-report",
                 "release-closeout-fixed-point",
                 "release-closeout-post-check-finalizer-dry-run",
                 "release-closeout-finality-verify",
@@ -855,10 +845,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "ops/reports/generated-artifact-index.json",
                 "canonical_report_finalization",
                 "release-terminal-finality",
-                "canonical_report_finality_suffix_changed",
+                "canonical_report_binding_graph_changed",
                 [
-                    "generated-artifact-finality-suffix",
-                    "release-closeout-summary-report",
                     "release-closeout-fixed-point",
                     "release-closeout-post-check-finalizer-dry-run",
                     "release-closeout-finality-verify",

@@ -8,8 +8,11 @@ from pathlib import Path
 
 import pytest
 
+from ops.scripts.core.artifact_binding_runtime import (
+    CONTENT_BINDING_MODE,
+    RAW_BINDING_MODE,
+)
 from ops.scripts.core.artifact_io_runtime import (
-    SEMANTIC_NOOP_ENVELOPE_FIELDS,
     ReportWriterKernelRequest,
     SchemaBackedReportWriteRequest,
     describe_output_file,
@@ -22,11 +25,43 @@ from ops.scripts.core.artifact_io_runtime import (
     write_schema_backed_report,
     write_schema_validated_json,
 )
+from ops.scripts.core.canonical_artifact_promote import resolve_binding_mode
 
 pytestmark = pytest.mark.fast_smoke
 
 
 class ArtifactIoRuntimeTests(unittest.TestCase):
+    def test_promotion_binding_policy_defaults_ordinary_reports_to_content(self) -> None:
+        self.assertEqual(
+            resolve_binding_mode(
+                expected_artifact_kind="generated_artifact_index_report",
+                requested_binding_mode=None,
+            ),
+            CONTENT_BINDING_MODE,
+        )
+
+    def test_promotion_binding_policy_requires_exact_authority_mode(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "release_closeout_summary promotion requires --binding-mode revision",
+        ):
+            resolve_binding_mode(
+                expected_artifact_kind="release_closeout_summary",
+                requested_binding_mode=None,
+            )
+        with self.assertRaisesRegex(ValueError, "requires revision binding"):
+            resolve_binding_mode(
+                expected_artifact_kind="release_closeout_summary",
+                requested_binding_mode=CONTENT_BINDING_MODE,
+            )
+        self.assertEqual(
+            resolve_binding_mode(
+                expected_artifact_kind="release_closeout_summary",
+                requested_binding_mode="revision",
+            ),
+            "revision",
+        )
+
     def test_read_json_object_requires_object_root(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "payload.json"
@@ -353,7 +388,7 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
 
             self.assertEqual(json.loads(destination.read_text(encoding="utf-8"))["status"], "pass")
 
-    def test_promote_schema_validated_json_can_preserve_semantic_noop_destination(self) -> None:
+    def test_promote_schema_validated_json_preserves_content_noop_bytes_and_mtime(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             schema_path = root / "schema.json"
@@ -395,13 +430,14 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
                 "producer": "ops.scripts.script_output_surfaces",
                 "generated_at": "2026-05-28T00:00:00Z",
                 "source_revision": "old",
-                "source_tree_fingerprint": "old-fp",
-                "input_fingerprints": {"source": "old"},
+                "source_tree_fingerprint": "same-fp",
+                "input_fingerprints": {"source": "same"},
                 "currentness": {"status": "current", "checked_at": "2026-05-28T00:00:00Z"},
                 "surfaces": [{"path": "ops/scripts/example.py"}],
             }
             destination.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
             before_text = destination.read_text(encoding="utf-8")
+            before_mtime_ns = destination.stat().st_mtime_ns
             candidate = root / "candidate.json"
             candidate.write_text(
                 json.dumps(
@@ -409,8 +445,8 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
                         **existing,
                         "generated_at": "2026-05-29T00:00:00Z",
                         "source_revision": "new",
-                        "source_tree_fingerprint": "new-fp",
-                        "input_fingerprints": {"source": "new"},
+                        "source_tree_fingerprint": "same-fp",
+                        "input_fingerprints": {"source": "same"},
                         "currentness": {
                             "status": "current",
                             "checked_at": "2026-05-29T00:00:00Z",
@@ -429,13 +465,13 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
                 expected_artifact_kind="script_output_surfaces",
                 expected_producer="ops.scripts.script_output_surfaces",
                 context="candidate promotion failed",
-                preserve_existing_on_semantic_match=True,
             )
 
             self.assertEqual(promoted, destination)
             self.assertEqual(destination.read_text(encoding="utf-8"), before_text)
+            self.assertEqual(destination.stat().st_mtime_ns, before_mtime_ns)
 
-    def test_promote_schema_validated_json_can_treat_source_fingerprint_as_semantic(self) -> None:
+    def test_promote_schema_validated_json_content_binding_includes_source_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             schema_path = root / "schema.json"
@@ -494,9 +530,6 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
                 candidate_path=candidate,
                 destination_path=destination,
                 context="candidate promotion failed",
-                preserve_existing_on_semantic_match=True,
-                semantic_ignore_fields=SEMANTIC_NOOP_ENVELOPE_FIELDS
-                - {"source_tree_fingerprint"},
             )
 
             self.assertEqual(
@@ -506,7 +539,7 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
                 "new-fp",
             )
 
-    def test_promote_schema_validated_json_replaces_invalid_semantic_noop_destination(self) -> None:
+    def test_promote_schema_validated_json_replaces_invalid_content_noop_destination(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             schema_path = root / "schema.json"
@@ -549,13 +582,101 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
                 candidate_path=candidate,
                 destination_path=destination,
                 context="candidate promotion failed",
-                preserve_existing_on_semantic_match=True,
             )
 
             self.assertEqual(
                 json.loads(destination.read_text(encoding="utf-8"))["generated_at"],
                 "2026-05-29T00:00:00Z",
             )
+
+    def test_promote_schema_validated_json_content_binding_includes_input_fingerprints(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "schema.json").write_text(
+                json.dumps(
+                    {
+                        "type": "object",
+                        "required": ["$schema", "generated_at", "input_fingerprints", "value"],
+                        "properties": {
+                            "$schema": {"const": "schema.json"},
+                            "generated_at": {"type": "string"},
+                            "input_fingerprints": {"type": "object"},
+                            "value": {"type": "string"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            destination = root / "canonical.json"
+            destination.write_text(
+                json.dumps(
+                    {
+                        "$schema": "schema.json",
+                        "generated_at": "2026-05-28T00:00:00Z",
+                        "input_fingerprints": {"source": "old"},
+                        "value": "same",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            candidate = root / "candidate.json"
+            candidate.write_text(
+                json.dumps(
+                    {
+                        "$schema": "schema.json",
+                        "generated_at": "2026-05-29T00:00:00Z",
+                        "input_fingerprints": {"source": "new"},
+                        "value": "same",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            promote_schema_validated_json(
+                root,
+                candidate_path=candidate,
+                destination_path=destination,
+                context="candidate promotion failed",
+            )
+
+            self.assertEqual(
+                json.loads(destination.read_text(encoding="utf-8"))["input_fingerprints"],
+                {"source": "new"},
+            )
+
+    def test_promote_schema_validated_json_raw_binding_replaces_format_only_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "schema.json").write_text(
+                json.dumps(
+                    {
+                        "type": "object",
+                        "required": ["$schema", "value"],
+                        "properties": {
+                            "$schema": {"const": "schema.json"},
+                            "value": {"type": "string"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            destination = root / "canonical.json"
+            destination.write_text('{"$schema":"schema.json","value":"same"}\n', encoding="utf-8")
+            candidate = root / "candidate.json"
+            candidate.write_text(
+                json.dumps({"$schema": "schema.json", "value": "same"}, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            promote_schema_validated_json(
+                root,
+                candidate_path=candidate,
+                destination_path=destination,
+                context="candidate promotion failed",
+                binding_mode=RAW_BINDING_MODE,
+            )
+
+            self.assertIn("  \"value\"", destination.read_text(encoding="utf-8"))
 
     def test_serialized_json_can_add_trailing_newline(self) -> None:
         self.assertEqual(serialized_json({"ok": True}, trailing_newline=True)[-1], "\n")

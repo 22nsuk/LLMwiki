@@ -11,6 +11,7 @@
     "artifact_context",
     "status",
     "bundle_ref",
+    "bundle_binding",
     "subjects",
     "verification_checks"
   ],
@@ -47,6 +48,20 @@
     },
     "bundle_ref": {
       "type": "string"
+    },
+    "bundle_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding_mode", "status", "raw_digest", "size_bytes"],
+      "properties": {
+        "binding_mode": { "const": "raw" },
+        "status": { "enum": ["bound", "missing", "not_applicable"] },
+        "raw_digest": {
+          "type": "string",
+          "pattern": "^(?:[a-f0-9]{64})?$"
+        },
+        "size_bytes": { "type": "integer", "minimum": 0 }
+      }
     },
     "subjects": {
       "type": "array",

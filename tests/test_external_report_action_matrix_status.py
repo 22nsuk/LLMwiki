@@ -5,6 +5,10 @@ import unittest
 
 import pytest
 
+from ops.scripts.core.artifact_binding_runtime import (
+    CONTENT_BINDING_MODE,
+    binding_file_digest,
+)
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
@@ -894,7 +898,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             report["summary"]["canonical_artifact_freshness_state"],
             self._unavailable_artifact_freshness_state(
                 evidence_status="source_identity_mismatch",
-                reason_id="artifact_freshness_source_revision_mismatch",
+                reason_id="artifact_freshness_source_tree_fingerprint_mismatch",
             ),
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
@@ -1499,8 +1503,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         finality_path = self.vault / FINALITY_ATTESTATION_PATH
         finality_report = json.loads(finality_path.read_text(encoding="utf-8"))
         finality_report["finality_status"] = "fail"
-        finality_report["matches_fixed_point_digest_map"] = False
-        finality_report["finality_failures"] = ["tracked_digest_map_current_mismatch"]
+        finality_report["matches_fixed_point_binding_digest_map"] = False
+        finality_report["finality_failures"] = [
+            "tracked_binding_digest_map_current_mismatch"
+        ]
         self._write_json(FINALITY_ATTESTATION_PATH, finality_report)
         (self.external / "release.md").write_text(
             "# Release Review\n\nsource package, evidence bundle, full-suite, promotion_blockers.\n",
@@ -1541,8 +1547,22 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         )
         fixed_point_path = self.vault / FIXED_POINT_REPORT_PATH
         fixed_point = json.loads(fixed_point_path.read_text(encoding="utf-8"))
-        fixed_point["tracked_artifacts"].append({"path": matrix_path})
-        fixed_point["final_digest_map"][matrix_path] = _sha256_file(self.vault / matrix_path)
+        raw_digest = _sha256_file(self.vault / matrix_path)
+        binding_digest = binding_file_digest(
+            self.vault / matrix_path,
+            binding_mode=CONTENT_BINDING_MODE,
+        )[1]
+        fixed_point["tracked_artifacts"].append(
+            {"path": matrix_path, "binding_mode": CONTENT_BINDING_MODE}
+        )
+        fixed_point["raw_digest_map"][matrix_path] = raw_digest
+        fixed_point["binding_digest_map"][matrix_path] = binding_digest
+        fixed_point["binding_mode_map"][matrix_path] = CONTENT_BINDING_MODE
+        fixed_point["execution"]["raw_digest_map"][matrix_path] = raw_digest
+        fixed_point["execution"]["binding_digest_map"][matrix_path] = binding_digest
+        fixed_point["execution"]["binding_mode_map"][matrix_path] = (
+            CONTENT_BINDING_MODE
+        )
         self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
         finality_report = build_finality_attestation_report(self.vault, context=fixed_context())
         write_finality_attestation(self.vault, finality_report)

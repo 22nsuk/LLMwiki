@@ -207,6 +207,8 @@
       "required": [
         "status",
         "manifest_load_status",
+        "authority_schema_status",
+        "manifest_schema_version",
         "artifact_count",
         "mismatch_count",
         "missing_artifact_count",
@@ -218,6 +220,11 @@
       "properties": {
         "status": { "type": "string", "enum": ["pass", "fail"] },
         "manifest_load_status": { "type": "string" },
+        "authority_schema_status": {
+          "type": "string",
+          "enum": ["current", "unsupported", "missing"]
+        },
+        "manifest_schema_version": { "type": "integer", "minimum": 0 },
         "artifact_count": { "type": "integer", "minimum": 0 },
         "mismatch_count": { "type": "integer", "minimum": 0 },
         "missing_artifact_count": { "type": "integer", "minimum": 0 },

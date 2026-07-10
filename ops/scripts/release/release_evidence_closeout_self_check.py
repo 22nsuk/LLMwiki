@@ -126,12 +126,30 @@ def _artifact_digest_watch(vault: Path, batch_data: dict[str, Any] | None) -> di
     if not batch_data or not isinstance(batch_data, dict):
         return {
             "status": "unavailable",
+            "authority_schema_status": "missing",
+            "manifest_schema_version": 0,
             "artifact_count": 0,
             "match_count": 0,
             "mismatch_count": 0,
             "missing_artifact_count": 0,
             "artifacts": [],
             "summary": "batch artifact digest watch unavailable because batch manifest is missing or unreadable",
+        }
+    schema_version = int(batch_data.get("schema_version", 0) or 0)
+    if schema_version != 2:
+        return {
+            "status": "mismatch",
+            "authority_schema_status": "unsupported",
+            "manifest_schema_version": schema_version,
+            "artifact_count": 0,
+            "match_count": 0,
+            "mismatch_count": 0,
+            "missing_artifact_count": 0,
+            "artifacts": [],
+            "summary": (
+                "batch artifact digest watch rejected non-current authority schema; "
+                f"expected=2; actual={schema_version}"
+            ),
         }
 
     raw_artifacts = batch_data.get("artifacts")
@@ -147,7 +165,7 @@ def _artifact_digest_watch(vault: Path, batch_data: dict[str, Any] | None) -> di
         rel_path = str(item.get("path", "")).strip()
         if not rel_path:
             continue
-        expected_digest = str(item.get("digest", "")).strip() or "missing"
+        expected_digest = str(item.get("raw_digest", "")).strip() or "missing"
         artifact_path = vault / rel_path
         exists = artifact_path.is_file()
         actual_digest = _file_fingerprint(artifact_path) if exists else "missing"
@@ -170,6 +188,8 @@ def _artifact_digest_watch(vault: Path, batch_data: dict[str, Any] | None) -> di
     status = "match" if not mismatch_count else "mismatch"
     return {
         "status": status,
+        "authority_schema_status": "current",
+        "manifest_schema_version": schema_version,
         "artifact_count": len(watched),
         "match_count": match_count,
         "mismatch_count": mismatch_count,
@@ -261,12 +281,16 @@ def build_report(
     digest_mismatch_count = int(artifact_digest_watch["mismatch_count"])
     result = "pass"
     summary = "Closeout self-check snapshot captured"
-    if missing_required_watch_paths or digest_mismatch_count:
+    if (
+        missing_required_watch_paths
+        or digest_mismatch_count
+        or artifact_digest_watch["status"] != "match"
+    ):
         result = "fail"
         summary_parts: list[str] = []
         if missing_required_watch_paths:
             summary_parts.append("Required drift watch paths missing: " + ", ".join(missing_required_watch_paths))
-        if digest_mismatch_count:
+        if digest_mismatch_count or artifact_digest_watch["status"] != "match":
             summary_parts.append(artifact_digest_watch["summary"])
         summary = "; ".join(summary_parts)
 

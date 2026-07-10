@@ -477,17 +477,11 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "remediation-backlog:\n"
     "\t@true\n"
     "generated-artifact-converge:\n"
-    "\t$(MAKE) generated-artifact-finality-suffix\n"
-    "generated-artifact-script-output:\n"
-    "\t$(MAKE) script-output-surfaces\n"
-    "generated-artifact-finality-suffix:\n"
     "\t$(MAKE) artifact-freshness\n"
     "\t$(MAKE) external-report-action-matrix\n"
     "\t$(MAKE) generated-artifact-index\n"
-    "\t$(MAKE) artifact-freshness\n"
-    "\t$(MAKE) external-report-action-matrix\n"
-    "\t$(MAKE) generated-artifact-index-body\n"
-    "\t$(MAKE) artifact-freshness\n"
+    "generated-artifact-script-output:\n"
+    "\t$(MAKE) script-output-surfaces\n"
     "script-output-surfaces:\n"
     "\t@true\n"
     "external-report-action-matrix:\n"
@@ -856,14 +850,14 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "target": "generated-artifact-index-body",
                 "produces": ["ops/reports/generated-artifact-index.json"],
                 "depends_on": ["artifact-freshness"] if invert_dependency else [],
-                "expensive_prerequisites_once": ["release-risk-taxonomy-matrix"],
+                "expensive_prerequisites": ["release-risk-taxonomy-matrix"],
             },
             {
                 "name": "artifact-freshness",
                 "target": "artifact-freshness",
                 "produces": ["ops/reports/artifact-freshness-report.json"],
                 "depends_on": ["generated-artifact-index-body"],
-                "expensive_prerequisites_once": [],
+                "expensive_prerequisites": [],
             },
         ]
         path = self.vault / "ops" / "policies" / "release-closeout-fixed-point.json"
@@ -1735,9 +1729,38 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")
-        self.assertEqual(
-            check["violations"][0]["reason"],
+        self.assertIn(
             "finality_verify_must_be_terminal",
+            {item["reason"] for item in check["violations"]},
+        )
+
+    def test_guard_fails_when_terminal_finality_runs_writer_after_attestation(self) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-terminal-finality:\n"
+                "\t$(MAKE) release-closeout-fixed-point\n"
+                "\t$(MAKE) tmp-json-clean\n",
+                "release-terminal-finality:\n"
+                "\t$(MAKE) release-closeout-fixed-point\n"
+                "\t$(MAKE) external-report-action-matrix\n"
+                "\t$(MAKE) tmp-json-clean\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_terminal_finality_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertIn(
+            "sequence_must_be_exact",
+            {item["reason"] for item in check["violations"]},
         )
 
     def test_guard_fails_when_fixed_point_policy_order_is_not_topological(self) -> None:

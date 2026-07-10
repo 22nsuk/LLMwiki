@@ -22,6 +22,10 @@ from ops.scripts.core.runtime_event_logging_runtime import (
     RuntimeEventRequest,
     build_runtime_event,
 )
+from ops.scripts.core.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_or_raise,
+)
 from ops.scripts.mechanism.auto_improve_readiness_runtime import build_readiness_report
 from ops.scripts.release.release_run_ready import build_run_ready_plan
 from ops.scripts.supply_chain.cyclonedx_sbom import build_bom
@@ -436,6 +440,7 @@ def _artifact_freshness_zero_summary() -> dict[str, int]:
         "root_ephemeral_artifact_count": 0,
         "run_log_placeholder_count": 0,
         "unknown_currentness_artifact_count": 0,
+        "source_revision_provenance_only_artifact_count": 0,
         "non_utf8_text_artifact_count": 0,
         "missing_schema_count": 0,
         "missing_artifact_envelope_count": 0,
@@ -455,7 +460,7 @@ def build_artifact_freshness_schema_sample_for_vault(vault: Path) -> dict:
     policy, resolved_policy_path = load_policy(
         vault, "ops/policies/wiki-maintainer-policy.yaml"
     )
-    return {
+    report = {
         **build_canonical_report_envelope(
             vault,
             generated_at=fixed_context().isoformat_z(),
@@ -494,6 +499,12 @@ def build_artifact_freshness_schema_sample_for_vault(vault: Path) -> dict:
         "non_utf8_text_artifacts": [],
         "artifact_records": [],
     }
+    validate_or_raise(
+        report,
+        load_schema_with_vault_override(vault, ARTIFACT_FRESHNESS_SCHEMA_PATH),
+        "artifact freshness schema sample validation failed",
+    )
+    return report
 
 
 def build_artifact_freshness_schema_sample() -> dict:
