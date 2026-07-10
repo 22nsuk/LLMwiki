@@ -159,8 +159,10 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
     ),
     MakeTargetContract(
         "release-converge-all-surfaces",
-        required_tokens=(
-            "$(MAKE) release-converge",
+        exact_recipe=(
+            "$(MAKE) release-converge-preflight",
+            "$(MAKE) registry-preflight",
+            "$(MAKE) release-smoke-full-reuse",
             "$(MAKE) sync-public-policy",
             "$(MAKE) public-check-all",
             "$(MAKE) release-converge-post",

@@ -300,7 +300,9 @@ release-converge:
 	$(MAKE) release-converge-post
 
 release-converge-all-surfaces:
-	$(MAKE) release-converge
+	$(MAKE) release-converge-preflight
+	$(MAKE) registry-preflight
+	$(MAKE) release-smoke-full-reuse
 	$(MAKE) sync-public-policy
 	$(MAKE) public-check-all
 	$(MAKE) release-converge-post

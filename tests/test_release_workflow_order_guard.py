@@ -334,7 +334,9 @@ AUTO_PROMOTION_PRESEAL_FORBIDDEN_WRITER_LINES = (
     AUTO_PROMOTION_PRESEAL_LINES + _make_recipe("generated-artifact-converge")
 )
 RELEASE_CONVERGE_ALL_LINES = _make_recipe(
-    "release-converge",
+    "release-converge-preflight",
+    "registry-preflight",
+    "release-smoke-full-reuse",
     "sync-public-policy",
     "public-check-all",
     "release-converge-post",

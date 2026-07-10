@@ -5,6 +5,7 @@
     "release-evidence-converge",
     "release-converge-preflight",
     "release-converge-post",
+    "release-converge-all-surfaces",
     "check-finalized",
     "release-finality-resettle",
     "release-terminal-finality",
@@ -193,6 +194,43 @@
         }
       ],
       "details": "release-converge-post runs diagnostics before delegating exactly once to the protected terminal finality controller; no canonical writer may follow that handoff."
+    },
+    {
+      "id": "release_converge_all_surfaces_protected_recipe",
+      "target": "release-converge-all-surfaces",
+      "expected_lines": [
+        {
+          "role": "release-converge-preflight",
+          "target": "release-converge-preflight",
+          "raw_line": "$(MAKE) release-converge-preflight"
+        },
+        {
+          "role": "registry-preflight",
+          "target": "registry-preflight",
+          "raw_line": "$(MAKE) registry-preflight"
+        },
+        {
+          "role": "release-smoke-full-reuse",
+          "target": "release-smoke-full-reuse",
+          "raw_line": "$(MAKE) release-smoke-full-reuse"
+        },
+        {
+          "role": "sync-public-policy",
+          "target": "sync-public-policy",
+          "raw_line": "$(MAKE) sync-public-policy"
+        },
+        {
+          "role": "public-check-all",
+          "target": "public-check-all",
+          "raw_line": "$(MAKE) public-check-all"
+        },
+        {
+          "role": "release-converge-post",
+          "target": "release-converge-post",
+          "raw_line": "$(MAKE) release-converge-post"
+        }
+      ],
+      "details": "release-converge-all-surfaces must make public evidence current before exactly one terminal convergence handoff."
     },
     {
       "id": "release_auto_promotion_preflight_prerequisites_protected_recipe",
