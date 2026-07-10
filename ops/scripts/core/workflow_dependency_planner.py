@@ -736,6 +736,58 @@ def _selected_command_duration_seconds(
     return selected_estimates
 
 
+def _matching_changed_path_rule(
+    path: str,
+    rules: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    return next(
+        (
+            rule
+            for rule in rules
+            if any(
+                fnmatch.fnmatch(path, str(pattern))
+                for pattern in rule.get("path_patterns", [])
+            )
+        ),
+        None,
+    )
+
+
+def _changed_path_recommendation(
+    path: str,
+    rule: dict[str, Any],
+    changed_files_manifest: str | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    command_templates = [
+        str(command) for command in rule.get("commands", []) if str(command).strip()
+    ]
+    commands = [
+        _format_command(
+            command,
+            path,
+            changed_files_manifest=changed_files_manifest,
+        )
+        for command in command_templates
+    ]
+    duration_seconds = int(rule.get("duration_seconds", 0) or 0)
+    return (
+        {
+            "path": path,
+            "matched_rule_id": str(rule.get("rule_id", "unknown_path")),
+            "commands": commands,
+            "reason": str(rule.get("reason", "")).strip(),
+            "coverage_class": str(rule.get("coverage_class", "conservative")).strip(),
+            "static_required": bool(rule.get("static_required", True)),
+            "duration_seconds": duration_seconds,
+        },
+        {
+            "commands": commands,
+            "command_templates": command_templates,
+            "duration_seconds": duration_seconds,
+        },
+    )
+
+
 def _changed_path_minimum_plan(
     changed_paths: list[str],
     registry: dict[str, Any],
@@ -763,64 +815,18 @@ def _changed_path_minimum_plan(
     recommendation_duration_inputs: list[dict[str, Any]] = []
     unknown_paths: list[str] = []
     for path in changed_paths:
-        matched_rule = next(
-            (
-                rule
-                for rule in rules
-                if any(
-                    fnmatch.fnmatch(path, str(pattern))
-                    for pattern in rule.get("path_patterns", [])
-                )
-            ),
-            None,
-        )
-        derived_rule = next(
-            (
-                rule
-                for rule in derived_rules
-                if any(
-                    fnmatch.fnmatch(path, str(pattern))
-                    for pattern in rule.get("path_patterns", [])
-                )
-            ),
-            None,
-        )
+        matched_rule = _matching_changed_path_rule(path, rules)
+        derived_rule = _matching_changed_path_rule(path, derived_rules)
         rule = _combined_changed_path_rule(matched_rule, derived_rule) or default_rule
-        if matched_rule is None:
-            if derived_rule is None:
-                unknown_paths.append(path)
-            else:
-                matched_rule = derived_rule
-        command_templates = [
-            str(command) for command in rule.get("commands", []) if str(command).strip()
-        ]
-        commands = [
-            _format_command(
-                command,
-                path,
-                changed_files_manifest=changed_files_manifest,
-            )
-            for command in command_templates
-        ]
-        duration_seconds = int(rule.get("duration_seconds", 0) or 0)
-        path_recommendations.append(
-            {
-                "path": path,
-                "matched_rule_id": str(rule.get("rule_id", "unknown_path")),
-                "commands": commands,
-                "reason": str(rule.get("reason", "")).strip(),
-                "coverage_class": str(rule.get("coverage_class", "conservative")).strip(),
-                "static_required": bool(rule.get("static_required", True)),
-                "duration_seconds": duration_seconds,
-            }
+        if matched_rule is None and derived_rule is None:
+            unknown_paths.append(path)
+        recommendation, duration_input = _changed_path_recommendation(
+            path,
+            rule,
+            changed_files_manifest,
         )
-        recommendation_duration_inputs.append(
-            {
-                "commands": commands,
-                "command_templates": command_templates,
-                "duration_seconds": duration_seconds,
-            }
-        )
+        path_recommendations.append(recommendation)
+        recommendation_duration_inputs.append(duration_input)
     selected_commands = _dedupe_preserve_order(
         [
             command
@@ -1047,6 +1053,83 @@ def _read_changed_paths(vault: Path, changed_files_manifest: str | None) -> list
     return paths
 
 
+def _planner_status(
+    missing_dependencies: list[dict[str, str]],
+    *,
+    git_changed_paths_failed: bool,
+    unknown_change_paths: list[str],
+    derived_surface_currentness_status: str,
+) -> str:
+    if missing_dependencies or git_changed_paths_failed:
+        return "fail"
+    if unknown_change_paths or derived_surface_currentness_status == "failed":
+        return "attention"
+    return "pass"
+
+
+def _planner_file_inputs(
+    vault: Path,
+    makefile_sources: list[str],
+    changed_files_manifest: str | None,
+) -> dict[str, str]:
+    file_inputs = {path: path for path in makefile_sources}
+    if (vault / ".github" / "workflows" / "ci.yml").exists():
+        file_inputs[".github/workflows/ci.yml"] = ".github/workflows/ci.yml"
+    if changed_files_manifest:
+        file_inputs["changed_files_manifest"] = changed_files_manifest
+    if (vault / DEFAULT_TEST_LANE_REGISTRY).exists():
+        file_inputs["test_lane_registry"] = DEFAULT_TEST_LANE_REGISTRY
+    if (vault / DERIVED_SURFACES_MANIFEST_PATH).exists():
+        file_inputs["derived_surfaces_manifest"] = DERIVED_SURFACES_MANIFEST_PATH
+    return file_inputs
+
+
+def _planner_report_envelope(
+    vault: Path,
+    *,
+    runtime_context: RuntimeContext,
+    resolved_policy_path: Path,
+    makefile_sources: list[str],
+    file_inputs: dict[str, str],
+    workflow_rules: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return build_canonical_report_envelope(
+        vault,
+        generated_at=runtime_context.isoformat_z(),
+        artifact_kind="workflow_dependency_planner",
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,
+        source_paths=[
+            "ops/scripts/core/git_changed_paths_runtime.py",
+            "ops/scripts/core/git_runtime.py",
+            "ops/scripts/core/workflow_dependency_planner.py",
+            "Makefile",
+            *[path for path in makefile_sources if path != "Makefile"],
+            DERIVED_SURFACES_MANIFEST_PATH,
+            "ops/README.md",
+        ],
+        file_inputs=file_inputs,
+        text_inputs={
+            "workflow_rules": json.dumps(
+                workflow_rules,
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+            "generated_artifact_converge_fanout_targets": json.dumps(
+                {
+                    "generated-artifact-converge": GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS,
+                    "generated-artifact-script-output": GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS,
+                    "generated-artifact-finality-suffix": GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+        },
+    )
+
+
 def build_report(
     vault: Path,
     *,
@@ -1091,54 +1174,25 @@ def build_report(
     )
     selected_workflows = _selected_workflows(selected_paths, workflow_rules)
     evidence_dag = _evidence_dag(resolved_vault)
-    status = (
-        "fail"
-        if missing_dependencies or git_changed_paths.failed
-        else "attention"
-        if unknown_change_paths or derived_surface_currentness["status"] == "failed"
-        else "pass"
+    status = _planner_status(
+        missing_dependencies,
+        git_changed_paths_failed=git_changed_paths.failed,
+        unknown_change_paths=unknown_change_paths,
+        derived_surface_currentness_status=str(derived_surface_currentness["status"]),
     )
-    file_inputs: dict[str, str] = {path: path for path in makefile_sources}
-    ci_workflow = resolved_vault / ".github" / "workflows" / "ci.yml"
-    if ci_workflow.exists():
-        file_inputs[".github/workflows/ci.yml"] = ".github/workflows/ci.yml"
-    if changed_files_manifest:
-        file_inputs["changed_files_manifest"] = changed_files_manifest
-    if (resolved_vault / DEFAULT_TEST_LANE_REGISTRY).exists():
-        file_inputs["test_lane_registry"] = DEFAULT_TEST_LANE_REGISTRY
-    if (resolved_vault / DERIVED_SURFACES_MANIFEST_PATH).exists():
-        file_inputs["derived_surfaces_manifest"] = DERIVED_SURFACES_MANIFEST_PATH
+    file_inputs = _planner_file_inputs(
+        resolved_vault,
+        makefile_sources,
+        changed_files_manifest,
+    )
     return {
-        **build_canonical_report_envelope(
+        **_planner_report_envelope(
             resolved_vault,
-            generated_at=runtime_context.isoformat_z(),
-            artifact_kind="workflow_dependency_planner",
-            producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
+            runtime_context=runtime_context,
             resolved_policy_path=resolved_policy_path,
-            schema_path=WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/core/git_changed_paths_runtime.py",
-                "ops/scripts/core/git_runtime.py",
-                "ops/scripts/core/workflow_dependency_planner.py",
-                "Makefile",
-                *[path for path in makefile_sources if path != "Makefile"],
-                DERIVED_SURFACES_MANIFEST_PATH,
-                "ops/README.md",
-            ],
+            makefile_sources=makefile_sources,
             file_inputs=file_inputs,
-            text_inputs={
-                "workflow_rules": json.dumps(workflow_rules, ensure_ascii=False, sort_keys=True),
-                "generated_artifact_converge_fanout_targets": json.dumps(
-                    {
-                        "generated-artifact-converge": GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS,
-                        "generated-artifact-script-output": GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS,
-                        "generated-artifact-finality-suffix": GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS,
-                    },
-                    ensure_ascii=False,
-                    sort_keys=True,
-                ),
-            },
+            workflow_rules=workflow_rules,
         ),
         "vault": report_path(resolved_vault, resolved_vault),
         "policy": {

@@ -513,16 +513,11 @@ def _protected_recipe_invocation(
     }
 
 
-def _observe_protected_recipe(
-    makefile_text: str,
-    entry: dict[str, Any],
-    workflow_order_spec: dict[str, Any],
-) -> _ProtectedRecipeObservation:
-    target = str(entry["target"])
-    expected_lines = _protected_expected_lines(entry)
-    definitions = _recipe_definitions(makefile_text, target)
+def _protected_recipe_definition_violations(
+    target: str,
+    definitions: list[_RecipeDefinition],
+) -> list[dict[str, Any]]:
     violations: list[dict[str, Any]] = []
-
     if len(definitions) != 1:
         violations.append(
             {
@@ -532,15 +527,6 @@ def _observe_protected_recipe(
                 "reason": "protected_recipe_definition_count_mismatch",
             }
         )
-
-    definition = definitions[0] if definitions else None
-    if definition is None:
-        return _ProtectedRecipeObservation(
-            expected_lines=expected_lines,
-            invocations=[],
-            violations=violations,
-        )
-
     for recipe_definition in definitions:
         if recipe_definition.rule.targets != {target}:
             violations.append(
@@ -574,8 +560,16 @@ def _observe_protected_recipe(
                     "reason": "protected_recipe_inline_recipe_forbidden",
                 }
             )
+    return violations
 
-    body_lines = definition.body_lines
+
+def _observe_protected_recipe_lines(
+    target: str,
+    body_lines: list[tuple[int, str]],
+    expected_lines: list[_ProtectedExpectedRecipeLine],
+    workflow_order_spec: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    violations: list[dict[str, Any]] = []
     if len(body_lines) != len(expected_lines):
         violations.append(
             {
@@ -632,6 +626,33 @@ def _observe_protected_recipe(
                 "reason": "protected_recipe_unexpected_line",
             }
         )
+    return invocations, violations
+
+
+def _observe_protected_recipe(
+    makefile_text: str,
+    entry: dict[str, Any],
+    workflow_order_spec: dict[str, Any],
+) -> _ProtectedRecipeObservation:
+    target = str(entry["target"])
+    expected_lines = _protected_expected_lines(entry)
+    definitions = _recipe_definitions(makefile_text, target)
+    violations = _protected_recipe_definition_violations(target, definitions)
+
+    if not definitions:
+        return _ProtectedRecipeObservation(
+            expected_lines=expected_lines,
+            invocations=[],
+            violations=violations,
+        )
+
+    invocations, line_violations = _observe_protected_recipe_lines(
+        target,
+        definitions[0].body_lines,
+        expected_lines,
+        workflow_order_spec,
+    )
+    violations.extend(line_violations)
 
     return _ProtectedRecipeObservation(
         expected_lines=expected_lines,

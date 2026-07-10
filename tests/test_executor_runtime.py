@@ -1071,6 +1071,55 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 str(expected_trusted_python),
             )
 
+    def test_non_worker_dependency_preflight_blocks_probe_execution_failures(self) -> None:
+        cases = (
+            (124, True, "late timeout detail", "dependency preflight timed out"),
+            (126, False, "trusted candidate launch denied", "trusted candidate launch denied"),
+        )
+        for returncode, timed_out, stderr, expected_detail in cases:
+            with self.subTest(returncode=returncode), tempfile.TemporaryDirectory() as temp_dir:
+                vault = Path(temp_dir) / "vault"
+                vault.mkdir()
+                _seed_executor_vault(vault)
+                request = _dependency_preflight_request(vault)
+                outcome = TrustedCandidateRunOutcome(
+                    returncode=returncode,
+                    stdout="",
+                    stderr=stderr,
+                    timed_out=timed_out,
+                    argv=[],
+                    audit_record={},
+                )
+
+                with (
+                    mock.patch(
+                        "ops.scripts.core.codex_exec_dependency_preflight_runtime.sys.executable",
+                        str(vault / ".venv" / "bin" / "python"),
+                    ),
+                    mock.patch(
+                        "ops.scripts.core.codex_exec_dependency_preflight_decision_runtime.run_trusted_candidate_command",
+                        return_value=outcome,
+                    ),
+                ):
+                    preflight, summary = non_worker_dependency_preflight(request)
+
+                self.assertEqual(preflight["status"], "fail")
+                self.assertEqual(preflight["returncode"], 1)
+                self.assertEqual(preflight["python"]["path"], ".venv/bin/python")
+                self.assertTrue(preflight["python"]["exists"])
+                self.assertTrue(
+                    all(
+                        module["status"] == "unknown"
+                        and module["detail"] == expected_detail
+                        for module in preflight["required_modules"]
+                    )
+                )
+                self.assertIsNotNone(summary)
+                assert summary is not None
+                self.assertEqual(summary.decision, "blocked")
+                self.assertEqual(summary.timed_out, timed_out)
+                self.assertIn(expected_detail, " ".join(summary.notes))
+
     def test_trusted_dependency_preflight_python_preserves_workspace_symlink_to_external_python(
         self,
     ) -> None:
