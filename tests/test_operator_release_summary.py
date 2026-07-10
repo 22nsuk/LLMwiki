@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_binding_runtime import binding_file_digest
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.operator_release_summary import build_report, main
@@ -43,6 +44,17 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
 
     def _digest(self, rel_path: str) -> str:
         return hashlib.sha256((self.vault / rel_path).read_bytes()).hexdigest()
+
+    def _artifact_record(self, rel_path: str, *, binding_mode: str = "content") -> dict[str, str]:
+        return {
+            "path": rel_path,
+            "raw_digest": self._digest(rel_path),
+            "binding_digest": binding_file_digest(
+                self.vault / rel_path,
+                binding_mode=binding_mode,
+            )[1],
+            "binding_mode": binding_mode,
+        }
 
     def _seed_release_reports(self, *, full_summary: bool) -> None:
         closeout_path = "ops/reports/release-closeout-summary.json"
@@ -142,13 +154,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         artifact_paths = [closeout_path, test_summary_path, learning_path, self_check_path]
         if full_summary:
             artifact_paths.append(full_summary_path)
-        artifacts = [
-            {
-                "path": rel_path,
-                "raw_digest": self._digest(rel_path),
-            }
-            for rel_path in artifact_paths
-        ]
+        artifacts = [self._artifact_record(rel_path) for rel_path in artifact_paths]
         source_zip_path = "build/release/LLMwiki-source.zip"
         (self.vault / source_zip_path).parent.mkdir(parents=True, exist_ok=True)
         (self.vault / source_zip_path).write_bytes(b"source zip")
@@ -338,10 +344,11 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         batch_path = self.vault / "ops" / "reports" / "release-closeout-batch-manifest.json"
         batch = json.loads(batch_path.read_text(encoding="utf-8"))
         batch["artifacts"].append(
-            {
-                "path": "ops/reports/release-evidence-dashboard.json",
-                "raw_digest": "a" * 64,
-            }
+            self._artifact_record("ops/reports/release-evidence-dashboard.json")
+        )
+        self._write_json(
+            "ops/reports/release-evidence-dashboard.json",
+            {"artifact_kind": "release_evidence_dashboard", "status": "changed"},
         )
         batch_path.write_text(json.dumps(batch, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -387,6 +394,83 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         )
         self.assertEqual(report["status"], "attention")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_batch_manifest_v2_requires_exact_integer_type(self) -> None:
+        path = self.vault / "ops/reports/release-closeout-batch-manifest.json"
+        baseline = json.loads(path.read_text(encoding="utf-8"))
+
+        for invalid_version in ("2", True):
+            with self.subTest(schema_version=invalid_version):
+                payload = {**baseline, "schema_version": invalid_version}
+                path.write_text(json.dumps(payload), encoding="utf-8")
+
+                report = build_report(self.vault, context=fixed_context())
+
+                self.assertEqual(report["batch_verify"]["status"], "fail")
+                self.assertEqual(report["batch_verify"]["manifest_schema_version"], 0)
+                self.assertEqual(report["artifact_digest_policy_status"], "unknown")
+                self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_content_binding_allows_envelope_raw_drift_but_rejects_semantic_drift(self) -> None:
+        artifact_path = self.vault / "ops/reports/release-closeout-summary.json"
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+        payload.update({"generated_at": "2026-05-05T00:00:00Z", "source_revision": "new-revision"})
+        artifact_path.write_text(json.dumps(payload, ensure_ascii=False, indent=4), encoding="utf-8")
+
+        envelope_drift = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(envelope_drift["batch_verify"]["status"], "pass")
+
+        payload["machine_release_allowed"] = False
+        artifact_path.write_text(json.dumps(payload, ensure_ascii=False, indent=4), encoding="utf-8")
+
+        semantic_drift = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(semantic_drift["batch_verify"]["status"], "fail")
+        mismatch = semantic_drift["batch_verify"]["mismatches"][0]
+        self.assertEqual(mismatch["binding_mode"], "content")
+        self.assertEqual(mismatch["reason"], "binding_digest_mismatch")
+
+    def test_raw_binding_rejects_byte_only_drift(self) -> None:
+        batch_path = self.vault / "ops/reports/release-closeout-batch-manifest.json"
+        batch = json.loads(batch_path.read_text(encoding="utf-8"))
+        tracked_path = "ops/reports/release-closeout-summary.json"
+        batch["artifacts"][0] = self._artifact_record(tracked_path, binding_mode="raw")
+        batch_path.write_text(json.dumps(batch), encoding="utf-8")
+        artifact_path = self.vault / tracked_path
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+        artifact_path.write_text(json.dumps(payload, ensure_ascii=False, indent=4), encoding="utf-8")
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(report["batch_verify"]["status"], "fail")
+        self.assertEqual(report["batch_verify"]["mismatches"][0]["binding_mode"], "raw")
+
+    def test_missing_binding_metadata_never_falls_back_to_raw_digest(self) -> None:
+        batch_path = self.vault / "ops/reports/release-closeout-batch-manifest.json"
+        batch = json.loads(batch_path.read_text(encoding="utf-8"))
+        batch["artifacts"][0].pop("binding_digest")
+        batch_path.write_text(json.dumps(batch), encoding="utf-8")
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(report["batch_verify"]["status"], "fail")
+        mismatch = report["batch_verify"]["mismatches"][0]
+        self.assertEqual(mismatch["reason"], "binding_metadata_invalid")
+        self.assertEqual(mismatch["actual_binding_digest"], "not_checked")
+        self.assertEqual(mismatch["declared_raw_digest"], batch["artifacts"][0]["raw_digest"])
+
+    def test_invalid_binding_digest_never_falls_back_to_raw_digest(self) -> None:
+        batch_path = self.vault / "ops/reports/release-closeout-batch-manifest.json"
+        batch = json.loads(batch_path.read_text(encoding="utf-8"))
+        batch["artifacts"][0]["binding_digest"] = "not-a-digest"
+        batch_path.write_text(json.dumps(batch), encoding="utf-8")
+
+        report = build_report(self.vault, context=fixed_context())
+
+        mismatch = report["batch_verify"]["mismatches"][0]
+        self.assertEqual(mismatch["reason"], "binding_metadata_invalid")
+        self.assertEqual(mismatch["actual_binding_digest"], "not_checked")
 
     def test_operator_summary_uses_clean_lane_blocking_count_from_closeout(self) -> None:
         self._write_json(

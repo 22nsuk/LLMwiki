@@ -945,6 +945,37 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         self.assertEqual(report["batch_manifest"]["semantic_release_status"], "clean_pass")
         self.assertEqual(report["batch_manifest"]["sealed_release_status"], "sealed_clean_pass")
 
+    def test_finality_build_rejects_non_integer_batch_schema_version(self) -> None:
+        for schema_version in ("2", True):
+            with self.subTest(schema_version=schema_version):
+                self._seed_finality_inputs()
+                batch_payload = json.loads(
+                    (self.vault / BATCH_MANIFEST_PATH).read_text(encoding="utf-8")
+                )
+                batch_payload["schema_version"] = schema_version
+                self._write_json(BATCH_MANIFEST_PATH, batch_payload)
+                self._write_json(
+                    SELF_CHECK_PATH,
+                    {
+                        "status": {"result": "pass"},
+                        "closeout_inputs": {
+                            "batch_manifest_fingerprint": _sha256(
+                                self.vault / BATCH_MANIFEST_PATH
+                            )
+                        },
+                    },
+                )
+                self._rebind_fixed_point_to_current_batch_and_self_check()
+
+                report = build_report(self.vault, context=fixed_context())
+
+                self.assertEqual(report["batch_manifest"]["schema_version"], 0)
+                self.assertEqual(report["finality_status"], "fail")
+                self.assertIn(
+                    "batch_manifest_unsupported_schema_version",
+                    report["finality_failures"],
+                )
+
     @pytest.mark.release_closeout_regression
     def test_finality_verify_fails_after_tracked_content_drift(self) -> None:
         self._seed_finality_inputs()
@@ -1060,6 +1091,58 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         self.assertIn(
             "generated-artifact-index-body",
             classification["recommended_fixed_point_initial_targets"],
+        )
+
+    def test_finality_verify_routes_unowned_batch_binding_drift_to_resettle(
+        self,
+    ) -> None:
+        self._seed_finality_inputs()
+        artifact_path = "ops/reports/release-smoke-report.json"
+        self._write_json(
+            artifact_path,
+            {"artifact_kind": "release_smoke_report", "status": "pass"},
+        )
+        batch_payload = json.loads(
+            (self.vault / BATCH_MANIFEST_PATH).read_text(encoding="utf-8")
+        )
+        batch_payload["artifacts"] = [
+            self._batch_artifact(artifact_path, role="primary_evidence")
+        ]
+        self._write_json(BATCH_MANIFEST_PATH, batch_payload)
+        self._write_json(
+            SELF_CHECK_PATH,
+            {
+                "status": {"result": "pass"},
+                "closeout_inputs": {
+                    "batch_manifest_fingerprint": _sha256(
+                        self.vault / BATCH_MANIFEST_PATH
+                    )
+                },
+            },
+        )
+        self._rebind_fixed_point_to_current_batch_and_self_check()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+        self._write_json(
+            artifact_path,
+            {"artifact_kind": "release_smoke_report", "status": "changed"},
+        )
+
+        diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "fail")
+        classification = diagnostics["failure_classification"]
+        self.assertEqual(
+            classification["classes"],
+            ["batch_manifest_artifact_binding_mismatch"],
+        )
+        self.assertEqual(
+            classification["recommended_lane"],
+            "release-finality-resettle-current-or-refresh",
+        )
+        self.assertEqual(
+            classification["recommended_targets"],
+            ["release-finality-resettle-current-or-refresh"],
         )
 
     def test_finality_verify_classifies_sealed_preflight_artifact_mismatch(self) -> None:

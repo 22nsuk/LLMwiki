@@ -12,6 +12,7 @@ from ops.scripts.core.artifact_binding_runtime import (
     MARKDOWN_CONTENT_BINDING_MODE,
     REVISION_BINDING_MODE,
     binding_file_digest,
+    is_sha256_digest,
 )
 
 pytestmark = pytest.mark.public
@@ -19,6 +20,14 @@ pytestmark = pytest.mark.public
 
 def _content_binding(path: Path) -> tuple[str, str]:
     return binding_file_digest(path, binding_mode=CONTENT_BINDING_MODE)
+
+
+def test_sha256_digest_validation_requires_lowercase_hex() -> None:
+    assert is_sha256_digest("a" * 64)
+    assert not is_sha256_digest("A" * 64)
+    assert not is_sha256_digest("a" * 63)
+    assert not is_sha256_digest("missing")
+    assert not is_sha256_digest(True)
 
 
 class ArtifactBindingRuntimeTests(unittest.TestCase):

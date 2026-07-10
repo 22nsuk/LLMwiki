@@ -12,7 +12,10 @@ from typing import Any
 
 import pytest
 
-from ops.scripts.core.artifact_binding_runtime import binding_file_digest
+from ops.scripts.core.artifact_binding_runtime import (
+    RAW_BINDING_MODE,
+    binding_file_digest,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.release_closeout_fixed_point import (
@@ -414,6 +417,32 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             revision_digest,
             report["binding_digest_map"][revision_path],
         )
+
+    def test_raw_binding_policy_emits_schema_valid_report(self) -> None:
+        policy = self._policy()
+        policy["writers"][0]["binding_mode"] = RAW_BINDING_MODE
+        self._write_policy(policy)
+
+        report = build_report(
+            self.vault,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=self._successful_runner([]),
+        )
+
+        raw_path = str(policy["writers"][0]["produces"][0])
+        self.assertEqual(report["binding_mode_map"][raw_path], RAW_BINDING_MODE)
+        self.assertEqual(
+            report["execution"]["binding_mode_map"][raw_path],
+            RAW_BINDING_MODE,
+        )
+        self.assertEqual(
+            report["tracked_artifacts"][0]["binding_mode"],
+            RAW_BINDING_MODE,
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+        write_report(self.vault, report)
 
     def test_undeclared_tracked_write_fails_execution(self) -> None:
         outputs = self._writer_outputs()

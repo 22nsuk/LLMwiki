@@ -235,11 +235,26 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["path", "expected_digest", "actual_digest"],
+            "required": [
+              "path",
+              "binding_mode",
+              "expected_binding_digest",
+              "actual_binding_digest",
+              "declared_raw_digest",
+              "actual_raw_digest",
+              "reason"
+            ],
             "properties": {
               "path": { "type": "string", "minLength": 1 },
-              "expected_digest": { "type": "string", "minLength": 1 },
-              "actual_digest": { "type": "string", "minLength": 1 }
+              "binding_mode": { "type": "string", "minLength": 1 },
+              "expected_binding_digest": { "type": "string", "minLength": 1 },
+              "actual_binding_digest": { "type": "string", "minLength": 1 },
+              "declared_raw_digest": { "type": "string", "minLength": 1 },
+              "actual_raw_digest": { "type": "string", "minLength": 1 },
+              "reason": {
+                "type": "string",
+                "enum": ["binding_metadata_invalid", "binding_digest_mismatch"]
+              }
             }
           }
         },

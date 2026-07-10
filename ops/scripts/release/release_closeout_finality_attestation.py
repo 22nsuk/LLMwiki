@@ -13,6 +13,7 @@ from ops.scripts.core.artifact_binding_runtime import (
     RAW_BINDING_MODE,
     REVISION_BINDING_MODE,
     binding_file_digest,
+    is_sha256_digest,
 )
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
@@ -79,6 +80,10 @@ def _normalized_string_list(value: Any) -> list[str] | None:
             return None
         result.append(item.strip())
     return result
+
+
+def _authority_schema_version(value: Any) -> int:
+    return value if type(value) is int else 0
 
 
 def _fixed_point_policy_authority(
@@ -324,7 +329,10 @@ def _batch_manifest_artifact_mismatches(vault: Path) -> dict[str, Any]:
         role = str(item.get("role", "")).strip()
         binding_expected = str(item.get("binding_digest", "")).strip()
         binding_mode = str(item.get("binding_mode", "")).strip()
-        if binding_expected and binding_mode in SUPPORTED_BINDING_MODES:
+        if (
+            is_sha256_digest(binding_expected)
+            and binding_mode in SUPPORTED_BINDING_MODES
+        ):
             binding_current = binding_file_digest(
                 vault / rel_path,
                 binding_mode=binding_mode,
@@ -505,6 +513,13 @@ def _finality_failure_classification(
     ]
     sealed_preflight = _sealed_preflight_summary(vault)
     fixed_point_writer_by_path = _fixed_point_writer_targets_by_path(vault)
+    unowned_batch_mismatches = [
+        item
+        for item in batch_mismatches
+        if item["path"] not in FRESHNESS_INDEX_COHORT_PATHS
+        and item["path"] != SEALED_PREFLIGHT_PATH
+        and not fixed_point_writer_by_path.get(item["path"])
+    ]
     fixed_point_writer_mismatches = [
         {
             **item,
@@ -540,6 +555,8 @@ def _finality_failure_classification(
             for item in fixed_point_writer_mismatches
             if item["writer_target"]
         )
+    if unowned_batch_mismatches:
+        classes.append("batch_manifest_artifact_binding_mismatch")
     if (
         binding_digest_mismatches
         and not fixed_point_authority_failed
@@ -554,6 +571,10 @@ def _finality_failure_classification(
     if failures and not classes:
         classes.append("unclassified_finality_current_check_failure")
 
+    resettle_refresh_required = bool(
+        unowned_batch_mismatches
+        or "unclassified_finality_current_check_failure" in classes
+    )
     fixed_point_refresh_required = bool(
         fixed_point_authority_failed or recommended_initial_targets
     )
@@ -568,13 +589,17 @@ def _finality_failure_classification(
         recommended_targets.append("release-closeout-fixed-point")
     if attestation_refresh_required:
         recommended_targets.append("release-closeout-finality-attestation")
-    if classes:
+    if resettle_refresh_required:
+        recommended_targets.append("release-finality-resettle-current-or-refresh")
+    elif classes:
         recommended_targets.append("release-closeout-finality-verify")
 
     recommended_targets = _dedupe_preserve_order(recommended_targets)
     recommended_initial_targets = _dedupe_preserve_order(recommended_initial_targets)
     recommended_lane = (
-        "release-authority-sealed-preflight + release-closeout-fixed-point"
+        "release-finality-resettle-current-or-refresh"
+        if resettle_refresh_required
+        else "release-authority-sealed-preflight + release-closeout-fixed-point"
         if "sealed_preflight_artifact_mismatch" in classes
         and "fixed_point_tracked_writer_binding_mismatch" in classes
         else "release-authority-sealed-preflight"
@@ -617,7 +642,7 @@ def _fixed_point_summary(vault: Path) -> tuple[dict[str, Any], dict[str, Any], s
         "raw_digest": raw_digest,
         "binding_mode": RAW_BINDING_MODE,
         "load_status": load_status,
-        "schema_version": int(payload.get("schema_version", 0) or 0),
+        "schema_version": _authority_schema_version(payload.get("schema_version")),
         "status": str(payload.get("status", "missing")).strip() if payload else "missing",
         "execution_pass_count": int(payload.get("execution_pass_count", 0) or 0),
         "raw_digest_map": _normalized_digest_map(payload.get("raw_digest_map")),
@@ -640,7 +665,7 @@ def _batch_manifest_summary(vault: Path) -> tuple[dict[str, Any], dict[str, Any]
         "raw_digest": raw_digest,
         "binding_mode": RAW_BINDING_MODE,
         "load_status": load_status,
-        "schema_version": int(payload.get("schema_version", 0) or 0),
+        "schema_version": _authority_schema_version(payload.get("schema_version")),
         "status": str(status_view.get("compatibility_status_value", "missing")).strip()
         if payload
         else "missing",

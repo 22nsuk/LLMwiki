@@ -116,7 +116,7 @@
       "type": "object",
       "additionalProperties": {
         "type": "string",
-        "enum": ["content", "revision"]
+        "enum": ["content", "raw", "revision"]
       }
     },
     "trackedArtifact": {
@@ -128,7 +128,7 @@
         "path": { "type": "string", "minLength": 1 },
         "binding_mode": {
           "type": "string",
-          "enum": ["content", "revision"]
+          "enum": ["content", "raw", "revision"]
         }
       }
     },

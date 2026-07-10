@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_binding_runtime import (
+    BINDING_MODES,
+    binding_file_digest,
+    is_sha256_digest,
+)
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
@@ -99,7 +104,7 @@ class OperatorReleaseRenderInputs:
 
 
 def _sha256_file(path: Path) -> str:
-    if not path.exists():
+    if not path.is_file():
         return "missing"
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -137,7 +142,8 @@ def _batch_verify_snapshot(vault: Path, batch_manifest: dict[str, Any], load_sta
             "mismatches": [],
             "summary": "release batch manifest is missing or unreadable",
         }
-    schema_version = int(batch_manifest.get("schema_version", 0) or 0)
+    declared_schema_version = batch_manifest.get("schema_version")
+    schema_version = declared_schema_version if type(declared_schema_version) is int else 0
     if schema_version != 2:
         return {
             "status": "fail",
@@ -152,7 +158,7 @@ def _batch_verify_snapshot(vault: Path, batch_manifest: dict[str, Any], load_sta
             "mismatches": [],
             "summary": (
                 "release batch manifest is not current authority; "
-                f"expected schema_version=2; actual={schema_version}"
+                f"expected exact integer schema_version=2; actual={declared_schema_version!r}"
             ),
         }
 
@@ -160,22 +166,54 @@ def _batch_verify_snapshot(vault: Path, batch_manifest: dict[str, Any], load_sta
     missing_count = 0
     artifacts = batch_manifest.get("artifacts", [])
     artifacts = artifacts if isinstance(artifacts, list) else []
-    for artifact in artifacts:
+    for index, artifact in enumerate(artifacts):
         if not isinstance(artifact, dict):
-            continue
-        rel_path = str(artifact.get("path", "")).strip()
-        if not rel_path:
-            continue
-        expected = str(artifact.get("raw_digest", "")).strip() or "missing"
-        actual = _sha256_file(vault / rel_path)
-        if actual == "missing":
-            missing_count += 1
-        if expected != actual:
             mismatches.append(
                 {
-                    "path": rel_path,
-                    "expected_digest": expected,
-                    "actual_digest": actual,
+                    "path": f"<invalid-artifact-{index}>",
+                    "binding_mode": "missing",
+                    "expected_binding_digest": "missing",
+                    "actual_binding_digest": "not_checked",
+                    "declared_raw_digest": "missing",
+                    "actual_raw_digest": "not_checked",
+                    "reason": "binding_metadata_invalid",
+                }
+            )
+            continue
+        rel_path = str(artifact.get("path", "")).strip()
+        display_rel_path = rel_path or f"<missing-path-{index}>"
+        binding_mode = str(artifact.get("binding_mode", "")).strip()
+        expected_binding_digest = str(artifact.get("binding_digest", "")).strip() or "missing"
+        declared_raw = str(artifact.get("raw_digest", "")).strip() or "missing"
+        artifact_path = vault / rel_path if rel_path else None
+        actual_raw = _sha256_file(artifact_path) if artifact_path is not None else "not_checked"
+        actual_binding_digest = "not_checked"
+        binding_metadata_valid = bool(
+            rel_path
+            and is_sha256_digest(expected_binding_digest)
+            and binding_mode in BINDING_MODES
+        )
+        if binding_metadata_valid and artifact_path is not None:
+            actual_binding_digest = binding_file_digest(
+                artifact_path,
+                binding_mode=binding_mode,
+            )[1]
+        if actual_raw == "missing":
+            missing_count += 1
+        if not binding_metadata_valid or expected_binding_digest != actual_binding_digest:
+            mismatches.append(
+                {
+                    "path": display_rel_path,
+                    "binding_mode": binding_mode or "missing",
+                    "expected_binding_digest": expected_binding_digest,
+                    "actual_binding_digest": actual_binding_digest,
+                    "declared_raw_digest": declared_raw,
+                    "actual_raw_digest": actual_raw,
+                    "reason": (
+                        "binding_digest_mismatch"
+                        if binding_metadata_valid
+                        else "binding_metadata_invalid"
+                    ),
                 }
             )
 
@@ -200,6 +238,8 @@ def _batch_verify_snapshot(vault: Path, batch_manifest: dict[str, Any], load_sta
 
 def _artifact_digest_policy_status(batch_verify: dict[str, Any]) -> str:
     if str(batch_verify.get("manifest_load_status", "")).strip() != "ok":
+        return "unknown"
+    if str(batch_verify.get("authority_schema_status", "")).strip() != "current":
         return "unknown"
     if int(batch_verify.get("missing_artifact_count", 0) or 0):
         return "missing"
