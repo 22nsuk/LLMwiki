@@ -432,6 +432,10 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
             "external-report-reference-manifest-settle",
         )
         self.assertEqual(
+            routes["external_reports_reference_manifest"]["recommended_targets"],
+            ["external-report-reference-manifest-settle"],
+        )
+        self.assertEqual(
             routes["ops_reports_test_execution_summary_full_current_or_refresh"]["recommended_lane"],
             "test-execution-summary-full-current-or-refresh",
         )
@@ -441,6 +445,29 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
             ],
             ["test-execution-summary-full-current-or-refresh"],
         )
+
+    def test_source_identity_review_archive_routes_to_its_owner(self) -> None:
+        routing = stale_routing(
+            [
+                {
+                    "path": "ops/reports/review-archive-report.json",
+                    "owner_surface": "ops_reports",
+                    "artifact_kind": "review_archive_report",
+                    "issues": ["source_tree_fingerprint_mismatch"],
+                    "stable_contract_issues": [],
+                    "mtime_sensitive_issues": [],
+                    "schema_validation_status": "pass",
+                    "gate_effect": "claim_blocker",
+                }
+            ],
+            root_ephemeral_count=0,
+            non_utf8_count=0,
+        )
+
+        route = routing["source_identity_owner_routes"][0]
+        self.assertEqual(route["route_id"], "ops_reports_review_archive")
+        self.assertEqual(route["recommended_lane"], "review-archive")
+        self.assertEqual(route["recommended_targets"], ["review-archive"])
 
     def test_source_identity_route_sample_paths_are_capped(self) -> None:
         routing = stale_routing(

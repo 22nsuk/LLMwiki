@@ -276,10 +276,7 @@ collaboration-governance: github-governance-live-drift
 
 external-report-lifecycle-refresh:
 	$(MAKE) external-report-reference-manifest-settle
-	$(MAKE) generated-artifact-converge
-	$(MAKE) release-closeout-summary-report
-	$(MAKE) release-evidence-cohort
-	$(MAKE) release-evidence-dashboard-report
+	$(MAKE) release-finality-resettle-current-or-refresh
 
 release-conditional: release-evidence-refresh-fast
 

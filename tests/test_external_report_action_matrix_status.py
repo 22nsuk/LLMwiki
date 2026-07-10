@@ -1412,7 +1412,6 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                             "recommended_lane": "external-report-reference-manifest-settle",
                             "recommended_targets": [
                                 "external-report-reference-manifest-settle",
-                                "external-report-lifecycle-refresh",
                             ],
                             "reason_ids": [
                                 "external_report_reference_manifest_source_identity"
@@ -1459,7 +1458,6 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "freshness-source-identity-converge",
                 "artifact-freshness-refresh-check",
                 "external-report-reference-manifest-settle",
-                "external-report-lifecycle-refresh",
             ],
         )
         active_summary = report["summary"]["active_action_resolution_summary"]

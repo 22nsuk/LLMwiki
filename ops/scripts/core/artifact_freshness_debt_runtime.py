@@ -761,10 +761,7 @@ def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
     if surface == "external_reports":
         route_id = "external_reports_reference_manifest"
         lane = "external-report-reference-manifest-settle"
-        targets = (
-            "external-report-reference-manifest-settle",
-            "external-report-lifecycle-refresh",
-        )
+        targets = ("external-report-reference-manifest-settle",)
         reason_id = "external_report_reference_manifest_source_identity"
     elif artifact_kind == "test_execution_summary":
         lane, targets, reason_id = _source_identity_test_summary_lane(rel_path)
@@ -841,6 +838,11 @@ def _source_identity_route_descriptor(record: dict[str, Any]) -> dict[str, Any]:
         lane = "bootstrap-preflight"
         targets = ("bootstrap-preflight",)
         reason_id = "bootstrap_preflight_source_identity"
+    elif artifact_kind == "review_archive_report":
+        route_id = "ops_reports_review_archive"
+        lane = "review-archive"
+        targets = ("review-archive",)
+        reason_id = "review_archive_source_identity"
     else:
         route_id = f"{surface}_source_identity_resettle"
         lane = "freshness-source-identity-converge"

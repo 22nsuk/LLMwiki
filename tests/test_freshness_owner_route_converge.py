@@ -103,6 +103,40 @@ class FreshnessOwnerRouteConvergeTests(unittest.TestCase):
             "owner_route_target_not_allowed",
         )
 
+    def test_build_plan_rejects_nested_external_lifecycle_target(self) -> None:
+        plan = build_plan(
+            _report(
+                [
+                    {
+                        "route_id": "external_reports_reference_manifest",
+                        "recommended_targets": ["external-report-lifecycle-refresh"],
+                    },
+                ]
+            )
+        )
+
+        self.assertEqual(plan["status"], "blocked")
+        self.assertEqual(plan["selected_targets"], [])
+        self.assertEqual(
+            plan["blocked_targets"][0]["reason"],
+            "owner_route_target_not_allowed",
+        )
+
+    def test_build_plan_selects_review_archive_owner(self) -> None:
+        plan = build_plan(
+            _report(
+                [
+                    {
+                        "route_id": "ops_reports_review_archive",
+                        "recommended_targets": ["review-archive"],
+                    },
+                ]
+            )
+        )
+
+        self.assertEqual(plan["status"], "owner_targets_available")
+        self.assertEqual(plan["selected_targets"], ["review-archive"])
+
     def test_build_plan_materializes_goal_runtime_targets_when_run_id_is_bound(self) -> None:
         plan = build_plan(
             _report(
@@ -169,11 +203,7 @@ class FreshnessOwnerRouteConvergeTests(unittest.TestCase):
         self.assertEqual(plan["blocked_targets"][0]["reason"], "goal_run_id_required")
         self.assertEqual(
             plan["terminal_suffix_targets"],
-            [
-                "artifact-freshness-refresh-check",
-                "generated-artifact-index",
-                "artifact-freshness-refresh-check",
-            ],
+            ["generated-artifact-converge"],
         )
         self.assertEqual(
             plan["deferred_terminal_suffix_targets"],
@@ -297,9 +327,6 @@ class FreshnessOwnerRouteConvergeTests(unittest.TestCase):
                 command_log,
                 [
                     "external-report-reference-manifest-settle",
-                    "artifact-freshness-refresh-check",
-                    "generated-artifact-index",
-                    "artifact-freshness-refresh-check",
                     "release-finality-resettle-current-or-refresh",
                 ],
             )
@@ -404,9 +431,7 @@ class FreshnessOwnerRouteConvergeTests(unittest.TestCase):
                 command_log,
                 [
                     "external-report-reference-manifest-settle",
-                    "artifact-freshness-refresh-check",
-                    "generated-artifact-index",
-                    "artifact-freshness-refresh-check",
+                    "generated-artifact-converge",
                 ],
             )
             self.assertEqual(plan["status"], "partial_pass_operator_blocked")
