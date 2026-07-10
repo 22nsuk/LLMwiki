@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 from ops.scripts.core.codex_exec_execution_types_runtime import (
     ExecutionRequest,
@@ -16,6 +17,7 @@ from ops.scripts.core.codex_exec_workspace_runtime import (
     workspace_virtualenv_python,
 )
 from ops.scripts.core.trusted_candidate_runner import (
+    TrustedCandidateRunOutcome,
     TrustedCandidateRunRequest,
     run_trusted_candidate_command,
 )
@@ -32,6 +34,83 @@ from .codex_exec_dependency_preflight_runtime import (
     trusted_dependency_preflight_python,
     workspace_python_failure,
 )
+
+
+def _resolve_trusted_preflight_python(
+    request: ExecutionRequest,
+    *,
+    workspace_python: Path,
+) -> tuple[Path, Path | None]:
+    trusted_python = trusted_dependency_preflight_python(
+        request.artifact_root,
+        workspace_root=request.workspace_root,
+    )
+    if not (
+        same_path(request.artifact_root, request.workspace_root)
+        and workspace_python.is_symlink()
+    ):
+        return trusted_python, None
+
+    try:
+        workspace_python_realpath = workspace_python.resolve(strict=True)
+    except OSError as exc:
+        raise DependencyPreflightTrustError(
+            f"trusted workspace python symlink is unreadable: {exc}"
+        ) from exc
+    if path_is_inside_workspace(workspace_python_realpath, request.workspace_root):
+        raise DependencyPreflightTrustError(
+            "trusted workspace python symlink resolves inside the workspace"
+        )
+    if trusted_python.absolute() == workspace_python.absolute():
+        return trusted_python, workspace_python_realpath
+
+    try:
+        trusted_python_resolved = trusted_python.resolve(strict=True)
+    except OSError as exc:
+        raise DependencyPreflightTrustError(
+            f"trusted dependency preflight python is unreadable: {exc}"
+        ) from exc
+    if trusted_python_resolved == workspace_python_realpath:
+        return workspace_python.absolute(), workspace_python_realpath
+    return trusted_python, None
+
+
+def _dependency_probe_execution_failure(
+    request: ExecutionRequest,
+    *,
+    trusted_python: Path,
+    roots: list[Path],
+    outcome: TrustedCandidateRunOutcome,
+) -> tuple[ExecutorDependencyPreflightPayload, ExecutionSummary]:
+    detail = "dependency preflight timed out" if outcome.timed_out else outcome.stderr
+    python_display = _sanitize_path_text(str(trusted_python), roots=roots)
+    preflight = dependency_preflight_payload(
+        role_requires_project_check=True,
+        status="fail",
+        python_path=python_display,
+        python_executable="",
+        python_version="",
+        python_exists=True,
+        required_modules=dependency_module_payloads("unknown", detail=detail),
+        returncode=1,
+    )
+    return (
+        preflight,
+        ExecutionSummary(
+            status="fail",
+            decision="blocked",
+            notes=[
+                (
+                    f"executor dependency preflight blocked {request.role}: "
+                    f"{python_display} could not execute required project dependency check; "
+                    f"{detail}"
+                )
+            ],
+            timed_out=outcome.timed_out,
+            timeout_seconds=request.timeout_seconds,
+            termination_reason="completed",
+        ),
+    )
 
 
 def non_worker_dependency_preflight(
@@ -91,9 +170,9 @@ def non_worker_dependency_preflight(
         )
 
     try:
-        trusted_python = trusted_dependency_preflight_python(
-            request.artifact_root,
-            workspace_root=request.workspace_root,
+        trusted_python, trusted_python_realpath = _resolve_trusted_preflight_python(
+            request,
+            workspace_python=workspace_python,
         )
     except DependencyPreflightTrustError as exc:
         return workspace_python_failure(
@@ -101,36 +180,6 @@ def non_worker_dependency_preflight(
             workspace_python=workspace_python,
             detail=str(exc),
         )
-    trusted_python_realpath = None
-    if same_path(request.artifact_root, request.workspace_root) and workspace_python.is_symlink():
-        try:
-            workspace_python_realpath = workspace_python.resolve(strict=True)
-        except OSError as exc:
-            return workspace_python_failure(
-                request=request,
-                workspace_python=workspace_python,
-                detail=f"trusted workspace python symlink is unreadable: {exc}",
-            )
-        if path_is_inside_workspace(workspace_python_realpath, request.workspace_root):
-            return workspace_python_failure(
-                request=request,
-                workspace_python=workspace_python,
-                detail="trusted workspace python symlink resolves inside the workspace",
-            )
-        if trusted_python.absolute() == workspace_python.absolute():
-            trusted_python_realpath = workspace_python_realpath
-        else:
-            try:
-                trusted_python_resolved = trusted_python.resolve(strict=True)
-            except OSError as exc:
-                return workspace_python_failure(
-                    request=request,
-                    workspace_python=workspace_python,
-                    detail=f"trusted dependency preflight python is unreadable: {exc}",
-                )
-            if trusted_python_resolved == workspace_python_realpath:
-                trusted_python = workspace_python.absolute()
-                trusted_python_realpath = workspace_python_realpath
     command = [
         str(workspace_python),
         *DEPENDENCY_PREFLIGHT_PYTHON_FLAGS,
@@ -150,44 +199,19 @@ def non_worker_dependency_preflight(
             trusted_python_realpath=trusted_python_realpath,
         )
     )
+    if outcome.timed_out or outcome.returncode == 126:
+        return _dependency_probe_execution_failure(
+            request,
+            trusted_python=trusted_python,
+            roots=roots,
+            outcome=outcome,
+        )
     completed = subprocess.CompletedProcess(
         outcome.argv,
         outcome.returncode,
         stdout=outcome.stdout,
         stderr=outcome.stderr,
     )
-    if outcome.timed_out or outcome.returncode == 126:
-        detail = (
-            "dependency preflight timed out" if outcome.timed_out else completed.stderr
-        )
-        python_display = _sanitize_path_text(str(trusted_python), roots=roots)
-        preflight = dependency_preflight_payload(
-            role_requires_project_check=True,
-            status="fail",
-            python_path=python_display,
-            python_executable="",
-            python_version="",
-            python_exists=True,
-            required_modules=dependency_module_payloads("unknown", detail=detail),
-            returncode=1,
-        )
-        return (
-            preflight,
-            ExecutionSummary(
-                status="fail",
-                decision="blocked",
-                notes=[
-                    (
-                        f"executor dependency preflight blocked {request.role}: "
-                        f"{python_display} could not execute required project dependency check; "
-                        f"{detail}"
-                    )
-                ],
-                timed_out=outcome.timed_out,
-                timeout_seconds=request.timeout_seconds,
-                termination_reason="completed",
-            ),
-        )
     preflight = dependency_preflight_from_probe(
         request,
         python_path=workspace_python,
