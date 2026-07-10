@@ -238,57 +238,49 @@ target. Release promotion still requires the separate
 `make release-run-ready`, `make release-sealed-run-ready`, and
 `make release-auto-promotion-ready` manifest authorities for the committed tree.
 
-`generated-artifact-converge` is now the generated-report finality suffix, not
-the owner of every generated contract fixture. It refreshes
+`generated-artifact-converge` is a bounded generated-report helper, not the
+owner of every generated contract fixture and not a finality loop. It runs
 `artifact-freshness`, `external-report-action-matrix`, and
-`generated-artifact-index` in that order. `script-output-surfaces` is a separate
-material output/fallback registry slice owned by
-`generated-artifact-script-output`; it records scripts with material output path
-surfaces or direct-script fallback entrypoints, and no longer carries
-generated-at, source-revision, source-tree-fingerprint, or currentness envelope
-fields in the tracked fixture.
+`generated-artifact-index` once each in that order. Its temporary before/after
+summary records binding changes, raw-only changes, and no-op promotion counts.
+`script-output-surfaces` remains a separate material output/fallback registry
+slice owned by `generated-artifact-script-output`.
 
-`release-finality-resettle-current-or-refresh` first replay-checks current
-finality and reuses it when possible. When a refresh is needed,
-`release-finality-resettle` refreshes the sealed rehearsal authority with
-`release-authority-sealed-preflight`, then uses the generated-artifact finality
-suffix (`artifact-freshness -> external-report-action-matrix ->
-generated-artifact-index`), refreshes `release-closeout-summary-report`, runs
-`release-closeout-fixed-point`, and verifies finality. `release-closeout-fixed-point`
-owns the last action-matrix refresh before it writes the finality attestation:
-after the post-promote artifact-freshness bootstrap, it refreshes the action
-matrix readback and only then writes the attestation. No canonical report writer
-should run between that attestation and `release-closeout-finality-verify`. Treat
-the finality verify as terminal: if any finality-tracked report writer runs afterward, rerun
-`make release-finality-resettle-current-or-refresh` instead of hand-patching the attestation.
+`release-finality-resettle-current-or-refresh` is the single finality
+controller. It performs a write-free current check, conditionally invokes
+`release-finality-resettle`, and then performs one final current check.
+`release-finality-resettle` refreshes the sealed rehearsal authority and hands
+control to `release-terminal-finality`; it does not run a separate generated
+artifact suffix or summary writer first.
+
+`release-closeout-fixed-point` loads a policy-declared acyclic writer graph.
+Tracked artifacts are derived from each writer's `produces` declaration, and
+policy loading rejects duplicate producers, cycles, unknown dependencies, and
+non-topological order. One execution selects the requested writers and their
+downstream closure, runs each selected writer at most once, and fails immediately
+on an undeclared tracked write. After the fixed-point report is promoted,
+`release-closeout-finality-attestation` is the only canonical writer. The
+terminal target then runs the strict write-free post-check and finality verify;
+there is no post-promote freshness bootstrap, action-matrix readback, semantic
+reuse iteration, or writer retry after attestation.
+
+Every tracked artifact declares one binding authority: `content` ignores
+envelope clocks and revision aliases while retaining source-tree and input
+fingerprints, `revision` additionally binds the exact source revision, and
+`raw` binds serialized bytes. Batch replay and finality verification use the
+same binding helper and do not override a failed raw binding with a semantic
+comparison. Schema-version-1 run/archive evidence remains readable as retained
+history but cannot be reused as current release authority; current fixed-point,
+batch, and finality reports require schema version 2.
+
 Observation registry edits that change tracked source, including
-`ops/observation-closeout-registry.json`, must happen before this terminal seal.
+`ops/observation-closeout-registry.json`, must happen before the terminal seal.
 Open or planned observations remain registry-owned even when their artifact is
-generated/local-only; after finality, either keep only closed observations with
-resolution evidence in generated artifacts, or update the registry and restart
-the resettle lane so the source-tree fingerprint and finality evidence stay
-aligned.
-Within `release-closeout-fixed-point`, raw digests still prove convergence, but
-the next iteration's target list is selected from per-report semantic digest
-changes so envelope/currentness churn does not repeatedly schedule the expensive
-generated-artifact feedback suffix. When
-`generated-artifact-index-body`, `artifact-freshness`, or
-`external-report-action-matrix` is selected again, the fixed-point engine also
-reuses the existing writer output and records a skipped command result if that
-writer's input fingerprint, output semantic digest, and tracked-context semantic
-digest have not changed.
-If the terminal finality current check still fails after this reuse path,
-`release-finality-resettle-current-check` emits a non-mutating diagnosis from
-`release-finality-resettle-current-diagnose`. Its
-`failure_classification`, together with the batch replay verifier's
-`batch manifest replay mismatch classification` JSON, separates batch-manifest
-source freshness/content drift, freshness/index/cohort digest drift, sealed
-preflight drift, fixed-point tracked-writer drift, and attestation-only digest
-drift so operators can rerun the narrow writer or seal lane before choosing full
-`release-finality-resettle`.
-The workflow planner now records the generated-artifact fan-out explicitly in
-each selected step's `fanout_targets` field so the repair suffix is inspectable
-rather than implicit in Make recipes alone.
+generated/local-only. If the post-refresh current check fails,
+`release-finality-resettle-current-diagnose` reports the owning cause, such as
+an invalid graph, undeclared tracked write, binding drift, or external source
+change after evidence generation. The failure is terminal for that invocation;
+the controller does not prescribe calling itself again.
 
 ## Promotion Principles
 
