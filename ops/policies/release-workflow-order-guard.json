@@ -225,12 +225,17 @@
           "raw_line": "$(MAKE) public-check-all"
         },
         {
+          "role": "test-execution-summary-full-current-or-refresh",
+          "target": "test-execution-summary-full-current-or-refresh",
+          "raw_line": "$(MAKE) test-execution-summary-full-current-or-refresh"
+        },
+        {
           "role": "release-converge-post",
           "target": "release-converge-post",
           "raw_line": "$(MAKE) release-converge-post"
         }
       ],
-      "details": "release-converge-all-surfaces must make public evidence current before exactly one terminal convergence handoff."
+      "details": "release-converge-all-surfaces must make public and full-suite evidence current before exactly one terminal convergence handoff."
     },
     {
       "id": "release_auto_promotion_preflight_prerequisites_protected_recipe",
@@ -672,6 +677,7 @@
         "release-source-ready-snapshot",
         "release-converge-all-surfaces"
       ],
+      "exact": true,
       "details": "release-source-ready-prepare must snapshot the starting HEAD before mutating convergence."
     },
     {

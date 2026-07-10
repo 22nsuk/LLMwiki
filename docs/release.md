@@ -145,7 +145,7 @@ surface comparison; this document owns release evidence and staged authority.
   is current as a material output/fallback registry before report-contract
   summaries or release smoke can read it.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh;
-  terminal finality runs once, after public-check evidence is current.
+  terminal finality runs once, after public-check and full-suite evidence are current.
 - `make release-source-ready`: source-ready commit flow. Mutating convergence happens
   in `release-source-ready-prepare` before the commit; `release-post-commit-finalize`
   then checks revision-bound evidence for the new HEAD before

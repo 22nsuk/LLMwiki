@@ -305,6 +305,7 @@ release-converge-all-surfaces:
 	$(MAKE) release-smoke-full-reuse
 	$(MAKE) sync-public-policy
 	$(MAKE) public-check-all
+	$(MAKE) test-execution-summary-full-current-or-refresh
 	$(MAKE) release-converge-post
 
 release-post-commit-finalize:
@@ -328,7 +329,6 @@ release-source-ready-snapshot:
 release-source-ready-prepare:
 	$(MAKE) release-source-ready-snapshot
 	$(MAKE) release-converge-all-surfaces
-	$(MAKE) test-execution-summary-full-current-or-refresh
 
 release-source-ready-commit:
 	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_COMMIT_OUT)" --pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)" --message "$(RELEASE_SOURCE_READY_COMMIT_MESSAGE)"

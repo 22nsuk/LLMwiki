@@ -339,6 +339,7 @@ RELEASE_CONVERGE_ALL_LINES = _make_recipe(
     "release-smoke-full-reuse",
     "sync-public-policy",
     "public-check-all",
+    "test-execution-summary-full-current-or-refresh",
     "release-converge-post",
 )
 RELEASE_EVIDENCE_CONVERGE_LINES = _make_recipe(

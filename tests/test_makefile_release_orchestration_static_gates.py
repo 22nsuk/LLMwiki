@@ -165,6 +165,7 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
             "$(MAKE) release-smoke-full-reuse",
             "$(MAKE) sync-public-policy",
             "$(MAKE) public-check-all",
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
             "$(MAKE) release-converge-post",
         ),
     ),
@@ -232,10 +233,9 @@ _RELEASE_SOURCE_READY_TARGET_CONTRACTS = (
     ),
     MakeTargetContract(
         "release-source-ready-prepare",
-        required_tokens=(
+        exact_recipe=(
             "$(MAKE) release-source-ready-snapshot",
             "$(MAKE) release-converge-all-surfaces",
-            "$(MAKE) test-execution-summary-full-current-or-refresh",
         ),
     ),
     MakeTargetContract(
