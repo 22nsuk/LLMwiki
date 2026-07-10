@@ -73,7 +73,7 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -81,7 +81,7 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -89,7 +89,7 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 vault,
                 "provenance-auditor",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -170,7 +170,7 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -178,7 +178,7 @@ class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )

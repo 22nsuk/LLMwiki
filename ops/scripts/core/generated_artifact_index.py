@@ -34,6 +34,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.release.external_report_action_matrix import (
         build_report as build_action_matrix_report,
     )
+    from ops.scripts.release.external_report_inventory_runtime import (
+        REFERENCE_MANIFEST,
+        active_report_paths,
+    )
     from ops.scripts.release.external_report_lifecycle_runtime import (
         action_statuses,
         archived_report_action_basis_records,
@@ -47,6 +51,10 @@ else:
     )
     from ops.scripts.release.external_report_action_matrix import (
         build_report as build_action_matrix_report,
+    )
+    from ops.scripts.release.external_report_inventory_runtime import (
+        REFERENCE_MANIFEST,
+        active_report_paths,
     )
     from ops.scripts.release.external_report_lifecycle_runtime import (
         action_statuses,
@@ -183,6 +191,21 @@ def _operator_report_inventory(vault: Path) -> list[dict[str, str]]:
     return _file_records(vault, "ops/operator")
 
 
+def _external_root_report_records(vault: Path) -> list[dict[str, str]]:
+    paths = active_report_paths(vault)
+    reference_manifest = vault / REFERENCE_MANIFEST
+    if reference_manifest.is_file():
+        paths.append(reference_manifest)
+    return [
+        {
+            "path": report_path(vault, path),
+            "family": _family_key(path),
+            "date": date_token(path.name),
+        }
+        for path in sorted(paths)
+    ]
+
+
 def _external_report_inventory(
     vault: Path,
     *,
@@ -194,7 +217,7 @@ def _external_report_inventory(
     if archived_basis is None:
         archived_basis = archived_report_action_basis_records(vault, statuses)
     return {
-        "root_records": _file_records(vault, "external-reports"),
+        "root_records": _external_root_report_records(vault),
         "content_lifecycle_profiles": content_lifecycle_inventory(vault),
         "archived_report_action_basis": archived_basis,
         "archive_file_count": len(archived_basis),
@@ -467,7 +490,7 @@ def _external_reports(
     status_by_action: dict[str, str] | None = None,
     archived_report_basis: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
-    root_records = _file_records(vault, "external-reports")
+    root_records = _external_root_report_records(vault)
     record_by_path = {record["path"]: record for record in root_records}
     root_paths = [vault / record["path"] for record in root_records]
     lifecycle_profiles = report_lifecycle_profiles(vault, root_paths)

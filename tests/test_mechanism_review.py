@@ -918,7 +918,7 @@ class MechanismReviewTest(unittest.TestCase):
                 failure_taxonomy_counts={"validation_blocked": 1},
                 executor_role_counts={"validator": 1},
                 routing_extras={
-                    "model_counts": {"gpt-5.5": 99},
+                    "model_counts": {"gpt-5.6-sol": 99},
                     "reasoning_effort_counts": {"xhigh": 99},
                 },
                 telemetry_extras={

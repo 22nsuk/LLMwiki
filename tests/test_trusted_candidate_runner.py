@@ -226,7 +226,7 @@ class TrustedCandidateInvariantTests(unittest.TestCase):
             routing_report={
                 "routing_decision": {
                     "sandbox_mode": "read-only",
-                    "model": "gpt-5.5",
+                    "model": "gpt-5.6-sol",
                     "reasoning_effort": "high",
                 }
             },

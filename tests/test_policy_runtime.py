@@ -83,7 +83,7 @@ class PolicyRuntimeTest(unittest.TestCase):
             policy["subagent_routing_policy"]["ladder"][0],
             {
                 "rung": 1,
-                "model": "gpt-5.5",
+                "model": "gpt-5.6-sol",
                 "reasoning_effort": "medium",
             },
         )

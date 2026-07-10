@@ -35,7 +35,7 @@ class AutoImproveSessionRuntimeTests(unittest.TestCase):
                         "selected_rung": 3,
                         "score_band": "low",
                         "sandbox_mode": "workspace-write",
-                        "model": "gpt-5.5",
+                        "model": "gpt-5.6-sol",
                         "reasoning_effort": "high",
                     },
                     "complexity_profile": {"risk_flags": ["runtime_touch", "runtime_touch", ""]},
@@ -49,7 +49,7 @@ class AutoImproveSessionRuntimeTests(unittest.TestCase):
                         "selected_rung": 2,
                         "score_band": "low",
                         "sandbox_mode": "read-only",
-                        "model": "gpt-5.5",
+                        "model": "gpt-5.6-sol",
                         "reasoning_effort": "xhigh",
                     },
                     "complexity_profile": {"risk_flags": ["contract_touch"]},
@@ -149,7 +149,7 @@ class AutoImproveSessionRuntimeTests(unittest.TestCase):
                 rollups["routing"]["sandbox_mode_counts"],
                 {"read-only": 1, "workspace-write": 1},
             )
-            self.assertEqual(rollups["routing"]["model_counts"], {"gpt-5.5": 2})
+            self.assertEqual(rollups["routing"]["model_counts"], {"gpt-5.6-sol": 2})
             self.assertEqual(rollups["routing"]["reasoning_effort_counts"], {"high": 1, "xhigh": 1})
             self.assertEqual(
                 rollups["routing"]["risk_flag_counts"],

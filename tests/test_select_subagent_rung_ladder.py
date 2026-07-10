@@ -16,7 +16,7 @@ class SelectSubagentRungLadderTests(unittest.TestCase):
         ladder = policy["subagent_routing_policy"]["ladder"]
 
         self.assertEqual([entry["rung"] for entry in ladder], [1, 2, 3])
-        self.assertEqual({entry["model"] for entry in ladder}, {"gpt-5.5"})
+        self.assertEqual({entry["model"] for entry in ladder}, {"gpt-5.6-sol"})
         self.assertEqual(
             [entry["reasoning_effort"] for entry in ladder],
             ["medium", "high", "xhigh"],

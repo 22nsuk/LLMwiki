@@ -95,7 +95,7 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["complexity_profile"]["complexity_score"], 0)
             self.assertEqual(report["routing_decision"]["score_band"], "low")
             self.assertEqual(report["routing_decision"]["selected_rung"], 1)
-            self.assertEqual(report["routing_decision"]["model"], "gpt-5.5")
+            self.assertEqual(report["routing_decision"]["model"], "gpt-5.6-sol")
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "medium")
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
@@ -132,7 +132,7 @@ class SubagentRoutingTest(unittest.TestCase):
                 report["manual_dispatch"]["launch_parameters"],
                 {
                     "profile_path": ".codex/agents/worker.toml",
-                    "model": "gpt-5.5",
+                    "model": "gpt-5.6-sol",
                     "model_reasoning_effort": "medium",
                     "sandbox_mode": "workspace-write",
                 },
@@ -145,7 +145,7 @@ class SubagentRoutingTest(unittest.TestCase):
                 report["manual_dispatch"]["fixed_reasoning_surface"],
                 {
                     "compatibility_rule": "exact_model_and_reasoning_effort_match_required",
-                    "required_model": "gpt-5.5",
+                    "required_model": "gpt-5.6-sol",
                     "required_model_reasoning_effort": "medium",
                     "required_selected_rung": 1,
                     "allowed_when": "fixed_values_match_required_model_and_reasoning_effort",
@@ -190,7 +190,7 @@ class SubagentRoutingTest(unittest.TestCase):
 
             self.assertIn(report["routing_decision"]["score_band"], {"high", "extreme"})
             self.assertEqual(report["routing_decision"]["selected_rung"], 3)
-            self.assertEqual(report["routing_decision"]["model"], "gpt-5.5")
+            self.assertEqual(report["routing_decision"]["model"], "gpt-5.6-sol")
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
@@ -214,7 +214,7 @@ class SubagentRoutingTest(unittest.TestCase):
             )
 
             self.assertEqual(report["routing_decision"]["selected_rung"], 3)
-            self.assertEqual(report["routing_decision"]["model"], "gpt-5.5")
+            self.assertEqual(report["routing_decision"]["model"], "gpt-5.6-sol")
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "workspace-write")
             self.assertTrue(

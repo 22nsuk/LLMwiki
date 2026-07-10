@@ -477,7 +477,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -562,7 +562,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -626,7 +626,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -689,7 +689,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -714,7 +714,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(
                 hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "8114d77e44982f2c549493038b5cb6fe35924601f3b38a5bfa186dcf5403a2d7",
+                "adcf40b14b547fd5de863c8de19b352129c1a2d0d8b0a9ccde24a163bc870528",
             )
             section_positions = [
                 prompt.index(section)
@@ -765,7 +765,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
         routing_report = _routing_report(
             "validator",
             sandbox_mode="read-only",
-            model="gpt-5.5",
+            model="gpt-5.6-sol",
             reasoning_effort="xhigh",
             selected_rung=3,
         )
@@ -862,7 +862,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
         self.assertEqual(first_payload["diagnostics"]["notes"], ["validator blocked", "missing dependency evidence"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "d9af97f903899ed4a58c67e99aca86b74e3ed982b33bd5e80402bfe85bec3707",
+            "87dac62f8eeb0a7a65e2fe4faff58679da38cf240c8d1eb434b07ce813a55ded",
         )
 
     def test_codex_exec_prefers_workspace_virtualenv_on_path(self) -> None:
@@ -879,7 +879,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -954,7 +954,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -997,7 +997,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -1551,7 +1551,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 artifact_root,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -1646,7 +1646,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2048,7 +2048,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 artifact_root,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2134,7 +2134,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 artifact_root,
                 "provenance-auditor",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2190,7 +2190,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 artifact_root,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2236,7 +2236,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 artifact_root,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2292,7 +2292,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     artifact_root,
                     "validator",
                     sandbox_mode="workspace-write",
-                    model="gpt-5.5",
+                    model="gpt-5.6-sol",
                     reasoning_effort="xhigh",
                     selected_rung=3,
                 )
@@ -2338,7 +2338,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2373,7 +2373,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2410,7 +2410,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2443,7 +2443,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "reviewer",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -2487,7 +2487,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "reviewer",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2543,7 +2543,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2608,7 +2608,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -2673,7 +2673,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -2720,7 +2720,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -2765,7 +2765,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -2810,7 +2810,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 artifact_root,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -2863,7 +2863,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -2904,7 +2904,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -2912,7 +2912,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -2994,7 +2994,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3002,7 +3002,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -3074,7 +3074,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3082,7 +3082,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -3155,7 +3155,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3163,7 +3163,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -3219,7 +3219,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3227,7 +3227,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -3279,7 +3279,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3287,7 +3287,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -3295,7 +3295,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "provenance-auditor",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -3375,7 +3375,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3383,7 +3383,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -3429,7 +3429,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3491,7 +3491,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3499,7 +3499,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )
@@ -3591,7 +3591,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "worker",
                 sandbox_mode="workspace-write",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="high",
                 selected_rung=2,
             )
@@ -3599,7 +3599,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 vault,
                 "validator",
                 sandbox_mode="read-only",
-                model="gpt-5.5",
+                model="gpt-5.6-sol",
                 reasoning_effort="xhigh",
                 selected_rung=3,
             )

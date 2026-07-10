@@ -54,7 +54,7 @@ def _seed_routing_report(vault: Path, *, run_id: str, role: str) -> None:
             {
                 "routing_decision": {
                     "sandbox_mode": "workspace-write",
-                    "model": "gpt-5.5",
+                    "model": "gpt-5.6-sol",
                     "reasoning_effort": "high",
                 }
             }
