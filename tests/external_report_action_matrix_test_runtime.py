@@ -10,11 +10,6 @@ from typing import Any
 
 import pytest
 
-from ops.scripts.core.artifact_binding_runtime import (
-    CONTENT_BINDING_MODE,
-    REVISION_BINDING_MODE,
-    binding_file_digest,
-)
 from ops.scripts.core.gate_effect_vocabulary import strongest_gate_effect
 from ops.scripts.core.generated_artifact_index import (
     build_report as build_generated_artifact_index_report,
@@ -49,10 +44,14 @@ from ops.scripts.release.external_report_lifecycle_runtime import (
 from ops.scripts.release.release_closeout_finality_attestation import (
     BATCH_MANIFEST_PATH,
     DEFAULT_OUT as FINALITY_ATTESTATION_PATH,
-    FIXED_POINT_REPORT_PATH,
     SELF_CHECK_PATH,
     build_report as build_finality_attestation_report,
     write_report as write_finality_attestation,
+)
+from ops.scripts.release.release_closeout_fixed_point import (
+    POLICY_PATH as FIXED_POINT_POLICY_PATH,
+    build_report as build_fixed_point_report,
+    write_report as write_fixed_point_report,
 )
 from ops.scripts.release.review_archive import CLEAN_SOURCE_COMMAND
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -82,6 +81,45 @@ _PUBLIC_REEXPORTS = (
 pytestmark = pytest.mark.public
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "external-report-action-matrix.schema.json"
+ACTION_MATRIX_REPORT_PATH = "ops/reports/external-report-action-matrix.json"
+GENERATED_ARTIFACT_INDEX_PATH = "ops/reports/generated-artifact-index.json"
+FIXED_POINT_TEST_POLICY = {
+    "version": 1,
+    "writers": [
+        {
+            "name": "external-report-action-matrix",
+            "target": "external-report-action-matrix",
+            "binding_mode": "content",
+            "produces": [ACTION_MATRIX_REPORT_PATH],
+            "depends_on": [],
+            "expensive_prerequisites": [],
+        },
+        {
+            "name": "generated-artifact-index",
+            "target": "generated-artifact-index-body",
+            "binding_mode": "content",
+            "produces": [GENERATED_ARTIFACT_INDEX_PATH],
+            "depends_on": ["external-report-action-matrix"],
+            "expensive_prerequisites": [],
+        },
+        {
+            "name": "release-closeout-batch-manifest",
+            "target": "release-closeout-batch-manifest-promote",
+            "binding_mode": "revision",
+            "produces": [BATCH_MANIFEST_PATH],
+            "depends_on": ["generated-artifact-index-body"],
+            "expensive_prerequisites": [],
+        },
+        {
+            "name": "release-evidence-closeout-self-check",
+            "target": "release-evidence-closeout-self-check",
+            "binding_mode": "content",
+            "produces": [SELF_CHECK_PATH],
+            "depends_on": ["release-closeout-batch-manifest-promote"],
+            "expensive_prerequisites": [],
+        },
+    ],
+}
 EXTERNAL_REPORT_FIXTURE_SCHEMA_NAMES = frozenset(
     {
         "artifact-envelope.schema.json",
@@ -97,6 +135,7 @@ EXTERNAL_REPORT_FIXTURE_SCHEMA_NAMES = frozenset(
         "goal-worktree-guard.schema.json",
         "release-authority-inventory.schema.json",
         "release-closeout-finality-attestation.schema.json",
+        "release-closeout-fixed-point.schema.json",
         "release-closeout-sealed-rehearsal-check.schema.json",
         "release-closeout-summary.schema.json",
         "remediation-backlog.schema.json",
@@ -120,6 +159,20 @@ def _canonical_json_digest(payload: dict) -> str:
 
 def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _successful_fixed_point_runner(argv, _cwd, timeout_seconds, _env):
+    return {
+        "command": list(argv),
+        "returncode": 0,
+        "timed_out": False,
+        "timeout_seconds": timeout_seconds,
+        "termination_reason": "",
+        "duration_ms": 0,
+        "stdout_tail": "",
+        "stderr_tail": "",
+        "status": "pass",
+    }
 
 
 
@@ -460,15 +513,22 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
                 },
             },
         )
-        generated_path = "ops/reports/generated-artifact-index.json"
+        self._write_finality_authority_reports()
+        self._write_release_manifests(
+            release_source_tree_fingerprint(self.vault)
+        )
+
+    def _write_finality_authority_reports(self) -> None:
         self._write_json(
-            generated_path,
+            GENERATED_ARTIFACT_INDEX_PATH,
             {"artifact_kind": "generated_artifact_index", "status": "pass"},
         )
+        source_revision = resolve_source_revision(self.vault).revision
         self._write_json(
             BATCH_MANIFEST_PATH,
             {
                 "schema_version": 2,
+                "source_revision": source_revision,
                 "status": "pass",
                 "release_authority_status": "clean_pass",
                 "semantic_release_status": "clean_pass",
@@ -488,58 +548,27 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
                 "closeout_inputs": {"batch_manifest_fingerprint": batch_digest},
             },
         )
-        raw_digest_map = {
-            generated_path: _sha256_file(self.vault / generated_path),
-            BATCH_MANIFEST_PATH: batch_digest,
-            SELF_CHECK_PATH: _sha256_file(self.vault / SELF_CHECK_PATH),
-        }
-        binding_mode_map = {
-            generated_path: CONTENT_BINDING_MODE,
-            BATCH_MANIFEST_PATH: REVISION_BINDING_MODE,
-            SELF_CHECK_PATH: CONTENT_BINDING_MODE,
-        }
-        binding_digest_map = {
-            path: binding_file_digest(
-                self.vault / path,
-                binding_mode=binding_mode_map[path],
-            )[1]
-            for path in raw_digest_map
-        }
         self._write_json(
-            FIXED_POINT_REPORT_PATH,
-            {
-                "artifact_kind": "release_closeout_fixed_point_report",
-                "producer": "ops.scripts.release_closeout_fixed_point",
-                "schema_version": 2,
-                "artifact_status": "current",
-                "currentness": {"status": "current"},
-                "status": "pass",
-                "execution_pass_count": 1,
-                "tracked_artifacts": [
-                    {"path": path, "binding_mode": binding_mode_map[path]}
-                    for path in sorted(raw_digest_map)
-                ],
-                "raw_digest_map": raw_digest_map,
-                "binding_digest_map": binding_digest_map,
-                "binding_mode_map": binding_mode_map,
-                "execution": {
-                    "status": "pass",
-                    "raw_digest_map": raw_digest_map,
-                    "binding_digest_map": binding_digest_map,
-                    "binding_mode_map": binding_mode_map,
-                },
-            },
+            FIXED_POINT_POLICY_PATH,
+            FIXED_POINT_TEST_POLICY,
         )
+        fixed_point_report = build_fixed_point_report(
+            self.vault,
+            context=fixed_context(),
+            command_runner=_successful_fixed_point_runner,
+        )
+        write_fixed_point_report(self.vault, fixed_point_report)
         finality_report = build_finality_attestation_report(self.vault, context=fixed_context())
         write_finality_attestation(self.vault, finality_report)
-        current_source_tree_fingerprint = release_source_tree_fingerprint(self.vault)
+
+    def _write_release_manifests(self, source_tree_fingerprint: str) -> None:
         self._write_json(
             "build/release/release-run-manifest.json",
             {
                 "status": "pass",
                 "artifact_kind": "release_run_manifest",
                 "source_revision": "source_package_without_git",
-                "source_tree_fingerprint": current_source_tree_fingerprint,
+                "source_tree_fingerprint": source_tree_fingerprint,
             },
         )
         self._write_json(
@@ -548,7 +577,7 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
                 "status": "pass",
                 "artifact_kind": "release_sealed_run_manifest",
                 "source_revision": "source_package_without_git",
-                "source_tree_fingerprint": current_source_tree_fingerprint,
+                "source_tree_fingerprint": source_tree_fingerprint,
             },
         )
         self._write_json(
@@ -557,7 +586,7 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
                 "status": "pass",
                 "artifact_kind": "release_auto_promotion_ready_manifest",
                 "source_revision": "source_package_without_git",
-                "source_tree_fingerprint": current_source_tree_fingerprint,
+                "source_tree_fingerprint": source_tree_fingerprint,
                 "auto_promotion_status": "allowed",
                 "unattended_promotion_allowed": True,
             },

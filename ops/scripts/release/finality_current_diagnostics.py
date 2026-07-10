@@ -29,6 +29,8 @@ def fixed_point_writer_targets_by_path(vault: Path) -> dict[str, str]:
         policy = json.loads(policy_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
+    if not isinstance(policy, dict):
+        return {}
     writers = policy.get("writers")
     if not isinstance(writers, list):
         return {}

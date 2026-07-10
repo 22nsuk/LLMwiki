@@ -24,11 +24,16 @@ from ops.scripts.core.artifact_io_runtime import (
 from ops.scripts.core.output_runtime import display_path
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.release.finality_current_diagnostics import (
     FRESHNESS_INDEX_COHORT_TARGETS as FRESHNESS_INDEX_COHORT_PATHS,
     SEALED_PREFLIGHT_PATH,
     dedupe_preserve_order as _dedupe_preserve_order,
     fixed_point_writer_targets_by_path as _fixed_point_writer_targets_by_path,
+)
+from ops.scripts.release.release_closeout_fixed_point import (
+    fixed_point_downstream_closed_writer_targets,
+    fixed_point_writer_specs_from_policy,
 )
 from ops.scripts.release.release_status_v2 import release_status_v2_view
 
@@ -65,10 +70,157 @@ def _normalized_digest_map(value: Any) -> dict[str, str]:
     return {str(path): str(digest) for path, digest in value.items()}
 
 
+def _normalized_string_list(value: Any) -> list[str] | None:
+    if not isinstance(value, list):
+        return None
+    result: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or not item.strip():
+            return None
+        result.append(item.strip())
+    return result
+
+
+def _fixed_point_policy_authority(
+    vault: Path,
+) -> tuple[list[dict[str, Any]], dict[str, str]] | None:
+    try:
+        writers = fixed_point_writer_specs_from_policy(vault)
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return None
+    binding_mode_map = {
+        str(path): str(writer["binding_mode"])
+        for writer in writers
+        for path in writer["produces"]
+    }
+    return writers, binding_mode_map
+
+
+def _fixed_point_single_pass_execution_is_consistent(
+    fixed_point: dict[str, Any],
+    *,
+    writers: list[dict[str, Any]],
+) -> bool:
+    execution = fixed_point.get("execution")
+    duration_summary = fixed_point.get("duration_summary")
+    command_sequence = _normalized_string_list(fixed_point.get("command_sequence"))
+    if (
+        not isinstance(execution, dict)
+        or not isinstance(duration_summary, dict)
+        or not command_sequence
+        or len(command_sequence) != len(set(command_sequence))
+    ):
+        return False
+
+    selected_targets = _normalized_string_list(execution.get("selected_targets"))
+    command_results = execution.get("command_results")
+    writer_costs = duration_summary.get("writer_costs")
+    if (
+        not selected_targets
+        or not isinstance(command_results, list)
+        or not isinstance(writer_costs, list)
+        or execution.get("status") != "pass"
+        or execution.get("reason") != "single_topological_pass_completed"
+        or duration_summary.get("execution_pass_count") != 1
+        or duration_summary.get("command_run_count") != len(command_results)
+    ):
+        return False
+
+    policy_command_sequence = [str(writer["target"]) for writer in writers]
+    if command_sequence != policy_command_sequence:
+        return False
+
+    try:
+        downstream_closed_targets = fixed_point_downstream_closed_writer_targets(
+            writers,
+            selected_targets,
+        )
+    except ValueError:
+        return False
+    if selected_targets != downstream_closed_targets:
+        return False
+    selected_set = set(selected_targets)
+
+    expected_result_targets = _dedupe_preserve_order(
+        [
+            target
+            for writer in writers
+            if str(writer["target"]) in selected_set
+            for target in [
+                *(str(item) for item in writer["expensive_prerequisites"]),
+                str(writer["target"]),
+            ]
+        ]
+    )
+    writer_command_counts = dict.fromkeys(command_sequence, 0)
+    result_targets: list[str] = []
+    for result in command_results:
+        if not isinstance(result, dict):
+            return False
+        target = str(result.get("target", "")).strip()
+        result_targets.append(target)
+        if target in writer_command_counts:
+            writer_command_counts[target] += 1
+        if (
+            result.get("status") != "pass"
+            or result.get("returncode") != 0
+            or result.get("timed_out") is not False
+            or _normalized_string_list(result.get("issues")) != []
+            or _normalized_string_list(result.get("undeclared_tracked_writes"))
+            != []
+        ):
+            return False
+    if result_targets != expected_result_targets:
+        return False
+
+    if len(writer_costs) != len(writers):
+        return False
+    for item, writer in zip(writer_costs, writers, strict=True):
+        if not isinstance(item, dict):
+            return False
+        target = str(item.get("target", "")).strip()
+        selected = item.get("selected")
+        run_count = item.get("run_count")
+        produces = _normalized_string_list(item.get("produces"))
+        expected_selected = target in selected_set
+        expected_run_count = 1 if expected_selected else 0
+        if (
+            str(item.get("name", "")).strip() != str(writer["name"])
+            or target != str(writer["target"])
+            or produces != [str(path) for path in writer["produces"]]
+            or type(selected) is not bool
+            or type(run_count) is not int
+            or selected is not expected_selected
+            or run_count != expected_run_count
+            or writer_command_counts[target] != expected_run_count
+        ):
+            return False
+    return True
+
+
 def _load_optional(vault: Path, rel_path: str) -> tuple[dict[str, Any], str]:
     raw_payload, diagnostics = load_optional_json_object_with_diagnostics(vault / rel_path)
     payload = raw_payload if isinstance(raw_payload, dict) else {}
     return payload, str(diagnostics.get("status", "unknown")).strip() or "unknown"
+
+
+def _revision_bound_artifacts_match_current_revision(
+    vault: Path,
+    binding_mode_map: dict[str, str],
+    *,
+    current_revision: str,
+) -> bool:
+    for path, binding_mode in binding_mode_map.items():
+        if binding_mode != REVISION_BINDING_MODE:
+            continue
+        payload, load_status = _load_optional(vault, path)
+        if (
+            load_status != "ok"
+            or str(payload.get("source_revision", "")).strip()
+            != current_revision
+        ):
+            return False
+    return True
 
 
 def _tracked_paths_from_fixed_point(fixed_point: dict[str, Any]) -> list[str]:
@@ -199,10 +351,23 @@ def _batch_manifest_artifact_mismatches(vault: Path) -> dict[str, Any]:
 
 
 def _fixed_point_authority_maps(
+    vault: Path,
     fixed_point: dict[str, Any],
 ) -> tuple[dict[str, str], dict[str, str], dict[str, str], str]:
     if fixed_point.get("schema_version") != 2:
         return {}, {}, {}, "unsupported_schema_version"
+    current_revision = resolve_source_revision(vault).revision
+    if str(fixed_point.get("source_revision", "")).strip() != current_revision:
+        return {}, {}, {}, "source_revision_mismatch"
+    policy_authority = _fixed_point_policy_authority(vault)
+    if policy_authority is None:
+        return {}, {}, {}, "invalid_writer_policy"
+    writers, policy_binding_mode_map = policy_authority
+    if not _fixed_point_single_pass_execution_is_consistent(
+        fixed_point,
+        writers=writers,
+    ):
+        return {}, {}, {}, "invalid_single_pass_execution"
     raw_digest_map = _normalized_digest_map(fixed_point.get("raw_digest_map"))
     binding_digest_map = _normalized_digest_map(
         fixed_point.get("binding_digest_map")
@@ -225,14 +390,25 @@ def _fixed_point_authority_maps(
         and _normalized_digest_map(execution.get("binding_mode_map"))
         == binding_mode_map
     )
+    tracked_artifacts = fixed_point.get("tracked_artifacts")
+    tracked_artifacts = tracked_artifacts if isinstance(tracked_artifacts, list) else []
     tracked_paths = set(_tracked_paths_from_fixed_point(fixed_point))
     tracked_mode_map = {
         str(item.get("path", "")).strip(): str(
             item.get("binding_mode", "")
         ).strip()
-        for item in fixed_point.get("tracked_artifacts", [])
+        for item in tracked_artifacts
         if isinstance(item, dict) and str(item.get("path", "")).strip()
     }
+    policy_paths = set(policy_binding_mode_map)
+    if (
+        len(tracked_artifacts) != len(policy_binding_mode_map)
+        or tracked_mode_map != policy_binding_mode_map
+        or binding_mode_map != policy_binding_mode_map
+        or set(raw_digest_map) != policy_paths
+        or set(binding_digest_map) != policy_paths
+    ):
+        return {}, {}, {}, "policy_binding_contract_mismatch"
     if (
         not tracked_paths
         or fixed_point.get("artifact_kind")
@@ -242,10 +418,6 @@ def _fixed_point_authority_maps(
         or fixed_point.get("artifact_status") != "current"
         or currentness_status != "current"
         or fixed_point.get("execution_pass_count") != 1
-        or set(raw_digest_map) != tracked_paths
-        or set(binding_digest_map) != tracked_paths
-        or set(binding_mode_map) != tracked_paths
-        or tracked_mode_map != binding_mode_map
         or not execution_is_consistent
         or any(
             digest != SHA256_MISSING
@@ -261,6 +433,12 @@ def _fixed_point_authority_maps(
         )
     ):
         return {}, {}, {}, "invalid_v2_authority"
+    if not _revision_bound_artifacts_match_current_revision(
+        vault,
+        policy_binding_mode_map,
+        current_revision=current_revision,
+    ):
+        return {}, {}, {}, "revision_binding_source_revision_mismatch"
     return raw_digest_map, binding_digest_map, binding_mode_map, "ok"
 
 
@@ -495,6 +673,7 @@ def _finality_failures(
     fixed_point_report: dict[str, Any],
     batch_manifest: dict[str, Any],
     self_check: dict[str, Any],
+    fixed_point_authority_status: str,
     matches_fixed_point_binding_digest_map: bool,
     binding_digest_mismatches: list[dict[str, str]],
 ) -> list[str]:
@@ -507,6 +686,10 @@ def _finality_failures(
         or fixed_point_report["execution_pass_count"] != 1
     ):
         failures.append("fixed_point_not_current_v2_authority")
+    if fixed_point_authority_status != "ok":
+        failures.append(
+            f"fixed_point_authority_status:{fixed_point_authority_status}"
+        )
     if batch_manifest["load_status"] != "ok":
         failures.append("batch_manifest_unavailable")
     if batch_manifest["schema_version"] != 2:
@@ -552,7 +735,7 @@ def build_report(
         fixed_point_binding_digest_map,
         fixed_point_binding_mode_map,
         fixed_point_authority_status,
-    ) = _fixed_point_authority_maps(fixed_payload)
+    ) = _fixed_point_authority_maps(vault, fixed_payload)
     tracked_paths = sorted(fixed_point_binding_mode_map)
     tracked_raw_digest_map = _raw_digest_map(vault, tracked_paths)
     tracked_binding_digest_map = _binding_digest_map(
@@ -574,6 +757,7 @@ def build_report(
         fixed_point_report=fixed_point_report,
         batch_manifest=batch_manifest,
         self_check=self_check,
+        fixed_point_authority_status=fixed_point_authority_status,
         matches_fixed_point_binding_digest_map=matches_fixed_point_binding_digest_map,
         binding_digest_mismatches=binding_digest_mismatches,
     )
@@ -700,7 +884,7 @@ def _attestation_tracked_binding_verification(
         fixed_binding_digest_map,
         fixed_binding_mode_map,
         fixed_authority_status,
-    ) = _fixed_point_authority_maps(fixed_payload)
+    ) = _fixed_point_authority_maps(vault, fixed_payload)
     current_binding_digest_map = _binding_digest_map(
         vault,
         fixed_binding_mode_map,
@@ -774,6 +958,14 @@ def _verify_attestation_diagnostics(
     if payload.get("schema_version") != 2:
         return _attestation_load_failure_report(vault, "unsupported_schema_version")
 
+    current_revision = resolve_source_revision(vault).revision
+    attestation_revision = str(payload.get("source_revision", "")).strip()
+    source_revision_failures = (
+        []
+        if attestation_revision == current_revision
+        else ["attestation_source_revision_mismatch"]
+    )
+
     component_failures, component_binding_mismatches = _attestation_component_verification(
         vault,
         payload,
@@ -784,6 +976,7 @@ def _verify_attestation_diagnostics(
         payload,
     )
     failures = [
+        *source_revision_failures,
         *component_failures,
         *tracked["failures"],
         *(
@@ -817,6 +1010,8 @@ def _verify_attestation_diagnostics(
         "batch_manifest_authority_failures": batch_diagnostics[
             "authority_failures"
         ],
+        "attestation_source_revision": attestation_revision,
+        "current_source_revision": current_revision,
     }
 
 

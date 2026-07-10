@@ -290,11 +290,8 @@ release-converge-preflight:
 release-converge-post:
 	$(MAKE) generated-artifact-converge
 	$(MAKE) remediation-backlog
-	$(MAKE) release-closeout-fixed-point
 	$(MAKE) operator-release-summary
-	$(MAKE) generated-artifact-converge
-	$(MAKE) release-closeout-fixed-point
-	$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required
+	$(MAKE) release-terminal-finality
 
 release-converge:
 	$(MAKE) release-converge-preflight

@@ -404,8 +404,8 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "release-converge-post:\n"
     "\t$(MAKE) generated-artifact-converge\n"
     "\t$(MAKE) remediation-backlog\n"
-    "\t$(MAKE) release-closeout-fixed-point\n"
-    "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
+    "\t$(MAKE) operator-release-summary\n"
+    "\t$(MAKE) release-terminal-finality\n"
     "release-source-ready-snapshot:\n"
     "\t@true\n"
     "release-source-ready-commit:\n"
@@ -1049,6 +1049,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             list(protected_preflight_lines),
             list(_sequence_roles("release_auto_promotion_preflight_sequence")),
         )
+
         self.assertIn(
             "--phase preflight",
             protected_preflight_lines[
@@ -1121,6 +1122,12 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                     "release_auto_promotion_preseal_forbidden_targets"
                 )
             )
+        )
+
+    def test_release_converge_post_protected_recipe_matches_sequence(self) -> None:
+        self.assertEqual(
+            list(_protected_recipe_lines("release-converge-post")),
+            list(_sequence_roles("release_converge_post_sequence")),
         )
 
     def test_spec_schema_rejects_empty_critical_guard_arrays(self) -> None:

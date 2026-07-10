@@ -4,6 +4,7 @@
   "target_recipe_order": [
     "release-evidence-converge",
     "release-converge-preflight",
+    "release-converge-post",
     "check-finalized",
     "release-finality-resettle",
     "release-terminal-finality",
@@ -165,6 +166,33 @@
         }
       ],
       "details": "release-converge-preflight is protected as one exact physical recipe so no raw or unmodelled work can run before script-output surfaces refresh."
+    },
+    {
+      "id": "release_converge_post_protected_recipe",
+      "target": "release-converge-post",
+      "expected_lines": [
+        {
+          "role": "generated-artifact-converge",
+          "target": "generated-artifact-converge",
+          "raw_line": "$(MAKE) generated-artifact-converge"
+        },
+        {
+          "role": "remediation-backlog",
+          "target": "remediation-backlog",
+          "raw_line": "$(MAKE) remediation-backlog"
+        },
+        {
+          "role": "operator-release-summary",
+          "target": "operator-release-summary",
+          "raw_line": "$(MAKE) operator-release-summary"
+        },
+        {
+          "role": "release-terminal-finality",
+          "target": "release-terminal-finality",
+          "raw_line": "$(MAKE) release-terminal-finality"
+        }
+      ],
+      "details": "release-converge-post runs diagnostics before delegating exactly once to the protected terminal finality controller; no canonical writer may follow that handoff."
     },
     {
       "id": "release_auto_promotion_preflight_prerequisites_protected_recipe",
@@ -431,6 +459,18 @@
         "test-execution-summary-report-contract-refresh-no-smoke"
       ],
       "details": "release-converge-preflight must refresh the narrow script-output surface before report-contract summaries or smoke evidence can read it."
+    },
+    {
+      "id": "release_converge_post_sequence",
+      "target": "release-converge-post",
+      "roles": [
+        "generated-artifact-converge",
+        "remediation-backlog",
+        "operator-release-summary",
+        "release-terminal-finality"
+      ],
+      "exact": true,
+      "details": "release-converge-post must complete diagnostics before one terminal finality handoff and must not run another writer afterward."
     },
     {
       "id": "release_finality_resettle_sequence",
@@ -709,12 +749,18 @@
       "allowed_repeated_targets": [
         "auto-improve-readiness-report-body",
         "generated-artifact-converge",
-        "release-closeout-fixed-point",
         "release-closeout-summary-report",
         "tmp-json-clean"
       ],
       "violation_reason": "unexpected_repeated_closeout_target",
-      "details": "Repeated release evidence converge refresh targets must stay explicit and bounded. Fixed-point owns iterative convergence; new repeated Make targets need an intentional contract update."
+      "details": "Repeated release evidence refresh targets must stay explicit and bounded. The fixed-point finalizer is single-pass, so new repeated Make targets need an intentional contract update."
+    },
+    {
+      "id": "release_converge_post_repetition_budget",
+      "target": "release-converge-post",
+      "allowed_repeated_targets": [],
+      "violation_reason": "release_converge_post_target_repeated",
+      "details": "The post-convergence lane delegates to terminal finality once; every direct target in this recipe must occur exactly once."
     },
     {
       "id": "release_auto_promotion_preflight_repetition_budget",

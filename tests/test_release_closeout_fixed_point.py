@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import inspect
 import json
@@ -294,6 +295,61 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         written = write_report(self.vault, report)
         self.assertTrue(written.is_file())
+
+    def test_schema_rejects_writer_run_count_above_single_pass(self) -> None:
+        report = build_report(
+            self.vault,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=self._successful_runner([]),
+        )
+        report["duration_summary"]["writer_costs"][0]["run_count"] = 2
+
+        errors = validate_with_schema(report, load_schema(SCHEMA_PATH))
+
+        self.assertTrue(
+            any(
+                "$.duration_summary.writer_costs[0].run_count" in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    def test_schema_rejects_zero_execution_and_pass_failure_signals(self) -> None:
+        report = build_report(
+            self.vault,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=self._successful_runner([]),
+        )
+        zero_execution = copy.deepcopy(report)
+        zero_execution["execution"]["selected_targets"] = []
+        zero_execution["execution"]["command_results"] = []
+        zero_execution["duration_summary"]["command_run_count"] = 0
+        zero_errors = validate_with_schema(zero_execution, load_schema(SCHEMA_PATH))
+
+        failure_signals = copy.deepcopy(report)
+        command_result = failure_signals["execution"]["command_results"][0]
+        command_result["timed_out"] = True
+        command_result["undeclared_tracked_writes"] = ["ops/reports/unexpected.json"]
+        command_result["issues"] = ["undeclared_tracked_write"]
+        signal_errors = validate_with_schema(failure_signals, load_schema(SCHEMA_PATH))
+
+        self.assertTrue(
+            any("$.execution.selected_targets" in error for error in zero_errors),
+            zero_errors,
+        )
+        self.assertTrue(
+            any("$.execution.command_results" in error for error in zero_errors),
+            zero_errors,
+        )
+        self.assertTrue(
+            any("$.duration_summary.command_run_count" in error for error in zero_errors),
+            zero_errors,
+        )
+        self.assertTrue(signal_errors)
 
     def test_initial_target_selects_downstream_closure_once(self) -> None:
         calls: list[str] = []

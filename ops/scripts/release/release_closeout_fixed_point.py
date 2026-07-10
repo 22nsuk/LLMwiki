@@ -120,7 +120,10 @@ def _stderr_progress(message: str) -> None:
 
 def _load_finalizer_policy(vault: Path) -> dict[str, Any]:
     path = vault / POLICY_PATH
-    return json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{POLICY_PATH} must contain a JSON object")
+    return payload
 
 
 def _policy_runtime(vault: Path) -> _FixedPointPolicyRuntime:
@@ -308,12 +311,25 @@ def _validated_initial_targets(
 ) -> list[str]:
     if targets is None:
         return _all_writer_targets(runtime.writers)
+    return _downstream_closed_writer_targets(
+        targets,
+        writer_targets=runtime.writer_targets,
+        downstream_by_target=runtime.downstream_by_target,
+    )
+
+
+def _downstream_closed_writer_targets(
+    targets: Sequence[str],
+    *,
+    writer_targets: Sequence[str],
+    downstream_by_target: Mapping[str, set[str]],
+) -> list[str]:
     requested = _dedupe_preserve_order(
         [str(target).strip() for target in targets if str(target).strip()]
     )
     if not requested:
         raise ValueError("initial_targets must include at least one target")
-    known = set(runtime.writer_targets)
+    known = set(writer_targets)
     unknown = sorted(set(requested) - known)
     if unknown:
         raise ValueError(f"unknown initial target(s): {unknown}")
@@ -322,10 +338,10 @@ def _validated_initial_targets(
         for initial_target in requested
         for target in {
             initial_target,
-            *runtime.downstream_by_target.get(initial_target, set()),
+            *downstream_by_target.get(initial_target, set()),
         }
     }
-    return [target for target in runtime.writer_targets if target in selected]
+    return [target for target in writer_targets if target in selected]
 
 
 def fixed_point_execution_targets_from_policy(vault: Path) -> list[str]:
@@ -336,6 +352,18 @@ def fixed_point_execution_targets_from_policy(vault: Path) -> list[str]:
 def fixed_point_writer_specs_from_policy(vault: Path) -> list[dict[str, Any]]:
     policy = _load_finalizer_policy(vault)
     return _writer_specs(policy)
+
+
+def fixed_point_downstream_closed_writer_targets(
+    writers: Sequence[dict[str, Any]],
+    targets: Sequence[str],
+) -> list[str]:
+    normalized_writers = list(writers)
+    return _downstream_closed_writer_targets(
+        targets,
+        writer_targets=_all_writer_targets(normalized_writers),
+        downstream_by_target=_downstream_by_target(normalized_writers),
+    )
 
 
 def fixed_point_output_paths_at_or_downstream(

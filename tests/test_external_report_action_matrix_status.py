@@ -5,25 +5,18 @@ import unittest
 
 import pytest
 
-from ops.scripts.core.artifact_binding_runtime import (
-    CONTENT_BINDING_MODE,
-    binding_file_digest,
-)
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 from tests.external_report_action_matrix_test_runtime import (
     FINALITY_ATTESTATION_PATH,
-    FIXED_POINT_REPORT_PATH,
     REPO_ROOT,
     SCHEMA_PATH,
     ExternalReportActionMatrixTestBase,
     _active_action_resolution_summary,
     _canonical_json_digest,
-    _sha256_file,
     action_status_reason_details,
     action_statuses,
-    build_finality_attestation_report,
     build_report,
     collaboration_governance_surface_reason_ids,
     fixed_context,
@@ -31,7 +24,6 @@ from tests.external_report_action_matrix_test_runtime import (
     load_schema,
     report_lifecycle_profiles,
     validate_with_schema,
-    write_finality_attestation,
 )
 
 pytestmark = pytest.mark.public
@@ -1537,33 +1529,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 1)
 
     def test_action_matrix_self_reference_does_not_reopen_finality(self) -> None:
-        self._write_release_verification_reports()
         matrix_path = "ops/reports/external-report-action-matrix.json"
         self._write_json(
             matrix_path,
             {"artifact_kind": "external_report_action_matrix", "status": "pre_finality"},
         )
-        fixed_point_path = self.vault / FIXED_POINT_REPORT_PATH
-        fixed_point = json.loads(fixed_point_path.read_text(encoding="utf-8"))
-        raw_digest = _sha256_file(self.vault / matrix_path)
-        binding_digest = binding_file_digest(
-            self.vault / matrix_path,
-            binding_mode=CONTENT_BINDING_MODE,
-        )[1]
-        fixed_point["tracked_artifacts"].append(
-            {"path": matrix_path, "binding_mode": CONTENT_BINDING_MODE}
-        )
-        fixed_point["raw_digest_map"][matrix_path] = raw_digest
-        fixed_point["binding_digest_map"][matrix_path] = binding_digest
-        fixed_point["binding_mode_map"][matrix_path] = CONTENT_BINDING_MODE
-        fixed_point["execution"]["raw_digest_map"][matrix_path] = raw_digest
-        fixed_point["execution"]["binding_digest_map"][matrix_path] = binding_digest
-        fixed_point["execution"]["binding_mode_map"][matrix_path] = (
-            CONTENT_BINDING_MODE
-        )
-        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
-        finality_report = build_finality_attestation_report(self.vault, context=fixed_context())
-        write_finality_attestation(self.vault, finality_report)
+        self._write_release_verification_reports()
         self._write_json(
             matrix_path,
             {"artifact_kind": "external_report_action_matrix", "status": "rewritten_by_matrix"},

@@ -1116,6 +1116,20 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         )
         self.assertNotIn("$(MAKE) release-evidence-converge", recipe_lines)
 
+    def test_release_converge_post_delegates_to_terminal_finality_once(self) -> None:
+        recipe_lines = _recipe_lines(_makefile_text(), "release-converge-post")
+
+        self.assertEqual(
+            recipe_lines,
+            [
+                "$(MAKE) generated-artifact-converge",
+                "$(MAKE) remediation-backlog",
+                "$(MAKE) operator-release-summary",
+                "$(MAKE) release-terminal-finality",
+            ],
+        )
+        self.assertNotIn("$(MAKE) release-closeout-fixed-point", recipe_lines)
+
     def test_check_finalized_runs_post_check_dry_run_before_mutating_finalizer(self) -> None:
         text = _makefile_text()
         block = _target_block(text, "check-finalized")

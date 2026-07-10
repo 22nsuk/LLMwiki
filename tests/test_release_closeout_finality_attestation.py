@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import hashlib
 import io
@@ -9,6 +10,7 @@ import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -19,6 +21,10 @@ from ops.scripts.core.artifact_binding_runtime import (
 )
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.core.source_revision_runtime import (
+    SourceRevision,
+    resolve_source_revision,
+)
 from ops.scripts.release.release_closeout_finality_attestation import (
     BATCH_MANIFEST_PATH,
     DEFAULT_OUT,
@@ -32,12 +38,17 @@ from ops.scripts.release.release_closeout_finality_attestation import (
     verify_attestation_report,
     write_report,
 )
+from ops.scripts.release.release_closeout_fixed_point import (
+    build_report as build_fixed_point_report,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-closeout-finality-attestation.schema.json"
+FIXED_POINT_POLICY_PATH = "ops/policies/release-closeout-fixed-point.json"
+FIXED_POINT_SCHEMA_PATH = "ops/schemas/release-closeout-fixed-point.schema.json"
 
 
 def fixed_context() -> RuntimeContext:
@@ -59,6 +70,35 @@ def _binding_digest(path: Path, binding_mode: str = CONTENT_BINDING_MODE) -> str
 
 
 class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
+    @staticmethod
+    def _fixed_point_writer_specs() -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "generated-artifact-index",
+                "target": "generated-artifact-index-body",
+                "binding_mode": CONTENT_BINDING_MODE,
+                "produces": ["ops/reports/generated-artifact-index.json"],
+                "depends_on": [],
+                "expensive_prerequisites": ["declared-prerequisite"],
+            },
+            {
+                "name": "release-closeout-batch-manifest",
+                "target": "release-closeout-batch-manifest-promote",
+                "binding_mode": REVISION_BINDING_MODE,
+                "produces": [BATCH_MANIFEST_PATH],
+                "depends_on": ["generated-artifact-index-body"],
+                "expensive_prerequisites": [],
+            },
+            {
+                "name": "release-evidence-closeout-self-check",
+                "target": "release-evidence-closeout-self-check",
+                "binding_mode": CONTENT_BINDING_MODE,
+                "produces": [SELF_CHECK_PATH],
+                "depends_on": ["release-closeout-batch-manifest-promote"],
+                "expensive_prerequisites": [],
+            },
+        ]
+
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.vault = Path(self.temp_dir.name) / "vault"
@@ -67,7 +107,11 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         (self.vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
         (self.vault / "external-reports").mkdir(parents=True, exist_ok=True)
         self._copy_support_file("ops/schemas/release-closeout-finality-attestation.schema.json")
-        self._copy_support_file("ops/policies/release-closeout-fixed-point.json")
+        self._copy_support_file(FIXED_POINT_SCHEMA_PATH)
+        self._write_json(
+            FIXED_POINT_POLICY_PATH,
+            {"version": 1, "writers": self._fixed_point_writer_specs()},
+        )
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -77,12 +121,32 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text((REPO_ROOT / rel_path).read_text(encoding="utf-8"), encoding="utf-8")
 
-    def _write_json(self, rel_path: str, payload: dict[str, Any]) -> None:
+    def _write_json(self, rel_path: str, payload: Any) -> None:
         path = self.vault / rel_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True), encoding="utf-8")
 
+    @staticmethod
+    def _successful_fixed_point_runner(
+        command: list[str],
+        _cwd: Path,
+        timeout_seconds: int,
+        _runtime_env: dict[str, str],
+    ) -> dict[str, Any]:
+        return {
+            "command": command,
+            "returncode": 0,
+            "timed_out": False,
+            "timeout_seconds": timeout_seconds,
+            "termination_reason": "completed",
+            "duration_ms": 1,
+            "stdout_tail": "",
+            "stderr_tail": "",
+            "status": "pass",
+        }
+
     def _seed_finality_inputs(self) -> dict[str, str]:
+        current_revision = resolve_source_revision(self.vault).revision
         generated_path = "ops/reports/generated-artifact-index.json"
         self._write_json(
             generated_path,
@@ -100,6 +164,7 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
                 "schema_version": 2,
                 "artifact_kind": "release_closeout_batch_manifest",
                 "producer": "ops.scripts.release_closeout_batch_manifest",
+                "source_revision": current_revision,
                 "status": "pass",
                 "release_authority_status": "clean_pass",
                 "semantic_release_status": "clean_pass",
@@ -131,46 +196,15 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
                 },
             },
         )
-        digest_map = {
-            generated_path: _sha256(self.vault / generated_path),
-            BATCH_MANIFEST_PATH: batch_digest,
-            SELF_CHECK_PATH: _sha256(self.vault / SELF_CHECK_PATH),
-        }
-        binding_mode_map = {
-            generated_path: CONTENT_BINDING_MODE,
-            BATCH_MANIFEST_PATH: REVISION_BINDING_MODE,
-            SELF_CHECK_PATH: CONTENT_BINDING_MODE,
-        }
-        binding_map = {
-            path: _binding_digest(self.vault / path, binding_mode_map[path])
-            for path in digest_map
-        }
-        self._write_json(
-            FIXED_POINT_REPORT_PATH,
-            {
-                "schema_version": 2,
-                "artifact_kind": "release_closeout_fixed_point_report",
-                "producer": "ops.scripts.release_closeout_fixed_point",
-                "status": "pass",
-                "artifact_status": "current",
-                "currentness": {"status": "current"},
-                "execution_pass_count": 1,
-                "tracked_artifacts": [
-                    {"path": path, "binding_mode": binding_mode_map[path]}
-                    for path in sorted(digest_map)
-                ],
-                "raw_digest_map": digest_map,
-                "binding_digest_map": binding_map,
-                "binding_mode_map": binding_mode_map,
-                "execution": {
-                    "status": "pass",
-                    "raw_digest_map": digest_map,
-                    "binding_digest_map": binding_map,
-                    "binding_mode_map": binding_mode_map,
-                },
-            },
+        fixed_point = build_fixed_point_report(
+            self.vault,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=self._successful_fixed_point_runner,
         )
-        return digest_map
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+        return fixed_point["raw_digest_map"]
 
     def _rebind_fixed_point_to_current_batch_and_self_check(self) -> None:
         fixed_point = json.loads((self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8"))
@@ -180,9 +214,18 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         raw_digest_map[SELF_CHECK_PATH] = _sha256(self.vault / SELF_CHECK_PATH)
         fixed_point["raw_digest_map"] = raw_digest_map
         binding_mode_map = fixed_point["binding_mode_map"]
+        name_by_path = {
+            str(path): str(writer["name"])
+            for writer in self._fixed_point_writer_specs()
+            for path in writer["produces"]
+        }
         fixed_point["tracked_artifacts"] = [
-            {"path": path, "binding_mode": binding_mode_map[path]}
-            for path in sorted(raw_digest_map)
+            {
+                "name": name_by_path[path],
+                "path": path,
+                "binding_mode": binding_mode_map[path],
+            }
+            for path in raw_digest_map
         ]
         fixed_point["binding_digest_map"] = {
             path: _binding_digest(self.vault / path, binding_mode_map[path])
@@ -196,6 +239,49 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
             }
         )
         self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+
+    def _set_fixed_point_execution(
+        self,
+        fixed_point: dict[str, Any],
+        *,
+        selected_targets: list[str],
+        result_targets: list[str],
+    ) -> None:
+        results_by_target = {
+            str(item["target"]): item
+            for item in fixed_point["execution"]["command_results"]
+        }
+        fixed_point["execution"]["selected_targets"] = selected_targets
+        fixed_point["execution"]["command_results"] = [
+            copy.deepcopy(results_by_target[target]) for target in result_targets
+        ]
+        selected_set = set(selected_targets)
+        for writer_cost in fixed_point["duration_summary"]["writer_costs"]:
+            selected = str(writer_cost["target"]) in selected_set
+            writer_cost.update(
+                {
+                    "selected": selected,
+                    "run_count": 1 if selected else 0,
+                    "total_duration_ms": 1 if selected else 0,
+                    "average_duration_ms": 1 if selected else 0,
+                    "max_duration_ms": 1 if selected else 0,
+                }
+            )
+        duration_summary = fixed_point["duration_summary"]
+        duration_summary["command_run_count"] = len(result_targets)
+        duration_summary["total_duration_ms"] = len(result_targets)
+        expensive = duration_summary["expensive_prerequisites"]
+        observed_expensive = [
+            target for target in result_targets if target in set(expensive["targets"])
+        ]
+        expensive.update(
+            {
+                "observed_target_count": len(set(observed_expensive)),
+                "run_count": len(observed_expensive),
+                "total_duration_ms": len(observed_expensive),
+                "summary": f"{len(observed_expensive)} prerequisite commands ran",
+            }
+        )
 
     def _batch_artifact(self, rel_path: str, *, role: str) -> dict[str, str]:
         raw_digest = _sha256(self.vault / rel_path)
@@ -355,6 +441,339 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         self.assertEqual(report["fixed_point_authority_status"], "unsupported_schema_version")
         self.assertEqual(report["finality_status"], "fail")
         self.assertIn("fixed_point_not_current_v2_authority", report["finality_failures"])
+
+    def test_finality_build_rejects_duplicate_writer_execution_authority(self) -> None:
+        self._seed_finality_inputs()
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        fixed_point["duration_summary"]["writer_costs"][0]["run_count"] = 2
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            report["fixed_point_authority_status"],
+            "invalid_single_pass_execution",
+        )
+        self.assertEqual(report["finality_status"], "fail")
+        self.assertIn(
+            "fixed_point_authority_status:invalid_single_pass_execution",
+            report["finality_failures"],
+        )
+
+    def test_finality_build_rejects_unexpected_command_result(self) -> None:
+        self._seed_finality_inputs()
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        fixed_point["execution"]["command_results"].append(
+            {
+                "target": "undeclared-prerequisite",
+                "status": "pass",
+                "returncode": 0,
+            }
+        )
+        fixed_point["duration_summary"]["command_run_count"] += 1
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            report["fixed_point_authority_status"],
+            "invalid_single_pass_execution",
+        )
+        self.assertEqual(report["finality_status"], "fail")
+
+    def test_finality_build_accepts_downstream_closed_partial_execution(self) -> None:
+        self._seed_finality_inputs()
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        selected_targets = fixed_point["command_sequence"][1:]
+        self._set_fixed_point_execution(
+            fixed_point,
+            selected_targets=selected_targets,
+            result_targets=selected_targets,
+        )
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            validate_with_schema(
+                fixed_point,
+                load_schema(REPO_ROOT / FIXED_POINT_SCHEMA_PATH),
+            ),
+            [],
+        )
+        self.assertEqual(report["fixed_point_authority_status"], "ok")
+        self.assertEqual(report["finality_status"], "pass")
+
+    def test_finality_build_rejects_non_closed_partial_execution(self) -> None:
+        self._seed_finality_inputs()
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        first_target = fixed_point["command_sequence"][0]
+        self._set_fixed_point_execution(
+            fixed_point,
+            selected_targets=[first_target],
+            result_targets=["declared-prerequisite", first_target],
+        )
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            validate_with_schema(
+                fixed_point,
+                load_schema(REPO_ROOT / FIXED_POINT_SCHEMA_PATH),
+            ),
+            [],
+        )
+        self.assertEqual(
+            report["fixed_point_authority_status"],
+            "invalid_single_pass_execution",
+        )
+        self.assertEqual(report["finality_status"], "fail")
+
+    def test_finality_build_rejects_zero_execution_authority(self) -> None:
+        self._seed_finality_inputs()
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        self._set_fixed_point_execution(
+            fixed_point,
+            selected_targets=[],
+            result_targets=[],
+        )
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+
+        report = build_report(self.vault, context=fixed_context())
+        schema_errors = validate_with_schema(
+            fixed_point,
+            load_schema(REPO_ROOT / FIXED_POINT_SCHEMA_PATH),
+        )
+
+        self.assertTrue(schema_errors)
+        self.assertEqual(
+            report["fixed_point_authority_status"],
+            "invalid_single_pass_execution",
+        )
+        self.assertEqual(report["finality_status"], "fail")
+
+    def test_finality_build_rejects_pass_execution_failure_signals(self) -> None:
+        self._seed_finality_inputs()
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        command_result = fixed_point["execution"]["command_results"][0]
+        command_result["timed_out"] = True
+        command_result["undeclared_tracked_writes"] = [BATCH_MANIFEST_PATH]
+        command_result["issues"] = ["undeclared_tracked_write"]
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+
+        report = build_report(self.vault, context=fixed_context())
+        schema_errors = validate_with_schema(
+            fixed_point,
+            load_schema(REPO_ROOT / FIXED_POINT_SCHEMA_PATH),
+        )
+
+        self.assertTrue(schema_errors)
+        self.assertEqual(
+            report["fixed_point_authority_status"],
+            "invalid_single_pass_execution",
+        )
+        self.assertEqual(report["finality_status"], "fail")
+
+    def test_finality_build_rejects_pass_execution_failure_reason(self) -> None:
+        self._seed_finality_inputs()
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        fixed_point["execution"]["reason"] = "command_failed"
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            report["fixed_point_authority_status"],
+            "invalid_single_pass_execution",
+        )
+        self.assertEqual(report["finality_status"], "fail")
+
+    def test_finality_build_rejects_policy_binding_mode_downgrade(self) -> None:
+        self._seed_finality_inputs()
+        batch_payload = json.loads(
+            (self.vault / BATCH_MANIFEST_PATH).read_text(encoding="utf-8")
+        )
+        batch_payload["source_revision"] = "stale-revision"
+        self._write_json(BATCH_MANIFEST_PATH, batch_payload)
+        self._write_json(
+            SELF_CHECK_PATH,
+            {
+                "status": {"result": "pass"},
+                "closeout_inputs": {
+                    "batch_manifest_fingerprint": _sha256(
+                        self.vault / BATCH_MANIFEST_PATH
+                    )
+                },
+            },
+        )
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        fixed_point["binding_mode_map"][BATCH_MANIFEST_PATH] = CONTENT_BINDING_MODE
+        for item in fixed_point["tracked_artifacts"]:
+            if item["path"] == BATCH_MANIFEST_PATH:
+                item["binding_mode"] = CONTENT_BINDING_MODE
+        self._write_json(FIXED_POINT_REPORT_PATH, fixed_point)
+        self._rebind_fixed_point_to_current_batch_and_self_check()
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            report["fixed_point_authority_status"],
+            "policy_binding_contract_mismatch",
+        )
+        self.assertEqual(report["finality_status"], "fail")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_finality_build_rejects_writer_produces_contract_drift(self) -> None:
+        self._seed_finality_inputs()
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        generated_path = "ops/reports/generated-artifact-index.json"
+        cases = {
+            "replaced": ["ops/reports/replaced.json"],
+            "missing": [],
+            "added": [generated_path, "ops/reports/extra.json"],
+        }
+
+        for case, produces in cases.items():
+            with self.subTest(case=case):
+                mutated = copy.deepcopy(fixed_point)
+                mutated["duration_summary"]["writer_costs"][0]["produces"] = produces
+                self._write_json(FIXED_POINT_REPORT_PATH, mutated)
+
+                report = build_report(self.vault, context=fixed_context())
+
+                self.assertEqual(
+                    report["fixed_point_authority_status"],
+                    "invalid_single_pass_execution",
+                )
+                self.assertEqual(report["finality_status"], "fail")
+
+    def test_invalid_writer_policy_is_a_structured_finality_failure(self) -> None:
+        self._seed_finality_inputs()
+        valid_report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, valid_report)
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        fixed_point_revision = fixed_point["source_revision"]
+        self._write_json(FIXED_POINT_POLICY_PATH, {"version": 1, "writers": []})
+
+        with patch(
+            "ops.scripts.release.release_closeout_finality_attestation.resolve_source_revision",
+            return_value=SourceRevision(fixed_point_revision, "source_package_without_git"),
+        ):
+            report = build_report(self.vault, context=fixed_context())
+            diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(report["fixed_point_authority_status"], "invalid_writer_policy")
+        self.assertEqual(report["finality_status"], "fail")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+        self.assertEqual(diagnostics["status"], "fail")
+        self.assertIn(
+            "fixed_point_authority_status:invalid_writer_policy",
+            diagnostics["failures"],
+        )
+
+    def test_non_object_writer_policy_is_a_structured_finality_failure(self) -> None:
+        self._seed_finality_inputs()
+        valid_report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, valid_report)
+        fixed_point = json.loads(
+            (self.vault / FIXED_POINT_REPORT_PATH).read_text(encoding="utf-8")
+        )
+        source_revision = fixed_point["source_revision"]
+
+        for case, policy in (("array", []), ("string", "invalid"), ("null", None)):
+            with self.subTest(case=case):
+                self._write_json(FIXED_POINT_POLICY_PATH, policy)
+                with patch(
+                    "ops.scripts.release.release_closeout_finality_attestation.resolve_source_revision",
+                    return_value=SourceRevision(
+                        source_revision,
+                        "source_package_without_git",
+                    ),
+                ):
+                    report = build_report(self.vault, context=fixed_context())
+                    diagnostics = verify_attestation_report(self.vault)
+
+                self.assertEqual(
+                    report["fixed_point_authority_status"],
+                    "invalid_writer_policy",
+                )
+                self.assertEqual(diagnostics["status"], "fail")
+                self.assertIn(
+                    "fixed_point_authority_status:invalid_writer_policy",
+                    diagnostics["failures"],
+                )
+
+    def test_finality_verify_rejects_revision_only_head_transition(self) -> None:
+        self._seed_finality_inputs()
+        report = build_report(self.vault, context=fixed_context())
+        write_report(self.vault, report)
+
+        with patch(
+            "ops.scripts.release.release_closeout_finality_attestation.resolve_source_revision",
+            return_value=SourceRevision("next-revision", "git_head"),
+        ):
+            diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(diagnostics["status"], "fail")
+        self.assertIn(
+            "attestation_source_revision_mismatch",
+            diagnostics["failures"],
+        )
+        self.assertIn(
+            "fixed_point_authority_status:source_revision_mismatch",
+            diagnostics["failures"],
+        )
+
+    def test_rebuilding_attestation_does_not_rebind_stale_fixed_point_revision(
+        self,
+    ) -> None:
+        self._seed_finality_inputs()
+        with patch(
+            "ops.scripts.release.release_closeout_finality_attestation.resolve_source_revision",
+            return_value=SourceRevision("next-revision", "git_head"),
+        ), patch(
+            "ops.scripts.core.artifact_envelope_runtime.resolve_source_revision",
+            return_value=SourceRevision("next-revision", "git_head"),
+        ):
+            report = build_report(self.vault, context=fixed_context())
+            write_report(self.vault, report)
+            diagnostics = verify_attestation_report(self.vault)
+
+        self.assertEqual(report["source_revision"], "next-revision")
+        self.assertEqual(
+            report["fixed_point_authority_status"],
+            "source_revision_mismatch",
+        )
+        self.assertEqual(report["finality_status"], "fail")
+        self.assertNotIn(
+            "attestation_source_revision_mismatch",
+            diagnostics["failures"],
+        )
+        self.assertIn(
+            "fixed_point_authority_status:source_revision_mismatch",
+            diagnostics["failures"],
+        )
 
     def test_finality_verify_rejects_tampered_batch_manifest_component_raw_digest(self) -> None:
         self._seed_finality_inputs()
