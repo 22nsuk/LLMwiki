@@ -475,6 +475,79 @@ def _sealed_preflight_summary(vault: Path) -> dict[str, Any]:
     }
 
 
+def _finality_repair_route(
+    *,
+    classes: list[str],
+    base_targets: list[str],
+    initial_targets: list[str],
+    fixed_point_authority_failed: bool,
+    component_raw_binding_mismatch: bool,
+    has_unowned_batch_mismatch: bool,
+    has_fixed_point_writer_mismatch: bool,
+) -> tuple[list[str], list[str], str]:
+    resettle_refresh_required = bool(
+        has_unowned_batch_mismatch
+        or "unclassified_finality_current_check_failure" in classes
+    )
+    fixed_point_refresh_required = bool(
+        fixed_point_authority_failed or initial_targets
+    )
+    attestation_refresh_required = (
+        classes == ["finality_attestation_binding_mismatch"]
+        or (
+            component_raw_binding_mismatch
+            and not fixed_point_refresh_required
+        )
+    )
+
+    targets = list(base_targets)
+    if fixed_point_refresh_required:
+        targets.append("release-closeout-fixed-point")
+    if attestation_refresh_required:
+        targets.append("release-closeout-finality-attestation")
+    if resettle_refresh_required:
+        targets.append("release-finality-resettle-current-or-refresh")
+    elif classes:
+        targets.append("release-closeout-finality-verify")
+
+    recommended_lane = (
+        "release-finality-resettle-current-or-refresh"
+        if resettle_refresh_required
+        else "release-authority-sealed-preflight + release-closeout-fixed-point"
+        if "sealed_preflight_artifact_mismatch" in classes
+        and "fixed_point_tracked_writer_binding_mismatch" in classes
+        else "release-authority-sealed-preflight"
+        if classes == ["sealed_preflight_artifact_mismatch"]
+        else "release-closeout-fixed-point"
+        if fixed_point_refresh_required or has_fixed_point_writer_mismatch
+        else "release-closeout-finality-attestation"
+        if attestation_refresh_required
+        else "release-closeout-finality-verify"
+    )
+    return (
+        _dedupe_preserve_order(targets),
+        _dedupe_preserve_order(initial_targets),
+        recommended_lane,
+    )
+
+
+def _current_finality_classification(vault: Path) -> dict[str, Any]:
+    return {
+        "status": "pass",
+        "classes": [],
+        "primary_class": "current",
+        "recommended_lane": "none",
+        "recommended_targets": [],
+        "recommended_fixed_point_initial_targets": [],
+        "batch_manifest_artifact_binding_mismatches": [],
+        "freshness_index_cohort_binding_mismatches": [],
+        "sealed_preflight_artifact_binding_mismatches": [],
+        "sealed_preflight": _sealed_preflight_summary(vault),
+        "fixed_point_tracked_writer_binding_mismatches": [],
+        "summary": "finality current-check is current",
+    }
+
+
 def _finality_failure_classification(
     vault: Path,
     *,
@@ -484,20 +557,7 @@ def _finality_failure_classification(
     batch_manifest_artifact_binding_mismatches: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     if not failures:
-        return {
-            "status": "pass",
-            "classes": [],
-            "primary_class": "current",
-            "recommended_lane": "none",
-            "recommended_targets": [],
-            "recommended_fixed_point_initial_targets": [],
-            "batch_manifest_artifact_binding_mismatches": [],
-            "freshness_index_cohort_binding_mismatches": [],
-            "sealed_preflight_artifact_binding_mismatches": [],
-            "sealed_preflight": _sealed_preflight_summary(vault),
-            "fixed_point_tracked_writer_binding_mismatches": [],
-            "summary": "finality current-check is current",
-        }
+        return _current_finality_classification(vault)
     batch_mismatches = (
         batch_manifest_artifact_binding_mismatches
         if batch_manifest_artifact_binding_mismatches is not None
@@ -571,44 +631,18 @@ def _finality_failure_classification(
     if failures and not classes:
         classes.append("unclassified_finality_current_check_failure")
 
-    resettle_refresh_required = bool(
-        unowned_batch_mismatches
-        or "unclassified_finality_current_check_failure" in classes
-    )
-    fixed_point_refresh_required = bool(
-        fixed_point_authority_failed or recommended_initial_targets
-    )
-    attestation_refresh_required = (
-        classes == ["finality_attestation_binding_mismatch"]
-        or (
-            component_raw_binding_mismatch
-            and not fixed_point_refresh_required
-        )
-    )
-    if fixed_point_refresh_required:
-        recommended_targets.append("release-closeout-fixed-point")
-    if attestation_refresh_required:
-        recommended_targets.append("release-closeout-finality-attestation")
-    if resettle_refresh_required:
-        recommended_targets.append("release-finality-resettle-current-or-refresh")
-    elif classes:
-        recommended_targets.append("release-closeout-finality-verify")
-
-    recommended_targets = _dedupe_preserve_order(recommended_targets)
-    recommended_initial_targets = _dedupe_preserve_order(recommended_initial_targets)
-    recommended_lane = (
-        "release-finality-resettle-current-or-refresh"
-        if resettle_refresh_required
-        else "release-authority-sealed-preflight + release-closeout-fixed-point"
-        if "sealed_preflight_artifact_mismatch" in classes
-        and "fixed_point_tracked_writer_binding_mismatch" in classes
-        else "release-authority-sealed-preflight"
-        if classes == ["sealed_preflight_artifact_mismatch"]
-        else "release-closeout-fixed-point"
-        if fixed_point_refresh_required or fixed_point_writer_mismatches
-        else "release-closeout-finality-attestation"
-        if attestation_refresh_required
-        else "release-closeout-finality-verify"
+    (
+        recommended_targets,
+        recommended_initial_targets,
+        recommended_lane,
+    ) = _finality_repair_route(
+        classes=classes,
+        base_targets=recommended_targets,
+        initial_targets=recommended_initial_targets,
+        fixed_point_authority_failed=fixed_point_authority_failed,
+        component_raw_binding_mismatch=component_raw_binding_mismatch,
+        has_unowned_batch_mismatch=bool(unowned_batch_mismatches),
+        has_fixed_point_writer_mismatch=bool(fixed_point_writer_mismatches),
     )
     return {
         "status": "pass" if not failures else "fail",

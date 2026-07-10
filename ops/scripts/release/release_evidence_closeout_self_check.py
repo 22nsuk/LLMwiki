@@ -127,6 +127,71 @@ def _component_count(data: dict[str, Any] | None) -> int:
     return 0
 
 
+def _watched_artifact(
+    vault: Path,
+    item: Any,
+    *,
+    index: int,
+) -> dict[str, Any]:
+    if not isinstance(item, dict):
+        return {
+            "path": f"<invalid-artifact-{index}>",
+            "binding_mode": "missing",
+            "expected_binding_digest": "missing",
+            "actual_binding_digest": "not_checked",
+            "declared_raw_digest": "missing",
+            "actual_raw_digest": "not_checked",
+            "status": "mismatch",
+            "reason": "binding_metadata_invalid",
+        }
+
+    rel_path = str(item.get("path", "")).strip()
+    display_rel_path = rel_path or f"<missing-path-{index}>"
+    binding_mode = str(item.get("binding_mode", "")).strip()
+    expected_binding_digest = str(item.get("binding_digest", "")).strip() or "missing"
+    declared_raw_digest = str(item.get("raw_digest", "")).strip() or "missing"
+    artifact_path = vault / rel_path if rel_path else None
+    actual_raw_digest = (
+        _file_fingerprint(artifact_path)
+        if artifact_path is not None and artifact_path.is_file()
+        else "missing"
+        if artifact_path is not None
+        else "not_checked"
+    )
+    binding_metadata_valid = bool(
+        rel_path
+        and is_sha256_digest(expected_binding_digest)
+        and binding_mode in BINDING_MODES
+    )
+    actual_binding_digest = "not_checked"
+    if binding_metadata_valid and artifact_path is not None:
+        actual_binding_digest = binding_file_digest(
+            artifact_path,
+            binding_mode=binding_mode,
+        )[1]
+    digest_status = (
+        "match"
+        if binding_metadata_valid and expected_binding_digest == actual_binding_digest
+        else "mismatch"
+    )
+    return {
+        "path": display_rel_path,
+        "binding_mode": binding_mode or "missing",
+        "expected_binding_digest": expected_binding_digest,
+        "actual_binding_digest": actual_binding_digest,
+        "declared_raw_digest": declared_raw_digest,
+        "actual_raw_digest": actual_raw_digest,
+        "status": digest_status,
+        "reason": (
+            "match"
+            if digest_status == "match"
+            else "binding_digest_mismatch"
+            if binding_metadata_valid
+            else "binding_metadata_invalid"
+        ),
+    }
+
+
 def _artifact_digest_watch(vault: Path, batch_data: dict[str, Any] | None) -> dict[str, Any]:
     if not batch_data or not isinstance(batch_data, dict):
         return {
@@ -160,79 +225,13 @@ def _artifact_digest_watch(vault: Path, batch_data: dict[str, Any] | None) -> di
 
     raw_artifacts = batch_data.get("artifacts")
     artifacts = raw_artifacts if isinstance(raw_artifacts, list) else []
-    watched: list[dict[str, Any]] = []
-    match_count = 0
-    mismatch_count = 0
-    missing_count = 0
-
-    for index, item in enumerate(artifacts):
-        if not isinstance(item, dict):
-            watched.append(
-                {
-                    "path": f"<invalid-artifact-{index}>",
-                    "binding_mode": "missing",
-                    "expected_binding_digest": "missing",
-                    "actual_binding_digest": "not_checked",
-                    "declared_raw_digest": "missing",
-                    "actual_raw_digest": "not_checked",
-                    "status": "mismatch",
-                    "reason": "binding_metadata_invalid",
-                }
-            )
-            mismatch_count += 1
-            continue
-        rel_path = str(item.get("path", "")).strip()
-        display_rel_path = rel_path or f"<missing-path-{index}>"
-        binding_mode = str(item.get("binding_mode", "")).strip()
-        expected_binding_digest = str(item.get("binding_digest", "")).strip() or "missing"
-        declared_raw_digest = str(item.get("raw_digest", "")).strip() or "missing"
-        artifact_path = vault / rel_path if rel_path else None
-        actual_raw_digest = (
-            _file_fingerprint(artifact_path)
-            if artifact_path is not None and artifact_path.is_file()
-            else "missing" if artifact_path is not None else "not_checked"
-        )
-        binding_metadata_valid = bool(
-            rel_path
-            and is_sha256_digest(expected_binding_digest)
-            and binding_mode in BINDING_MODES
-        )
-        actual_binding_digest = "not_checked"
-        if binding_metadata_valid and artifact_path is not None:
-            actual_binding_digest = binding_file_digest(
-                artifact_path,
-                binding_mode=binding_mode,
-            )[1]
-        digest_status = (
-            "match"
-            if binding_metadata_valid
-            and expected_binding_digest == actual_binding_digest
-            else "mismatch"
-        )
-        if actual_raw_digest == "missing":
-            missing_count += 1
-        if digest_status == "match":
-            match_count += 1
-        else:
-            mismatch_count += 1
-        watched.append(
-            {
-                "path": display_rel_path,
-                "binding_mode": binding_mode or "missing",
-                "expected_binding_digest": expected_binding_digest,
-                "actual_binding_digest": actual_binding_digest,
-                "declared_raw_digest": declared_raw_digest,
-                "actual_raw_digest": actual_raw_digest,
-                "status": digest_status,
-                "reason": (
-                    "match"
-                    if digest_status == "match"
-                    else "binding_digest_mismatch"
-                    if binding_metadata_valid
-                    else "binding_metadata_invalid"
-                ),
-            }
-        )
+    watched = [
+        _watched_artifact(vault, item, index=index)
+        for index, item in enumerate(artifacts)
+    ]
+    match_count = sum(item["status"] == "match" for item in watched)
+    mismatch_count = len(watched) - match_count
+    missing_count = sum(item["actual_raw_digest"] == "missing" for item in watched)
 
     status = "match" if not mismatch_count else "mismatch"
     return {
