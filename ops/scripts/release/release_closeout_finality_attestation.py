@@ -516,6 +516,12 @@ def _finality_failure_classification(
     classes: list[str] = []
     recommended_targets: list[str] = []
     recommended_initial_targets: list[str] = []
+    fixed_point_authority_failed = any(
+        failure.startswith("fixed_point_authority_status:")
+        for failure in failures
+    )
+    if fixed_point_authority_failed:
+        classes.append("fixed_point_authority_failure")
     if freshness_index_cohort:
         classes.append("batch_manifest_freshness_index_cohort_binding_mismatch")
         recommended_initial_targets.extend(
@@ -534,16 +540,33 @@ def _finality_failure_classification(
             for item in fixed_point_writer_mismatches
             if item["writer_target"]
         )
-    if binding_digest_mismatches and not fixed_point_writer_mismatches:
+    if (
+        binding_digest_mismatches
+        and not fixed_point_authority_failed
+        and not fixed_point_writer_mismatches
+    ):
         classes.append("finality_attestation_binding_mismatch")
-    if any(failure.endswith("_raw_binding_mismatch") for failure in failures):
+    component_raw_binding_mismatch = any(
+        failure.endswith("_raw_binding_mismatch") for failure in failures
+    )
+    if component_raw_binding_mismatch:
         classes.append("terminal_component_raw_binding_mismatch")
     if failures and not classes:
         classes.append("unclassified_finality_current_check_failure")
 
-    if recommended_initial_targets:
+    fixed_point_refresh_required = bool(
+        fixed_point_authority_failed or recommended_initial_targets
+    )
+    attestation_refresh_required = (
+        classes == ["finality_attestation_binding_mismatch"]
+        or (
+            component_raw_binding_mismatch
+            and not fixed_point_refresh_required
+        )
+    )
+    if fixed_point_refresh_required:
         recommended_targets.append("release-closeout-fixed-point")
-    if classes == ["finality_attestation_binding_mismatch"]:
+    if attestation_refresh_required:
         recommended_targets.append("release-closeout-finality-attestation")
     if classes:
         recommended_targets.append("release-closeout-finality-verify")
@@ -557,11 +580,9 @@ def _finality_failure_classification(
         else "release-authority-sealed-preflight"
         if classes == ["sealed_preflight_artifact_mismatch"]
         else "release-closeout-fixed-point"
-        if recommended_initial_targets or fixed_point_writer_mismatches
+        if fixed_point_refresh_required or fixed_point_writer_mismatches
         else "release-closeout-finality-attestation"
-        if classes == ["finality_attestation_binding_mismatch"]
-        else "terminal-component-owner"
-        if "terminal_component_raw_binding_mismatch" in classes
+        if attestation_refresh_required
         else "release-closeout-finality-verify"
     )
     return {
@@ -704,7 +725,10 @@ def _finality_failures(
         failures.append("self_check_not_pass")
     if not self_check["batch_manifest_fingerprint_matches_current"]:
         failures.append("self_check_batch_raw_binding_mismatch")
-    if not matches_fixed_point_binding_digest_map:
+    if (
+        fixed_point_authority_status == "ok"
+        and not matches_fixed_point_binding_digest_map
+    ):
         failures.append("tracked_binding_digest_map_mismatch")
         failures.extend(
             f"binding_digest_mismatch:{item['path']}"
@@ -892,6 +916,17 @@ def _attestation_tracked_binding_verification(
     recorded_binding_digest_map = _normalized_digest_map(
         payload.get("tracked_binding_digest_map")
     )
+    if fixed_authority_status != "ok":
+        return {
+            "failures": [
+                f"fixed_point_authority_status:{fixed_authority_status}"
+            ],
+            "binding_digest_mismatches": [],
+            "fixed_point_binding_mismatches": [],
+            "binding_mode_map_mismatch": False,
+            "recorded_binding_digest_map": recorded_binding_digest_map,
+            "current_binding_digest_map": {},
+        }
     recorded_binding_mode_map = _normalized_digest_map(
         payload.get("tracked_binding_mode_map")
     )
@@ -906,8 +941,6 @@ def _attestation_tracked_binding_verification(
         binding_mode_map=fixed_binding_mode_map,
     )
     failures: list[str] = []
-    if fixed_authority_status != "ok":
-        failures.append(f"fixed_point_authority_status:{fixed_authority_status}")
     if recorded_binding_mode_map != fixed_binding_mode_map:
         failures.append("tracked_binding_mode_map_current_mismatch")
     if binding_digest_mismatches or not recorded_binding_digest_map:

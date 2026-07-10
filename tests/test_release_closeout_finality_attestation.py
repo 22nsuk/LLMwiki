@@ -744,6 +744,21 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
             "fixed_point_authority_status:source_revision_mismatch",
             diagnostics["failures"],
         )
+        classification = diagnostics["failure_classification"]
+        self.assertEqual(
+            classification["classes"],
+            ["fixed_point_authority_failure"],
+        )
+        self.assertEqual(
+            classification["recommended_lane"],
+            "release-closeout-fixed-point",
+        )
+        self.assertEqual(
+            classification["recommended_targets"],
+            ["release-closeout-fixed-point", "release-closeout-finality-verify"],
+        )
+        self.assertEqual(diagnostics["binding_digest_mismatches"], [])
+        self.assertEqual(diagnostics["fixed_point_binding_mismatches"], [])
 
     def test_rebuilding_attestation_does_not_rebind_stale_fixed_point_revision(
         self,
@@ -798,6 +813,22 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
                 for item in diagnostics["component_binding_mismatches"]
             ],
             ["batch_manifest"],
+        )
+        classification = diagnostics["failure_classification"]
+        self.assertEqual(
+            classification["classes"],
+            ["terminal_component_raw_binding_mismatch"],
+        )
+        self.assertEqual(
+            classification["recommended_lane"],
+            "release-closeout-finality-attestation",
+        )
+        self.assertEqual(
+            classification["recommended_targets"],
+            [
+                "release-closeout-finality-attestation",
+                "release-closeout-finality-verify",
+            ],
         )
 
     def test_finality_verify_rejects_tampered_component_and_tracked_digest(self) -> None:

@@ -55,7 +55,7 @@
       "required": ["binding_mode", "status", "raw_digest", "size_bytes"],
       "properties": {
         "binding_mode": { "const": "raw" },
-        "status": { "enum": ["bound", "missing", "not_applicable"] },
+        "status": { "enum": ["bound", "invalid", "missing", "not_applicable"] },
         "raw_digest": {
           "type": "string",
           "pattern": "^(?:[a-f0-9]{64})?$"

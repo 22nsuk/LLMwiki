@@ -147,6 +147,54 @@ class SigstoreBundleTests(unittest.TestCase):
                 )
             )
 
+    def test_build_bundle_verification_rejects_non_regular_bundle_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            model = self._seed_supply_chain_reports(vault)
+            bundle = vault / "tmp" / "sigstore.bundle"
+            bundle.mkdir(parents=True)
+
+            report = build_bundle_verification(
+                vault,
+                artifact_model=model,
+                bundle_ref="tmp/sigstore.bundle",
+            )
+            destination = write_bundle_verification(
+                vault,
+                report,
+                "ops/reports/sigstore-bundle-verification.json",
+            )
+            persisted = json.loads(destination.read_text(encoding="utf-8"))
+
+            self.assertEqual(
+                persisted["status"],
+                "external-bundle-verification-failed",
+            )
+            self.assertEqual(
+                persisted["bundle_binding"],
+                {
+                    "binding_mode": "raw",
+                    "status": "invalid",
+                    "raw_digest": "",
+                    "size_bytes": 0,
+                },
+            )
+            self.assertTrue(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "external_bundle_observed"
+                )
+            )
+            self.assertFalse(
+                next(
+                    item["pass"]
+                    for item in persisted["verification_checks"]
+                    if item["rule"] == "external_bundle_json_parseable"
+                )
+            )
+
     def test_build_bundle_verification_requires_sigstore_bundle_shape_for_verified_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

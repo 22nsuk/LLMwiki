@@ -61,6 +61,7 @@ BUNDLE_BINDING_MODE = RAW_BINDING_MODE
 class _BundleEvidence:
     ref: str
     present: bool
+    regular_file: bool
     parseable: bool
     has_sigstore_shape: bool
     raw_digest: str
@@ -158,19 +159,21 @@ def _bundle_evidence(
     bundle_ref: str | None,
 ) -> _BundleEvidence:
     if not bundle_ref:
-        return _BundleEvidence("", False, False, False, "", 0)
+        return _BundleEvidence("", False, False, False, False, "", 0)
     bundle_path = _resolve_ref(vault, bundle_ref)
     resolved_bundle_ref = report_path(vault, bundle_path) if bundle_path.exists() else bundle_ref
     bundle_present = bundle_path.exists()
-    bundle_payload = _bundle_payload(bundle_path) if bundle_present else None
+    bundle_is_regular_file = bundle_path.is_file()
+    bundle_payload = _bundle_payload(bundle_path) if bundle_is_regular_file else None
     bundle_parseable = bundle_payload is not None
     return _BundleEvidence(
         resolved_bundle_ref,
         bundle_present,
+        bundle_is_regular_file,
         bundle_parseable,
         _has_sigstore_bundle_shape(bundle_payload),
-        sha256_file(bundle_path) if bundle_present else "",
-        bundle_path.stat().st_size if bundle_present else 0,
+        sha256_file(bundle_path) if bundle_is_regular_file else "",
+        bundle_path.stat().st_size if bundle_is_regular_file else 0,
     )
 
 
@@ -232,8 +235,10 @@ def _verification_status(
 
 
 def _bundle_binding_status(bundle_ref: str | None, bundle: _BundleEvidence) -> str:
-    if bundle.present:
+    if bundle.regular_file:
         return "bound"
+    if bundle.present:
+        return "invalid"
     return "missing" if bundle_ref else "not_applicable"
 
 
