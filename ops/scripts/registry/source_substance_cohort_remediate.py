@@ -16,8 +16,14 @@ from typing import Any, Protocol
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
 from ops.scripts.core.filesystem_runtime import AtomicTextUpdate, atomic_multi_write
 from ops.scripts.core.frontmatter_runtime import parse_frontmatter
+from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
@@ -26,9 +32,14 @@ from ops.scripts.core.schema_runtime import (
 from ops.scripts.eval.source_page_substance_runtime import (
     evaluate_source_page_substance,
 )
+from ops.scripts.registry.source_substance_cohort_classify import (
+    build_report as build_classification_report,
+)
 
+DEFAULT_OUT = "tmp/source-substance-cohort-remediation.json"
 SCHEMA_PATH = "ops/schemas/source-substance-cohort-remediation.schema.json"
 PRODUCER = "ops.scripts.registry.source_substance_cohort_remediate"
+SOURCE_COMMAND = "python -m ops.scripts.registry.source_substance_cohort_remediate --vault ."
 PAGE_ROOTS = ("wiki", "system")
 TEXT_SUFFIXES = frozenset({".md", ".markdown", ".txt", ".text"})
 SUMMARY_FAILURES = frozenset(
@@ -228,10 +239,12 @@ def _new_entry(
     page_path: Path,
     page_text: str,
     initial_eval: dict[str, Any],
+    classification_route: str,
 ) -> dict[str, Any]:
     return {
         "page": _relative_path(vault, page_path),
         "status": "operator_review",
+        "classification_route": classification_route,
         "reason_codes": [],
         "remediation_reasons": list(initial_eval["failures"]),
         "page_sha256_before": _sha256_text(page_text),
@@ -253,6 +266,7 @@ def _build_page_candidate(
     page_path: Path,
     *,
     pdf_extractor: PdfExtractor,
+    classification_route: str,
 ) -> tuple[dict[str, Any] | None, _Candidate | None]:
     page_text = page_path.read_text(encoding="utf-8")
     initial_eval = evaluate_source_page_substance(page_text)
@@ -264,7 +278,11 @@ def _build_page_candidate(
         page_path=page_path,
         page_text=page_text,
         initial_eval=initial_eval,
+        classification_route=classification_route,
     )
+    if classification_route in {"no_action", "retained_operator_review"}:
+        entry["reason_codes"] = ["classification_requires_operator_review"]
+        return entry, None
     try:
         frontmatter = parse_frontmatter(page_text)
     except ValueError:
@@ -362,6 +380,50 @@ def _report_status(entries: Sequence[dict[str, Any]]) -> str:
     return "ready"
 
 
+def _raw_input_paths(vault: Path, pages: Sequence[Path]) -> list[str]:
+    raw_paths: list[str] = []
+    for page_path in pages:
+        try:
+            frontmatter = parse_frontmatter(page_path.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        raw_path = (frontmatter or {}).get("raw_path")
+        if not isinstance(raw_path, str) or Path(raw_path).is_absolute():
+            continue
+        if (vault / raw_path).is_file() and raw_path not in raw_paths:
+            raw_paths.append(raw_path)
+    return sorted(raw_paths)
+
+
+def _canonical_envelope(
+    vault: Path,
+    *,
+    context: RuntimeContext,
+    pages: Sequence[Path],
+    source_command: str,
+) -> tuple[dict[str, Any], dict[str, Any], Path]:
+    policy, resolved_policy_path = load_policy(vault)
+    envelope = build_canonical_report_envelope(
+        vault,
+        generated_at=context.isoformat_z(),
+        artifact_kind="source_substance_cohort_remediation",
+        producer=PRODUCER,
+        source_command=source_command,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        source_paths=[
+            "ops/scripts/registry/source_substance_cohort_remediate.py",
+            "ops/scripts/registry/source_substance_cohort_classify.py",
+            "ops/scripts/eval/source_page_substance_runtime.py",
+        ],
+        path_group_inputs={
+            "source_pages": [report_path(vault, page_path) for page_path in pages],
+            "raw_sources": _raw_input_paths(vault, pages),
+        },
+    )
+    return envelope, policy, resolved_policy_path
+
+
 def build_remediation(
     vault: Path,
     *,
@@ -372,22 +434,47 @@ def build_remediation(
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     extractor = pdf_extractor or SubprocessPdfExtractor()
     pages = _discover_source_pages(resolved_vault)
+    classification = build_classification_report(
+        resolved_vault,
+        context=runtime_context,
+    )
+    classification_routes = {
+        str(entry["page"]): str(entry["remediation_route"])
+        for entry in classification["entries"]
+        if isinstance(entry, dict)
+    }
     entries: list[dict[str, Any]] = []
     candidates: list[_Candidate] = []
     for page_path in pages:
         entry, candidate = _build_page_candidate(
-            resolved_vault, page_path, pdf_extractor=extractor
+            resolved_vault,
+            page_path,
+            pdf_extractor=extractor,
+            classification_route=classification_routes.get(
+                _relative_path(resolved_vault, page_path),
+                "operator_review",
+            ),
         )
         if entry is not None:
             entries.append(entry)
         if candidate is not None:
             candidates.append(candidate)
 
+    envelope, policy, resolved_policy_path = _canonical_envelope(
+        resolved_vault,
+        context=runtime_context,
+        pages=pages,
+        source_command=SOURCE_COMMAND,
+    )
     report = {
-        "$schema": SCHEMA_PATH,
+        **envelope,
+        "schema_version": 1,
+        "vault": report_path(resolved_vault, resolved_vault),
+        "policy": {
+            "path": report_path(resolved_vault, resolved_policy_path),
+            "version": policy.get("version"),
+        },
         "artifact_kind": "source_substance_cohort_remediation",
-        "producer": PRODUCER,
-        "generated_at": runtime_context.isoformat_z(),
         "mode": "dry_run",
         "status": _report_status(entries),
         "summary": {
@@ -438,6 +525,7 @@ def apply_remediation(
 
     report = build.report
     report["mode"] = "apply"
+    report["source_command"] = f"{SOURCE_COMMAND} --apply"
     report["summary"]["applied"] = len(build.candidates)
     report["summary"]["candidate_ready"] = 0
     for entry in report["entries"]:
@@ -448,12 +536,45 @@ def apply_remediation(
         entry["reason_codes"] = ["atomic_raw_repair_applied"]
         entry["page_sha256_after"] = _sha256_text(page_path.read_text(encoding="utf-8"))
     report["status"] = _report_status(report["entries"])
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
+    refreshed, _policy, _resolved_policy_path = _canonical_envelope(
+        resolved_vault,
+        context=runtime_context,
+        pages=_discover_source_pages(resolved_vault),
+        source_command=f"{SOURCE_COMMAND} --apply",
+    )
+    for key in (
+        "$schema",
+        "generated_at",
+        "source_revision",
+        "source_tree_fingerprint",
+        "input_fingerprints",
+        "currentness",
+    ):
+        report[key] = refreshed[key]
     validate_or_raise(
         report,
         load_schema_with_vault_override(resolved_vault, SCHEMA_PATH),
         "source substance cohort remediation report",
     )
     return report
+
+
+def write_report(
+    vault: Path,
+    report: dict[str, Any],
+    out_path: str | None = None,
+) -> Path:
+    return write_schema_backed_report(
+        SchemaBackedReportWriteRequest(
+            vault=vault,
+            payload=report,
+            schema_path=SCHEMA_PATH,
+            out_path=out_path,
+            default_relative_path=DEFAULT_OUT,
+            context="source substance cohort remediation schema validation failed",
+        )
+    )
 
 
 def build_report(
@@ -474,6 +595,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--vault", default=".")
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--out")
     return parser.parse_args(argv)
 
 
@@ -481,7 +603,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault)
     report = apply_remediation(vault) if args.apply else build_report(vault)
-    print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+    if args.out:
+        print(report_path(vault.resolve(), write_report(vault, report, args.out)))
+    else:
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 
 

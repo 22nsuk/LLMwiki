@@ -8,6 +8,17 @@
     "artifact_kind",
     "producer",
     "generated_at",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
     "mode",
     "status",
     "summary",
@@ -26,6 +37,37 @@
     "generated_at": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "source_command": {"type": "string", "minLength": 1},
+    "source_revision": {"type": "string"},
+    "source_tree_fingerprint": {"type": "string", "minLength": 1},
+    "input_fingerprints": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "schema_version": {"const": 1},
+    "artifact_status": {"const": "current"},
+    "retention_policy": {"const": "canonical_report"},
+    "encoding": {"const": "utf-8"},
+    "currentness": {
+      "type": "object",
+      "required": ["status", "checked_at"],
+      "additionalProperties": true,
+      "properties": {
+        "status": {"const": "current"},
+        "checked_at": {"type": "string", "minLength": 1}
+      }
+    },
+    "vault": {"type": "string", "minLength": 1},
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "version": {"type": "integer", "minimum": 1}
+      }
     },
     "mode": {
       "enum": ["dry_run", "apply"]
@@ -101,6 +143,7 @@
       "required": [
         "page",
         "status",
+        "classification_route",
         "reason_codes",
         "remediation_reasons",
         "page_sha256_before",
@@ -119,6 +162,15 @@
         "page": {
           "type": "string",
           "pattern": "^(wiki|system)/source--[^/]+\\.md$"
+        },
+        "classification_route": {
+          "enum": [
+            "no_action",
+            "recover_from_text_raw",
+            "recover_from_pdf_raw",
+            "retained_operator_review",
+            "operator_review"
+          ]
         },
         "status": {
           "enum": ["candidate_ready", "applied", "operator_review"]

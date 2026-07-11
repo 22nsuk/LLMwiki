@@ -19,6 +19,7 @@ from ops.scripts.eval.source_page_substance_runtime import (
 )
 from ops.scripts.eval.wiki_page_runtime import section_body
 from ops.scripts.registry import source_substance_cohort_remediate as remediation
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 FIXED_CONTEXT = RuntimeContext(
     clock=lambda: dt.datetime(2026, 7, 12, 3, 4, 5, tzinfo=dt.UTC),
@@ -78,7 +79,7 @@ This section must remain byte-for-byte stable.
 
 ## Related pages
 
-- [[concept--synthetic]]
+- [[synthesis--synthetic]]
 
 ## Open questions
 
@@ -128,9 +129,15 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.vault = Path(self.temporary_directory.name)
-        (self.vault / "wiki").mkdir()
-        (self.vault / "system").mkdir()
-        (self.vault / "raw").mkdir()
+        seed_minimal_vault(self.vault)
+        for root_name in ("wiki", "system"):
+            for path in (self.vault / root_name).glob("source--*.md"):
+                path.unlink()
+        (self.vault / "raw").mkdir(exist_ok=True)
+        (self.vault / "wiki/synthesis--synthetic.md").write_text(
+            "# Synthetic synthesis\n\n- [[source--synthetic]]\n",
+            encoding="utf-8",
+        )
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
