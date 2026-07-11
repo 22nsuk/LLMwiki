@@ -385,6 +385,41 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         self.assertNotIn("기사 듣기", candidate)
         self.assertIn(ENGLISH_SENTENCES[2], candidate)
 
+    def test_structural_news_noise_and_fragments_are_rejected(self) -> None:
+        noisy = (
+            "NEW YORK, June 17 (Reuters) - Synthetic markets opened higher.",
+            "(서울=연합뉴스) 합성 시장이 상승했다.",
+            "FILE PHOTO: An analyst walks past a synthetic display.",
+            "Reuters.",
+            '"An unfinished quotation ended without its pair.',
+            "123.4 shares rose after the announcement.",
+        )
+
+        extracted = remediation.extract_complete_sentences(
+            "\n".join((*noisy, *ENGLISH_SENTENCES))
+        )
+
+        self.assertEqual(extracted, list(ENGLISH_SENTENCES))
+
+    def test_candidate_quality_rejects_contained_and_same_number_claims(self) -> None:
+        contained = weak_page("raw/synthetic.md").replace(
+            "\nSynthetic Source\n\n## Why it matters",
+            "\nOperators measured twelve stable samples. "
+            "Independent reviewers confirmed the temperature range."
+            "\n\n## Why it matters",
+        ).replace(
+            "- Incomplete point...",
+            "- The field team measured twelve stable samples during the trial.\n"
+            "- The team measured twelve stable samples.\n"
+            "- Reviewers confirmed the recorded temperature range.\n"
+            "- The final dataset retained every accepted observation.",
+        )
+
+        self.assertEqual(
+            remediation._candidate_section_quality_reason(contained),
+            "candidate_section_near_duplicate",
+        )
+
     def test_cross_page_sentence_reuse_requires_operator_review(self) -> None:
         self._write_page(name="source--first.md", raw_path="raw/first.md")
         self._write_page(name="source--second.md", raw_path="raw/second.md")

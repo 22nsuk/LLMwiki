@@ -70,9 +70,26 @@ _WORD_RE = re.compile(r"[^\W_]+", re.UNICODE)
 _QUERY_TOKEN_RE = re.compile(r"[A-Za-z0-9]{3,}|[가-힣]{2,}")
 _EMAIL_RE = re.compile(r"\b[^\s@]+@[^\s@]+\.[^\s@]+\b")
 _LEADING_NOISE_RE = re.compile(
-    r"^(?:by\s+|사진\s*[=:]|자료\s*[=:]|그래픽\s*[=:]|출처\s*[=:]|"
+    r"^(?:by\s+|file\s+photo\s*[:=-]|caption\s*[:=-]|photo\s*[:=-]|"
+    r"사진\s*[=:]|자료\s*[=:]|그래픽\s*[=:]|출처\s*[=:]|제공\s*[=:]|"
     r"입력\s|수정\s|등록\s|기자\s|관련\s*기사|기사\s*듣기|자동\s*요약)",
     re.IGNORECASE,
+)
+_DATELINE_RE = re.compile(
+    r"^(?:\([^\n)]{1,80}(?:연합뉴스|뉴시스|로이터)\)|"
+    r"[A-Z][A-Z .'-]{1,50},\s+(?:[A-Z][a-z]+\s+)?\d{1,2}\s+"
+    r"\((?:Reuters|AP|Bloomberg)\)\s*[-:]|"
+    r"(?:SEOUL|NEW YORK|LONDON|WASHINGTON|TOKYO),\s+\((?:Reuters|AP)\)\s*[-:])",
+    re.IGNORECASE,
+)
+_MASTHEAD_RE = re.compile(
+    r"^(?:Reuters|Associated Press|AP News|Bloomberg|연합뉴스|뉴시스|"
+    r"조선일보|중앙일보|동아일보|한겨레|매일경제|한국경제)[.!。]?$",
+    re.IGNORECASE,
+)
+_FRAGMENT_START_RE = re.compile(
+    r"^(?:[0-9][0-9.,%+/-]*|[A-Z]{2,5}(?:\.[A-Z])?)\s+"
+    r"(?:[a-z]|rose\b|fell\b|gained\b|lost\b|shares?\b|points?\b)",
 )
 _NOISE_MARKERS = (
     "all rights reserved",
@@ -232,10 +249,24 @@ def _sentence_is_noisy(sentence: str) -> bool:
         _EMAIL_RE.search(sentence)
         or _URL_RE.search(sentence)
         or _LEADING_NOISE_RE.search(sentence)
+        or _DATELINE_RE.search(sentence)
+        or _MASTHEAD_RE.fullmatch(sentence.strip())
+        or _FRAGMENT_START_RE.search(sentence)
+        or _has_unbalanced_delimiters(sentence)
         or any(marker in lowered for marker in _NOISE_MARKERS)
         or any(marker in sentence for marker in ("**", "__", "![", "|"))
         or re.match(r"^[a-z]", sentence)
     )
+
+
+def _has_unbalanced_delimiters(sentence: str) -> bool:
+    stripped = sentence.strip()
+    if stripped.startswith((")", "]", "}", "’", "”", "」", "』")):
+        return True
+    for opening, closing in (("(", ")"), ("[", "]"), ("{", "}"), ("“", "”"), ("‘", "’"), ("「", "」"), ("『", "』")):
+        if sentence.count(opening) != sentence.count(closing):
+            return True
+    return sentence.count('"') % 2 == 1
 
 
 def _query_tokens(page_text: str, frontmatter: dict[str, Any]) -> set[str]:
@@ -305,7 +336,12 @@ def _rank_source_sentences(
         if any(
             tokens
             and excluded_tokens
-            and len(tokens & excluded_tokens) / len(tokens | excluded_tokens) >= 0.6
+            and (
+                len(tokens & excluded_tokens) / len(tokens | excluded_tokens) >= 0.6
+                or len(tokens & excluded_tokens)
+                / min(len(tokens), len(excluded_tokens))
+                >= 0.75
+            )
             for excluded_tokens in excluded_token_sets
         ):
             continue
@@ -344,11 +380,26 @@ def _candidate_section_quality_reason(candidate_text: str) -> str | None:
     if any(_sentence_is_noisy(claim) for claim in all_claims):
         return "candidate_section_noise"
     token_sets = [_sentence_tokens(claim) for claim in all_claims]
+    number_sets = [set(re.findall(r"\d+(?:[.,]\d+)?%?", claim)) for claim in all_claims]
     for index, tokens in enumerate(token_sets):
-        for other_tokens in token_sets[index + 1 :]:
+        for other_index, other_tokens in enumerate(
+            token_sets[index + 1 :], start=index + 1
+        ):
             if not tokens or not other_tokens:
                 continue
-            if len(tokens & other_tokens) / len(tokens | other_tokens) >= 0.7:
+            intersection = tokens & other_tokens
+            union = tokens | other_tokens
+            containment = len(intersection) / min(len(tokens), len(other_tokens))
+            same_numbered_claim = bool(
+                number_sets[index]
+                and number_sets[index] == number_sets[other_index]
+                and len(intersection) >= 2
+            )
+            if (
+                len(intersection) / len(union) >= 0.55
+                or containment >= 0.8
+                or same_numbered_claim
+            ):
                 return "candidate_section_near_duplicate"
     return None
 
