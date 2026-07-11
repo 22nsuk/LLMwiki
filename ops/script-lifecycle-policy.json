@@ -2869,6 +2869,15 @@
       "replacement": "make raw-registry-shard-policy-sync-check"
     },
     {
+      "canonical_module": "ops.scripts.registry.source_substance_candidate_quality_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.source_substance_candidate_quality_runtime"
+    },
+    {
       "canonical_module": "ops.scripts.registry.source_substance_cohort_classify",
       "console_scripts": [],
       "install_state": "not_installed",
