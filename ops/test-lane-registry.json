@@ -14,6 +14,7 @@
       "make test-fast": 120,
       "make test-boundary-contract-smoke": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider {path}": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_changed_path_minimum_executor.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_workflow_dependency_planner.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_source_revision_runtime.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
@@ -111,6 +112,7 @@
       {
         "rule_id": "workflow_dependency_planner_source",
         "path_patterns": [
+          "ops/scripts/core/changed_path_minimum_plan_runtime.py",
           "ops/scripts/core/git_changed_paths_runtime.py",
           "ops/scripts/core/workflow_dependency_planner.py"
         ],
@@ -137,6 +139,20 @@
         "coverage_class": "makefile_static_gates",
         "static_required": true,
         "duration_seconds": 270
+      },
+      {
+        "rule_id": "changed_path_minimum_executor_source",
+        "path_patterns": [
+          "ops/scripts/test/changed_path_minimum_executor.py"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_changed_path_minimum_executor.py"
+        ],
+        "reason": "Changed-path executor changes should prove the command grammar, registry ownership, failure stop, and final-checkpoint boundary without replaying the default suite.",
+        "coverage_class": "changed_path_minimum_executor",
+        "static_required": true,
+        "duration_seconds": 90
       },
       {
         "rule_id": "executor_runtime_source",
@@ -168,13 +184,12 @@
           "tools/**/*.py"
         ],
         "commands": [
-          "make static",
-          "make test"
+          "make static"
         ],
-        "reason": "Runtime Python changes need static analysis plus the default pytest lane (fast unit tests plus boundary contract smoke) before release evidence is trusted.",
+        "reason": "Generic runtime Python changes use static analysis for iterative feedback; changed test files and owner-specific rules add focused behavior checks, while the explicit final checkpoint retains broad release authority.",
         "coverage_class": "runtime_source",
         "static_required": true,
-        "duration_seconds": 180
+        "duration_seconds": 60
       },
       {
         "rule_id": "pytest_harness",

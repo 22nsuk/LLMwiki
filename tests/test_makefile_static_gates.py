@@ -392,6 +392,10 @@ def _assert_workflow_dependency_planner_target(
     case.assertNotIn("canonical_artifact_promote", planner_check_block)
     changed_path_plan_block = _target_block(text, "changed-path-minimum-plan")
     case.assertIn("--changed-paths-from-git", changed_path_plan_block)
+    _assert_phony_targets(case, text, ("changed-path-minimum-test",))
+    changed_path_test_block = _target_block(text, "changed-path-minimum-test")
+    case.assertIn("changed-path-minimum-plan", changed_path_test_block)
+    case.assertIn("ops.scripts.test.changed_path_minimum_executor", changed_path_test_block)
     for target in ("static", "check", "check-all", "release-check", "release-clean"):
         with case.subTest(target=target):
             case.assertNotIn("workflow-dependency-planner", _target_block(text, target))

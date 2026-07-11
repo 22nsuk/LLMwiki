@@ -68,6 +68,16 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         )
         _assert_run_contains(
             self,
+            _step(verify, "Run full public check"),
+            ("make public-check-all",),
+        )
+        verify_step_names = [str(step.get("name", "")) for step in _steps(verify)]
+        self.assertLess(
+            verify_step_names.index("Run full public check"),
+            verify_step_names.index("Materialize verified source zip"),
+        )
+        _assert_run_contains(
+            self,
             _step(publish, "Generate supply-chain artifacts"),
             ("make openvex-draft-cached", "make supply-chain-benchmark"),
         )

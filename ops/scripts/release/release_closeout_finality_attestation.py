@@ -27,8 +27,8 @@ from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.release.finality_current_diagnostics import (
-    FRESHNESS_INDEX_COHORT_TARGETS as FRESHNESS_INDEX_COHORT_PATHS,
     SEALED_PREFLIGHT_PATH,
+    classify_batch_replay_binding_mismatches,
     dedupe_preserve_order as _dedupe_preserve_order,
     fixed_point_writer_targets_by_path as _fixed_point_writer_targets_by_path,
 )
@@ -53,6 +53,11 @@ SUPPORTED_BINDING_MODES = {
     REVISION_BINDING_MODE,
     RAW_BINDING_MODE,
 }
+FINALITY_ATTESTATION_SOURCE_PATHS = [
+    "ops/scripts/release/release_closeout_finality_attestation.py",
+    "ops/scripts/release/finality_current_diagnostics.py",
+    "ops/scripts/core/artifact_binding_runtime.py",
+]
 
 
 def _sha256_file(path: Path) -> str:
@@ -544,8 +549,32 @@ def _current_finality_classification(vault: Path) -> dict[str, Any]:
         "sealed_preflight_artifact_binding_mismatches": [],
         "sealed_preflight": _sealed_preflight_summary(vault),
         "fixed_point_tracked_writer_binding_mismatches": [],
+        "unowned_binding_mismatches": [],
         "summary": "finality current-check is current",
     }
+
+
+def _finality_fixed_point_writer_mismatches(
+    vault: Path,
+    *,
+    batch_mismatches: list[dict[str, str]],
+    batch_classification: dict[str, Any],
+    fixed_point_binding_mismatches: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    fixed_point_writer_by_path = _fixed_point_writer_targets_by_path(vault)
+    batch_mismatch_paths = {str(item["path"]) for item in batch_mismatches}
+    result = list(
+        batch_classification["fixed_point_tracked_writer_binding_mismatches"]
+    )
+    result.extend(
+        {
+            **item,
+            "writer_target": fixed_point_writer_by_path.get(item["path"], ""),
+        }
+        for item in fixed_point_binding_mismatches
+        if item["path"] not in batch_mismatch_paths
+    )
+    return result
 
 
 def _finality_failure_classification(
@@ -563,60 +592,53 @@ def _finality_failure_classification(
         if batch_manifest_artifact_binding_mismatches is not None
         else _batch_manifest_artifact_mismatches(vault)["binding_mismatches"]
     )
-    freshness_index_cohort = [
-        item
-        for item in batch_mismatches
-        if item["path"] in FRESHNESS_INDEX_COHORT_PATHS
-    ]
-    sealed_preflight_artifact_mismatches = [
-        item for item in batch_mismatches if item["path"] == SEALED_PREFLIGHT_PATH
-    ]
+    batch_classification = classify_batch_replay_binding_mismatches(
+        vault,
+        batch_mismatches,
+    )
+    freshness_index_cohort = list(
+        batch_classification["freshness_index_cohort_binding_mismatches"]
+    )
+    sealed_preflight_artifact_mismatches = list(
+        batch_classification["sealed_preflight_artifact_binding_mismatches"]
+    )
+    unowned_batch_mismatches = list(
+        batch_classification["unowned_binding_mismatches"]
+    )
     sealed_preflight = _sealed_preflight_summary(vault)
-    fixed_point_writer_by_path = _fixed_point_writer_targets_by_path(vault)
-    unowned_batch_mismatches = [
-        item
-        for item in batch_mismatches
-        if item["path"] not in FRESHNESS_INDEX_COHORT_PATHS
-        and item["path"] != SEALED_PREFLIGHT_PATH
-        and not fixed_point_writer_by_path.get(item["path"])
-    ]
-    fixed_point_writer_mismatches = [
-        {
-            **item,
-            "writer_target": fixed_point_writer_by_path.get(item["path"], ""),
-        }
-        for item in fixed_point_binding_mismatches
-    ]
+    fixed_point_writer_mismatches = _finality_fixed_point_writer_mismatches(
+        vault,
+        batch_mismatches=batch_mismatches,
+        batch_classification=batch_classification,
+        fixed_point_binding_mismatches=fixed_point_binding_mismatches,
+    )
 
     classes: list[str] = []
-    recommended_targets: list[str] = []
-    recommended_initial_targets: list[str] = []
+    recommended_targets = list(batch_classification["recommended_targets"])
+    recommended_initial_targets = list(
+        batch_classification["recommended_fixed_point_initial_targets"]
+    )
     fixed_point_authority_failed = any(
         failure.startswith("fixed_point_authority_status:")
         for failure in failures
     )
     if fixed_point_authority_failed:
         classes.append("fixed_point_authority_failure")
-    if freshness_index_cohort:
-        classes.append("batch_manifest_freshness_index_cohort_binding_mismatch")
-        recommended_initial_targets.extend(
-            FRESHNESS_INDEX_COHORT_PATHS[item["path"]]
-            for item in freshness_index_cohort
-        )
+    classes.extend(str(value) for value in batch_classification["classes"])
     if sealed_preflight_artifact_mismatches or (
         sealed_preflight["load_status"] == "ok" and not sealed_preflight["current"]
     ):
-        classes.append("sealed_preflight_artifact_mismatch")
+        if "sealed_preflight_artifact_mismatch" not in classes:
+            classes.append("sealed_preflight_artifact_mismatch")
         recommended_targets.append("release-authority-sealed-preflight")
     if fixed_point_writer_mismatches:
-        classes.append("fixed_point_tracked_writer_binding_mismatch")
+        if "fixed_point_tracked_writer_binding_mismatch" not in classes:
+            classes.append("fixed_point_tracked_writer_binding_mismatch")
         recommended_initial_targets.extend(
             item["writer_target"]
             for item in fixed_point_writer_mismatches
             if item["writer_target"]
         )
-    if unowned_batch_mismatches:
-        classes.append("batch_manifest_artifact_binding_mismatch")
     if (
         binding_digest_mismatches
         and not fixed_point_authority_failed
@@ -656,6 +678,7 @@ def _finality_failure_classification(
         "sealed_preflight_artifact_binding_mismatches": sealed_preflight_artifact_mismatches,
         "sealed_preflight": sealed_preflight,
         "fixed_point_tracked_writer_binding_mismatches": fixed_point_writer_mismatches,
+        "unowned_binding_mismatches": unowned_batch_mismatches,
         "summary": (
             "finality current-check is current"
             if not failures
@@ -855,10 +878,7 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/release/release_closeout_finality_attestation.py",
-                "ops/scripts/core/artifact_binding_runtime.py",
-            ],
+            source_paths=FINALITY_ATTESTATION_SOURCE_PATHS,
             file_inputs={
                 "fixed_point_report": FIXED_POINT_REPORT_PATH,
                 "batch_manifest": BATCH_MANIFEST_PATH,

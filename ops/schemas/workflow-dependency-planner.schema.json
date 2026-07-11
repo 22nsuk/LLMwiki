@@ -322,6 +322,7 @@
         "advisory",
         "registry_path",
         "selected_commands",
+        "selected_command_specs",
         "final_checkpoint_required",
         "final_checkpoint_commands",
         "release_proof_replacement",
@@ -350,6 +351,11 @@
         "selected_commands": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "selected_command_specs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/changed_path_command_spec" },
           "uniqueItems": true
         },
         "final_checkpoint_required": {
@@ -389,6 +395,23 @@
         "path_recommendations": {
           "type": "array",
           "items": { "$ref": "#/$defs/changed_path_recommendation" }
+        }
+      }
+    },
+    "changed_path_command_spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "argv", "env"],
+      "properties": {
+        "command": { "type": "string", "minLength": 1 },
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
         }
       }
     },

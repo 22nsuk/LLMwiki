@@ -59,6 +59,7 @@ help:
 		"" \
 		"Release:" \
 		"  make changed-path-minimum-plan    write advisory changed-path test plan" \
+		"  make changed-path-minimum-test    run the deduplicated minimum test plan" \
 		"  make release-evidence-converge    converge release evidence through closeout phases" \
 		"  make release-run-ready            converge and verify run-ready evidence" \
 		"  make release-post-commit-finalize check post-commit evidence readback" \

@@ -25,6 +25,7 @@ from ops.scripts.core.makefile_runtime import load_makefile_text, makefile_sourc
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.core.workflow_dependency_planner import build_report, write_report
+from ops.scripts.test.changed_path_minimum_executor import execute_plan
 from ops.scripts.test.generate_release_governance_from_lane_registry import (
     validate_alignment,
 )
@@ -668,8 +669,10 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(plan["coverage_class"], "runtime_source")
         self.assertEqual(
             plan["selected_commands"],
-            ["make static", "make test", "make sync-derived-check"],
+            ["make static", "make sync-derived-check"],
         )
+        self.assertNotIn("make test", plan["selected_commands"])
+        self.assertTrue(plan["final_checkpoint_required"])
         self.assertEqual(
             [item["matched_rule_id"] for item in plan["path_recommendations"]],
             ["python_runtime_source+derived_surface_currentness"],
@@ -678,6 +681,41 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
             [],
         )
+
+    def test_generic_tool_path_uses_static_only_advisory_minimum(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["tools/generic_helper.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["selected_commands"], ["make static"])
+        self.assertEqual(plan["estimated_duration_seconds"], 60)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertTrue(plan["final_checkpoint_required"])
+        self.assertEqual(plan["final_checkpoint_commands"], ["make release-run-ready"])
+        self.assertFalse(plan["release_proof_replacement"])
+
+    def test_generic_source_and_changed_test_merge_focused_minimum(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[
+                "tools/generic_helper.py",
+                "tests/test_workflow_dependency_planner.py",
+            ],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(
+            plan["selected_commands"],
+            ["make static", FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND],
+        )
+        self.assertEqual(plan["selected_commands"].count("make static"), 1)
+        self.assertNotIn("make test", plan["selected_commands"])
+        self.assertTrue(plan["final_checkpoint_required"])
+        self.assertFalse(plan["release_proof_replacement"])
 
     def test_executor_runtime_source_selects_focused_executor_lane(self) -> None:
         for changed_path in [
@@ -709,6 +747,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
     def test_planner_source_uses_focused_changed_path_minimum(self) -> None:
         for source_path in [
+            "ops/scripts/core/changed_path_minimum_plan_runtime.py",
             "ops/scripts/core/git_changed_paths_runtime.py",
             "ops/scripts/core/workflow_dependency_planner.py",
         ]:
@@ -749,6 +788,28 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                     ),
                     [],
                 )
+
+    def test_changed_path_executor_source_uses_its_focused_contract(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["ops/scripts/test/changed_path_minimum_executor.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "changed_path_minimum_executor")
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q "
+                "-p no:cacheprovider tests/test_changed_path_minimum_executor.py",
+                "make sync-derived-check",
+            ],
+        )
+        self.assertNotIn("make test", plan["selected_commands"])
+        self.assertEqual(plan["estimated_duration_seconds"], 210)
 
     def test_git_runtime_source_uses_shared_changed_path_minimum(self) -> None:
         source_path = "ops/scripts/core/git_runtime.py"
@@ -1122,12 +1183,46 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
+        self.assertEqual(
+            plan["selected_command_specs"],
+            [
+                {"command": "make static", "argv": ["make", "static"], "env": {}},
+                {
+                    "command": FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
+                    "argv": [
+                        ".venv/bin/python",
+                        "-m",
+                        "pytest",
+                        "-q",
+                        "-p",
+                        "no:cacheprovider",
+                        "tests/test_workflow_dependency_planner.py",
+                    ],
+                    "env": {"PYTHONDONTWRITEBYTECODE": "1"},
+                },
+            ],
+        )
         self.assertEqual(plan["budget_status"], "within_budget")
         self.assertEqual(
             plan["final_checkpoint_commands"],
             ["make release-run-ready"],
         )
         self.assertFalse(plan["release_proof_replacement"])
+        self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_command_spec_preserves_untrusted_path_as_one_argv_token(self) -> None:
+        changed_path = "tests/test_name with spaces;echo.py"
+        report = build_report(
+            self.vault,
+            changed_paths=[changed_path],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        focused_spec = plan["selected_command_specs"][1]
+        self.assertEqual(focused_spec["argv"][-1], changed_path)
+        self.assertEqual(len(focused_spec["argv"]), 7)
+        self.assertEqual(focused_spec["env"], {"PYTHONDONTWRITEBYTECODE": "1"})
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_path_minimum_plan_routes_makefile_static_helper_to_split_gates(
@@ -1360,14 +1455,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             plan["selected_commands"],
             [
                 "make static",
-                "make test",
                 "make sync-derived-check",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 420)
-        self.assertEqual(plan["budget_status"], "over_budget")
+        self.assertEqual(plan["estimated_duration_seconds"], 270)
+        self.assertEqual(plan["budget_status"], "within_budget")
         self.assertEqual(
             plan["command_duration_seconds"],
             {
@@ -1375,12 +1469,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make sync-derived-check": 120,
                 "make workflow-dependency-planner-check": 60,
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
-                "make test": 150,
             },
         )
         self.assertEqual(
             [item["duration_seconds"] for item in plan["path_recommendations"]],
-            [300, 270],
+            [180, 270],
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
@@ -1404,13 +1497,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             plan["selected_commands"],
             [
                 "make static",
-                "make test",
                 "make sync-derived-check",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 570)
+        self.assertEqual(plan["estimated_duration_seconds"], 450)
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_path_minimum_plan_matches_public_docs(self) -> None:
@@ -1788,6 +1880,40 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             ["make static", "make public-check"],
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_executor_skips_staged_deleted_test_selector(self) -> None:
+        rel_path = "tests/test_removed.py"
+        test_path = self.vault / rel_path
+        test_path.parent.mkdir(parents=True, exist_ok=True)
+        test_path.write_text("def test_removed(): pass\n", encoding="utf-8")
+        registry_schema = self.vault / "ops" / "schemas" / "test-lane-registry.schema.json"
+        registry_schema.parent.mkdir(parents=True, exist_ok=True)
+        registry_schema.write_text(
+            (REPO_ROOT / "ops" / "schemas" / "test-lane-registry.schema.json").read_text(
+                encoding="utf-8"
+            ),
+            encoding="utf-8",
+        )
+        self._commit_git_baseline()
+        self._run_git("rm", rel_path)
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+        plan = report["changed_path_minimum_plan"]
+        focused_command = FOCUSED_PYTEST_TEMPLATE.replace("{path}", rel_path)
+        self.assertEqual(report["selected_change_paths"], [rel_path])
+        self.assertEqual(plan["selected_commands"], ["make static", focused_command])
+        calls: list[list[str]] = []
+
+        def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 0)
+
+        self.assertEqual(execute_plan(self.vault, report, run_command=run), 0)
+        self.assertEqual(calls, [["make", "static"]])
 
     def test_changed_paths_from_git_preserves_staged_rename_name_only_semantics(self) -> None:
         old_path = self.vault / "docs" / "old.md"

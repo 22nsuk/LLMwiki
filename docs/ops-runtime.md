@@ -68,8 +68,10 @@ the human-owned contract. Add or adjust source-derived projection membership in
 `ops/policies/derived-surfaces.json`, then run `make sync-derived` so the
 generated Make fragment and the declared projections converge from those
 sources. New generic `ops/scripts/**/*.py` changes are also known to the workflow
-dependency planner as runtime source changes and should pair `make static` with
-the default `make test` lane unless a narrower changed-path minimum applies.
+dependency planner as runtime source changes. Their iterative minimum pairs
+`make static` with any focused tests selected by changed test files or
+owner-specific rules. Shared lane-contract changes and the final release
+checkpoint still run their broader authoritative lanes.
 
 Static Make/CI tests should keep structural invariants and wiring checks only.
 Exact generated content belongs in the generator unit test or the

@@ -13,6 +13,16 @@
       ]
     },
     {
+      "path": "ops/scripts/core/changed_path_minimum_plan_runtime.py",
+      "role": "internal_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "build_changed_path_minimum_plan",
+        "derive_surface_currentness",
+        "load_test_lane_registry"
+      ]
+    },
+    {
       "path": "ops/scripts/mechanism/finalize_run.py",
       "role": "cli_facade",
       "direct_script_entrypoint": true,
