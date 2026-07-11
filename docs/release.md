@@ -157,7 +157,9 @@ surface comparison; this document owns release evidence and staged authority.
   source-ready commits. It runs check/current-only surfaces, writes the
   post-commit readback report, then leaves `release-closeout-finality-verify` as
   the final Make invocation. It fails if source fingerprint or source contract
-  paths drift. Dirty tracked generated evidence is `attention` and points back to
+  paths drift. Its public evidence check reuses the same full public-suite
+  configuration produced by `release-converge-all-surfaces`. Dirty tracked
+  generated evidence is `attention` and points back to
   `release-source-ready-prepare`. It does not refresh full pytest evidence,
   staged authority manifests, report writer clusters, or action lifecycle
   cleanup. It also does not replace `release-run-ready`,

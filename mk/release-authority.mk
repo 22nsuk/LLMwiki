@@ -317,7 +317,7 @@ release-post-commit-finalize:
 	$(MAKE) test-execution-summary-current-check
 	$(MAKE) test-execution-summary-full-current-check
 	$(MAKE) sync-public-policy-check
-	$(MAKE) public-check-summary-current-check
+	$(MAKE) public-check-all-check
 	$(MAKE) artifact-freshness-check
 	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode verify --previous "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)" --out "$(RELEASE_POST_COMMIT_FINALIZATION_OUT)" --fail-on-attention
 	$(MAKE) release-closeout-finality-verify

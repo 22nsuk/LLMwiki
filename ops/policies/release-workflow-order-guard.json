@@ -119,9 +119,9 @@
           "raw_line": "$(MAKE) sync-public-policy-check"
         },
         {
-          "role": "public-check-summary-current-check",
-          "target": "public-check-summary-current-check",
-          "raw_line": "$(MAKE) public-check-summary-current-check"
+          "role": "public-check-all-check",
+          "target": "public-check-all-check",
+          "raw_line": "$(MAKE) public-check-all-check"
         },
         {
           "role": "artifact-freshness-check",
@@ -645,7 +645,7 @@
         "test-execution-summary-current-check",
         "test-execution-summary-full-current-check",
         "sync-public-policy-check",
-        "public-check-summary-current-check",
+        "public-check-all-check",
         "artifact-freshness-check",
         "release-post-commit-finalizer-verify",
         "release-closeout-finality-verify"
