@@ -46,8 +46,9 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "theme": "release writer ordering single source",
         "patterns": [r"workflow_dependency_planner", r"fixed-point", r"writer dependency", r"single source"],
         "evidence_paths": [
-            "ops/reports/workflow-dependency-planner.json",
-            "ops/reports/release-workflow-order-guard.json",
+            "Makefile",
+            "ops/policies/release-closeout-fixed-point.json",
+            "ops/policies/release-workflow-order-guard.json",
         ],
         "recommended_target": "release-workflow-order-guard",
     },

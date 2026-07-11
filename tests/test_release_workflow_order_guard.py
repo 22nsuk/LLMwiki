@@ -12,10 +12,15 @@ import pytest
 
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release.external_report_lifecycle_status_decision_runtime import (
+    single_source_status,
+)
 from ops.scripts.release.release_workflow_order_guard import (
+    _check_planner_fixed_point_writer_order,
     build_report,
     check_report,
     check_workflow_order_spec_raw_lines,
+    release_writer_single_source_contract,
     write_report,
     write_workflow_order_spec_raw_lines,
 )
@@ -869,6 +874,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             {
                 "name": "generated-artifact-index",
                 "target": "generated-artifact-index-body",
+                "binding_mode": "content",
                 "produces": ["ops/reports/generated-artifact-index.json"],
                 "depends_on": ["artifact-freshness"] if invert_dependency else [],
                 "expensive_prerequisites": ["release-risk-taxonomy-matrix"],
@@ -876,6 +882,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             {
                 "name": "artifact-freshness",
                 "target": "artifact-freshness",
+                "binding_mode": "content",
                 "produces": ["ops/reports/artifact-freshness-report.json"],
                 "depends_on": ["generated-artifact-index-body"],
                 "expensive_prerequisites": [],
@@ -1623,6 +1630,135 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         )
         self.assertTrue(write_report(self.vault, report).exists())
 
+    def test_live_single_source_contract_passes_without_generated_reports(self) -> None:
+        contract = release_writer_single_source_contract(
+            self.vault,
+            context=fixed_context(),
+        )
+
+        self.assertEqual(contract["status"], "pass")
+        self.assertEqual(contract["writer_count"], 2)
+        self.assertEqual(contract["planner_evidence_dag_status"], "pass")
+        self.assertEqual(contract["missing_check_ids"], [])
+        self.assertEqual(contract["failed_check_ids"], [])
+        self.assertFalse((self.vault / "ops/reports").exists())
+
+    def test_single_source_status_rejects_invalid_live_fixed_point_graphs(self) -> None:
+        policy_path = self.vault / "ops/policies/release-closeout-fixed-point.json"
+        valid_policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        valid_writers = valid_policy["writers"]
+        invalid_policies = {
+            "empty": {"version": 1, "writers": []},
+            "duplicate_producer": {
+                "version": 1,
+                "writers": [
+                    valid_writers[0],
+                    {
+                        **valid_writers[1],
+                        "produces": valid_writers[0]["produces"],
+                    },
+                ],
+            },
+            "unknown_dependency": {
+                "version": 1,
+                "writers": [
+                    {**valid_writers[0], "depends_on": ["unknown-writer"]}
+                ],
+            },
+            "cycle": {
+                "version": 1,
+                "writers": [
+                    {
+                        **valid_writers[0],
+                        "depends_on": [valid_writers[1]["target"]],
+                    },
+                    {
+                        **valid_writers[1],
+                        "depends_on": [valid_writers[0]["target"]],
+                    },
+                ],
+            },
+            "non_topological": {
+                "version": 1,
+                "writers": [
+                    {
+                        **valid_writers[0],
+                        "depends_on": [valid_writers[1]["target"]],
+                    },
+                    {**valid_writers[1], "depends_on": []},
+                ],
+            },
+        }
+
+        for name, policy in invalid_policies.items():
+            with self.subTest(name=name):
+                policy_path.write_text(json.dumps(policy), encoding="utf-8")
+                self.assertEqual(single_source_status(self.vault), "partially_automated")
+
+    def test_single_source_status_ignores_reports_but_rejects_live_terminal_drift(
+        self,
+    ) -> None:
+        reports = self.vault / "ops/reports"
+        reports.mkdir(parents=True)
+        for name in (
+            "release-workflow-order-guard.json",
+            "workflow-dependency-planner.json",
+        ):
+            reports.joinpath(name).write_text('{"status":"fail"}', encoding="utf-8")
+
+        self.assertEqual(single_source_status(self.vault), "implemented")
+
+        makefile = self.vault / "Makefile"
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-terminal-finality:\n"
+                "\t$(MAKE) release-closeout-fixed-point\n"
+                "\t$(MAKE) tmp-json-clean\n",
+                "release-terminal-finality:\n"
+                "\t$(MAKE) release-closeout-fixed-point\n"
+                "\t$(MAKE) artifact-freshness\n"
+                "\t$(MAKE) tmp-json-clean\n",
+            ),
+            encoding="utf-8",
+        )
+        for path in reports.glob("*.json"):
+            path.write_text('{"status":"pass"}', encoding="utf-8")
+
+        self.assertEqual(single_source_status(self.vault), "partially_automated")
+
+    def test_planner_writer_order_rejects_obsolete_expanded_entrypoints(self) -> None:
+        writers = [
+            {"target": "artifact-freshness"},
+            {"target": "generated-artifact-index-body"},
+        ]
+        for target in (
+            "generated-artifact-converge",
+            "artifact-freshness",
+            "generated-artifact-index-body",
+        ):
+            with self.subTest(target=target):
+                check = _check_planner_fixed_point_writer_order(
+                    {
+                        "selected_workflows": [
+                            {
+                                "workflow_id": "workflow_dependency_planner_closeout",
+                                "steps": [
+                                    {"target": "workflow-dependency-planner"},
+                                    {"target": "release-terminal-finality"},
+                                    {"target": target},
+                                ],
+                            }
+                        ]
+                    },
+                    writers,
+                )
+
+                self.assertEqual(check["status"], "fail")
+                self.assertIn(
+                    "fixed_point_writer_must_not_be_expanded_by_planner",
+                    {item["reason"] for item in check["violations"]},
+                )
+
     def test_real_repo_release_order_report_builds_from_current_make_graph(self) -> None:
         report = build_report(REPO_ROOT, context=fixed_context())
 
@@ -1794,12 +1930,8 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
     def test_guard_fails_when_fixed_point_policy_order_is_not_topological(self) -> None:
         self._write_fixed_point_policy(invert_dependency=True)
 
-        report = build_report(self.vault, context=fixed_context())
-
-        check = next(item for item in report["checks"] if item["id"] == "fixed_point_policy_topological_order")
-        self.assertEqual(report["status"], "fail")
-        self.assertEqual(check["status"], "fail")
-        self.assertEqual(check["violations"][0]["reason"], "dependency_not_before_target")
+        with self.assertRaisesRegex(ValueError, "writer dependency cycle"):
+            build_report(self.vault, context=fixed_context())
 
     def test_guard_fails_when_unplanned_closeout_target_repeats(self) -> None:
         makefile = self.vault.joinpath("Makefile")

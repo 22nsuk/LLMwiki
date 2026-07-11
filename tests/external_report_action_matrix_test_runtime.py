@@ -423,21 +423,7 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
             "owner_target": "artifact-freshness",
         }
     def _write_support_reports(self) -> None:
-        self._write_json(
-            "ops/reports/release-workflow-order-guard.json",
-            {"status": "pass"},
-        )
-        self._write_json(
-            "ops/reports/workflow-dependency-planner.json",
-            {
-                "workflow_rules": [
-                    {
-                        "workflow_id": "workflow_dependency_planner_closeout",
-                        "targets": ["workflow-dependency-planner", "generated-artifact-index-body"],
-                    }
-                ]
-            },
-        )
+        self._write_json(FIXED_POINT_POLICY_PATH, FIXED_POINT_TEST_POLICY)
         self._write_json(
             "ops/reports/outcome-provenance-gate-policy.json",
             {"status": "pass"},

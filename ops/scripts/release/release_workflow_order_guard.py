@@ -32,6 +32,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.release.release_closeout_fixed_point import (
         POLICY_PATH as FIXED_POINT_POLICY_PATH,
+        fixed_point_writer_specs_from_policy,
     )
     from ops.scripts.release.release_workflow_order_guard_recipes import (
         SPEC_PATH,
@@ -71,7 +72,10 @@ else:
         build_report as build_workflow_dependency_report,
     )
 
-    from .release_closeout_fixed_point import POLICY_PATH as FIXED_POINT_POLICY_PATH
+    from .release_closeout_fixed_point import (
+        POLICY_PATH as FIXED_POINT_POLICY_PATH,
+        fixed_point_writer_specs_from_policy,
+    )
     from .release_workflow_order_guard_recipes import (
         SPEC_PATH,
         _expanded_recipe_invocations,
@@ -99,6 +103,14 @@ SOURCE_COMMAND = (
 )
 RELEASE_CONVERGE_TARGET = "release-evidence-converge"
 CHECK_FINALIZED_TARGET = "check-finalized"
+SINGLE_SOURCE_REQUIRED_CHECK_IDS = frozenset(
+    {
+        "fixed_point_policy_topological_order",
+        "release_terminal_finality_sequence",
+        "workflow_dependency_planner_closeout_hooks",
+        "workflow_dependency_planner_fixed_point_policy_order",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -449,41 +461,6 @@ def _check_protected_recipe(
     )
 
 
-def _fixed_point_writer_specs(policy: dict[str, Any]) -> list[dict[str, Any]]:
-    writers = policy.get("writers")
-    if not isinstance(writers, list):
-        return []
-    result: list[dict[str, Any]] = []
-    for item in writers:
-        if not isinstance(item, dict):
-            continue
-        target = str(item.get("target", "")).strip()
-        if not target:
-            continue
-        result.append(
-            {
-                "name": str(item.get("name", target)).strip() or target,
-                "target": target,
-                "depends_on": [
-                    str(dep).strip()
-                    for dep in item.get("depends_on", [])
-                    if str(dep).strip()
-                ],
-                "expensive_prerequisites": [
-                    str(dep).strip()
-                    for dep in item.get("expensive_prerequisites", [])
-                    if str(dep).strip()
-                ],
-                "produces": [
-                    str(path).strip()
-                    for path in item.get("produces", [])
-                    if str(path).strip()
-                ],
-            }
-        )
-    return result
-
-
 def _fixed_point_initial_order(writers: list[dict[str, Any]]) -> list[str]:
     seen: set[str] = set()
     ordered: list[str] = []
@@ -577,12 +554,7 @@ def _check_planner_fixed_point_writer_order(
         for step in planner_workflow.get("steps", [])
         if isinstance(step, dict) and str(step.get("target", "")).strip()
     ]
-    if "generated-artifact-converge" in planner_steps:
-        expected = ["generated-artifact-converge"]
-    elif "release-terminal-finality" in planner_steps:
-        expected = ["release-terminal-finality"]
-    else:
-        expected = _fixed_point_initial_order(writers)
+    expected = ["release-terminal-finality"]
     positions = _subsequence_positions(
         [{"role": step, "target": step} for step in planner_steps],
         expected,
@@ -595,12 +567,21 @@ def _check_planner_fixed_point_writer_order(
         for role, position in zip(expected, positions, strict=False)
         if position == 0
     ]
+    writer_targets = {str(writer["target"]) for writer in writers}
+    violations.extend(
+        {
+            "target": step,
+            "reason": "fixed_point_writer_must_not_be_expanded_by_planner",
+        }
+        for step in planner_steps
+        if step == "generated-artifact-converge" or step in writer_targets
+    )
     return _check(
         "workflow_dependency_planner_fixed_point_policy_order",
         expected_order=expected,
         observed_order=planner_steps,
         violations=violations,
-        details="The planner closeout recommendation must delegate to the fixed-point terminal controller or preserve a valid graph entrypoint.",
+        details="The planner closeout recommendation must delegate once to the fixed-point terminal controller.",
     )
 
 
@@ -670,7 +651,7 @@ def _workflow_order_inputs(
     runtime_context = context or RuntimeContext.from_policy(policy)
     makefile_text, makefile_sources = load_makefile_text(resolved_vault)
     fixed_point_policy = _load_json(resolved_vault / FIXED_POINT_POLICY_PATH)
-    writers = _fixed_point_writer_specs(fixed_point_policy)
+    writers = fixed_point_writer_specs_from_policy(resolved_vault)
     rule_kinds_by_target = _target_rule_kinds(makefile_text)
     protected_recipe_observations = _protected_recipe_observations(
         makefile_text,
@@ -776,6 +757,50 @@ def _release_workflow_order_checks(inputs: _WorkflowOrderInputs) -> list[dict[st
         ]
     )
     return checks
+
+
+def release_writer_single_source_contract(
+    vault: Path,
+    *,
+    policy_path: str | None = None,
+    spec_path: str | None = None,
+    context: RuntimeContext | None = None,
+) -> dict[str, Any]:
+    """Evaluate the live writer graph contract without reading generated reports."""
+    inputs = _workflow_order_inputs(
+        vault,
+        policy_path=policy_path,
+        spec_path=spec_path,
+        context=context,
+    )
+    checks = _release_workflow_order_checks(inputs)
+    checks_by_id = {str(check["id"]): check for check in checks}
+    missing_check_ids = sorted(SINGLE_SOURCE_REQUIRED_CHECK_IDS - checks_by_id.keys())
+    failed_check_ids = sorted(
+        check_id
+        for check_id in SINGLE_SOURCE_REQUIRED_CHECK_IDS
+        if checks_by_id.get(check_id, {}).get("status") != "pass"
+    )
+    evidence_dag = inputs.planner_report.get("evidence_dag", {})
+    if not isinstance(evidence_dag, dict):
+        evidence_dag = {}
+    writer_count = len(inputs.writers)
+    dag_matches_policy = (
+        evidence_dag.get("source") == FIXED_POINT_POLICY_PATH
+        and evidence_dag.get("status") == "pass"
+        and evidence_dag.get("node_count") == writer_count
+    )
+    return {
+        "status": (
+            "pass"
+            if not missing_check_ids and not failed_check_ids and dag_matches_policy
+            else "fail"
+        ),
+        "writer_count": writer_count,
+        "planner_evidence_dag_status": "pass" if dag_matches_policy else "fail",
+        "missing_check_ids": missing_check_ids,
+        "failed_check_ids": failed_check_ids,
+    }
 
 
 def _workflow_order_envelope(inputs: _WorkflowOrderInputs) -> dict[str, Any]:
