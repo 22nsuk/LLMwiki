@@ -668,8 +668,10 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(plan["coverage_class"], "runtime_source")
         self.assertEqual(
             plan["selected_commands"],
-            ["make static", "make test", "make sync-derived-check"],
+            ["make static", "make sync-derived-check"],
         )
+        self.assertNotIn("make test", plan["selected_commands"])
+        self.assertTrue(plan["final_checkpoint_required"])
         self.assertEqual(
             [item["matched_rule_id"] for item in plan["path_recommendations"]],
             ["python_runtime_source+derived_surface_currentness"],
@@ -678,6 +680,41 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)),
             [],
         )
+
+    def test_generic_tool_path_uses_static_only_advisory_minimum(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["tools/generic_helper.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["selected_commands"], ["make static"])
+        self.assertEqual(plan["estimated_duration_seconds"], 60)
+        self.assertEqual(plan["budget_status"], "within_budget")
+        self.assertTrue(plan["final_checkpoint_required"])
+        self.assertEqual(plan["final_checkpoint_commands"], ["make release-run-ready"])
+        self.assertFalse(plan["release_proof_replacement"])
+
+    def test_generic_source_and_changed_test_merge_focused_minimum(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[
+                "tools/generic_helper.py",
+                "tests/test_workflow_dependency_planner.py",
+            ],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(
+            plan["selected_commands"],
+            ["make static", FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND],
+        )
+        self.assertEqual(plan["selected_commands"].count("make static"), 1)
+        self.assertNotIn("make test", plan["selected_commands"])
+        self.assertTrue(plan["final_checkpoint_required"])
+        self.assertFalse(plan["release_proof_replacement"])
 
     def test_executor_runtime_source_selects_focused_executor_lane(self) -> None:
         for changed_path in [
@@ -1417,14 +1454,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             plan["selected_commands"],
             [
                 "make static",
-                "make test",
                 "make sync-derived-check",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 420)
-        self.assertEqual(plan["budget_status"], "over_budget")
+        self.assertEqual(plan["estimated_duration_seconds"], 270)
+        self.assertEqual(plan["budget_status"], "within_budget")
         self.assertEqual(
             plan["command_duration_seconds"],
             {
@@ -1432,12 +1468,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make sync-derived-check": 120,
                 "make workflow-dependency-planner-check": 60,
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
-                "make test": 150,
             },
         )
         self.assertEqual(
             [item["duration_seconds"] for item in plan["path_recommendations"]],
-            [300, 270],
+            [180, 270],
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
@@ -1461,13 +1496,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             plan["selected_commands"],
             [
                 "make static",
-                "make test",
                 "make sync-derived-check",
                 "make workflow-dependency-planner-check",
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND,
             ],
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 570)
+        self.assertEqual(plan["estimated_duration_seconds"], 450)
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
     def test_changed_path_minimum_plan_matches_public_docs(self) -> None:

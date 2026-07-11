@@ -184,13 +184,12 @@
           "tools/**/*.py"
         ],
         "commands": [
-          "make static",
-          "make test"
+          "make static"
         ],
-        "reason": "Runtime Python changes need static analysis plus the default pytest lane (fast unit tests plus boundary contract smoke) before release evidence is trusted.",
+        "reason": "Generic runtime Python changes use static analysis for iterative feedback; changed test files and owner-specific rules add focused behavior checks, while the explicit final checkpoint retains broad release authority.",
         "coverage_class": "runtime_source",
         "static_required": true,
-        "duration_seconds": 180
+        "duration_seconds": 60
       },
       {
         "rule_id": "pytest_harness",
