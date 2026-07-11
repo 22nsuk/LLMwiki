@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import io
 import json
 import tempfile
@@ -31,6 +32,8 @@ ENGLISH_SENTENCES = (
     "The second trial reduced processing time by six minutes.",
     "Independent reviewers confirmed the recorded temperature range.",
     "The final dataset retained every accepted observation.",
+    "A separate audit reproduced the reported sample count.",
+    "The published method documents the bounded collection window.",
 )
 
 KOREAN_SENTENCES = (
@@ -38,6 +41,8 @@ KOREAN_SENTENCES = (
     "두 번째 측정은 처리 시간을 여섯 분 줄였다.",
     "독립 검토자는 기록된 온도 범위를 다시 확인했다.",
     "최종 자료는 승인된 관측값을 모두 보존했다.",
+    "별도 감사는 보고된 표본 수를 재현했다.",
+    "공개된 방법은 제한된 수집 기간을 문서화했다.",
 )
 
 
@@ -46,9 +51,11 @@ def weak_page(raw_path: str, *, summary: str = "Synthetic Source") -> str:
 title: Synthetic Source
 page_type: source
 corpus: content
+registry_id: W-TEST
 aliases: [source--synthetic]
 tags: [source]
 raw_path: {raw_path}
+primary_lens: field team trial reviewers dataset audit method 연구팀 측정 검토자 자료 감사 방법 최종 승인 관측값 공개 수집 기간
 ---
 
 # Synthetic Source
@@ -105,6 +112,8 @@ source: synthetic
             f"[{sentences[1]}](https://example.invalid/reference)",
             sentences[2],
             sentences[3],
+            sentences[4],
+            sentences[5],
             "Copyright 2026 Synthetic Publisher. All rights reserved.",
         ]
     )
@@ -117,7 +126,7 @@ class SuccessfulPdfExtractor:
 
     def extract(self, path: Path) -> str:
         self.paths.append(path)
-        return self.text
+        return self.text.replace(".", f" for {path.stem}.")
 
 
 class FailingPdfExtractor:
@@ -165,7 +174,9 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         page_before = page.read_bytes()
         raw_before = raw.read_bytes()
 
-        report = remediation.build_report(self.vault, context=FIXED_CONTEXT)
+        report = remediation.build_report(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
 
         self.assertEqual(page.read_bytes(), page_before)
         self.assertEqual(raw.read_bytes(), raw_before)
@@ -199,7 +210,9 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
             "atomic_multi_write",
             wraps=real_atomic_multi_write,
         ) as atomic_write:
-            report = remediation.apply_remediation(self.vault, context=FIXED_CONTEXT)
+            report = remediation.apply_remediation(
+                self.vault, context=FIXED_CONTEXT, enforce_registry=False
+            )
 
         atomic_write.assert_called_once()
         after = page.read_text(encoding="utf-8")
@@ -228,7 +241,9 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         )
         self._write_raw(raw_markdown())
 
-        remediation.apply_remediation(self.vault, context=FIXED_CONTEXT)
+        remediation.apply_remediation(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
 
         after = page.read_text(encoding="utf-8")
         self.assertEqual(section_body(after, "Summary").strip(), passing_summary)
@@ -246,7 +261,9 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         self._write_raw(raw_markdown())
         before_key_points = section_body(page_text, "Key points")
 
-        remediation.apply_remediation(self.vault, context=FIXED_CONTEXT)
+        remediation.apply_remediation(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
 
         after = page.read_text(encoding="utf-8")
         self.assertEqual(section_body(after, "Key points"), before_key_points)
@@ -265,7 +282,9 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         self._write_raw(raw_text, name="synthetic.md")
         before = page.read_bytes()
 
-        report = remediation.apply_remediation(self.vault, context=FIXED_CONTEXT)
+        report = remediation.apply_remediation(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
 
         self.assertEqual(page.read_bytes(), before)
         entry = report["entries"][0]
@@ -277,7 +296,9 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         page = self._write_page(raw_path="raw/does-not-exist.md")
         before = page.read_bytes()
 
-        report = remediation.apply_remediation(self.vault, context=FIXED_CONTEXT)
+        report = remediation.apply_remediation(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
 
         self.assertEqual(page.read_bytes(), before)
         self.assertEqual(report["entries"][0]["status"], "operator_review")
@@ -300,8 +321,22 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         (self.vault / "raw/failure.pdf").write_bytes(b"synthetic-pdf-failure")
         extractor = SuccessfulPdfExtractor(" ".join(ENGLISH_SENTENCES))
 
+        default_report = remediation.build_report(
+            self.vault,
+            context=FIXED_CONTEXT,
+            pdf_extractor=extractor,
+            enforce_registry=False,
+        )
+        for entry in default_report["entries"]:
+            self.assertEqual(entry["status"], "operator_review")
+            self.assertEqual(entry["reason_codes"], ["pdf_requires_operator_review"])
+
         success_report = remediation.build_report(
-            self.vault, context=FIXED_CONTEXT, pdf_extractor=extractor
+            self.vault,
+            context=FIXED_CONTEXT,
+            pdf_extractor=extractor,
+            enforce_registry=False,
+            allow_pdf_candidates=True,
         )
         success_entries = {entry["page"]: entry for entry in success_report["entries"]}
         self.assertEqual(
@@ -311,13 +346,92 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         self.assertEqual(len(extractor.paths), 2)
 
         failure_report = remediation.build_report(
-            self.vault, context=FIXED_CONTEXT, pdf_extractor=FailingPdfExtractor()
+            self.vault,
+            context=FIXED_CONTEXT,
+            pdf_extractor=FailingPdfExtractor(),
+            enforce_registry=False,
+            allow_pdf_candidates=True,
         )
         for entry in failure_report["entries"]:
             self.assertEqual(entry["status"], "operator_review")
             self.assertEqual(entry["reason_codes"], ["pdf_extraction_failed"])
         self.assertTrue(success_page.is_file())
         self.assertTrue(failure_page.is_file())
+
+    def test_leading_noise_is_rejected_before_relevant_source_facts(self) -> None:
+        self._write_page()
+        noisy_raw = "\n\n".join(
+            [
+                "By Synthetic Reporter reporter@example.invalid.",
+                "사진=Example Publisher copyright image credit.",
+                "기사 듣기 글자 크기 관련 기사.",
+                *ENGLISH_SENTENCES,
+            ]
+        )
+        self._write_raw(noisy_raw)
+
+        build = remediation.build_remediation(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
+
+        self.assertEqual(build.report["summary"]["candidate_ready"], 1)
+        candidate = build.candidates[0].after_text
+        self.assertNotIn("Synthetic Reporter", candidate)
+        self.assertNotIn("사진=", candidate)
+        self.assertNotIn("기사 듣기", candidate)
+        self.assertIn(ENGLISH_SENTENCES[2], candidate)
+
+    def test_cross_page_sentence_reuse_requires_operator_review(self) -> None:
+        self._write_page(name="source--first.md", raw_path="raw/first.md")
+        self._write_page(name="source--second.md", raw_path="raw/second.md")
+        self._write_raw(raw_markdown(), name="first.md")
+        self._write_raw(raw_markdown(), name="second.md")
+
+        report = remediation.build_report(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
+
+        self.assertEqual(report["summary"]["candidate_ready"], 0)
+        self.assertEqual(report["summary"]["operator_review"], 2)
+        self.assertEqual(
+            {tuple(entry["reason_codes"]) for entry in report["entries"]},
+            {("sentence_reused_across_source_pages",)},
+        )
+
+    def test_registry_path_target_hash_and_trace_are_fail_closed(self) -> None:
+        self._write_page()
+        raw = self._write_raw(raw_markdown())
+        raw_sha256 = hashlib.sha256(raw.read_bytes()).hexdigest()
+        registry_path = self.vault / "ops/raw-registry.json"
+        registry_path.write_text(
+            json.dumps(
+                {
+                    "entries": [
+                        {
+                            "registry_id": "W-TEST",
+                            "target_page": "source--synthetic",
+                            "storage_path": "raw/synthetic.md",
+                            "content_sha256": raw_sha256,
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        current = remediation.build_report(self.vault, context=FIXED_CONTEXT)
+        self.assertEqual(current["summary"]["candidate_ready"], 1)
+
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        registry["entries"][0]["content_sha256"] = "0" * 64
+        registry_path.write_text(json.dumps(registry), encoding="utf-8")
+        drifted = remediation.build_report(self.vault, context=FIXED_CONTEXT)
+
+        self.assertEqual(drifted["summary"]["candidate_ready"], 0)
+        self.assertEqual(
+            drifted["entries"][0]["reason_codes"],
+            ["registry_raw_sha256_mismatch"],
+        )
 
     def test_raw_fidelity_failure_is_operator_review_and_never_writes(self) -> None:
         page = self._write_page()
@@ -330,10 +444,12 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
 
         with patch.object(
             remediation,
-            "extract_complete_sentences",
+            "_rank_source_sentences",
             return_value=alien_sentences,
         ):
-            report = remediation.apply_remediation(self.vault, context=FIXED_CONTEXT)
+            report = remediation.apply_remediation(
+                self.vault, context=FIXED_CONTEXT, enforce_registry=False
+            )
 
         self.assertEqual(page.read_bytes(), before)
         self.assertEqual(report["entries"][0]["reason_codes"], ["raw_fidelity_failed"])
@@ -356,9 +472,13 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         page = self._write_page()
         self._write_raw(raw_markdown())
 
-        first = remediation.apply_remediation(self.vault, context=FIXED_CONTEXT)
+        first = remediation.apply_remediation(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
         after_first = page.read_bytes()
-        second = remediation.apply_remediation(self.vault, context=FIXED_CONTEXT)
+        second = remediation.apply_remediation(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
 
         self.assertEqual(first["summary"]["applied"], 1)
         self.assertEqual(page.read_bytes(), after_first)

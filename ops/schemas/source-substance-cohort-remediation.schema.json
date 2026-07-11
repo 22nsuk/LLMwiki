@@ -142,6 +142,7 @@
       "additionalProperties": false,
       "required": [
         "page",
+        "registry_id",
         "status",
         "classification_route",
         "reason_codes",
@@ -163,6 +164,7 @@
           "type": "string",
           "pattern": "^(wiki|system)/source--[^/]+\\.md$"
         },
+        "registry_id": {"type": ["string", "null"]},
         "classification_route": {
           "enum": [
             "no_action",

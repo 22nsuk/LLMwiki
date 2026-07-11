@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,9 +30,11 @@ from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
 )
+from ops.scripts.core.source_trace_runtime import extract_source_trace_refs
 from ops.scripts.eval.source_page_substance_runtime import (
     evaluate_source_page_substance,
 )
+from ops.scripts.eval.wiki_page_runtime import section_body
 from ops.scripts.registry.source_substance_cohort_classify import (
     build_report as build_classification_report,
 )
@@ -64,6 +67,45 @@ _HTML_RE = re.compile(r"<[^>]+>")
 _MARKDOWN_PREFIX_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)")
 _SENTENCE_RE = re.compile(r"[^.!?。！？\n]+[.!?。！？](?=\s|$)")
 _WORD_RE = re.compile(r"[^\W_]+", re.UNICODE)
+_QUERY_TOKEN_RE = re.compile(r"[A-Za-z0-9]{3,}|[가-힣]{2,}")
+_EMAIL_RE = re.compile(r"\b[^\s@]+@[^\s@]+\.[^\s@]+\b")
+_LEADING_NOISE_RE = re.compile(
+    r"^(?:by\s+|사진\s*[=:]|자료\s*[=:]|그래픽\s*[=:]|출처\s*[=:]|"
+    r"입력\s|수정\s|등록\s|기자\s|관련\s*기사|기사\s*듣기|자동\s*요약)",
+    re.IGNORECASE,
+)
+_NOISE_MARKERS = (
+    "all rights reserved",
+    "copyright",
+    "image credit",
+    "photo credit",
+    "getty images",
+    "기사 듣기",
+    "글자 크기",
+    "관련 기사",
+    "관련기사",
+    "본문 바로가기",
+    "자동요약",
+    "음성으로 듣기",
+    "무단전재",
+    "재배포 금지",
+)
+_QUERY_STOPWORDS = frozenset(
+    {
+        "source",
+        "this",
+        "that",
+        "with",
+        "from",
+        "about",
+        "자료",
+        "원문",
+        "기록",
+        "근거",
+        "source가",
+        "source는",
+    }
+)
 _COPYRIGHT_MARKERS = (
     "copyright",
     "all rights reserved",
@@ -109,6 +151,7 @@ class _Candidate:
     after_text: str
     raw_path: Path
     raw_sha256: str
+    used_sentence_digests: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -171,6 +214,15 @@ def extract_complete_sentences(normalized_raw_text: str) -> list[str]:
         sentence = re.sub(r"\s+", " ", match.group(0)).strip()
         if sentence.endswith(("...", "…")):
             continue
+        lowered = sentence.casefold()
+        if (
+            _EMAIL_RE.search(sentence)
+            or _LEADING_NOISE_RE.search(sentence)
+            or any(marker in lowered for marker in _NOISE_MARKERS)
+            or any(marker in sentence for marker in ("**", "__", "![", "|"))
+            or re.match(r"^[a-z]", sentence)
+        ):
+            continue
         if len(sentence) < 12 or len(_WORD_RE.findall(sentence)) < 3:
             continue
         identity = sentence.casefold()
@@ -179,6 +231,86 @@ def extract_complete_sentences(normalized_raw_text: str) -> list[str]:
         seen.add(identity)
         sentences.append(sentence)
     return sentences
+
+
+def _query_tokens(page_text: str, frontmatter: dict[str, Any]) -> set[str]:
+    query_parts = [
+        str(frontmatter.get(field, ""))
+        for field in (
+            "title",
+            "domain",
+            "primary_concept",
+            "primary_lens",
+            "topic_family",
+            "topic_subfamily",
+        )
+    ]
+    query_parts.extend(
+        section_body(page_text, heading) or ""
+        for heading in ("Summary", "Why it matters")
+    )
+    return {
+        token.casefold()
+        for token in _QUERY_TOKEN_RE.findall(" ".join(query_parts))
+        if token.casefold() not in _QUERY_STOPWORDS
+    }
+
+
+def _sentence_tokens(sentence: str) -> set[str]:
+    return {
+        token.casefold()
+        for token in _QUERY_TOKEN_RE.findall(sentence)
+        if token.casefold() not in _QUERY_STOPWORDS
+    }
+
+
+def _query_overlap_count(tokens: set[str], query_tokens: set[str]) -> int:
+    matched_query_tokens: set[str] = set()
+    for query_token in query_tokens:
+        for token in tokens:
+            if query_token == token:
+                matched_query_tokens.add(query_token)
+                break
+            if re.fullmatch(r"[가-힣]+", query_token) and re.fullmatch(
+                r"[가-힣]+", token
+            ) and (query_token in token or token in query_token):
+                matched_query_tokens.add(query_token)
+                break
+    return len(matched_query_tokens)
+
+
+def _rank_source_sentences(
+    sentences: Sequence[str],
+    *,
+    page_text: str,
+    frontmatter: dict[str, Any],
+) -> list[str]:
+    query_tokens = _query_tokens(page_text, frontmatter)
+    title = str(frontmatter.get("title", "")).strip().casefold()
+    ranked: list[tuple[int, int, str, set[str]]] = []
+    for index, sentence in enumerate(sentences):
+        lowered = sentence.casefold()
+        if title and (lowered == title or (lowered.startswith(title) and len(sentence) < 160)):
+            continue
+        tokens = _sentence_tokens(sentence)
+        overlap = _query_overlap_count(tokens, query_tokens)
+        if query_tokens and overlap == 0:
+            continue
+        score = overlap * 10 + int(bool(re.search(r"\d", sentence)))
+        score += int(35 <= len(sentence) <= 280)
+        ranked.append((-score, index, sentence, tokens))
+
+    selected: list[tuple[str, set[str]]] = []
+    for _negative_score, _index, sentence, tokens in sorted(ranked):
+        if any(
+            tokens
+            and existing_tokens
+            and len(tokens & existing_tokens) / len(tokens | existing_tokens) >= 0.7
+            for _existing, existing_tokens in selected
+        ):
+            continue
+        selected.append((sentence, tokens))
+    return [sentence for sentence, _tokens in selected]
 
 
 def _replace_section(text: str, heading: str, body: str) -> str:
@@ -243,6 +375,7 @@ def _new_entry(
 ) -> dict[str, Any]:
     return {
         "page": _relative_path(vault, page_path),
+        "registry_id": None,
         "status": "operator_review",
         "classification_route": classification_route,
         "reason_codes": [],
@@ -267,6 +400,9 @@ def _build_page_candidate(
     *,
     pdf_extractor: PdfExtractor,
     classification_route: str,
+    registry_entries_by_id: dict[str, list[dict[str, Any]]],
+    enforce_registry: bool,
+    allow_pdf_candidates: bool,
 ) -> tuple[dict[str, Any] | None, _Candidate | None]:
     page_text = page_path.read_text(encoding="utf-8")
     initial_eval = evaluate_source_page_substance(page_text)
@@ -288,6 +424,8 @@ def _build_page_candidate(
     except ValueError:
         entry["reason_codes"] = ["invalid_frontmatter"]
         return entry, None
+    registry_id = str((frontmatter or {}).get("registry_id", "")).strip()
+    entry["registry_id"] = registry_id or None
     raw_path, path_error = _resolve_raw_path(vault, (frontmatter or {}).get("raw_path"))
     if path_error is not None or raw_path is None:
         entry["reason_codes"] = [path_error]
@@ -296,6 +434,22 @@ def _build_page_candidate(
     raw_bytes = raw_path.read_bytes()
     raw_sha256 = _sha256_bytes(raw_bytes)
     entry["source_raw_sha256"] = raw_sha256
+    if enforce_registry:
+        alignment_error = _registry_alignment_error(
+            vault=vault,
+            page_path=page_path,
+            page_text=page_text,
+            frontmatter=frontmatter or {},
+            raw_path=raw_path,
+            raw_sha256=raw_sha256,
+            registry_entries_by_id=registry_entries_by_id,
+        )
+        if alignment_error is not None:
+            entry["reason_codes"] = [alignment_error]
+            return entry, None
+    if raw_path.suffix.casefold() == ".pdf" and not allow_pdf_candidates:
+        entry["reason_codes"] = ["pdf_requires_operator_review"]
+        return entry, None
     raw_text, extraction_error = _extract_raw_text(
         raw_path, pdf_extractor=pdf_extractor
     )
@@ -309,7 +463,11 @@ def _build_page_candidate(
     normalized_raw = _normalize_raw_text(
         raw_text, markdown=raw_path.suffix.casefold() in {".md", ".markdown"}
     )
-    sentences = extract_complete_sentences(normalized_raw)
+    sentences = _rank_source_sentences(
+        extract_complete_sentences(normalized_raw),
+        page_text=page_text,
+        frontmatter=frontmatter or {},
+    )
     entry["normalized_raw_sha256"] = _sha256_text(normalized_raw)
     entry["extracted_sentence_count"] = len(sentences)
 
@@ -319,15 +477,22 @@ def _build_page_candidate(
     if not repair_summary and not repair_key_points:
         entry["reason_codes"] = ["no_supported_section_repair"]
         return entry, None
+    required_sentence_count = 6 if repair_summary and repair_key_points else 4
     if repair_summary and len(sentences) < 2:
         entry["reason_codes"].append("insufficient_summary_sentences")
-    if repair_key_points and len(sentences) < 4:
+    if repair_key_points and len(sentences) < required_sentence_count:
         entry["reason_codes"].append("insufficient_key_point_sentences")
     if entry["reason_codes"]:
         return entry, None
 
     summary_sentences = sentences[:2] if repair_summary else []
-    key_point_sentences = sentences[:4] if repair_key_points else []
+    key_point_sentences = (
+        sentences[2:6]
+        if repair_summary and repair_key_points
+        else sentences[:4]
+        if repair_key_points
+        else []
+    )
     candidate_text = page_text
     if repair_summary:
         candidate_text = _replace_section(
@@ -370,8 +535,67 @@ def _build_page_candidate(
             after_text=candidate_text,
             raw_path=raw_path,
             raw_sha256=raw_sha256,
+            used_sentence_digests=tuple(
+                _sha256_text(sentence) for sentence in used_sentences
+            ),
         ),
     )
+
+
+def _load_registry_entries_by_id(vault: Path) -> dict[str, list[dict[str, Any]]]:
+    path = vault / "ops/raw-registry.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    entries = payload.get("entries") if isinstance(payload, dict) else None
+    result: dict[str, list[dict[str, Any]]] = {}
+    for entry in entries if isinstance(entries, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        registry_id = str(entry.get("registry_id", "")).strip()
+        if registry_id:
+            result.setdefault(registry_id, []).append(entry)
+    return result
+
+
+def _registry_alignment_error(
+    *,
+    vault: Path,
+    page_path: Path,
+    page_text: str,
+    frontmatter: dict[str, Any],
+    raw_path: Path,
+    raw_sha256: str,
+    registry_entries_by_id: dict[str, list[dict[str, Any]]],
+) -> str | None:
+    registry_id = str(frontmatter.get("registry_id", "")).strip()
+    if not registry_id:
+        return "registry_id_missing"
+    entries = registry_entries_by_id.get(registry_id, [])
+    if len(entries) != 1:
+        return "registry_id_not_unique"
+    entry = entries[0]
+    if str(entry.get("target_page", "")).strip() != page_path.stem:
+        return "registry_target_page_mismatch"
+    raw_relative = _relative_path(vault, raw_path)
+    aliases = entry.get("path_aliases")
+    alias_values = aliases if isinstance(aliases, list) else []
+    locators = {
+        str(entry.get("storage_path", "")).strip(),
+        *(str(alias).strip() for alias in alias_values),
+    }
+    if raw_relative not in locators:
+        return "registry_raw_path_mismatch"
+    expected_sha256 = str(entry.get("content_sha256", "")).strip().lower()
+    if not expected_sha256:
+        return "registry_raw_sha256_missing"
+    if expected_sha256 != raw_sha256:
+        return "registry_raw_sha256_mismatch"
+    source_trace_refs = extract_source_trace_refs(section_body(page_text, "Source trace"))
+    if raw_relative not in source_trace_refs:
+        return "source_trace_raw_path_mismatch"
+    return None
 
 
 def _report_status(entries: Sequence[dict[str, Any]]) -> str:
@@ -429,6 +653,8 @@ def build_remediation(
     *,
     context: RuntimeContext | None = None,
     pdf_extractor: PdfExtractor | None = None,
+    enforce_registry: bool = True,
+    allow_pdf_candidates: bool = False,
 ) -> RemediationBuild:
     resolved_vault = vault.resolve()
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
@@ -443,6 +669,7 @@ def build_remediation(
         for entry in classification["entries"]
         if isinstance(entry, dict)
     }
+    registry_entries_by_id = _load_registry_entries_by_id(resolved_vault)
     entries: list[dict[str, Any]] = []
     candidates: list[_Candidate] = []
     for page_path in pages:
@@ -454,11 +681,47 @@ def build_remediation(
                 _relative_path(resolved_vault, page_path),
                 "operator_review",
             ),
+            registry_entries_by_id=registry_entries_by_id,
+            enforce_registry=enforce_registry,
+            allow_pdf_candidates=allow_pdf_candidates,
         )
         if entry is not None:
             entries.append(entry)
         if candidate is not None:
             candidates.append(candidate)
+
+    repeated_sentence_digests = {
+        digest
+        for digest, count in Counter(
+            digest
+            for candidate in candidates
+            for digest in candidate.used_sentence_digests
+        ).items()
+        if count > 1
+    }
+    if repeated_sentence_digests:
+        rejected_pages = {
+            candidate.page_path
+            for candidate in candidates
+            if repeated_sentence_digests.intersection(
+                candidate.used_sentence_digests
+            )
+        }
+        for entry in entries:
+            if resolved_vault / entry["page"] not in rejected_pages:
+                continue
+            entry["status"] = "operator_review"
+            entry["reason_codes"] = ["sentence_reused_across_source_pages"]
+            entry["page_sha256_candidate"] = None
+            entry["candidate_eval"] = None
+            entry["summary_sentence_digests"] = []
+            entry["key_point_sentence_digests"] = []
+            entry["used_sentence_count"] = 0
+        candidates = [
+            candidate
+            for candidate in candidates
+            if candidate.page_path not in rejected_pages
+        ]
 
     envelope, policy, resolved_policy_path = _canonical_envelope(
         resolved_vault,
@@ -501,8 +764,16 @@ def apply_remediation(
     *,
     context: RuntimeContext | None = None,
     pdf_extractor: PdfExtractor | None = None,
+    enforce_registry: bool = True,
+    allow_pdf_candidates: bool = False,
 ) -> dict[str, Any]:
-    build = build_remediation(vault, context=context, pdf_extractor=pdf_extractor)
+    build = build_remediation(
+        vault,
+        context=context,
+        pdf_extractor=pdf_extractor,
+        enforce_registry=enforce_registry,
+        allow_pdf_candidates=allow_pdf_candidates,
+    )
     resolved_vault = vault.resolve()
     for candidate in build.candidates:
         current_text = candidate.page_path.read_text(encoding="utf-8")
@@ -582,8 +853,16 @@ def build_report(
     *,
     context: RuntimeContext | None = None,
     pdf_extractor: PdfExtractor | None = None,
+    enforce_registry: bool = True,
+    allow_pdf_candidates: bool = False,
 ) -> dict[str, Any]:
-    return build_remediation(vault, context=context, pdf_extractor=pdf_extractor).report
+    return build_remediation(
+        vault,
+        context=context,
+        pdf_extractor=pdf_extractor,
+        enforce_registry=enforce_registry,
+        allow_pdf_candidates=allow_pdf_candidates,
+    ).report
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
