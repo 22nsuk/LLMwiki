@@ -1330,6 +1330,53 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertIn("test_summary_not_pass", {item["code"] for item in report["blockers"]})
         self.assertEqual(validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)), [])
 
+    def test_current_full_suite_covers_marker_selected_contract_lanes(self) -> None:
+        self._write_dependency_lockfiles()
+        self._write_happy_sources()
+        self._write_source_report(
+            "test_summary",
+            {
+                "status": "pass",
+                "suite": "report-contract-summary",
+                "suite_scope": "report_contract_summary",
+                "command": "pytest -m report_contract_core",
+                "deselected_tests": [],
+                "deselection_lifecycle": {
+                    "status": "pass",
+                    "actual_deselected_count": 0,
+                    "max_allowed_deselected_count": 0,
+                    "over_budget": False,
+                    "expired_count": 0,
+                    "release_blocking_count": 0,
+                    "missing_lifecycle_count": 0,
+                    "duplicate_policy_entry_count": 0,
+                    "unused_policy_entry_count": 0,
+                    "blockers": [],
+                },
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["clean_release_ready"])
+        self.assertTrue(report["machine_release_allowed"])
+        lanes = {item["lane_id"]: item for item in report["test_failure_lanes"]}
+        self.assertEqual(
+            {lane_id: lane["status"] for lane_id, lane in lanes.items()},
+            {
+                "report_schema_contract": "pass",
+                "runtime_telemetry_schema_contract": "pass",
+            },
+        )
+        self.assertTrue(all(lane["represented_in_summary"] for lane in lanes.values()))
+        self.assertTrue(
+            all(
+                lane["source_path"] == "ops/reports/test-execution-summary-full.json"
+                for lane in lanes.values()
+            )
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)), [])
+
     def test_truth_ladder_separates_checked_in_from_live_rerun_readiness(self) -> None:
         self._write_happy_sources()
         self._write_source_report(
