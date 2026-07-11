@@ -15,6 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 class SyncDerivedConvergenceTests(unittest.TestCase):
     def test_sync_derived_does_not_change_git_status(self) -> None:
+        if not _is_git_worktree():
+            self.skipTest("requires a Git worktree; public export is intentionally gitless")
         env = os.environ.copy()
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         before_status = _git_status_porcelain()
@@ -40,6 +42,19 @@ class SyncDerivedConvergenceTests(unittest.TestCase):
             ),
         )
         self.assertEqual(_git_status_porcelain(), before_status)
+
+
+def _is_git_worktree() -> bool:
+    status = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    return status.returncode == 0 and status.stdout.strip() == "true"
 
 
 def _git_status_porcelain() -> str:

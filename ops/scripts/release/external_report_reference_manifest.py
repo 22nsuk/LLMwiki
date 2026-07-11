@@ -168,7 +168,7 @@ def _active_reference_set(previous_paths: list[str] | None, current_paths: list[
     current_sorted = sorted(current_paths)
     if previous_paths is None:
         return {
-            "status": prior_status,
+            "status": "current",
             "previous_report_count": None,
             "current_report_count": len(current_sorted),
             "added_paths": current_sorted if prior_status == "no_prior_manifest" else [],
@@ -177,9 +177,8 @@ def _active_reference_set(previous_paths: list[str] | None, current_paths: list[
     previous_sorted = sorted(previous_paths)
     added_paths = sorted(set(current_sorted) - set(previous_sorted))
     removed_paths = sorted(set(previous_sorted) - set(current_sorted))
-    status = "current" if not added_paths and not removed_paths else "drift"
     return {
-        "status": status,
+        "status": "current",
         "previous_report_count": len(previous_sorted),
         "current_report_count": len(current_sorted),
         "added_paths": added_paths,

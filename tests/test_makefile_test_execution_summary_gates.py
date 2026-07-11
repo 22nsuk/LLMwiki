@@ -52,8 +52,9 @@ COMPATIBILITY_TEST_EXECUTION_SUMMARY_TARGETS = {
         "test-execution-summary-report-contract "
         "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=current-or-refresh"
     ),
-    "test-execution-summary-reuse": (
-        "test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=reuse"
+    "test-execution-summary-revision-rebind": (
+        "test-execution-summary-report-contract "
+        "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=revision-rebind"
     ),
     "test-execution-summary-full-body": (
         "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=body"
@@ -64,8 +65,8 @@ COMPATIBILITY_TEST_EXECUTION_SUMMARY_TARGETS = {
     "test-execution-summary-full-refresh-no-converge": (
         "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=refresh-no-converge"
     ),
-    "test-execution-summary-full-aggregate-reuse": (
-        "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=aggregate-reuse"
+    "test-execution-summary-full-revision-rebind": (
+        "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=revision-rebind"
     ),
     "test-execution-summary-full-current-check": (
         "test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=current-check"
@@ -228,7 +229,7 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote",
             ),
         )
-    def test_report_contract_modes_preserve_refresh_and_reuse_paths(self) -> None:
+    def test_report_contract_modes_separate_revision_rebind_from_test_execution(self) -> None:
         text = _makefile_text()
 
         refresh_block = _mode_block(
@@ -256,12 +257,27 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
             current_or_refresh_block,
         )
         self.assertIn(
-            "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=reuse",
+            "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=revision-rebind",
             current_or_refresh_block,
         )
-        reuse_block = _mode_block(text, "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE", "reuse")
-        self.assertIn("--reuse-if-current", reuse_block)
-        self.assertIn("--refresh-revision-if-same-tree", reuse_block)
+        self.assertIn(
+            "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=run",
+            current_or_refresh_block,
+        )
+        rebind_block = _mode_block(
+            text,
+            "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE",
+            "revision-rebind",
+        )
+        self.assertIn("--reuse-if-current", rebind_block)
+        self.assertIn("--reuse-only", rebind_block)
+        self.assertIn("--refresh-revision-if-same-tree", rebind_block)
+        self.assertIn("--binding-mode revision", rebind_block)
+        self.assertIn('rm -f "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"', rebind_block)
+        self.assertIn(
+            'test -f "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"',
+            rebind_block,
+        )
 
     def test_full_summary_modes_preserve_body_refresh_and_reuse_paths(self) -> None:
         text = _makefile_text()
@@ -304,8 +320,17 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
             text, "TEST_EXECUTION_SUMMARY_FULL_MODE", "current-or-refresh"
         )
         self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=current-check", current_or_refresh_block)
-        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=aggregate-reuse", current_or_refresh_block)
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=revision-rebind", current_or_refresh_block)
         self.assertIn("TEST_EXECUTION_SUMMARY_FULL_MODE=refresh-no-converge", current_or_refresh_block)
+        rebind_block = _mode_block(text, "TEST_EXECUTION_SUMMARY_FULL_MODE", "revision-rebind")
+        self.assertIn("--reuse-only", rebind_block)
+        self.assertIn("--refresh-revision-if-same-tree", rebind_block)
+        self.assertIn("--binding-mode revision", rebind_block)
+        self.assertIn('rm -f "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)"', rebind_block)
+        self.assertIn(
+            'test -f "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)"',
+            rebind_block,
+        )
 
     def test_compatibility_summary_targets_delegate_to_mode_targets(self) -> None:
         text = _makefile_text()
@@ -320,6 +345,9 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                     )
                     continue
                 self.assertIn(f"$(MAKE) {expected}", block)
+                if target.endswith("revision-rebind"):
+                    self.assertIn("no tests were run", block)
+                    self.assertIn("release-source-ready-prepare", block)
 
     def test_report_contract_closeout_uses_generated_artifact_orchestrator(self) -> None:
         text = _makefile_text()

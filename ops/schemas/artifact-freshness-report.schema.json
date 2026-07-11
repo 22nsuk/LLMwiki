@@ -156,6 +156,7 @@
         "root_ephemeral_artifact_count",
         "run_log_placeholder_count",
         "unknown_currentness_artifact_count",
+        "source_revision_provenance_only_artifact_count",
         "non_utf8_text_artifact_count",
         "missing_schema_count",
         "missing_artifact_envelope_count",
@@ -199,6 +200,10 @@
           "minimum": 0
         },
         "unknown_currentness_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_revision_provenance_only_artifact_count": {
           "type": "integer",
           "minimum": 0
         },
@@ -916,7 +921,7 @@
           "type": "string",
           "enum": [
             "current",
-            "stale",
+            "provenance_only",
             "unknown",
             "not_applicable"
           ]

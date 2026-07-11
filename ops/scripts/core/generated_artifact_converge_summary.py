@@ -5,16 +5,17 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.core.generated_artifact_semantic_digest import (
-    JSON_TOP_LEVEL_ENVELOPE_MODE,
+from ops.scripts.core.artifact_binding_runtime import (
+    CONTENT_BINDING_MODE,
+    binding_file_digest,
     canonical_digest,
-    semantic_file_digest,
     sha256_bytes,
 )
 
 DEFAULT_OUT = "tmp/generated-artifact-converge-summary.json"
 DEFAULT_BEFORE_OUT = "tmp/generated-artifact-converge-summary.before.json"
 TARGET_OUTPUT_PATHS = {
+    "artifact-freshness": ("ops/reports/artifact-freshness-report.json",),
     "external-report-action-matrix": ("ops/reports/external-report-action-matrix.json",),
     "generated-artifact-index": (
         "ops/operator/artifact-relocation-audit.json",
@@ -25,7 +26,6 @@ TARGET_OUTPUT_PATHS = {
         "ops/reports/release-risk-taxonomy-matrix.md",
         "ops/reports/generated-artifact-index.json",
     ),
-    "artifact-freshness": ("ops/reports/artifact-freshness-report.json",),
 }
 
 
@@ -36,18 +36,21 @@ def _path_snapshot(vault: Path, rel_path: str) -> dict[str, Any]:
             "path": rel_path,
             "exists": False,
             "raw_sha256": "",
-            "semantic_sha256": "",
-            "semantic_mode": "missing",
+            "binding_sha256": "",
+            "binding_format": "missing",
         }
     raw = path.read_bytes()
     raw_sha256 = sha256_bytes(raw)
-    semantic_mode, semantic_sha256 = semantic_file_digest(path)
+    binding_format, binding_sha256 = binding_file_digest(
+        path,
+        binding_mode=CONTENT_BINDING_MODE,
+    )
     return {
         "path": rel_path,
         "exists": True,
         "raw_sha256": raw_sha256,
-        "semantic_sha256": semantic_sha256,
-        "semantic_mode": semantic_mode,
+        "binding_sha256": binding_sha256,
+        "binding_format": binding_format,
     }
 
 
@@ -71,7 +74,7 @@ def _target_snapshot(vault: Path, target: str, paths: tuple[str, ...]) -> dict[s
         "paths": list(paths),
         "path_digests": path_snapshots,
         "raw_digest": _target_digest(path_snapshots, "raw_sha256"),
-        "semantic_digest": _target_digest(path_snapshots, "semantic_sha256"),
+        "binding_digest": _target_digest(path_snapshots, "binding_sha256"),
     }
 
 
@@ -99,35 +102,35 @@ def _comparison(after: dict[str, Any], before: dict[str, Any] | None) -> dict[st
         for item in before.get("path_digests", [])
         if isinstance(item, dict)
     }
-    semantic_changed_paths: list[str] = []
+    binding_changed_paths: list[str] = []
     raw_changed_paths: list[str] = []
     for item in after["path_digests"]:
         path = str(item["path"])
         before_item = before_path_digests.get(path, {})
-        if str(before_item.get("semantic_sha256", "")) != str(item["semantic_sha256"]):
-            semantic_changed_paths.append(path)
+        if str(before_item.get("binding_sha256", "")) != str(item["binding_sha256"]):
+            binding_changed_paths.append(path)
         if str(before_item.get("raw_sha256", "")) != str(item["raw_sha256"]):
             raw_changed_paths.append(path)
-    semantic_changed = bool(semantic_changed_paths)
+    binding_changed = bool(binding_changed_paths)
     raw_changed = bool(raw_changed_paths)
     return {
         "target": after["target"],
         "paths": after["paths"],
-        "status": "changed" if semantic_changed else "noop",
-        "semantic_changed": semantic_changed,
+        "status": "changed" if binding_changed else "noop",
+        "binding_changed": binding_changed,
         "raw_changed": raw_changed,
         "change_classification": (
-            "semantic_changed"
-            if semantic_changed
-            else "envelope_or_raw_only_changed"
+            "binding_changed"
+            if binding_changed
+            else "raw_only_changed"
             if raw_changed
             else "noop"
         ),
-        "semantic_before_digest": str(before.get("semantic_digest", "")),
-        "semantic_after_digest": after["semantic_digest"],
+        "binding_before_digest": str(before.get("binding_digest", "")),
+        "binding_after_digest": after["binding_digest"],
         "raw_before_digest": str(before.get("raw_digest", "")),
         "raw_after_digest": after["raw_digest"],
-        "semantic_changed_paths": semantic_changed_paths,
+        "binding_changed_paths": binding_changed_paths,
         "raw_changed_paths": raw_changed_paths,
         "path_digests": after["path_digests"],
     }
@@ -148,14 +151,14 @@ def build_report(
             {
                 **snapshot,
                 "status": "snapshot",
-                "semantic_before_digest": snapshot["semantic_digest"],
-                "semantic_after_digest": snapshot["semantic_digest"],
+                "binding_before_digest": snapshot["binding_digest"],
+                "binding_after_digest": snapshot["binding_digest"],
                 "raw_before_digest": snapshot["raw_digest"],
                 "raw_after_digest": snapshot["raw_digest"],
-                "semantic_changed": False,
+                "binding_changed": False,
                 "raw_changed": False,
                 "change_classification": "snapshot",
-                "semantic_changed_paths": [],
+                "binding_changed_paths": [],
                 "raw_changed_paths": [],
             }
             for snapshot in snapshots
@@ -172,13 +175,25 @@ def build_report(
         "phase": phase,
         "status": (
             "changed"
-            if any(item["semantic_changed"] for item in target_summaries)
+            if any(item["binding_changed"] for item in target_summaries)
             else "noop"
             if phase == "after"
             else "snapshot"
         ),
         "summary_path_policy": "tmp_only_noncanonical_observability",
-        "semantic_digest_mode": f"{JSON_TOP_LEVEL_ENVELOPE_MODE}_and_markdown_generated_at",
+        "binding_mode": CONTENT_BINDING_MODE,
+        "writer_count": len(target_summaries),
+        "changed_writer_count": sum(
+            1 for item in target_summaries if item["status"] == "changed"
+        ),
+        "noop_promotion_count": sum(
+            1 for item in target_summaries if item["status"] == "noop"
+        ),
+        "raw_only_change_count": sum(
+            1
+            for item in target_summaries
+            if item["change_classification"] == "raw_only_changed"
+        ),
         "target_summaries": target_summaries,
     }
 

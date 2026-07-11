@@ -14,7 +14,6 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         build_canonical_report_envelope,
     )
     from ops.scripts.core.artifact_io_runtime import (
-        SEMANTIC_NOOP_ENVELOPE_FIELDS,
         SchemaBackedReportWriteRequest,
         read_json_object,
         resolve_schema_backed_report_output_path,
@@ -55,7 +54,6 @@ else:
         build_canonical_report_envelope,
     )
     from ops.scripts.core.artifact_io_runtime import (
-        SEMANTIC_NOOP_ENVELOPE_FIELDS,
         SchemaBackedReportWriteRequest,
         read_json_object,
         resolve_schema_backed_report_output_path,
@@ -201,12 +199,25 @@ def _check_spec_subsequence(
     entry: dict[str, Any],
     invocations_by_target: dict[str, list[dict[str, Any]]],
 ) -> dict[str, Any]:
-    return _check_subsequence(
+    invocations = invocations_by_target.get(str(entry["target"]), [])
+    expected_roles = _string_list(entry.get("roles"))
+    check = _check_subsequence(
         str(entry["id"]),
-        invocations_by_target.get(str(entry["target"]), []),
-        _string_list(entry.get("roles")),
+        invocations,
+        expected_roles,
         details=str(entry.get("details", "")),
     )
+    observed_roles = [str(item["role"]) for item in invocations]
+    if bool(entry.get("exact")) and observed_roles != expected_roles:
+        check["status"] = "fail"
+        check["violations"].append(
+            {
+                "expected_role": ",".join(expected_roles),
+                "observed_role": ",".join(observed_roles),
+                "reason": "sequence_must_be_exact",
+            }
+        )
+    return check
 
 
 def _append_terminal_guard(
@@ -458,9 +469,9 @@ def _fixed_point_writer_specs(policy: dict[str, Any]) -> list[dict[str, Any]]:
                     for dep in item.get("depends_on", [])
                     if str(dep).strip()
                 ],
-                "expensive_prerequisites_once": [
+                "expensive_prerequisites": [
                     str(dep).strip()
-                    for dep in item.get("expensive_prerequisites_once", [])
+                    for dep in item.get("expensive_prerequisites", [])
                     if str(dep).strip()
                 ],
                 "produces": [
@@ -477,11 +488,10 @@ def _fixed_point_initial_order(writers: list[dict[str, Any]]) -> list[str]:
     seen: set[str] = set()
     ordered: list[str] = []
     for writer in writers:
-        for target in writer["expensive_prerequisites_once"]:
+        for target in writer["expensive_prerequisites"]:
             if target not in seen:
                 seen.add(target)
                 ordered.append(target)
-    for writer in writers:
         target = str(writer["target"])
         if target not in seen:
             seen.add(target)
@@ -520,7 +530,7 @@ def _check_fixed_point_policy_order(writers: list[dict[str, Any]]) -> dict[str, 
     )
 
 
-def _check_planner_hooks(planner_report: dict[str, Any], closeout_invocations: list[dict[str, Any]]) -> dict[str, Any]:
+def _check_planner_hooks(planner_report: dict[str, Any]) -> dict[str, Any]:
     workflows = {
         str(item.get("workflow_id", "")): item
         for item in planner_report.get("selected_workflows", [])
@@ -534,7 +544,7 @@ def _check_planner_hooks(planner_report: dict[str, Any], closeout_invocations: l
     ]
     required_steps = [
         "workflow-dependency-planner",
-        "release-closeout-finality-verify",
+        "release-terminal-finality",
     ]
     violations = [
         {
@@ -549,7 +559,7 @@ def _check_planner_hooks(planner_report: dict[str, Any], closeout_invocations: l
         expected_order=required_steps,
         observed_order=planner_steps,
         violations=violations,
-        details="The planner closeout recommendation must keep finality hooks visible in the source-derived workflow graph.",
+        details="The planner closeout recommendation must delegate once to terminal finality instead of expanding writer suffixes.",
     )
 
 
@@ -571,8 +581,6 @@ def _check_planner_fixed_point_writer_order(
         expected = ["generated-artifact-converge"]
     elif "release-terminal-finality" in planner_steps:
         expected = ["release-terminal-finality"]
-    elif "generated-artifact-finality-suffix" in planner_steps:
-        expected = ["generated-artifact-finality-suffix"]
     else:
         expected = _fixed_point_initial_order(writers)
     positions = _subsequence_positions(
@@ -592,7 +600,7 @@ def _check_planner_fixed_point_writer_order(
         expected_order=expected,
         observed_order=planner_steps,
         violations=violations,
-        details="The planner closeout recommendation must derive fixed-point writer order from ops/policies/release-closeout-fixed-point.json.",
+        details="The planner closeout recommendation must delegate to the fixed-point terminal controller or preserve a valid graph entrypoint.",
     )
 
 
@@ -759,10 +767,7 @@ def _release_workflow_order_checks(inputs: _WorkflowOrderInputs) -> list[dict[st
     checks.extend(
         [
             _check_fixed_point_policy_order(inputs.writers),
-            _check_planner_hooks(
-                inputs.planner_report,
-                invocations[RELEASE_CONVERGE_TARGET],
-            ),
+            _check_planner_hooks(inputs.planner_report),
             _check_planner_fixed_point_writer_order(
                 inputs.planner_report,
                 inputs.writers,
@@ -884,10 +889,17 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
 
 
 def _stable_report_payload(report: dict[str, Any]) -> dict[str, Any]:
+    projection_envelope_fields = {
+        "generated_at",
+        "source_revision",
+        "source_tree_fingerprint",
+        "input_fingerprints",
+        "currentness",
+    }
     return {
         key: value
         for key, value in report.items()
-        if key not in SEMANTIC_NOOP_ENVELOPE_FIELDS
+        if key not in projection_envelope_fields
     }
 
 

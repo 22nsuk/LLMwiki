@@ -4,6 +4,10 @@
   "target_recipe_order": [
     "release-evidence-converge",
     "release-converge-preflight",
+    "release-converge-post-evidence",
+    "release-converge-post",
+    "release-converge-all-surfaces",
+    "release-converge-all-surfaces-pre-finality",
     "check-finalized",
     "release-finality-resettle",
     "release-terminal-finality",
@@ -15,6 +19,7 @@
     "release-source-ready",
     "release-source-ready-prepare",
     "release-source-ready-post-verify",
+    "release-post-commit-rebind",
     "release-post-commit-finalize"
   ],
   "role_overrides": [
@@ -117,9 +122,9 @@
           "raw_line": "$(MAKE) sync-public-policy-check"
         },
         {
-          "role": "public-check-summary-current-check",
-          "target": "public-check-summary-current-check",
-          "raw_line": "$(MAKE) public-check-summary-current-check"
+          "role": "public-check-all-check",
+          "target": "public-check-all-check",
+          "raw_line": "$(MAKE) public-check-all-check"
         },
         {
           "role": "artifact-freshness-check",
@@ -165,6 +170,40 @@
         }
       ],
       "details": "release-converge-preflight is protected as one exact physical recipe so no raw or unmodelled work can run before script-output surfaces refresh."
+    },
+    {
+      "id": "release_converge_post_protected_recipe",
+      "target": "release-converge-post",
+      "expected_lines": [
+        {
+          "role": "release-converge-post-evidence",
+          "target": "release-converge-post-evidence",
+          "raw_line": "$(MAKE) release-converge-post-evidence"
+        },
+        {
+          "role": "release-terminal-finality",
+          "target": "release-terminal-finality",
+          "raw_line": "$(MAKE) release-terminal-finality"
+        }
+      ],
+      "details": "release-converge-post completes evidence writers and delegates exactly once to terminal finality; the fixed-point graph owns the final operator readback writer."
+    },
+    {
+      "id": "release_converge_all_surfaces_protected_recipe",
+      "target": "release-converge-all-surfaces",
+      "expected_lines": [
+        {
+          "role": "release-converge-all-surfaces-pre-finality",
+          "target": "release-converge-all-surfaces-pre-finality",
+          "raw_line": "$(MAKE) release-converge-all-surfaces-pre-finality"
+        },
+        {
+          "role": "release-terminal-finality",
+          "target": "release-terminal-finality",
+          "raw_line": "$(MAKE) release-terminal-finality"
+        }
+      ],
+      "details": "release-converge-all-surfaces must finish all pre-finality surfaces and run terminal finality exactly once; the fixed-point graph owns the final operator readback writer."
     },
     {
       "id": "release_auto_promotion_preflight_prerequisites_protected_recipe",
@@ -412,10 +451,8 @@
         "release-evidence-dashboard-report",
         "release-lane-summary",
         "release-clean-blocker-ledger",
-        "release-closeout-post-check-finalizer-dry-run",
-        "release-closeout-fixed-point",
-        "operator-release-summary",
         "generated-artifact-converge",
+        "release-closeout-post-check-finalizer-dry-run",
         "release-closeout-fixed-point",
         "tmp-json-clean",
         "release-closeout-finality-verify"
@@ -434,6 +471,42 @@
       "details": "release-converge-preflight must refresh the narrow script-output surface before report-contract summaries or smoke evidence can read it."
     },
     {
+      "id": "release_converge_post_evidence_sequence",
+      "target": "release-converge-post-evidence",
+      "roles": [
+        "generated-artifact-converge",
+        "remediation-backlog"
+      ],
+      "exact": true,
+      "details": "release-converge-post-evidence owns only canonical evidence writers that must finish before terminal finality."
+    },
+    {
+      "id": "release_converge_post_sequence",
+      "target": "release-converge-post",
+      "roles": [
+        "release-converge-post-evidence",
+        "release-terminal-finality"
+      ],
+      "exact": true,
+      "details": "release-converge-post must complete evidence before one terminal finality handoff; no writer may run afterward."
+    },
+    {
+      "id": "release_converge_all_surfaces_pre_finality_sequence",
+      "target": "release-converge-all-surfaces-pre-finality",
+      "roles": [
+        "release-converge-preflight",
+        "registry-preflight",
+        "release-smoke-fast",
+        "release-smoke-full-reuse",
+        "sync-public-policy",
+        "public-check-all",
+        "test-execution-summary-full-current-or-refresh",
+        "release-converge-post-evidence"
+      ],
+      "exact": true,
+      "details": "the source-ready prepare lane must finish every mutable non-finality surface before the commit boundary."
+    },
+    {
       "id": "release_finality_resettle_sequence",
       "target": "release-finality-resettle",
       "roles": [
@@ -447,15 +520,14 @@
       "id": "release_terminal_finality_sequence",
       "target": "release-terminal-finality",
       "roles": [
-        "generated-artifact-finality-suffix",
-        "release-closeout-summary-report",
         "release-closeout-fixed-point",
         "tmp-json-clean",
         "release-closeout-post-check-finalizer-strict-dry-run",
         "tmp-json-clean",
         "release-closeout-finality-verify"
       ],
-      "details": "release-terminal-finality must settle freshness/index/matrix through the finality suffix, refresh fixed-point once, run a strict dry-run currentness check, then make finality verification terminal."
+      "exact": true,
+      "details": "release-terminal-finality must execute the binding graph once, run a strict read-only currentness check, then make finality verification terminal."
     },
     {
       "id": "release_authority_post_ready_finality_sequence",
@@ -559,7 +631,7 @@
         "test-execution-summary-current-check",
         "test-execution-summary-full-current-check",
         "sync-public-policy-check",
-        "public-check-summary-current-check",
+        "public-check-all-check",
         "artifact-freshness-check",
         "release-post-commit-finalizer-verify",
         "release-closeout-finality-verify"
@@ -584,19 +656,34 @@
       "roles": [
         "release-source-ready-prepare",
         "release-source-ready-commit",
+        "release-post-commit-rebind",
         "release-post-commit-finalize",
         "release-source-ready-post-verify"
       ],
-      "details": "release-source-ready must prepare all mutating evidence before committing, create one release-source-ready commit, converge post-commit evidence, then run a write-free post-verify lane."
+      "details": "release-source-ready must prepare non-finality evidence, commit once, bind revision authority to the new HEAD, then run check-only finalization and post-verify lanes."
     },
     {
       "id": "release_source_ready_prepare_sequence",
       "target": "release-source-ready-prepare",
       "roles": [
         "release-source-ready-snapshot",
-        "release-converge-all-surfaces"
+        "release-converge-all-surfaces-pre-finality"
       ],
-      "details": "release-source-ready-prepare must snapshot the starting HEAD before mutating convergence."
+      "exact": true,
+      "details": "release-source-ready-prepare must snapshot the starting HEAD and stop before revision-bound terminal finality."
+    },
+    {
+      "id": "release_post_commit_rebind_sequence",
+      "target": "release-post-commit-rebind",
+      "roles": [
+        "release-smoke-fast-refresh-check",
+        "release-smoke-full-reuse",
+        "test-execution-summary-revision-rebind",
+        "test-execution-summary-full-revision-rebind",
+        "release-terminal-finality"
+      ],
+      "exact": true,
+      "details": "post-commit rebinding must fail fast unless test evidence comes from the same source tree, refresh revision-sensitive smoke evidence without executing tests, and run terminal finality once for the committed HEAD; the fixed-point graph owns the operator readback writer."
     },
     {
       "id": "release_source_ready_post_verify_sequence",
@@ -711,12 +798,18 @@
       "allowed_repeated_targets": [
         "auto-improve-readiness-report-body",
         "generated-artifact-converge",
-        "release-closeout-fixed-point",
         "release-closeout-summary-report",
         "tmp-json-clean"
       ],
       "violation_reason": "unexpected_repeated_closeout_target",
-      "details": "Repeated release evidence converge refresh targets must stay explicit and bounded. Fixed-point owns iterative convergence; new repeated Make targets need an intentional contract update."
+      "details": "Repeated release evidence refresh targets must stay explicit and bounded. The fixed-point finalizer is single-pass, so new repeated Make targets need an intentional contract update."
+    },
+    {
+      "id": "release_converge_post_repetition_budget",
+      "target": "release-converge-post",
+      "allowed_repeated_targets": [],
+      "violation_reason": "release_converge_post_target_repeated",
+      "details": "The post-convergence lane delegates to terminal finality once; every direct target in this recipe must occur exactly once."
     },
     {
       "id": "release_auto_promotion_preflight_repetition_budget",

@@ -92,7 +92,7 @@
     },
     "schema_version": {
       "type": "integer",
-      "minimum": 1
+      "const": 2
     },
     "artifact_status": {
       "type": "string",
@@ -336,7 +336,9 @@
         "required": [
           "path",
           "artifact_kind",
-          "digest",
+          "raw_digest",
+          "binding_digest",
+          "binding_mode",
           "generated_at",
           "producer",
           "source_tree_fingerprint",
@@ -352,9 +354,17 @@
           "artifact_kind": {
             "type": "string"
           },
-          "digest": {
+          "raw_digest": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
+          },
+          "binding_digest": {
+            "type": "string",
+            "pattern": "^(missing|[a-f0-9]{64})$"
+          },
+          "binding_mode": {
+            "type": "string",
+            "enum": ["content", "revision", "raw"]
           },
           "generated_at": {
             "type": "string"

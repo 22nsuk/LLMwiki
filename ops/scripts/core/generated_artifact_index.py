@@ -91,11 +91,9 @@ DASHED_YYYYMMDD_RE = re.compile(r"(?<!\d)(20\d{2}-\d{2}-\d{2})(?!\d)")
 COMPACT_YYMMDD_RE = re.compile(r"(?<!\d)(\d{6})(?!\d)")
 RUN_ID_DATE_RE = re.compile(r"run-(20\d{6})")
 TASK_IMPROVEMENT_OBSERVATIONS_PREFIX = "ops/reports/task-improvement-observations/"
-NON_SEALING_INDEX_REPORTS = {
+NON_GRAPH_INDEX_EXCLUSION_PATHS = {
     "ops/reports/archive-execution-manifest.json",
     "ops/reports/make-target-inventory.json",
-    "ops/reports/release-closeout-batch-manifest.json",
-    "ops/reports/release-evidence-closeout-self-check.json",
     "ops/reports/release-workflow-order-guard.json",
     "ops/reports/workflow-dependency-planner.json",
 }
@@ -179,16 +177,33 @@ def _task_improvement_observation_reports(vault: Path) -> list[str]:
     ]
 
 
-def _is_sealing_index_report(record: dict[str, str]) -> bool:
-    return record["path"] != DEFAULT_OUT and record["path"] not in NON_SEALING_INDEX_REPORTS
+def _index_exclusion_paths(vault: Path) -> set[str]:
+    from ops.scripts.release.release_closeout_fixed_point import (
+        fixed_point_output_paths_at_or_downstream,
+    )
+
+    return NON_GRAPH_INDEX_EXCLUSION_PATHS | fixed_point_output_paths_at_or_downstream(
+        vault,
+        "generated-artifact-index-body",
+    )
 
 
 def _ops_report_inventory(vault: Path) -> list[dict[str, str]]:
-    return [record for record in _file_records(vault, "ops/reports") if _is_sealing_index_report(record)]
+    excluded_paths = _index_exclusion_paths(vault)
+    return [
+        record
+        for record in _file_records(vault, "ops/reports")
+        if record["path"] not in excluded_paths
+    ]
 
 
 def _operator_report_inventory(vault: Path) -> list[dict[str, str]]:
-    return _file_records(vault, "ops/operator")
+    excluded_paths = _index_exclusion_paths(vault)
+    return [
+        record
+        for record in _file_records(vault, "ops/operator")
+        if record["path"] not in excluded_paths
+    ]
 
 
 def _external_root_report_records(vault: Path) -> list[dict[str, str]]:
@@ -235,6 +250,7 @@ def _action_matrix_basis_state(vault: Path) -> dict[str, Any]:
         "status": "current",
         "reason_id": "action_matrix_basis_current",
         "source_revision": "",
+        "source_revision_status": "unknown",
         "source_tree_fingerprint": "",
         "current_source_revision": current_revision,
         "current_source_tree_fingerprint": current_fingerprint,
@@ -257,6 +273,9 @@ def _action_matrix_basis_state(vault: Path) -> dict[str, Any]:
     base.update(
         {
             "source_revision": source_revision,
+            "source_revision_status": (
+                "current" if source_revision == current_revision else "provenance_only"
+            ),
             "source_tree_fingerprint": source_tree_fingerprint,
         }
     )
@@ -278,16 +297,17 @@ def _action_matrix_basis_state(vault: Path) -> dict[str, Any]:
             "status": "stale",
             "reason_id": "action_matrix_currentness_not_current",
         }
-    if (
-        not source_revision
-        or not source_tree_fingerprint
-        or source_revision != current_revision
-        or source_tree_fingerprint != current_fingerprint
-    ):
+    if not source_revision or not source_tree_fingerprint:
         return {
             **base,
             "status": "source_identity_mismatch",
-            "reason_id": "action_matrix_source_identity_mismatch",
+            "reason_id": "action_matrix_source_identity_missing",
+        }
+    if source_tree_fingerprint != current_fingerprint:
+        return {
+            **base,
+            "status": "source_identity_mismatch",
+            "reason_id": "action_matrix_source_tree_fingerprint_mismatch",
         }
     if not isinstance(payload.get("action_items"), list):
         return {
@@ -417,10 +437,11 @@ def _external_report_decision_reason(decision: dict[str, Any]) -> str:
 
 
 def _ops_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str, str]], dict[str, int]]:
+    excluded_paths = _index_exclusion_paths(vault)
     root_records = [
         record
         for record in _file_records(vault, "ops/reports")
-        if record["path"] not in NON_SEALING_INDEX_REPORTS
+        if record["path"] not in excluded_paths
     ]
     task_observation_reports = _task_improvement_observation_reports(vault)
     current = [
@@ -454,7 +475,7 @@ def _ops_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str, str]
 
 
 def _operator_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str, str]], dict[str, int]]:
-    root_records = _file_records(vault, "ops/operator")
+    root_records = _operator_report_inventory(vault)
     current = [
         {
             "surface": "operator_reports",

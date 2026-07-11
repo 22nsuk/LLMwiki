@@ -382,6 +382,61 @@ def test_status_surface_displays_currentness_for_public_and_closeout_evidence() 
         )
 
 
+def test_status_surface_treats_revision_alias_by_declared_owner_binding() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        fingerprint = release_source_tree_fingerprint(vault)
+        reports = vault / "ops" / "reports"
+        reports.mkdir(parents=True)
+        alias_envelope = {
+            "artifact_status": "current",
+            "currentness": {"status": "current"},
+            "source_revision": "previous-revision",
+            "source_tree_fingerprint": fingerprint,
+        }
+        (reports / "release-closeout-summary.json").write_text(
+            json.dumps(
+                {
+                    **alias_envelope,
+                    "status": "pass",
+                    "release_authority_status": "clean_pass",
+                    "machine_release_allowed": True,
+                }
+            ),
+            encoding="utf-8",
+        )
+        (reports / "public-check-summary.json").write_text(
+            json.dumps(
+                {
+                    **alias_envelope,
+                    "status": "pass",
+                    "summary": {"public_check_status": "pass"},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        surface = build_status_surface(
+            vault,
+            context=fixed_context(),
+            lock_check_runner=lambda _vault: {"status": "pass", "returncode": 0},
+            remote_sync_reader=lambda _vault: {
+                "status": "unknown",
+                "upstream": "",
+                "ahead": 0,
+                "behind": 0,
+            },
+        )
+
+        closeout_detail = str(_line_by_key(surface, "source_closeout")["detail"])
+        public_detail = str(_line_by_key(surface, "public_summary")["detail"])
+        assert "evidence_currentness=stale" in closeout_detail
+        assert "source_revision=stale" in closeout_detail
+        assert "evidence_currentness=current" in public_detail
+        assert "source_revision=provenance_only" in public_detail
+
+
 def test_status_surface_keeps_self_declared_currentness_visible_when_evidence_is_stale() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         vault = Path(temp_dir) / "vault"

@@ -16,7 +16,7 @@ pytestmark = pytest.mark.public
 
 
 class GeneratedArtifactConvergeSummaryTests(unittest.TestCase):
-    def test_after_summary_distinguishes_semantic_changes_from_envelope_churn(self) -> None:
+    def test_after_summary_distinguishes_binding_changes_from_clock_churn(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             freshness = vault / "ops" / "reports" / "artifact-freshness-report.json"
@@ -62,11 +62,11 @@ class GeneratedArtifactConvergeSummaryTests(unittest.TestCase):
 
             self.assertEqual(by_target["artifact-freshness"]["status"], "changed")
             self.assertEqual(
-                by_target["artifact-freshness"]["semantic_changed_paths"],
+                by_target["artifact-freshness"]["binding_changed_paths"],
                 ["ops/reports/artifact-freshness-report.json"],
             )
 
-    def test_generated_markdown_timestamp_churn_is_not_semantic_change(self) -> None:
+    def test_generated_markdown_timestamp_churn_is_not_binding_change(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             matrix = vault / "ops" / "reports" / "release-risk-taxonomy-matrix.md"
@@ -93,9 +93,9 @@ class GeneratedArtifactConvergeSummaryTests(unittest.TestCase):
             self.assertEqual(by_target["generated-artifact-index"]["status"], "noop")
             self.assertEqual(
                 by_target["generated-artifact-index"]["change_classification"],
-                "envelope_or_raw_only_changed",
+                "raw_only_changed",
             )
-            self.assertEqual(by_target["generated-artifact-index"]["semantic_changed_paths"], [])
+            self.assertEqual(by_target["generated-artifact-index"]["binding_changed_paths"], [])
             self.assertEqual(
                 by_target["generated-artifact-index"]["raw_changed_paths"],
                 ["ops/reports/release-risk-taxonomy-matrix.md"],
@@ -105,9 +105,11 @@ class GeneratedArtifactConvergeSummaryTests(unittest.TestCase):
                 for item in by_target["generated-artifact-index"]["path_digests"]
                 if item["path"] == "ops/reports/release-risk-taxonomy-matrix.md"
             )
-            self.assertEqual(matrix_digest["semantic_mode"], "markdown_without_generated_at")
+            self.assertEqual(matrix_digest["binding_format"], "markdown_content_binding")
+            self.assertEqual(after["noop_promotion_count"], 3)
+            self.assertEqual(after["raw_only_change_count"], 1)
 
-    def test_nested_json_provenance_drift_is_semantic_change(self) -> None:
+    def test_nested_json_provenance_drift_is_binding_change(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             freshness = vault / "ops" / "reports" / "artifact-freshness-report.json"
@@ -139,7 +141,7 @@ class GeneratedArtifactConvergeSummaryTests(unittest.TestCase):
 
             self.assertEqual(by_target["artifact-freshness"]["status"], "changed")
             self.assertEqual(
-                by_target["artifact-freshness"]["semantic_changed_paths"],
+                by_target["artifact-freshness"]["binding_changed_paths"],
                 ["ops/reports/artifact-freshness-report.json"],
             )
 

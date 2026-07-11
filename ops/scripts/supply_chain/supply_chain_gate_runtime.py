@@ -5,7 +5,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.core.artifact_binding_runtime import REVISION_BINDING_MODE
+from ops.scripts.core.artifact_freshness_runtime import (
+    build_canonical_report_envelope,
+    canonical_artifact_payload,
+)
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
@@ -16,6 +20,7 @@ from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_constants_runtime import (
     SUPPLY_CHAIN_GATE_REPORT_SCHEMA_PATH,
 )
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.supply_chain.ci_install_proof_runtime import (
     CANONICAL_UV_LOCK_CHECK_COMMAND,
     UV_LOCK_CHECK_COMMAND,
@@ -28,6 +33,7 @@ PROVENANCE_REPORT_REL_PATH = "ops/reports/supply-chain-provenance.json"
 GATE_REPORT_REL_PATH = "ops/reports/supply-chain-gate-report.json"
 PRODUCER = "ops.scripts.supply_chain_gate_runtime"
 SOURCE_COMMAND = "python -m ops.scripts.supply_chain_gate_runtime --vault ."
+PROVENANCE_BINDING_MODE = REVISION_BINDING_MODE
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -49,6 +55,32 @@ def _check_inputs_exist(provenance: dict[str, Any]) -> dict[str, Any]:
     if missing:
         return {"rule": "all_required_inputs_exist", "pass": False, "details": f"Missing: {', '.join(missing)}"}
     return {"rule": "all_required_inputs_exist", "pass": True}
+
+
+def _check_provenance_binding(vault: Path, provenance: dict[str, Any]) -> dict[str, Any]:
+    normalized = canonical_artifact_payload(provenance)
+    artifact_kind = str(normalized.get("artifact_kind", "")).strip()
+    source_revision = str(normalized.get("source_revision", "")).strip()
+    current_revision = resolve_source_revision(vault).revision
+    failures: list[str] = []
+    if artifact_kind != "supply_chain_provenance_report":
+        failures.append("artifact_kind_mismatch")
+    if not source_revision:
+        failures.append("source_revision_missing")
+    elif source_revision != current_revision:
+        failures.append("source_revision_mismatch")
+    return {
+        "rule": "provenance_revision_binding",
+        "pass": not failures,
+        "details": (
+            f"binding_mode={PROVENANCE_BINDING_MODE}; current revision is bound"
+            if not failures
+            else (
+                f"binding_mode={PROVENANCE_BINDING_MODE}; "
+                f"failures={','.join(failures)}"
+            )
+        ),
+    }
 
 
 def _check_parser_errors(provenance: dict[str, Any]) -> dict[str, Any]:
@@ -220,6 +252,7 @@ def build_gate_report(
 
         provenance = _load_json(provenance_path)
     checks = [
+        _check_provenance_binding(vault, provenance),
         _check_inputs_exist(provenance),
         _check_parser_errors(provenance),
         _check_uv_lock_freshness(provenance),

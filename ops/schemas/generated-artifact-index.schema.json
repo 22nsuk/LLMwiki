@@ -328,6 +328,7 @@
         "status",
         "reason_id",
         "source_revision",
+        "source_revision_status",
         "source_tree_fingerprint",
         "current_source_revision",
         "current_source_tree_fingerprint",
@@ -351,6 +352,10 @@
         },
         "reason_id": { "type": "string", "minLength": 1 },
         "source_revision": { "type": "string" },
+        "source_revision_status": {
+          "type": "string",
+          "enum": ["current", "provenance_only", "unknown"]
+        },
         "source_tree_fingerprint": { "type": "string" },
         "current_source_revision": { "type": "string", "minLength": 1 },
         "current_source_tree_fingerprint": { "type": "string", "minLength": 1 },

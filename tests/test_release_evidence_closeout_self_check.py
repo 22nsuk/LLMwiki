@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from ops.scripts.core.artifact_binding_runtime import binding_file_digest
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.release_evidence_closeout_self_check import (
@@ -59,6 +60,17 @@ class ReleaseEvidenceCloseoutSelfCheckTests(unittest.TestCase):
     def _digest(self, rel_path: str) -> str:
         return hashlib.sha256((self.vault / rel_path).read_bytes()).hexdigest()
 
+    def _artifact_record(self, rel_path: str, *, binding_mode: str = "content") -> dict[str, str]:
+        return {
+            "path": rel_path,
+            "raw_digest": self._digest(rel_path),
+            "binding_digest": binding_file_digest(
+                self.vault / rel_path,
+                binding_mode=binding_mode,
+            )[1],
+            "binding_mode": binding_mode,
+        }
+
     def _write_closeout_inputs(
         self,
         *,
@@ -66,6 +78,7 @@ class ReleaseEvidenceCloseoutSelfCheckTests(unittest.TestCase):
         cohort_overrides: dict[str, object] | None = None,
     ) -> None:
         batch_manifest: dict[str, object] = {
+            "schema_version": 2,
             "summary": {"artifact_count": 10},
             "artifacts": [],
             "input_fingerprints": {"release_smoke": "a" * 64},
@@ -260,11 +273,12 @@ class ReleaseEvidenceCloseoutSelfCheckTests(unittest.TestCase):
     def test_batch_artifact_digest_watch_fails_after_sealed_artifact_drift(self) -> None:
         artifact_path = "ops/reports/release-evidence-dashboard.json"
         self._write_json(artifact_path, {"artifact_kind": "release_evidence_dashboard", "status": "pass"})
-        sealed_digest = self._digest(artifact_path)
+        sealed_record = self._artifact_record(artifact_path)
         self._write_closeout_inputs(
             batch_overrides={
                 "summary": {"artifact_count": 1},
-                "artifacts": [{"path": artifact_path, "digest": sealed_digest}],
+                "schema_version": 2,
+                "artifacts": [sealed_record],
             }
         )
 
@@ -294,9 +308,161 @@ class ReleaseEvidenceCloseoutSelfCheckTests(unittest.TestCase):
         self.assertEqual(watch["artifact_count"], 1)
         self.assertEqual(watch["mismatch_count"], 1)
         self.assertEqual(watch["artifacts"][0]["path"], artifact_path)
-        self.assertEqual(watch["artifacts"][0]["expected_digest"], sealed_digest)
-        self.assertNotEqual(watch["artifacts"][0]["actual_digest"], sealed_digest)
+        self.assertEqual(
+            watch["artifacts"][0]["expected_binding_digest"],
+            sealed_record["binding_digest"],
+        )
+        self.assertNotEqual(
+            watch["artifacts"][0]["actual_binding_digest"],
+            sealed_record["binding_digest"],
+        )
         self.assertEqual(validate_with_schema(drifted, load_schema(SCHEMA_PATH)), [])
+
+    def test_v1_batch_manifest_is_not_reused_as_current_authority(self) -> None:
+        self._write_closeout_inputs(batch_overrides={"schema_version": 1})
+
+        report = build_report(
+            self.vault,
+            "ops/reports/release-closeout-batch-manifest.json",
+            "ops/reports/release-evidence-cohort.json",
+            fixed_context(),
+        )
+
+        watch = report["batch_artifact_digest_watch"]
+        self.assertEqual(report["status"]["result"], "fail")
+        self.assertEqual(watch["authority_schema_status"], "unsupported")
+        self.assertEqual(watch["manifest_schema_version"], 1)
+
+    def test_batch_manifest_v2_requires_exact_integer_type(self) -> None:
+        for invalid_version in ("2", True):
+            with self.subTest(schema_version=invalid_version):
+                self._write_closeout_inputs(batch_overrides={"schema_version": invalid_version})
+
+                report = build_report(
+                    self.vault,
+                    "ops/reports/release-closeout-batch-manifest.json",
+                    "ops/reports/release-evidence-cohort.json",
+                    fixed_context(),
+                )
+
+                watch = report["batch_artifact_digest_watch"]
+                self.assertEqual(report["status"]["result"], "fail")
+                self.assertEqual(watch["authority_schema_status"], "unsupported")
+                self.assertEqual(watch["manifest_schema_version"], 0)
+                self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_content_binding_allows_envelope_raw_drift_but_rejects_semantic_drift(self) -> None:
+        artifact_path = "ops/reports/release-evidence-dashboard.json"
+        self._write_json(
+            artifact_path,
+            {"artifact_kind": "release_evidence_dashboard", "status": "pass"},
+        )
+        sealed_record = self._artifact_record(artifact_path)
+        self._write_closeout_inputs(
+            batch_overrides={"summary": {"artifact_count": 1}, "artifacts": [sealed_record]}
+        )
+        self._write_json(
+            artifact_path,
+            {
+                "artifact_kind": "release_evidence_dashboard",
+                "status": "pass",
+                "generated_at": "2026-05-05T00:00:00Z",
+                "source_revision": "new-revision",
+            },
+        )
+
+        envelope_drift = build_report(
+            self.vault,
+            "ops/reports/release-closeout-batch-manifest.json",
+            "ops/reports/release-evidence-cohort.json",
+            fixed_context(),
+        )
+
+        watch = envelope_drift["batch_artifact_digest_watch"]
+        self.assertEqual(watch["status"], "match")
+        self.assertNotEqual(watch["artifacts"][0]["declared_raw_digest"], watch["artifacts"][0]["actual_raw_digest"])
+
+        payload = json.loads((self.vault / artifact_path).read_text(encoding="utf-8"))
+        payload["status"] = "attention"
+        self._write_json(artifact_path, payload)
+
+        semantic_drift = build_report(
+            self.vault,
+            "ops/reports/release-closeout-batch-manifest.json",
+            "ops/reports/release-evidence-cohort.json",
+            fixed_context(),
+        )
+
+        self.assertEqual(semantic_drift["batch_artifact_digest_watch"]["status"], "mismatch")
+
+    def test_raw_binding_rejects_byte_only_drift(self) -> None:
+        artifact_path = "ops/reports/release-evidence-dashboard.json"
+        self._write_json(artifact_path, {"artifact_kind": "release_evidence_dashboard", "status": "pass"})
+        sealed_record = self._artifact_record(artifact_path, binding_mode="raw")
+        self._write_closeout_inputs(
+            batch_overrides={"summary": {"artifact_count": 1}, "artifacts": [sealed_record]}
+        )
+        payload = json.loads((self.vault / artifact_path).read_text(encoding="utf-8"))
+        (self.vault / artifact_path).write_text(json.dumps(payload, indent=4), encoding="utf-8")
+
+        report = build_report(
+            self.vault,
+            "ops/reports/release-closeout-batch-manifest.json",
+            "ops/reports/release-evidence-cohort.json",
+            fixed_context(),
+        )
+
+        watch = report["batch_artifact_digest_watch"]
+        self.assertEqual(watch["status"], "mismatch")
+        self.assertEqual(watch["artifacts"][0]["binding_mode"], "raw")
+
+    def test_missing_binding_metadata_never_falls_back_to_raw_digest(self) -> None:
+        artifact_path = "ops/reports/release-evidence-dashboard.json"
+        self._write_json(artifact_path, {"artifact_kind": "release_evidence_dashboard", "status": "pass"})
+        sealed_record = self._artifact_record(artifact_path)
+        sealed_record.pop("binding_mode")
+        self._write_closeout_inputs(
+            batch_overrides={"summary": {"artifact_count": 1}, "artifacts": [sealed_record]}
+        )
+
+        report = build_report(
+            self.vault,
+            "ops/reports/release-closeout-batch-manifest.json",
+            "ops/reports/release-evidence-cohort.json",
+            fixed_context(),
+        )
+
+        artifact = report["batch_artifact_digest_watch"]["artifacts"][0]
+        self.assertEqual(artifact["status"], "mismatch")
+        self.assertEqual(artifact["reason"], "binding_metadata_invalid")
+        self.assertEqual(artifact["actual_binding_digest"], "not_checked")
+        self.assertEqual(artifact["declared_raw_digest"], sealed_record["raw_digest"])
+
+    def test_invalid_binding_digest_never_falls_back_to_raw_digest(self) -> None:
+        artifact_path = "ops/reports/release-evidence-dashboard.json"
+        self._write_json(
+            artifact_path,
+            {"artifact_kind": "release_evidence_dashboard", "status": "pass"},
+        )
+        sealed_record = self._artifact_record(artifact_path)
+        sealed_record["binding_digest"] = "not-a-digest"
+        self._write_closeout_inputs(
+            batch_overrides={
+                "summary": {"artifact_count": 1},
+                "artifacts": [sealed_record],
+            }
+        )
+
+        report = build_report(
+            self.vault,
+            "ops/reports/release-closeout-batch-manifest.json",
+            "ops/reports/release-evidence-cohort.json",
+            fixed_context(),
+        )
+
+        artifact = report["batch_artifact_digest_watch"]["artifacts"][0]
+        self.assertEqual(artifact["reason"], "binding_metadata_invalid")
+        self.assertEqual(artifact["actual_binding_digest"], "not_checked")
 
     def test_missing_input_documents_handled_gracefully(self) -> None:
         """Self-check handles missing input documents without error."""

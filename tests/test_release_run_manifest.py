@@ -94,6 +94,7 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self,
         *,
         generated_at: str = "2026-05-23T12:00:00Z",
+        source_revision: str = "abc123",
         machine_release_allowed: bool = True,
         note: str = "stable",
     ) -> None:
@@ -105,7 +106,7 @@ class ReleaseRunManifestTests(unittest.TestCase):
                 "generated_at": generated_at,
                 "producer": "ops.scripts.release_closeout_summary",
                 "source_command": "python -m ops.scripts.release_closeout_summary --vault . --profile default",
-                "source_revision": "abc123",
+                "source_revision": source_revision,
                 "source_tree_fingerprint": "fp-current",
                 "input_fingerprints": {"fixture": "same"},
                 "schema_version": 1,
@@ -739,7 +740,7 @@ class ReleaseRunManifestTests(unittest.TestCase):
             original,
         )
 
-    def test_check_mode_reports_closeout_summary_semantic_drift_without_overwriting_manifest(
+    def test_check_mode_reports_closeout_summary_binding_drift_without_overwriting_manifest(
         self,
     ) -> None:
         self._write_run_inputs()
@@ -768,6 +769,25 @@ class ReleaseRunManifestTests(unittest.TestCase):
             (self.vault / "build/release/release-run-manifest.json").read_text(encoding="utf-8"),
             original,
         )
+
+    def test_check_mode_rejects_closeout_summary_revision_drift(self) -> None:
+        self._write_run_inputs()
+        self._write_closeout_summary(source_revision="before")
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+        self._write_closeout_summary(source_revision="after")
+
+        stdout = io.StringIO()
+        with self._patch_clean_repo("fp-current"), redirect_stdout(stdout):
+            result = main(["--vault", str(self.vault), "--check"])
+
+        self.assertEqual(result, 1)
+        self.assertIn("release_run_manifest_input_fingerprint_drift", stdout.getvalue())
 
     def test_check_mode_reports_source_revision_drift_without_overwriting_manifest(self) -> None:
         self._write_run_inputs()

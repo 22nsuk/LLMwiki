@@ -36,12 +36,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,
     )
     from ops.scripts.release.release_closeout_fixed_point import (
-        fixed_point_initial_targets_from_policy,
         fixed_point_writer_specs_from_policy,
     )
 else:
     from ops.scripts.release.release_closeout_fixed_point import (
-        fixed_point_initial_targets_from_policy,
         fixed_point_writer_specs_from_policy,
     )
 
@@ -79,36 +77,9 @@ MAKE_RECIPE_RE = re.compile(r"\$\((?:MAKE|make)\)\s+(?P<args>[^\n;&|]+)")
 TARGET_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.%/@-]+$")
 OPTION_OR_ASSIGNMENT_RE = re.compile(r"^(?:-|[A-Za-z_][A-Za-z0-9_]*=)")
 
-REPORT_CLOSEOUT_TARGETS = [
-    "test-execution-summary-report-contract",
-    "generated-artifact-converge",
-    "release-closeout-summary-conditional",
-    "release-evidence-cohort",
-    "learning-readiness-signoff-revalidation",
-    "release-evidence-dashboard-report",
-    "release-lane-summary",
-    "release-clean-blocker-ledger",
-    "release-closeout-batch-manifest-promote",
-    "release-evidence-closeout-self-check",
-    "release-closeout-fixed-point",
-    "tmp-json-clean",
-    "operator-release-summary",
-    "release-closeout-finality-verify",
-]
 EXTERNAL_REPORT_TARGETS = [
     "external-report-reference-manifest",
-    "generated-artifact-converge",
-    "release-closeout-summary-conditional",
-    "release-evidence-cohort",
-    "release-evidence-dashboard-report",
-    "release-lane-summary",
-    "release-clean-blocker-ledger",
-    "release-closeout-batch-manifest-promote",
-    "release-evidence-closeout-self-check",
-    "release-closeout-fixed-point",
-    "tmp-json-clean",
-    "operator-release-summary",
-    "release-closeout-finality-verify",
+    "release-finality-resettle",
 ]
 FINALITY_RESETTLE_TARGETS = [
     "workflow-dependency-planner",
@@ -126,25 +97,6 @@ GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS = [
     "script-output-surfaces",
 ]
 
-GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS = [
-    "artifact-freshness",
-    "external-report-action-matrix",
-    "generated-artifact-index",
-]
-PLANNER_CLOSEOUT_FALLBACK_TARGETS = [
-    "workflow-dependency-planner",
-    "generated-artifact-converge",
-    "release-closeout-summary-conditional",
-    "release-evidence-cohort",
-    "release-evidence-dashboard-report",
-    "release-lane-summary",
-    "release-clean-blocker-ledger",
-    "release-closeout-batch-manifest-promote",
-    "release-evidence-closeout-self-check",
-    "tmp-json-clean",
-    "operator-release-summary",
-    "release-closeout-finality-verify",
-]
 WORKFLOW_RULES: list[dict[str, Any]] = [
     {
         "rule_id": "workflow_dependency_planner_contract_change",
@@ -164,7 +116,7 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "recommended_lane": "workflow-dependency-planner",
         "reason_code": "workflow_dependency_planner_input_or_contract_changed",
         "description": "Workflow planner source, schema, Make orchestration, CI fingerprint, or CLI/documentation surface changed; refresh the planner before finality verification.",
-        "targets": PLANNER_CLOSEOUT_FALLBACK_TARGETS,
+        "targets": FINALITY_RESETTLE_TARGETS,
         "expensive": False,
         "reusable": True,
     },
@@ -228,10 +180,7 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "recommended_lane": "release-evidence-converge",
         "reason_code": "release_runtime_or_schema_contract_changed",
         "description": "Release evidence producers, schemas, or Make orchestration changed; rebuild the ordered release evidence converge chain before trusting operator summaries.",
-        "targets": [
-            "release-evidence-converge",
-            "operator-release-summary",
-        ],
+        "targets": ["release-evidence-converge"],
         "expensive": True,
         "reusable": False,
     },
@@ -251,7 +200,7 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "recommended_lane": "report-contract-closeout",
         "reason_code": "report_contract_policy_or_test_target_fingerprint_changed",
         "description": "Report-contract tests, policy input, or schema samples changed; refresh schema samples and test-execution evidence, then close the generated artifact convergence loop.",
-        "targets": ["report-contract-closeout", "operator-release-summary"],
+        "targets": ["report-contract-closeout", "release-finality-resettle"],
         "expensive": False,
         "reusable": True,
     },
@@ -291,8 +240,8 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         ],
         "workflow_id": "canonical_report_finalization",
         "recommended_lane": "release-finality-resettle",
-        "reason_code": "canonical_report_finality_suffix_changed",
-        "description": "Canonical generated reports changed; use the focused resettle lane so finality is rewritten only after generated artifact convergence and fixed-point closeout.",
+        "reason_code": "canonical_report_binding_graph_changed",
+        "description": "Canonical generated reports changed; run the focused single-pass binding graph before terminal finality verification.",
         "targets": FINALITY_RESETTLE_TARGETS,
         "expensive": False,
         "reusable": True,
@@ -336,7 +285,7 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
             "sync-derived",
             "test-report-contract-core",
             "generated-artifact-converge",
-            "operator-release-summary",
+            "release-finality-resettle",
         ],
         "expensive": False,
         "reusable": True,
@@ -355,35 +304,9 @@ def _dedupe_preserve_order(items: list[str]) -> list[str]:
     return result
 
 
-def _planner_closeout_targets(vault: Path) -> list[str]:
-    try:
-        policy_targets = fixed_point_initial_targets_from_policy(vault)
-    except (OSError, ValueError, json.JSONDecodeError):
-        return list(PLANNER_CLOSEOUT_FALLBACK_TARGETS)
-    targets = ["workflow-dependency-planner", *policy_targets]
-    if "learning-readiness-signoff-revalidation" in policy_targets:
-        revalidation_index = targets.index("learning-readiness-signoff-revalidation") + 1
-        targets.insert(revalidation_index, "release-evidence-cohort")
-    elif "release-closeout-summary-report" in policy_targets:
-        summary_index = targets.index("release-closeout-summary-report") + 1
-        targets.insert(summary_index, "release-evidence-cohort")
-    targets.extend(
-        [
-            "tmp-json-clean",
-            "operator-release-summary",
-            "release-closeout-finality-verify",
-        ]
-    )
-    return _dedupe_preserve_order(targets)
-
-
 def _workflow_rules(vault: Path) -> list[dict[str, Any]]:
-    rules = [dict(rule) for rule in WORKFLOW_RULES]
-    planner_targets = _planner_closeout_targets(vault)
-    for rule in rules:
-        if rule.get("workflow_id") == "workflow_dependency_planner_closeout":
-            rule["targets"] = planner_targets
-    return rules
+    del vault
+    return [dict(rule) for rule in WORKFLOW_RULES]
 
 
 def _parse_makefile(content: str) -> tuple[set[str], set[str], list[dict[str, str]]]:
@@ -516,7 +439,6 @@ def _primary_report_for_target(target: str) -> str:
         "external-report-action-matrix": "ops/reports/external-report-action-matrix.json",
         "generated-artifact-converge": "ops/reports/artifact-freshness-report.json",
         "generated-artifact-script-output": "ops/script-output-surfaces.json",
-        "generated-artifact-finality-suffix": "ops/reports/artifact-freshness-report.json",
         "generated-artifact-index": "ops/reports/generated-artifact-index.json",
         "generated-artifact-index-body": "ops/reports/generated-artifact-index.json",
         "learning-readiness-signoff-revalidation": "ops/reports/learning-readiness-signoff-revalidation.json",
@@ -544,10 +466,7 @@ def _fanout_targets_for_target(target: str) -> list[str]:
     return {
         "generated-artifact-converge": list(GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS),
         "generated-artifact-script-output": list(GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS),
-        "generated-artifact-finality-suffix": list(GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS),
         "release-terminal-finality": [
-            "generated-artifact-finality-suffix",
-            "release-closeout-summary-report",
             "release-closeout-fixed-point",
             "release-closeout-post-check-finalizer-dry-run",
             "release-closeout-finality-verify",
@@ -950,8 +869,8 @@ def _current_evidence_signals() -> list[dict[str, str]]:
         {
             "source": "workflow_rules",
             "name": "operator_summary",
-            "status": "refresh_after_batch_manifest",
-            "recommended_target": "operator-release-summary",
+            "status": "owned_by_fixed_point_graph",
+            "recommended_target": "release-finality-resettle-current-or-refresh",
         },
         {
             "source": "workflow_rules",
@@ -1117,11 +1036,10 @@ def _planner_report_envelope(
                 ensure_ascii=False,
                 sort_keys=True,
             ),
-            "generated_artifact_converge_fanout_targets": json.dumps(
+            "generated_artifact_fanout_targets": json.dumps(
                 {
                     "generated-artifact-converge": GENERATED_ARTIFACT_CONVERGE_FANOUT_TARGETS,
                     "generated-artifact-script-output": GENERATED_ARTIFACT_SCRIPT_OUTPUT_TARGETS,
-                    "generated-artifact-finality-suffix": GENERATED_ARTIFACT_FINALITY_SUFFIX_TARGETS,
                 },
                 ensure_ascii=False,
                 sort_keys=True,

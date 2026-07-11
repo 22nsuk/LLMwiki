@@ -13,8 +13,8 @@ from ops.scripts.release.release_evidence_dashboard_render_runtime import (
 
 @dataclass(frozen=True)
 class FinalizerEvidenceDigests:
-    fixed_point_digest: str
-    cost_trend_digest: str
+    fixed_point_raw_digest: str
+    cost_trend_raw_digest: str
 
 
 @dataclass(frozen=True)
@@ -38,10 +38,10 @@ def _finalizer_evidence_digests(vault: Path) -> FinalizerEvidenceDigests:
     fixed_point_path = vault / FIXED_POINT_PATH
     cost_trend_path = vault / FIXED_POINT_COST_TREND_PATH
     return FinalizerEvidenceDigests(
-        fixed_point_digest=_sha256_file(fixed_point_path)
+        fixed_point_raw_digest=_sha256_file(fixed_point_path)
         if fixed_point_path.is_file()
         else "",
-        cost_trend_digest=_sha256_file(cost_trend_path)
+        cost_trend_raw_digest=_sha256_file(cost_trend_path)
         if cost_trend_path.is_file()
         else "",
     )
@@ -52,12 +52,8 @@ def _missing_expensive_prerequisites(load_status: str) -> dict[str, Any]:
         "targets": [],
         "configured_target_count": 0,
         "observed_target_count": 0,
-        "first_iteration_run_count": 0,
-        "post_first_iteration_selected_count": 0,
-        "post_first_iteration_run_count": 0,
-        "skipped_post_first_iteration_selection_count": 0,
+        "run_count": 0,
         "total_duration_ms": 0,
-        "skip_policy_effective": False,
         "summary": f"fixed-point report load_status={load_status}",
     }
 
@@ -67,15 +63,15 @@ def _missing_finalizer_evidence_basis(
 ) -> dict[str, Any]:
     return {
         "fixed_point_report_path": FIXED_POINT_PATH,
-        "fixed_point_report_digest": digests.fixed_point_digest,
-        "current_fixed_point_report_digest": digests.fixed_point_digest,
+        "fixed_point_report_raw_digest": digests.fixed_point_raw_digest,
+        "current_fixed_point_report_raw_digest": digests.fixed_point_raw_digest,
         "fixed_point_generated_at": "",
         "cost_trend_path": FIXED_POINT_COST_TREND_PATH,
         "cost_trend_load_status": cost_trend_load_status,
-        "cost_trend_digest": digests.cost_trend_digest,
+        "cost_trend_raw_digest": digests.cost_trend_raw_digest,
         "cost_trend_sample_count": 0,
-        "cost_trend_latest_fixed_point_digest": "",
-        "sampled_fixed_point_report_digest": "",
+        "cost_trend_latest_fixed_point_raw_digest": "",
+        "sampled_fixed_point_report_raw_digest": "",
         "basis_relation_to_current_fixed_point": "cost_trend_unavailable",
     }
 
@@ -90,14 +86,11 @@ def _missing_finalizer_duration_signal(
         "load_status": load_status,
         "fixed_point_report_status": "unknown",
         "status": "unknown",
-        "converged": False,
-        "iteration_count": 0,
+        "execution_pass_count": 0,
         "command_run_count": 0,
         "total_duration_ms": 0,
         "writer_costs": [],
-        "expensive_prerequisites_once": _missing_expensive_prerequisites(
-            load_status
-        ),
+        "expensive_prerequisites": _missing_expensive_prerequisites(load_status),
         "threshold_summary": {
             "status": "not_evaluated",
             "breached_writer_count": 0,
@@ -116,7 +109,7 @@ def _finalizer_duration_sections(
 ) -> FinalizerDurationSections:
     duration = fixed_point.get("duration_summary")
     duration_summary = duration if isinstance(duration, dict) else {}
-    expensive = duration_summary.get("expensive_prerequisites_once")
+    expensive = duration_summary.get("expensive_prerequisites")
     threshold = cost_trend.get("threshold_summary")
     latest = cost_trend.get("latest_sample")
     return FinalizerDurationSections(
@@ -135,22 +128,21 @@ def _finalizer_duration_sections(
 def _cost_trend_basis_relation(
     *,
     cost_trend_load_status: str,
-    sampled_fixed_point_digest: str,
-    fixed_point_digest: str,
+    sampled_fixed_point_raw_digest: str,
+    fixed_point_raw_digest: str,
 ) -> str:
     if cost_trend_load_status != "ok":
         return "cost_trend_unavailable"
-    if not sampled_fixed_point_digest:
+    if not sampled_fixed_point_raw_digest:
         return "sample_missing"
-    if sampled_fixed_point_digest == fixed_point_digest:
+    if sampled_fixed_point_raw_digest == fixed_point_raw_digest:
         return "sampled_current_fixed_point"
     return "sampled_different_fixed_point"
 
 
 def _finalizer_threshold_status(threshold_summary: dict[str, Any]) -> str:
     status = (
-        str(threshold_summary.get("status", "not_evaluated")).strip()
-        or "not_evaluated"
+        str(threshold_summary.get("status", "not_evaluated")).strip() or "not_evaluated"
     )
     return status if status in {"pass", "attention"} else "not_evaluated"
 
@@ -166,16 +158,16 @@ def _writer_cost_records(writer_costs: list[dict[str, Any]]) -> list[dict[str, A
         {
             "name": str(item.get("name", "")).strip(),
             "target": str(item.get("target", "")).strip(),
+            "produces": [
+                str(path).strip()
+                for path in item.get("produces", [])
+                if str(path).strip()
+            ],
             "run_count": int(item.get("run_count", 0) or 0),
-            "selected_iteration_count": int(
-                item.get("selected_iteration_count", 0) or 0
-            ),
+            "selected": bool(item.get("selected", False)),
             "total_duration_ms": int(item.get("total_duration_ms", 0) or 0),
             "average_duration_ms": int(item.get("average_duration_ms", 0) or 0),
             "max_duration_ms": int(item.get("max_duration_ms", 0) or 0),
-            "skipped_after_first_iteration_count": int(
-                item.get("skipped_after_first_iteration_count", 0) or 0
-            ),
         }
         for item in writer_costs
         if str(item.get("target", "")).strip()
@@ -193,20 +185,8 @@ def _expensive_prerequisites_payload(expensive: dict[str, Any]) -> dict[str, Any
             expensive.get("configured_target_count", 0) or 0
         ),
         "observed_target_count": int(expensive.get("observed_target_count", 0) or 0),
-        "first_iteration_run_count": int(
-            expensive.get("first_iteration_run_count", 0) or 0
-        ),
-        "post_first_iteration_selected_count": int(
-            expensive.get("post_first_iteration_selected_count", 0) or 0
-        ),
-        "post_first_iteration_run_count": int(
-            expensive.get("post_first_iteration_run_count", 0) or 0
-        ),
-        "skipped_post_first_iteration_selection_count": int(
-            expensive.get("skipped_post_first_iteration_selection_count", 0) or 0
-        ),
+        "run_count": int(expensive.get("run_count", 0) or 0),
         "total_duration_ms": int(expensive.get("total_duration_ms", 0) or 0),
-        "skip_policy_effective": bool(expensive.get("skip_policy_effective", False)),
         "summary": str(expensive.get("summary", "")).strip()
         or "fixed-point expensive prerequisite duration evidence loaded",
     }
@@ -244,24 +224,24 @@ def _finalizer_evidence_basis(
     digests: FinalizerEvidenceDigests,
     *,
     cost_trend_load_status: str,
-    sampled_fixed_point_digest: str,
+    sampled_fixed_point_raw_digest: str,
     basis_relation: str,
 ) -> dict[str, Any]:
     return {
         "fixed_point_report_path": FIXED_POINT_PATH,
-        "fixed_point_report_digest": digests.fixed_point_digest,
-        "current_fixed_point_report_digest": digests.fixed_point_digest,
+        "fixed_point_report_raw_digest": digests.fixed_point_raw_digest,
+        "current_fixed_point_report_raw_digest": digests.fixed_point_raw_digest,
         "fixed_point_generated_at": str(fixed_point.get("generated_at", "")).strip(),
         "cost_trend_path": FIXED_POINT_COST_TREND_PATH,
         "cost_trend_load_status": cost_trend_load_status,
-        "cost_trend_digest": digests.cost_trend_digest,
+        "cost_trend_raw_digest": digests.cost_trend_raw_digest,
         "cost_trend_sample_count": int(cost_trend.get("sample_count", 0) or 0)
         if cost_trend_load_status == "ok"
         else 0,
-        "cost_trend_latest_fixed_point_digest": str(
-            sections.trend_latest_sample.get("fixed_point_report_digest", "")
+        "cost_trend_latest_fixed_point_raw_digest": str(
+            sections.trend_latest_sample.get("fixed_point_report_raw_digest", "")
         ).strip(),
-        "sampled_fixed_point_report_digest": sampled_fixed_point_digest,
+        "sampled_fixed_point_report_raw_digest": sampled_fixed_point_raw_digest,
         "basis_relation_to_current_fixed_point": basis_relation,
     }
 
@@ -274,30 +254,36 @@ def finalizer_duration_signal(
     cost_trend_load_status: str,
 ) -> dict[str, Any]:
     digests = _finalizer_evidence_digests(vault)
-    if load_status != "ok":
+    effective_load_status = load_status
+    if load_status == "ok" and fixed_point.get("schema_version") != 2:
+        effective_load_status = "unsupported_schema_version"
+    effective_cost_trend_load_status = cost_trend_load_status
+    if cost_trend_load_status == "ok" and cost_trend.get("schema_version") != 2:
+        effective_cost_trend_load_status = "unsupported_schema_version"
+    if effective_load_status != "ok":
         return _missing_finalizer_duration_signal(
-            load_status, cost_trend_load_status, digests
+            effective_load_status, effective_cost_trend_load_status, digests
         )
     sections = _finalizer_duration_sections(fixed_point, cost_trend)
     sampled_digest = str(
-        sections.trend_latest_sample.get("fixed_point_report_digest", "")
+        sections.trend_latest_sample.get("fixed_point_report_raw_digest", "")
     ).strip()
     basis_relation = _cost_trend_basis_relation(
-        cost_trend_load_status=cost_trend_load_status,
-        sampled_fixed_point_digest=sampled_digest,
-        fixed_point_digest=digests.fixed_point_digest,
+        cost_trend_load_status=effective_cost_trend_load_status,
+        sampled_fixed_point_raw_digest=sampled_digest,
+        fixed_point_raw_digest=digests.fixed_point_raw_digest,
     )
     threshold_status = _finalizer_threshold_status(sections.threshold_summary)
     report_status = str(fixed_point.get("status", "unknown")).strip() or "unknown"
     return {
         "path": FIXED_POINT_PATH,
-        "load_status": load_status,
+        "load_status": effective_load_status,
         "fixed_point_report_status": report_status,
         "status": _finalizer_signal_status(report_status, threshold_status),
-        "converged": bool(fixed_point.get("converged", False)),
-        "iteration_count": int(
+        "execution_pass_count": int(
             sections.duration_summary.get(
-                "iteration_count", fixed_point.get("iteration_count", 0)
+                "execution_pass_count",
+                fixed_point.get("execution_pass_count", 0),
             )
             or 0
         ),
@@ -308,21 +294,21 @@ def finalizer_duration_signal(
             sections.duration_summary.get("total_duration_ms", 0) or 0
         ),
         "writer_costs": _writer_cost_records(sections.writer_costs),
-        "expensive_prerequisites_once": _expensive_prerequisites_payload(
+        "expensive_prerequisites": _expensive_prerequisites_payload(
             sections.expensive_prerequisites
         ),
         "threshold_summary": _finalizer_threshold_summary_payload(
             sections.threshold_summary,
             threshold_status=threshold_status,
-            cost_trend_load_status=cost_trend_load_status,
+            cost_trend_load_status=effective_cost_trend_load_status,
         ),
         "evidence_basis": _finalizer_evidence_basis(
             fixed_point,
             cost_trend,
             sections,
             digests,
-            cost_trend_load_status=cost_trend_load_status,
-            sampled_fixed_point_digest=sampled_digest,
+            cost_trend_load_status=effective_cost_trend_load_status,
+            sampled_fixed_point_raw_digest=sampled_digest,
             basis_relation=basis_relation,
         ),
         "summary": str(sections.duration_summary.get("summary", "")).strip()

@@ -139,8 +139,6 @@ def _artifact_freshness_rejection_reason(
             EVIDENCE_STATUS_SOURCE_IDENTITY_MISMATCH,
             "artifact_freshness_source_tree_fingerprint_missing",
         )
-    if observed_source_revision != current_source_revision:
-        return EVIDENCE_STATUS_SOURCE_IDENTITY_MISMATCH, "artifact_freshness_source_revision_mismatch"
     if observed_source_tree_fingerprint != current_source_tree_fingerprint:
         return (
             EVIDENCE_STATUS_SOURCE_IDENTITY_MISMATCH,

@@ -20,84 +20,98 @@
       "path": "ops/reports/release-smoke-report.json",
       "name": "release-smoke-report",
       "role": "primary_evidence",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/source-package-clean-extract.json",
       "name": "source-package-clean-extract",
       "role": "source_package_reproducibility",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "external-reports/report-reference-manifest.json",
       "name": "external-report-reference-manifest",
       "role": "external_review_provenance",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/generated-artifact-index.json",
       "name": "generated-artifact-index",
       "role": "index",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/artifact-freshness-report.json",
       "name": "artifact-freshness-report",
       "role": "primary_evidence",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/test-execution-summary.json",
       "name": "test-execution-summary",
       "role": "report_contract_evidence",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/test-execution-summary-full.json",
       "name": "test-execution-summary-full",
       "role": "full_suite_evidence",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/release-closeout-summary.json",
       "name": "release-closeout-summary",
       "role": "decision",
+      "binding_mode": "revision",
       "required": true
     },
     {
       "path": "ops/reports/learning-readiness-signoff-revalidation.json",
       "name": "learning-readiness-signoff-revalidation",
       "role": "signoff",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "name": "learning-delta-scoreboard",
       "role": "learning_claim_guard",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/release-evidence-cohort.json",
       "name": "release-evidence-cohort",
       "role": "cohort",
+      "binding_mode": "revision",
       "required": true
     },
     {
       "path": "ops/reports/release-evidence-dashboard.json",
       "name": "release-evidence-dashboard",
       "role": "dashboard",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/release-lane-summary.json",
       "name": "release-lane-summary",
       "role": "lane_summary",
+      "binding_mode": "content",
       "required": true
     },
     {
       "path": "ops/reports/release-clean-blocker-ledger.json",
       "name": "release-clean-blocker-ledger",
       "role": "clean_blocker_ledger",
+      "binding_mode": "content",
       "required": true
     }
   ]

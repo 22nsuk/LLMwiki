@@ -53,6 +53,15 @@
       "replacement": "make archive-execution-manifest-apply"
     },
     {
+      "canonical_module": "ops.scripts.core.artifact_binding_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.artifact_binding_runtime"
+    },
+    {
       "canonical_module": "ops.scripts.core.artifact_envelope_runtime",
       "console_scripts": [],
       "install_state": "not_installed",
@@ -492,15 +501,6 @@
       "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make generated-artifact-retention-clean"
-    },
-    {
-      "canonical_module": "ops.scripts.core.generated_artifact_semantic_digest",
-      "console_scripts": [],
-      "install_state": "not_installed",
-      "lifecycle": "helper",
-      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
-      "removal_ready": false,
-      "replacement": "python -m ops.scripts.core.generated_artifact_semantic_digest"
     },
     {
       "canonical_module": "ops.scripts.core.git_changed_paths_runtime",

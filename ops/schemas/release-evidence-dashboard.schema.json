@@ -52,7 +52,7 @@
       "type": "object",
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
-    "schema_version": { "type": "integer", "minimum": 1 },
+    "schema_version": { "type": "integer", "const": 2 },
     "artifact_status": {
       "type": "string",
       "enum": ["current", "archived", "stale", "unknown"]
@@ -382,12 +382,12 @@
     "fixed_point_input_status": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "load_status", "status", "converged"],
+      "required": ["path", "load_status", "status", "execution_pass_count"],
       "properties": {
         "path": { "type": "string", "minLength": 1 },
         "load_status": { "type": "string" },
         "status": { "type": "string" },
-        "converged": { "type": "boolean" }
+        "execution_pass_count": { "type": "integer", "minimum": 0, "maximum": 1 }
       }
     },
     "fixed_point_finalizer_cost": {
@@ -398,12 +398,11 @@
         "load_status",
         "fixed_point_report_status",
         "status",
-        "converged",
-        "iteration_count",
+        "execution_pass_count",
         "command_run_count",
         "total_duration_ms",
         "writer_costs",
-        "expensive_prerequisites_once",
+        "expensive_prerequisites",
         "threshold_summary",
         "evidence_basis",
         "summary"
@@ -413,19 +412,18 @@
         "load_status": { "type": "string" },
         "fixed_point_report_status": {
           "type": "string",
-          "enum": ["pass", "non_converged", "fail", "unknown"]
+          "enum": ["pass", "fail", "unknown"]
         },
-        "status": { "type": "string", "enum": ["pass", "attention", "non_converged", "fail", "unknown"] },
-        "converged": { "type": "boolean" },
-        "iteration_count": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["pass", "attention", "fail", "unknown"] },
+        "execution_pass_count": { "type": "integer", "minimum": 0, "maximum": 1 },
         "command_run_count": { "type": "integer", "minimum": 0 },
         "total_duration_ms": { "type": "integer", "minimum": 0 },
         "writer_costs": {
           "type": "array",
           "items": { "$ref": "#/$defs/fixed_point_writer_cost" }
         },
-        "expensive_prerequisites_once": {
-          "$ref": "#/$defs/fixed_point_expensive_prerequisites_once"
+        "expensive_prerequisites": {
+          "$ref": "#/$defs/fixed_point_expensive_prerequisites"
         },
         "threshold_summary": { "$ref": "#/$defs/fixed_point_cost_threshold_summary" },
         "evidence_basis": { "$ref": "#/$defs/fixed_point_cost_evidence_basis" },
@@ -439,36 +437,35 @@
         "name",
         "target",
         "run_count",
-        "selected_iteration_count",
+        "produces",
+        "selected",
         "total_duration_ms",
         "average_duration_ms",
-        "max_duration_ms",
-        "skipped_after_first_iteration_count"
+        "max_duration_ms"
       ],
       "properties": {
         "name": { "type": "string" },
         "target": { "type": "string", "minLength": 1 },
         "run_count": { "type": "integer", "minimum": 0 },
-        "selected_iteration_count": { "type": "integer", "minimum": 0 },
+        "produces": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "selected": { "type": "boolean" },
         "total_duration_ms": { "type": "integer", "minimum": 0 },
         "average_duration_ms": { "type": "integer", "minimum": 0 },
-        "max_duration_ms": { "type": "integer", "minimum": 0 },
-        "skipped_after_first_iteration_count": { "type": "integer", "minimum": 0 }
+        "max_duration_ms": { "type": "integer", "minimum": 0 }
       }
     },
-    "fixed_point_expensive_prerequisites_once": {
+    "fixed_point_expensive_prerequisites": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "targets",
         "configured_target_count",
         "observed_target_count",
-        "first_iteration_run_count",
-        "post_first_iteration_selected_count",
-        "post_first_iteration_run_count",
-        "skipped_post_first_iteration_selection_count",
+        "run_count",
         "total_duration_ms",
-        "skip_policy_effective",
         "summary"
       ],
       "properties": {
@@ -478,12 +475,8 @@
         },
         "configured_target_count": { "type": "integer", "minimum": 0 },
         "observed_target_count": { "type": "integer", "minimum": 0 },
-        "first_iteration_run_count": { "type": "integer", "minimum": 0 },
-        "post_first_iteration_selected_count": { "type": "integer", "minimum": 0 },
-        "post_first_iteration_run_count": { "type": "integer", "minimum": 0 },
-        "skipped_post_first_iteration_selection_count": { "type": "integer", "minimum": 0 },
+        "run_count": { "type": "integer", "minimum": 0 },
         "total_duration_ms": { "type": "integer", "minimum": 0 },
-        "skip_policy_effective": { "type": "boolean" },
         "summary": { "type": "string", "minLength": 1 }
       }
     },
@@ -506,40 +499,40 @@
       "additionalProperties": false,
       "required": [
         "fixed_point_report_path",
-        "fixed_point_report_digest",
-        "current_fixed_point_report_digest",
+        "fixed_point_report_raw_digest",
+        "current_fixed_point_report_raw_digest",
         "fixed_point_generated_at",
         "cost_trend_path",
         "cost_trend_load_status",
-        "cost_trend_digest",
+        "cost_trend_raw_digest",
         "cost_trend_sample_count",
-        "cost_trend_latest_fixed_point_digest",
-        "sampled_fixed_point_report_digest",
+        "cost_trend_latest_fixed_point_raw_digest",
+        "sampled_fixed_point_report_raw_digest",
         "basis_relation_to_current_fixed_point"
       ],
       "properties": {
         "fixed_point_report_path": { "type": "string", "minLength": 1 },
-        "fixed_point_report_digest": {
+        "fixed_point_report_raw_digest": {
           "type": "string",
           "pattern": "^(|[0-9a-f]{64})$"
         },
-        "current_fixed_point_report_digest": {
+        "current_fixed_point_report_raw_digest": {
           "type": "string",
           "pattern": "^(|[0-9a-f]{64})$"
         },
         "fixed_point_generated_at": { "type": "string" },
         "cost_trend_path": { "type": "string", "minLength": 1 },
         "cost_trend_load_status": { "type": "string" },
-        "cost_trend_digest": {
+        "cost_trend_raw_digest": {
           "type": "string",
           "pattern": "^(|[0-9a-f]{64})$"
         },
         "cost_trend_sample_count": { "type": "integer", "minimum": 0 },
-        "cost_trend_latest_fixed_point_digest": {
+        "cost_trend_latest_fixed_point_raw_digest": {
           "type": "string",
           "pattern": "^(|[0-9a-f]{64})$"
         },
-        "sampled_fixed_point_report_digest": {
+        "sampled_fixed_point_report_raw_digest": {
           "type": "string",
           "pattern": "^(|[0-9a-f]{64})$"
         },

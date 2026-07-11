@@ -163,6 +163,12 @@ docs unless restarting this sequence. Refresh
 `make test-execution-summary-full-current-or-refresh` for
 explicit full-proof lanes such as `make release-run-ready` or
 `make release-source-ready-prepare`. Use
+`make test-execution-summary-revision-rebind` and
+`make test-execution-summary-full-revision-rebind` when a lightweight workflow
+may reuse same-tree evidence, especially after the prepared tree has been
+committed. These targets never execute pytest or collect-only and fail fast when
+the source tree differs. This keeps the expensive run in the prepare phase
+instead of repeating it for the commit SHA. Use
 `test-execution-summary-full-refresh-no-converge` only as the explicit fallback
 when current full-suite evidence cannot be reused and generated-artifact
 convergence must be deferred to a later release lane. The full-suite shard

@@ -89,9 +89,9 @@ def _dashboard_inputs_payload(reports: Any, signals: Any) -> dict[str, Any]:
         "release_closeout_summary": signals.closeout_input,
         "release_closeout_fixed_point": {
             "path": FIXED_POINT_PATH,
-            "load_status": reports.fixed_point_load_status,
+            "load_status": signals.finalizer_duration["load_status"],
             "status": signals.finalizer_duration["fixed_point_report_status"],
-            "converged": signals.finalizer_duration["converged"],
+            "execution_pass_count": signals.finalizer_duration["execution_pass_count"],
         },
         "release_closeout_fixed_point_cost_trend": {
             "path": FIXED_POINT_COST_TREND_PATH,
@@ -163,7 +163,9 @@ def _dashboard_summary_payload(
             "confirmed_learning_improvement_status"
         ],
         "evidence_cohort_status": learning_guard["evidence_cohort_status"],
-        "learning_claim_blocker_status": learning_guard["learning_claim_blocker_status"],
+        "learning_claim_blocker_status": learning_guard[
+            "learning_claim_blocker_status"
+        ],
         "confirmed_blocking_predicate_ids": learning_guard[
             "confirmed_blocking_predicate_ids"
         ],
@@ -188,9 +190,7 @@ def _dashboard_summary_payload(
         "confirmed_wording_policy_status": learning_guard[
             "confirmed_wording_policy_status"
         ],
-        "self_improvement_claim_model": learning_guard[
-            "self_improvement_claim_model"
-        ],
+        "self_improvement_claim_model": learning_guard["self_improvement_claim_model"],
         "same_eval_reason_coverage_status": learning_guard[
             "same_eval_reason_coverage_status"
         ],
@@ -244,10 +244,9 @@ def _render_dashboard_report(inputs: DashboardRenderInputs) -> dict[str, Any]:
                 "artifact_freshness": ARTIFACT_FRESHNESS_PATH,
                 "learning_delta_scoreboard": LEARNING_DELTA_SCOREBOARD_PATH,
             },
-            text_inputs={
-                "current_source_tree_fingerprint": inputs.current_fingerprint
-            },
+            text_inputs={"current_source_tree_fingerprint": inputs.current_fingerprint},
         ),
+        "schema_version": 2,
         "vault": report_path(inputs.vault, inputs.vault),
         "policy": {
             "path": report_path(inputs.vault, inputs.resolved_policy_path),

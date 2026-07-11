@@ -29,7 +29,6 @@ from .artifact_freshness_debt_runtime import (
     debt_queues,
     is_run_local_artifact,
     matching_issues,
-    mtime_drift_is_advisory_only,
     owner_surface,
     owner_surface_rollup,
     recommended_next_action,
@@ -120,17 +119,13 @@ _PAYLOAD_COMPAT_EXPORTS = (
     embed_artifact_envelope_metadata,
 )
 PROGRESS_FORMATS = ("none", "jsonl", "jsonl-stable")
-FINALITY_OWNED_TERMINAL_ARTIFACT_PATHS = {
-    "ops/reports/release-closeout-finality-attestation.json",
-}
-NON_SEALING_ARTIFACT_PATHS = {
+OWNER_VERIFIED_NON_GRAPH_FRESHNESS_EXCLUSION_PATHS = {
     "ops/reports/archive-execution-manifest.json",
     "ops/reports/make-target-inventory.json",
-    "ops/reports/release-closeout-batch-manifest.json",
-    "ops/reports/release-evidence-closeout-self-check.json",
+    "ops/reports/release-closeout-finality-attestation.json",
+    "ops/reports/release-closeout-fixed-point.json",
     "ops/reports/release-workflow-order-guard.json",
     "ops/reports/workflow-dependency-planner.json",
-    *FINALITY_OWNED_TERMINAL_ARTIFACT_PATHS,
 }
 _SCHEMA_COMPAT_EXPORTS = (
     NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES,
@@ -166,6 +161,7 @@ class _ArtifactFreshnessScanInputs:
 class _ArtifactFreshnessCountSummary:
     stale_count: int
     unknown_currentness_count: int
+    source_revision_provenance_only_count: int
     missing_schema_count: int
     missing_envelope_count: int
     schema_invalid_count: int
@@ -371,25 +367,37 @@ def _run_log_placeholders(vault: Path) -> list[dict[str, Any]]:
     return sorted(placeholders, key=lambda item: item["path"])
 
 
+def _owner_verified_freshness_exclusion_paths(vault: Path) -> set[str]:
+    from ops.scripts.release.release_closeout_fixed_point import (
+        fixed_point_output_paths_at_or_downstream,
+    )
+
+    return OWNER_VERIFIED_NON_GRAPH_FRESHNESS_EXCLUSION_PATHS | (
+        fixed_point_output_paths_at_or_downstream(vault, "artifact-freshness")
+    )
+
+
 def _text_artifact_paths(vault: Path) -> list[Path]:
+    excluded_paths = _owner_verified_freshness_exclusion_paths(vault)
     paths: list[Path] = []
     for pattern in TEXT_ARTIFACT_GLOBS:
         paths.extend(_glob_files(vault, pattern))
     return [
         path
         for path in _unique_paths(paths)
-        if report_path(vault, path) not in NON_SEALING_ARTIFACT_PATHS
+        if report_path(vault, path) not in excluded_paths
     ]
 
 
 def _json_artifact_paths(vault: Path) -> list[Path]:
+    excluded_paths = _owner_verified_freshness_exclusion_paths(vault)
     paths: list[Path] = []
     for pattern in JSON_ARTIFACT_GLOBS:
         paths.extend(_glob_files(vault, pattern))
     return [
         path
         for path in _unique_paths(paths)
-        if report_path(vault, path) not in NON_SEALING_ARTIFACT_PATHS
+        if report_path(vault, path) not in excluded_paths
     ]
 
 
@@ -569,80 +577,9 @@ def _source_revision_status(
         if freshness_context is not None
         else resolve_source_revision(vault).revision
     )
-    return "current" if observed == current else "stale"
-
-
-INPUT_FINGERPRINT_CHECKS = {
-    "external_report_action_matrix": "ops/reports/external-report-action-matrix.json",
-    "generated_artifact_index_report": "ops/reports/generated-artifact-index.json",
-}
-
-
-def _live_producer_input_fingerprints(
-    vault: Path,
-    *,
-    artifact_kind: str,
-) -> dict[str, str] | None:
-    if artifact_kind == "external_report_action_matrix":
-        from ops.scripts.release.external_report_action_matrix import (
-            build_report as build_action_matrix_report,
-        )
-
-        payload = build_action_matrix_report(vault)
-    elif artifact_kind == "generated_artifact_index_report":
-        from ops.scripts.core.generated_artifact_index import (
-            build_report as build_generated_artifact_index_report,
-        )
-
-        payload = build_generated_artifact_index_report(vault)
-    else:
-        return None
-    input_fingerprints = payload.get("input_fingerprints")
-    if not isinstance(input_fingerprints, dict):
-        return None
-    return {
-        str(key): str(value)
-        for key, value in input_fingerprints.items()
-        if str(key)
-    }
-
-
-def _input_fingerprint_status(
-    vault: Path,
-    *,
-    rel_path: str,
-    normalized_payload: dict[str, Any],
-    schema_validation_status: str,
-) -> tuple[str, list[str]]:
-    artifact_kind = str(normalized_payload.get("artifact_kind", "")).strip()
-    expected = INPUT_FINGERPRINT_CHECKS.get(artifact_kind)
-    if expected is None or expected != rel_path:
-        return "not_applicable", []
-    if schema_validation_status != "pass":
-        return "not_applicable", []
-    if str(normalized_payload.get("artifact_status", "")).strip() != "current":
-        return "not_applicable", []
-    if str(normalized_payload.get("retention_policy", "")).strip() != "canonical_report":
-        return "not_applicable", []
-    stored = normalized_payload.get("input_fingerprints")
-    if not isinstance(stored, dict):
-        return "unknown", []
-    try:
-        live = _live_producer_input_fingerprints(vault, artifact_kind=artifact_kind)
-    except (OSError, TypeError, ValueError, RuntimeError):
-        return "unknown", []
-    if live is None:
-        return "unknown", []
-    mismatch_keys = sorted(
-        {
-            str(key)
-            for key in set(stored) | set(live)
-            if stored.get(key) != live.get(key)
-        }
-    )
-    if mismatch_keys:
-        return "stale", mismatch_keys
-    return "current", []
+    if observed == current:
+        return "current"
+    return "provenance_only"
 
 
 def _schema_validation(
@@ -834,12 +771,8 @@ def _artifact_record_currentness_state(
         schema_validation_status=schema_validation_status,
         freshness_context=freshness_context,
     )
-    input_fingerprint_status, input_fingerprint_mismatch_keys = _input_fingerprint_status(
-        vault,
-        rel_path=rel_path,
-        normalized_payload=normalized_payload,
-        schema_validation_status=schema_validation_status,
-    )
+    input_fingerprint_status = "not_applicable"
+    input_fingerprint_mismatch_keys: list[str] = []
     currentness_status = _computed_currentness_status(
         declared_currentness_status=declared_currentness_status,
         source_tree_fingerprint_status=source_tree_fingerprint_status,
@@ -851,9 +784,7 @@ def _artifact_record_currentness_state(
         issues.append("source_tree_fingerprint_mismatch")
     elif source_tree_fingerprint_status == "unknown":
         issues.append("source_tree_fingerprint_unknown")
-    if source_revision_status == "stale":
-        issues.append("source_revision_mismatch")
-    elif source_revision_status == "unknown":
+    if source_revision_status == "unknown":
         issues.append("source_revision_unknown")
     if input_fingerprint_status == "stale":
         issues.extend(
@@ -964,7 +895,7 @@ def _json_artifact_record(
         mtime_source=mtime_source,
         zip_mtimes=zip_mtimes,
     )
-    if mtime_status == "stale" and not mtime_drift_is_advisory_only(rel_path):
+    if mtime_status == "stale":
         issues.append("generated_at_older_than_file_mtime")
     if not noncanonical_archive:
         issues.extend(_test_target_fingerprint_issues(vault, normalized_payload))
@@ -992,7 +923,6 @@ def _json_artifact_record(
         mtime_status=mtime_status,
     ) and (
         currentness.source_tree_fingerprint_status != "stale"
-        and currentness.source_revision_status != "stale"
         and currentness.input_fingerprint_status != "stale"
     )
     mtime_sensitive = mtime_status == "stale"
@@ -1117,6 +1047,11 @@ def _summarize_artifact_freshness_counts(
             if record["currentness_status"] == "unknown"
             or "unknown_currentness" in record["issues"]
         ),
+        source_revision_provenance_only_count=sum(
+            1
+            for record in artifact_records
+            if record["source_revision_status"] == "provenance_only"
+        ),
         missing_schema_count=sum(1 for record in artifact_records if "missing_schema" in record["issues"]),
         missing_envelope_count=sum(
             1 for record in artifact_records if "missing_artifact_envelope" in record["issues"]
@@ -1166,6 +1101,9 @@ def _artifact_freshness_summary_payload(
         "root_ephemeral_artifact_count": len(scan_inputs.root_ephemeral),
         "run_log_placeholder_count": len(scan_inputs.run_log_placeholders),
         "unknown_currentness_artifact_count": counts.unknown_currentness_count,
+        "source_revision_provenance_only_artifact_count": (
+            counts.source_revision_provenance_only_count
+        ),
         "non_utf8_text_artifact_count": len(scan_inputs.non_utf8),
         "missing_schema_count": counts.missing_schema_count,
         "missing_artifact_envelope_count": counts.missing_envelope_count,

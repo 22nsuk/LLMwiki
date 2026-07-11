@@ -118,7 +118,7 @@ def _threshold_for_target(policy: dict[str, Any], target: str) -> dict[str, Any]
 def _sample_from_fixed_point(
     fixed_point: dict[str, Any],
     *,
-    fixed_point_digest: str,
+    fixed_point_raw_digest: str,
 ) -> dict[str, Any]:
     duration_summary = fixed_point.get("duration_summary")
     if not isinstance(duration_summary, dict):
@@ -137,14 +137,14 @@ def _sample_from_fixed_point(
     ]
     return {
         "fixed_point_report_path": FIXED_POINT_REPORT_PATH,
-        "fixed_point_report_digest": fixed_point_digest,
+        "fixed_point_report_raw_digest": fixed_point_raw_digest,
         "fixed_point_generated_at": str(fixed_point.get("generated_at", "")).strip(),
         "fixed_point_status": str(fixed_point.get("status", "unknown")).strip()
         or "unknown",
-        "fixed_point_converged": bool(fixed_point.get("converged", False)),
-        "iteration_count": int(
+        "execution_pass_count": int(
             fixed_point.get(
-                "iteration_count", duration_summary.get("iteration_count", 0)
+                "execution_pass_count",
+                duration_summary.get("execution_pass_count", 0),
             )
             or 0
         ),
@@ -155,8 +155,10 @@ def _sample_from_fixed_point(
 
 
 def _previous_samples(
-    previous_trend: dict[str, Any], current_digest: str
+    previous_trend: dict[str, Any], current_raw_digest: str
 ) -> list[dict[str, Any]]:
+    if previous_trend.get("schema_version") != 2:
+        return []
     samples = previous_trend.get("samples")
     if not isinstance(samples, list):
         return []
@@ -164,8 +166,27 @@ def _previous_samples(
         item
         for item in samples
         if isinstance(item, dict)
-        and str(item.get("fixed_point_report_digest", "")).strip() != current_digest
+        and str(item.get("fixed_point_report_raw_digest", "")).strip()
+        != current_raw_digest
     ]
+
+
+def _current_fixed_point_load_status(
+    fixed_point: dict[str, Any], diagnostics: dict[str, Any]
+) -> str:
+    load_status = str(diagnostics.get("status", "unknown"))
+    if load_status == "ok" and fixed_point.get("schema_version") != 2:
+        return "unsupported_schema_version"
+    return load_status
+
+
+def _current_trend_load_status(
+    previous_trend: dict[str, Any], diagnostics: dict[str, Any]
+) -> str:
+    load_status = str(diagnostics.get("status", "unknown"))
+    if load_status == "ok" and previous_trend.get("schema_version") != 2:
+        return "unsupported_schema_version"
+    return load_status
 
 
 def _writer_cost_by_target(sample: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -195,12 +216,12 @@ def _writer_trends(
         previous_sample_count = len(previous_costs)
         previous_average = (
             round(
-                    sum(
-                        int(item.get("total_duration_ms", 0) or 0)
-                        for item in previous_costs
-                    )
-                    / previous_sample_count
+                sum(
+                    int(item.get("total_duration_ms", 0) or 0)
+                    for item in previous_costs
                 )
+                / previous_sample_count
+            )
             if previous_sample_count
             else 0
         )
@@ -267,22 +288,30 @@ def build_report(
     fixed_point, fixed_point_diagnostics = load_optional_json_object_with_diagnostics(
         fixed_point_path
     )
-    if fixed_point_diagnostics.get("status") != "ok":
+    fixed_point_load_status = _current_fixed_point_load_status(
+        fixed_point, fixed_point_diagnostics
+    )
+    if fixed_point_load_status != "ok":
         raise FileNotFoundError(
-            f"fixed-point report is required: {display_path(vault, fixed_point_path)}"
+            "current schema-v2 fixed-point report is required: "
+            f"{display_path(vault, fixed_point_path)} "
+            f"(load_status={fixed_point_load_status})"
         )
-    fixed_point_digest = _sha256_file(fixed_point_path)
+    fixed_point_raw_digest = _sha256_file(fixed_point_path)
     previous_trend, previous_diagnostics = load_optional_json_object_with_diagnostics(
         vault / previous_path
     )
-    previous_digest = (
+    previous_raw_digest = (
         _sha256_file(vault / previous_path) if (vault / previous_path).is_file() else ""
     )
+    previous_load_status = _current_trend_load_status(
+        previous_trend, previous_diagnostics
+    )
     sample = _sample_from_fixed_point(
-        fixed_point, fixed_point_digest=fixed_point_digest
+        fixed_point, fixed_point_raw_digest=fixed_point_raw_digest
     )
     retained_run_count = int(cost_policy["retained_run_count"])
-    samples = [*_previous_samples(previous_trend, fixed_point_digest), sample][
+    samples = [*_previous_samples(previous_trend, fixed_point_raw_digest), sample][
         -retained_run_count:
     ]
     writer_trends = _writer_trends(samples, cost_policy)
@@ -308,6 +337,7 @@ def build_report(
     )
     return {
         **envelope,
+        "schema_version": 2,
         "vault": display_path(vault, vault),
         "policy": {
             "path": POLICY_PATH,
@@ -316,16 +346,16 @@ def build_report(
         "status": status,
         "fixed_point_report": {
             "path": FIXED_POINT_REPORT_PATH,
-            "load_status": str(fixed_point_diagnostics.get("status", "unknown")),
-            "digest": fixed_point_digest,
+            "load_status": fixed_point_load_status,
+            "raw_digest": fixed_point_raw_digest,
             "sample_available": True,
         },
         "retained_run_count": retained_run_count,
         "sample_count": len(samples),
         "previous_trend": {
             "path": previous_path,
-            "load_status": str(previous_diagnostics.get("status", "unknown")),
-            "digest": previous_digest,
+            "load_status": previous_load_status,
+            "raw_digest": previous_raw_digest,
         },
         "latest_sample": sample,
         "samples": samples,
@@ -358,8 +388,11 @@ def build_missing_fixed_point_report(
     previous_trend, previous_diagnostics = load_optional_json_object_with_diagnostics(
         vault / previous_path
     )
-    previous_digest = (
+    previous_raw_digest = (
         _sha256_file(vault / previous_path) if (vault / previous_path).is_file() else ""
+    )
+    previous_load_status = _current_trend_load_status(
+        previous_trend, previous_diagnostics
     )
     retained_run_count = int(cost_policy["retained_run_count"])
     diagnostics = fixed_point_diagnostics or {"status": "missing"}
@@ -383,6 +416,7 @@ def build_missing_fixed_point_report(
     )
     return {
         **envelope,
+        "schema_version": 2,
         "vault": display_path(vault, vault),
         "policy": {
             "path": POLICY_PATH,
@@ -392,15 +426,15 @@ def build_missing_fixed_point_report(
         "fixed_point_report": {
             "path": FIXED_POINT_REPORT_PATH,
             "load_status": load_status,
-            "digest": "",
+            "raw_digest": "",
             "sample_available": False,
         },
         "retained_run_count": retained_run_count,
         "sample_count": 0,
         "previous_trend": {
             "path": previous_path,
-            "load_status": str(previous_diagnostics.get("status", "unknown")),
-            "digest": previous_digest,
+            "load_status": previous_load_status,
+            "raw_digest": previous_raw_digest,
         },
         "latest_sample": None,
         "samples": [],
@@ -454,10 +488,14 @@ def main(argv: list[str] | None = None) -> int:
         _, fixed_point_diagnostics = load_optional_json_object_with_diagnostics(
             vault / FIXED_POINT_REPORT_PATH
         )
+        diagnostics = dict(fixed_point_diagnostics)
+        diagnostics["status"] = _current_fixed_point_load_status(
+            _, fixed_point_diagnostics
+        )
         report = build_missing_fixed_point_report(
             vault,
             previous_path=args.previous,
-            fixed_point_diagnostics=fixed_point_diagnostics,
+            fixed_point_diagnostics=diagnostics,
         )
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))

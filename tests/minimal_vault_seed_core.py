@@ -52,6 +52,7 @@ def _prepare_minimal_vault_surface(
         "release-risk-taxonomy.json",
         "learning-claim-auto-unlock.json",
         "learning-claim-confirmed-improvement.json",
+        "release-closeout-fixed-point.json",
     ):
         policy_source = shared.REPO_ROOT / "ops" / "policies" / policy_name
         if policy_source.exists():

@@ -13,6 +13,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_binding_runtime import (
+    BINDING_MODES,
+    binding_file_digest,
+    is_sha256_digest,
+)
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
@@ -122,10 +127,77 @@ def _component_count(data: dict[str, Any] | None) -> int:
     return 0
 
 
+def _watched_artifact(
+    vault: Path,
+    item: Any,
+    *,
+    index: int,
+) -> dict[str, Any]:
+    if not isinstance(item, dict):
+        return {
+            "path": f"<invalid-artifact-{index}>",
+            "binding_mode": "missing",
+            "expected_binding_digest": "missing",
+            "actual_binding_digest": "not_checked",
+            "declared_raw_digest": "missing",
+            "actual_raw_digest": "not_checked",
+            "status": "mismatch",
+            "reason": "binding_metadata_invalid",
+        }
+
+    rel_path = str(item.get("path", "")).strip()
+    display_rel_path = rel_path or f"<missing-path-{index}>"
+    binding_mode = str(item.get("binding_mode", "")).strip()
+    expected_binding_digest = str(item.get("binding_digest", "")).strip() or "missing"
+    declared_raw_digest = str(item.get("raw_digest", "")).strip() or "missing"
+    artifact_path = vault / rel_path if rel_path else None
+    actual_raw_digest = (
+        _file_fingerprint(artifact_path)
+        if artifact_path is not None and artifact_path.is_file()
+        else "missing"
+        if artifact_path is not None
+        else "not_checked"
+    )
+    binding_metadata_valid = bool(
+        rel_path
+        and is_sha256_digest(expected_binding_digest)
+        and binding_mode in BINDING_MODES
+    )
+    actual_binding_digest = "not_checked"
+    if binding_metadata_valid and artifact_path is not None:
+        actual_binding_digest = binding_file_digest(
+            artifact_path,
+            binding_mode=binding_mode,
+        )[1]
+    digest_status = (
+        "match"
+        if binding_metadata_valid and expected_binding_digest == actual_binding_digest
+        else "mismatch"
+    )
+    return {
+        "path": display_rel_path,
+        "binding_mode": binding_mode or "missing",
+        "expected_binding_digest": expected_binding_digest,
+        "actual_binding_digest": actual_binding_digest,
+        "declared_raw_digest": declared_raw_digest,
+        "actual_raw_digest": actual_raw_digest,
+        "status": digest_status,
+        "reason": (
+            "match"
+            if digest_status == "match"
+            else "binding_digest_mismatch"
+            if binding_metadata_valid
+            else "binding_metadata_invalid"
+        ),
+    }
+
+
 def _artifact_digest_watch(vault: Path, batch_data: dict[str, Any] | None) -> dict[str, Any]:
     if not batch_data or not isinstance(batch_data, dict):
         return {
             "status": "unavailable",
+            "authority_schema_status": "missing",
+            "manifest_schema_version": 0,
             "artifact_count": 0,
             "match_count": 0,
             "mismatch_count": 0,
@@ -133,43 +205,39 @@ def _artifact_digest_watch(vault: Path, batch_data: dict[str, Any] | None) -> di
             "artifacts": [],
             "summary": "batch artifact digest watch unavailable because batch manifest is missing or unreadable",
         }
+    declared_schema_version = batch_data.get("schema_version")
+    schema_version = declared_schema_version if type(declared_schema_version) is int else 0
+    if schema_version != 2:
+        return {
+            "status": "mismatch",
+            "authority_schema_status": "unsupported",
+            "manifest_schema_version": schema_version,
+            "artifact_count": 0,
+            "match_count": 0,
+            "mismatch_count": 0,
+            "missing_artifact_count": 0,
+            "artifacts": [],
+            "summary": (
+                "batch artifact digest watch rejected non-current authority schema; "
+                f"expected exact integer=2; actual={declared_schema_version!r}"
+            ),
+        }
 
     raw_artifacts = batch_data.get("artifacts")
     artifacts = raw_artifacts if isinstance(raw_artifacts, list) else []
-    watched: list[dict[str, Any]] = []
-    match_count = 0
-    mismatch_count = 0
-    missing_count = 0
-
-    for item in artifacts:
-        if not isinstance(item, dict):
-            continue
-        rel_path = str(item.get("path", "")).strip()
-        if not rel_path:
-            continue
-        expected_digest = str(item.get("digest", "")).strip() or "missing"
-        artifact_path = vault / rel_path
-        exists = artifact_path.is_file()
-        actual_digest = _file_fingerprint(artifact_path) if exists else "missing"
-        digest_status = "match" if expected_digest == actual_digest else "mismatch"
-        if not exists:
-            missing_count += 1
-        if digest_status == "match":
-            match_count += 1
-        else:
-            mismatch_count += 1
-        watched.append(
-            {
-                "path": rel_path,
-                "expected_digest": expected_digest,
-                "actual_digest": actual_digest,
-                "status": digest_status,
-            }
-        )
+    watched = [
+        _watched_artifact(vault, item, index=index)
+        for index, item in enumerate(artifacts)
+    ]
+    match_count = sum(item["status"] == "match" for item in watched)
+    mismatch_count = len(watched) - match_count
+    missing_count = sum(item["actual_raw_digest"] == "missing" for item in watched)
 
     status = "match" if not mismatch_count else "mismatch"
     return {
         "status": status,
+        "authority_schema_status": "current",
+        "manifest_schema_version": schema_version,
         "artifact_count": len(watched),
         "match_count": match_count,
         "mismatch_count": mismatch_count,
@@ -261,12 +329,16 @@ def build_report(
     digest_mismatch_count = int(artifact_digest_watch["mismatch_count"])
     result = "pass"
     summary = "Closeout self-check snapshot captured"
-    if missing_required_watch_paths or digest_mismatch_count:
+    if (
+        missing_required_watch_paths
+        or digest_mismatch_count
+        or artifact_digest_watch["status"] != "match"
+    ):
         result = "fail"
         summary_parts: list[str] = []
         if missing_required_watch_paths:
             summary_parts.append("Required drift watch paths missing: " + ", ".join(missing_required_watch_paths))
-        if digest_mismatch_count:
+        if digest_mismatch_count or artifact_digest_watch["status"] != "match":
             summary_parts.append(artifact_digest_watch["summary"])
         summary = "; ".join(summary_parts)
 

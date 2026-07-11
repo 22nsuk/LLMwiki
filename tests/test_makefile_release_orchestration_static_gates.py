@@ -129,6 +129,8 @@ _RELEASE_CONVERGE_PHONY_TARGETS = (
     "release-worktree-clean-check",
     "release-converge",
     "release-converge-all-surfaces",
+    "release-converge-all-surfaces-pre-finality",
+    "release-converge-post-evidence",
     "head-aligned-evidence-converge",
 )
 
@@ -153,28 +155,43 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
         required_tokens=(
             "$(MAKE) release-converge-preflight",
             "$(MAKE) registry-preflight",
+            "$(MAKE) release-smoke-fast",
             "$(MAKE) release-smoke-full-reuse",
             "$(MAKE) release-converge-post",
         ),
     ),
     MakeTargetContract(
         "release-converge-all-surfaces",
-        required_tokens=(
-            "$(MAKE) release-converge",
+        exact_recipe=(
+            "$(MAKE) release-converge-all-surfaces-pre-finality",
+            "$(MAKE) release-terminal-finality",
+        ),
+    ),
+    MakeTargetContract(
+        "release-converge-all-surfaces-pre-finality",
+        exact_recipe=(
+            "$(MAKE) release-converge-preflight",
+            "$(MAKE) registry-preflight",
+            "$(MAKE) release-smoke-fast",
+            "$(MAKE) release-smoke-full-reuse",
             "$(MAKE) sync-public-policy",
             "$(MAKE) public-check-all",
-            "$(MAKE) release-converge-post",
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
+            "$(MAKE) release-converge-post-evidence",
+        ),
+    ),
+    MakeTargetContract(
+        "release-converge-post-evidence",
+        exact_recipe=(
+            "$(MAKE) generated-artifact-converge",
+            "$(MAKE) remediation-backlog",
         ),
     ),
     MakeTargetContract(
         "release-converge-post",
-        required_tokens=(
-            "$(MAKE) generated-artifact-converge",
-            "$(MAKE) remediation-backlog",
-            "$(MAKE) release-closeout-fixed-point",
-            "$(MAKE) operator-release-summary",
-            "$(MAKE) release-closeout-post-check-finalizer-dry-run "
-            "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+        exact_recipe=(
+            "$(MAKE) release-converge-post-evidence",
+            "$(MAKE) release-terminal-finality",
         ),
         forbidden_tokens=(
             "$(MAKE) generated-artifact-index",
@@ -188,6 +205,7 @@ _RELEASE_SOURCE_READY_PHONY_TARGETS = (
     "release-source-ready-prepare",
     "release-source-ready-commit",
     "release-source-ready-post-verify",
+    "release-post-commit-rebind",
     "release-source-ready",
 )
 
@@ -232,10 +250,25 @@ _RELEASE_SOURCE_READY_TARGET_CONTRACTS = (
     ),
     MakeTargetContract(
         "release-source-ready-prepare",
-        required_tokens=(
+        exact_recipe=(
             "$(MAKE) release-source-ready-snapshot",
-            "$(MAKE) release-converge-all-surfaces",
+            "$(MAKE) release-converge-all-surfaces-pre-finality",
+        ),
+    ),
+    MakeTargetContract(
+        "release-post-commit-rebind",
+        exact_recipe=(
+            "$(MAKE) release-smoke-fast-refresh-check",
+            "$(MAKE) release-smoke-full-reuse",
+            "$(MAKE) test-execution-summary-revision-rebind",
+            "$(MAKE) test-execution-summary-full-revision-rebind",
+            "$(MAKE) release-terminal-finality",
+        ),
+        forbidden_tokens=(
+            "$(MAKE) test-execution-summary-current-or-refresh",
             "$(MAKE) test-execution-summary-full-current-or-refresh",
+            "$(MAKE) test-execution-summary-full-refresh",
+            "$(PYTHON) -m pytest",
         ),
     ),
     MakeTargetContract(
@@ -267,6 +300,7 @@ _RELEASE_SOURCE_READY_TARGET_CONTRACTS = (
         required_tokens=(
             "$(MAKE) release-source-ready-prepare",
             "$(MAKE) release-source-ready-commit",
+            "$(MAKE) release-post-commit-rebind",
             "$(MAKE) release-post-commit-finalize",
             "$(MAKE) release-source-ready-post-verify",
         ),
@@ -675,23 +709,19 @@ class MakefileReleaseOrchestrationStaticGateTests(unittest.TestCase):
         self.assertNotIn("release-converge-artifact-commit", _phony_target_names(text))
         _assert_make_target_contracts(self, text, _RELEASE_CONVERGE_TARGET_CONTRACTS)
 
-        release_converge_post_block = _target_block(text, "release-converge-post")
-        self.assertGreater(
-            release_converge_post_block.index("$(MAKE) operator-release-summary"),
-            release_converge_post_block.index("$(MAKE) release-closeout-fixed-point"),
+        terminal_finality_recipe = _recipe_lines(text, "release-terminal-finality")
+        fixed_point_index = terminal_finality_recipe.index(
+            "$(MAKE) release-closeout-fixed-point"
         )
-        self.assertGreater(
-            release_converge_post_block.rindex("$(MAKE) release-closeout-fixed-point"),
-            release_converge_post_block.rindex("$(MAKE) generated-artifact-converge"),
+        strict_dry_run_index = terminal_finality_recipe.index(
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run "
+            "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
         )
-        self.assertGreaterEqual(
-            release_converge_post_block.count("$(MAKE) generated-artifact-converge"),
-            2,
+        verify_index = terminal_finality_recipe.index(
+            "$(MAKE) release-closeout-finality-verify"
         )
-        self.assertGreaterEqual(
-            release_converge_post_block.count("$(MAKE) release-closeout-fixed-point"),
-            2,
-        )
+        self.assertLess(fixed_point_index, strict_dry_run_index)
+        self.assertLess(strict_dry_run_index, verify_index)
 
     def test_release_source_ready_targets_commit_source_and_verify_without_amends(
         self,

@@ -180,6 +180,7 @@
         "id": { "$ref": "#/$defs/check_id" },
         "target": { "$ref": "#/$defs/make_target" },
         "roles": { "$ref": "#/$defs/ordered_non_empty_make_target_list" },
+        "exact": { "type": "boolean" },
         "details": { "type": "string" }
       }
     },

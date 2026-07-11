@@ -26,7 +26,6 @@ from ops.scripts.learning.learning_readiness_vocabulary import (
     LEARNING_STATUS_LIKELY,
 )
 
-from .release_closeout_envelope_runtime import FIXED_POINT_POLICY_PATH
 from .release_closeout_gate_decision_runtime import (
     FAILED_NODEID_RE,
     RELEASE_READINESS_STATES,
@@ -146,18 +145,17 @@ def artifact_freshness_stable_contract_debt_only(payload: dict[str, Any]) -> boo
 
 
 def release_owned_artifact_freshness_paths(vault: Path) -> set[str]:
-    path = vault / FIXED_POINT_POLICY_PATH
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return set()
-    tracked = payload.get("tracked_artifacts")
-    if not isinstance(tracked, list):
+        from .release_closeout_fixed_point import fixed_point_writer_specs_from_policy
+
+        writers = fixed_point_writer_specs_from_policy(vault)
+    except (OSError, ValueError, json.JSONDecodeError):
         return set()
     return {
-        rel_path
-        for rel_path in tracked
-        if isinstance(rel_path, str) and rel_path != "ops/reports/artifact-freshness-report.json"
+        str(rel_path)
+        for writer in writers
+        for rel_path in writer["produces"]
+        if str(rel_path) != "ops/reports/artifact-freshness-report.json"
     }
 
 

@@ -29,18 +29,12 @@ DEFERRED_FINALITY_TARGETS = {
     "release-terminal-finality",
 }
 TERMINAL_SUFFIX_TARGETS = (
-    "artifact-freshness-refresh-check",
-    "generated-artifact-index",
-    "artifact-freshness-refresh-check",
     "release-finality-resettle-current-or-refresh",
 )
-PARTIAL_TERMINAL_SUFFIX_TARGETS = TERMINAL_SUFFIX_TARGETS[:-1]
+PARTIAL_TERMINAL_SUFFIX_TARGETS = ("generated-artifact-converge",)
 ALLOWED_ROUTE_TARGETS: dict[str, frozenset[str]] = {
     "external_reports_reference_manifest": frozenset(
-        {
-            "external-report-reference-manifest-settle",
-            "external-report-lifecycle-refresh",
-        }
+        {"external-report-reference-manifest-settle"}
     ),
     "ops_reports_test_execution_summary_full_current_or_refresh": frozenset(
         {"test-execution-summary-full-current-or-refresh"}
@@ -97,6 +91,7 @@ ALLOWED_ROUTE_TARGETS: dict[str, frozenset[str]] = {
     "ops_reports_registry_preflight": frozenset({"registry-preflight"}),
     "ops_reports_github_governance": frozenset({"github-governance-live-drift"}),
     "ops_reports_bootstrap_preflight": frozenset({"bootstrap-preflight"}),
+    "ops_reports_review_archive": frozenset({"review-archive"}),
 }
 
 

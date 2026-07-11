@@ -505,10 +505,12 @@ def _sealed_run_manifest_reason_ids(vault: Path) -> list[str]:
 
 def _finality_attestation_report_pass(finality: dict[str, Any]) -> bool:
     return (
-        str(finality.get("finality_status", "")).strip() == "pass"
-        and bool(finality.get("matches_fixed_point_digest_map"))
+        finality.get("schema_version") == 2
+        and str(finality.get("finality_status", "")).strip() == "pass"
+        and str(finality.get("fixed_point_authority_status", "")).strip() == "ok"
+        and bool(finality.get("matches_fixed_point_binding_digest_map"))
         and not as_list(finality.get("finality_failures"))
-        and not as_list(finality.get("digest_mismatches"))
+        and not as_list(finality.get("binding_digest_mismatches"))
     )
 
 
@@ -519,8 +521,11 @@ def _release_evidence_finality_reason_ids(vault: Path) -> list[str]:
     finality_fixed_point = as_dict(finality.get("fixed_point_report"))
     if fixed_point.get("status") != "pass":
         reasons.append("release_closeout_fixed_point_not_pass")
-    if not bool(fixed_point.get("converged")):
-        reasons.append("release_closeout_fixed_point_not_converged")
+    if (
+        fixed_point.get("schema_version") != 2
+        or fixed_point.get("execution_pass_count") != 1
+    ):
+        reasons.append("release_closeout_fixed_point_not_current_v2_authority")
     if finality_fixed_point.get("status") != "pass":
         reasons.append("release_finality_fixed_point_report_not_pass")
     if not _finality_attestation_report_pass(finality):
@@ -634,7 +639,8 @@ def release_evidence_bundle_and_attestation_verified(vault: Path) -> bool:
         and _full_suite_evidence_verified(vault)
         and source_package_distribution_binding_verified(vault)
         and fixed_point.get("status") == "pass"
-        and bool(fixed_point.get("converged"))
+        and fixed_point.get("schema_version") == 2
+        and fixed_point.get("execution_pass_count") == 1
         and finality_fixed_point.get("status") == "pass"
         and _finality_attestation_report_pass(finality)
     )

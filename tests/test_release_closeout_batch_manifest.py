@@ -1045,12 +1045,16 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         classification = json.loads(classification_line)
         self.assertEqual(
             classification["primary_class"],
-            "batch_manifest_source_freshness_mismatch",
+            "external_source_change_after_evidence",
         )
         self.assertEqual(classification["source_freshness_status"], "fail")
-        self.assertIn(
+        self.assertNotIn(
             "release-finality-resettle-current-or-refresh",
             classification["recommended_targets"],
+        )
+        self.assertEqual(
+            classification["recommended_lane"],
+            "external-source-change-review",
         )
 
     def test_check_manifest_classifies_content_drift_without_digest_drift(
@@ -1092,7 +1096,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
             classification["primary_class"],
             "batch_manifest_content_mismatch",
         )
-        self.assertEqual(classification["digest_mismatches"], [])
+        self.assertEqual(classification["binding_mismatches"], [])
         self.assertIn(
             "release-closeout-batch-manifest-promote",
             classification["recommended_targets"],
@@ -1135,7 +1139,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         stderr_text = stderr.getvalue()
-        self.assertIn("artifact digest mismatches:", stderr_text)
+        self.assertIn("artifact binding mismatches:", stderr_text)
         self.assertIn("ops/reports/release-evidence-dashboard.json", stderr_text)
         classification_line = stderr_text.split(
             "batch manifest replay mismatch classification:\n",
@@ -1144,14 +1148,14 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         classification = json.loads(classification_line)
         self.assertEqual(
             classification["primary_class"],
-            "fixed_point_tracked_writer_mismatch",
+            "fixed_point_tracked_writer_binding_mismatch",
         )
         self.assertEqual(
             classification["recommended_fixed_point_initial_targets"],
             ["release-evidence-dashboard-report"],
         )
 
-    def test_check_manifest_classifies_freshness_index_cohort_digest_drift(self) -> None:
+    def test_check_manifest_classifies_freshness_index_cohort_binding_drift(self) -> None:
         self._write_required_artifacts(currentness_status="current")
         self._write_closeout_summary()
         report = build_batch_manifest(
@@ -1190,14 +1194,14 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         classification = json.loads(classification_line)
         self.assertEqual(
             classification["primary_class"],
-            "batch_manifest_freshness_index_cohort_digest_mismatch",
+            "batch_manifest_freshness_index_cohort_binding_mismatch",
         )
         self.assertEqual(
             classification["recommended_fixed_point_initial_targets"],
             ["artifact-freshness"],
         )
         self.assertNotIn(
-            "fixed_point_tracked_writer_mismatch",
+            "fixed_point_tracked_writer_binding_mismatch",
             classification["classes"],
         )
 
@@ -1249,9 +1253,181 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
             "ops/reports/release-clean-blocker-ledger.json",
         }
         self.assertEqual(artifact_paths, expected_paths)
+        self.assertEqual(report["schema_version"], 2)
         for artifact in report["artifacts"]:
             self.assertIn("required", artifact)
             self.assertTrue(artifact["required"])
+            self.assertNotIn("digest", artifact)
+            self.assertRegex(artifact["raw_digest"], r"^[a-f0-9]{64}$")
+            self.assertRegex(artifact["binding_digest"], r"^[a-f0-9]{64}$")
+            expected_mode = (
+                "revision"
+                if artifact["path"]
+                in {
+                    "ops/reports/release-closeout-summary.json",
+                    "ops/reports/release-evidence-cohort.json",
+                }
+                else "content"
+            )
+            self.assertEqual(artifact["binding_mode"], expected_mode)
+
+    def test_check_manifest_allows_raw_only_artifact_drift(self) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        self._write_closeout_summary()
+        report = build_batch_manifest(
+            self.vault,
+            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.UTC)),
+        )
+        write_report(self.vault, report, "ops/reports/test-batch-manifest.json")
+        dashboard_path = "ops/reports/release-evidence-dashboard.json"
+        dashboard = json.loads(
+            (self.vault / dashboard_path).read_text(encoding="utf-8")
+        )
+        dashboard["generated_at"] = "2026-05-02T08:01:00Z"
+        dashboard["source_revision"] = "raw-envelope-alias-only"
+        dashboard["currentness"]["checked_at"] = "2026-05-02T08:01:00Z"
+        self._write_artifact(dashboard_path, dashboard)
+
+        exit_code = main(
+            [
+                "--vault",
+                self.vault.as_posix(),
+                "--out",
+                "ops/reports/test-batch-manifest.json",
+                "--check",
+            ]
+        )
+
+        self.assertEqual(exit_code, 0)
+
+    def test_check_manifest_rejects_v1_as_current_authority(self) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        self._write_closeout_summary()
+        report = build_batch_manifest(
+            self.vault,
+            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.UTC)),
+        )
+        report["schema_version"] = 1
+        self._write_artifact("ops/reports/test-batch-manifest.json", report)
+
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            exit_code = main(
+                [
+                    "--vault",
+                    self.vault.as_posix(),
+                    "--out",
+                    "ops/reports/test-batch-manifest.json",
+                    "--check",
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "only schema_version=2 is current authority",
+            stderr.getvalue(),
+        )
+
+    def test_release_audit_pack_materializes_v1_digest_as_archive_evidence(
+        self,
+    ) -> None:
+        artifact_path = "ops/reports/legacy-release-evidence.json"
+        self._write_artifact(artifact_path, {"status": "retained"})
+        artifact_digest = hashlib.sha256(
+            (self.vault / artifact_path).read_bytes()
+        ).hexdigest()
+        legacy_manifest = {
+            "schema_version": 1,
+            "batch_id": "legacy-archive-batch",
+            "artifacts": [
+                {
+                    "path": artifact_path,
+                    "digest": artifact_digest,
+                    "required": True,
+                    "role": "retained_archive_evidence",
+                    "artifact_kind": "test_report",
+                }
+            ],
+        }
+        self.assertNotIn("raw_digest", legacy_manifest["artifacts"][0])
+        manifest_path = "ops/reports/legacy-batch-manifest.json"
+        self._write_artifact(manifest_path, legacy_manifest)
+
+        result = build_audit_pack(
+            self.vault,
+            batch_manifest_path=manifest_path,
+            out_path="tmp/legacy-release-audit-pack.zip",
+        )
+
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["missing_required"], [])
+        self.assertEqual(result["digest_mismatches"], [])
+        with zipfile.ZipFile(self.vault / result["path"]) as archive:
+            names = set(archive.namelist())
+            pack_manifest = json.loads(archive.read("release-audit-pack-manifest.json"))
+        self.assertIn(artifact_path, names)
+        self.assertEqual(pack_manifest["batch_id"], "legacy-archive-batch")
+        self.assertIn(
+            {
+                "path": artifact_path,
+                "sha256": artifact_digest,
+                "role": "retained_archive_evidence",
+            },
+            pack_manifest["packed_entries"],
+        )
+
+    def test_release_audit_pack_rejects_v2_legacy_digest_fallback(self) -> None:
+        artifact_path = "ops/reports/release-evidence.json"
+        self._write_artifact(artifact_path, {"status": "retained"})
+        artifact_digest = hashlib.sha256(
+            (self.vault / artifact_path).read_bytes()
+        ).hexdigest()
+        manifest_path = "ops/reports/malformed-v2-batch-manifest.json"
+        self._write_artifact(
+            manifest_path,
+            {
+                "schema_version": 2,
+                "batch_id": "malformed-v2-batch",
+                "artifacts": [
+                    {
+                        "path": artifact_path,
+                        "digest": artifact_digest,
+                        "required": True,
+                        "role": "release_evidence",
+                        "artifact_kind": "test_report",
+                    }
+                ],
+            },
+        )
+
+        with self.assertRaisesRegex(ValueError, "must declare raw_digest"):
+            build_audit_pack(
+                self.vault,
+                batch_manifest_path=manifest_path,
+                out_path="tmp/malformed-v2-release-audit-pack.zip",
+            )
+
+    def test_batch_manifest_rejects_missing_artifact_binding_mode(self) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        self._write_closeout_summary()
+        policy_path = self.vault / "ops/policies/release-closeout-batch.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        policy["artifacts"][0].pop("binding_mode")
+        self._write_artifact("ops/policies/release-closeout-batch.json", policy)
+
+        with self.assertRaisesRegex(ValueError, "must declare binding_mode"):
+            build_batch_manifest(self.vault, context=fixed_context())
+
+    def test_batch_manifest_rejects_unknown_artifact_binding_mode(self) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        self._write_closeout_summary()
+        policy_path = self.vault / "ops/policies/release-closeout-batch.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        policy["artifacts"][0]["binding_mode"] = "unknown"
+        self._write_artifact("ops/policies/release-closeout-batch.json", policy)
+
+        with self.assertRaisesRegex(ValueError, "unsupported binding_mode"):
+            build_batch_manifest(self.vault, context=fixed_context())
 
     def test_release_audit_pack_materializes_batch_manifest_artifacts(self) -> None:
         self._write_required_artifacts(currentness_status="current")
@@ -1467,9 +1643,6 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         )
         self.assertNotIn("$(MAKE) release-evidence-closeout-self-check", recipe_lines)
         allowed_after_fixed_point = {
-            "$(MAKE) operator-release-summary",
-            "$(MAKE) generated-artifact-converge",
-            "$(MAKE) release-closeout-fixed-point",
             "$(MAKE) tmp-json-clean",
             "$(MAKE) release-closeout-finality-verify",
         }
@@ -1482,8 +1655,8 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
                 )
         self.assertEqual(
             recipe_lines.count("$(MAKE) release-closeout-fixed-point"),
-            2,
-            "release-evidence-converge should settle once before and once after late generated writers",
+            1,
+            "release-evidence-converge should execute the writer graph once",
         )
 
 

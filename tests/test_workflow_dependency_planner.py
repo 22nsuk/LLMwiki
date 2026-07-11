@@ -159,11 +159,12 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             ".PHONY: static ruff typecheck release-evidence-converge release-smoke-full "
             "release-evidence-closeout "
             "test-execution-summary-report-contract generated-artifact-converge generated-artifact-script-output "
-            "generated-artifact-finality-suffix script-output-surfaces "
+            "script-output-surfaces "
             "external-report-action-matrix generated-artifact-index generated-artifact-index-body artifact-freshness "
             "release-closeout-summary-report release-closeout-fixed-point "
             "tmp-json-clean release-closeout-finality-verify "
-            "operator-release-summary report-contract-closeout workflow-dependency-planner sync-derived\n"
+            "operator-release-summary report-contract-closeout workflow-dependency-planner sync-derived "
+            "release-finality-resettle release-authority-sealed-preflight release-terminal-finality\n"
             "static: ruff typecheck\n"
             "\t@echo static\n"
             "ruff:\n"
@@ -181,17 +182,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "test-execution-summary-report-contract:\n"
             "\t@echo tests\n"
             "generated-artifact-converge:\n"
-            "\t$(MAKE) generated-artifact-finality-suffix\n"
-            "generated-artifact-script-output:\n"
-            "\t$(MAKE) script-output-surfaces\n"
-            "generated-artifact-finality-suffix:\n"
             "\t$(MAKE) artifact-freshness\n"
             "\t$(MAKE) external-report-action-matrix\n"
             "\t$(MAKE) generated-artifact-index\n"
-            "\t$(MAKE) artifact-freshness\n"
-            "\t$(MAKE) external-report-action-matrix\n"
-            "\t$(MAKE) generated-artifact-index-body\n"
-            "\t$(MAKE) artifact-freshness\n"
+            "generated-artifact-script-output:\n"
+            "\t$(MAKE) script-output-surfaces\n"
             "script-output-surfaces:\n"
             "\t@echo surfaces\n"
             "external-report-action-matrix:\n"
@@ -212,6 +207,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "\t@echo tmp clean\n"
             "release-closeout-finality-verify:\n"
             "\t@echo finality\n"
+            "release-finality-resettle:\n"
+            "\t$(MAKE) workflow-dependency-planner\n"
+            "\t$(MAKE) release-authority-sealed-preflight\n"
+            "\t$(MAKE) release-terminal-finality\n"
+            "release-authority-sealed-preflight:\n"
+            "\t@echo sealed preflight\n"
+            "release-terminal-finality:\n"
+            "\t@echo terminal finality\n"
             "workflow-dependency-planner:\n"
             "\t@echo planner\n"
             "sync-derived:\n"
@@ -251,20 +254,18 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                             "name": "alpha",
                             "target": "alpha-writer",
                             "produces": ["ops/reports/alpha.json"],
+                            "binding_mode": "content",
                             "depends_on": [],
-                            "expensive_prerequisites_once": ["seed-writer"],
+                            "expensive_prerequisites": ["seed-writer"],
                         },
                         {
                             "name": "beta",
                             "target": "beta-writer",
                             "produces": ["ops/reports/beta.json"],
+                            "binding_mode": "content",
                             "depends_on": ["alpha-writer"],
-                            "expensive_prerequisites_once": [],
+                            "expensive_prerequisites": [],
                         },
-                    ],
-                    "tracked_artifacts": [
-                        "ops/reports/alpha.json",
-                        "ops/reports/beta.json",
                     ],
                 },
                 indent=2,
@@ -489,7 +490,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             report["dependency_edges"],
         )
         self.assertEqual(report["summary"]["missing_dependency_count"], 0)
-        self.assertEqual(report["evidence_dag"]["status"], "attention")
+        self.assertEqual(report["evidence_dag"]["status"], "pass")
         self.assertIn("Makefile", report["input_fingerprints"])
         self.assertIn(".github/workflows/ci.yml", report["input_fingerprints"])
         self.assertIn("test_lane_registry", report["input_fingerprints"])
@@ -598,7 +599,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(workflow["matched_paths"], [changed_path])
                 self.assertEqual(
                     [step["target"] for step in workflow["steps"]],
-                    ["report-contract-closeout", "operator-release-summary"],
+                    ["report-contract-closeout", "release-finality-resettle"],
                 )
                 self.assertEqual(report["status"], "pass")
 
@@ -627,9 +628,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(workflow["recommended_lane"], "workflow-dependency-planner")
                 self.assertEqual(workflow["matched_paths"], [path])
                 self.assertEqual(workflow["steps"][0]["target"], "workflow-dependency-planner")
-                self.assertIn(
-                    "release-closeout-finality-verify",
+                self.assertEqual(
                     [step["target"] for step in workflow["steps"]],
+                    [
+                        "workflow-dependency-planner",
+                        "release-authority-sealed-preflight",
+                        "release-terminal-finality",
+                    ],
                 )
                 self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
 
@@ -799,7 +804,10 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
         self.assertEqual(workflow["recommended_lane"], "release-evidence-converge")
         self.assertEqual(workflow["matched_paths"], ["ops/scripts/release/operator_release_summary.py"])
-        self.assertEqual([step["target"] for step in workflow["steps"]], ["release-evidence-converge", "operator-release-summary"])
+        self.assertEqual(
+            [step["target"] for step in workflow["steps"]],
+            ["release-evidence-converge"],
+        )
         converge_step = workflow["steps"][0]
         self.assertEqual(converge_step["fanout_targets"], [])
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
@@ -829,8 +837,6 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(
             workflow["steps"][2]["fanout_targets"],
             [
-                "generated-artifact-finality-suffix",
-                "release-closeout-summary-report",
                 "release-closeout-fixed-point",
                 "release-closeout-post-check-finalizer-dry-run",
                 "release-closeout-finality-verify",
@@ -855,10 +861,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "ops/reports/generated-artifact-index.json",
                 "canonical_report_finalization",
                 "release-terminal-finality",
-                "canonical_report_finality_suffix_changed",
+                "canonical_report_binding_graph_changed",
                 [
-                    "generated-artifact-finality-suffix",
-                    "release-closeout-summary-report",
                     "release-closeout-fixed-point",
                     "release-closeout-post-check-finalizer-dry-run",
                     "release-closeout-finality-verify",
@@ -911,7 +915,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
         self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-terminal-finality")
 
-    def test_planner_closeout_steps_are_derived_from_fixed_point_policy(self) -> None:
+    def test_planner_closeout_delegates_to_terminal_finality(self) -> None:
         self._write_fixed_point_policy()
 
         report = build_report(
@@ -926,15 +930,17 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             if item["workflow_id"] == "workflow_dependency_planner_closeout"
         )
         self.assertEqual(
-            [step["target"] for step in workflow["steps"][:4]],
+            [step["target"] for step in workflow["steps"]],
             [
                 "workflow-dependency-planner",
-                "seed-writer",
-                "alpha-writer",
-                "beta-writer",
+                "release-authority-sealed-preflight",
+                "release-terminal-finality",
             ],
         )
-        self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-closeout-finality-verify")
+        self.assertNotIn(
+            "operator-release-summary",
+            [step["target"] for step in workflow["steps"]],
+        )
 
     def test_evidence_dag_maps_fixed_point_policy_report_flow(self) -> None:
         self._write_fixed_point_policy()
@@ -983,7 +989,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
-    def test_planner_closeout_places_cohort_after_learning_revalidation(self) -> None:
+    def test_planner_closeout_does_not_expand_fixed_point_policy_writers(self) -> None:
         policy_path = self.vault / "ops" / "policies" / "release-closeout-fixed-point.json"
         policy_path.parent.mkdir(parents=True, exist_ok=True)
         policy_path.write_text(
@@ -1033,15 +1039,15 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             if item["workflow_id"] == "workflow_dependency_planner_closeout"
         )
         steps = [step["target"] for step in workflow["steps"]]
-
-        self.assertLess(
-            steps.index("learning-readiness-signoff-revalidation"),
-            steps.index("release-evidence-cohort"),
+        self.assertEqual(
+            steps,
+            [
+                "workflow-dependency-planner",
+                "release-authority-sealed-preflight",
+                "release-terminal-finality",
+            ],
         )
-        self.assertLess(
-            steps.index("release-evidence-cohort"),
-            steps.index("release-evidence-dashboard-report"),
-        )
+        self.assertNotIn("operator-release-summary-terminal", steps)
 
     def test_planner_schema_change_keeps_report_contract_closeout(self) -> None:
         report = build_report(

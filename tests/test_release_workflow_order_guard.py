@@ -334,10 +334,17 @@ AUTO_PROMOTION_PRESEAL_FORBIDDEN_WRITER_LINES = (
     AUTO_PROMOTION_PRESEAL_LINES + _make_recipe("generated-artifact-converge")
 )
 RELEASE_CONVERGE_ALL_LINES = _make_recipe(
-    "release-converge",
-    "sync-public-policy",
-    "public-check-all",
-    "release-converge-post",
+    "release-converge-all-surfaces-pre-finality",
+    "release-terminal-finality",
+)
+RELEASE_CONVERGE_PRE_FINALITY_LINES = _make_recipe(
+    *_sequence_roles("release_converge_all_surfaces_pre_finality_sequence")
+)
+RELEASE_CONVERGE_POST_EVIDENCE_LINES = _make_recipe(
+    *_sequence_roles("release_converge_post_evidence_sequence")
+)
+RELEASE_CONVERGE_POST_LINES = _make_recipe(
+    *_sequence_roles("release_converge_post_sequence")
 )
 RELEASE_EVIDENCE_CONVERGE_LINES = _make_recipe(
     *_sequence_roles("release_evidence_converge_finalizer_sequence")
@@ -356,6 +363,9 @@ RELEASE_AUTHORITY_SETTLE_LINES = _make_recipe(
 )
 RELEASE_POST_COMMIT_FINALIZE_LINES = _make_recipe(
     *_sequence_roles("release_post_commit_finalizer_sequence")
+)
+RELEASE_POST_COMMIT_REBIND_LINES = _make_recipe(
+    *_sequence_roles("release_post_commit_rebind_sequence")
 )
 RELEASE_WORKFLOW_ORDER_SUPPORT_PHONY_TARGETS = (
     "check",
@@ -394,18 +404,21 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "{release_source_ready_prepare_lines}"
     "release-source-ready-post-verify:\n"
     "{release_source_ready_post_verify_lines}"
+    "release-post-commit-rebind:\n"
+    "{release_post_commit_rebind_lines}"
     "release-converge-all-surfaces:\n"
     "{release_converge_all_lines}"
+    "release-converge-all-surfaces-pre-finality:\n"
+    "{release_converge_pre_finality_lines}"
     "release-converge:\n"
     "\t$(MAKE) release-converge-preflight\n"
     "\t$(MAKE) release-converge-post\n"
     "release-converge-preflight:\n"
     "{release_converge_preflight_lines}"
+    "release-converge-post-evidence:\n"
+    "{release_converge_post_evidence_lines}"
     "release-converge-post:\n"
-    "\t$(MAKE) generated-artifact-converge\n"
-    "\t$(MAKE) remediation-backlog\n"
-    "\t$(MAKE) release-closeout-fixed-point\n"
-    "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
+    "{release_converge_post_lines}"
     "release-source-ready-snapshot:\n"
     "\t@true\n"
     "release-source-ready-commit:\n"
@@ -454,7 +467,11 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "\t@true\n"
     "test-execution-summary-current-or-refresh:\n"
     "\t@true\n"
+    "test-execution-summary-revision-rebind:\n"
+    "\t@true\n"
     "test-execution-summary-full-current-check:\n"
+    "\t@true\n"
+    "test-execution-summary-full-revision-rebind:\n"
     "\t@true\n"
     "test-execution-summary-full-refresh:\n"
     "\t@true\n"
@@ -477,17 +494,11 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "remediation-backlog:\n"
     "\t@true\n"
     "generated-artifact-converge:\n"
-    "\t$(MAKE) generated-artifact-finality-suffix\n"
-    "generated-artifact-script-output:\n"
-    "\t$(MAKE) script-output-surfaces\n"
-    "generated-artifact-finality-suffix:\n"
     "\t$(MAKE) artifact-freshness\n"
     "\t$(MAKE) external-report-action-matrix\n"
     "\t$(MAKE) generated-artifact-index\n"
-    "\t$(MAKE) artifact-freshness\n"
-    "\t$(MAKE) external-report-action-matrix\n"
-    "\t$(MAKE) generated-artifact-index-body\n"
-    "\t$(MAKE) artifact-freshness\n"
+    "generated-artifact-script-output:\n"
+    "\t$(MAKE) script-output-surfaces\n"
     "script-output-surfaces:\n"
     "\t@true\n"
     "external-report-action-matrix:\n"
@@ -560,12 +571,16 @@ def _workflow_order_guard_makefile_text(
             else RELEASE_SOURCE_READY_LINES
         ),
         release_source_ready_prepare_lines=RELEASE_SOURCE_READY_PREPARE_LINES,
+        release_post_commit_rebind_lines=RELEASE_POST_COMMIT_REBIND_LINES,
         release_source_ready_post_verify_lines=(
             RELEASE_SOURCE_READY_POST_VERIFY_MISORDER_LINES
             if misorder_release_source_ready_post_verify
             else RELEASE_SOURCE_READY_POST_VERIFY_LINES
         ),
         release_converge_all_lines=RELEASE_CONVERGE_ALL_LINES,
+        release_converge_pre_finality_lines=RELEASE_CONVERGE_PRE_FINALITY_LINES,
+        release_converge_post_evidence_lines=RELEASE_CONVERGE_POST_EVIDENCE_LINES,
+        release_converge_post_lines=RELEASE_CONVERGE_POST_LINES,
         release_converge_preflight_lines=(
             RELEASE_CONVERGE_PREFLIGHT_MISORDER_LINES
             if misorder_release_converge_preflight
@@ -856,14 +871,14 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "target": "generated-artifact-index-body",
                 "produces": ["ops/reports/generated-artifact-index.json"],
                 "depends_on": ["artifact-freshness"] if invert_dependency else [],
-                "expensive_prerequisites_once": ["release-risk-taxonomy-matrix"],
+                "expensive_prerequisites": ["release-risk-taxonomy-matrix"],
             },
             {
                 "name": "artifact-freshness",
                 "target": "artifact-freshness",
                 "produces": ["ops/reports/artifact-freshness-report.json"],
                 "depends_on": ["generated-artifact-index-body"],
-                "expensive_prerequisites_once": [],
+                "expensive_prerequisites": [],
             },
         ]
         path = self.vault / "ops" / "policies" / "release-closeout-fixed-point.json"
@@ -1055,6 +1070,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             list(protected_preflight_lines),
             list(_sequence_roles("release_auto_promotion_preflight_sequence")),
         )
+
         self.assertIn(
             "--phase preflight",
             protected_preflight_lines[
@@ -1127,6 +1143,12 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                     "release_auto_promotion_preseal_forbidden_targets"
                 )
             )
+        )
+
+    def test_release_converge_post_protected_recipe_matches_sequence(self) -> None:
+        self.assertEqual(
+            list(_protected_recipe_lines("release-converge-post")),
+            list(_sequence_roles("release_converge_post_sequence")),
         )
 
     def test_spec_schema_rejects_empty_critical_guard_arrays(self) -> None:
@@ -1735,9 +1757,38 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")
-        self.assertEqual(
-            check["violations"][0]["reason"],
+        self.assertIn(
             "finality_verify_must_be_terminal",
+            {item["reason"] for item in check["violations"]},
+        )
+
+    def test_guard_fails_when_terminal_finality_runs_writer_after_attestation(self) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-terminal-finality:\n"
+                "\t$(MAKE) release-closeout-fixed-point\n"
+                "\t$(MAKE) tmp-json-clean\n",
+                "release-terminal-finality:\n"
+                "\t$(MAKE) release-closeout-fixed-point\n"
+                "\t$(MAKE) external-report-action-matrix\n"
+                "\t$(MAKE) tmp-json-clean\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_terminal_finality_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertIn(
+            "sequence_must_be_exact",
+            {item["reason"] for item in check["violations"]},
         )
 
     def test_guard_fails_when_fixed_point_policy_order_is_not_topological(self) -> None:

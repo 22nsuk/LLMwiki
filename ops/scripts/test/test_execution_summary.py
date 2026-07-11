@@ -963,7 +963,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--reuse-only",
         action="store_true",
-        help="With --reuse-if-current, fail instead of executing when reusable evidence is stale.",
+        help=(
+            "With --reuse-if-current, fail without executing the test command or "
+            "collect-only when reusable evidence is stale."
+        ),
     )
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
@@ -998,13 +1001,20 @@ def _run_aggregate_cli(vault: Path, args: argparse.Namespace) -> int:
 
 
 def _collect_nodeid_digest_for_args(vault: Path, args: argparse.Namespace) -> dict[str, Any] | None:
-    if args.collect_nodeids:
-        return collect_pytest_nodeid_digest(
-            vault,
-            args.command,
-            timeout_seconds=args.collect_timeout_seconds,
-        )
-    return None
+    if not args.collect_nodeids:
+        return None
+    if args.reuse_only:
+        try:
+            existing = _load_summary(vault, args.reuse_from or args.out)
+        except (OSError, json.JSONDecodeError, ValueError):
+            return None
+        existing_digest = existing.get("pytest_collect_nodeid_digest")
+        return dict(existing_digest) if isinstance(existing_digest, dict) else None
+    return collect_pytest_nodeid_digest(
+        vault,
+        args.command,
+        timeout_seconds=args.collect_timeout_seconds,
+    )
 
 
 def _reused_report_for_args(

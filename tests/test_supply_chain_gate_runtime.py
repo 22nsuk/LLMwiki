@@ -6,8 +6,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ops.scripts.core.artifact_binding_runtime import REVISION_BINDING_MODE
 from ops.scripts.core.runtime_context import RuntimeContext
-from ops.scripts.supply_chain.supply_chain_gate_runtime import build_gate_report
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.supply_chain.supply_chain_gate_runtime import (
+    PROVENANCE_BINDING_MODE,
+    build_gate_report,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 
@@ -56,6 +61,11 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def _write_provenance(self, payload: dict) -> None:
+        payload = {
+            "artifact_kind": "supply_chain_provenance_report",
+            "source_revision": resolve_source_revision(self.vault).revision,
+            **payload,
+        }
         (self.vault / "ops" / "reports" / "supply-chain-provenance.json").write_text(
             json.dumps(payload), encoding="utf-8"
         )
@@ -86,6 +96,35 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
 
         report = build_gate_report(self.vault, context=fixed_context())
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(PROVENANCE_BINDING_MODE, REVISION_BINDING_MODE)
+        self.assertTrue(
+            next(
+                check["pass"]
+                for check in report["checks"]
+                if check["rule"] == "provenance_revision_binding"
+            )
+        )
+
+    def test_gate_rejects_provenance_from_another_revision(self) -> None:
+        self._write_provenance(
+            {
+                "source_revision": "stale-revision",
+                "inputs": [],
+                "lock_evidence": {},
+                "ci_install_proof": {},
+            }
+        )
+
+        report = build_gate_report(self.vault, context=fixed_context())
+        binding_check = next(
+            check
+            for check in report["checks"]
+            if check["rule"] == "provenance_revision_binding"
+        )
+
+        self.assertEqual(report["status"], "fail")
+        self.assertFalse(binding_check["pass"])
+        self.assertIn("source_revision_mismatch", binding_check["details"])
 
     def test_gate_accepts_local_composite_action_install_proof(self) -> None:
         (self.vault / ".github" / "workflows" / "ci.yml").write_text(

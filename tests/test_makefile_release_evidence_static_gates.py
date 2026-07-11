@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -255,7 +257,6 @@ _RELEASE_CLOSEOUT_BATCH_MANIFEST_ASSIGNMENTS = (
     "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_RECOMMENDED_TARGETS_OUT ?= tmp/release-closeout-post-check-finalizer-recommended-targets.txt",
     "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_PLAN_OUT ?= tmp/release-closeout-post-check-finalizer-plan.json",
     "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS ?=",
-    "RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS ?= 10",
     "RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS ?=",
 )
 
@@ -384,10 +385,7 @@ _EXTERNAL_REPORT_RELEASE_BASIS_TARGET_CONTRACTS = (
         "external-report-lifecycle-refresh",
         exact_recipe=(
             "$(MAKE) external-report-reference-manifest-settle",
-            "$(MAKE) generated-artifact-converge",
-            "$(MAKE) release-closeout-summary-report",
-            "$(MAKE) release-evidence-cohort",
-            "$(MAKE) release-evidence-dashboard-report",
+            "$(MAKE) release-finality-resettle-current-or-refresh",
         ),
     ),
 )
@@ -521,6 +519,7 @@ _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS = (
             '--zip-metadata "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)"',
             '--distribution-zip "$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)"',
             "ops.scripts.canonical_artifact_promote",
+            "--binding-mode revision",
         ),
     ),
     MakeTargetContract(
@@ -540,10 +539,8 @@ _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS = (
             "ops.scripts.release_closeout_fixed_point",
             '--out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)"',
             "--schema ops/schemas/release-closeout-fixed-point.schema.json",
-            "--bootstrap-post-promote",
             '--initial-target "$(target)"',
-            "--baseline-before-first-iteration",
-            "$(MAKE) external-report-action-matrix",
+            "--binding-mode revision",
             "$(MAKE) release-closeout-finality-attestation",
         ),
     ),
@@ -563,6 +560,7 @@ _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS = (
         required_tokens=(
             "ops.scripts.release_closeout_finality_attestation",
             "--schema ops/schemas/release-closeout-finality-attestation.schema.json",
+            "--binding-mode revision",
         ),
     ),
     MakeTargetContract(
@@ -647,9 +645,9 @@ def _assert_external_report_release_basis_targets(case: unittest.TestCase, text:
         _EXTERNAL_REPORT_RELEASE_BASIS_TARGET_CONTRACTS,
     )
     settle_block = _target_block(text, "external-report-reference-manifest-settle")
-    case.assertGreaterEqual(
+    case.assertEqual(
         settle_block.count("external-report-reference-manifest-release-check"),
-        2,
+        1,
     )
 
 
@@ -667,17 +665,17 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
 def _assert_batch_manifest_closeout_recipe_targets(case: unittest.TestCase, text: str) -> None:
     _assert_make_target_contracts(case, text, _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS)
     fixed_point_lines = _recipe_lines(text, "release-closeout-fixed-point")
-    bootstrap_index = next(
+    promotion_index = next(
         index
         for index, line in enumerate(fixed_point_lines)
-        if "--bootstrap-post-promote" in line
+        if "ops.scripts.canonical_artifact_promote" in line
     )
-    matrix_index = fixed_point_lines.index("$(MAKE) external-report-action-matrix")
     attestation_index = fixed_point_lines.index(
         "$(MAKE) release-closeout-finality-attestation"
     )
-    case.assertLess(bootstrap_index, matrix_index)
-    case.assertLess(matrix_index, attestation_index)
+    case.assertLess(promotion_index, attestation_index)
+    case.assertNotIn("$(MAKE) external-report-action-matrix", fixed_point_lines)
+    case.assertFalse(any("--bootstrap-post-promote" in line for line in fixed_point_lines))
 
 
 def _assert_release_audit_and_post_seal_targets(case: unittest.TestCase, text: str) -> None:
@@ -862,8 +860,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             _recipe_lines(text, "operator-evidence-closeout-finality-resettle"),
             [
                 "$(MAKE) test-execution-summary-current-or-refresh",
-                '$(MAKE) generated-artifact-finality-suffix ARTIFACT_FRESHNESS_PROGRESS="$(OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS)"',
-                "$(MAKE) release-closeout-summary-report",
                 '$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS="$(OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS)" ARTIFACT_FRESHNESS_PROGRESS="$(OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS)"',
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) release-closeout-finality-verify",
@@ -1041,11 +1037,23 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertTrue(recipe_lines, "release-evidence-converge has no recipe lines")
 
         self.assertIn("$(MAKE) release-closeout-fixed-point", recipe_lines)
-        self.assertIn("$(MAKE) operator-release-summary", recipe_lines)
+        self.assertNotIn("$(MAKE) operator-release-summary", recipe_lines)
         self.assertNotIn(
             "$(MAKE) release-closeout-batch-manifest-promote", recipe_lines
         )
         self.assertNotIn("$(MAKE) release-evidence-closeout-self-check", recipe_lines)
+
+    def test_fixed_point_terminal_operator_writer_cleans_staging_first(self) -> None:
+        text = _makefile_text()
+
+        self.assertIn("operator-release-summary-terminal", _target_block(text, ".PHONY"))
+        self.assertEqual(
+            _recipe_lines(text, "operator-release-summary-terminal"),
+            [
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) operator-release-summary",
+            ],
+        )
 
     def test_release_verify_current_and_sealed_verify_are_check_lanes(self) -> None:
         text = _makefile_text()
@@ -1091,8 +1099,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             with self.subTest(required_line=required_line):
                 self.assertIn(required_line, recipe_lines)
         for required_line in (
-            "$(MAKE) generated-artifact-finality-suffix",
-            "$(MAKE) release-closeout-summary-report",
             "$(MAKE) release-closeout-fixed-point",
             "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
         ):
@@ -1118,7 +1124,114 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         )
         self.assertIn("$(MAKE) release-finality-resettle-current-check", current_or_refresh_block)
         self.assertIn("$(MAKE) release-finality-resettle", current_or_refresh_block)
+        self.assertGreaterEqual(
+            current_or_refresh_block.count("$(MAKE) release-finality-resettle-current-check"),
+            2,
+        )
         self.assertNotIn("$(MAKE) release-evidence-converge", recipe_lines)
+
+    def test_release_finality_resettle_second_call_preserves_canonical_outputs(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir)
+            fake_make = state_dir / "fake-make"
+            fake_make.write_text(
+                """#!/bin/sh
+set -eu
+target=${1:-}
+printf '%s\n' "$target" >> "$FAKE_STATE_DIR/calls"
+case "$target" in
+  release-finality-resettle-current-check)
+    test -f "$FAKE_STATE_DIR/current"
+    ;;
+  tmp-json-clean)
+    ;;
+  release-finality-resettle)
+    printf '%s\n' 'canonical-a' > "$FAKE_STATE_DIR/artifact-a.json"
+    printf '%s\n' 'canonical-b' > "$FAKE_STATE_DIR/artifact-b.json"
+    : > "$FAKE_STATE_DIR/current"
+    ;;
+  *)
+    printf 'unexpected target: %s\n' "$target" >&2
+    exit 97
+    ;;
+esac
+""",
+                encoding="utf-8",
+            )
+            fake_make.chmod(0o755)
+            env = {**os.environ, "FAKE_STATE_DIR": state_dir.as_posix()}
+            command = [
+                "make",
+                "-s",
+                "release-finality-resettle-current-or-refresh",
+                f"MAKE={fake_make.as_posix()}",
+            ]
+
+            first = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
+            self.assertEqual(first.returncode, 0, first.stderr)
+            artifact_paths = [
+                state_dir / "artifact-a.json",
+                state_dir / "artifact-b.json",
+            ]
+            before = {
+                path.name: (
+                    hashlib.sha256(path.read_bytes()).hexdigest(),
+                    path.stat().st_mtime_ns,
+                )
+                for path in artifact_paths
+            }
+
+            second = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
+            after = {
+                path.name: (
+                    hashlib.sha256(path.read_bytes()).hexdigest(),
+                    path.stat().st_mtime_ns,
+                )
+                for path in artifact_paths
+            }
+
+            self.assertEqual(second.returncode, 0, second.stderr)
+            self.assertEqual(after, before)
+            self.assertEqual(
+                (state_dir / "calls").read_text(encoding="utf-8").splitlines(),
+                [
+                    "release-finality-resettle-current-check",
+                    "tmp-json-clean",
+                    "release-finality-resettle",
+                    "release-finality-resettle-current-check",
+                    "release-finality-resettle-current-check",
+                ],
+            )
+
+    def test_release_converge_post_delegates_to_terminal_finality_once(self) -> None:
+        recipe_lines = _recipe_lines(_makefile_text(), "release-converge-post")
+
+        self.assertEqual(
+            recipe_lines,
+            [
+                "$(MAKE) release-converge-post-evidence",
+                "$(MAKE) release-terminal-finality",
+            ],
+        )
+        self.assertNotIn("$(MAKE) release-closeout-fixed-point", recipe_lines)
 
     def test_check_finalized_runs_post_check_dry_run_before_mutating_finalizer(self) -> None:
         text = _makefile_text()
@@ -1229,13 +1342,11 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             "batch manifest index out of range",
         )
 
-        # Fixed-point owns iteration internally; Make should keep any extra
-        # fixed-point calls bounded instead of hand-rolling an outer loop.
+        # The graph owns one writer pass; Make must not add an outer settle loop.
         fixed_point_count = sum(
             1 for w, _ in occurrences if w == "release-closeout-fixed-point"
         )
-        self.assertGreaterEqual(fixed_point_count, 1)
-        self.assertLessEqual(fixed_point_count, 2)
+        self.assertEqual(fixed_point_count, 1)
 
     def test_release_evidence_refresh_fast_reuses_existing_expensive_evidence(
         self,
@@ -1259,7 +1370,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
                 "$(MAKE) auto-improve-readiness-report",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) generated-artifact-converge",
-                "$(MAKE) test-execution-summary-reuse",
+                "$(MAKE) test-execution-summary-revision-rebind",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) generated-artifact-converge",
@@ -1271,6 +1382,8 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         )
         self.assertNotIn("$(MAKE) release-smoke-full\n", block)
         self.assertNotIn("$(MAKE) test-execution-summary\n", block)
+        self.assertNotIn("test-execution-summary-current-or-refresh", block)
+        self.assertIn("test-execution-summary-revision-rebind", block)
 
     def test_release_evidence_cohort_targets_exist(self) -> None:
         text = _makefile_text()

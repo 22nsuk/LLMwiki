@@ -13,12 +13,15 @@ from typing import Any, TypedDict
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.artifact_binding_runtime import (
+        REVISION_BINDING_MODE,
+        binding_file_digest,
+    )
     from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.core.generated_artifact_semantic_digest import semantic_file_digest
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.release_authority_state_runtime import (
         release_status_v2_view_with_readiness_fallback,
@@ -34,12 +37,15 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         release_source_tree_fingerprint,
     )
 else:
+    from ops.scripts.core.artifact_binding_runtime import (
+        REVISION_BINDING_MODE,
+        binding_file_digest,
+    )
     from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
-    from ops.scripts.core.generated_artifact_semantic_digest import semantic_file_digest
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.release_authority_state_runtime import (
         release_status_v2_view_with_readiness_fallback,
@@ -215,7 +221,10 @@ def _manifest_input_fingerprints(
 
 
 def _closeout_summary_fingerprint(vault: Path, closeout_summary: str | Path) -> str:
-    _semantic_mode, digest = semantic_file_digest(_resolve(vault, closeout_summary))
+    _binding_format, digest = binding_file_digest(
+        _resolve(vault, closeout_summary),
+        binding_mode=REVISION_BINDING_MODE,
+    )
     return digest
 
 

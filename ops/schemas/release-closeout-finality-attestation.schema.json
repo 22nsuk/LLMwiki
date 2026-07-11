@@ -24,11 +24,12 @@
     "batch_manifest",
     "self_check",
     "external_report_manifest",
-    "tracked_digest_map",
-    "tracked_semantic_digest_map",
-    "tracked_semantic_digest_modes",
-    "matches_fixed_point_digest_map",
-    "digest_mismatches",
+    "tracked_raw_digest_map",
+    "tracked_binding_digest_map",
+    "tracked_binding_mode_map",
+    "fixed_point_authority_status",
+    "matches_fixed_point_binding_digest_map",
+    "binding_digest_mismatches",
     "finality_status",
     "finality_failures"
   ],
@@ -56,7 +57,7 @@
       "type": "object",
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
-    "schema_version": { "type": "integer", "minimum": 1 },
+    "schema_version": { "type": "integer", "const": 2 },
     "artifact_status": {
       "type": "string",
       "enum": ["current", "stale"]
@@ -86,13 +87,26 @@
     "batch_manifest": { "$ref": "#/$defs/batch_manifest" },
     "self_check": { "$ref": "#/$defs/self_check" },
     "external_report_manifest": { "$ref": "#/$defs/external_report_manifest" },
-    "tracked_digest_map": { "$ref": "#/$defs/digest_map" },
-    "tracked_semantic_digest_map": { "$ref": "#/$defs/digest_map" },
-    "tracked_semantic_digest_modes": { "$ref": "#/$defs/semantic_mode_map" },
-    "matches_fixed_point_digest_map": { "type": "boolean" },
-    "digest_mismatches": {
+    "tracked_raw_digest_map": { "$ref": "#/$defs/digest_map" },
+    "tracked_binding_digest_map": { "$ref": "#/$defs/digest_map" },
+    "tracked_binding_mode_map": { "$ref": "#/$defs/binding_mode_map" },
+    "fixed_point_authority_status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "unsupported_schema_version",
+        "invalid_writer_policy",
+        "invalid_single_pass_execution",
+        "policy_binding_contract_mismatch",
+        "source_revision_mismatch",
+        "revision_binding_source_revision_mismatch",
+        "invalid_v2_authority"
+      ]
+    },
+    "matches_fixed_point_binding_digest_map": { "type": "boolean" },
+    "binding_digest_mismatches": {
       "type": "array",
-      "items": { "$ref": "#/$defs/digest_mismatch" }
+      "items": { "$ref": "#/$defs/binding_digest_mismatch" }
     },
     "finality_status": {
       "type": "string",
@@ -104,38 +118,47 @@
     }
   },
   "$defs": {
-    "digest": {
+    "sha256": {
       "type": "string",
       "pattern": "^(missing|[0-9a-f]{64})$"
     },
     "digest_map": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/digest" }
+      "additionalProperties": { "$ref": "#/$defs/sha256" }
     },
-    "semantic_mode_map": {
+    "binding_mode_map": {
       "type": "object",
-      "additionalProperties": { "type": "string", "minLength": 1 }
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["content", "revision", "raw"]
+      }
     },
     "fixed_point_report": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "path",
-        "digest",
+        "raw_digest",
+        "binding_mode",
         "load_status",
+        "schema_version",
         "status",
-        "converged",
-        "converged_iteration",
-        "final_digest_map"
+        "execution_pass_count",
+        "raw_digest_map",
+        "binding_digest_map",
+        "binding_mode_map"
       ],
       "properties": {
         "path": { "type": "string", "const": "ops/reports/release-closeout-fixed-point.json" },
-        "digest": { "$ref": "#/$defs/digest" },
+        "raw_digest": { "$ref": "#/$defs/sha256" },
+        "binding_mode": { "type": "string", "const": "raw" },
         "load_status": { "type": "string", "minLength": 1 },
+        "schema_version": { "type": "integer", "minimum": 0 },
         "status": { "type": "string", "minLength": 1 },
-        "converged": { "type": "boolean" },
-        "converged_iteration": { "type": "integer", "minimum": 0 },
-        "final_digest_map": { "$ref": "#/$defs/digest_map" }
+        "execution_pass_count": { "type": "integer", "minimum": 0 },
+        "raw_digest_map": { "$ref": "#/$defs/digest_map" },
+        "binding_digest_map": { "$ref": "#/$defs/digest_map" },
+        "binding_mode_map": { "$ref": "#/$defs/binding_mode_map" }
       }
     },
     "batch_manifest": {
@@ -143,8 +166,10 @@
       "additionalProperties": false,
       "required": [
         "path",
-        "digest",
+        "raw_digest",
+        "binding_mode",
         "load_status",
+        "schema_version",
         "status",
         "release_authority_status",
         "semantic_release_status",
@@ -154,8 +179,10 @@
       ],
       "properties": {
         "path": { "type": "string", "const": "ops/reports/release-closeout-batch-manifest.json" },
-        "digest": { "$ref": "#/$defs/digest" },
+        "raw_digest": { "$ref": "#/$defs/sha256" },
+        "binding_mode": { "type": "string", "const": "raw" },
         "load_status": { "type": "string", "minLength": 1 },
+        "schema_version": { "type": "integer", "minimum": 0 },
         "status": { "type": "string", "minLength": 1 },
         "release_authority_status": { "type": "string", "minLength": 1 },
         "semantic_release_status": { "type": "string", "minLength": 1 },
@@ -172,7 +199,8 @@
       "additionalProperties": false,
       "required": [
         "path",
-        "digest",
+        "raw_digest",
+        "binding_mode",
         "load_status",
         "result",
         "batch_manifest_fingerprint",
@@ -180,7 +208,8 @@
       ],
       "properties": {
         "path": { "type": "string", "const": "ops/reports/release-evidence-closeout-self-check.json" },
-        "digest": { "$ref": "#/$defs/digest" },
+        "raw_digest": { "$ref": "#/$defs/sha256" },
+        "binding_mode": { "type": "string", "const": "raw" },
         "load_status": { "type": "string", "minLength": 1 },
         "result": { "type": "string", "minLength": 1 },
         "batch_manifest_fingerprint": { "type": "string" },
@@ -192,27 +221,38 @@
       "additionalProperties": false,
       "required": [
         "path",
-        "digest",
+        "raw_digest",
+        "binding_mode",
         "load_status",
         "mode",
         "distribution_provenance_status"
       ],
       "properties": {
         "path": { "type": "string", "const": "external-reports/report-reference-manifest.json" },
-        "digest": { "$ref": "#/$defs/digest" },
+        "raw_digest": { "$ref": "#/$defs/sha256" },
+        "binding_mode": { "type": "string", "const": "raw" },
         "load_status": { "type": "string", "minLength": 1 },
         "mode": { "type": "string" },
         "distribution_provenance_status": { "type": "string" }
       }
     },
-    "digest_mismatch": {
+    "binding_digest_mismatch": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "fixed_point_digest", "current_digest"],
+      "required": [
+        "path",
+        "fixed_point_binding_digest",
+        "current_binding_digest",
+        "binding_mode"
+      ],
       "properties": {
         "path": { "type": "string", "minLength": 1 },
-        "fixed_point_digest": { "$ref": "#/$defs/digest" },
-        "current_digest": { "$ref": "#/$defs/digest" }
+        "fixed_point_binding_digest": { "$ref": "#/$defs/sha256" },
+        "current_binding_digest": { "$ref": "#/$defs/sha256" },
+        "binding_mode": {
+          "type": "string",
+          "enum": ["content", "revision", "raw"]
+        }
       }
     }
   }

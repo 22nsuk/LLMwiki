@@ -190,6 +190,7 @@ def _evidence_currentness_detail(
     *,
     current_source_revision: str,
     current_source_tree_fingerprint: str,
+    binding_mode: str,
 ) -> str:
     if load_status != "ok":
         return (
@@ -210,12 +211,18 @@ def _evidence_currentness_detail(
         str(payload.get("source_tree_fingerprint", "")).strip(),
         current_source_tree_fingerprint,
     )
+    if (
+        binding_mode == "content"
+        and source_revision_status == STATUS_VALUE_STALE
+        and source_tree_fingerprint_status == STATUS_VALUE_CURRENT
+    ):
+        source_revision_status = "provenance_only"
     reasons: list[str] = []
     if self_declared_currentness != STATUS_VALUE_CURRENT:
         reasons.append(f"self_declared_currentness:{self_declared_currentness}")
     if artifact_status != STATUS_VALUE_CURRENT:
         reasons.append(f"artifact_status:{artifact_status}")
-    if source_revision_status != STATUS_VALUE_CURRENT:
+    if source_revision_status not in {STATUS_VALUE_CURRENT, "provenance_only"}:
         reasons.append(f"source_revision:{source_revision_status}")
     if source_tree_fingerprint_status != STATUS_VALUE_CURRENT:
         reasons.append(f"source_tree_fingerprint:{source_tree_fingerprint_status}")
@@ -657,12 +664,14 @@ def build_status_surface(
             closeout_load_status,
             current_source_revision=current_source_revision,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
+            binding_mode="revision",
         ),
         public_summary_currentness_detail=_evidence_currentness_detail(
             public_summary,
             public_load_status,
             current_source_revision=current_source_revision,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
+            binding_mode="content",
         ),
     )
 

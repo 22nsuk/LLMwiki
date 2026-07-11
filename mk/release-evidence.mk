@@ -1,4 +1,4 @@
-.PHONY: collaboration-governance external-report-action-matrix external-report-lifecycle-refresh external-report-reference-manifest external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-reference-manifest-strict freshness-owner-route-converge freshness-source-identity-converge github-governance-live-drift github-governance-live-drift-check operator-evidence-closeout-current-or-refresh operator-evidence-closeout-finality-resettle operator-release-summary release-audit-pack release-builder-full release-builder-full-lane-guard release-clean release-clean-blocker-ledger release-clean-lane-evidence-review release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-closeout-finality-attestation release-closeout-finality-verify release-closeout-fixed-point release-closeout-fixed-point-cost-trend release-closeout-post-check-finalizer-ci-artifact release-closeout-post-check-finalizer-dry-run release-closeout-summary release-closeout-summary-conditional release-closeout-summary-report release-conditional release-distribution-zip release-distribution-zip-lane-guard release-evidence-closeout release-evidence-closeout-lane-guard release-evidence-closeout-self-check release-evidence-cohort release-evidence-cohort-check release-evidence-cohort-preseal-refresh release-evidence-cohort-report release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-evidence-dashboard release-evidence-dashboard-report release-evidence-refresh-fast release-finality-resettle release-finality-resettle-current-check release-finality-resettle-current-diagnose release-finality-resettle-current-or-refresh release-freshness-sensitive-evidence-refresh release-lane-summary release-post-seal-attestation release-provenance-clean release-sbom-clean release-sealed-verify release-smoke release-smoke-fast release-smoke-fast-current-check release-smoke-fast-refresh-check release-smoke-full release-smoke-full-current-check release-smoke-full-reuse release-smoke-lane-guard release-source-package-check release-terminal-finality release-verify-current review-archive review-archive-clean
+.PHONY: collaboration-governance external-report-action-matrix external-report-lifecycle-refresh external-report-reference-manifest external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-reference-manifest-strict freshness-owner-route-converge freshness-source-identity-converge github-governance-live-drift github-governance-live-drift-check operator-evidence-closeout-current-or-refresh operator-evidence-closeout-finality-resettle operator-release-summary operator-release-summary-terminal release-audit-pack release-builder-full release-builder-full-lane-guard release-clean release-clean-blocker-ledger release-clean-lane-evidence-review release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-closeout-finality-attestation release-closeout-finality-verify release-closeout-fixed-point release-closeout-fixed-point-cost-trend release-closeout-post-check-finalizer-ci-artifact release-closeout-post-check-finalizer-dry-run release-closeout-summary release-closeout-summary-conditional release-closeout-summary-report release-conditional release-distribution-zip release-distribution-zip-lane-guard release-evidence-closeout release-evidence-closeout-lane-guard release-evidence-closeout-self-check release-evidence-cohort release-evidence-cohort-check release-evidence-cohort-preseal-refresh release-evidence-cohort-report release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-evidence-dashboard release-evidence-dashboard-report release-evidence-refresh-fast release-finality-resettle release-finality-resettle-current-check release-finality-resettle-current-diagnose release-finality-resettle-current-or-refresh release-freshness-sensitive-evidence-refresh release-lane-summary release-post-seal-attestation release-provenance-clean release-sbom-clean release-sealed-verify release-smoke release-smoke-fast release-smoke-fast-current-check release-smoke-fast-refresh-check release-smoke-full release-smoke-full-current-check release-smoke-full-reuse release-smoke-lane-guard release-source-package-check release-terminal-finality release-verify-current review-archive review-archive-clean
 
 release-evidence-converge: release-evidence-converge-phase-3
 
@@ -60,9 +60,6 @@ release-evidence-converge-phase-2: release-evidence-converge-phase-1
 release-evidence-converge-phase-3: release-evidence-converge-phase-2
 	$(MAKE) release-closeout-post-check-finalizer-dry-run
 	$(MAKE) release-closeout-fixed-point
-	$(MAKE) operator-release-summary
-	$(MAKE) generated-artifact-converge
-	$(MAKE) release-closeout-fixed-point
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
 
@@ -72,8 +69,6 @@ release-finality-resettle:
 	$(MAKE) release-terminal-finality
 
 release-terminal-finality:
-	$(MAKE) generated-artifact-finality-suffix
-	$(MAKE) release-closeout-summary-report
 	$(MAKE) release-closeout-fixed-point
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required
@@ -99,12 +94,11 @@ release-finality-resettle-current-or-refresh:
 	else \
 		$(MAKE) tmp-json-clean; \
 		$(MAKE) release-finality-resettle; \
+		$(MAKE) release-finality-resettle-current-check; \
 	fi
 
 operator-evidence-closeout-finality-resettle:
 	$(MAKE) test-execution-summary-current-or-refresh
-	$(MAKE) generated-artifact-finality-suffix ARTIFACT_FRESHNESS_PROGRESS="$(OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS)"
-	$(MAKE) release-closeout-summary-report
 	$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS="$(OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS)" ARTIFACT_FRESHNESS_PROGRESS="$(OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS)"
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
@@ -154,7 +148,7 @@ release-evidence-refresh-fast:
 	$(MAKE) auto-improve-readiness-report
 	$(MAKE) tmp-json-clean
 	$(MAKE) generated-artifact-converge
-	$(MAKE) test-execution-summary-reuse
+	$(MAKE) test-execution-summary-revision-rebind
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) tmp-json-clean
 	$(MAKE) generated-artifact-converge
@@ -199,31 +193,31 @@ release-smoke-fast-refresh-check:
 
 release-closeout-summary:
 	$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)"
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary --binding-mode revision
 
 # Write-only refresh target: keep closeout JSON shape current without enforcing final release authority.
 release-closeout-summary-report:
 	$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --no-fail
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary --binding-mode revision
 
 release-closeout-summary-conditional:
 	$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --allow-conditional
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary --binding-mode revision
 
 release-clean-lane-evidence-review:
 	$(PYTHON) -m ops.scripts.release_clean_lane_evidence_review --vault "$(VAULT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --out "$(RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_OUT)"
 
 release-evidence-cohort:
 	$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy "$(RELEASE_EVIDENCE_COHORT_POLICY)" --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)" $(if $(RELEASE_EVIDENCE_COHORT_ZIP_METADATA),--zip-metadata "$(RELEASE_EVIDENCE_COHORT_ZIP_METADATA)",) $(if $(filter strict_same_fingerprint,$(RELEASE_EVIDENCE_COHORT_POLICY)),--fail-on-attention --require-clean-lane,)
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --out "$(RELEASE_EVIDENCE_COHORT_OUT)" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --out "$(RELEASE_EVIDENCE_COHORT_OUT)" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort --binding-mode revision
 
 release-evidence-cohort-report:
 	$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy "$(RELEASE_EVIDENCE_COHORT_POLICY)" --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)" $(if $(RELEASE_EVIDENCE_COHORT_ZIP_METADATA),--zip-metadata "$(RELEASE_EVIDENCE_COHORT_ZIP_METADATA)",)
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --out "$(RELEASE_EVIDENCE_COHORT_OUT)" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --out "$(RELEASE_EVIDENCE_COHORT_OUT)" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort --binding-mode revision
 
 release-evidence-cohort-preseal-refresh:
 	$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy strict_same_fingerprint --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)" $(if $(RELEASE_EVIDENCE_COHORT_ZIP_METADATA),--zip-metadata "$(RELEASE_EVIDENCE_COHORT_ZIP_METADATA)",)
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --out "$(RELEASE_EVIDENCE_COHORT_OUT)" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_EVIDENCE_COHORT_STAGING_OUT)" --out "$(RELEASE_EVIDENCE_COHORT_OUT)" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort --binding-mode revision
 
 release-evidence-cohort-check:
 	$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_DIAGNOSTIC_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy strict_same_fingerprint --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)" $(if $(RELEASE_EVIDENCE_COHORT_ZIP_METADATA),--zip-metadata "$(RELEASE_EVIDENCE_COHORT_ZIP_METADATA)",) --fail-on-attention --require-clean-lane
@@ -248,6 +242,10 @@ release-clean-blocker-ledger:
 operator-release-summary:
 	$(PYTHON) -m ops.scripts.operator_release_summary --vault "$(VAULT)" --out "$(OPERATOR_RELEASE_SUMMARY_OUT)"
 
+operator-release-summary-terminal:
+	$(MAKE) tmp-json-clean
+	$(MAKE) operator-release-summary
+
 review-archive:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.release.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"
 
@@ -266,13 +264,7 @@ external-report-reference-manifest-release-check:
 	$(if $(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH),$(MAKE) external-report-reference-manifest-strict,$(MAKE) external-report-reference-manifest EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE=advisory)
 
 external-report-reference-manifest-settle:
-	@if [ -n "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" ]; then \
-		$(MAKE) external-report-reference-manifest-release-check EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
-		$(MAKE) external-report-reference-manifest-release-check EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
-	else \
-		$(MAKE) external-report-reference-manifest-release-check; \
-		$(MAKE) external-report-reference-manifest-release-check; \
-	fi
+	$(MAKE) external-report-reference-manifest-release-check $(if $(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP),EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)",)
 
 external-report-action-matrix:
 	$(PYTHON) -m ops.scripts.external_report_action_matrix --vault "$(VAULT)" --out "$(EXTERNAL_REPORT_ACTION_MATRIX_OUT)"
@@ -287,10 +279,7 @@ collaboration-governance: github-governance-live-drift
 
 external-report-lifecycle-refresh:
 	$(MAKE) external-report-reference-manifest-settle
-	$(MAKE) generated-artifact-converge
-	$(MAKE) release-closeout-summary-report
-	$(MAKE) release-evidence-cohort
-	$(MAKE) release-evidence-dashboard-report
+	$(MAKE) release-finality-resettle-current-or-refresh
 
 release-conditional: release-evidence-refresh-fast
 
@@ -301,10 +290,8 @@ release-provenance-clean: release-clean supply-chain-check
 release-sbom-clean: release-provenance-clean sbom-readiness-check
 release-closeout-fixed-point:
 	$(MAKE) bootstrap-preflight
-	$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --max-iterations "$(RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS)" --timeout-seconds "$(RELEASE_CLOSEOUT_FIXED_POINT_TIMEOUT_SECONDS)" $(foreach target,$(RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS),--initial-target "$(target)") $(if $(RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS),--baseline-before-first-iteration,) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)",) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--make-variable "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_OUT)" --schema ops/schemas/release-closeout-fixed-point.schema.json --expected-artifact-kind release_closeout_fixed_point_report --expected-producer ops.scripts.release_closeout_fixed_point
-	$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --bootstrap-post-promote --max-iterations "$(RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS)" --timeout-seconds "$(RELEASE_CLOSEOUT_FIXED_POINT_TIMEOUT_SECONDS)" $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)",) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--make-variable "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)
-	$(MAKE) external-report-action-matrix
+	$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --timeout-seconds "$(RELEASE_CLOSEOUT_FIXED_POINT_TIMEOUT_SECONDS)" $(foreach target,$(RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS),--initial-target "$(target)") $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)",) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--make-variable "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_OUT)" --schema ops/schemas/release-closeout-fixed-point.schema.json --expected-artifact-kind release_closeout_fixed_point_report --expected-producer ops.scripts.release_closeout_fixed_point --binding-mode revision
 	$(MAKE) release-closeout-finality-attestation
 
 release-closeout-post-check-finalizer-dry-run:
@@ -319,14 +306,14 @@ release-closeout-fixed-point-cost-trend:
 
 release-closeout-finality-attestation:
 	$(PYTHON) -m ops.scripts.release_closeout_finality_attestation --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_CANDIDATE_OUT)"
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --schema ops/schemas/release-closeout-finality-attestation.schema.json --expected-artifact-kind release_closeout_finality_attestation --expected-producer ops.scripts.release_closeout_finality_attestation
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --schema ops/schemas/release-closeout-finality-attestation.schema.json --expected-artifact-kind release_closeout_finality_attestation --expected-producer ops.scripts.release_closeout_finality_attestation --binding-mode revision
 
 release-closeout-finality-verify:
 	$(PYTHON) -m ops.scripts.release_closeout_finality_attestation --vault "$(VAULT)" --attestation "$(RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT)" --verify
 
 release-closeout-batch-manifest-promote:
 	$(PYTHON) -m ops.scripts.release_closeout_batch_manifest --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_CANDIDATE_OUT)" $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--zip-metadata "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)" --zip-timestamp-timezone "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--distribution-zip "$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_OUT)" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_OUT)" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest --binding-mode revision
 
 release-closeout-batch-manifest-replay-verify:
 	@if [ -d tmp ] && find tmp -mindepth 1 -type f | grep -q .; then \

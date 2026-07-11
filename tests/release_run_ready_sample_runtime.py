@@ -6,7 +6,10 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 from unittest.mock import patch
 
-from ops.scripts.core.generated_artifact_semantic_digest import semantic_file_digest
+from ops.scripts.core.artifact_binding_runtime import (
+    REVISION_BINDING_MODE,
+    binding_file_digest,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.release.release_run_ready import (
     build_run_ready_plan,
@@ -604,8 +607,9 @@ def _write_current_run_ready_evidence(
     source_package_smoke = _source_package_smoke_payload(source_zip)
     closeout_summary_path = "ops/reports/release-closeout-summary.json"
     _write_json(vault, closeout_summary_path, _release_closeout_summary_payload())
-    _semantic_mode, closeout_summary_fingerprint = semantic_file_digest(
-        vault / closeout_summary_path
+    _binding_format, closeout_summary_fingerprint = binding_file_digest(
+        vault / closeout_summary_path,
+        binding_mode=REVISION_BINDING_MODE,
     )
     evidence = {
         "build/release/release-run-manifest.json": _release_run_manifest_payload(
