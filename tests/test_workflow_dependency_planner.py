@@ -1434,7 +1434,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make static": 60,
                 "make workflow-dependency-planner-check": 60,
                 FOCUSED_WORKFLOW_PLANNER_TEST_COMMAND: 30,
-                "make test-report-contract-core": 180,
+                "make test-execution-summary-current-or-refresh": 180,
                 "make sync-derived-check": 120,
             },
         )
@@ -1574,7 +1574,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                             "pytest -q -p no:cacheprovider "
                             "tests/test_report_schema_sample_regeneration.py"
                         ),
-                        "make test-report-contract-core",
+                        "make test-execution-summary-current-or-refresh",
                     ],
                 )
                 self.assertEqual(plan["unknown_paths"], [])

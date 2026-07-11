@@ -126,6 +126,10 @@ inventory, and selector-registry drift before the full `make public-check` lane.
 treated as checkpoint-grade work.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.
+Changed-path handoff plans use
+`make test-execution-summary-current-or-refresh` so the same selector either
+reuses current evidence or promotes the summary consumed by release readiness.
+Direct CI lane checks continue to use `make test-report-contract-core`.
 `make test-report-contract-all` intentionally sweeps every `report_contract`
 marker and is a checkpoint, release-style, or final contract proof, not the
 default for every vertical slice. Report-contract, release-sealing, and

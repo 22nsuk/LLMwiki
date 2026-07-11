@@ -1063,6 +1063,37 @@ def _reused_report_for_args(
     return None
 
 
+def _exact_reuse_only_diagnostics(
+    vault: Path,
+    args: argparse.Namespace,
+    *,
+    collect_nodeid_digest: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not args.reuse_only or args.refresh_revision_if_same_tree:
+        return None
+    try:
+        existing = _load_summary(vault, args.reuse_from or args.out)
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+    diagnostics = reuse_currentness_diagnostics(
+        existing,
+        vault=vault,
+        command=args.command,
+        suite=args.suite,
+        collect_nodeids=args.collect_nodeids,
+        collect_nodeid_digest=collect_nodeid_digest,
+        deselection_policy_path=args.deselection_policy,
+    )
+    if not diagnostics.get("reusable"):
+        return None
+    return {
+        "summary_mode": "reused",
+        "write_status": "not_written",
+        "reused_from": str(existing.get("generated_at", "")),
+        "reuse_diagnostics": diagnostics,
+    }
+
+
 def _interrupted_report(
     vault: Path,
     args: argparse.Namespace,
@@ -1238,6 +1269,14 @@ def main(argv: list[str] | None = None) -> int:
         return _run_aggregate_cli(vault, args)
 
     collect_nodeid_digest = _collect_nodeid_digest_for_args(vault, args)
+    exact_reuse = _exact_reuse_only_diagnostics(
+        vault,
+        args,
+        collect_nodeid_digest=collect_nodeid_digest,
+    )
+    if exact_reuse is not None:
+        print(json.dumps(exact_reuse, ensure_ascii=False, indent=2))
+        return 0
     report = _reused_report_for_args(
         vault,
         args,

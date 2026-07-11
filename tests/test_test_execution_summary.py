@@ -1493,6 +1493,64 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertTrue(diagnostics["current_source_tree_fingerprint"])
             self.assertTrue(diagnostics["observed_source_tree_fingerprint"])
 
+    def test_cli_exact_reuse_only_is_no_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            test_file = vault / "tests/test_sample.py"
+            test_file.parent.mkdir(parents=True, exist_ok=True)
+            test_file.write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+            command = [sys.executable, "-m", "pytest", "tests/test_sample.py"]
+            existing = build_report(
+                vault,
+                command=command,
+                result=_result(returncode=0, stdout="= 2 passed in 1.00s ="),
+                duration_ms=1000,
+                suite="unit",
+                context=_fixed_context(),
+            )
+            canonical = vault / "ops/reports/test-execution-summary.json"
+            canonical.parent.mkdir(parents=True, exist_ok=True)
+            canonical.write_text(json.dumps(existing), encoding="utf-8")
+            before_bytes = canonical.read_bytes()
+            before_mtime = canonical.stat().st_mtime_ns
+            check_out = vault / "tmp/test-execution-summary-check.json"
+
+            with (
+                patch("ops.scripts.test.test_execution_summary.run_with_timeout") as run,
+                patch(
+                    "ops.scripts.test.test_execution_summary.collect_pytest_nodeid_digest"
+                ) as collect,
+                patch("ops.scripts.test.test_execution_summary.write_report") as write,
+                redirect_stdout(io.StringIO()) as stdout,
+            ):
+                returncode = summary_main(
+                    [
+                        "--vault",
+                        str(vault),
+                        "--out",
+                        "tmp/test-execution-summary-check.json",
+                        "--suite",
+                        "unit",
+                        "--reuse-only",
+                        "--reuse-from",
+                        "ops/reports/test-execution-summary.json",
+                        "--",
+                        *command,
+                    ]
+                )
+
+            diagnostics = json.loads(stdout.getvalue())
+            self.assertEqual(returncode, 0)
+            self.assertEqual(diagnostics["write_status"], "not_written")
+            run.assert_not_called()
+            collect.assert_not_called()
+            write.assert_not_called()
+            self.assertFalse(check_out.exists())
+            self.assertEqual(canonical.read_bytes(), before_bytes)
+            self.assertEqual(canonical.stat().st_mtime_ns, before_mtime)
+
     def test_cli_reuse_only_fails_fast_when_source_revision_is_stale(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
