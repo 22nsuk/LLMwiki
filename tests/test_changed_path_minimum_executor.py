@@ -26,7 +26,24 @@ def _report(*specs: dict[str, object]) -> dict[str, object]:
 
 class ChangedPathMinimumExecutorTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.vault = REPO_ROOT
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.vault = Path(self.temp_dir.name) / "vault"
+        for rel_path in (
+            "ops/test-lane-registry.json",
+            "ops/schemas/test-lane-registry.schema.json",
+        ):
+            destination = self.vault / rel_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                (REPO_ROOT / rel_path).read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+        workspace_python = self.vault / ".venv/bin/python"
+        workspace_python.parent.mkdir(parents=True, exist_ok=True)
+        workspace_python.touch()
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
 
     def test_executes_specs_in_order_without_final_checkpoint(self) -> None:
         calls: list[dict[str, Any]] = []
@@ -75,8 +92,8 @@ class ChangedPathMinimumExecutorTests(unittest.TestCase):
             next(
                 path.resolve()
                 for path in (
-                    REPO_ROOT / ".venv/bin/python",
-                    REPO_ROOT / ".venv/Scripts/python.exe",
+                    self.vault / ".venv/bin/python",
+                    self.vault / ".venv/Scripts/python.exe",
                 )
                 if path.is_file()
             ),
