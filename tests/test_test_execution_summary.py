@@ -4,6 +4,7 @@ import datetime as dt
 import hashlib
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -44,6 +45,8 @@ from ops.scripts.test.test_execution_summary import (
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.report_contract, pytest.mark.report_contract_core]
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _result(
@@ -1451,10 +1454,15 @@ class TestExecutionSummaryTest(unittest.TestCase):
             out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
             (vault / "README.md").write_text("# Test\n\nSource tree changed.\n", encoding="utf-8")
 
-            with patch(
-                "ops.scripts.test.test_execution_summary.run_with_timeout",
-                return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
-            ) as run:
+            with (
+                patch(
+                    "ops.scripts.test.test_execution_summary.run_with_timeout",
+                    return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
+                ) as run,
+                patch(
+                    "ops.scripts.test.test_execution_summary.collect_pytest_nodeid_digest"
+                ) as collect,
+            ):
                 stdout = io.StringIO()
                 with redirect_stdout(stdout):
                     returncode = summary_main(
@@ -1465,8 +1473,10 @@ class TestExecutionSummaryTest(unittest.TestCase):
                             "tmp/test-execution-summary-check.json",
                             "--suite",
                             "unit",
+                            "--collect-nodeids",
                             "--reuse-if-current",
                             "--reuse-only",
+                            "--refresh-revision-if-same-tree",
                             "--reuse-from",
                             "ops/reports/test-execution-summary.json",
                             "--",
@@ -1476,6 +1486,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
 
             self.assertEqual(returncode, 1)
             self.assertEqual(run.call_count, 0)
+            self.assertEqual(collect.call_count, 0)
             self.assertFalse((vault / "tmp" / "test-execution-summary-check.json").exists())
             diagnostics = json.loads(stdout.getvalue())["reuse_diagnostics"]
             self.assertEqual(diagnostics["reason"], REUSE_MISMATCH_SOURCE_TREE)
@@ -1550,16 +1561,29 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 duration_ms=1000,
                 suite="unit",
                 context=_fixed_context(),
+                collect_nodeids=True,
+                collect_nodeid_digest={
+                    "status": "collected",
+                    "command": "python -m pytest --collect-only -q tests/test_sample.py",
+                    "nodeid_count": 2,
+                    "sha256": "a" * 64,
+                    "reason": "",
+                },
             )
             existing["source_revision"] = "old-revision"
             out_path = vault / "ops" / "reports" / "test-execution-summary.json"
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
-            with patch(
-                "ops.scripts.test.test_execution_summary.run_with_timeout",
-                return_value=_result(returncode=1, stdout="= 1 failed in 0.01s ="),
-            ) as run:
+            with (
+                patch(
+                    "ops.scripts.test.test_execution_summary.run_with_timeout",
+                    return_value=_result(returncode=1, stdout="= 1 failed in 0.01s ="),
+                ) as run,
+                patch(
+                    "ops.scripts.test.test_execution_summary.collect_pytest_nodeid_digest"
+                ) as collect,
+            ):
                 returncode = summary_main(
                     [
                         "--vault",
@@ -1568,7 +1592,9 @@ class TestExecutionSummaryTest(unittest.TestCase):
                         "ops/reports/test-execution-summary.json",
                         "--suite",
                         "unit",
+                        "--collect-nodeids",
                         "--reuse-if-current",
+                        "--reuse-only",
                         "--refresh-revision-if-same-tree",
                         "--",
                         *command,
@@ -1578,6 +1604,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
 
             self.assertEqual(returncode, 0)
             self.assertEqual(run.call_count, 0)
+            self.assertEqual(collect.call_count, 0)
             self.assertEqual(payload["summary_mode"], "reused")
             self.assertEqual(payload["source_revision"], "source_package_without_git")
             self.assertEqual(payload["counts"]["passed"], 2)
@@ -1759,6 +1786,104 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(payload["source_revision"], "source_package_without_git")
             self.assertEqual(payload["source_tree_fingerprint"], shard["source_tree_fingerprint"])
             self.assertEqual(payload["counts"]["passed"], 2)
+
+    def test_make_full_revision_rebind_preserves_current_and_replaces_stale_revision(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            shard = build_report(
+                vault,
+                command=[sys.executable, "-m", "pytest"],
+                result=_result(returncode=0, stdout="= 2 passed in 1.00s ="),
+                duration_ms=1000,
+                suite="full-shard-1",
+                context=_fixed_context(),
+                collect_nodeids=True,
+                collect_nodeid_digest={
+                    "status": "collected",
+                    "command": "python -m pytest --collect-only -q",
+                    "nodeid_count": 2,
+                    "sha256": "a" * 64,
+                    "reason": "",
+                },
+            )
+            shard_dir = vault / "ops" / "reports" / "test-execution-summary-full-shards"
+            shard_dir.mkdir(parents=True)
+            (shard_dir / "full-suite-shard-1.json").write_text(
+                json.dumps(shard, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            aggregate = build_aggregate_report(
+                vault,
+                shard_paths=[
+                    "ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json"
+                ],
+                suite="full",
+                context=_fixed_context(),
+            )
+            out_path = vault / "ops" / "reports" / "test-execution-summary-full.json"
+            out_path.write_text(
+                json.dumps(aggregate, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            candidate_path = vault / "tmp" / "test-execution-summary-full.candidate.json"
+            candidate_path.parent.mkdir(parents=True)
+            candidate_path.write_text('{"stale": true}\n', encoding="utf-8")
+
+            before_bytes = out_path.read_bytes()
+            before_mtime_ns = out_path.stat().st_mtime_ns
+            current_result = subprocess.run(
+                [
+                    "make",
+                    "-s",
+                    "test-execution-summary-full-revision-rebind",
+                    f"VAULT={vault}",
+                    f"PYTHON={sys.executable}",
+                    f"TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT={candidate_path}",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
+
+            self.assertEqual(current_result.returncode, 0, current_result.stderr)
+            self.assertFalse(candidate_path.exists())
+            self.assertEqual(out_path.read_bytes(), before_bytes)
+            self.assertEqual(out_path.stat().st_mtime_ns, before_mtime_ns)
+
+            aggregate["source_revision"] = "old-revision"
+            out_path.write_text(
+                json.dumps(aggregate, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            candidate_path.write_text('{"stale": true}\n', encoding="utf-8")
+            stale_result = subprocess.run(
+                [
+                    "make",
+                    "-s",
+                    "test-execution-summary-full-revision-rebind",
+                    f"VAULT={vault}",
+                    f"PYTHON={sys.executable}",
+                    f"TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT={candidate_path}",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
+            rebound = json.loads(out_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(stale_result.returncode, 0, stale_result.stderr)
+            self.assertFalse(candidate_path.exists())
+            self.assertEqual(rebound["source_revision"], "source_package_without_git")
+            self.assertEqual(rebound["source_tree_fingerprint"], shard["source_tree_fingerprint"])
+            self.assertEqual(rebound["counts"]["passed"], 2)
 
     def test_cli_preserves_deselection_policy_in_written_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -1277,7 +1277,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
                 "$(MAKE) auto-improve-readiness-report",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) generated-artifact-converge",
-                "$(MAKE) test-execution-summary-reuse",
+                "$(MAKE) test-execution-summary-revision-rebind",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) tmp-json-clean",
                 "$(MAKE) generated-artifact-converge",
@@ -1289,6 +1289,8 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         )
         self.assertNotIn("$(MAKE) release-smoke-full\n", block)
         self.assertNotIn("$(MAKE) test-execution-summary\n", block)
+        self.assertNotIn("test-execution-summary-current-or-refresh", block)
+        self.assertIn("test-execution-summary-revision-rebind", block)
 
     def test_release_evidence_cohort_targets_exist(self) -> None:
         text = _makefile_text()

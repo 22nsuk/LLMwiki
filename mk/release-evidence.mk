@@ -148,7 +148,7 @@ release-evidence-refresh-fast:
 	$(MAKE) auto-improve-readiness-report
 	$(MAKE) tmp-json-clean
 	$(MAKE) generated-artifact-converge
-	$(MAKE) test-execution-summary-reuse
+	$(MAKE) test-execution-summary-revision-rebind
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) tmp-json-clean
 	$(MAKE) generated-artifact-converge

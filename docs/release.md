@@ -140,6 +140,10 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-auto-promotion-ready-check`: revalidate the existing
   auto-promotion manifest inputs without recomputing expensive evidence.
 - `make release-converge`: mutating evidence convergence for release reports.
+- `make release-evidence-refresh-fast`: lightweight report refresh that accepts
+  only current or same-tree test evidence. It never falls back to pytest; source
+  changes fail fast and require the explicit owning test or source-ready prepare
+  lane.
 - `make release-converge-preflight`: first refreshes the narrow
   `generated-artifact-script-output` lane so `ops/script-output-surfaces.json`
   is current as a material output/fallback registry before report-contract
@@ -151,9 +155,12 @@ surface comparison; this document owns release evidence and staged authority.
   finality attestation.
 - `make release-source-ready`: source-ready commit flow. Non-finality convergence
   happens in `release-source-ready-prepare` before the commit. The dedicated
-  `release-post-commit-rebind` lane then reuses same-tree test evidence, refreshes
-  revision-sensitive smoke evidence, runs terminal finality once for the committed
-  HEAD, and lets the fixed-point graph update the local-only operator summary.
+  `release-post-commit-rebind` lane then rebinds same-tree test evidence without
+  executing pytest or collect-only, refreshes revision-sensitive smoke evidence,
+  runs terminal finality once for the committed HEAD, and lets the fixed-point
+  graph update the local-only operator summary. If the source tree changed after
+  preparation, it fails immediately and requires a new prepare pass instead of
+  silently starting an expensive suite.
   `release-post-commit-finalize` checks that authority before
   `release-source-ready-post-verify` runs as a write-free check.
 - `make release-post-commit-finalize`: official post-commit evidence suffix for
@@ -553,7 +560,8 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   suite. Self-declared currentness is only a diagnostic hint;
   HEAD/source-fingerprint/domain-currentness checks are the authority.
   `release-check` does not rerun the unit subset after this full-suite evidence
-  is current.
+  is current. Post-commit finalization is stricter: it only accepts exact-current
+  or same-tree revision-rebind evidence and never falls back to test execution.
 - `ops/reports/public-check-summary.json` proves the exported public tree contract.
   `public-check-summary-current-check`, `public-check-all-check`, and
   `release-run-ready` reuse this report only when the same

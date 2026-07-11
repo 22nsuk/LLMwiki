@@ -319,8 +319,8 @@ release-converge-all-surfaces-pre-finality:
 release-post-commit-rebind:
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) release-smoke-full-reuse
-	$(MAKE) test-execution-summary-current-or-refresh
-	$(MAKE) test-execution-summary-full-current-or-refresh
+	$(MAKE) test-execution-summary-revision-rebind
+	$(MAKE) test-execution-summary-full-revision-rebind
 	$(MAKE) release-terminal-finality
 
 release-post-commit-finalize:

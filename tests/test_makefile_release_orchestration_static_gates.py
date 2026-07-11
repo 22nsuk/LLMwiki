@@ -260,9 +260,15 @@ _RELEASE_SOURCE_READY_TARGET_CONTRACTS = (
         exact_recipe=(
             "$(MAKE) release-smoke-fast-refresh-check",
             "$(MAKE) release-smoke-full-reuse",
+            "$(MAKE) test-execution-summary-revision-rebind",
+            "$(MAKE) test-execution-summary-full-revision-rebind",
+            "$(MAKE) release-terminal-finality",
+        ),
+        forbidden_tokens=(
             "$(MAKE) test-execution-summary-current-or-refresh",
             "$(MAKE) test-execution-summary-full-current-or-refresh",
-            "$(MAKE) release-terminal-finality",
+            "$(MAKE) test-execution-summary-full-refresh",
+            "$(PYTHON) -m pytest",
         ),
     ),
     MakeTargetContract(

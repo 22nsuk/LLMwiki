@@ -62,7 +62,7 @@ RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regressi
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT ?= tmp/release-closeout-finality-verify-ci.json
 
-.PHONY: fast-smoke runtime-hotspot-smoke makefile-static-gates test-boundary-contract-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact ci-report-contract-tier test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-executor-runtime test-subprocess pytest-markers-sync pytest-markers-sync-check _internal-pytest-markers-sync-check test-selectors-sync test-selectors-sync-check _internal-test-selectors-sync-check release-governance-sync _internal-release-governance-sync-check release-governance-sync-check report-schema-samples-check report-schema-samples-regenerate _internal-report-schema-samples-check runtime-hotspot-goldens-check _internal-runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout report-contract-closeout-generated-artifacts test-execution-summary-fast test-execution-summary-report-contract test-execution-summary test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-reuse test-execution-summary-full test-execution-summary-full-body test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-aggregate-reuse test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke runtime-hotspot-smoke makefile-static-gates test-boundary-contract-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact ci-report-contract-tier test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-executor-runtime test-subprocess pytest-markers-sync pytest-markers-sync-check _internal-pytest-markers-sync-check test-selectors-sync test-selectors-sync-check _internal-test-selectors-sync-check release-governance-sync _internal-release-governance-sync-check release-governance-sync-check report-schema-samples-check report-schema-samples-regenerate _internal-report-schema-samples-check runtime-hotspot-goldens-check _internal-runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout report-contract-closeout-generated-artifacts test-execution-summary-fast test-execution-summary-report-contract test-execution-summary test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-revision-rebind test-execution-summary-full test-execution-summary-full-body test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-revision-rebind test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 .PHONY: test-schema-static-smoke release-closeout-finality-verify-ci-artifact
 
 pytest-markers-sync:
@@ -215,13 +215,20 @@ else ifeq ($(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE),current-or-refresh)
 test-execution-summary-report-contract:
 	@if $(MAKE) test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=current-check; then \
 		echo "test execution summary is current; reused $(TEST_EXECUTION_SUMMARY_REUSE_FROM)"; \
+	elif $(MAKE) test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=revision-rebind; then \
+		echo "test execution summary revision rebound from same-tree evidence; reused $(TEST_EXECUTION_SUMMARY_REUSE_FROM)"; \
 	else \
-		$(MAKE) test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=reuse; \
+		$(MAKE) test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=run; \
 	fi
-else ifeq ($(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE),reuse)
+else ifeq ($(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE),revision-rebind)
 test-execution-summary-report-contract:
-	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --reuse-if-current --refresh-revision-if-same-tree --reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)" --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
+	rm -f "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --reuse-if-current --reuse-only --refresh-revision-if-same-tree --reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)" --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
+	@if test -f "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"; then \
+		$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary --binding-mode revision && rm -f "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"; \
+	else \
+		printf '%s\n' "report-contract evidence already matches the current revision; canonical report preserved."; \
+	fi
 else
 test-execution-summary-report-contract:
 	@printf '%s\n' "unsupported TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE)"; exit 2
@@ -248,10 +255,15 @@ else ifeq ($(TEST_EXECUTION_SUMMARY_FULL_MODE),refresh-no-converge)
 test-execution-summary-full:
 	$(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=body
 	@echo "full-suite evidence refreshed without generated artifact convergence; release preseal must reuse $(TEST_EXECUTION_SUMMARY_FULL_OUT) by currentness check"
-else ifeq ($(TEST_EXECUTION_SUMMARY_FULL_MODE),aggregate-reuse)
+else ifeq ($(TEST_EXECUTION_SUMMARY_FULL_MODE),revision-rebind)
 test-execution-summary-full:
-	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)" --aggregate --aggregate-dir "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)" --reuse-if-current --refresh-revision-if-same-tree --reuse-from "$(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
+	rm -f "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)"
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)" --aggregate --aggregate-dir "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)" --reuse-if-current --reuse-only --refresh-revision-if-same-tree --reuse-from "$(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"
+	@if test -f "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)"; then \
+		$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary --binding-mode revision && rm -f "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)"; \
+	else \
+		printf '%s\n' "full-suite evidence already matches the current revision; canonical report preserved."; \
+	fi
 else ifeq ($(TEST_EXECUTION_SUMMARY_FULL_MODE),current-check)
 test-execution-summary-full:
 	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_CHECK_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)" --aggregate --reuse-if-current --reuse-only --reuse-from "$(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"
@@ -259,8 +271,8 @@ else ifeq ($(TEST_EXECUTION_SUMMARY_FULL_MODE),current-or-refresh)
 test-execution-summary-full:
 	@if $(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=current-check; then \
 		echo "full-suite evidence is current; reused $(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"; \
-	elif $(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=aggregate-reuse; then \
-		echo "full-suite evidence metadata refreshed from current shards; reused $(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"; \
+	elif $(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=revision-rebind; then \
+		echo "full-suite evidence revision rebound from same-tree shards; reused $(TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM)"; \
 	else \
 		$(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=refresh-no-converge; \
 	fi
@@ -283,8 +295,11 @@ test-execution-summary-current-check:
 test-execution-summary-current-or-refresh:
 	$(MAKE) test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=current-or-refresh
 
-test-execution-summary-reuse:
-	$(MAKE) test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=reuse
+test-execution-summary-revision-rebind:
+	@$(MAKE) test-execution-summary-report-contract TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_MODE=revision-rebind || { \
+		printf '%s\n' "report-contract evidence is not from the current source tree; no tests were run. Run make release-source-ready-prepare before committing."; \
+		exit 1; \
+	}
 
 test-execution-summary-full-body:
 	$(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=body
@@ -295,8 +310,11 @@ test-execution-summary-full-refresh:
 test-execution-summary-full-refresh-no-converge:
 	$(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=refresh-no-converge
 
-test-execution-summary-full-aggregate-reuse:
-	$(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=aggregate-reuse
+test-execution-summary-full-revision-rebind:
+	@$(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=revision-rebind || { \
+		printf '%s\n' "full-suite evidence is not from the current source tree; no tests were run. Run make release-source-ready-prepare before committing."; \
+		exit 1; \
+	}
 
 test-execution-summary-full-current-check:
 	$(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=current-check

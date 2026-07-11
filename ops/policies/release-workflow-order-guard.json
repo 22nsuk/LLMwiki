@@ -678,12 +678,12 @@
       "roles": [
         "release-smoke-fast-refresh-check",
         "release-smoke-full-reuse",
-        "test-execution-summary-current-or-refresh",
-        "test-execution-summary-full-current-or-refresh",
+        "test-execution-summary-revision-rebind",
+        "test-execution-summary-full-revision-rebind",
         "release-terminal-finality"
       ],
       "exact": true,
-      "details": "post-commit rebinding must reuse same-tree test evidence, refresh revision-sensitive smoke evidence, and run terminal finality once for the committed HEAD; the fixed-point graph owns the operator readback writer."
+      "details": "post-commit rebinding must fail fast unless test evidence comes from the same source tree, refresh revision-sensitive smoke evidence without executing tests, and run terminal finality once for the committed HEAD; the fixed-point graph owns the operator readback writer."
     },
     {
       "id": "release_source_ready_post_verify_sequence",

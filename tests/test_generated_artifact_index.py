@@ -56,7 +56,7 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("{}", encoding="utf-8")
             (vault / "ops" / "operator").mkdir(parents=True, exist_ok=True)
-            (vault / "ops" / "operator" / "operator-release-summary.json").write_text(
+            (vault / "ops" / "operator" / "operator-runtime-notes.json").write_text(
                 "{}",
                 encoding="utf-8",
             )
@@ -129,7 +129,11 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             self.assertIn("external-reports/code_review_20260420.md", candidate_paths)
             self.assertIn("runs/run-20260420-old", candidate_paths)
             current_paths = {item["path"] for item in report["canonical_reports"]}
-            self.assertIn("ops/operator/operator-release-summary.json", current_paths)
+            self.assertNotIn(
+                "ops/operator/operator-release-summary.json",
+                current_paths,
+            )
+            self.assertIn("ops/operator/operator-runtime-notes.json", current_paths)
             self.assertTrue(graph_owned_paths.isdisjoint(current_paths))
             self.assertIn(
                 "external-reports/current_code_review_20260423.md", current_paths
@@ -137,7 +141,7 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             operator_report = next(
                 item
                 for item in report["canonical_reports"]
-                if item["path"] == "ops/operator/operator-release-summary.json"
+                if item["path"] == "ops/operator/operator-runtime-notes.json"
             )
             self.assertEqual(operator_report["surface"], "operator_reports")
             self.assertEqual(

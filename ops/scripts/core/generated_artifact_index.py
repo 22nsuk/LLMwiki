@@ -198,7 +198,12 @@ def _ops_report_inventory(vault: Path) -> list[dict[str, str]]:
 
 
 def _operator_report_inventory(vault: Path) -> list[dict[str, str]]:
-    return _file_records(vault, "ops/operator")
+    excluded_paths = _index_exclusion_paths(vault)
+    return [
+        record
+        for record in _file_records(vault, "ops/operator")
+        if record["path"] not in excluded_paths
+    ]
 
 
 def _external_root_report_records(vault: Path) -> list[dict[str, str]]:
@@ -470,7 +475,7 @@ def _ops_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str, str]
 
 
 def _operator_reports(vault: Path) -> tuple[list[dict[str, str]], list[dict[str, str]], dict[str, int]]:
-    root_records = _file_records(vault, "ops/operator")
+    root_records = _operator_report_inventory(vault)
     current = [
         {
             "surface": "operator_reports",
