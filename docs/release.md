@@ -146,13 +146,15 @@ surface comparison; this document owns release evidence and staged authority.
   summaries or release smoke can read it.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh;
   terminal finality runs once, after fast/full smoke, public-check, and full-suite
-  evidence are current.
-- `make release-source-ready`: source-ready commit flow. Mutating convergence happens
-  in `release-source-ready-prepare` before the commit; `release-post-commit-finalize`
-  then checks revision-bound evidence for the new HEAD before
-  `release-source-ready-post-verify` runs as a write-free check. Operator
-  release summary is local-only evidence and is refreshed during the prepare
-  convergence flow.
+  evidence are current. The local-only operator summary is refreshed after that
+  finality pass.
+- `make release-source-ready`: source-ready commit flow. Non-finality convergence
+  happens in `release-source-ready-prepare` before the commit. The dedicated
+  `release-post-commit-rebind` lane then reuses same-tree test evidence, refreshes
+  revision-sensitive smoke evidence, runs terminal finality once for the committed
+  HEAD, and updates the local-only operator summary. `release-post-commit-finalize`
+  checks that authority before `release-source-ready-post-verify` runs as a
+  write-free check.
 - `make release-post-commit-finalize`: official post-commit evidence suffix for
   source-ready commits. It runs check/current-only surfaces, writes the
   post-commit readback report, then leaves `release-closeout-finality-verify` as

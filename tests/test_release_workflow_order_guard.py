@@ -334,14 +334,18 @@ AUTO_PROMOTION_PRESEAL_FORBIDDEN_WRITER_LINES = (
     AUTO_PROMOTION_PRESEAL_LINES + _make_recipe("generated-artifact-converge")
 )
 RELEASE_CONVERGE_ALL_LINES = _make_recipe(
-    "release-converge-preflight",
-    "registry-preflight",
-    "release-smoke-fast",
-    "release-smoke-full-reuse",
-    "sync-public-policy",
-    "public-check-all",
-    "test-execution-summary-full-current-or-refresh",
-    "release-converge-post",
+    "release-converge-all-surfaces-pre-finality",
+    "release-terminal-finality",
+    "operator-release-summary",
+)
+RELEASE_CONVERGE_PRE_FINALITY_LINES = _make_recipe(
+    *_sequence_roles("release_converge_all_surfaces_pre_finality_sequence")
+)
+RELEASE_CONVERGE_POST_EVIDENCE_LINES = _make_recipe(
+    *_sequence_roles("release_converge_post_evidence_sequence")
+)
+RELEASE_CONVERGE_POST_LINES = _make_recipe(
+    *_sequence_roles("release_converge_post_sequence")
 )
 RELEASE_EVIDENCE_CONVERGE_LINES = _make_recipe(
     *_sequence_roles("release_evidence_converge_finalizer_sequence")
@@ -360,6 +364,9 @@ RELEASE_AUTHORITY_SETTLE_LINES = _make_recipe(
 )
 RELEASE_POST_COMMIT_FINALIZE_LINES = _make_recipe(
     *_sequence_roles("release_post_commit_finalizer_sequence")
+)
+RELEASE_POST_COMMIT_REBIND_LINES = _make_recipe(
+    *_sequence_roles("release_post_commit_rebind_sequence")
 )
 RELEASE_WORKFLOW_ORDER_SUPPORT_PHONY_TARGETS = (
     "check",
@@ -398,18 +405,21 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "{release_source_ready_prepare_lines}"
     "release-source-ready-post-verify:\n"
     "{release_source_ready_post_verify_lines}"
+    "release-post-commit-rebind:\n"
+    "{release_post_commit_rebind_lines}"
     "release-converge-all-surfaces:\n"
     "{release_converge_all_lines}"
+    "release-converge-all-surfaces-pre-finality:\n"
+    "{release_converge_pre_finality_lines}"
     "release-converge:\n"
     "\t$(MAKE) release-converge-preflight\n"
     "\t$(MAKE) release-converge-post\n"
     "release-converge-preflight:\n"
     "{release_converge_preflight_lines}"
+    "release-converge-post-evidence:\n"
+    "{release_converge_post_evidence_lines}"
     "release-converge-post:\n"
-    "\t$(MAKE) generated-artifact-converge\n"
-    "\t$(MAKE) remediation-backlog\n"
-    "\t$(MAKE) operator-release-summary\n"
-    "\t$(MAKE) release-terminal-finality\n"
+    "{release_converge_post_lines}"
     "release-source-ready-snapshot:\n"
     "\t@true\n"
     "release-source-ready-commit:\n"
@@ -558,12 +568,16 @@ def _workflow_order_guard_makefile_text(
             else RELEASE_SOURCE_READY_LINES
         ),
         release_source_ready_prepare_lines=RELEASE_SOURCE_READY_PREPARE_LINES,
+        release_post_commit_rebind_lines=RELEASE_POST_COMMIT_REBIND_LINES,
         release_source_ready_post_verify_lines=(
             RELEASE_SOURCE_READY_POST_VERIFY_MISORDER_LINES
             if misorder_release_source_ready_post_verify
             else RELEASE_SOURCE_READY_POST_VERIFY_LINES
         ),
         release_converge_all_lines=RELEASE_CONVERGE_ALL_LINES,
+        release_converge_pre_finality_lines=RELEASE_CONVERGE_PRE_FINALITY_LINES,
+        release_converge_post_evidence_lines=RELEASE_CONVERGE_POST_EVIDENCE_LINES,
+        release_converge_post_lines=RELEASE_CONVERGE_POST_LINES,
         release_converge_preflight_lines=(
             RELEASE_CONVERGE_PREFLIGHT_MISORDER_LINES
             if misorder_release_converge_preflight

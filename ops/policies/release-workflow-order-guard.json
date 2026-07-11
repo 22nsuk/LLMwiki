@@ -4,8 +4,10 @@
   "target_recipe_order": [
     "release-evidence-converge",
     "release-converge-preflight",
+    "release-converge-post-evidence",
     "release-converge-post",
     "release-converge-all-surfaces",
+    "release-converge-all-surfaces-pre-finality",
     "check-finalized",
     "release-finality-resettle",
     "release-terminal-finality",
@@ -17,6 +19,7 @@
     "release-source-ready",
     "release-source-ready-prepare",
     "release-source-ready-post-verify",
+    "release-post-commit-rebind",
     "release-post-commit-finalize"
   ],
   "role_overrides": [
@@ -173,74 +176,44 @@
       "target": "release-converge-post",
       "expected_lines": [
         {
-          "role": "generated-artifact-converge",
-          "target": "generated-artifact-converge",
-          "raw_line": "$(MAKE) generated-artifact-converge"
-        },
-        {
-          "role": "remediation-backlog",
-          "target": "remediation-backlog",
-          "raw_line": "$(MAKE) remediation-backlog"
-        },
-        {
-          "role": "operator-release-summary",
-          "target": "operator-release-summary",
-          "raw_line": "$(MAKE) operator-release-summary"
+          "role": "release-converge-post-evidence",
+          "target": "release-converge-post-evidence",
+          "raw_line": "$(MAKE) release-converge-post-evidence"
         },
         {
           "role": "release-terminal-finality",
           "target": "release-terminal-finality",
           "raw_line": "$(MAKE) release-terminal-finality"
+        },
+        {
+          "role": "operator-release-summary",
+          "target": "operator-release-summary",
+          "raw_line": "$(MAKE) operator-release-summary"
         }
       ],
-      "details": "release-converge-post runs diagnostics before delegating exactly once to the protected terminal finality controller; no canonical writer may follow that handoff."
+      "details": "release-converge-post completes evidence writers, delegates exactly once to terminal finality, then refreshes the local-only operator readback from final authority."
     },
     {
       "id": "release_converge_all_surfaces_protected_recipe",
       "target": "release-converge-all-surfaces",
       "expected_lines": [
         {
-          "role": "release-converge-preflight",
-          "target": "release-converge-preflight",
-          "raw_line": "$(MAKE) release-converge-preflight"
+          "role": "release-converge-all-surfaces-pre-finality",
+          "target": "release-converge-all-surfaces-pre-finality",
+          "raw_line": "$(MAKE) release-converge-all-surfaces-pre-finality"
         },
         {
-          "role": "registry-preflight",
-          "target": "registry-preflight",
-          "raw_line": "$(MAKE) registry-preflight"
+          "role": "release-terminal-finality",
+          "target": "release-terminal-finality",
+          "raw_line": "$(MAKE) release-terminal-finality"
         },
         {
-          "role": "release-smoke-fast",
-          "target": "release-smoke-fast",
-          "raw_line": "$(MAKE) release-smoke-fast"
-        },
-        {
-          "role": "release-smoke-full-reuse",
-          "target": "release-smoke-full-reuse",
-          "raw_line": "$(MAKE) release-smoke-full-reuse"
-        },
-        {
-          "role": "sync-public-policy",
-          "target": "sync-public-policy",
-          "raw_line": "$(MAKE) sync-public-policy"
-        },
-        {
-          "role": "public-check-all",
-          "target": "public-check-all",
-          "raw_line": "$(MAKE) public-check-all"
-        },
-        {
-          "role": "test-execution-summary-full-current-or-refresh",
-          "target": "test-execution-summary-full-current-or-refresh",
-          "raw_line": "$(MAKE) test-execution-summary-full-current-or-refresh"
-        },
-        {
-          "role": "release-converge-post",
-          "target": "release-converge-post",
-          "raw_line": "$(MAKE) release-converge-post"
+          "role": "operator-release-summary",
+          "target": "operator-release-summary",
+          "raw_line": "$(MAKE) operator-release-summary"
         }
       ],
-      "details": "release-converge-all-surfaces must make public and full-suite evidence current before exactly one terminal convergence handoff."
+      "details": "release-converge-all-surfaces must finish all pre-finality surfaces, run terminal finality exactly once, then refresh the local-only operator readback."
     },
     {
       "id": "release_auto_promotion_preflight_prerequisites_protected_recipe",
@@ -490,9 +463,9 @@
         "release-clean-blocker-ledger",
         "generated-artifact-converge",
         "release-closeout-post-check-finalizer-dry-run",
-        "operator-release-summary",
         "release-closeout-fixed-point",
         "tmp-json-clean",
+        "operator-release-summary",
         "release-closeout-finality-verify"
       ],
       "details": "release-evidence-converge must run preflight/static/package/test evidence, freshness and learning refreshes, release evidence summaries, then the fixed-point finalizer sequence ending in finality verification."
@@ -509,16 +482,41 @@
       "details": "release-converge-preflight must refresh the narrow script-output surface before report-contract summaries or smoke evidence can read it."
     },
     {
+      "id": "release_converge_post_evidence_sequence",
+      "target": "release-converge-post-evidence",
+      "roles": [
+        "generated-artifact-converge",
+        "remediation-backlog"
+      ],
+      "exact": true,
+      "details": "release-converge-post-evidence owns only canonical evidence writers that must finish before terminal finality."
+    },
+    {
       "id": "release_converge_post_sequence",
       "target": "release-converge-post",
       "roles": [
-        "generated-artifact-converge",
-        "remediation-backlog",
-        "operator-release-summary",
-        "release-terminal-finality"
+        "release-converge-post-evidence",
+        "release-terminal-finality",
+        "operator-release-summary"
       ],
       "exact": true,
-      "details": "release-converge-post must complete diagnostics before one terminal finality handoff and must not run another writer afterward."
+      "details": "release-converge-post must complete evidence before one terminal finality handoff and refresh only the local operator readback afterward."
+    },
+    {
+      "id": "release_converge_all_surfaces_pre_finality_sequence",
+      "target": "release-converge-all-surfaces-pre-finality",
+      "roles": [
+        "release-converge-preflight",
+        "registry-preflight",
+        "release-smoke-fast",
+        "release-smoke-full-reuse",
+        "sync-public-policy",
+        "public-check-all",
+        "test-execution-summary-full-current-or-refresh",
+        "release-converge-post-evidence"
+      ],
+      "exact": true,
+      "details": "the source-ready prepare lane must finish every mutable non-finality surface before the commit boundary."
     },
     {
       "id": "release_finality_resettle_sequence",
@@ -670,20 +668,35 @@
       "roles": [
         "release-source-ready-prepare",
         "release-source-ready-commit",
+        "release-post-commit-rebind",
         "release-post-commit-finalize",
         "release-source-ready-post-verify"
       ],
-      "details": "release-source-ready must prepare all mutating evidence before committing, create one release-source-ready commit, converge post-commit evidence, then run a write-free post-verify lane."
+      "details": "release-source-ready must prepare non-finality evidence, commit once, bind revision authority to the new HEAD, then run check-only finalization and post-verify lanes."
     },
     {
       "id": "release_source_ready_prepare_sequence",
       "target": "release-source-ready-prepare",
       "roles": [
         "release-source-ready-snapshot",
-        "release-converge-all-surfaces"
+        "release-converge-all-surfaces-pre-finality"
       ],
       "exact": true,
-      "details": "release-source-ready-prepare must snapshot the starting HEAD before mutating convergence."
+      "details": "release-source-ready-prepare must snapshot the starting HEAD and stop before revision-bound terminal finality."
+    },
+    {
+      "id": "release_post_commit_rebind_sequence",
+      "target": "release-post-commit-rebind",
+      "roles": [
+        "release-smoke-fast-refresh-check",
+        "release-smoke-full-reuse",
+        "test-execution-summary-current-or-refresh",
+        "test-execution-summary-full-current-or-refresh",
+        "release-terminal-finality",
+        "operator-release-summary"
+      ],
+      "exact": true,
+      "details": "post-commit rebinding must reuse same-tree test evidence, refresh revision-sensitive smoke evidence, run terminal finality once for the committed HEAD, then update the local operator readback."
     },
     {
       "id": "release_source_ready_post_verify_sequence",

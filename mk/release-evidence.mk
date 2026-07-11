@@ -59,9 +59,9 @@ release-evidence-converge-phase-2: release-evidence-converge-phase-1
 
 release-evidence-converge-phase-3: release-evidence-converge-phase-2
 	$(MAKE) release-closeout-post-check-finalizer-dry-run
-	$(MAKE) operator-release-summary
 	$(MAKE) release-closeout-fixed-point
 	$(MAKE) tmp-json-clean
+	$(MAKE) operator-release-summary
 	$(MAKE) release-closeout-finality-verify
 
 release-finality-resettle:

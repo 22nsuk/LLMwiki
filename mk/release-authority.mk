@@ -1,4 +1,4 @@
-.PHONY: head-aligned-evidence-converge release-authority-archive-candidate-gate release-authority-inventory release-authority-post-ready-finality release-authority-post-ready-finality-current-check release-authority-post-ready-finality-current-or-refresh release-authority-sealed-preflight release-authority-settle release-auto-promotion-goal-run-id-guard release-auto-promotion-goal-run-id-verified-check release-auto-promotion-operator-summary release-auto-promotion-preflight release-auto-promotion-preflight-check release-auto-promotion-preflight-prerequisites release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-check release-auto-promotion-ready-invalidate release-auto-promotion-ready-plan release-auto-promotion-safe-cleanup release-auto-promotion-safe-cleanup-cleanup-only release-auto-promotion-safe-cleanup-finalize release-check release-check-all-surfaces release-check-core release-check-finalized release-check-post-check release-check-post-converge release-check-preflight-converge release-converge release-converge-all-surfaces release-converge-post release-converge-preflight release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-evidence-closeout-sealed-sidecars release-package-current release-package-current-check release-package-current-or-refresh release-post-commit-finalize release-preflight-current release-public-current release-run-ready release-run-ready-check release-run-ready-plan release-run-ready-plan-check release-seal-current release-sealed-post-seal-attestation release-sealed-run-ready release-sealed-run-ready-check release-sealed-run-ready-plan release-source-package-clean-extract release-source-package-clean-extract-current-check release-source-package-clean-extract-current-or-refresh release-source-package-smoke release-source-package-smoke-current-check release-source-package-smoke-current-or-refresh release-source-ready release-source-ready-commit release-source-ready-post-verify release-source-ready-prepare release-source-ready-snapshot release-source-ready-status release-test-current release-worktree-clean-check
+.PHONY: head-aligned-evidence-converge release-authority-archive-candidate-gate release-authority-inventory release-authority-post-ready-finality release-authority-post-ready-finality-current-check release-authority-post-ready-finality-current-or-refresh release-authority-sealed-preflight release-authority-settle release-auto-promotion-goal-run-id-guard release-auto-promotion-goal-run-id-verified-check release-auto-promotion-operator-summary release-auto-promotion-preflight release-auto-promotion-preflight-check release-auto-promotion-preflight-prerequisites release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-check release-auto-promotion-ready-invalidate release-auto-promotion-ready-plan release-auto-promotion-safe-cleanup release-auto-promotion-safe-cleanup-cleanup-only release-auto-promotion-safe-cleanup-finalize release-check release-check-all-surfaces release-check-core release-check-finalized release-check-post-check release-check-post-converge release-check-preflight-converge release-converge release-converge-all-surfaces release-converge-all-surfaces-pre-finality release-converge-post release-converge-post-evidence release-converge-preflight release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-evidence-closeout-sealed-sidecars release-package-current release-package-current-check release-package-current-or-refresh release-post-commit-finalize release-post-commit-rebind release-preflight-current release-public-current release-run-ready release-run-ready-check release-run-ready-plan release-run-ready-plan-check release-seal-current release-sealed-post-seal-attestation release-sealed-run-ready release-sealed-run-ready-check release-sealed-run-ready-plan release-source-package-clean-extract release-source-package-clean-extract-current-check release-source-package-clean-extract-current-or-refresh release-source-package-smoke release-source-package-smoke-current-check release-source-package-smoke-current-or-refresh release-source-ready release-source-ready-commit release-source-ready-post-verify release-source-ready-prepare release-source-ready-snapshot release-source-ready-status release-test-current release-worktree-clean-check
 
 release-authority-inventory:
 	$(PYTHON) -m ops.scripts.release_authority_inventory --vault "$(VAULT)" --out "$(RELEASE_AUTHORITY_INVENTORY_OUT)"
@@ -287,11 +287,14 @@ release-converge-preflight:
 	$(MAKE) goal-runtime-local-evidence-refresh
 	$(MAKE) test-execution-summary-report-contract-refresh-no-smoke
 
-release-converge-post:
+release-converge-post-evidence:
 	$(MAKE) generated-artifact-converge
 	$(MAKE) remediation-backlog
-	$(MAKE) operator-release-summary
+
+release-converge-post:
+	$(MAKE) release-converge-post-evidence
 	$(MAKE) release-terminal-finality
+	$(MAKE) operator-release-summary
 
 release-converge:
 	$(MAKE) release-converge-preflight
@@ -301,6 +304,11 @@ release-converge:
 	$(MAKE) release-converge-post
 
 release-converge-all-surfaces:
+	$(MAKE) release-converge-all-surfaces-pre-finality
+	$(MAKE) release-terminal-finality
+	$(MAKE) operator-release-summary
+
+release-converge-all-surfaces-pre-finality:
 	$(MAKE) release-converge-preflight
 	$(MAKE) registry-preflight
 	$(MAKE) release-smoke-fast
@@ -308,7 +316,15 @@ release-converge-all-surfaces:
 	$(MAKE) sync-public-policy
 	$(MAKE) public-check-all
 	$(MAKE) test-execution-summary-full-current-or-refresh
-	$(MAKE) release-converge-post
+	$(MAKE) release-converge-post-evidence
+
+release-post-commit-rebind:
+	$(MAKE) release-smoke-fast-refresh-check
+	$(MAKE) release-smoke-full-reuse
+	$(MAKE) test-execution-summary-current-or-refresh
+	$(MAKE) test-execution-summary-full-current-or-refresh
+	$(MAKE) release-terminal-finality
+	$(MAKE) operator-release-summary
 
 release-post-commit-finalize:
 	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"
@@ -330,7 +346,7 @@ release-source-ready-snapshot:
 
 release-source-ready-prepare:
 	$(MAKE) release-source-ready-snapshot
-	$(MAKE) release-converge-all-surfaces
+	$(MAKE) release-converge-all-surfaces-pre-finality
 
 release-source-ready-commit:
 	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_COMMIT_OUT)" --pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)" --message "$(RELEASE_SOURCE_READY_COMMIT_MESSAGE)"
@@ -345,6 +361,7 @@ release-source-ready-post-verify:
 release-source-ready:
 	$(MAKE) release-source-ready-prepare
 	$(MAKE) release-source-ready-commit
+	$(MAKE) release-post-commit-rebind
 	$(MAKE) release-post-commit-finalize
 	$(MAKE) release-source-ready-post-verify
 

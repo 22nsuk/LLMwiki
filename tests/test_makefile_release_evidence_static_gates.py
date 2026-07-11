@@ -1036,6 +1036,14 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
 
         self.assertIn("$(MAKE) release-closeout-fixed-point", recipe_lines)
         self.assertIn("$(MAKE) operator-release-summary", recipe_lines)
+        self.assertLess(
+            recipe_lines.index("$(MAKE) release-closeout-fixed-point"),
+            recipe_lines.index("$(MAKE) operator-release-summary"),
+        )
+        self.assertLess(
+            recipe_lines.index("$(MAKE) operator-release-summary"),
+            recipe_lines.index("$(MAKE) release-closeout-finality-verify"),
+        )
         self.assertNotIn(
             "$(MAKE) release-closeout-batch-manifest-promote", recipe_lines
         )
@@ -1122,10 +1130,9 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertEqual(
             recipe_lines,
             [
-                "$(MAKE) generated-artifact-converge",
-                "$(MAKE) remediation-backlog",
-                "$(MAKE) operator-release-summary",
+                "$(MAKE) release-converge-post-evidence",
                 "$(MAKE) release-terminal-finality",
+                "$(MAKE) operator-release-summary",
             ],
         )
         self.assertNotIn("$(MAKE) release-closeout-fixed-point", recipe_lines)

@@ -129,6 +129,8 @@ _RELEASE_CONVERGE_PHONY_TARGETS = (
     "release-worktree-clean-check",
     "release-converge",
     "release-converge-all-surfaces",
+    "release-converge-all-surfaces-pre-finality",
+    "release-converge-post-evidence",
     "head-aligned-evidence-converge",
 )
 
@@ -161,6 +163,14 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
     MakeTargetContract(
         "release-converge-all-surfaces",
         exact_recipe=(
+            "$(MAKE) release-converge-all-surfaces-pre-finality",
+            "$(MAKE) release-terminal-finality",
+            "$(MAKE) operator-release-summary",
+        ),
+    ),
+    MakeTargetContract(
+        "release-converge-all-surfaces-pre-finality",
+        exact_recipe=(
             "$(MAKE) release-converge-preflight",
             "$(MAKE) registry-preflight",
             "$(MAKE) release-smoke-fast",
@@ -168,16 +178,22 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
             "$(MAKE) sync-public-policy",
             "$(MAKE) public-check-all",
             "$(MAKE) test-execution-summary-full-current-or-refresh",
-            "$(MAKE) release-converge-post",
+            "$(MAKE) release-converge-post-evidence",
+        ),
+    ),
+    MakeTargetContract(
+        "release-converge-post-evidence",
+        exact_recipe=(
+            "$(MAKE) generated-artifact-converge",
+            "$(MAKE) remediation-backlog",
         ),
     ),
     MakeTargetContract(
         "release-converge-post",
         exact_recipe=(
-            "$(MAKE) generated-artifact-converge",
-            "$(MAKE) remediation-backlog",
-            "$(MAKE) operator-release-summary",
+            "$(MAKE) release-converge-post-evidence",
             "$(MAKE) release-terminal-finality",
+            "$(MAKE) operator-release-summary",
         ),
         forbidden_tokens=(
             "$(MAKE) generated-artifact-index",
@@ -191,6 +207,7 @@ _RELEASE_SOURCE_READY_PHONY_TARGETS = (
     "release-source-ready-prepare",
     "release-source-ready-commit",
     "release-source-ready-post-verify",
+    "release-post-commit-rebind",
     "release-source-ready",
 )
 
@@ -237,7 +254,18 @@ _RELEASE_SOURCE_READY_TARGET_CONTRACTS = (
         "release-source-ready-prepare",
         exact_recipe=(
             "$(MAKE) release-source-ready-snapshot",
-            "$(MAKE) release-converge-all-surfaces",
+            "$(MAKE) release-converge-all-surfaces-pre-finality",
+        ),
+    ),
+    MakeTargetContract(
+        "release-post-commit-rebind",
+        exact_recipe=(
+            "$(MAKE) release-smoke-fast-refresh-check",
+            "$(MAKE) release-smoke-full-reuse",
+            "$(MAKE) test-execution-summary-current-or-refresh",
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
+            "$(MAKE) release-terminal-finality",
+            "$(MAKE) operator-release-summary",
         ),
     ),
     MakeTargetContract(
@@ -269,6 +297,7 @@ _RELEASE_SOURCE_READY_TARGET_CONTRACTS = (
         required_tokens=(
             "$(MAKE) release-source-ready-prepare",
             "$(MAKE) release-source-ready-commit",
+            "$(MAKE) release-post-commit-rebind",
             "$(MAKE) release-post-commit-finalize",
             "$(MAKE) release-source-ready-post-verify",
         ),
