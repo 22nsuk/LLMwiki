@@ -576,6 +576,65 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_identical_byte_undeclared_tracked_replacement_fails_execution(
+        self,
+    ) -> None:
+        outputs = self._writer_outputs()
+        undeclared_path = outputs["generated-artifact-index-body"][0]
+        existing_path = self.vault / undeclared_path
+        existing_path.parent.mkdir(parents=True, exist_ok=True)
+        existing_bytes = b'{"stable": true}\n'
+        existing_path.write_bytes(existing_bytes)
+
+        def runner(
+            argv: Sequence[str],
+            cwd: Path,
+            timeout_seconds: int,
+            env: Mapping[str, str],
+        ) -> dict[str, Any]:
+            target = argv[1]
+            for rel_path in outputs.get(target, []):
+                path = cwd / rel_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps({"target": target}), encoding="utf-8")
+            if target == "artifact-freshness":
+                replacement = existing_path.with_suffix(".replacement.json")
+                replacement.write_bytes(existing_bytes)
+                replacement.replace(existing_path)
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        report = build_report(
+            self.vault,
+            initial_targets=("artifact-freshness",),
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertEqual(report["status"], "fail")
+        command_result = report["execution"]["command_results"][0]
+        self.assertEqual(
+            command_result["termination_reason"],
+            "undeclared_tracked_write",
+        )
+        self.assertEqual(
+            command_result["undeclared_tracked_writes"],
+            [undeclared_path],
+        )
+        self.assertEqual(existing_path.read_bytes(), existing_bytes)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_dry_run_rejects_v1_as_current_authority(self) -> None:
         runtime = _policy_runtime(self.vault)
         legacy_map = dict.fromkeys(runtime.tracked_paths, "missing")

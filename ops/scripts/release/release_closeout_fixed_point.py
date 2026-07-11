@@ -429,6 +429,26 @@ def _raw_digest_map(
     return result
 
 
+def _tracked_output_state_map(
+    vault: Path, tracked_artifacts: Sequence[dict[str, str]]
+) -> dict[str, tuple[str, int, int, int]]:
+    result: dict[str, tuple[str, int, int, int]] = {}
+    for item in tracked_artifacts:
+        rel_path = item["path"]
+        path = vault / rel_path
+        if not path.is_file():
+            result[rel_path] = ("missing", 0, 0, 0)
+            continue
+        stat = path.stat()
+        result[rel_path] = (
+            _sha256_file(path),
+            int(stat.st_dev),
+            int(stat.st_ino),
+            int(stat.st_mtime_ns),
+        )
+    return result
+
+
 def _binding_maps(
     vault: Path, tracked_artifacts: Sequence[dict[str, str]]
 ) -> tuple[dict[str, str], dict[str, str]]:
@@ -451,7 +471,7 @@ def _writer_by_target(writers: Sequence[dict[str, Any]]) -> dict[str, dict[str, 
 
 
 def _changed_paths(
-    previous: dict[str, str] | None, current: dict[str, str]
+    previous: Mapping[str, object] | None, current: Mapping[str, object]
 ) -> list[str]:
     if previous is None:
         return sorted(current)
@@ -524,7 +544,7 @@ def _run_execution(
             make_variables=context.make_variables,
         )
         writer = (context.writer_by_target or {}).get(target)
-        before_digest_map = _raw_digest_map(
+        before_output_state_map = _tracked_output_state_map(
             context.vault, context.tracked_artifacts
         )
         _emit_progress(
@@ -540,8 +560,13 @@ def _run_execution(
             context.timeout_seconds,
             context.runtime_env,
         )
-        after_digest_map = _raw_digest_map(context.vault, context.tracked_artifacts)
-        tracked_paths_changed = _changed_paths(before_digest_map, after_digest_map)
+        after_output_state_map = _tracked_output_state_map(
+            context.vault, context.tracked_artifacts
+        )
+        tracked_paths_changed = _changed_paths(
+            before_output_state_map,
+            after_output_state_map,
+        )
         declared_produces = (
             {str(path) for path in writer["produces"]} if writer is not None else set()
         )

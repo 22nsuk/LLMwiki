@@ -45,7 +45,25 @@ def _write_file_to_archive(archive: zipfile.ZipFile, source: Path, name: str) ->
     _write_bytes_to_archive(archive, name, source.read_bytes())
 
 
+def _artifact_expected_digest(
+    item: dict[str, Any], *, schema_version: int
+) -> str:
+    digest_field = "digest" if schema_version == 1 else "raw_digest"
+    digest = str(item.get(digest_field, "")).strip()
+    if not digest:
+        raise ValueError(
+            f"release audit pack schema_version={schema_version} artifact "
+            f"must declare {digest_field}"
+        )
+    return digest
+
+
 def _artifact_entries(batch_manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    schema_version = int(batch_manifest.get("schema_version", 0))
+    if schema_version not in {1, 2}:
+        raise ValueError(
+            "release audit pack requires batch manifest schema_version 1 or 2"
+        )
     entries: list[dict[str, Any]] = []
     for item in batch_manifest.get("artifacts", []):
         if not isinstance(item, dict):
@@ -56,8 +74,9 @@ def _artifact_entries(batch_manifest: dict[str, Any]) -> list[dict[str, Any]]:
                 "path": rel_path,
                 # v1 manifests are archive inputs only; current v2 authority
                 # records the exact artifact bytes as raw_digest.
-                "expected_sha256": str(
-                    item.get("raw_digest", item.get("digest", ""))
+                "expected_sha256": _artifact_expected_digest(
+                    item,
+                    schema_version=schema_version,
                 ),
                 "required": bool(item.get("required", False)),
                 "role": str(item.get("role", "")),

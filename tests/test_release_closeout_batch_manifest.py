@@ -1328,6 +1328,85 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
             stderr.getvalue(),
         )
 
+    def test_release_audit_pack_materializes_v1_digest_as_archive_evidence(
+        self,
+    ) -> None:
+        artifact_path = "ops/reports/legacy-release-evidence.json"
+        self._write_artifact(artifact_path, {"status": "retained"})
+        artifact_digest = hashlib.sha256(
+            (self.vault / artifact_path).read_bytes()
+        ).hexdigest()
+        legacy_manifest = {
+            "schema_version": 1,
+            "batch_id": "legacy-archive-batch",
+            "artifacts": [
+                {
+                    "path": artifact_path,
+                    "digest": artifact_digest,
+                    "required": True,
+                    "role": "retained_archive_evidence",
+                    "artifact_kind": "test_report",
+                }
+            ],
+        }
+        self.assertNotIn("raw_digest", legacy_manifest["artifacts"][0])
+        manifest_path = "ops/reports/legacy-batch-manifest.json"
+        self._write_artifact(manifest_path, legacy_manifest)
+
+        result = build_audit_pack(
+            self.vault,
+            batch_manifest_path=manifest_path,
+            out_path="tmp/legacy-release-audit-pack.zip",
+        )
+
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["missing_required"], [])
+        self.assertEqual(result["digest_mismatches"], [])
+        with zipfile.ZipFile(self.vault / result["path"]) as archive:
+            names = set(archive.namelist())
+            pack_manifest = json.loads(archive.read("release-audit-pack-manifest.json"))
+        self.assertIn(artifact_path, names)
+        self.assertEqual(pack_manifest["batch_id"], "legacy-archive-batch")
+        self.assertIn(
+            {
+                "path": artifact_path,
+                "sha256": artifact_digest,
+                "role": "retained_archive_evidence",
+            },
+            pack_manifest["packed_entries"],
+        )
+
+    def test_release_audit_pack_rejects_v2_legacy_digest_fallback(self) -> None:
+        artifact_path = "ops/reports/release-evidence.json"
+        self._write_artifact(artifact_path, {"status": "retained"})
+        artifact_digest = hashlib.sha256(
+            (self.vault / artifact_path).read_bytes()
+        ).hexdigest()
+        manifest_path = "ops/reports/malformed-v2-batch-manifest.json"
+        self._write_artifact(
+            manifest_path,
+            {
+                "schema_version": 2,
+                "batch_id": "malformed-v2-batch",
+                "artifacts": [
+                    {
+                        "path": artifact_path,
+                        "digest": artifact_digest,
+                        "required": True,
+                        "role": "release_evidence",
+                        "artifact_kind": "test_report",
+                    }
+                ],
+            },
+        )
+
+        with self.assertRaisesRegex(ValueError, "must declare raw_digest"):
+            build_audit_pack(
+                self.vault,
+                batch_manifest_path=manifest_path,
+                out_path="tmp/malformed-v2-release-audit-pack.zip",
+            )
+
     def test_batch_manifest_rejects_missing_artifact_binding_mode(self) -> None:
         self._write_required_artifacts(currentness_status="current")
         self._write_closeout_summary()

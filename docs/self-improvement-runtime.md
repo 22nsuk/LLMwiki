@@ -258,7 +258,9 @@ Tracked artifacts are derived from each writer's `produces` declaration, and
 policy loading rejects duplicate producers, cycles, unknown dependencies, and
 non-topological order. One execution selects the requested writers and their
 downstream closure, runs each selected writer at most once, and fails immediately
-on an undeclared tracked write. After the fixed-point report is promoted,
+on an undeclared tracked write. Per-command output-state comparison uses raw
+digests, file identity, and modification time, so an observable identical-byte
+replacement is still treated as a write event. After the fixed-point report is promoted,
 `release-closeout-finality-attestation` is the only canonical writer. The
 terminal target then runs the strict write-free post-check and finality verify;
 there is no post-promote freshness bootstrap, action-matrix readback, semantic

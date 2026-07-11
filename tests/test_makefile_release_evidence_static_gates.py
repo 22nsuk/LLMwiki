@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -1127,6 +1129,97 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             2,
         )
         self.assertNotIn("$(MAKE) release-evidence-converge", recipe_lines)
+
+    def test_release_finality_resettle_second_call_preserves_canonical_outputs(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir)
+            fake_make = state_dir / "fake-make"
+            fake_make.write_text(
+                """#!/bin/sh
+set -eu
+target=${1:-}
+printf '%s\n' "$target" >> "$FAKE_STATE_DIR/calls"
+case "$target" in
+  release-finality-resettle-current-check)
+    test -f "$FAKE_STATE_DIR/current"
+    ;;
+  tmp-json-clean)
+    ;;
+  release-finality-resettle)
+    printf '%s\n' 'canonical-a' > "$FAKE_STATE_DIR/artifact-a.json"
+    printf '%s\n' 'canonical-b' > "$FAKE_STATE_DIR/artifact-b.json"
+    : > "$FAKE_STATE_DIR/current"
+    ;;
+  *)
+    printf 'unexpected target: %s\n' "$target" >&2
+    exit 97
+    ;;
+esac
+""",
+                encoding="utf-8",
+            )
+            fake_make.chmod(0o755)
+            env = {**os.environ, "FAKE_STATE_DIR": str(state_dir)}
+            command = [
+                "make",
+                "-s",
+                "release-finality-resettle-current-or-refresh",
+                f"MAKE={fake_make}",
+            ]
+
+            first = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
+            self.assertEqual(first.returncode, 0, first.stderr)
+            artifact_paths = [
+                state_dir / "artifact-a.json",
+                state_dir / "artifact-b.json",
+            ]
+            before = {
+                path.name: (
+                    hashlib.sha256(path.read_bytes()).hexdigest(),
+                    path.stat().st_mtime_ns,
+                )
+                for path in artifact_paths
+            }
+
+            second = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
+            after = {
+                path.name: (
+                    hashlib.sha256(path.read_bytes()).hexdigest(),
+                    path.stat().st_mtime_ns,
+                )
+                for path in artifact_paths
+            }
+
+            self.assertEqual(second.returncode, 0, second.stderr)
+            self.assertEqual(after, before)
+            self.assertEqual(
+                (state_dir / "calls").read_text(encoding="utf-8").splitlines(),
+                [
+                    "release-finality-resettle-current-check",
+                    "tmp-json-clean",
+                    "release-finality-resettle",
+                    "release-finality-resettle-current-check",
+                    "release-finality-resettle-current-check",
+                ],
+            )
 
     def test_release_converge_post_delegates_to_terminal_finality_once(self) -> None:
         recipe_lines = _recipe_lines(_makefile_text(), "release-converge-post")
