@@ -570,11 +570,14 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `release-check` does not rerun the unit subset after this full-suite evidence
   is current. Post-commit finalization is stricter: it only accepts exact-current
   or same-tree revision-rebind evidence and never falls back to test execution.
-- `ops/reports/public-check-summary.json` proves the exported public tree contract.
-  `public-check-summary-current-check` and `release-run-ready` require the
-  registry-default public selector, while `public-check-all-check` requires the
-  selectorless checkpoint configuration. Each caller reuses the report only when the same
-  `source_tree_fingerprint` and `input_fingerprints.public_check_config` still
+- `ops/reports/public-check-summary.json` proves the registry-default exported
+  public tree contract; `ops/reports/public-check-summary-full.json` separately
+  proves the selectorless full checkpoint used by `public-check-all`.
+  `public-check-summary-current-check` and `release-run-ready` use only the
+  default artifact, while `public-check-all-check` uses only the full artifact.
+  Each caller reuses its report only when the same mode, source command, pytest
+  selector, `source_tree_fingerprint`, and
+  `input_fingerprints.public_check_config` still
   match; stale evidence must be refreshed by its matching writer. The config
   fingerprint binds the resolved public export directory and boundary, public
   Python identity, pytest flags, ruff/mypy targets, and runner timeout/heartbeat

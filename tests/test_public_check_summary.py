@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import io
 import json
 import tempfile
@@ -269,6 +270,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 report["summary"]["public_check_config_fingerprint"],
                 report["input_fingerprints"]["public_check_config"],
             )
+            self.assertEqual(report["source_command"], "python -m ops.scripts.public_check_summary --vault .")
             self.assertTrue(report["public_export"]["output_dir"].startswith("<tmp>/"))
             self.assertTrue(report["public_export"]["output_dir"].endswith(f"/{public_out.name}"))
             self.assertTrue(_public_pytest_summary_cache_path().exists())
@@ -753,6 +755,114 @@ class PublicCheckSummaryTests(unittest.TestCase):
             payload = json.loads(stdout.getvalue())
             self.assertEqual(payload["summary_mode"], "executed")
             self.assertIn("public_check_config", payload["reuse_diagnostics"]["reason"])
+
+    def test_exact_current_cli_check_does_not_rewrite_canonical_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            public_out = Path(temp_dir) / "public"
+            request = PublicCheckRequest(
+                public_out=str(public_out), public_python="python", pytest_flags="-q"
+            )
+            report = build_report(
+                vault, request, context=fixed_context(), command_runner=fake_runner
+            )
+            destination = write_report(vault, report)
+            before_sha256 = hashlib.sha256(destination.read_bytes()).hexdigest()
+            before_mtime_ns = destination.stat().st_mtime_ns
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exit_code = public_check_summary_module.main(
+                    [
+                        "--vault", str(vault),
+                        "--reuse-only", "--reuse-from", str(destination),
+                        "--public-out", str(public_out),
+                        "--public-python", "python",
+                        "--pytest-flags=-q",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(json.loads(stdout.getvalue())["summary_mode"], "reused")
+            self.assertEqual(hashlib.sha256(destination.read_bytes()).hexdigest(), before_sha256)
+            self.assertEqual(destination.stat().st_mtime_ns, before_mtime_ns)
+
+    def test_default_then_full_execution_preserves_both_canonical_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            public_out = Path(temp_dir) / "public"
+
+            def execute(mode: str, selector: str, out_path: str) -> Path:
+                report = build_report(
+                    vault,
+                    PublicCheckRequest(
+                        mode=mode,
+                        public_out=str(public_out),
+                        public_python="python",
+                        pytest_mark_expr=selector,
+                    ),
+                    context=fixed_context(),
+                    command_runner=fake_runner,
+                )
+                return write_report(vault, report, out_path)
+
+            default_path = execute(
+                "default", "public", "ops/reports/public-check-summary.json"
+            )
+            default_sha256 = hashlib.sha256(default_path.read_bytes()).hexdigest()
+            full_path = execute(
+                "full", "", "ops/reports/public-check-summary-full.json"
+            )
+
+            self.assertTrue(default_path.is_file())
+            self.assertTrue(full_path.is_file())
+            self.assertEqual(hashlib.sha256(default_path.read_bytes()).hexdigest(), default_sha256)
+            self.assertEqual(
+                json.loads(full_path.read_text(encoding="utf-8"))["source_command"],
+                "python -m ops.scripts.public_check_summary --vault . --mode full",
+            )
+
+    def test_cross_mode_reuse_is_rejected_in_both_directions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            public_out = Path(temp_dir) / "public"
+            requests = {
+                "default": PublicCheckRequest(
+                    mode="default", public_out=str(public_out), public_python="python"
+                ),
+                "full": PublicCheckRequest(
+                    mode="full",
+                    public_out=str(public_out),
+                    public_python="python",
+                    pytest_mark_expr="",
+                ),
+            }
+            paths = {}
+            for mode, request in requests.items():
+                report = build_report(
+                    vault, request, context=fixed_context(), command_runner=fake_runner
+                )
+                suffix = "-full" if mode == "full" else ""
+                paths[mode] = write_report(
+                    vault, report, f"ops/reports/public-check-summary{suffix}.json"
+                )
+
+            for expected_mode, artifact_mode in (("default", "full"), ("full", "default")):
+                diagnostics = reusable_summary_diagnostics(
+                    vault, paths[artifact_mode], requests[expected_mode]
+                )
+                self.assertFalse(diagnostics["reusable"])
+                self.assertIn("source_command", diagnostics["reason"])
+                self.assertIn("public_check_config", diagnostics["reason"])
 
     def test_script_output_surfaces_refresh_does_not_stale_public_summary_without_source_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

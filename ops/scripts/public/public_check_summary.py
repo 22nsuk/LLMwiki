@@ -61,6 +61,7 @@ DEFAULT_OUT = "ops/reports/public-check-summary.json"
 PRODUCER = "ops.scripts.public_check_summary"
 SCHEMA_PATH = "ops/schemas/public-check-summary.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.public_check_summary --vault ."
+FULL_SOURCE_COMMAND = "python -m ops.scripts.public_check_summary --vault . --mode full"
 DEFAULT_TIMEOUT_SECONDS = 5400
 DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 30
 TAIL_LINE_COUNT = 80
@@ -84,6 +85,7 @@ PRIVATE_EXPORT_PATTERNS = (
 
 @dataclass(frozen=True)
 class PublicCheckRequest:
+    mode: str = "default"
     public_out: str = DEFAULT_PUBLIC_OUT
     public_python: str = sys.executable
     ruff_targets: str = "ops/scripts tests tools"
@@ -245,6 +247,8 @@ def _public_check_config_payload(vault: Path, request: PublicCheckRequest) -> di
         public_out_boundary = "outside_source_vault"
     return {
         "version": 1,
+        "mode": request.mode,
+        "source_command": _public_check_source_command(request),
         "public_out": {
             "boundary": public_out_boundary,
             "relative_to_vault": public_out_relative_to_vault,
@@ -275,6 +279,10 @@ def _public_check_config_text(vault: Path, request: PublicCheckRequest) -> str:
 
 def _public_check_config_fingerprint(vault: Path, request: PublicCheckRequest) -> str:
     return _canonical_sha256(_public_check_config_payload(vault, request))
+
+
+def _public_check_source_command(request: PublicCheckRequest) -> str:
+    return FULL_SOURCE_COMMAND if request.mode == "full" else SOURCE_COMMAND
 
 
 def _pytest_public_summary_command(
@@ -738,7 +746,7 @@ def _render_public_check_report(
             generated_at=runtime_context.isoformat_z(),
             artifact_kind="public_check_summary",
             producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
+            source_command=_public_check_source_command(request),
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=source_paths,
@@ -842,6 +850,9 @@ def reusable_summary_diagnostics(
         "source_tree_fingerprint": payload.get("source_tree_fingerprint") == current_source_tree_fingerprint,
     }
     if request is not None:
+        expected_source_command = _public_check_source_command(request)
+        observed_source_command = str(payload.get("source_command", ""))
+        checks["source_command"] = observed_source_command == expected_source_command
         expected_public_check_config_fingerprint = _public_check_config_fingerprint(vault, request)
         observed_public_check_config_fingerprint = str(
             input_fingerprints.get(PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY, "")
@@ -862,6 +873,8 @@ def reusable_summary_diagnostics(
             diagnostics["observed_public_check_config_fingerprint"] = (
                 observed_public_check_config_fingerprint
             )
+            diagnostics["expected_source_command"] = expected_source_command
+            diagnostics["observed_source_command"] = observed_source_command
         return diagnostics
     diagnostics.update(
         {
@@ -902,6 +915,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run public mirror checks and write a canonical summary.")
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--mode", choices=("default", "full"), default="default")
     parser.add_argument("--public-out", default=DEFAULT_PUBLIC_OUT)
     parser.add_argument("--public-python", default=sys.executable)
     parser.add_argument("--ruff-targets", default="ops/scripts tests tools")
@@ -926,6 +940,7 @@ def main(argv: list[str] | None = None) -> int:
         args.reuse_if_current = True
     vault = Path(args.vault).resolve()
     request = PublicCheckRequest(
+        mode=args.mode,
         public_out=args.public_out,
         public_python=args.public_python,
         ruff_targets=args.ruff_targets,

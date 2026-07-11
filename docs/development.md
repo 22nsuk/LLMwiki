@@ -220,7 +220,10 @@ those diagnostics before assuming a timed-out public pytest is still running.
 Reuse-only public-check paths also compare the stored
 `input_fingerprints.public_check_config` against the requested public export
 directory, export boundary, public Python identity, pytest flags, and
-ruff/mypy targets, plus the runner timeout and heartbeat settings. The
+ruff/mypy targets, plus the runner timeout and heartbeat settings. Default
+`public-check` and selectorless `public-check-all` use separate canonical,
+candidate, check, and reuse paths; currentness also binds the mode, source
+command, and pytest selector identity. The
 temporary pytest summary cache path is intentionally not part of that
 fingerprint.
 When CI public-check fails, inspect the printed `failure_causes` and uploaded

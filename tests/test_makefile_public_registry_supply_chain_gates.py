@@ -405,9 +405,36 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
             text,
             "public-check-summary-current-or-refresh",
         )
+        summary_full_block = _target_block(text, "public-check-summary-full")
+        summary_full_check_block = _target_block(text, "public-check-summary-full-check")
+        summary_full_current_check_block = _target_block(
+            text,
+            "public-check-summary-full-current-check",
+        )
         sync_check_block = _target_block(text, "sync-public-policy-check")
         _assert_assignment_exists(
             self, text, "PUBLIC_CHECK_SUMMARY_REUSE_FROM", "$(PUBLIC_CHECK_SUMMARY_OUT)"
+        )
+        _assert_assignment_exists(
+            self, text, "PUBLIC_CHECK_SUMMARY_FULL_OUT", "ops/reports/public-check-summary-full.json"
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "PUBLIC_CHECK_SUMMARY_FULL_CANDIDATE_OUT",
+            "tmp/public-check-summary-full.candidate.json",
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "PUBLIC_CHECK_SUMMARY_FULL_CHECK_OUT",
+            "tmp/public-check-summary-full-check.json",
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "PUBLIC_CHECK_SUMMARY_FULL_REUSE_FROM",
+            "$(PUBLIC_CHECK_SUMMARY_FULL_OUT)",
         )
         _assert_assignment_exists(self, text, "PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS", "30")
         _assert_assignment_exists(
@@ -433,6 +460,27 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
         self.assertNotIn("ops.scripts.canonical_artifact_promote", summary_current_check_block)
         self.assertIn("$(MAKE) public-check-summary-current-check", summary_current_or_refresh_block)
         self.assertIn("$(MAKE) public-check-summary", summary_current_or_refresh_block)
+        self.assertIn('--out "$(PUBLIC_CHECK_SUMMARY_FULL_CANDIDATE_OUT)"', summary_full_block)
+        self.assertIn('--mode full', summary_full_block)
+        self.assertIn('--pytest-mark-expr ""', summary_full_block)
+        self.assertIn(
+            '--candidate "$(PUBLIC_CHECK_SUMMARY_FULL_CANDIDATE_OUT)"', summary_full_block
+        )
+        self.assertIn('--out "$(PUBLIC_CHECK_SUMMARY_FULL_OUT)"', summary_full_block)
+        self.assertIn('--out "$(PUBLIC_CHECK_SUMMARY_FULL_CHECK_OUT)"', summary_full_check_block)
+        self.assertNotIn("ops.scripts.canonical_artifact_promote", summary_full_check_block)
+        self.assertIn(
+            '--out "$(PUBLIC_CHECK_SUMMARY_FULL_CHECK_OUT)"', summary_full_current_check_block
+        )
+        self.assertIn("--reuse-if-current", summary_full_current_check_block)
+        self.assertIn("--reuse-only", summary_full_current_check_block)
+        self.assertIn(
+            '--reuse-from "$(PUBLIC_CHECK_SUMMARY_FULL_REUSE_FROM)"',
+            summary_full_current_check_block,
+        )
+        self.assertNotIn(
+            "ops.scripts.canonical_artifact_promote", summary_full_current_check_block
+        )
         self.assertIn("--check", sync_check_block)
         self.assertIn('--gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"', sync_check_block)
         public_targets = (
@@ -451,7 +499,9 @@ class MakefilePublicRegistrySupplyChainGateTests(unittest.TestCase):
                 if target == "ci-public-tier":
                     self.assertIn("public-check", block)
                 elif target == "public-check-all-check":
-                    self.assertIn("public-check-summary-current-check", block)
+                    self.assertIn("public-check-summary-full-current-check", block)
+                elif target.startswith("public-check-all"):
+                    self.assertIn("public-check-summary-full", block)
                 else:
                     self.assertIn("public-check-summary", block)
         ci_public_block = _target_block(text, "ci-public-tier")
