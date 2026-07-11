@@ -8,6 +8,10 @@
       "role": "internal_facade"
     },
     {
+      "path": "ops/scripts/core/changed_path_minimum_plan_runtime.py",
+      "role": "internal_facade"
+    },
+    {
       "path": "ops/scripts/mechanism/finalize_run.py",
       "role": "cli_facade"
     },

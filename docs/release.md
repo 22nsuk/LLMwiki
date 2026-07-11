@@ -200,6 +200,10 @@ surface comparison; this document owns release evidence and staged authority.
   duration-budget status, and always marks the final full release proof as still
   required through the registry-owned explicit checkpoint command, currently
   `make release-run-ready`.
+- `make changed-path-minimum-test`: writes that plan and executes its deduplicated
+  command specs once, in order. The executor accepts only registry-owned Make
+  targets and cache-safe focused pytest commands, does not invoke a shell, stops
+  on the first failure, and never runs the final checkpoint commands.
 - `make release-evidence-converge`: authoritative clean release evidence convergence.
 - `make release-evidence-closeout-sealed`: check-only sealed packaging lane for an
   already source-ready tree. It must not run mutating source/evidence convergence;
@@ -218,8 +222,9 @@ surface comparison; this document owns release evidence and staged authority.
 
 ## Recommended Order
 
-1. Before committing a changed source tree, run `make changed-path-minimum-plan`
-   when you want a cheap advisory lane, then run `make release-converge-preflight`
+1. Before committing a changed source tree, run `make changed-path-minimum-test`
+   for the executable minimum lane, or `make changed-path-minimum-plan` for a
+   read-only preview, then run `make release-converge-preflight`
    or the full `make release-source-ready` flow. This keeps
    the `ops/script-output-surfaces.json` material output/fallback registry
    current in the same source commit instead of requiring a follow-up
@@ -319,6 +324,9 @@ after its matrix `exclude` entries. The fast tier keeps Python 3.12, 3.13, and
 and governance matrix are deliberately expanded together. Singleton checks
 include Windows release smoke, raw-registry cross-environment evidence,
 supply-chain, CodeQL, and dependency review.
+The release workflow also runs blocking `make public-check-all` before it
+materializes the source ZIP, so the packaged public mirror receives one
+selectorless exported-tree checkpoint in addition to the regular CI matrix.
 
 Live GitHub drift evidence is an operator/full-vault lane, not a public CI or
 release-promotion prerequisite. Create a sanitized JSON input with normalized
@@ -563,10 +571,11 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   is current. Post-commit finalization is stricter: it only accepts exact-current
   or same-tree revision-rebind evidence and never falls back to test execution.
 - `ops/reports/public-check-summary.json` proves the exported public tree contract.
-  `public-check-summary-current-check`, `public-check-all-check`, and
-  `release-run-ready` reuse this report only when the same
+  `public-check-summary-current-check` and `release-run-ready` require the
+  registry-default public selector, while `public-check-all-check` requires the
+  selectorless checkpoint configuration. Each caller reuses the report only when the same
   `source_tree_fingerprint` and `input_fingerprints.public_check_config` still
-  match; stale evidence reruns the full public export check lane. The config
+  match; stale evidence must be refreshed by its matching writer. The config
   fingerprint binds the resolved public export directory and boundary, public
   Python identity, pytest flags, ruff/mypy targets, and runner timeout/heartbeat
   settings while excluding the temporary pytest summary cache path. Its inner

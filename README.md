@@ -86,7 +86,7 @@ Use `make help` for the compact, current command index. The main families are:
 | Tests/report contracts | `make test`, `make test-all`, `make test-report-contract-core`, `make test-report-contract-all` |
 | Public mirror | `make sync-derived`, `make sync-derived-check`, `make public-check`, `make public-check-all` |
 | Mechanism/goal runtime | `make auto-improve-readiness`, `make goal-runtime-run-admission`, `make release-auto-promotion-ready` |
-| Release | `make changed-path-minimum-plan`, `make release-run-ready`, `make release-post-commit-finalize`, `make release-sealed-run-ready` |
+| Release | `make changed-path-minimum-test`, `make release-run-ready`, `make release-post-commit-finalize`, `make release-sealed-run-ready` |
 | Review handoff | `make review-archive-clean`, `make review-archive` |
 | Supply chain | `make supply-chain-check`, `make cyclonedx-sbom`, `make spdx-sbom`, `make openvex-draft`, `make in-toto-statement`, `make sigstore-bundle` |
 

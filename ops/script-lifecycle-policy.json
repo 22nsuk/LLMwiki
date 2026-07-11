@@ -188,6 +188,15 @@
       "replacement": "make artifact-freshness"
     },
     {
+      "canonical_module": "ops.scripts.core.changed_path_minimum_plan_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.core.changed_path_minimum_plan_runtime"
+    },
+    {
       "canonical_module": "ops.scripts.core.cli_surface_inventory",
       "console_scripts": [],
       "install_state": "not_installed",
@@ -3670,6 +3679,15 @@
       "rationale": "Generated from direct_fallback_modules, makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "make supply-chain-provenance"
+    },
+    {
+      "canonical_module": "ops.scripts.test.changed_path_minimum_executor",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "make_only",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make changed-path-minimum-test"
     },
     {
       "canonical_module": "ops.scripts.test.ci_tier_lane_bridge",
