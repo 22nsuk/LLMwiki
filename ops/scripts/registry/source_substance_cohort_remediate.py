@@ -16,35 +16,67 @@ from typing import Any, Protocol
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-
-from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.core.artifact_io_runtime import (
-    SchemaBackedReportWriteRequest,
-    write_schema_backed_report,
-)
-from ops.scripts.core.filesystem_runtime import AtomicTextUpdate, atomic_multi_write
-from ops.scripts.core.frontmatter_runtime import parse_frontmatter
-from ops.scripts.core.policy_runtime import load_policy, report_path
-from ops.scripts.core.runtime_context import RuntimeContext
-from ops.scripts.core.schema_runtime import (
-    load_schema_with_vault_override,
-    validate_or_raise,
-)
-from ops.scripts.core.source_trace_runtime import extract_source_trace_refs
-from ops.scripts.eval.source_page_substance_runtime import (
-    evaluate_source_page_substance,
-)
-from ops.scripts.eval.wiki_page_runtime import section_body
-from ops.scripts.registry.source_substance_candidate_quality_runtime import (
-    SENTENCE_RE as _SENTENCE_RE,
-    candidate_section_quality_reason as _candidate_section_quality_reason,
-    extract_complete_sentences,
-    normalize_raw_text as _normalize_raw_text,
-    rank_source_sentences as _rank_source_sentences,
-)
-from ops.scripts.registry.source_substance_cohort_classify import (
-    build_report as build_classification_report,
-)
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
+    from ops.scripts.core.filesystem_runtime import AtomicTextUpdate, atomic_multi_write
+    from ops.scripts.core.frontmatter_runtime import parse_frontmatter
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_or_raise,
+    )
+    from ops.scripts.core.source_trace_runtime import extract_source_trace_refs
+    from ops.scripts.eval.source_page_substance_runtime import (
+        evaluate_source_page_substance,
+    )
+    from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.source_substance_candidate_quality_runtime import (
+        SENTENCE_RE as _SENTENCE_RE,
+        candidate_section_quality_reason as _candidate_section_quality_reason,
+        extract_complete_sentences,
+        normalize_raw_text as _normalize_raw_text,
+        rank_source_sentences as _rank_source_sentences,
+    )
+    from ops.scripts.registry.source_substance_cohort_classify import (
+        build_report as build_classification_report,
+    )
+else:
+    from ops.scripts.core.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+    )
+    from ops.scripts.core.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
+    from ops.scripts.core.filesystem_runtime import AtomicTextUpdate, atomic_multi_write
+    from ops.scripts.core.frontmatter_runtime import parse_frontmatter
+    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.runtime_context import RuntimeContext
+    from ops.scripts.core.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_or_raise,
+    )
+    from ops.scripts.core.source_trace_runtime import extract_source_trace_refs
+    from ops.scripts.eval.source_page_substance_runtime import (
+        evaluate_source_page_substance,
+    )
+    from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.source_substance_candidate_quality_runtime import (
+        SENTENCE_RE as _SENTENCE_RE,
+        candidate_section_quality_reason as _candidate_section_quality_reason,
+        extract_complete_sentences,
+        normalize_raw_text as _normalize_raw_text,
+        rank_source_sentences as _rank_source_sentences,
+    )
+    from ops.scripts.registry.source_substance_cohort_classify import (
+        build_report as build_classification_report,
+    )
 
 DEFAULT_OUT = "tmp/source-substance-cohort-remediation.json"
 SCHEMA_PATH = "ops/schemas/source-substance-cohort-remediation.schema.json"
