@@ -25,6 +25,9 @@ from ops.scripts.core.source_revision_runtime import (
     SourceRevision,
     resolve_source_revision,
 )
+from ops.scripts.release.finality_current_diagnostics import (
+    classify_batch_replay_binding_mismatches,
+)
 from ops.scripts.release.release_closeout_finality_attestation import (
     BATCH_MANIFEST_PATH,
     DEFAULT_OUT,
@@ -32,6 +35,7 @@ from ops.scripts.release.release_closeout_finality_attestation import (
     FIXED_POINT_REPORT_PATH,
     SEALED_PREFLIGHT_PATH,
     SELF_CHECK_PATH,
+    _finality_failure_classification,
     build_report,
     main,
     verify_attestation,
@@ -125,6 +129,25 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         path = self.vault / rel_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+
+    def _batch_and_finality_mismatch_verdicts(
+        self,
+        mismatches: list[dict[str, str]],
+        *,
+        fixed_point_mismatches: list[dict[str, str]] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        batch_verdict = classify_batch_replay_binding_mismatches(
+            self.vault,
+            mismatches,
+        )
+        finality_verdict = _finality_failure_classification(
+            self.vault,
+            failures=["batch_manifest_artifact_binding_current_mismatch"],
+            binding_digest_mismatches=[],
+            fixed_point_binding_mismatches=fixed_point_mismatches or [],
+            batch_manifest_artifact_binding_mismatches=mismatches,
+        )
+        return batch_verdict, finality_verdict
 
     @staticmethod
     def _successful_fixed_point_runner(
@@ -1134,7 +1157,7 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         classification = diagnostics["failure_classification"]
         self.assertEqual(
             classification["classes"],
-            ["batch_manifest_artifact_binding_mismatch"],
+            ["batch_manifest_replay_binding_mismatch"],
         )
         self.assertEqual(
             classification["recommended_lane"],
@@ -1142,8 +1165,142 @@ class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
         )
         self.assertEqual(
             classification["recommended_targets"],
-            ["release-finality-resettle-current-or-refresh"],
+            [
+                "release-finality-resettle-current-or-refresh",
+                "release-closeout-batch-manifest-replay-verify",
+                "release-closeout-finality-verify",
+            ],
         )
+
+    def test_batch_replay_and_finality_share_binding_mismatch_verdicts(self) -> None:
+        mismatch_paths = (
+            SELF_CHECK_PATH,
+            "ops/reports/artifact-freshness-report.json",
+            SEALED_PREFLIGHT_PATH,
+            "ops/reports/unowned-report.json",
+        )
+        parity_keys = (
+            "classes",
+            "primary_class",
+            "recommended_lane",
+            "recommended_targets",
+            "recommended_fixed_point_initial_targets",
+            "freshness_index_cohort_binding_mismatches",
+            "sealed_preflight_artifact_binding_mismatches",
+            "fixed_point_tracked_writer_binding_mismatches",
+            "unowned_binding_mismatches",
+        )
+
+        for path in mismatch_paths:
+            with self.subTest(path=path):
+                mismatch = {
+                    "path": path,
+                    "binding_mode": CONTENT_BINDING_MODE,
+                    "expected_binding_digest": "a" * 64,
+                    "actual_binding_digest": "b" * 64,
+                }
+                batch_verdict, finality_verdict = (
+                    self._batch_and_finality_mismatch_verdicts([mismatch])
+                )
+
+                for key in parity_keys:
+                    self.assertEqual(
+                        finality_verdict[key],
+                        batch_verdict[key],
+                        key,
+                    )
+
+    def test_finality_deduplicates_shared_fixed_point_mismatch_by_path(self) -> None:
+        mismatch = {
+            "path": SELF_CHECK_PATH,
+            "binding_mode": CONTENT_BINDING_MODE,
+            "expected_binding_digest": "a" * 64,
+            "actual_binding_digest": "b" * 64,
+        }
+
+        _, classification = self._batch_and_finality_mismatch_verdicts(
+            [mismatch],
+            fixed_point_mismatches=[mismatch],
+        )
+
+        self.assertEqual(
+            classification["fixed_point_tracked_writer_binding_mismatches"],
+            [
+                {
+                    **mismatch,
+                    "writer_target": "release-evidence-closeout-self-check",
+                }
+            ],
+        )
+
+    def test_finality_preserves_shared_verdict_for_dual_owned_cohort_path(
+        self,
+    ) -> None:
+        mismatch = {
+            "path": "ops/reports/generated-artifact-index.json",
+            "binding_mode": CONTENT_BINDING_MODE,
+            "expected_binding_digest": "a" * 64,
+            "actual_binding_digest": "b" * 64,
+        }
+        batch_verdict, finality_verdict = (
+            self._batch_and_finality_mismatch_verdicts(
+                [mismatch],
+                fixed_point_mismatches=[mismatch],
+            )
+        )
+
+        self.assertEqual(finality_verdict["classes"], batch_verdict["classes"])
+        self.assertEqual(
+            finality_verdict["recommended_lane"],
+            batch_verdict["recommended_lane"],
+        )
+        self.assertEqual(
+            finality_verdict["recommended_targets"],
+            batch_verdict["recommended_targets"],
+        )
+        self.assertEqual(
+            finality_verdict["fixed_point_tracked_writer_binding_mismatches"],
+            batch_verdict["fixed_point_tracked_writer_binding_mismatches"],
+        )
+
+    def test_batch_replay_and_finality_share_mixed_mismatch_verdict(self) -> None:
+        mismatches = [
+            {
+                "path": SELF_CHECK_PATH,
+                "binding_mode": CONTENT_BINDING_MODE,
+                "expected_binding_digest": "a" * 64,
+                "actual_binding_digest": "b" * 64,
+            },
+            {
+                "path": "ops/reports/unowned-report.json",
+                "binding_mode": CONTENT_BINDING_MODE,
+                "expected_binding_digest": "c" * 64,
+                "actual_binding_digest": "d" * 64,
+            },
+        ]
+        batch_verdict, finality_verdict = (
+            self._batch_and_finality_mismatch_verdicts(
+                mismatches,
+                fixed_point_mismatches=mismatches,
+            )
+        )
+
+        self.assertEqual(
+            finality_verdict["classes"],
+            [
+                "fixed_point_tracked_writer_binding_mismatch",
+                "batch_manifest_replay_binding_mismatch",
+            ],
+        )
+        for key in (
+            "classes",
+            "recommended_lane",
+            "recommended_targets",
+            "recommended_fixed_point_initial_targets",
+            "fixed_point_tracked_writer_binding_mismatches",
+            "unowned_binding_mismatches",
+        ):
+            self.assertEqual(finality_verdict[key], batch_verdict[key], key)
 
     def test_finality_verify_classifies_sealed_preflight_artifact_mismatch(self) -> None:
         self._seed_finality_inputs()

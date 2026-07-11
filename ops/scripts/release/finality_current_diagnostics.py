@@ -49,13 +49,15 @@ def fixed_point_writer_targets_by_path(vault: Path) -> dict[str, str]:
     return result
 
 
-def classify_batch_replay_binding_mismatches(
+def _categorize_batch_replay_binding_mismatches(
     vault: Path,
     binding_mismatches: list[dict[str, str]],
-    *,
-    source_freshness: dict[str, Any] | None = None,
-    content_matches: bool | None = None,
-) -> dict[str, Any]:
+) -> tuple[
+    list[dict[str, str]],
+    list[dict[str, str]],
+    list[dict[str, str]],
+    list[dict[str, str]],
+]:
     freshness_index_cohort = [
         item
         for item in binding_mismatches
@@ -75,6 +77,40 @@ def classify_batch_replay_binding_mismatches(
         and item["path"] != SEALED_PREFLIGHT_PATH
         and fixed_point_writer_by_path.get(item["path"])
     ]
+    categorized_paths = {
+        str(item["path"])
+        for item in [
+            *freshness_index_cohort,
+            *sealed_preflight,
+            *fixed_point_writer_mismatches,
+        ]
+    }
+    unowned_mismatches = [
+        item
+        for item in binding_mismatches
+        if item["path"] not in categorized_paths
+    ]
+    return (
+        freshness_index_cohort,
+        sealed_preflight,
+        fixed_point_writer_mismatches,
+        unowned_mismatches,
+    )
+
+
+def classify_batch_replay_binding_mismatches(
+    vault: Path,
+    binding_mismatches: list[dict[str, str]],
+    *,
+    source_freshness: dict[str, Any] | None = None,
+    content_matches: bool | None = None,
+) -> dict[str, Any]:
+    (
+        freshness_index_cohort,
+        sealed_preflight,
+        fixed_point_writer_mismatches,
+        unowned_mismatches,
+    ) = _categorize_batch_replay_binding_mismatches(vault, binding_mismatches)
 
     classes: list[str] = []
     recommended_targets: list[str] = []
@@ -105,8 +141,9 @@ def classify_batch_replay_binding_mismatches(
     if content_matches is False and not binding_mismatches:
         classes.append("batch_manifest_content_mismatch")
         recommended_targets.append("release-closeout-batch-manifest-promote")
-    if binding_mismatches and not classes:
+    if unowned_mismatches:
         classes.append("batch_manifest_replay_binding_mismatch")
+        recommended_targets.append("release-finality-resettle-current-or-refresh")
 
     if recommended_initial_targets:
         recommended_targets.append("release-closeout-fixed-point")
@@ -121,7 +158,9 @@ def classify_batch_replay_binding_mismatches(
     recommended_targets = dedupe_preserve_order(recommended_targets)
     recommended_initial_targets = dedupe_preserve_order(recommended_initial_targets)
     recommended_lane = (
-        "release-authority-sealed-preflight + release-closeout-fixed-point"
+        "release-finality-resettle-current-or-refresh"
+        if "batch_manifest_replay_binding_mismatch" in classes
+        else "release-authority-sealed-preflight + release-closeout-fixed-point"
         if "sealed_preflight_artifact_mismatch" in classes
         and recommended_initial_targets
         else "release-authority-sealed-preflight"
@@ -148,6 +187,7 @@ def classify_batch_replay_binding_mismatches(
         "freshness_index_cohort_binding_mismatches": freshness_index_cohort,
         "sealed_preflight_artifact_binding_mismatches": sealed_preflight,
         "fixed_point_tracked_writer_binding_mismatches": fixed_point_writer_mismatches,
+        "unowned_binding_mismatches": unowned_mismatches,
         "summary": (
             "batch manifest replay content bindings are current"
             if not classes
