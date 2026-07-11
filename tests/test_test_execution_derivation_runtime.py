@@ -285,6 +285,55 @@ def test_derivation_rejects_parent_and_input_digest_drift(tmp_path: Path) -> Non
         )
 
 
+def test_derivation_fails_closed_across_authority_boundaries(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    _, full_summary, full_manifest, selected_manifest = _derived_fixture(vault)
+    junit_evidence = parse_junit_testcases(
+        _junit_xml(), expected_nodeids=full_manifest["nodeids"]
+    )
+
+    parent_drift = deepcopy(full_summary)
+    parent_drift["pytest_collect_nodeid_digest"]["manifest_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="not bound to full manifest"):
+        derive_subset_summary(
+            parent_drift, junit_evidence, full_manifest, selected_manifest
+        )
+
+    revision_drift = deepcopy(selected_manifest)
+    revision_drift["source_revision"] = "different-revision"
+    with pytest.raises(ValueError, match="source_revision drift"):
+        derive_subset_summary(
+            full_summary, junit_evidence, full_manifest, revision_drift
+        )
+
+    outcome_drift = deepcopy(junit_evidence)
+    outcome_drift["outcomes"].pop(next(iter(outcome_drift["outcomes"])))
+    with pytest.raises(ValueError, match="do not exactly match"):
+        derive_subset_summary(
+            full_summary, outcome_drift, full_manifest, selected_manifest
+        )
+
+    with pytest.raises(ValueError, match="not a subset"):
+        derive_subset_summary(
+            full_summary,
+            junit_evidence,
+            full_manifest,
+            ["tests/test_outside.py::test_not_collected"],
+        )
+
+    deselection_overcount = deepcopy(selected_manifest)
+    deselection_overcount["deselected_tests"] = [{"nodeid": "one"}, {"nodeid": "two"}]
+    with pytest.raises(ValueError, match="deselection metadata exceeds"):
+        derive_subset_summary(
+            full_summary,
+            junit_evidence,
+            full_manifest,
+            deselection_overcount,
+        )
+
+
 def test_pure_derivation_api_accepts_exact_selected_nodeids(tmp_path: Path) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()

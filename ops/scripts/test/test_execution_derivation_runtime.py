@@ -372,96 +372,16 @@ def _derived_status(counts: dict[str, int]) -> str:
     return "pass"
 
 
-def derive_subset_summary(
+def _build_validated_subset_summary(
     full_summary: dict[str, Any],
     junit_evidence: dict[str, Any],
     collection_manifest: dict[str, Any],
-    selected_nodeids: Sequence[str] | dict[str, Any],
+    selected_manifest: dict[str, Any],
+    *,
+    full_set: set[str],
+    selected: list[str],
+    outcomes: dict[str, Any],
 ) -> dict[str, Any]:
-    """Derive targeted summary evidence without filesystem or clock access."""
-    if isinstance(selected_nodeids, dict):
-        selected_manifest = selected_nodeids
-    else:
-        exact_nodeids = canonical_nodeids(selected_nodeids)
-        semantic_command = f"exact-nodeid-selection:{nodeids_sha256(exact_nodeids)}"
-        selected_manifest = {
-            "nodeids": exact_nodeids,
-            "nodeid_count": len(exact_nodeids),
-            "nodeids_sha256": nodeids_sha256(exact_nodeids),
-            "semantic_command": semantic_command,
-            "semantic_command_sha256": sha256_text(semantic_command),
-            "selection_kind": "selector_subset",
-            "source_tree_fingerprint": full_summary.get("source_tree_fingerprint"),
-            "source_revision": full_summary.get("source_revision"),
-            "deselected_tests": [],
-            "deselection_lifecycle": deepcopy(full_summary.get("deselection_lifecycle", {})),
-        }
-    blockers = [
-        *validate_collection_manifest_payload(collection_manifest),
-        *validate_collection_manifest_payload(selected_manifest),
-    ]
-    if blockers:
-        raise ValueError(
-            "collection manifest validation failed: " + "; ".join(blockers)
-        )
-    if full_summary.get("status") != "pass" or not full_summary.get(
-        "represents_full_suite"
-    ):
-        raise ValueError("parent summary must be passing full-suite evidence")
-    if collection_manifest.get("selection_kind") != "full_suite":
-        raise ValueError("full collection manifest must use selection_kind=full_suite")
-    if selected_manifest.get("selection_kind") != "selector_subset":
-        raise ValueError(
-            "selected collection manifest must use selection_kind=selector_subset"
-        )
-    for label, manifest in (
-        ("full", collection_manifest),
-        ("selected", selected_manifest),
-    ):
-        if manifest.get("source_tree_fingerprint") != full_summary.get(
-            "source_tree_fingerprint"
-        ):
-            raise ValueError(f"{label} collection source_tree_fingerprint drift")
-        if manifest.get("source_revision") != full_summary.get("source_revision"):
-            raise ValueError(f"{label} collection source_revision drift")
-    digest = full_summary.get("pytest_collect_nodeid_digest", {})
-    if (
-        digest.get("status") != "collected"
-        or digest.get("nodeid_count") != collection_manifest.get("nodeid_count")
-        or digest.get("sha256") != collection_manifest.get("nodeids_sha256")
-        or digest.get("manifest_nodeids_sha256")
-        != collection_manifest.get("nodeids_sha256")
-        or digest.get("manifest_sha256")
-        != serialized_report_sha256(collection_manifest)
-        or digest.get("source_tree_fingerprint")
-        != collection_manifest.get("source_tree_fingerprint")
-    ):
-        raise ValueError(
-            "parent summary collection digest/count is not bound to full manifest"
-        )
-    expected_junit_sha = next(
-        (
-            str(item.get("sha256", ""))
-            for item in full_summary.get("evidence_artifacts", [])
-            if isinstance(item, dict) and item.get("kind") == "junit_xml"
-        ),
-        "",
-    )
-    if not expected_junit_sha or expected_junit_sha != junit_evidence.get("sha256"):
-        raise ValueError("JUnit digest drift from parent summary")
-    _require_matching_outcomes(full_summary, junit_evidence)
-    full_set = set(collection_manifest["nodeids"])
-    selected = canonical_nodeids(selected_manifest["nodeids"])
-    extra_selected = sorted(set(selected) - full_set)
-    if extra_selected:
-        raise ValueError(
-            f"selected collection is not a subset of full collection: {extra_selected}"
-        )
-    outcomes = junit_evidence.get("outcomes", {})
-    if set(outcomes) != full_set:
-        raise ValueError(
-            "JUnit outcome nodeids do not exactly match full collection manifest"
-        )
     subset_counter = Counter(str(outcomes[nodeid]) for nodeid in selected)
     counts = {label: int(subset_counter.get(label, 0)) for label in OUTCOME_LABELS}
     counts.update({"warnings": 0, "subtests_passed": 0})
@@ -572,6 +492,107 @@ def derive_subset_summary(
     for field in ("shards", "reused_from", "release_contract_diagnosis"):
         derived.pop(field, None)
     return derived
+
+
+def derive_subset_summary(
+    full_summary: dict[str, Any],
+    junit_evidence: dict[str, Any],
+    collection_manifest: dict[str, Any],
+    selected_nodeids: Sequence[str] | dict[str, Any],
+) -> dict[str, Any]:
+    """Derive targeted summary evidence without filesystem or clock access."""
+    if isinstance(selected_nodeids, dict):
+        selected_manifest = selected_nodeids
+    else:
+        exact_nodeids = canonical_nodeids(selected_nodeids)
+        semantic_command = f"exact-nodeid-selection:{nodeids_sha256(exact_nodeids)}"
+        selected_manifest = {
+            "nodeids": exact_nodeids,
+            "nodeid_count": len(exact_nodeids),
+            "nodeids_sha256": nodeids_sha256(exact_nodeids),
+            "semantic_command": semantic_command,
+            "semantic_command_sha256": sha256_text(semantic_command),
+            "selection_kind": "selector_subset",
+            "source_tree_fingerprint": full_summary.get("source_tree_fingerprint"),
+            "source_revision": full_summary.get("source_revision"),
+            "deselected_tests": [],
+            "deselection_lifecycle": deepcopy(full_summary.get("deselection_lifecycle", {})),
+        }
+    blockers = [
+        *validate_collection_manifest_payload(collection_manifest),
+        *validate_collection_manifest_payload(selected_manifest),
+    ]
+    if blockers:
+        raise ValueError(
+            "collection manifest validation failed: " + "; ".join(blockers)
+        )
+    if full_summary.get("status") != "pass" or not full_summary.get(
+        "represents_full_suite"
+    ):
+        raise ValueError("parent summary must be passing full-suite evidence")
+    if collection_manifest.get("selection_kind") != "full_suite":
+        raise ValueError("full collection manifest must use selection_kind=full_suite")
+    if selected_manifest.get("selection_kind") != "selector_subset":
+        raise ValueError(
+            "selected collection manifest must use selection_kind=selector_subset"
+        )
+    for label, manifest in (
+        ("full", collection_manifest),
+        ("selected", selected_manifest),
+    ):
+        if manifest.get("source_tree_fingerprint") != full_summary.get(
+            "source_tree_fingerprint"
+        ):
+            raise ValueError(f"{label} collection source_tree_fingerprint drift")
+        if manifest.get("source_revision") != full_summary.get("source_revision"):
+            raise ValueError(f"{label} collection source_revision drift")
+    digest = full_summary.get("pytest_collect_nodeid_digest", {})
+    if (
+        digest.get("status") != "collected"
+        or digest.get("nodeid_count") != collection_manifest.get("nodeid_count")
+        or digest.get("sha256") != collection_manifest.get("nodeids_sha256")
+        or digest.get("manifest_nodeids_sha256")
+        != collection_manifest.get("nodeids_sha256")
+        or digest.get("manifest_sha256")
+        != serialized_report_sha256(collection_manifest)
+        or digest.get("source_tree_fingerprint")
+        != collection_manifest.get("source_tree_fingerprint")
+    ):
+        raise ValueError(
+            "parent summary collection digest/count is not bound to full manifest"
+        )
+    expected_junit_sha = next(
+        (
+            str(item.get("sha256", ""))
+            for item in full_summary.get("evidence_artifacts", [])
+            if isinstance(item, dict) and item.get("kind") == "junit_xml"
+        ),
+        "",
+    )
+    if not expected_junit_sha or expected_junit_sha != junit_evidence.get("sha256"):
+        raise ValueError("JUnit digest drift from parent summary")
+    _require_matching_outcomes(full_summary, junit_evidence)
+    full_set = set(collection_manifest["nodeids"])
+    selected = canonical_nodeids(selected_manifest["nodeids"])
+    extra_selected = sorted(set(selected) - full_set)
+    if extra_selected:
+        raise ValueError(
+            f"selected collection is not a subset of full collection: {extra_selected}"
+        )
+    outcomes = junit_evidence.get("outcomes", {})
+    if set(outcomes) != full_set:
+        raise ValueError(
+            "JUnit outcome nodeids do not exactly match full collection manifest"
+        )
+    return _build_validated_subset_summary(
+        full_summary,
+        junit_evidence,
+        collection_manifest,
+        selected_manifest,
+        full_set=full_set,
+        selected=selected,
+        outcomes=outcomes,
+    )
 
 
 def _lifecycle_without_clock(value: Any) -> Any:

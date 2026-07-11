@@ -14,6 +14,7 @@ import pytest
 
 from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.core.runtime_context import RuntimeContext
+from ops.scripts.test import trusted_ci_evidence_runtime as trusted_runtime
 from ops.scripts.test.test_execution_aggregate_runtime import build_aggregate_report
 from ops.scripts.test.test_execution_command_runtime import toolchain_fingerprint
 from ops.scripts.test.test_execution_derivation_runtime import (
@@ -269,6 +270,8 @@ def _run_import(
             "--source-digest",
             report["source_revision"],
             "--deny-self-hosted-runners",
+            "--predicate-type",
+            "https://slsa.dev/provenance/v1",
             "--format",
             "json",
         ]
@@ -468,4 +471,22 @@ def test_strict_bundle_reader_rejects_unsafe_zip_shapes(
             if kind == "undeclared":
                 archive.writestr("extra.txt", b"x")
     with pytest.raises(ValueError):
+        read_strict_bundle(archive_path)
+
+
+def test_strict_bundle_reader_rejects_oversized_members(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive_path = tmp_path / "oversized.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        for name in (
+            SUMMARY_MEMBER,
+            COLLECTION_MEMBER,
+            JUNIT_MEMBER,
+            BUNDLE_MANIFEST_MEMBER,
+        ):
+            archive.writestr(name, b"{}")
+    monkeypatch.setattr(trusted_runtime, "MAX_MEMBER_UNCOMPRESSED_BYTES", 1)
+
+    with pytest.raises(ValueError, match="exceeds size limit"):
         read_strict_bundle(archive_path)

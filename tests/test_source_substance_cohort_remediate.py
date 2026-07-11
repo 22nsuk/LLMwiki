@@ -273,6 +273,39 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         )
         self.assertEqual(report["entries"][0]["status"], "operator_review")
 
+    def test_summary_only_repair_preserves_passing_key_points(self) -> None:
+        passing_key_points = "\n".join(
+            [
+                "- Operators archived the calibration protocol for later audits.",
+                "- The control group retained its original sampling schedule.",
+                "- Reviewers documented the equipment boundary before collection.",
+                "- The published appendix identifies the independent review window.",
+            ]
+        )
+        page_text = weak_page("raw/synthetic.md").replace(
+            "- Incomplete point...", passing_key_points
+        )
+        self._write_page(text=page_text)
+        self._write_raw(raw_markdown())
+
+        build = remediation.build_remediation(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
+
+        self.assertEqual(build.report["summary"]["candidate_ready"], 1)
+        entry = build.report["entries"][0]
+        candidate = build.candidates[0].after_text
+        self.assertEqual(len(entry["summary_sentence_digests"]), 2)
+        self.assertEqual(entry["key_point_sentence_digests"], [])
+        self.assertEqual(
+            section_body(candidate, "Key points"),
+            section_body(page_text, "Key points"),
+        )
+        self.assertNotEqual(
+            section_body(candidate, "Summary"),
+            section_body(page_text, "Summary"),
+        )
+
     def test_truncated_and_insufficient_raw_never_writes(self) -> None:
         page = self._write_page()
         raw_text = " ".join(
@@ -491,7 +524,13 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
             )
 
         self.assertEqual(page.read_bytes(), before)
-        self.assertEqual(report["entries"][0]["reason_codes"], ["raw_fidelity_failed"])
+        entry = report["entries"][0]
+        self.assertEqual(entry["reason_codes"], ["raw_fidelity_failed"])
+        self.assertEqual(entry["used_sentence_count"], 6)
+        self.assertEqual(len(entry["summary_sentence_digests"]), 2)
+        self.assertEqual(len(entry["key_point_sentence_digests"]), 4)
+        self.assertIsNone(entry["candidate_eval"])
+        self.assertIsNone(entry["page_sha256_candidate"])
 
     def test_default_cli_prints_report_without_writing(self) -> None:
         page = self._write_page()

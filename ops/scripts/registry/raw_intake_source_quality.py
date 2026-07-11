@@ -210,9 +210,7 @@ def _source_quality_for_entry(
     has_hard_source_page_issue = any(issue in hard_source_page_issue_names for issue in issues)
     if not issues:
         quality_status = "pass"
-    elif not reviewed:
-        quality_status = "fail"
-    elif "raw_body_empty" in issues:
+    elif not reviewed or "raw_body_empty" in issues:
         quality_status = "fail"
     elif proposed_action == "keep_source_only_seed":
         quality_status = "review"

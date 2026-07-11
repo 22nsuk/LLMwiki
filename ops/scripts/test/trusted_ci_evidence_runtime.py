@@ -20,6 +20,8 @@ JUNIT_MEMBER = "test-execution-summary-full.junit.xml"
 PAYLOAD_MEMBERS = (SUMMARY_MEMBER, COLLECTION_MEMBER, JUNIT_MEMBER)
 EXPECTED_MEMBERS = frozenset((*PAYLOAD_MEMBERS, BUNDLE_MANIFEST_MEMBER))
 DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+MAX_MEMBER_UNCOMPRESSED_BYTES = 128 * 1024 * 1024
+MAX_BUNDLE_UNCOMPRESSED_BYTES = 256 * 1024 * 1024
 
 
 def sha256_bytes(payload: bytes) -> str:
@@ -69,6 +71,7 @@ def read_strict_bundle(bundle_path: Path) -> dict[str, bytes]:
     try:
         with zipfile.ZipFile(bundle_path) as archive:
             members: dict[str, bytes] = {}
+            total_size = 0
             for info in archive.infolist():
                 name = safe_zip_member_name(info.filename)
                 if info.is_dir():
@@ -79,7 +82,15 @@ def read_strict_bundle(bundle_path: Path) -> dict[str, bytes]:
                     raise ValueError(f"duplicate ZIP member: {name}")
                 if name not in EXPECTED_MEMBERS:
                     raise ValueError(f"undeclared ZIP member: {name}")
-                members[name] = archive.read(info)
+                if info.file_size > MAX_MEMBER_UNCOMPRESSED_BYTES:
+                    raise ValueError(f"ZIP member exceeds size limit: {name}")
+                total_size += info.file_size
+                if total_size > MAX_BUNDLE_UNCOMPRESSED_BYTES:
+                    raise ValueError("ZIP bundle exceeds total uncompressed size limit")
+                payload = archive.read(info)
+                if len(payload) != info.file_size:
+                    raise ValueError(f"ZIP member size metadata mismatch: {name}")
+                members[name] = payload
     except zipfile.BadZipFile as exc:
         raise ValueError(f"invalid ZIP evidence bundle: {exc}") from exc
     missing = sorted(EXPECTED_MEMBERS.difference(members))

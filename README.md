@@ -74,10 +74,10 @@ full-suite evidence, use the current-or-refresh evidence lane described in
 [docs/development.md](./docs/development.md#supported-test-entrypoints). Bare
 `pytest` is not a supported entrypoint. Use Make targets or focused
 `.venv/bin/python -m pytest tests/...` selectors.
-Trusted-CI Phase 2 evidence is intentionally additive: `make
-trusted-ci-evidence-bundle` packages existing full-suite outputs, while `make
-trusted-ci-evidence-import` verifies an attested ZIP into a diagnostic report
-without promoting it or replacing any local release authority lane.
+Trusted-CI Phase 2 evidence is intentionally additive. The
+`trusted-ci-evidence-bundle` Make target packages existing full-suite outputs,
+while `trusted-ci-evidence-import` verifies an attested ZIP into a diagnostic
+report without promoting it or replacing any local release authority lane.
 
 ## Primary Operator Entrypoints
 

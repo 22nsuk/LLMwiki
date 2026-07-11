@@ -38,10 +38,20 @@
       "type": "object",
       "required": ["python_version", "pytest_version", "plugin_autoload_policy", "interpreter_path_class", "toolchain_contract"]
     },
-    "collection": { "$ref": "#/$defs/digest_count" },
+    "collection": { "$ref": "#/$defs/collection_identity" },
     "junit": { "$ref": "#/$defs/digest_count" }
   },
   "$defs": {
+    "collection_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "manifest_sha256", "count"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
     "digest_count": {
       "type": "object",
       "additionalProperties": false,

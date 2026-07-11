@@ -61,7 +61,10 @@ def _junit_summary_identity(summary: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate_evidence(
-    summary: dict[str, Any], collection: dict[str, Any], junit: bytes
+    summary: dict[str, Any],
+    collection: dict[str, Any],
+    collection_bytes: bytes,
+    junit: bytes,
 ) -> dict[str, int]:
     if (
         summary.get("status") != "pass"
@@ -78,6 +81,16 @@ def _validate_evidence(
         raise ValueError("summary/collection nodeid digest mismatch")
     if digest.get("nodeid_count") != collection.get("nodeid_count"):
         raise ValueError("summary/collection nodeid count mismatch")
+    if digest.get("manifest_sha256") != sha256_bytes(collection_bytes):
+        raise ValueError("summary/collection manifest file digest mismatch")
+    if digest.get("manifest_nodeids_sha256") != collection.get("nodeids_sha256"):
+        raise ValueError("summary/collection manifest nodeid digest mismatch")
+    if digest.get("source_revision") != collection.get("source_revision"):
+        raise ValueError("summary/collection digest source revision mismatch")
+    if digest.get("source_tree_fingerprint") != collection.get(
+        "source_tree_fingerprint"
+    ):
+        raise ValueError("summary/collection digest source tree mismatch")
     junit_count = junit_testcase_count(junit)
     junit_identity = _junit_summary_identity(summary)
     if junit_identity.get("sha256") != sha256_bytes(junit):
@@ -145,6 +158,7 @@ def _bundle_manifest(
         "execution_environment": summary["execution_environment"],
         "collection": {
             "sha256": collection["nodeids_sha256"],
+            "manifest_sha256": sha256_bytes(payloads[COLLECTION_MEMBER]),
             "count": counts["collection_count"],
         },
         "junit": {
@@ -168,7 +182,12 @@ def build_bundle(
         collection_path=collection_path,
         junit_path=junit_path,
     )
-    counts = _validate_evidence(summary, collection, payloads[JUNIT_MEMBER])
+    counts = _validate_evidence(
+        summary,
+        collection,
+        payloads[COLLECTION_MEMBER],
+        payloads[JUNIT_MEMBER],
+    )
     manifest = _bundle_manifest(summary, collection, payloads, counts)
     validate_or_raise(
         manifest,

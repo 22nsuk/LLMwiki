@@ -81,6 +81,8 @@ def _gh_command(
         "--source-digest",
         revision,
         "--deny-self-hosted-runners",
+        "--predicate-type",
+        PREDICATE_TYPE,
         "--format",
         "json",
     ]
@@ -209,18 +211,28 @@ def _member_identity_checks(
 
 
 def _collection_check(
-    manifest: dict[str, Any], summary: dict[str, Any], collection: dict[str, Any]
+    members: dict[str, bytes],
+    manifest: dict[str, Any],
+    summary: dict[str, Any],
+    collection: dict[str, Any],
 ) -> dict[str, str]:
     digest = summary["pytest_collect_nodeid_digest"]
+    collection_file_sha = sha256_bytes(members[COLLECTION_MEMBER])
     valid = (
         not validate_collection_manifest_payload(collection)
         and manifest["collection"]
         == {
             "sha256": collection["nodeids_sha256"],
+            "manifest_sha256": collection_file_sha,
             "count": collection["nodeid_count"],
         }
         and digest.get("sha256") == collection["nodeids_sha256"]
         and digest.get("nodeid_count") == collection["nodeid_count"]
+        and digest.get("manifest_sha256") == collection_file_sha
+        and digest.get("manifest_nodeids_sha256") == collection["nodeids_sha256"]
+        and digest.get("source_revision") == collection["source_revision"]
+        and digest.get("source_tree_fingerprint")
+        == collection["source_tree_fingerprint"]
     )
     return _check(
         "collection",
@@ -320,7 +332,7 @@ def _embedded_checks(
     return [
         *_member_identity_checks(members, manifest),
         *_contract_checks(vault, manifest, summary, collection, contract),
-        _collection_check(manifest, summary, collection),
+        _collection_check(members, manifest, summary, collection),
         _junit_check(members, manifest, summary),
     ]
 
