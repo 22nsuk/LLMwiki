@@ -146,15 +146,16 @@ surface comparison; this document owns release evidence and staged authority.
   summaries or release smoke can read it.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh;
   terminal finality runs once, after fast/full smoke, public-check, and full-suite
-  evidence are current. The local-only operator summary is refreshed after that
-  finality pass.
+  evidence are current. The fixed-point graph cleans staging diagnostics and
+  refreshes the local-only operator summary as its final declared writer before
+  finality attestation.
 - `make release-source-ready`: source-ready commit flow. Non-finality convergence
   happens in `release-source-ready-prepare` before the commit. The dedicated
   `release-post-commit-rebind` lane then reuses same-tree test evidence, refreshes
   revision-sensitive smoke evidence, runs terminal finality once for the committed
-  HEAD, and updates the local-only operator summary. `release-post-commit-finalize`
-  checks that authority before `release-source-ready-post-verify` runs as a
-  write-free check.
+  HEAD, and lets the fixed-point graph update the local-only operator summary.
+  `release-post-commit-finalize` checks that authority before
+  `release-source-ready-post-verify` runs as a write-free check.
 - `make release-post-commit-finalize`: official post-commit evidence suffix for
   source-ready commits. It runs check/current-only surfaces, writes the
   post-commit readback report, then leaves `release-closeout-finality-verify` as
@@ -611,13 +612,17 @@ fingerprints, accepted risk, gate attention, or learning blockers.
     -> release-clean-blocker-ledger
     -> release-closeout-batch-manifest-promote
     -> release-evidence-closeout-self-check
+    -> operator-release-summary-terminal
   ```
 
   A fixed-point execution runs each selected writer exactly once. An initial
   target selects that writer and its downstream closure; it does not create an
   iteration. Expensive prerequisites declared by selected writers run once
   before the writer pass, and an undeclared write to another tracked artifact
-  fails the execution.
+  fails the execution. The terminal operator writer first removes staging files,
+  then writes `ops/operator/operator-release-summary.json` from the final batch
+  manifest and self-check. Callers must not append a standalone operator-summary
+  write after terminal finality.
 
   Every tracked artifact declares one binding mode; authority does not fall back
   to a generic semantic digest:

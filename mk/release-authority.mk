@@ -294,7 +294,6 @@ release-converge-post-evidence:
 release-converge-post:
 	$(MAKE) release-converge-post-evidence
 	$(MAKE) release-terminal-finality
-	$(MAKE) operator-release-summary
 
 release-converge:
 	$(MAKE) release-converge-preflight
@@ -306,7 +305,6 @@ release-converge:
 release-converge-all-surfaces:
 	$(MAKE) release-converge-all-surfaces-pre-finality
 	$(MAKE) release-terminal-finality
-	$(MAKE) operator-release-summary
 
 release-converge-all-surfaces-pre-finality:
 	$(MAKE) release-converge-preflight
@@ -324,7 +322,6 @@ release-post-commit-rebind:
 	$(MAKE) test-execution-summary-current-or-refresh
 	$(MAKE) test-execution-summary-full-current-or-refresh
 	$(MAKE) release-terminal-finality
-	$(MAKE) operator-release-summary
 
 release-post-commit-finalize:
 	$(PYTHON) -m ops.scripts.release.release_post_commit_finalizer --vault "$(VAULT)" --mode snapshot --out "$(RELEASE_POST_COMMIT_FINALIZATION_SNAPSHOT_OUT)"

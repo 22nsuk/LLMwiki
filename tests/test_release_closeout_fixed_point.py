@@ -18,6 +18,10 @@ from ops.scripts.core.artifact_binding_runtime import (
 )
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.release.operator_release_summary import (
+    OperatorReleaseSummaryRequest,
+    build_report as build_operator_release_summary,
+)
 from ops.scripts.release.release_closeout_fixed_point import (
     DEFAULT_OUT,
     POLICY_PATH,
@@ -157,6 +161,15 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             },
         )
         self.assertEqual(set(modes.values()), {"content", "revision"})
+        self.assertEqual(runtime.writer_targets[-1], "operator-release-summary-terminal")
+        self.assertEqual(
+            runtime.writers[-1]["depends_on"],
+            ["release-evidence-closeout-self-check"],
+        )
+        self.assertEqual(
+            runtime.writers[-1]["produces"],
+            ["ops/operator/operator-release-summary.json"],
+        )
         positions = {
             target: runtime.writer_targets.index(target)
             for target in (
@@ -184,6 +197,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         )
         self.assertIn("ops/reports/generated-artifact-index.json", downstream_paths)
         self.assertIn("ops/reports/release-closeout-summary.json", downstream_paths)
+        self.assertIn("ops/operator/operator-release-summary.json", downstream_paths)
         self.assertNotIn("ops/reports/artifact-freshness-report.json", downstream_paths)
 
     def test_policy_rejects_missing_and_invalid_binding_modes(self) -> None:
@@ -298,6 +312,70 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         written = write_report(self.vault, report)
         self.assertTrue(written.is_file())
+
+    def test_terminal_operator_writer_reads_final_batch_and_self_check(self) -> None:
+        calls: list[str] = []
+        observed_summaries: list[dict[str, Any]] = []
+        outputs = self._writer_outputs()
+
+        def runner(
+            argv: Sequence[str],
+            cwd: Path,
+            timeout_seconds: int,
+            env: Mapping[str, str],
+        ) -> dict[str, Any]:
+            del timeout_seconds
+            target = argv[1]
+            calls.append(target)
+            for rel_path in outputs.get(target, []):
+                path = cwd / rel_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if target == "release-closeout-batch-manifest-promote":
+                    payload: dict[str, Any] = {
+                        "schema_version": 2,
+                        "artifacts": [],
+                        "release_decision_snapshot": {},
+                    }
+                elif target == "release-evidence-closeout-self-check":
+                    payload = {"status": {"result": "pass"}}
+                elif target == "operator-release-summary-terminal":
+                    summary = build_operator_release_summary(
+                        cwd,
+                        OperatorReleaseSummaryRequest(context=fixed_context()),
+                    )
+                    observed_summaries.append(summary)
+                    payload = summary
+                else:
+                    payload = {
+                        "target": target,
+                        "generated_at": env["LLMWIKI_RUNTIME_UTC_NOW"],
+                        "source_revision": f"revision-for-{target}",
+                    }
+                path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        report = build_report(
+            self.vault,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(calls[-1], "operator-release-summary-terminal")
+        self.assertEqual(len(observed_summaries), 1)
+        summary = observed_summaries[0]
+        self.assertEqual(summary["batch_verify"]["manifest_schema_version"], 2)
+        self.assertEqual(summary["batch_verify"]["artifact_count"], 0)
+        self.assertEqual(summary["batch_verify"]["tmp_json_count"], 0)
 
     def test_schema_rejects_writer_run_count_above_single_pass(self) -> None:
         report = build_report(

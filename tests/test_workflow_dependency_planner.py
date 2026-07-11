@@ -163,7 +163,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "external-report-action-matrix generated-artifact-index generated-artifact-index-body artifact-freshness "
             "release-closeout-summary-report release-closeout-fixed-point "
             "tmp-json-clean release-closeout-finality-verify "
-            "operator-release-summary report-contract-closeout workflow-dependency-planner sync-derived\n"
+            "operator-release-summary report-contract-closeout workflow-dependency-planner sync-derived "
+            "release-finality-resettle release-authority-sealed-preflight release-terminal-finality\n"
             "static: ruff typecheck\n"
             "\t@echo static\n"
             "ruff:\n"
@@ -206,6 +207,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "\t@echo tmp clean\n"
             "release-closeout-finality-verify:\n"
             "\t@echo finality\n"
+            "release-finality-resettle:\n"
+            "\t$(MAKE) workflow-dependency-planner\n"
+            "\t$(MAKE) release-authority-sealed-preflight\n"
+            "\t$(MAKE) release-terminal-finality\n"
+            "release-authority-sealed-preflight:\n"
+            "\t@echo sealed preflight\n"
+            "release-terminal-finality:\n"
+            "\t@echo terminal finality\n"
             "workflow-dependency-planner:\n"
             "\t@echo planner\n"
             "sync-derived:\n"
@@ -590,7 +599,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(workflow["matched_paths"], [changed_path])
                 self.assertEqual(
                     [step["target"] for step in workflow["steps"]],
-                    ["report-contract-closeout", "operator-release-summary"],
+                    ["report-contract-closeout", "release-finality-resettle"],
                 )
                 self.assertEqual(report["status"], "pass")
 
@@ -619,9 +628,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(workflow["recommended_lane"], "workflow-dependency-planner")
                 self.assertEqual(workflow["matched_paths"], [path])
                 self.assertEqual(workflow["steps"][0]["target"], "workflow-dependency-planner")
-                self.assertIn(
-                    "release-closeout-finality-verify",
+                self.assertEqual(
                     [step["target"] for step in workflow["steps"]],
+                    [
+                        "workflow-dependency-planner",
+                        "release-authority-sealed-preflight",
+                        "release-terminal-finality",
+                    ],
                 )
                 self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
 
@@ -791,7 +804,10 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
         self.assertEqual(workflow["recommended_lane"], "release-evidence-converge")
         self.assertEqual(workflow["matched_paths"], ["ops/scripts/release/operator_release_summary.py"])
-        self.assertEqual([step["target"] for step in workflow["steps"]], ["release-evidence-converge", "operator-release-summary"])
+        self.assertEqual(
+            [step["target"] for step in workflow["steps"]],
+            ["release-evidence-converge"],
+        )
         converge_step = workflow["steps"][0]
         self.assertEqual(converge_step["fanout_targets"], [])
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
@@ -899,7 +915,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
         self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-terminal-finality")
 
-    def test_planner_closeout_steps_are_derived_from_fixed_point_policy(self) -> None:
+    def test_planner_closeout_delegates_to_terminal_finality(self) -> None:
         self._write_fixed_point_policy()
 
         report = build_report(
@@ -914,15 +930,17 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             if item["workflow_id"] == "workflow_dependency_planner_closeout"
         )
         self.assertEqual(
-            [step["target"] for step in workflow["steps"][:4]],
+            [step["target"] for step in workflow["steps"]],
             [
                 "workflow-dependency-planner",
-                "seed-writer",
-                "alpha-writer",
-                "beta-writer",
+                "release-authority-sealed-preflight",
+                "release-terminal-finality",
             ],
         )
-        self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-closeout-finality-verify")
+        self.assertNotIn(
+            "operator-release-summary",
+            [step["target"] for step in workflow["steps"]],
+        )
 
     def test_evidence_dag_maps_fixed_point_policy_report_flow(self) -> None:
         self._write_fixed_point_policy()
@@ -971,7 +989,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
 
-    def test_planner_closeout_places_cohort_after_learning_revalidation(self) -> None:
+    def test_planner_closeout_does_not_expand_fixed_point_policy_writers(self) -> None:
         policy_path = self.vault / "ops" / "policies" / "release-closeout-fixed-point.json"
         policy_path.parent.mkdir(parents=True, exist_ok=True)
         policy_path.write_text(
@@ -1021,15 +1039,15 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             if item["workflow_id"] == "workflow_dependency_planner_closeout"
         )
         steps = [step["target"] for step in workflow["steps"]]
-
-        self.assertLess(
-            steps.index("learning-readiness-signoff-revalidation"),
-            steps.index("release-evidence-cohort"),
+        self.assertEqual(
+            steps,
+            [
+                "workflow-dependency-planner",
+                "release-authority-sealed-preflight",
+                "release-terminal-finality",
+            ],
         )
-        self.assertLess(
-            steps.index("release-evidence-cohort"),
-            steps.index("release-evidence-dashboard-report"),
-        )
+        self.assertNotIn("operator-release-summary-terminal", steps)
 
     def test_planner_schema_change_keeps_report_contract_closeout(self) -> None:
         report = build_report(

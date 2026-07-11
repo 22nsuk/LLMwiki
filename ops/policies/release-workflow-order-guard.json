@@ -184,14 +184,9 @@
           "role": "release-terminal-finality",
           "target": "release-terminal-finality",
           "raw_line": "$(MAKE) release-terminal-finality"
-        },
-        {
-          "role": "operator-release-summary",
-          "target": "operator-release-summary",
-          "raw_line": "$(MAKE) operator-release-summary"
         }
       ],
-      "details": "release-converge-post completes evidence writers, delegates exactly once to terminal finality, then refreshes the local-only operator readback from final authority."
+      "details": "release-converge-post completes evidence writers and delegates exactly once to terminal finality; the fixed-point graph owns the final operator readback writer."
     },
     {
       "id": "release_converge_all_surfaces_protected_recipe",
@@ -206,14 +201,9 @@
           "role": "release-terminal-finality",
           "target": "release-terminal-finality",
           "raw_line": "$(MAKE) release-terminal-finality"
-        },
-        {
-          "role": "operator-release-summary",
-          "target": "operator-release-summary",
-          "raw_line": "$(MAKE) operator-release-summary"
         }
       ],
-      "details": "release-converge-all-surfaces must finish all pre-finality surfaces, run terminal finality exactly once, then refresh the local-only operator readback."
+      "details": "release-converge-all-surfaces must finish all pre-finality surfaces and run terminal finality exactly once; the fixed-point graph owns the final operator readback writer."
     },
     {
       "id": "release_auto_promotion_preflight_prerequisites_protected_recipe",
@@ -465,7 +455,6 @@
         "release-closeout-post-check-finalizer-dry-run",
         "release-closeout-fixed-point",
         "tmp-json-clean",
-        "operator-release-summary",
         "release-closeout-finality-verify"
       ],
       "details": "release-evidence-converge must run preflight/static/package/test evidence, freshness and learning refreshes, release evidence summaries, then the fixed-point finalizer sequence ending in finality verification."
@@ -496,11 +485,10 @@
       "target": "release-converge-post",
       "roles": [
         "release-converge-post-evidence",
-        "release-terminal-finality",
-        "operator-release-summary"
+        "release-terminal-finality"
       ],
       "exact": true,
-      "details": "release-converge-post must complete evidence before one terminal finality handoff and refresh only the local operator readback afterward."
+      "details": "release-converge-post must complete evidence before one terminal finality handoff; no writer may run afterward."
     },
     {
       "id": "release_converge_all_surfaces_pre_finality_sequence",
@@ -692,11 +680,10 @@
         "release-smoke-full-reuse",
         "test-execution-summary-current-or-refresh",
         "test-execution-summary-full-current-or-refresh",
-        "release-terminal-finality",
-        "operator-release-summary"
+        "release-terminal-finality"
       ],
       "exact": true,
-      "details": "post-commit rebinding must reuse same-tree test evidence, refresh revision-sensitive smoke evidence, run terminal finality once for the committed HEAD, then update the local operator readback."
+      "details": "post-commit rebinding must reuse same-tree test evidence, refresh revision-sensitive smoke evidence, and run terminal finality once for the committed HEAD; the fixed-point graph owns the operator readback writer."
     },
     {
       "id": "release_source_ready_post_verify_sequence",

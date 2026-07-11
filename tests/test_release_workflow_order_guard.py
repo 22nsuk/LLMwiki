@@ -336,7 +336,6 @@ AUTO_PROMOTION_PRESEAL_FORBIDDEN_WRITER_LINES = (
 RELEASE_CONVERGE_ALL_LINES = _make_recipe(
     "release-converge-all-surfaces-pre-finality",
     "release-terminal-finality",
-    "operator-release-summary",
 )
 RELEASE_CONVERGE_PRE_FINALITY_LINES = _make_recipe(
     *_sequence_roles("release_converge_all_surfaces_pre_finality_sequence")

@@ -530,7 +530,7 @@ def _check_fixed_point_policy_order(writers: list[dict[str, Any]]) -> dict[str, 
     )
 
 
-def _check_planner_hooks(planner_report: dict[str, Any], closeout_invocations: list[dict[str, Any]]) -> dict[str, Any]:
+def _check_planner_hooks(planner_report: dict[str, Any]) -> dict[str, Any]:
     workflows = {
         str(item.get("workflow_id", "")): item
         for item in planner_report.get("selected_workflows", [])
@@ -544,7 +544,7 @@ def _check_planner_hooks(planner_report: dict[str, Any], closeout_invocations: l
     ]
     required_steps = [
         "workflow-dependency-planner",
-        "release-closeout-finality-verify",
+        "release-terminal-finality",
     ]
     violations = [
         {
@@ -559,7 +559,7 @@ def _check_planner_hooks(planner_report: dict[str, Any], closeout_invocations: l
         expected_order=required_steps,
         observed_order=planner_steps,
         violations=violations,
-        details="The planner closeout recommendation must keep finality hooks visible in the source-derived workflow graph.",
+        details="The planner closeout recommendation must delegate once to terminal finality instead of expanding writer suffixes.",
     )
 
 
@@ -600,7 +600,7 @@ def _check_planner_fixed_point_writer_order(
         expected_order=expected,
         observed_order=planner_steps,
         violations=violations,
-        details="The planner closeout recommendation must derive fixed-point writer order from ops/policies/release-closeout-fixed-point.json.",
+        details="The planner closeout recommendation must delegate to the fixed-point terminal controller or preserve a valid graph entrypoint.",
     )
 
 
@@ -767,10 +767,7 @@ def _release_workflow_order_checks(inputs: _WorkflowOrderInputs) -> list[dict[st
     checks.extend(
         [
             _check_fixed_point_policy_order(inputs.writers),
-            _check_planner_hooks(
-                inputs.planner_report,
-                invocations[RELEASE_CONVERGE_TARGET],
-            ),
+            _check_planner_hooks(inputs.planner_report),
             _check_planner_fixed_point_writer_order(
                 inputs.planner_report,
                 inputs.writers,

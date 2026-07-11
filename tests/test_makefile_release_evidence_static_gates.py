@@ -1035,19 +1035,23 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertTrue(recipe_lines, "release-evidence-converge has no recipe lines")
 
         self.assertIn("$(MAKE) release-closeout-fixed-point", recipe_lines)
-        self.assertIn("$(MAKE) operator-release-summary", recipe_lines)
-        self.assertLess(
-            recipe_lines.index("$(MAKE) release-closeout-fixed-point"),
-            recipe_lines.index("$(MAKE) operator-release-summary"),
-        )
-        self.assertLess(
-            recipe_lines.index("$(MAKE) operator-release-summary"),
-            recipe_lines.index("$(MAKE) release-closeout-finality-verify"),
-        )
+        self.assertNotIn("$(MAKE) operator-release-summary", recipe_lines)
         self.assertNotIn(
             "$(MAKE) release-closeout-batch-manifest-promote", recipe_lines
         )
         self.assertNotIn("$(MAKE) release-evidence-closeout-self-check", recipe_lines)
+
+    def test_fixed_point_terminal_operator_writer_cleans_staging_first(self) -> None:
+        text = _makefile_text()
+
+        self.assertIn("operator-release-summary-terminal", _target_block(text, ".PHONY"))
+        self.assertEqual(
+            _recipe_lines(text, "operator-release-summary-terminal"),
+            [
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) operator-release-summary",
+            ],
+        )
 
     def test_release_verify_current_and_sealed_verify_are_check_lanes(self) -> None:
         text = _makefile_text()
@@ -1132,7 +1136,6 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
             [
                 "$(MAKE) release-converge-post-evidence",
                 "$(MAKE) release-terminal-finality",
-                "$(MAKE) operator-release-summary",
             ],
         )
         self.assertNotIn("$(MAKE) release-closeout-fixed-point", recipe_lines)

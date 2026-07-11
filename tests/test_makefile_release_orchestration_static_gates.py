@@ -165,7 +165,6 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
         exact_recipe=(
             "$(MAKE) release-converge-all-surfaces-pre-finality",
             "$(MAKE) release-terminal-finality",
-            "$(MAKE) operator-release-summary",
         ),
     ),
     MakeTargetContract(
@@ -193,7 +192,6 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
         exact_recipe=(
             "$(MAKE) release-converge-post-evidence",
             "$(MAKE) release-terminal-finality",
-            "$(MAKE) operator-release-summary",
         ),
         forbidden_tokens=(
             "$(MAKE) generated-artifact-index",
@@ -265,7 +263,6 @@ _RELEASE_SOURCE_READY_TARGET_CONTRACTS = (
             "$(MAKE) test-execution-summary-current-or-refresh",
             "$(MAKE) test-execution-summary-full-current-or-refresh",
             "$(MAKE) release-terminal-finality",
-            "$(MAKE) operator-release-summary",
         ),
     ),
     MakeTargetContract(
