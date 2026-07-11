@@ -25,6 +25,7 @@ from ops.scripts.core.makefile_runtime import load_makefile_text, makefile_sourc
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.core.workflow_dependency_planner import build_report, write_report
+from ops.scripts.test.changed_path_minimum_executor import execute_plan
 from ops.scripts.test.generate_release_governance_from_lane_registry import (
     validate_alignment,
 )
@@ -1879,6 +1880,40 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             ["make static", "make public-check"],
         )
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
+
+    def test_changed_path_minimum_executor_skips_staged_deleted_test_selector(self) -> None:
+        rel_path = "tests/test_removed.py"
+        test_path = self.vault / rel_path
+        test_path.parent.mkdir(parents=True, exist_ok=True)
+        test_path.write_text("def test_removed(): pass\n", encoding="utf-8")
+        registry_schema = self.vault / "ops" / "schemas" / "test-lane-registry.schema.json"
+        registry_schema.parent.mkdir(parents=True, exist_ok=True)
+        registry_schema.write_text(
+            (REPO_ROOT / "ops" / "schemas" / "test-lane-registry.schema.json").read_text(
+                encoding="utf-8"
+            ),
+            encoding="utf-8",
+        )
+        self._commit_git_baseline()
+        self._run_git("rm", rel_path)
+
+        report = build_report(
+            self.vault,
+            changed_paths_from_git=True,
+            context=fixed_context(),
+        )
+        plan = report["changed_path_minimum_plan"]
+        focused_command = FOCUSED_PYTEST_TEMPLATE.replace("{path}", rel_path)
+        self.assertEqual(report["selected_change_paths"], [rel_path])
+        self.assertEqual(plan["selected_commands"], ["make static", focused_command])
+        calls: list[list[str]] = []
+
+        def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 0)
+
+        self.assertEqual(execute_plan(self.vault, report, run_command=run), 0)
+        self.assertEqual(calls, [["make", "static"]])
 
     def test_changed_paths_from_git_preserves_staged_rename_name_only_semantics(self) -> None:
         old_path = self.vault / "docs" / "old.md"

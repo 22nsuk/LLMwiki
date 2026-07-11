@@ -3,6 +3,8 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
@@ -14,12 +16,16 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.repor
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _report(*specs: dict[str, object]) -> dict[str, object]:
+def _report(
+    *specs: dict[str, object],
+    path_recommendations: list[dict[str, object]] | None = None,
+) -> dict[str, object]:
     return {
         "changed_path_minimum_plan": {
             "selected_commands": [spec["command"] for spec in specs],
             "selected_command_specs": list(specs),
             "final_checkpoint_commands": ["make release-run-ready"],
+            "path_recommendations": path_recommendations or [],
         }
     }
 
@@ -119,6 +125,71 @@ class ChangedPathMinimumExecutorTests(unittest.TestCase):
         self.assertEqual(execute_plan(self.vault, report, run_command=run), 7)
         self.assertEqual(calls, [["make", "static"]])
 
+    def test_skips_deleted_dynamic_pytest_selector_and_keeps_other_commands(self) -> None:
+        selector = "tests/test_deleted.py"
+        pytest_command = (
+            "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p "
+            f"no:cacheprovider {selector}"
+        )
+        report = _report(
+            {"command": "make static", "argv": ["make", "static"], "env": {}},
+            {
+                "command": pytest_command,
+                "argv": [*self._pytest_prefix(), selector],
+                "env": {"PYTHONDONTWRITEBYTECODE": "1"},
+            },
+            path_recommendations=[
+                {
+                    "path": selector,
+                    "commands": ["make static", pytest_command],
+                }
+            ],
+        )
+        calls: list[list[str]] = []
+
+        def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 0)
+
+        output = StringIO()
+        with redirect_stdout(output):
+            result = execute_plan(self.vault, report, run_command=run)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(calls, [["make", "static"]])
+        self.assertIn(
+            'changed-path minimum skipped deleted selector [2/2]: "tests/test_deleted.py"',
+            output.getvalue(),
+        )
+
+    def test_does_not_skip_missing_fixed_registry_selector(self) -> None:
+        selector = "tests/test_missing_registry_selector.py"
+        command = (
+            "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p "
+            f"no:cacheprovider {selector}"
+        )
+        report = _report(
+            {
+                "command": command,
+                "argv": [*self._pytest_prefix(), selector],
+                "env": {"PYTHONDONTWRITEBYTECODE": "1"},
+            },
+            path_recommendations=[
+                {
+                    "path": "ops/scripts/example.py",
+                    "commands": [command],
+                }
+            ],
+        )
+        calls: list[list[str]] = []
+
+        def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 4)
+
+        self.assertEqual(execute_plan(self.vault, report, run_command=run), 4)
+        self.assertEqual(len(calls), 1)
+
     def test_rejects_commands_outside_the_registry_execution_grammar(self) -> None:
         unsafe_reports = (
             _report(
@@ -173,6 +244,60 @@ class ChangedPathMinimumExecutorTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(ValueError, "does not match argv"):
+            execute_plan(self.vault, report)
+
+    def test_rejects_selector_symlink_that_resolves_outside_tests(self) -> None:
+        outside = Path(self.temp_dir.name) / "outside.py"
+        outside.write_text("def test_outside(): pass\n", encoding="utf-8")
+        tests_dir = self.vault / "tests"
+        tests_dir.mkdir()
+        selector_path = tests_dir / "test_link.py"
+        try:
+            selector_path.symlink_to(outside)
+        except OSError as exc:
+            self.skipTest(f"symlink creation unavailable: {exc}")
+        selector = "tests/test_link.py"
+        command = (
+            "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p "
+            f"no:cacheprovider {selector}"
+        )
+        report = _report(
+            {
+                "command": command,
+                "argv": [*self._pytest_prefix(), selector],
+                "env": {"PYTHONDONTWRITEBYTECODE": "1"},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "resolves outside tests"):
+            execute_plan(self.vault, report)
+
+    def test_rejects_tests_root_symlink_that_resolves_outside_repository(self) -> None:
+        outside_tests = Path(self.temp_dir.name) / "outside-tests"
+        outside_tests.mkdir()
+        (outside_tests / "test_external.py").write_text(
+            "def test_external(): pass\n",
+            encoding="utf-8",
+        )
+        tests_dir = self.vault / "tests"
+        try:
+            tests_dir.symlink_to(outside_tests, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"symlink creation unavailable: {exc}")
+        selector = "tests/test_external.py"
+        command = (
+            "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p "
+            f"no:cacheprovider {selector}"
+        )
+        report = _report(
+            {
+                "command": command,
+                "argv": [*self._pytest_prefix(), selector],
+                "env": {"PYTHONDONTWRITEBYTECODE": "1"},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "tests root resolves outside"):
             execute_plan(self.vault, report)
 
     def test_fails_closed_when_workspace_python_is_missing(self) -> None:

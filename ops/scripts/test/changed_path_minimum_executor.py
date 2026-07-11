@@ -92,19 +92,35 @@ def _resolved_argv(vault: Path, argv: Sequence[object]) -> list[str]:
     return resolved
 
 
-def _validate_repo_test_selector(selector: str) -> None:
+def _repo_test_selector_path(vault: Path, selector: str) -> tuple[str, Path]:
     file_part = selector.split("::", 1)[0]
     path = Path(file_part)
     if path.is_absolute() or ".." in path.parts or not path.parts or path.parts[0] != "tests":
         raise ValueError(f"changed-path pytest selector must stay under tests/: {selector!r}")
+    vault_root = vault.resolve()
+    try:
+        tests_root = (vault_root / "tests").resolve()
+        resolved = (vault_root / path).resolve()
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(
+            f"changed-path pytest selector could not be resolved: {selector!r}"
+        ) from exc
+    if not tests_root.is_relative_to(vault_root):
+        raise ValueError("changed-path tests root resolves outside the repository")
+    if not resolved.is_relative_to(tests_root):
+        raise ValueError(
+            f"changed-path pytest selector resolves outside tests/: {selector!r}"
+        )
+    return file_part, resolved
 
 
 def _validate_command_spec(
+    vault: Path,
     argv: Sequence[object],
     env: Mapping[str, object],
     *,
     allowed_make_targets: set[str],
-) -> None:
+) -> tuple[str, Path] | None:
     tokens = tuple(str(token) for token in argv)
     normalized_env = {str(name): str(value) for name, value in env.items()}
     if tokens[:1] == ("make",):
@@ -114,15 +130,35 @@ def _validate_command_spec(
             raise ValueError(f"changed-path make target is not registry-owned: {tokens[1]!r}")
         if normalized_env:
             raise ValueError("changed-path make commands must not override the environment")
-        return
+        return None
     if tokens[: len(PYTEST_ARGV_PREFIX)] == PYTEST_ARGV_PREFIX:
         if len(tokens) != len(PYTEST_ARGV_PREFIX) + 1:
             raise ValueError(f"unsupported changed-path pytest command: {tokens!r}")
         if normalized_env != ALLOWED_ENVIRONMENT:
             raise ValueError("changed-path pytest commands require the cache-safe environment")
-        _validate_repo_test_selector(tokens[-1])
-        return
+        return _repo_test_selector_path(vault, tokens[-1])
     raise ValueError(f"unsupported changed-path executable: {tokens[:1]!r}")
+
+
+def _is_deleted_changed_selector(
+    raw_plan: Mapping[str, object],
+    *,
+    command: str,
+    selector_file: str,
+    selector_path: Path,
+) -> bool:
+    if selector_path.is_file():
+        return False
+    recommendations = raw_plan.get("path_recommendations", [])
+    if not isinstance(recommendations, list):
+        return False
+    return any(
+        isinstance(item, dict)
+        and str(item.get("path", "")) == selector_file
+        and isinstance(item.get("commands"), list)
+        and command in item["commands"]
+        for item in recommendations
+    )
 
 
 def _command_text_from_spec(
@@ -163,11 +199,26 @@ def execute_plan(
             raise ValueError(f"invalid changed-path command spec: {command or '<unnamed>'}")
         if command != _command_text_from_spec(argv, env):
             raise ValueError("changed-path display command does not match argv and env")
-        _validate_command_spec(
+        validated_selector = _validate_command_spec(
+            vault,
             argv,
             env,
             allowed_make_targets=allowed_make_targets,
         )
+        if validated_selector is not None:
+            selector_file, selector_path = validated_selector
+            if _is_deleted_changed_selector(
+                raw_plan,
+                command=command,
+                selector_file=selector_file,
+                selector_path=selector_path,
+            ):
+                print(
+                    "changed-path minimum skipped deleted selector "
+                    f"[{index}/{total}]: {_safe_command_text(selector_file)}",
+                    flush=True,
+                )
+                continue
         print(
             f"changed-path minimum [{index}/{total}]: {_safe_command_text(command)}",
             flush=True,
