@@ -1161,12 +1161,12 @@ esac
                 encoding="utf-8",
             )
             fake_make.chmod(0o755)
-            env = {**os.environ, "FAKE_STATE_DIR": str(state_dir)}
+            env = {**os.environ, "FAKE_STATE_DIR": state_dir.as_posix()}
             command = [
                 "make",
                 "-s",
                 "release-finality-resettle-current-or-refresh",
-                f"MAKE={fake_make}",
+                f"MAKE={fake_make.as_posix()}",
             ]
 
             first = subprocess.run(
