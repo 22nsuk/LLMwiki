@@ -210,6 +210,11 @@
           "raw_line": "$(MAKE) registry-preflight"
         },
         {
+          "role": "release-smoke-fast",
+          "target": "release-smoke-fast",
+          "raw_line": "$(MAKE) release-smoke-fast"
+        },
+        {
           "role": "release-smoke-full-reuse",
           "target": "release-smoke-full-reuse",
           "raw_line": "$(MAKE) release-smoke-full-reuse"

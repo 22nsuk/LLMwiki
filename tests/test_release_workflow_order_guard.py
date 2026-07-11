@@ -336,6 +336,7 @@ AUTO_PROMOTION_PRESEAL_FORBIDDEN_WRITER_LINES = (
 RELEASE_CONVERGE_ALL_LINES = _make_recipe(
     "release-converge-preflight",
     "registry-preflight",
+    "release-smoke-fast",
     "release-smoke-full-reuse",
     "sync-public-policy",
     "public-check-all",

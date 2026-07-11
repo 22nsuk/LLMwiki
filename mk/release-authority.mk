@@ -296,12 +296,14 @@ release-converge-post:
 release-converge:
 	$(MAKE) release-converge-preflight
 	$(MAKE) registry-preflight
+	$(MAKE) release-smoke-fast
 	$(MAKE) release-smoke-full-reuse
 	$(MAKE) release-converge-post
 
 release-converge-all-surfaces:
 	$(MAKE) release-converge-preflight
 	$(MAKE) registry-preflight
+	$(MAKE) release-smoke-fast
 	$(MAKE) release-smoke-full-reuse
 	$(MAKE) sync-public-policy
 	$(MAKE) public-check-all

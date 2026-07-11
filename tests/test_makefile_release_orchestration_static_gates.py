@@ -153,6 +153,7 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
         required_tokens=(
             "$(MAKE) release-converge-preflight",
             "$(MAKE) registry-preflight",
+            "$(MAKE) release-smoke-fast",
             "$(MAKE) release-smoke-full-reuse",
             "$(MAKE) release-converge-post",
         ),
@@ -162,6 +163,7 @@ _RELEASE_CONVERGE_TARGET_CONTRACTS = (
         exact_recipe=(
             "$(MAKE) release-converge-preflight",
             "$(MAKE) registry-preflight",
+            "$(MAKE) release-smoke-fast",
             "$(MAKE) release-smoke-full-reuse",
             "$(MAKE) sync-public-policy",
             "$(MAKE) public-check-all",
