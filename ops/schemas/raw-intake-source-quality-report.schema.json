@@ -121,7 +121,7 @@
       "properties": {
         "status": {
           "type": "string",
-          "enum": ["ok", "empty", "missing_path", "missing_file", "not_textual"]
+          "enum": ["ok", "insufficient", "empty", "missing_path", "missing_file", "not_textual"]
         },
         "char_count": { "type": "integer", "minimum": 0 },
         "sha256": { "type": "string" }

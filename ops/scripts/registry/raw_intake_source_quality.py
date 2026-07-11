@@ -136,9 +136,18 @@ def _raw_lead_state(vault: Path, raw_path: str) -> dict[str, Any]:
         return {"status": "missing_file", "char_count": 0, "sha256": ""}
     if resolved.suffix.lower() not in TEXTUAL_RAW_SUFFIXES:
         return {"status": "not_textual", "char_count": 0, "sha256": ""}
-    lead = extract_clean_lead(resolved.read_text(encoding="utf-8", errors="replace"))
+    raw_text = resolved.read_text(encoding="utf-8", errors="replace")
+    body_lines = [
+        line.strip()
+        for line in _strip_frontmatter(raw_text).splitlines()
+        if line.strip()
+        and not line.lstrip().startswith("#")
+        and not _is_boilerplate_line(line)
+    ]
+    lead = extract_clean_lead(raw_text)
+    status = "ok" if lead else "insufficient" if body_lines else "empty"
     return {
-        "status": "ok" if lead else "empty",
+        "status": status,
         "char_count": len(lead),
         "sha256": _sha256_text(lead) if lead else "",
     }
@@ -186,7 +195,9 @@ def _source_quality_for_entry(
             issues.extend(str(item) for item in substance.get("failures", []))
 
     raw_lead = _raw_lead_state(vault, raw_path)
-    if raw_lead["status"] in {"ok", "empty"} and raw_lead["char_count"] < min_raw_lead_chars:
+    if raw_lead["status"] == "empty":
+        issues.append("raw_body_empty")
+    if raw_lead["status"] in {"ok", "empty", "insufficient"} and raw_lead["char_count"] < min_raw_lead_chars:
         issues.append("cleaned_raw_lead_below_min_chars")
 
     reviewed = review_status in REVIEWED_ROUTE_STATUSES
@@ -200,6 +211,8 @@ def _source_quality_for_entry(
     if not issues:
         quality_status = "pass"
     elif not reviewed:
+        quality_status = "fail"
+    elif "raw_body_empty" in issues:
         quality_status = "fail"
     elif proposed_action == "keep_source_only_seed":
         quality_status = "review"
