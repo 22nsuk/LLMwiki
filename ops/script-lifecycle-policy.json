@@ -2878,6 +2878,15 @@
       "replacement": "python -m ops.scripts.registry.source_substance_cohort_classify"
     },
     {
+      "canonical_module": "ops.scripts.registry.source_substance_cohort_remediate",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from direct_fallback_modules, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.registry.source_substance_cohort_remediate"
+    },
+    {
       "canonical_module": "ops.scripts.release.advisory_lifecycle_runtime",
       "console_scripts": [],
       "install_state": "not_installed",
@@ -3805,6 +3814,33 @@
       "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
       "removal_ready": false,
       "replacement": "python -m ops.scripts.test.test_lane_registry_runtime"
+    },
+    {
+      "canonical_module": "ops.scripts.test.trusted_ci_evidence_bundle",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make trusted-ci-evidence-bundle"
+    },
+    {
+      "canonical_module": "ops.scripts.test.trusted_ci_evidence_import",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "report_generator",
+      "rationale": "Generated from makefile_module_invocations, ops_scripts_scan, script_output_surfaces; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "make trusted-ci-evidence-import"
+    },
+    {
+      "canonical_module": "ops.scripts.test.trusted_ci_evidence_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.trusted_ci_evidence_runtime"
     }
   ]
 }

@@ -163,11 +163,17 @@ def assert_workflow_run_contains(
 
 
 def assert_locked_install_shape(
-    case: unittest.TestCase, workflow: dict[str, object], expected_job_count: int
+    case: unittest.TestCase,
+    workflow: dict[str, object],
+    expected_job_count: int,
+    jobs_requiring_setup: tuple[str, ...] | None = None,
 ) -> None:
     jobs = workflow_jobs(workflow)
     case.assertEqual(len(jobs), expected_job_count)
-    for job_name, job in jobs.items():
+    selected = set(jobs) if jobs_requiring_setup is None else set(jobs_requiring_setup)
+    case.assertTrue(selected.issubset(jobs))
+    for job_name in selected:
+        job = jobs[job_name]
         if not isinstance(job, dict):
             raise AssertionError(f"workflow job must be a mapping: {job_name}")
         with case.subTest(job=job_name):

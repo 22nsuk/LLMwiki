@@ -125,6 +125,14 @@ TEST_EXECUTION_SUMMARY_ASSIGNMENTS = (
         "ops/reports/test-execution-summary-full-shards",
     ),
     ("TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS", "30"),
+    (
+        "TRUSTED_CI_EVIDENCE_BUNDLE_OUT",
+        "build/trusted-ci/test-execution-summary-full-evidence.zip",
+    ),
+    (
+        "TRUSTED_CI_EVIDENCE_IMPORT_OUT",
+        "tmp/trusted-ci-evidence-import-report.json",
+    ),
 )
 
 TEST_EXECUTION_SUMMARY_ABSENT_ASSIGNMENTS = (
@@ -242,6 +250,32 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote",
             ),
         )
+
+    def test_trusted_ci_bundle_and_import_are_additive_wrappers(self) -> None:
+        text = _makefile_text()
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "trusted-ci-evidence-bundle",
+            (
+                "ops.scripts.test.trusted_ci_evidence_bundle",
+                "$(TEST_EXECUTION_SUMMARY_FULL_OUT)",
+                "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)",
+                "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "trusted-ci-evidence-import",
+            (
+                "ops.scripts.test.trusted_ci_evidence_import",
+                "$(TRUSTED_CI_EVIDENCE_BUNDLE_OUT)",
+                "$(TRUSTED_CI_EVIDENCE_IMPORT_OUT)",
+            ),
+        )
+        self.assertNotIn("trusted-ci-evidence-import", _target_block(text, "release-run-ready"))
+
     def test_report_contract_modes_separate_revision_rebind_from_test_execution(self) -> None:
         text = _makefile_text()
 

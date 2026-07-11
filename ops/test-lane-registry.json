@@ -2,6 +2,23 @@
   "$schema": "ops/schemas/test-lane-registry.schema.json",
   "version": 2,
   "description": "Authoritative registry for persistent pytest lanes, derived execution packs, CI routing, and documentation boundaries validated against Make, CI, and public-safe docs.",
+  "trusted_ci_evidence": {
+    "status": "additive_non_authoritative",
+    "repository": "22nsuk/LLMwiki",
+    "signer_workflow": "22nsuk/LLMwiki/.github/workflows/release.yml",
+    "workflow_path": ".github/workflows/release.yml",
+    "runner": "ubuntu-latest",
+    "summary_suite": "full",
+    "semantic_command": "aggregate test execution summary shards",
+    "environment": {
+      "python_major_minor": "3.12",
+      "minimum_pytest_major": 8,
+      "plugin_autoload_disabled": true,
+      "interpreter_path_class": "repo_virtualenv",
+      "toolchain_status": "pass",
+      "release_evidence_effect": "eligible"
+    }
+  },
   "changed_path_minimums": {
     "version": 1,
     "default_duration_budget_seconds": 300,

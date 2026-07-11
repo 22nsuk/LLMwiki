@@ -23,6 +23,53 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  trusted-ci-full-suite-evidence:
+    name: trusted CI full-suite evidence / py3.12
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Python and uv
+        uses: ./.github/actions/setup-python-uv
+        with:
+          python-version: "3.12"
+
+      - name: Run test-execution-summary-full once
+        run: make test-execution-summary-full-body
+
+      - name: Materialize trusted CI full-suite evidence bundle
+        run: make trusted-ci-evidence-bundle
+
+      - name: Upload trusted CI full-suite evidence bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trusted-ci-full-suite-evidence
+          path: build/trusted-ci/test-execution-summary-full-evidence.zip
+          if-no-files-found: error
+
+  attest-trusted-ci-full-suite-evidence:
+    name: attest trusted CI full-suite evidence
+    needs: trusted-ci-full-suite-evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download trusted CI full-suite evidence bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: trusted-ci-full-suite-evidence
+          path: tmp/trusted-ci
+
+      - name: Attest trusted CI full-suite evidence bundle
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: tmp/trusted-ci/test-execution-summary-full-evidence.zip
+
   verify-clean-release:
     name: verify clean release readiness
     runs-on: ubuntu-latest

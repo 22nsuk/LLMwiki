@@ -570,6 +570,15 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `release-check` does not rerun the unit subset after this full-suite evidence
   is current. Post-commit finalization is stricter: it only accepts exact-current
   or same-tree revision-rebind evidence and never falls back to test execution.
+- Release workflow Phase 2 also runs `test-execution-summary-full` once in a
+  dedicated unprivileged job, materializes
+  `test-execution-summary-full-evidence.zip`, and passes only that ZIP to a
+  minimal OIDC attestation job. The importer invokes `gh attestation verify`
+  with the registry-owned exact repository and signer workflow, current source
+  digest, and self-hosted-runner denial, then replays embedded schemas and
+  revision/tree/command/toolchain/collection/JUnit bindings. This remains
+  additive diagnostic evidence: it is not consumed by `release-run-ready`,
+  preseal, publish authority, or canonical summary promotion.
 - `ops/reports/public-check-summary.json` proves the registry-default exported
   public tree contract; `ops/reports/public-check-summary-full.json` separately
   proves the selectorless full checkpoint used by `public-check-all`.
