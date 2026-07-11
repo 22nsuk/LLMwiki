@@ -249,7 +249,7 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         self.assertEqual(section_body(after, "Summary").strip(), passing_summary)
         self.assertTrue(evaluate_source_page_substance(after)["pass"])
 
-    def test_existing_passing_key_points_are_preserved_when_only_summary_fails(
+    def test_summary_repair_fails_closed_when_only_raw_facts_duplicate_key_points(
         self,
     ) -> None:
         page_text = weak_page("raw/synthetic.md")
@@ -261,13 +261,17 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         self._write_raw(raw_markdown())
         before_key_points = section_body(page_text, "Key points")
 
-        remediation.apply_remediation(
+        before = page.read_bytes()
+        report = remediation.apply_remediation(
             self.vault, context=FIXED_CONTEXT, enforce_registry=False
         )
 
-        after = page.read_text(encoding="utf-8")
-        self.assertEqual(section_body(after, "Key points"), before_key_points)
-        self.assertTrue(evaluate_source_page_substance(after)["pass"])
+        self.assertEqual(page.read_bytes(), before)
+        self.assertEqual(
+            section_body(page.read_text(encoding="utf-8"), "Key points"),
+            before_key_points,
+        )
+        self.assertEqual(report["entries"][0]["status"], "operator_review")
 
     def test_truncated_and_insufficient_raw_never_writes(self) -> None:
         page = self._write_page()

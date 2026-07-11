@@ -214,14 +214,7 @@ def extract_complete_sentences(normalized_raw_text: str) -> list[str]:
         sentence = re.sub(r"\s+", " ", match.group(0)).strip()
         if sentence.endswith(("...", "…")):
             continue
-        lowered = sentence.casefold()
-        if (
-            _EMAIL_RE.search(sentence)
-            or _LEADING_NOISE_RE.search(sentence)
-            or any(marker in lowered for marker in _NOISE_MARKERS)
-            or any(marker in sentence for marker in ("**", "__", "![", "|"))
-            or re.match(r"^[a-z]", sentence)
-        ):
+        if _sentence_is_noisy(sentence):
             continue
         if len(sentence) < 12 or len(_WORD_RE.findall(sentence)) < 3:
             continue
@@ -231,6 +224,18 @@ def extract_complete_sentences(normalized_raw_text: str) -> list[str]:
         seen.add(identity)
         sentences.append(sentence)
     return sentences
+
+
+def _sentence_is_noisy(sentence: str) -> bool:
+    lowered = sentence.casefold()
+    return bool(
+        _EMAIL_RE.search(sentence)
+        or _URL_RE.search(sentence)
+        or _LEADING_NOISE_RE.search(sentence)
+        or any(marker in lowered for marker in _NOISE_MARKERS)
+        or any(marker in sentence for marker in ("**", "__", "![", "|"))
+        or re.match(r"^[a-z]", sentence)
+    )
 
 
 def _query_tokens(page_text: str, frontmatter: dict[str, Any]) -> set[str]:
@@ -284,15 +289,26 @@ def _rank_source_sentences(
     *,
     page_text: str,
     frontmatter: dict[str, Any],
+    excluded_claims: Sequence[str] = (),
 ) -> list[str]:
     query_tokens = _query_tokens(page_text, frontmatter)
     title = str(frontmatter.get("title", "")).strip().casefold()
+    excluded_token_sets = [
+        _sentence_tokens(claim) for claim in excluded_claims if claim.strip()
+    ]
     ranked: list[tuple[int, int, str, set[str]]] = []
     for index, sentence in enumerate(sentences):
         lowered = sentence.casefold()
         if title and (lowered == title or (lowered.startswith(title) and len(sentence) < 160)):
             continue
         tokens = _sentence_tokens(sentence)
+        if any(
+            tokens
+            and excluded_tokens
+            and len(tokens & excluded_tokens) / len(tokens | excluded_tokens) >= 0.6
+            for excluded_tokens in excluded_token_sets
+        ):
+            continue
         overlap = _query_overlap_count(tokens, query_tokens)
         if query_tokens and overlap == 0:
             continue
@@ -311,6 +327,30 @@ def _rank_source_sentences(
             continue
         selected.append((sentence, tokens))
     return [sentence for sentence, _tokens in selected]
+
+
+def _candidate_section_quality_reason(candidate_text: str) -> str | None:
+    summary = (section_body(candidate_text, "Summary") or "").strip()
+    key_points = [
+        re.sub(r"^[-*]\s+", "", line).strip()
+        for line in (section_body(candidate_text, "Key points") or "").splitlines()
+        if re.match(r"^[-*]\s+", line)
+    ]
+    summary_sentences = [
+        re.sub(r"\s+", " ", match.group(0)).strip()
+        for match in _SENTENCE_RE.finditer(summary)
+    ]
+    all_claims = [*summary_sentences, *key_points]
+    if any(_sentence_is_noisy(claim) for claim in all_claims):
+        return "candidate_section_noise"
+    token_sets = [_sentence_tokens(claim) for claim in all_claims]
+    for index, tokens in enumerate(token_sets):
+        for other_tokens in token_sets[index + 1 :]:
+            if not tokens or not other_tokens:
+                continue
+            if len(tokens & other_tokens) / len(tokens | other_tokens) >= 0.7:
+                return "candidate_section_near_duplicate"
+    return None
 
 
 def _replace_section(text: str, heading: str, body: str) -> str:
@@ -463,17 +503,32 @@ def _build_page_candidate(
     normalized_raw = _normalize_raw_text(
         raw_text, markdown=raw_path.suffix.casefold() in {".md", ".markdown"}
     )
+    failures = set(initial_eval["failures"])
+    repair_summary = bool(failures & SUMMARY_FAILURES)
+    repair_key_points = bool(failures & KEY_POINT_FAILURES)
+    excluded_claims: list[str] = []
+    if repair_key_points and not repair_summary:
+        excluded_claims.extend(
+            match.group(0).strip()
+            for match in _SENTENCE_RE.finditer(
+                section_body(page_text, "Summary") or ""
+            )
+        )
+    if repair_summary and not repair_key_points:
+        excluded_claims.extend(
+            re.sub(r"^[-*]\s+", "", line).strip()
+            for line in (section_body(page_text, "Key points") or "").splitlines()
+            if re.match(r"^[-*]\s+", line)
+        )
     sentences = _rank_source_sentences(
         extract_complete_sentences(normalized_raw),
         page_text=page_text,
         frontmatter=frontmatter or {},
+        excluded_claims=excluded_claims,
     )
     entry["normalized_raw_sha256"] = _sha256_text(normalized_raw)
     entry["extracted_sentence_count"] = len(sentences)
 
-    failures = set(initial_eval["failures"])
-    repair_summary = bool(failures & SUMMARY_FAILURES)
-    repair_key_points = bool(failures & KEY_POINT_FAILURES)
     if not repair_summary and not repair_key_points:
         entry["reason_codes"] = ["no_supported_section_repair"]
         return entry, None
@@ -523,6 +578,10 @@ def _build_page_candidate(
     entry["page_sha256_candidate"] = _sha256_text(candidate_text)
     if not candidate_eval["pass"]:
         entry["reason_codes"] = ["candidate_eval_failed"]
+        return entry, None
+    quality_reason = _candidate_section_quality_reason(candidate_text)
+    if quality_reason is not None:
+        entry["reason_codes"] = [quality_reason]
         return entry, None
 
     entry["status"] = "candidate_ready"
