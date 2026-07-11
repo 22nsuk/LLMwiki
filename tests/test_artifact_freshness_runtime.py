@@ -386,28 +386,31 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            operator_payload = {
+                "$schema": "ops/schemas/operator-example.schema.json",
+                "artifact_kind": "operator_example",
+                "generated_at": "2026-04-24T12:00:00Z",
+                "producer": "test",
+                "source_command": "pytest",
+                "source_revision": "unknown",
+                "source_tree_fingerprint": "abc",
+                "input_fingerprints": {"policy": "abc"},
+                "schema_version": 1,
+                "artifact_status": "current",
+                "retention_policy": "canonical_report",
+                "encoding": "utf-8",
+                "currentness": {
+                    "status": "current",
+                    "checked_at": "2026-04-24T12:00:00Z",
+                },
+                "answer": "ok",
+            }
             (operator_dir / "operator-release-summary.json").write_text(
-                json.dumps(
-                    {
-                        "$schema": "ops/schemas/operator-example.schema.json",
-                        "artifact_kind": "operator_example",
-                        "generated_at": "2026-04-24T12:00:00Z",
-                        "producer": "test",
-                        "source_command": "pytest",
-                        "source_revision": "unknown",
-                        "source_tree_fingerprint": "abc",
-                        "input_fingerprints": {"policy": "abc"},
-                        "schema_version": 1,
-                        "artifact_status": "current",
-                        "retention_policy": "canonical_report",
-                        "encoding": "utf-8",
-                        "currentness": {
-                            "status": "current",
-                            "checked_at": "2026-04-24T12:00:00Z",
-                        },
-                        "answer": "ok",
-                    }
-                ),
+                json.dumps(operator_payload),
+                encoding="utf-8",
+            )
+            (operator_dir / "operator-runtime-notes.json").write_text(
+                json.dumps(operator_payload),
                 encoding="utf-8",
             )
             excluded_paths = {
@@ -436,12 +439,13 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             report = build_report(vault, context=fixed_context())
 
             paths = {record["path"] for record in report["artifact_records"]}
-            self.assertIn("ops/operator/operator-release-summary.json", paths)
+            self.assertNotIn("ops/operator/operator-release-summary.json", paths)
+            self.assertIn("ops/operator/operator-runtime-notes.json", paths)
             self.assertTrue(excluded_paths.isdisjoint(paths))
             operator_record = next(
                 record
                 for record in report["artifact_records"]
-                if record["path"] == "ops/operator/operator-release-summary.json"
+                if record["path"] == "ops/operator/operator-runtime-notes.json"
             )
             self.assertEqual(operator_record["owner_surface"], "operator_reports")
 
