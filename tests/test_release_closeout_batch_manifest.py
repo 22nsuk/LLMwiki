@@ -20,6 +20,7 @@ from ops.scripts.eval.wiki_manifest import release_manifest_excludes_path
 from ops.scripts.release.release_audit_pack import build_audit_pack
 from ops.scripts.release.release_closeout_batch_manifest import (
     ARCHIVE_SELF_DESCRIPTION_PATH,
+    BATCH_MANIFEST_SOURCE_PATHS,
     FINALITY_ATTESTATION_PATH,
     BatchArtifactInventory,
     ReleaseDecisionInputs,
@@ -134,6 +135,17 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         fixed_point_policy_dest.write_text(
             FIXED_POINT_POLICY_PATH.read_text(encoding="utf-8"), encoding="utf-8"
         )
+
+    def test_source_paths_include_shared_finality_diagnostics(self) -> None:
+        self.assertEqual(
+            BATCH_MANIFEST_SOURCE_PATHS,
+            [
+                "ops/scripts/release/release_closeout_batch_manifest.py",
+                "ops/scripts/release/finality_current_diagnostics.py",
+            ],
+        )
+        for rel_path in BATCH_MANIFEST_SOURCE_PATHS:
+            self.assertTrue((REPO_ROOT / rel_path).is_file(), rel_path)
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()

@@ -51,6 +51,11 @@ from .release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
 
+BATCH_MANIFEST_SOURCE_PATHS = [
+    "ops/scripts/release/release_closeout_batch_manifest.py",
+    "ops/scripts/release/finality_current_diagnostics.py",
+]
+
 DEFAULT_OUT = "ops/reports/release-closeout-batch-manifest.json"
 PRODUCER = "ops.scripts.release_closeout_batch_manifest"
 SCHEMA_PATH = "ops/schemas/release-closeout-batch-manifest.schema.json"
@@ -1269,7 +1274,7 @@ def _render_batch_manifest_report(inputs: BatchManifestRenderInputs) -> dict[str
             source_command=inputs.source_command,
             resolved_policy_path=inputs.resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=["ops/scripts/release/release_closeout_batch_manifest.py"],
+            source_paths=BATCH_MANIFEST_SOURCE_PATHS,
             text_inputs=_envelope_text_inputs(inputs),
         ),
         "schema_version": 2,

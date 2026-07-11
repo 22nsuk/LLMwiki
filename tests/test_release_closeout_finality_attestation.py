@@ -32,6 +32,7 @@ from ops.scripts.release.release_closeout_finality_attestation import (
     BATCH_MANIFEST_PATH,
     DEFAULT_OUT,
     EXTERNAL_REPORT_MANIFEST_PATH,
+    FINALITY_ATTESTATION_SOURCE_PATHS,
     FIXED_POINT_REPORT_PATH,
     SEALED_PREFLIGHT_PATH,
     SELF_CHECK_PATH,
@@ -74,6 +75,18 @@ def _binding_digest(path: Path, binding_mode: str = CONTENT_BINDING_MODE) -> str
 
 
 class ReleaseCloseoutFinalityAttestationTests(unittest.TestCase):
+    def test_source_paths_include_shared_finality_diagnostics(self) -> None:
+        self.assertEqual(
+            FINALITY_ATTESTATION_SOURCE_PATHS,
+            [
+                "ops/scripts/release/release_closeout_finality_attestation.py",
+                "ops/scripts/release/finality_current_diagnostics.py",
+                "ops/scripts/core/artifact_binding_runtime.py",
+            ],
+        )
+        for rel_path in FINALITY_ATTESTATION_SOURCE_PATHS:
+            self.assertTrue((REPO_ROOT / rel_path).is_file(), rel_path)
+
     @staticmethod
     def _fixed_point_writer_specs() -> list[dict[str, Any]]:
         return [

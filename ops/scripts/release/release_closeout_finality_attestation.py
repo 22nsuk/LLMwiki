@@ -53,6 +53,11 @@ SUPPORTED_BINDING_MODES = {
     REVISION_BINDING_MODE,
     RAW_BINDING_MODE,
 }
+FINALITY_ATTESTATION_SOURCE_PATHS = [
+    "ops/scripts/release/release_closeout_finality_attestation.py",
+    "ops/scripts/release/finality_current_diagnostics.py",
+    "ops/scripts/core/artifact_binding_runtime.py",
+]
 
 
 def _sha256_file(path: Path) -> str:
@@ -873,10 +878,7 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/release/release_closeout_finality_attestation.py",
-                "ops/scripts/core/artifact_binding_runtime.py",
-            ],
+            source_paths=FINALITY_ATTESTATION_SOURCE_PATHS,
             file_inputs={
                 "fixed_point_report": FIXED_POINT_REPORT_PATH,
                 "batch_manifest": BATCH_MANIFEST_PATH,
