@@ -47,6 +47,16 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         tail_text as _tail_text,
         toolchain_fingerprint as _toolchain_fingerprint,
     )
+    from ops.scripts.test.test_execution_derivation_runtime import (
+        build_collection_manifest,
+        derive_subset_summary,
+        load_collection_manifest_digest,
+        parse_junit_testcases,
+        subset_summary_parity,
+        validate_collection_manifest_payload,
+        validate_collection_manifest_schema,
+        write_collection_manifest,
+    )
     from ops.scripts.test.test_execution_deselection_runtime import (
         deselection_lifecycle as _deselection_lifecycle,
         load_deselection_policy as _load_deselection_policy,
@@ -123,6 +133,16 @@ else:
         semantic_command_text as _semantic_command_text,
         tail_text as _tail_text,
         toolchain_fingerprint as _toolchain_fingerprint,
+    )
+    from ops.scripts.test.test_execution_derivation_runtime import (
+        build_collection_manifest,
+        derive_subset_summary,
+        load_collection_manifest_digest,
+        parse_junit_testcases,
+        subset_summary_parity,
+        validate_collection_manifest_payload,
+        validate_collection_manifest_schema,
+        write_collection_manifest,
     )
     from ops.scripts.test.test_execution_deselection_runtime import (
         deselection_lifecycle as _deselection_lifecycle,
@@ -307,6 +327,12 @@ def collect_pytest_nodeid_digest(
     command: list[str],
     *,
     timeout_seconds: int,
+    collection_manifest_out: str | None = None,
+    suite: str = "pytest",
+    policy_path: str | None = None,
+    context: RuntimeContext | None = None,
+    deselected_tests: list[dict[str, Any]] | None = None,
+    deselection_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     selectors = _pytest_selector_args(command)
     collect_command = [
@@ -347,7 +373,7 @@ def collect_pytest_nodeid_digest(
     digest_input = "\n".join(nodeids)
     if digest_input:
         digest_input = f"{digest_input}\n"
-    return {
+    digest = {
         "status": "collected",
         "command": command_text,
         "nodeid_count": len(nodeids),
@@ -355,6 +381,24 @@ def collect_pytest_nodeid_digest(
         "reason": "",
         "duration_ms": elapsed_ms,
     }
+    if collection_manifest_out:
+        manifest = build_collection_manifest(
+            vault,
+            suite=suite,
+            semantic_command=_semantic_command_text(vault, command),
+            nodeids=nodeids,
+            selection_kind=(
+                "selector_subset"
+                if _pytest_selector_args(command) or _pytest_collect_modifiers(command)
+                else "full_suite"
+            ),
+            policy_path=policy_path,
+            context=context,
+            deselected_tests=list(deselected_tests or []),
+            deselection_lifecycle=dict(deselection_lifecycle or {}),
+        )
+        digest.update(write_collection_manifest(vault, manifest, collection_manifest_out))
+    return digest
 
 
 _BUILD_REPORT_KWARGS = {
@@ -943,6 +987,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--collect-nodeids", action="store_true")
     parser.add_argument("--collect-timeout-seconds", type=int, default=300)
+    parser.add_argument("--collection-manifest")
+    parser.add_argument("--collection-only", action="store_true")
+    parser.add_argument("--derive-subset-from-full", action="store_true")
+    parser.add_argument("--full-summary")
+    parser.add_argument("--full-collection-manifest")
+    parser.add_argument("--selection-manifest")
+    parser.add_argument("--parity-direct-summary")
     parser.add_argument("--junit-xml-path")
     parser.add_argument("--execution-log-out")
     parser.add_argument("--failed-nodeids-out")
@@ -974,8 +1025,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         args.command = args.command[1:]
     if args.heartbeat_interval_seconds < 0:
         parser.error("--heartbeat-interval-seconds must be >= 0")
-    if not args.command and not args.aggregate and not args.aggregate_from:
+    if not args.command and not args.aggregate and not args.aggregate_from and not args.derive_subset_from_full:
         parser.error("test command required for non-aggregate summaries; pass -- <command>")
+    if args.derive_subset_from_full and not all(
+        (args.full_summary, args.junit_xml_path, args.full_collection_manifest, args.selection_manifest)
+    ):
+        parser.error(
+            "--derive-subset-from-full requires --full-summary, --junit-xml-path, "
+            "--full-collection-manifest, and --selection-manifest"
+        )
     return args
 
 
@@ -1010,11 +1068,84 @@ def _collect_nodeid_digest_for_args(vault: Path, args: argparse.Namespace) -> di
             return None
         existing_digest = existing.get("pytest_collect_nodeid_digest")
         return dict(existing_digest) if isinstance(existing_digest, dict) else None
+    if args.collection_manifest and not args.collection_only:
+        return load_collection_manifest_digest(vault, args.collection_manifest)
+    policy, _ = load_policy(vault, args.policy)
+    runtime_context = RuntimeContext.from_policy(policy)
+    generated_at = runtime_context.isoformat_z()
+    deselected_tests = structured_deselected_tests(
+        args.command,
+        vault=vault,
+        deselection_policy_path=args.deselection_policy,
+    )
+    deselection_lifecycle = _deselection_lifecycle(
+        deselected_tests,
+        generated_at=generated_at,
+        policy_payload=_load_deselection_policy_payload(vault, args.deselection_policy),
+    )
     return collect_pytest_nodeid_digest(
         vault,
         args.command,
         timeout_seconds=args.collect_timeout_seconds,
+        collection_manifest_out=args.out if args.collection_only else None,
+        suite=args.suite,
+        policy_path=args.policy,
+        context=runtime_context,
+        deselected_tests=deselected_tests,
+        deselection_lifecycle=deselection_lifecycle,
     )
+
+
+def _load_json_object(vault: Path, path_value: str) -> dict[str, Any]:
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = vault / path
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"JSON artifact must be an object: {display_path(vault, path)}")
+    return payload
+
+
+def _run_collection_only_cli(vault: Path, args: argparse.Namespace) -> int:
+    digest = _collect_nodeid_digest_for_args(vault, args)
+    print(json.dumps(digest or {"status": "failed"}, ensure_ascii=False, indent=2))
+    return 0 if isinstance(digest, dict) and digest.get("status") == "collected" else 1
+
+
+def _run_derived_subset_cli(vault: Path, args: argparse.Namespace) -> int:
+    try:
+        full_summary = _load_summary(vault, args.full_summary)
+        full_manifest = _load_json_object(vault, args.full_collection_manifest)
+        selected_manifest = _load_json_object(vault, args.selection_manifest)
+        blockers = [
+            *validate_collection_manifest_payload(full_manifest),
+            *validate_collection_manifest_payload(selected_manifest),
+        ]
+        if blockers:
+            raise ValueError("; ".join(blockers))
+        validate_collection_manifest_schema(vault, full_manifest)
+        validate_collection_manifest_schema(vault, selected_manifest)
+        junit_path = Path(args.junit_xml_path)
+        if not junit_path.is_absolute():
+            junit_path = vault / junit_path
+        junit_evidence = parse_junit_testcases(
+            junit_path.read_bytes(), expected_nodeids=full_manifest["nodeids"]
+        )
+        report = derive_subset_summary(
+            full_summary, junit_evidence, full_manifest, selected_manifest
+        )
+        _write_and_print_report(vault, report, args.out)
+        if args.parity_direct_summary:
+            parity = subset_summary_parity(
+                report, _load_summary(vault, args.parity_direct_summary)
+            )
+            print(json.dumps({"derived_direct_parity": parity}, ensure_ascii=False, indent=2))
+            if parity["status"] != "pass":
+                return 1
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        print(f"derived subset authority failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+    return 0
 
 
 def _reused_report_for_args(
@@ -1241,6 +1372,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.reuse_only:
         args.reuse_if_current = True
     vault = Path(args.vault).resolve()
+    if args.derive_subset_from_full:
+        return _run_derived_subset_cli(vault, args)
+    if args.collection_only:
+        return _run_collection_only_cli(vault, args)
     if args.aggregate or args.aggregate_from:
         if args.reuse_if_current:
             diagnostics = reusable_aggregate_summary_diagnostics(

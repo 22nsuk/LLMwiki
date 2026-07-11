@@ -3744,6 +3744,15 @@
       "replacement": "python -m ops.scripts.test.test_execution_command_runtime"
     },
     {
+      "canonical_module": "ops.scripts.test.test_execution_derivation_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.test.test_execution_derivation_runtime"
+    },
+    {
       "canonical_module": "ops.scripts.test.test_execution_deselection_runtime",
       "console_scripts": [],
       "install_state": "not_installed",

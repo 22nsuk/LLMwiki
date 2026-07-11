@@ -23,6 +23,9 @@ from ops.scripts.test.test_execution_command_runtime import (
     build_execution_environment,
     toolchain_fingerprint as _toolchain_fingerprint,
 )
+from ops.scripts.test.test_execution_derivation_runtime import (
+    collection_manifest_reference_is_current,
+)
 from ops.scripts.test.test_execution_evidence_runtime import (
     evidence_artifact_consistency as _evidence_artifact_consistency,
     nodeid_outcome_consistency as _nodeid_outcome_consistency,
@@ -84,6 +87,13 @@ def reusable_aggregate_summary_diagnostics(
         "full_suite_evidence": (
             suite.strip().lower().replace("_", "-") not in FULL_SUITE_SCOPES
             or bool(existing.get("represents_full_suite"))
+        ),
+        "collection_manifest": (
+            suite.strip().lower().replace("_", "-") not in FULL_SUITE_SCOPES
+            or not existing.get("pytest_collect_nodeid_digest", {}).get("manifest_path")
+            or collection_manifest_reference_is_current(
+                vault, existing.get("pytest_collect_nodeid_digest", {})
+            )
         ),
     }
     failed = [name for name, passed in checks.items() if not passed]
@@ -293,6 +303,10 @@ def aggregate_nodeid_digest(shards: list[dict[str, Any]]) -> dict[str, Any]:
             "sha256": "",
             "reason": "one or more shard nodeid digests were not collected",
         }
+    if len(digests) == 1:
+        aggregate = dict(digests[0])
+        aggregate["reason"] = "aggregate report reuses the exact shard collection digest"
+        return aggregate
     digest_input = "\n".join(
         f"{digest.get('sha256', '')}:{int(digest.get('nodeid_count', 0) or 0)}"
         for digest in digests

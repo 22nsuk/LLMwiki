@@ -4,9 +4,32 @@ from pathlib import Path
 
 from ops.scripts.test.test_execution_aggregate_runtime import (
     aggregate_counts,
+    aggregate_nodeid_digest,
     aggregate_status,
     summary_shard_paths,
 )
+
+
+def test_single_shard_aggregate_preserves_exact_collection_manifest_binding() -> None:
+    digest = {
+        "status": "collected",
+        "command": "python -m pytest --collect-only",
+        "nodeid_count": 2,
+        "sha256": "a" * 64,
+        "reason": "",
+        "manifest_path": "build/release-payloads/full.collection.json",
+        "manifest_sha256": "b" * 64,
+        "manifest_schema": "ops/schemas/test-execution-collection-manifest.schema.json",
+        "manifest_nodeids_sha256": "a" * 64,
+        "source_tree_fingerprint": "tree",
+        "source_revision": "revision",
+    }
+
+    aggregate = aggregate_nodeid_digest([{"pytest_collect_nodeid_digest": digest}])
+
+    assert aggregate["sha256"] == digest["sha256"]
+    assert aggregate["nodeid_count"] == digest["nodeid_count"]
+    assert aggregate["manifest_sha256"] == digest["manifest_sha256"]
 
 
 def test_aggregate_status_and_counts_are_separate_from_cli_runtime() -> None:
