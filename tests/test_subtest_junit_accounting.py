@@ -35,12 +35,21 @@ def _run_junit_subprocess(
 ) -> tuple[subprocess.CompletedProcess[str], bytes]:
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
+        conftest_path = temp_path / "conftest.py"
         test_path = temp_path / "test_sample.py"
         junit_path = temp_path / "junit.xml"
+        conftest_path.write_text(
+            "from tests.conftest import pytest_runtest_logreport\n",
+            encoding="utf-8",
+        )
         test_path.write_text(fixture_source, encoding="utf-8")
         env = os.environ.copy()
         env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
         env["PYTHONDONTWRITEBYTECODE"] = "1"
+        existing_pythonpath = env.get("PYTHONPATH")
+        env["PYTHONPATH"] = os.pathsep.join(
+            part for part in (str(REPO_ROOT), existing_pythonpath) if part
+        )
         completed = subprocess.run(
             [
                 sys.executable,
@@ -49,14 +58,12 @@ def _run_junit_subprocess(
                 "-q",
                 "-p",
                 "no:cacheprovider",
-                "-p",
-                "tests.conftest",
                 *mode_args,
                 "--junitxml",
                 str(junit_path),
-                str(test_path),
+                test_path.name,
             ],
-            cwd=REPO_ROOT,
+            cwd=temp_path,
             env=env,
             capture_output=True,
             text=True,
