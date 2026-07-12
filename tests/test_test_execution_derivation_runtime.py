@@ -120,14 +120,15 @@ def test_xunit2_testcase_properties_account_for_passing_subtests_by_nodeid() -> 
 @pytest.mark.parametrize(
     ("xml", "message"),
     [
-        (
+        pytest.param(
             _junit_xml_with_subtests().replace(
                 f'<property name="{JUNIT_SUBTESTS_PASSED_PROPERTY}" value="1" />'.encode(),
                 b"",
             ),
             "missing testcase property",
+            id="missing-property",
         ),
-        (
+        pytest.param(
             _junit_xml_with_subtests().replace(
                 f'<property name="{JUNIT_SUBTESTS_PASSED_PROPERTY}" value="2" />'.encode(),
                 (
@@ -136,9 +137,18 @@ def test_xunit2_testcase_properties_account_for_passing_subtests_by_nodeid() -> 
                 ).encode(),
             ),
             "duplicate",
+            id="duplicate-property",
         ),
-        (_junit_xml_with_subtests(first_property="many"), "not an integer"),
-        (_junit_xml_with_subtests(tests="6"), "do not match testsuite aggregate"),
+        pytest.param(
+            _junit_xml_with_subtests(first_property="many"),
+            "not an integer",
+            id="non-integer-property",
+        ),
+        pytest.param(
+            _junit_xml_with_subtests(tests="6"),
+            "do not match testsuite aggregate",
+            id="aggregate-mismatch",
+        ),
     ],
 )
 def test_subtest_property_authority_fails_closed(xml: bytes, message: str) -> None:
@@ -155,23 +165,27 @@ def test_subtest_property_authority_fails_closed(xml: bytes, message: str) -> No
 @pytest.mark.parametrize(
     ("xml", "message"),
     [
-        (
+        pytest.param(
             b'<testsuite><testcase classname="tests.test_sample" name="test_function[value-a]" /></testsuite>',
             "missing=",
+            id="missing-testcase",
         ),
-        (
+        pytest.param(
             b'<testsuite><testcase classname="tests.test_sample" name="test_function[value-a]" />'
             b'<testcase classname="tests.test_sample" name="test_function[value-a]" /></testsuite>',
             "duplicate=",
+            id="duplicate-testcase",
         ),
-        (
+        pytest.param(
             b'<testsuite><testcase classname="tests.test_sample" name="test_function[value-a]" />'
             b'<testcase classname="tests.test_other" name="test_extra" /></testsuite>',
             "unmatched_or_extra=",
+            id="unmatched-testcase",
         ),
-        (
+        pytest.param(
             b'<testsuite><testcase name="test_function[value-a]" /></testsuite>',
             "missing xunit2",
+            id="missing-xunit-identity",
         ),
     ],
 )
