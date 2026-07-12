@@ -25,6 +25,7 @@ from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 from ops.scripts.test.test_execution_evidence_runtime import (
+    junit_test_count_from_xml,
     nodeid_outcome_consistency,
     sha256_file,
     sha256_text,
@@ -162,6 +163,9 @@ def write_collection_manifest(
 def load_collection_manifest_digest(
     vault: Path,
     path_value: str | Path,
+    *,
+    expected_suite: str,
+    expected_semantic_command: str,
 ) -> dict[str, Any]:
     path = Path(path_value)
     if not path.is_absolute():
@@ -175,6 +179,10 @@ def load_collection_manifest_digest(
         raise ValueError("; ".join(blockers))
     if manifest.get("source_tree_fingerprint") != release_source_tree_fingerprint(vault):
         raise ValueError("collection manifest source_tree_fingerprint drift")
+    if manifest.get("suite") != expected_suite:
+        raise ValueError("collection manifest suite mismatch")
+    if manifest.get("semantic_command") != expected_semantic_command:
+        raise ValueError("collection manifest semantic_command mismatch")
     return {
         "status": "collected",
         "command": str(manifest["semantic_command"]),
@@ -188,6 +196,91 @@ def load_collection_manifest_digest(
         "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
         "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
         "source_revision": str(manifest["source_revision"]),
+    }
+
+
+def _junit_summary_identity(summary: dict[str, Any]) -> dict[str, Any]:
+    matches = [
+        item
+        for item in summary.get("evidence_artifacts", [])
+        if isinstance(item, dict) and item.get("kind") == "junit_xml"
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            "full summary must declare exactly one JUnit evidence artifact"
+        )
+    return matches[0]
+
+
+def _validate_full_summary_collection_contract(
+    summary: dict[str, Any],
+    collection: dict[str, Any],
+) -> None:
+    blockers = validate_collection_manifest_payload(collection)
+    if blockers:
+        raise ValueError("collection manifest validation failed: " + "; ".join(blockers))
+    if summary.get("status") != "pass" or summary.get("represents_full_suite") is not True:
+        raise ValueError("full summary must be passing full-suite evidence")
+    if collection.get("selection_kind") != "full_suite":
+        raise ValueError("full collection manifest must use selection_kind=full_suite")
+    for field in ("source_revision", "source_tree_fingerprint"):
+        if summary.get(field) != collection.get(field):
+            raise ValueError(f"summary/collection {field} mismatch")
+
+
+def _validate_summary_collection_digest(
+    summary: dict[str, Any],
+    collection: dict[str, Any],
+    collection_bytes: bytes,
+) -> None:
+    digest = summary.get("pytest_collect_nodeid_digest", {})
+    if digest.get("status") != "collected":
+        raise ValueError("full summary collection digest must be collected")
+    if digest.get("sha256") != collection.get("nodeids_sha256"):
+        raise ValueError("summary/collection nodeid digest mismatch")
+    if digest.get("nodeid_count") != collection.get("nodeid_count"):
+        raise ValueError("summary/collection nodeid count mismatch")
+    if digest.get("manifest_sha256") != hashlib.sha256(collection_bytes).hexdigest():
+        raise ValueError("summary/collection manifest file digest mismatch")
+    if digest.get("manifest_nodeids_sha256") != collection.get("nodeids_sha256"):
+        raise ValueError("summary/collection manifest nodeid digest mismatch")
+    if digest.get("source_revision") != collection.get("source_revision"):
+        raise ValueError("summary/collection digest source revision mismatch")
+    if digest.get("source_tree_fingerprint") != collection.get(
+        "source_tree_fingerprint"
+    ):
+        raise ValueError("summary/collection digest source tree mismatch")
+
+
+def _validate_summary_junit_digest(
+    summary: dict[str, Any], junit_bytes: bytes
+) -> int:
+    junit_count = junit_test_count_from_xml(junit_bytes)
+    if junit_count is None:
+        raise ValueError("JUnit XML is unreadable")
+    junit_identity = _junit_summary_identity(summary)
+    if junit_identity.get("sha256") != hashlib.sha256(junit_bytes).hexdigest():
+        raise ValueError("summary/JUnit digest mismatch")
+    if junit_identity.get("observed_count") != junit_count:
+        raise ValueError("summary/JUnit test count mismatch")
+    if junit_identity.get("consistency_status") != "pass":
+        raise ValueError("summary/JUnit consistency is not passing")
+    return junit_count
+
+
+def validate_full_suite_evidence_bindings(
+    summary: dict[str, Any],
+    collection: dict[str, Any],
+    *,
+    collection_bytes: bytes,
+    junit_bytes: bytes,
+) -> dict[str, int]:
+    _validate_full_summary_collection_contract(summary, collection)
+    _validate_summary_collection_digest(summary, collection, collection_bytes)
+    junit_count = _validate_summary_junit_digest(summary, junit_bytes)
+    return {
+        "collection_count": int(collection["nodeid_count"]),
+        "junit_count": junit_count,
     }
 
 

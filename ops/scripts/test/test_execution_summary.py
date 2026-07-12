@@ -40,6 +40,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         build_execution_environment,
         classify_interpreter_path,
         classify_status,
+        collection_semantic_command_text as _collection_semantic_command_text,
         display_command as _display_command,
         parse_pytest_counts,
         semantic_command,
@@ -56,6 +57,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         subset_summary_parity,
         validate_collection_manifest_payload,
         validate_collection_manifest_schema,
+        validate_full_suite_evidence_bindings,
         write_collection_manifest,
     )
     from ops.scripts.test.test_execution_deselection_runtime import (
@@ -128,6 +130,7 @@ else:
         build_execution_environment,
         classify_interpreter_path,
         classify_status,
+        collection_semantic_command_text as _collection_semantic_command_text,
         display_command as _display_command,
         parse_pytest_counts,
         semantic_command,
@@ -144,6 +147,7 @@ else:
         subset_summary_parity,
         validate_collection_manifest_payload,
         validate_collection_manifest_schema,
+        validate_full_suite_evidence_bindings,
         write_collection_manifest,
     )
     from ops.scripts.test.test_execution_deselection_runtime import (
@@ -387,7 +391,7 @@ def collect_pytest_nodeid_digest(
         manifest = build_collection_manifest(
             vault,
             suite=suite,
-            semantic_command=_semantic_command_text(vault, command),
+            semantic_command=_collection_semantic_command_text(vault, command),
             nodeids=nodeids,
             selection_kind=(
                 "selector_subset"
@@ -991,6 +995,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--collect-timeout-seconds", type=int, default=300)
     parser.add_argument("--collection-manifest")
     parser.add_argument("--collection-only", action="store_true")
+    parser.add_argument("--validate-full-suite-sidecars", action="store_true")
     parser.add_argument("--derive-subset-from-full", action="store_true")
     parser.add_argument("--full-summary")
     parser.add_argument("--full-collection-manifest")
@@ -1027,7 +1032,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         args.command = args.command[1:]
     if args.heartbeat_interval_seconds < 0:
         parser.error("--heartbeat-interval-seconds must be >= 0")
-    if not args.command and not args.aggregate and not args.aggregate_from and not args.derive_subset_from_full:
+    if (
+        not args.command
+        and not args.aggregate
+        and not args.aggregate_from
+        and not args.derive_subset_from_full
+        and not args.validate_full_suite_sidecars
+    ):
         parser.error("test command required for non-aggregate summaries; pass -- <command>")
     if args.derive_subset_from_full and not all(
         (args.full_summary, args.junit_xml_path, args.full_collection_manifest, args.selection_manifest)
@@ -1035,6 +1046,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error(
             "--derive-subset-from-full requires --full-summary, --junit-xml-path, "
             "--full-collection-manifest, and --selection-manifest"
+        )
+    if args.validate_full_suite_sidecars and not all(
+        (args.full_summary, args.junit_xml_path, args.full_collection_manifest)
+    ):
+        parser.error(
+            "--validate-full-suite-sidecars requires --full-summary, "
+            "--junit-xml-path, and --full-collection-manifest"
         )
     return args
 
@@ -1080,7 +1098,14 @@ def _collect_nodeid_digest_for_args(vault: Path, args: argparse.Namespace) -> di
         existing_digest = existing.get("pytest_collect_nodeid_digest")
         return dict(existing_digest) if isinstance(existing_digest, dict) else None
     if args.collection_manifest and not args.collection_only:
-        return load_collection_manifest_digest(vault, args.collection_manifest)
+        return load_collection_manifest_digest(
+            vault,
+            args.collection_manifest,
+            expected_suite=args.suite,
+            expected_semantic_command=_collection_semantic_command_text(
+                vault, args.command
+            ),
+        )
     policy, _ = load_policy(vault, args.policy)
     runtime_context = RuntimeContext.from_policy(policy)
     generated_at = runtime_context.isoformat_z()
@@ -1115,6 +1140,38 @@ def _load_json_object(vault: Path, path_value: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"JSON artifact must be an object: {display_path(vault, path)}")
     return payload
+
+
+def _run_full_suite_sidecar_validation_cli(
+    vault: Path, args: argparse.Namespace
+) -> int:
+    try:
+        summary = _load_summary(vault, args.full_summary)
+        collection_path = Path(args.full_collection_manifest)
+        if not collection_path.is_absolute():
+            collection_path = vault / collection_path
+        collection_bytes = collection_path.read_bytes()
+        collection = json.loads(collection_bytes.decode("utf-8"))
+        if not isinstance(collection, dict):
+            raise ValueError("full collection manifest must be a JSON object")
+        validate_collection_manifest_schema(vault, collection)
+        junit_path = Path(args.junit_xml_path)
+        if not junit_path.is_absolute():
+            junit_path = vault / junit_path
+        counts = validate_full_suite_evidence_bindings(
+            summary,
+            collection,
+            collection_bytes=collection_bytes,
+            junit_bytes=junit_path.read_bytes(),
+        )
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        print(
+            f"full-suite sidecar validation failed: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    print(json.dumps({"status": "pass", **counts}, ensure_ascii=False, indent=2))
+    return 0
 
 
 def _run_collection_only_cli(vault: Path, args: argparse.Namespace) -> int:
@@ -1383,6 +1440,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.reuse_only:
         args.reuse_if_current = True
     vault = Path(args.vault).resolve()
+    if args.validate_full_suite_sidecars:
+        return _run_full_suite_sidecar_validation_cli(vault, args)
     if args.derive_subset_from_full:
         return _run_derived_subset_cli(vault, args)
     if args.collection_only:

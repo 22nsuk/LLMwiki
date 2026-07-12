@@ -26,7 +26,7 @@ from ops.scripts.test.test_execution_evidence_runtime import (
     junit_artifact_identity,
     sha256_file,
 )
-from ops.scripts.test.test_execution_summary import build_report
+from ops.scripts.test.test_execution_summary import build_report, main as summary_main
 from ops.scripts.test.trusted_ci_evidence_bundle import build_bundle
 from ops.scripts.test.trusted_ci_evidence_import import import_bundle
 from ops.scripts.test.trusted_ci_evidence_runtime import (
@@ -151,7 +151,12 @@ def _seed_evidence(vault: Path, *, subtests_passed: int = 0) -> Path:
         context=_context(),
     )
     write_collection_manifest(vault, collection, collection_path)
-    digest = load_collection_manifest_digest(vault, collection_path)
+    digest = load_collection_manifest_digest(
+        vault,
+        collection_path,
+        expected_suite="full-shard-1",
+        expected_semantic_command="-m pytest",
+    )
     junit = junit_artifact_identity(
         vault,
         junit_path,
@@ -189,10 +194,6 @@ def _seed_evidence(vault: Path, *, subtests_passed: int = 0) -> Path:
         ],
         suite="full",
         context=_context(),
-    )
-    summary["execution_environment"] = _ci_environment()
-    summary["toolchain_fingerprint"] = toolchain_fingerprint(
-        summary["execution_environment"]
     )
     _write_json(vault / "ops/reports/test-execution-summary-full.json", summary)
     return build_bundle(
@@ -362,7 +363,32 @@ def test_bundle_and_import_use_junit_suite_totals_for_subtests(tmp_path: Path) -
 
     assert manifest["junit"]["count"] == 3
     assert summary["counts"]["subtests_passed"] == 2
+    assert summary["execution_environment"]["interpreter_path_class"] == "path_lookup"
     assert report["status"] == "pass", (report["diagnostics"], report["checks"])
+
+
+def test_full_suite_sidecar_cli_fails_when_junit_is_missing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    _seed_evidence(vault)
+    args = [
+        "--vault",
+        str(vault),
+        "--validate-full-suite-sidecars",
+        "--full-summary",
+        "ops/reports/test-execution-summary-full.json",
+        "--full-collection-manifest",
+        "build/release-payloads/test-execution-summary-full.collection.json",
+        "--junit-xml-path",
+        "build/release-payloads/test-execution-summary-full.junit.xml",
+    ]
+
+    assert summary_main(args) == 0
+    (vault / "build/release-payloads/test-execution-summary-full.junit.xml").unlink()
+    assert summary_main(args) == 1
+    assert "full-suite sidecar validation failed" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(

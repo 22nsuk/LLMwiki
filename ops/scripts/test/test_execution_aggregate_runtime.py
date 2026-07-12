@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import shlex
-import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +20,6 @@ from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 from ops.scripts.test.test_execution_command_runtime import (
-    build_execution_environment,
     toolchain_fingerprint as _toolchain_fingerprint,
 )
 from ops.scripts.test.test_execution_derivation_runtime import (
@@ -173,6 +172,23 @@ def aggregate_counts(shards: list[dict[str, Any]]) -> dict[str, int]:
         for key in counts:
             counts[key] += int(shard_counts.get(key, 0) or 0)
     return counts
+
+
+def aggregate_execution_environment(shards: list[dict[str, Any]]) -> dict[str, Any]:
+    environments: list[dict[str, Any]] = []
+    for index, shard in enumerate(shards, start=1):
+        environment = shard.get("execution_environment")
+        if not isinstance(environment, dict):
+            raise ValueError(
+                f"aggregate shard {index} has no execution_environment"
+            )
+        environments.append(environment)
+    if not environments:
+        raise ValueError("aggregate report received no shard execution environments")
+    first = environments[0]
+    if any(environment != first for environment in environments[1:]):
+        raise ValueError("aggregate shard execution_environment mismatch")
+    return deepcopy(first)
 
 
 def summary_shard_paths(vault: Path, aggregate_from: list[str], aggregate_dir: str) -> list[str]:
@@ -387,11 +403,11 @@ def build_aggregate_report(
         deselected_tests=deselected_tests,
         generated_at=generated_at,
     )
-    execution_environment = build_execution_environment(vault, [sys.executable, "-m", "pytest"])
+    execution_environment = aggregate_execution_environment(shards)
     coverage = _apply_toolchain_contract_to_coverage(
         _suite_coverage(
             suite=suite,
-            command=[sys.executable, "-m", "pytest"],
+            command=[],
             summary_mode="aggregate",
             shards=shards,
         ),

@@ -341,6 +341,18 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         self.assertEqual(report["entries"][0]["status"], "operator_review")
         self.assertEqual(report["entries"][0]["reason_codes"], ["raw_path_not_file"])
 
+    def test_rst_raw_uses_the_same_text_recovery_contract_as_classifier(self) -> None:
+        self._write_page(raw_path="raw/synthetic.rst")
+        self._write_raw("\n\n".join(ENGLISH_SENTENCES), name="synthetic.rst")
+
+        report = remediation.build_report(
+            self.vault, context=FIXED_CONTEXT, enforce_registry=False
+        )
+
+        self.assertEqual(report["summary"]["candidate_ready"], 1)
+        self.assertEqual(report["entries"][0]["classification_route"], "recover_from_text_raw")
+        self.assertNotIn("unsupported_raw_type", report["entries"][0]["reason_codes"])
+
     def test_pdf_extractor_success_and_failure_are_reported_without_binary_coupling(
         self,
     ) -> None:

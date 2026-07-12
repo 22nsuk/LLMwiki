@@ -44,6 +44,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         rank_source_sentences as _rank_source_sentences,
     )
     from ops.scripts.registry.source_substance_cohort_classify import (
+        TEXT_RAW_SUFFIXES,
         build_report as build_classification_report,
         resolve_source_raw_path,
     )
@@ -76,6 +77,7 @@ else:
         rank_source_sentences as _rank_source_sentences,
     )
     from ops.scripts.registry.source_substance_cohort_classify import (
+        TEXT_RAW_SUFFIXES,
         build_report as build_classification_report,
         resolve_source_raw_path,
     )
@@ -85,7 +87,6 @@ SCHEMA_PATH = "ops/schemas/source-substance-cohort-remediation.schema.json"
 PRODUCER = "ops.scripts.registry.source_substance_cohort_remediate"
 SOURCE_COMMAND = "python -m ops.scripts.registry.source_substance_cohort_remediate --vault ."
 PAGE_ROOTS = ("wiki", "system")
-TEXT_SUFFIXES = frozenset({".md", ".markdown", ".txt", ".text"})
 SUMMARY_FAILURES = frozenset(
     {"summary_repeats_title", "summary_lacks_source_specific_facts"}
 )
@@ -192,7 +193,7 @@ def _extract_raw_text(
     pdf_extractor: PdfExtractor,
 ) -> tuple[str | None, str | None]:
     suffix = raw_path.suffix.casefold()
-    if suffix in TEXT_SUFFIXES:
+    if suffix in TEXT_RAW_SUFFIXES:
         try:
             return raw_path.read_text(encoding="utf-8"), None
         except (OSError, UnicodeError):
@@ -345,11 +346,10 @@ def _build_page_candidate(
         return entry, None
     registry_id = str((frontmatter or {}).get("registry_id", "")).strip()
     entry["registry_id"] = registry_id or None
-    raw_path, path_error = resolve_source_raw_path(
-        vault, (frontmatter or {}).get("raw_path")
-    )
-    if path_error is not None or raw_path is None:
-        entry["reason_codes"] = [path_error]
+    raw_resolution = resolve_source_raw_path(vault, (frontmatter or {}).get("raw_path"))
+    if (raw_path := raw_resolution.file_path) is None:
+        resolution_error = raw_resolution.error or "raw_path_resolution_incomplete"
+        entry["reason_codes"] = [resolution_error]
         return entry, None
 
     raw_bytes = raw_path.read_bytes()

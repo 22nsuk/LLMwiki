@@ -16,13 +16,15 @@ from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
 )
+from ops.scripts.test.test_execution_derivation_runtime import (
+    validate_full_suite_evidence_bindings,
+)
 from ops.scripts.test.trusted_ci_evidence_runtime import (
     BUNDLE_MANIFEST_MEMBER,
     COLLECTION_MEMBER,
     JUNIT_MEMBER,
     PAYLOAD_MEMBERS,
     SUMMARY_MEMBER,
-    junit_test_count,
     semantic_digest,
     sha256_bytes,
     write_deterministic_member,
@@ -44,65 +46,6 @@ def _required_file(vault: Path, value: str, *, label: str) -> Path:
     if path.is_symlink() or not path.is_file():
         raise ValueError(f"{label} must be an existing non-symlink file: {value}")
     return path
-
-
-def _junit_summary_identity(summary: dict[str, Any]) -> dict[str, Any]:
-    artifacts = summary.get("evidence_artifacts", [])
-    matches = [
-        item
-        for item in artifacts
-        if isinstance(item, dict) and item.get("kind") == "junit_xml"
-    ]
-    if len(matches) != 1:
-        raise ValueError(
-            "full summary must declare exactly one JUnit evidence artifact"
-        )
-    return matches[0]
-
-
-def _validate_evidence(
-    summary: dict[str, Any],
-    collection: dict[str, Any],
-    collection_bytes: bytes,
-    junit: bytes,
-) -> dict[str, int]:
-    if (
-        summary.get("status") != "pass"
-        or summary.get("represents_full_suite") is not True
-    ):
-        raise ValueError("full summary must be passing full-suite evidence")
-    for field in ("source_revision", "source_tree_fingerprint"):
-        if summary.get(field) != collection.get(field):
-            raise ValueError(f"summary/collection {field} mismatch")
-    digest = summary.get("pytest_collect_nodeid_digest", {})
-    if digest.get("status") != "collected":
-        raise ValueError("full summary collection digest must be collected")
-    if digest.get("sha256") != collection.get("nodeids_sha256"):
-        raise ValueError("summary/collection nodeid digest mismatch")
-    if digest.get("nodeid_count") != collection.get("nodeid_count"):
-        raise ValueError("summary/collection nodeid count mismatch")
-    if digest.get("manifest_sha256") != sha256_bytes(collection_bytes):
-        raise ValueError("summary/collection manifest file digest mismatch")
-    if digest.get("manifest_nodeids_sha256") != collection.get("nodeids_sha256"):
-        raise ValueError("summary/collection manifest nodeid digest mismatch")
-    if digest.get("source_revision") != collection.get("source_revision"):
-        raise ValueError("summary/collection digest source revision mismatch")
-    if digest.get("source_tree_fingerprint") != collection.get(
-        "source_tree_fingerprint"
-    ):
-        raise ValueError("summary/collection digest source tree mismatch")
-    junit_count = junit_test_count(junit)
-    junit_identity = _junit_summary_identity(summary)
-    if junit_identity.get("sha256") != sha256_bytes(junit):
-        raise ValueError("summary/JUnit digest mismatch")
-    if junit_identity.get("observed_count") != junit_count:
-        raise ValueError("summary/JUnit test count mismatch")
-    if junit_identity.get("consistency_status") != "pass":
-        raise ValueError("summary/JUnit consistency is not passing")
-    return {
-        "collection_count": int(collection["nodeid_count"]),
-        "junit_count": junit_count,
-    }
 
 
 def _load_bundle_inputs(
@@ -182,11 +125,11 @@ def build_bundle(
         collection_path=collection_path,
         junit_path=junit_path,
     )
-    counts = _validate_evidence(
+    counts = validate_full_suite_evidence_bindings(
         summary,
         collection,
-        payloads[COLLECTION_MEMBER],
-        payloads[JUNIT_MEMBER],
+        collection_bytes=payloads[COLLECTION_MEMBER],
+        junit_bytes=payloads[JUNIT_MEMBER],
     )
     manifest = _bundle_manifest(summary, collection, payloads, counts)
     validate_or_raise(

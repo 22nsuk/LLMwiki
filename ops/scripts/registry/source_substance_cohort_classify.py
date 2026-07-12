@@ -6,6 +6,7 @@ import hashlib
 import re
 import sys
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,13 @@ REMEDIATION_ROUTES = (
 )
 
 
+@dataclass(frozen=True)
+class SourceRawPathResolution:
+    relative_path: str | None
+    file_path: Path | None
+    error: str | None
+
+
 def _source_pages(vault: Path) -> list[tuple[str, Path]]:
     pages: list[tuple[str, Path]] = []
     for corpus in ("wiki", "system"):
@@ -105,19 +113,20 @@ def _sha256_file(path: Path) -> str:
 
 def resolve_source_raw_path(
     vault: Path, raw_path_value: Any
-) -> tuple[Path | None, str | None]:
+) -> SourceRawPathResolution:
     if not isinstance(raw_path_value, str) or not raw_path_value.strip():
-        return None, "raw_path_missing_frontmatter"
+        return SourceRawPathResolution(None, None, "raw_path_missing_frontmatter")
     relative = Path(raw_path_value.strip())
     if relative.is_absolute():
-        return None, "raw_path_outside_vault"
+        return SourceRawPathResolution(None, None, "raw_path_outside_vault")
     vault_root = vault.resolve()
     resolved = (vault_root / relative).resolve()
     if not resolved.is_relative_to(vault_root):
-        return None, "raw_path_outside_vault"
+        return SourceRawPathResolution(None, None, "raw_path_outside_vault")
+    normalized = resolved.relative_to(vault_root).as_posix()
     if not resolved.is_file():
-        return None, "raw_path_not_file"
-    return resolved, None
+        return SourceRawPathResolution(normalized, None, "raw_path_not_file")
+    return SourceRawPathResolution(normalized, resolved, None)
 
 
 def _raw_metadata(path: Path | None) -> tuple[bool, str, str | None]:
@@ -187,6 +196,35 @@ def _remediation_route(
     return "operator_review"
 
 
+def _classification_report_envelope(
+    vault: Path,
+    *,
+    generated_at: str,
+    resolved_policy_path: Path,
+    source_pages: list[tuple[str, Path]],
+    synthesis_pages: list[Path],
+    raw_input_paths: set[str],
+) -> dict[str, Any]:
+    return build_canonical_report_envelope(
+        vault,
+        generated_at=generated_at,
+        artifact_kind="source_substance_cohort_classification",
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        source_paths=[
+            "ops/scripts/registry/source_substance_cohort_classify.py",
+            "ops/scripts/eval/source_page_substance_runtime.py",
+        ],
+        path_group_inputs={
+            "source_pages": [report_path(vault, path) for _, path in source_pages],
+            "synthesis_pages": [report_path(vault, path) for path in synthesis_pages],
+            "raw_paths": sorted(raw_input_paths),
+        },
+    )
+
+
 def build_report(
     vault: Path, *, context: RuntimeContext | None = None
 ) -> dict[str, Any]:
@@ -208,6 +246,7 @@ def build_report(
     failing_by_corpus: Counter[str] = Counter()
     failure_reason_counts: Counter[str] = Counter()
     passing_count = 0
+    raw_input_paths: set[str] = set()
 
     for corpus, path in source_pages:
         text = path.read_text(encoding="utf-8")
@@ -226,13 +265,13 @@ def build_report(
             inverse_targets=inverse_targets,
         )
         raw_path_value = _frontmatter_text(frontmatter, "raw_path")
-        resolved_raw_path, _ = resolve_source_raw_path(vault, raw_path_value)
-        raw_path = (
-            resolved_raw_path.relative_to(vault.resolve()).as_posix()
-            if resolved_raw_path is not None
-            else None
+        raw_resolution = resolve_source_raw_path(vault, raw_path_value)
+        raw_path = raw_resolution.relative_path
+        if raw_path is not None:
+            raw_input_paths.add(raw_path)
+        raw_exists, raw_media_class, raw_sha256 = _raw_metadata(
+            raw_resolution.file_path
         )
-        raw_exists, raw_media_class, raw_sha256 = _raw_metadata(resolved_raw_path)
         remediation_route = _remediation_route(
             substance_pass=substance_pass,
             linked=bool(linkage["linked"]),
@@ -272,22 +311,13 @@ def build_report(
     total_source_count = len(entries)
     failing_count = total_source_count - passing_count
     generated_at = runtime_context.isoformat_z()
-    envelope = build_canonical_report_envelope(
+    envelope = _classification_report_envelope(
         vault,
         generated_at=generated_at,
-        artifact_kind="source_substance_cohort_classification",
-        producer=PRODUCER,
-        source_command=SOURCE_COMMAND,
         resolved_policy_path=resolved_policy_path,
-        schema_path=SCHEMA_PATH,
-        source_paths=[
-            "ops/scripts/registry/source_substance_cohort_classify.py",
-            "ops/scripts/eval/source_page_substance_runtime.py",
-        ],
-        path_group_inputs={
-            "source_pages": [report_path(vault, path) for _, path in source_pages],
-            "synthesis_pages": [report_path(vault, path) for path in synthesis_pages],
-        },
+        source_pages=source_pages,
+        synthesis_pages=synthesis_pages,
+        raw_input_paths=raw_input_paths,
     )
     envelope["schema_version"] = 2
     return {

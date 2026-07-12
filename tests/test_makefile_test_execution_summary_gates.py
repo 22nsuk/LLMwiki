@@ -391,7 +391,7 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
             block,
             "test-execution-summary-report-contract-derived-parity",
             (
-                "$(MAKE) test-execution-summary-full-current-check",
+                "$(MAKE) test-execution-summary-full-sidecars-current-or-refresh",
                 "$(MAKE) test-execution-summary-current-check",
                 "--collection-only",
                 '--out "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_COLLECTION_MANIFEST_OUT)"',
@@ -401,10 +401,34 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 '--parity-direct-summary "$(TEST_EXECUTION_SUMMARY_OUT)"',
             ),
         )
-        self.assertNotIn("current-or-refresh", block)
+        self.assertNotIn("test-execution-summary-full-current-check", block)
         self.assertIn(
             "test-execution-summary: test-execution-summary-report-contract",
             text,
+        )
+
+    def test_full_sidecar_current_or_refresh_checks_before_and_after_refresh(self) -> None:
+        text = _makefile_text()
+        current_check = _target_block(
+            text, "test-execution-summary-full-sidecars-current-check"
+        )
+        current_or_refresh = _target_block(
+            text, "test-execution-summary-full-sidecars-current-or-refresh"
+        )
+
+        self.assertIn("$(MAKE) test-execution-summary-full-current-check", current_check)
+        self.assertIn("--validate-full-suite-sidecars", current_check)
+        self.assertIn(
+            "$(MAKE) test-execution-summary-full-sidecars-current-check",
+            current_or_refresh,
+        )
+        self.assertIn(
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
+            current_or_refresh,
+        )
+        self.assertIn(
+            "$(MAKE) test-execution-summary-full-refresh-no-converge",
+            current_or_refresh,
         )
 
     def test_compatibility_summary_targets_delegate_to_mode_targets(self) -> None:

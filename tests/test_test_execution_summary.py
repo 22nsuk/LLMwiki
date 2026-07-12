@@ -1835,7 +1835,12 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 / "build/release-payloads/test-execution-summary-full.collection.json"
             )
             write_collection_manifest(vault, manifest, manifest_path)
-            digest = load_collection_manifest_digest(vault, manifest_path)
+            digest = load_collection_manifest_digest(
+                vault,
+                manifest_path,
+                expected_suite="full-shard-1",
+                expected_semantic_command="-m pytest",
+            )
             shard = build_report(
                 vault,
                 command=[sys.executable, "-m", "pytest"],

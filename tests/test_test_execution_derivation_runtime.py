@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import json
 import shutil
 from copy import deepcopy
 from pathlib import Path
@@ -22,6 +23,7 @@ from ops.scripts.test.test_execution_derivation_runtime import (
     parse_junit_testcases,
     serialized_report_sha256,
     subset_summary_parity,
+    validate_full_suite_evidence_bindings,
     write_collection_manifest,
 )
 from ops.scripts.test.test_execution_summary import build_report
@@ -263,6 +265,9 @@ def _derived_fixture(
             "size_bytes": len(xml),
             "sha256": hashlib.sha256(xml).hexdigest(),
             "source": "pytest_junit_xml",
+            "observed_count": int(junit_evidence["testcase_count"])
+            + int(junit_evidence["subtests_passed"]),
+            "consistency_status": "pass",
         }
     ]
     selected_manifest = build_collection_manifest(
@@ -279,6 +284,39 @@ def _derived_fixture(
         full_summary, junit_evidence, full_manifest, selected_manifest
     )
     return derived, full_summary, full_manifest, selected_manifest
+
+
+def test_full_suite_sidecar_binding_rejects_collection_and_junit_drift(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    _, full_summary, full_manifest, _ = _derived_fixture(vault)
+    manifest_bytes = f"{json.dumps(full_manifest, ensure_ascii=False, indent=2)}\n".encode()
+
+    counts = validate_full_suite_evidence_bindings(
+        full_summary,
+        full_manifest,
+        collection_bytes=manifest_bytes,
+        junit_bytes=_junit_xml(),
+    )
+
+    assert counts == {"collection_count": 2, "junit_count": 2}
+    with pytest.raises(ValueError, match="manifest file digest mismatch"):
+        validate_full_suite_evidence_bindings(
+            full_summary,
+            full_manifest,
+            collection_bytes=manifest_bytes + b" ",
+            junit_bytes=_junit_xml(),
+        )
+    with pytest.raises(ValueError, match="JUnit digest mismatch"):
+        validate_full_suite_evidence_bindings(
+            full_summary,
+            full_manifest,
+            collection_bytes=manifest_bytes,
+            junit_bytes=_junit_xml() + b" ",
+        )
 
 
 def test_selected_subset_sums_only_its_parent_subtest_properties(
@@ -398,9 +436,29 @@ def test_collection_manifest_reference_rejects_input_digest_drift(
 
     assert collection_manifest_reference_is_current(vault, digest) is True
     assert collection_manifest_reference_is_rebindable(vault, digest) is True
-    loaded_digest = load_collection_manifest_digest(vault, identity["manifest_path"])
+    loaded_digest = load_collection_manifest_digest(
+        vault,
+        identity["manifest_path"],
+        expected_suite="full-shard-1",
+        expected_semantic_command="-m pytest",
+    )
     assert loaded_digest["sha256"] == manifest["nodeids_sha256"]
     assert loaded_digest["manifest_sha256"] == identity["manifest_sha256"]
+
+    with pytest.raises(ValueError, match="semantic_command mismatch"):
+        load_collection_manifest_digest(
+            vault,
+            identity["manifest_path"],
+            expected_suite="full-shard-1",
+            expected_semantic_command="-m pytest -m report_contract_core",
+        )
+    with pytest.raises(ValueError, match="suite mismatch"):
+        load_collection_manifest_digest(
+            vault,
+            identity["manifest_path"],
+            expected_suite="report-contract-summary",
+            expected_semantic_command="-m pytest",
+        )
 
     path = vault / identity["manifest_path"]
     path.write_text(

@@ -229,6 +229,12 @@ class SourceSubstanceCohortClassifyTests(unittest.TestCase):
                 "wiki/source--absolute.md": str(outside),
                 "wiki/source--traversal.md": "../outside.txt",
             }
+            try:
+                (vault / "raw/outside-link.txt").symlink_to(outside)
+            except OSError:
+                pass
+            else:
+                pages["wiki/source--symlink.md"] = "raw/outside-link.txt"
             for relative_path, raw_path in pages.items():
                 path = vault / relative_path
                 path.write_text(
@@ -250,6 +256,47 @@ class SourceSubstanceCohortClassifyTests(unittest.TestCase):
                 self.assertEqual(entry["raw_media_class"], "missing")
                 self.assertIsNone(entry["raw_sha256"])
                 self.assertEqual(entry["remediation_route"], "operator_review")
+
+    def test_raw_input_fingerprint_tracks_safe_missing_create_replace_and_delete(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = self._seed_vault(Path(temp_dir))
+            page = vault / "wiki/source--tracked-raw.md"
+            page.write_text(
+                _source_page(
+                    title="Tracked raw",
+                    created="2026-07-12",
+                    raw_path="raw/tracked.txt",
+                    synthesis_link="synthesis--tracked",
+                ),
+                encoding="utf-8",
+            )
+            (vault / "wiki/synthesis--tracked.md").write_text(
+                "# Tracked synthesis\n", encoding="utf-8"
+            )
+            raw = vault / "raw/tracked.txt"
+
+            missing = build_report(vault)
+            missing_entry = missing["entries"][0]
+            self.assertEqual(missing_entry["raw_path"], "raw/tracked.txt")
+            self.assertFalse(missing_entry["raw_exists"])
+
+            raw.write_text("first raw payload", encoding="utf-8")
+            created = build_report(vault)
+            raw.write_text("second raw payload", encoding="utf-8")
+            replaced = build_report(vault)
+            raw.unlink()
+            deleted = build_report(vault)
+
+            fingerprints = [
+                report["input_fingerprints"]["raw_paths"]
+                for report in (missing, created, replaced, deleted)
+            ]
+            self.assertNotEqual(fingerprints[0], fingerprints[1])
+            self.assertNotEqual(fingerprints[1], fingerprints[2])
+            self.assertNotEqual(fingerprints[2], fingerprints[3])
+            self.assertEqual(fingerprints[0], fingerprints[3])
 
     def test_write_report_rejects_invalid_payload_without_writing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

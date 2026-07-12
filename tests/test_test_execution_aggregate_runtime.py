@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.test.test_execution_aggregate_runtime import (
     aggregate_counts,
+    aggregate_execution_environment,
     aggregate_nodeid_digest,
     aggregate_status,
     summary_shard_paths,
@@ -49,6 +52,53 @@ def test_aggregate_status_and_counts_are_separate_from_cli_runtime() -> None:
         "warnings": 1,
         "subtests_passed": 0,
     }
+
+
+def test_aggregate_execution_environment_preserves_identical_shard_provenance() -> None:
+    environment = {
+        "python_version": "3.12.10",
+        "pytest_version": "8.4.1",
+        "plugin_autoload_policy": {
+            "env_var": "PYTEST_DISABLE_PLUGIN_AUTOLOAD",
+            "value": "1",
+            "autoload_disabled": True,
+            "policy": "disabled",
+        },
+        "interpreter_path_class": "path_lookup",
+        "toolchain_contract": {"status": "pass"},
+    }
+
+    aggregate = aggregate_execution_environment(
+        [
+            {"execution_environment": environment},
+            {"execution_environment": dict(environment)},
+        ]
+    )
+
+    assert aggregate == environment
+    assert aggregate is not environment
+
+
+def test_aggregate_execution_environment_rejects_shard_drift() -> None:
+    first = {
+        "python_version": "3.12.10",
+        "pytest_version": "8.4.1",
+        "plugin_autoload_policy": {"autoload_disabled": True},
+        "interpreter_path_class": "path_lookup",
+        "toolchain_contract": {"status": "pass"},
+    }
+    second = {
+        **first,
+        "interpreter_path_class": "external_absolute",
+    }
+
+    with pytest.raises(ValueError, match="execution_environment mismatch"):
+        aggregate_execution_environment(
+            [
+                {"execution_environment": first},
+                {"execution_environment": second},
+            ]
+        )
 
 
 def test_summary_shard_paths_prefers_explicit_inputs(tmp_path: Path) -> None:
