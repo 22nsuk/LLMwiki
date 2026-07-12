@@ -55,6 +55,15 @@
       "next_action": "Rebind release-run evidence for the current source tree, then run release-sealed-run-ready and release-auto-promotion-ready so the action matrix can clear release and promotion pending actions.",
       "exit_condition": "Close when the refreshed action matrix no longer reports release-run or promotion readiness pending for the active external reports, or when a narrower release-authority observation replaces it.",
       "owner_or_lane": "release-authority-preseal"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260711-test-runtime-cost-reduction/improvement-observations.json",
+      "observation_id": "release_checkpoint_evidence_deduplication",
+      "status": "planned",
+      "retained_reason": "Current release authority remains correct, but measured preseal execution still repeats generated index and readiness writers and retains a separate default public marker checkpoint after stronger evidence has already passed.",
+      "next_action": "Collect parity evidence for revision-, source-tree-, input-, and artifact-bound reuse, then remove only the duplicate preseal writers and public marker replay proven equivalent to stronger current evidence.",
+      "exit_condition": "Close when release preseal and checkpoint planning skip the measured duplicate executions without weakening local or unattended release authority, with a second-call no-write proof and focused workflow tests.",
+      "owner_or_lane": "test-evidence-cost-governance"
     }
   ]
 }
