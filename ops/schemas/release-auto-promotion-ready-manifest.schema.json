@@ -122,7 +122,12 @@
               "additionalProperties": false,
               "required": ["gate_attention_count"],
               "properties": {
-                "gate_attention_count": { "type": "integer", "minimum": 0 }
+                "gate_attention_count": { "type": "integer", "minimum": 0 },
+                "raw_count": { "type": "integer", "minimum": 0 },
+                "identity_count_mismatch": { "type": "boolean" },
+                "discounted_ids": { "$ref": "#/$defs/identity_codes" },
+                "release_gate_discounted_ids": { "$ref": "#/$defs/identity_codes" },
+                "advisory_discounted_ids": { "$ref": "#/$defs/identity_codes" }
               }
             },
             "learning_claim": {
@@ -130,7 +135,12 @@
               "additionalProperties": false,
               "required": ["learning_claim_blocking_family_count"],
               "properties": {
-                "learning_claim_blocking_family_count": { "type": "integer", "minimum": 0 }
+                "learning_claim_blocking_family_count": { "type": "integer", "minimum": 0 },
+                "raw_count": { "type": "integer", "minimum": 0 },
+                "identity_count_mismatch": { "type": "boolean" },
+                "discounted_ids": { "$ref": "#/$defs/identity_codes" },
+                "release_gate_discounted_ids": { "$ref": "#/$defs/identity_codes" },
+                "advisory_discounted_ids": { "$ref": "#/$defs/identity_codes" }
               }
             }
           }
@@ -164,6 +174,7 @@
             "promotion_blocker_count": { "type": "integer", "minimum": 0 },
             "stage3_blocking_promotion_blocker_count": { "type": "integer", "minimum": 0 },
             "release_gate_diagnostic_promotion_blocker_count": { "type": "integer", "minimum": 0 },
+            "release_gate_diagnostic_promotion_blocker_ids": { "$ref": "#/$defs/identity_codes" },
             "clean_release_blocker_count": { "type": "integer", "minimum": 0 }
           }
         },
@@ -297,6 +308,11 @@
     }
   },
   "$defs": {
+    "identity_codes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
     "currentness": {
       "type": "object",
       "additionalProperties": false,

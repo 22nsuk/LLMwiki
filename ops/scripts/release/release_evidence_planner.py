@@ -29,6 +29,11 @@ from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )
+from ops.scripts.release.stage3_operator_authority_runtime import (
+    current_lower_authority_pass,
+    release_gate_blocker_ids,
+    stage3_count_audit,
+)
 
 DEFAULT_OUT = "build/release/release-evidence-plan.json"
 SCHEMA_PATH = "ops/schemas/release-evidence-plan.schema.json"
@@ -194,15 +199,32 @@ def _int_value(value: Any) -> int:
     return 0
 
 
-def _operator_attention_counts(vault: Path, path: str) -> dict[str, int]:
+def _operator_attention_diagnostics(
+    vault: Path,
+    path: str,
+    *,
+    release_gate_ids: set[str],
+    lower_authority_pass: bool,
+) -> dict[str, Any]:
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path))
     if diagnostics.get("status") != "ok" or not isinstance(payload, dict):
         return {}
     accepted_risk = payload.get("accepted_risk")
     if not isinstance(accepted_risk, dict):
-        return {}
-    raw_gate_attention = _int_value(accepted_risk.get("gate_attention_count"))
-    advisory_attention = _int_value(accepted_risk.get("advisory_lifecycle_family_count"))
+        accepted_risk = {}
+    gate_attention = stage3_count_audit(
+        _int_value(accepted_risk.get("gate_attention_count")),
+        operator_ids=accepted_risk.get("gate_attention_codes"),
+        release_gate_ids=release_gate_ids,
+        lower_authority_pass=lower_authority_pass,
+        advisory_ids=accepted_risk.get("advisory_lifecycle_codes"),
+    )
+    learning_claim = stage3_count_audit(
+        _int_value(accepted_risk.get("learning_claim_blocking_family_count")),
+        operator_ids=accepted_risk.get("learning_claim_blocking_codes"),
+        release_gate_ids=release_gate_ids,
+        lower_authority_pass=lower_authority_pass,
+    )
     return {
         "release_accepted_risk_count": _int_value(
             accepted_risk.get("release_accepted_risk_count")
@@ -210,27 +232,46 @@ def _operator_attention_counts(vault: Path, path: str) -> dict[str, int]:
         "clean_lane_blocking_accepted_risk_family_count": _int_value(
             accepted_risk.get("clean_lane_blocking_accepted_risk_family_count")
         ),
-        "gate_attention_count": max(0, raw_gate_attention - advisory_attention),
+        "gate_attention": gate_attention.diagnostics(
+            count_field="gate_attention_count",
+        ),
+        "learning_claim": learning_claim.diagnostics(
+            count_field="learning_claim_blocking_family_count",
+        ),
     }
 
 
 def _operator_attention_blocker(
     *,
     node: dict[str, Any],
-    counts: dict[str, int],
+    diagnostics: dict[str, Any],
 ) -> dict[str, str]:
-    observed = "; ".join(f"{name}={value}" for name, value in counts.items())
+    gate_attention = diagnostics["gate_attention"]
+    learning_claim = diagnostics["learning_claim"]
+    observed = (
+        f"release_accepted_risk_count={diagnostics['release_accepted_risk_count']}; "
+        "clean_lane_blocking_accepted_risk_family_count="
+        f"{diagnostics['clean_lane_blocking_accepted_risk_family_count']}; "
+        f"gate_attention_count={gate_attention['gate_attention_count']}; "
+        f"gate_attention_raw_count={gate_attention['raw_count']}; "
+        f"gate_attention_discounted_ids={','.join(gate_attention['discounted_ids']) or 'none'}; "
+        "learning_claim_blocking_family_count="
+        f"{learning_claim['learning_claim_blocking_family_count']}; "
+        f"learning_claim_raw_count={learning_claim['raw_count']}; "
+        f"learning_claim_discounted_ids={','.join(learning_claim['discounted_ids']) or 'none'}"
+    )
     return {
         "id": "operator_summary_release_attention_not_clean",
         "node": str(node["name"]),
         "observed": observed,
         "expected": (
             "release_accepted_risk_count=0; "
-            "clean_lane_blocking_accepted_risk_family_count=0; gate_attention_count=0"
+            "clean_lane_blocking_accepted_risk_family_count=0; gate_attention_count=0; "
+            "learning_claim_blocking_family_count=0"
         ),
         "summary": (
-            "Sealed operator diagnostics still report accepted risk or gate attention, so "
-            "unattended promotion would fail at Stage 3."
+            "Sealed operator diagnostics still report accepted risk, gate attention, or "
+            "learning-claim blockers, so unattended promotion would fail at Stage 3."
         ),
         "recommended_next_step": (
             "Run make release-auto-promotion-preseal to refresh source cleanup evidence, "
@@ -462,8 +503,22 @@ def _auto_promotion_ready_findings(
     nodes: dict[str, dict[str, Any]],
     *,
     operator_summary: str,
+    auto_improve_readiness: str,
+    run_manifest: str,
+    sealed_run_manifest: str,
+    current_fingerprint: str,
+    current_revision: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
-    blockers = _auto_promotion_ready_blockers(vault, nodes, operator_summary=operator_summary)
+    blockers = _auto_promotion_ready_blockers(
+        vault,
+        nodes,
+        operator_summary=operator_summary,
+        auto_improve_readiness=auto_improve_readiness,
+        run_manifest=run_manifest,
+        sealed_run_manifest=sealed_run_manifest,
+        current_fingerprint=current_fingerprint,
+        current_revision=current_revision,
+    )
     actions: list[dict[str, str]] = []
     if not blockers and not nodes["auto_improve_readiness"]["can_reuse"]:
         actions.append(
@@ -480,11 +535,72 @@ def _auto_promotion_ready_findings(
     return blockers, actions
 
 
+def _operator_summary_attention_blocker(
+    vault: Path,
+    nodes: dict[str, dict[str, Any]],
+    *,
+    operator_summary: str,
+    auto_improve_readiness: str,
+    run_manifest: str,
+    sealed_run_manifest: str,
+    current_fingerprint: str,
+    current_revision: str,
+) -> dict[str, str] | None:
+    run_payload, _run_diagnostics = load_optional_json_object_with_diagnostics(
+        _resolve(vault, run_manifest)
+    )
+    sealed_payload, _sealed_diagnostics = load_optional_json_object_with_diagnostics(
+        _resolve(vault, sealed_run_manifest)
+    )
+    auto_payload, auto_diagnostics = load_optional_json_object_with_diagnostics(
+        _resolve(vault, auto_improve_readiness)
+    )
+    auto_node = nodes["auto_improve_readiness"]
+    current_auto_payload = (
+        auto_payload
+        if auto_diagnostics.get("status") == "ok"
+        and auto_node["artifact_kind"] == "auto_improve_readiness_report"
+        and auto_node["currentness_status"] == "current"
+        else {}
+    )
+    diagnostics = _operator_attention_diagnostics(
+        vault,
+        operator_summary,
+        release_gate_ids=release_gate_blocker_ids(current_auto_payload),
+        lower_authority_pass=current_lower_authority_pass(
+            run_payload=run_payload,
+            sealed_payload=sealed_payload,
+            run_identity=nodes["run_manifest"],
+            sealed_identity=nodes["sealed_run_manifest"],
+            current_fingerprint=current_fingerprint,
+            current_revision=current_revision,
+        ),
+    )
+    nodes["operator_summary"]["stage3_count_diagnostics"] = diagnostics
+    blocking_counts = (
+        diagnostics["release_accepted_risk_count"],
+        diagnostics["clean_lane_blocking_accepted_risk_family_count"],
+        diagnostics["gate_attention"]["gate_attention_count"],
+        diagnostics["learning_claim"]["learning_claim_blocking_family_count"],
+    )
+    if not any(value != 0 for value in blocking_counts):
+        return None
+    return _operator_attention_blocker(
+        node=nodes["operator_summary"],
+        diagnostics=diagnostics,
+    )
+
+
 def _auto_promotion_ready_blockers(
     vault: Path,
     nodes: dict[str, dict[str, Any]],
     *,
     operator_summary: str,
+    auto_improve_readiness: str,
+    run_manifest: str,
+    sealed_run_manifest: str,
+    current_fingerprint: str,
+    current_revision: str,
 ) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     blocker_specs = [
@@ -552,9 +668,18 @@ def _auto_promotion_ready_blockers(
                 )
             )
     if nodes["operator_summary"]["can_reuse"]:
-        counts = _operator_attention_counts(vault, operator_summary)
-        if any(value != 0 for value in counts.values()):
-            blockers.append(_operator_attention_blocker(node=nodes["operator_summary"], counts=counts))
+        operator_blocker = _operator_summary_attention_blocker(
+            vault,
+            nodes,
+            operator_summary=operator_summary,
+            auto_improve_readiness=auto_improve_readiness,
+            run_manifest=run_manifest,
+            sealed_run_manifest=sealed_run_manifest,
+            current_fingerprint=current_fingerprint,
+            current_revision=current_revision,
+        )
+        if operator_blocker:
+            blockers.append(operator_blocker)
     return blockers
 
 
@@ -611,6 +736,11 @@ def _build_plan_from_request(request: ReleaseEvidencePlanRequest) -> dict[str, A
             request.vault,
             nodes,
             operator_summary=request.operator_summary,
+            auto_improve_readiness=request.auto_improve_readiness,
+            run_manifest=request.run_manifest,
+            sealed_run_manifest=request.sealed_run_manifest,
+            current_fingerprint=fingerprint,
+            current_revision=commit,
         )
     metadata = {
         "generated_at": generated_at,

@@ -926,6 +926,29 @@ def _release_decision_snapshot(batch_manifest: dict[str, Any]) -> dict[str, Any]
     return snapshot if isinstance(snapshot, dict) else {}
 
 
+def _closeout_issue_codes(
+    closeout: dict[str, Any],
+    *,
+    collections: tuple[str, ...],
+    effect_field: str | None = None,
+    effect_value: str | None = None,
+) -> list[str]:
+    codes: set[str] = set()
+    for collection in collections:
+        issues = closeout.get(collection, [])
+        if not isinstance(issues, list):
+            continue
+        for issue in issues:
+            if not isinstance(issue, dict):
+                continue
+            if effect_field and str(issue.get(effect_field, "")).strip() != effect_value:
+                continue
+            code = str(issue.get("code", "")).strip()
+            if code:
+                codes.add(code)
+    return sorted(codes)
+
+
 def _accepted_risk_summary(
     closeout: dict[str, Any],
     release_decision_snapshot: dict[str, Any],
@@ -971,6 +994,29 @@ def _accepted_risk_summary(
                 _scope_count(closeout, "advisory_lifecycle_family_count"),
             )
             or 0
+        ),
+        "gate_attention_codes": sorted(
+            set(_closeout_issue_codes(closeout, collections=("blockers",)))
+            | set(
+                _closeout_issue_codes(
+                    closeout,
+                    collections=("accepted_risks",),
+                    effect_field="advisory_lifecycle_effect",
+                    effect_value="review_backlog",
+                )
+            )
+        ),
+        "learning_claim_blocking_codes": _closeout_issue_codes(
+            closeout,
+            collections=("blockers", "accepted_risks"),
+            effect_field="learning_lane_effect",
+            effect_value="blocks_learning_claim",
+        ),
+        "advisory_lifecycle_codes": _closeout_issue_codes(
+            closeout,
+            collections=("blockers", "accepted_risks"),
+            effect_field="advisory_lifecycle_effect",
+            effect_value="review_backlog",
         ),
         "count_sources": _accepted_risk_count_sources(),
     }

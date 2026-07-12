@@ -433,6 +433,8 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
             "clean_lane_blocking_accepted_risk_family_count": 0,
             "gate_attention_count": 1,
             "advisory_lifecycle_family_count": 1,
+            "gate_attention_codes": ["archive_review_backlog"],
+            "advisory_lifecycle_codes": ["archive_review_backlog"],
         }
         self._write_json("build/release/operator-release-summary.json", operator)
 
@@ -441,6 +443,283 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
 
         self.assertEqual(plan["plan_status"], "ready")
         self.assertNotIn("operator_summary_release_attention_not_clean", plan["failures"])
+
+    def test_auto_promotion_plan_discounts_release_gate_only_operator_counts(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 0,
+            "gate_attention_count": 1,
+            "learning_claim_blocking_family_count": 1,
+            "gate_attention_codes": [
+                "promotion_blocked_by_release_batch_manifest_failure"
+            ],
+            "learning_claim_blocking_codes": [
+                "promotion_blocked_by_release_batch_manifest_failure"
+            ],
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+        auto = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        auto["promotion_blockers"] = [
+            {
+                "id": "promotion_blocked_by_release_batch_manifest_failure",
+                "scope": "release_gate",
+            }
+        ]
+        self._write_json("ops/reports/auto-improve-readiness.json", auto)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        self.assertEqual(plan["plan_status"], "ready")
+        self.assertNotIn("operator_summary_release_attention_not_clean", plan["failures"])
+        diagnostics = plan["nodes"]["operator_summary"]["stage3_count_diagnostics"]
+        self.assertEqual(diagnostics["gate_attention"]["raw_count"], 1)
+        self.assertEqual(
+            diagnostics["gate_attention"]["discounted_ids"],
+            ["promotion_blocked_by_release_batch_manifest_failure"],
+        )
+        archived_v1 = json.loads(json.dumps(plan))
+        archived_v1["nodes"]["operator_summary"].pop("stage3_count_diagnostics")
+        self.assertEqual(validate_with_schema(archived_v1, load_schema(SCHEMA_PATH)), [])
+
+    def test_auto_promotion_plan_preserves_mixed_operator_count_residuals(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 0,
+            "gate_attention_count": 2,
+            "learning_claim_blocking_family_count": 2,
+            "gate_attention_codes": [
+                "promotion_blocked_by_release_batch_manifest_failure",
+                "unrelated_gate_attention",
+            ],
+            "learning_claim_blocking_codes": [
+                "promotion_blocked_by_release_batch_manifest_failure",
+                "unrelated_learning_claim",
+            ],
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+        auto = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        auto["promotion_blockers"] = [
+            {
+                "id": "promotion_blocked_by_release_batch_manifest_failure",
+                "scope": "release_gate",
+            }
+        ]
+        self._write_json("ops/reports/auto-improve-readiness.json", auto)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        blocker = next(
+            item
+            for item in plan["blockers"]
+            if item["id"] == "operator_summary_release_attention_not_clean"
+        )
+        self.assertIn("gate_attention_count=1", blocker["observed"])
+        self.assertIn("learning_claim_blocking_family_count=1", blocker["observed"])
+
+    def test_auto_promotion_plan_same_count_with_unrelated_ids_fails_closed(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 0,
+            "gate_attention_count": 1,
+            "learning_claim_blocking_family_count": 1,
+            "gate_attention_codes": ["unrelated_gate_attention"],
+            "learning_claim_blocking_codes": ["unrelated_learning_claim"],
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+        auto = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        auto["promotion_blockers"] = [
+            {
+                "id": "promotion_blocked_by_release_batch_manifest_failure",
+                "scope": "release_gate",
+            }
+        ]
+        self._write_json("ops/reports/auto-improve-readiness.json", auto)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        diagnostics = plan["nodes"]["operator_summary"]["stage3_count_diagnostics"]
+        self.assertEqual(diagnostics["gate_attention"]["discounted_ids"], [])
+        self.assertIn("operator_summary_release_attention_not_clean", plan["failures"])
+
+    def test_auto_promotion_plan_identity_count_mismatch_fails_closed(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 0,
+            "gate_attention_count": 1,
+            "learning_claim_blocking_family_count": 0,
+            "gate_attention_codes": [
+                "promotion_blocked_by_release_batch_manifest_failure",
+                "unrelated_gate_attention",
+            ],
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+        auto = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        auto["promotion_blockers"] = [
+            {
+                "id": "promotion_blocked_by_release_batch_manifest_failure",
+                "scope": "release_gate",
+            }
+        ]
+        self._write_json("ops/reports/auto-improve-readiness.json", auto)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        diagnostics = plan["nodes"]["operator_summary"]["stage3_count_diagnostics"]
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertTrue(diagnostics["gate_attention"]["identity_count_mismatch"])
+        self.assertEqual(diagnostics["gate_attention"]["discounted_ids"], [])
+        self.assertEqual(diagnostics["gate_attention"]["gate_attention_count"], 2)
+
+    def test_auto_promotion_plan_requires_explicit_clean_lower_authority(self) -> None:
+        self._write_authorities()
+        run = json.loads(
+            (self.vault / "build/release/release-run-manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        run["release_authority_status"] = "conditional_pass"
+        run["machine_release_allowed"] = False
+        self._write_json("build/release/release-run-manifest.json", run)
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "release_accepted_risk_count": 0,
+            "clean_lane_blocking_accepted_risk_family_count": 0,
+            "gate_attention_count": 1,
+            "learning_claim_blocking_family_count": 0,
+            "gate_attention_codes": [
+                "promotion_blocked_by_release_batch_manifest_failure"
+            ],
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+        auto = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        auto["promotion_blockers"] = [
+            {
+                "id": "promotion_blocked_by_release_batch_manifest_failure",
+                "scope": "release_gate",
+            }
+        ]
+        self._write_json("ops/reports/auto-improve-readiness.json", auto)
+
+        with self._patch_current_repo():
+            plan = self._build_plan(stage="auto-promotion-ready")
+
+        self.assertTrue(plan["nodes"]["run_manifest"]["can_reuse"])
+        self.assertEqual(plan["plan_status"], "blocked")
+        diagnostics = plan["nodes"]["operator_summary"]["stage3_count_diagnostics"]
+        self.assertEqual(diagnostics["gate_attention"]["discounted_ids"], [])
+        self.assertEqual(diagnostics["gate_attention"]["gate_attention_count"], 1)
+
+    def test_auto_promotion_plan_rejects_explicit_unknown_lower_authority(self) -> None:
+        for manifest_path, field in (
+            ("build/release/release-run-manifest.json", "release_authority_status"),
+            ("build/release/release-sealed-run-manifest.json", "sealed_release_status"),
+        ):
+            with self.subTest(field=field):
+                self._write_authorities()
+                operator = json.loads(
+                    (self.vault / "build/release/operator-release-summary.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                operator["status"] = "pass"
+                operator["accepted_risk"] = {
+                    "release_accepted_risk_count": 0,
+                    "clean_lane_blocking_accepted_risk_family_count": 0,
+                    "gate_attention_count": 1,
+                    "learning_claim_blocking_family_count": 0,
+                    "gate_attention_codes": [
+                        "promotion_blocked_by_release_batch_manifest_failure"
+                    ],
+                }
+                self._write_json("build/release/operator-release-summary.json", operator)
+                auto = json.loads(
+                    (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                auto["promotion_blockers"] = [
+                    {
+                        "id": "promotion_blocked_by_release_batch_manifest_failure",
+                        "scope": "release_gate",
+                    }
+                ]
+                self._write_json("ops/reports/auto-improve-readiness.json", auto)
+                authority = json.loads(
+                    (self.vault / manifest_path).read_text(encoding="utf-8")
+                )
+                authority[field] = "unknown"
+                if field == "release_authority_status":
+                    authority["machine_release_allowed"] = False
+                self._write_json(manifest_path, authority)
+
+                with self._patch_current_repo():
+                    plan = self._build_plan(stage="auto-promotion-ready")
+
+                diagnostics = plan["nodes"]["operator_summary"][
+                    "stage3_count_diagnostics"
+                ]
+                self.assertEqual(plan["plan_status"], "blocked")
+                self.assertEqual(diagnostics["gate_attention"]["discounted_ids"], [])
+                self.assertEqual(diagnostics["gate_attention"]["gate_attention_count"], 1)
 
     def test_auto_promotion_plan_blocks_clean_lane_accepted_risk_count(self) -> None:
         self._write_authorities()
