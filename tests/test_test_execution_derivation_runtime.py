@@ -296,11 +296,12 @@ def test_selected_subset_sums_only_its_parent_subtest_properties(
     assert full_summary["counts"]["subtests_passed"] == 3
     assert derived["counts"]["passed"] == 1
     assert derived["counts"]["subtests_passed"] == 2
-    direct = deepcopy(derived)
-    direct.pop("evidence_origin")
-    direct.pop("derivation")
-    direct["summary_mode"] = "single"
-    assert subset_summary_parity(derived, direct)["status"] == "pass"
+    assert derived["pytest_marker_deselected_count"] == 0
+    assert (
+        derived["derivation"]["full_collection_nodeid_count"]
+        - derived["derivation"]["selected_collection_nodeid_count"]
+        == 1
+    )
 
     mismatched_summary = deepcopy(full_summary)
     mismatched_summary["counts"]["subtests_passed"] = 2
@@ -506,15 +507,69 @@ def test_direct_parity_is_exact_for_status_counts_nodeids_and_deselection(
     vault = tmp_path / "vault"
     vault.mkdir()
     seed_minimal_vault(vault)
-    derived, _, _, _ = _derived_fixture(vault)
-    direct = deepcopy(derived)
-    direct.pop("evidence_origin")
-    direct.pop("derivation")
-    direct["summary_mode"] = "single"
+    _, full_summary, full_manifest, selected_manifest = _derived_fixture(vault)
+    command = [
+        "python",
+        "-m",
+        "pytest",
+        "-m",
+        "report_contract_core",
+        "-p",
+        "no:cacheprovider",
+    ]
+    direct = build_report(
+        vault,
+        command=command,
+        result=TimedProcessResult(
+            args=command,
+            returncode=0,
+            stdout="1 passed in 0.01s",
+            stderr="",
+            timed_out=False,
+            timeout_seconds=30,
+            termination_reason="completed",
+        ),
+        duration_ms=10,
+        suite="report-contract-summary",
+        collect_nodeids=True,
+        collect_nodeid_digest={
+            "status": "collected",
+            "command": "python -m pytest --collect-only",
+            "nodeid_count": selected_manifest["nodeid_count"],
+            "sha256": selected_manifest["nodeids_sha256"],
+            "reason": "",
+        },
+        context=FIXED_CONTEXT,
+    )
+    selected_manifest = build_collection_manifest(
+        vault,
+        suite="report-contract-summary",
+        semantic_command=selected_manifest["semantic_command"],
+        nodeids=selected_manifest["nodeids"],
+        selection_kind="selector_subset",
+        deselected_tests=direct["deselected_tests"],
+        deselection_lifecycle=direct["deselection_lifecycle"],
+        context=FIXED_CONTEXT,
+    )
+    derived = derive_subset_summary(
+        full_summary,
+        parse_junit_testcases(
+            _junit_xml(), expected_nodeids=full_manifest["nodeids"]
+        ),
+        full_manifest,
+        selected_manifest,
+    )
 
-    assert subset_summary_parity(derived, direct)["status"] == "pass"
+    assert direct["pytest_marker_deselected_count"] == 0
+    assert derived["pytest_marker_deselected_count"] == 0
+    direct_parity = subset_summary_parity(derived, direct)
+    assert direct_parity["status"] == "pass", direct_parity
 
-    direct["counts"]["warnings"] = 1
-    parity = subset_summary_parity(derived, direct)
+    observed_deselection = deepcopy(direct)
+    observed_deselection["pytest_marker_deselected_count"] = 1
+    parity = subset_summary_parity(derived, observed_deselection)
     assert parity["status"] == "fail"
-    assert "derived/direct parity mismatch: counts" in parity["blockers"]
+    assert (
+        "derived/direct parity mismatch: pytest_marker_deselected_count"
+        in parity["blockers"]
+    )

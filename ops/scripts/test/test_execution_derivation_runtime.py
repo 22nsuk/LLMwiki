@@ -559,11 +559,14 @@ def _derived_subset_deselection_metadata(
     deselected_tests = deepcopy(selected_manifest.get("deselected_tests", []))
     lifecycle = deepcopy(selected_manifest.get("deselection_lifecycle", {}))
     policy_deselected_count = len(deselected_tests)
-    marker_deselected_count = len(full_set) - len(selected) - policy_deselected_count
-    if marker_deselected_count < 0:
+    excluded_count = len(full_set) - len(selected)
+    if policy_deselected_count > excluded_count:
         raise ValueError(
             "selected deselection metadata exceeds full-to-subset deselection count"
         )
+    # The selected manifest is post-selector collection evidence. The excluded
+    # selector cohort stays explicit in derivation counts, not as observed stdout.
+    marker_deselected_count = 0
     return (
         deselected_tests,
         lifecycle,
